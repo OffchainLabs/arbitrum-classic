@@ -48,13 +48,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
-	}
-	if err := c.setupContracts(); err != nil {
-		return err
-	}
+func (c *PendingTopChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	//header, err := c.Client.HeaderByNumber(ctx, nil)
 	//if err != nil {
 	//	return err
@@ -103,7 +97,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 	//		}
 	//	}
 	//}()
-	return nil
+	return nil, nil
 }
 
 //func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {

@@ -44,6 +44,7 @@ class CheckpointStorage {
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
+    std::unique_ptr<KeyValueStore> makeKeyValueStore();
 };
 
 #endif /* checkpointstorage_hpp */

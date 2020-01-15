@@ -36,10 +36,10 @@ import (
 type pendingInbox struct {
 	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
 	client             *ethclient.Client
-	auth               *bind.TransactOpts
+	auth               *TransactAuth
 }
 
-func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*pendingInbox, error) {
+func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
@@ -60,8 +60,10 @@ func (con *pendingInbox) SendTransactionMessage(
 		return err
 	}
 
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.SendTransactionMessage(
-		con.auth,
+		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		seqNumber,
 		amount,
@@ -82,9 +84,9 @@ func (con *pendingInbox) DepositEthMessage(
 
 	tx, err := con.GlobalPendingInbox.DepositEthMessage(
 		&bind.TransactOpts{
-			From:     con.auth.From,
-			Signer:   con.auth.Signer,
-			GasLimit: con.auth.GasLimit,
+			From:     con.auth.auth.From,
+			Signer:   con.auth.auth.Signer,
+			GasLimit: con.auth.auth.GasLimit,
 			Value:    value,
 			Context:  ctx,
 		},
@@ -106,9 +108,10 @@ func (con *pendingInbox) DepositERC20Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.DepositERC20Message(
-		con.auth,
+		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
@@ -129,9 +132,10 @@ func (con *pendingInbox) DepositERC721Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.DepositERC721Message(
-		con.auth,
+		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
@@ -146,11 +150,13 @@ func (con *pendingInbox) DepositERC721Message(
 }
 
 func (con *pendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
-			From:     con.auth.From,
-			Signer:   con.auth.Signer,
-			GasLimit: con.auth.GasLimit,
+			From:     con.auth.auth.From,
+			Signer:   con.auth.auth.Signer,
+			GasLimit: con.auth.auth.GasLimit,
 			Value:    amount,
 			Context:  ctx,
 		},
@@ -175,5 +181,5 @@ func (con *pendingInbox) GetTokenBalance(
 }
 
 func (con *pendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-	return waitForReceipt(ctx, con.client, con.auth.From, tx, methodName)
+	return waitForReceipt(ctx, con.client, con.auth.auth.From, tx, methodName)
 }

@@ -26,8 +26,6 @@ interface IGlobalPendingInbox {
         bytes data
     );
 
-    function getPending() external returns(bytes32, uint);
-
     event EthDepositMessageDelivered(
         address indexed vmReceiverId,
         address sender,
@@ -51,6 +49,8 @@ interface IGlobalPendingInbox {
         uint256 value
     );
 
+    function getPending() external returns(bytes32, uint);
+
     function sendMessages(bytes calldata _messages) external;
 
     function registerForInbox() external;
@@ -58,11 +58,6 @@ interface IGlobalPendingInbox {
     function depositEthMessage(
         address _vmAddress, 
         address _destination) external payable;
-
-    function depositEthMessage(
-        address payable _vmAddress, 
-        address _destination, 
-        uint256 _value) external;
 
     function forwardTransactionMessage(
         address _vmAddress,

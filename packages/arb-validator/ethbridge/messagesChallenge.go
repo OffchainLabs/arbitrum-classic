@@ -22,7 +22,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -36,7 +35,7 @@ type messagesChallenge struct {
 	contract *messageschallenge.MessagesChallenge
 }
 
-func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*messagesChallenge, error) {
+func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*messagesChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -54,9 +53,10 @@ func (c *messagesChallenge) Bisect(
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.contract.Bisect(
-		c.auth,
+		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
 		hashSliceToRaw(segmentHashes),
 		chainLength,
@@ -75,9 +75,10 @@ func (c *messagesChallenge) OneStepProof(
 	topHashB common.Hash,
 	value common.Hash,
 ) error {
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProof(
-		c.auth,
+		c.auth.getAuth(ctx),
 		lowerHashA,
 		topHashA,
 		lowerHashB,

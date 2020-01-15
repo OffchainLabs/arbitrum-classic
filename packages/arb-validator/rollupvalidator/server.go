@@ -25,6 +25,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -42,23 +44,22 @@ import (
 type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
-	chain         *rollup.ChainObserver
+	man           *rollupmanager.Manager
 	maxCallSteps  uint32
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(chainObserver *rollup.ChainObserver, maxCallSteps uint32) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallSteps uint32) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
-	chainObserver.AddListener(assertionListener)
+	man.AddListener(assertionListener)
 
-	rollupAddress := chainObserver.ContractAddress()
-	tracker := newTxTracker(rollupAddress)
+	tracker := newTxTracker(man.RollupAddress)
 	go func() {
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{rollupAddress, tracker, chainObserver, maxCallSteps}, nil
+	return &Server{man.RollupAddress, tracker, man, maxCallSteps}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -177,7 +178,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		msg.Data,
-		value.NewIntValue(m.chain.CurrentBlockId().Height.AsInt()),
+		value.NewIntValue(m.man.CurrentBlockId().Height.AsInt()),
 		value.NewIntValue(msgHashInt),
 	})
 	callingMessage := valprotocol.Message{
@@ -189,7 +190,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	messageStack := protocol.NewMessageStack()
 	messageStack.AddMessage(callingMessage.AsValue())
 
-	assertion, steps := m.chain.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
+	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
 
 	log.Println("Executed call for", steps, "steps")
 

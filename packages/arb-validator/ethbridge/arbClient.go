@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -70,9 +71,34 @@ func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId,
 	return getBlockID(header), nil
 }
 
+func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
+	if err != nil {
+		return nil, err
+	}
+	return getBlockID(header), nil
+}
+
+type TransactAuth struct {
+	sync.Mutex
+	auth *bind.TransactOpts
+}
+
+func (t *TransactAuth) getAuth(ctx context.Context) *bind.TransactOpts {
+	return &bind.TransactOpts{
+		From:     t.auth.From,
+		Nonce:    t.auth.Nonce,
+		Signer:   t.auth.Signer,
+		Value:    t.auth.Value,
+		GasPrice: t.auth.GasPrice,
+		GasLimit: t.auth.GasLimit,
+		Context:  ctx,
+	}
+}
+
 type EthArbAuthClient struct {
 	*EthArbClient
-	auth *bind.TransactOpts
+	auth *TransactAuth
 }
 
 func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*EthArbAuthClient, error) {
@@ -82,12 +108,12 @@ func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*EthArbAuthClient
 	}
 	return &EthArbAuthClient{
 		EthArbClient: client,
-		auth:         auth,
+		auth:         &TransactAuth{auth: auth},
 	}, nil
 }
 
 func (c *EthArbAuthClient) Address() common.Address {
-	return common.NewAddressFromEth(c.auth.From)
+	return common.NewAddressFromEth(c.auth.auth.From)
 }
 
 func (c *EthArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
@@ -119,14 +145,16 @@ func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbr
 }
 
 func (c *EthArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
-	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c.client)
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client)
 	if err != nil {
 		return nil, err
 	}
 	if err := waitForReceipt(
 		context.Background(),
 		c.client,
-		c.auth.From,
+		c.auth.auth.From,
 		tx,
 		"DeployChallengeTester",
 	); err != nil {

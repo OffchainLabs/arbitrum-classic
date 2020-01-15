@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"bytes"
 	"context"
+	"errors"
 	"math/big"
 	"strings"
 
@@ -153,55 +154,79 @@ func (vm *ethRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	if err := vm.setupContracts(); err != nil {
-		return err
+		return nil, err
 	}
 
 	headers := make(chan *types.Header)
 	headersSub, err := vm.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
+	logCtx, cancelFunc := context.WithCancel(ctx)
 
-	if err := getLogs(ctx, vm.client, vm.rollupFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
-		return err
+	rollupMaybeLogChan, err := getLogs(logCtx, vm.client, vm.rollupFilter(), startHeight, startLogIndex)
+	if err != nil {
+		return nil, err
+	}
+	inboxMaybeLogChan, err := getLogs(logCtx, vm.client, vm.messageFilter(), startHeight, startLogIndex)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := getLogs(ctx, vm.client, vm.messageFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
-		return err
-	}
-
+	eventChan := make(chan arbbridge.MaybeEvent, 1024)
 	go func() {
+		defer close(eventChan)
+		defer cancelFunc()
 		defer headersSub.Unsubscribe()
 
 		for {
 			select {
 			case <-ctx.Done():
-				break
+				return
 			case header := <-headers:
-				outChan <- arbbridge.Notification{
+				eventChan <- arbbridge.MaybeEvent{Event: arbbridge.NewTimeEvent{arbbridge.ChainInfo{
 					BlockId: getBlockID(header),
-					Event:   arbbridge.NewTimeEvent{},
-				}
-			case ethLog := <-logChan:
-				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
-					errChan <- err
+				}}}
+			case maybeLog, ok := <-rollupMaybeLogChan:
+				if !ok {
+					eventChan <- arbbridge.MaybeEvent{Err: errors.New("rollupMaybeLogChan terminated early")}
 					return
 				}
-			case err := <-logErrChan:
-				errChan <- err
-				return
+				if maybeLog.err != nil {
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				event, err := vm.processEvents(ctx, maybeLog.log)
+				if err != nil {
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				eventChan <- arbbridge.MaybeEvent{Event: event}
+			case maybeLog, ok := <-inboxMaybeLogChan:
+				if !ok {
+					eventChan <- arbbridge.MaybeEvent{Err: errors.New("inboxMaybeLogChan terminated early")}
+					return
+				}
+				if maybeLog.err != nil {
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				event, err := vm.processEvents(ctx, maybeLog.log)
+				if err != nil {
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				eventChan <- arbbridge.MaybeEvent{Event: event}
 			case err := <-headersSub.Err():
-				errChan <- err
+				eventChan <- arbbridge.MaybeEvent{Err: err}
 				return
 			}
 		}
 	}()
-	return nil
+	return eventChan, nil
 }
 
 func AddressToIntValue(address common.Address) value.IntValue {
@@ -212,7 +237,7 @@ func AddressToIntValue(address common.Address) value.IntValue {
 	return value.NewIntValue(addressVal)
 }
 
-func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arbbridge.Event, error) {
+func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
 		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
@@ -254,7 +279,8 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arb
 		})
 
 		return arbbridge.MessageDeliveredEvent{
-			MsgValue: dataMsg,
+			ChainInfo: chainInfo,
+			MsgValue:  dataMsg,
 		}, nil
 
 	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
@@ -290,7 +316,8 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arb
 		})
 
 		return arbbridge.MessageDeliveredEvent{
-			MsgValue: dataMsg,
+			ChainInfo: chainInfo,
+			MsgValue:  dataMsg,
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
@@ -328,7 +355,8 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arb
 		})
 
 		return arbbridge.MessageDeliveredEvent{
-			MsgValue: dataMsg,
+			ChainInfo: chainInfo,
+			MsgValue:  dataMsg,
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
@@ -366,7 +394,8 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arb
 		})
 
 		return arbbridge.MessageDeliveredEvent{
-			MsgValue: dataMsg,
+			ChainInfo: chainInfo,
+			MsgValue:  dataMsg,
 		}, nil
 
 	} else {
@@ -374,130 +403,124 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arb
 	}
 }
 
-func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if ethLog.Topics[0] == rollupStakeCreatedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.StakeCreatedEvent{
-				Staker:   common.NewAddressFromEth(eventVal.Staker),
-				NodeHash: eventVal.NodeHash,
-			}, nil
-		} else if ethLog.Topics[0] == rollupChallengeStartedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ChallengeStartedEvent{
-				Asserter:          common.NewAddressFromEth(eventVal.Asserter),
-				Challenger:        common.NewAddressFromEth(eventVal.Challenger),
-				ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
-				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
-			}, nil
-		} else if ethLog.Topics[0] == rollupChallengeCompletedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ChallengeCompletedEvent{
-				Winner:            common.NewAddressFromEth(eventVal.Winner),
-				Loser:             common.NewAddressFromEth(eventVal.Loser),
-				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
-			}, nil
-		} else if ethLog.Topics[0] == rollupRefundedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.StakeRefundedEvent{
-				Staker: common.NewAddressFromEth(eventVal.Staker),
-			}, nil
-		} else if ethLog.Topics[0] == rollupPrunedID {
-			eventVal, err := vm.ArbRollup.ParseRollupPruned(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.PrunedEvent{
-				Leaf: eventVal.Leaf,
-			}, nil
-		} else if ethLog.Topics[0] == rollupStakeMovedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.StakeMovedEvent{
-				Staker:   common.NewAddressFromEth(eventVal.Staker),
-				Location: eventVal.ToNodeHash,
-			}, nil
-		} else if ethLog.Topics[0] == rollupAssertedID {
-			eventVal, err := vm.ArbRollup.ParseRollupAsserted(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.AssertedEvent{
-				PrevLeafHash: eventVal.Fields[0],
-				Params: &structures.AssertionParams{
-					NumSteps: eventVal.NumSteps,
-					TimeBounds: &protocol.TimeBoundsBlocks{
-						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
-						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
-					},
-					ImportedMessageCount: eventVal.ImportedMessageCount,
-				},
-				Claim: &structures.AssertionClaim{
-					AfterPendingTop:       eventVal.Fields[2],
-					ImportedMessagesSlice: eventVal.Fields[3],
-					AssertionStub: &valprotocol.ExecutionAssertionStub{
-						AfterHash:        eventVal.Fields[4],
-						DidInboxInsn:     eventVal.DidInboxInsn,
-						NumGas:           eventVal.NumArbGas,
-						FirstMessageHash: [32]byte{},
-						LastMessageHash:  eventVal.Fields[5],
-						FirstLogHash:     [32]byte{},
-						LastLogHash:      eventVal.Fields[6],
-					},
-				},
-				MaxPendingTop:   eventVal.Fields[1],
-				MaxPendingCount: eventVal.PendingCount,
-			}, nil
-		} else if ethLog.Topics[0] == rollupConfirmedID {
-			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ConfirmedEvent{
-				NodeHash: eventVal.NodeHash,
-			}, nil
-		} else if ethLog.Topics[0] == confirmedAssertionID {
-			eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(ethLog)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ConfirmedAssertionEvent{
-				LogsAccHash: eventVal.LogsAccHash,
-			}, nil
-		} else {
-			return vm.ProcessMessageDeliveredEvents(ethLog)
-		}
-	}()
-
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log) (arbbridge.Event, error) {
+	header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if event != nil {
-		header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
+	chainInfo := getChainInfo(ethLog, header)
+	if ethLog.Topics[0] == rollupStakeCreatedID {
+		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		outChan <- arbbridge.Notification{
-			BlockId: getBlockID(header),
-			Event:   event,
-			TxHash:  ethLog.TxHash,
+		return arbbridge.StakeCreatedEvent{
+			ChainInfo: chainInfo,
+			Staker:    common.NewAddressFromEth(eventVal.Staker),
+			NodeHash:  eventVal.NodeHash,
+		}, nil
+	} else if ethLog.Topics[0] == rollupChallengeStartedID {
+		eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(ethLog)
+		if err != nil {
+			return nil, err
 		}
+		return arbbridge.ChallengeStartedEvent{
+			ChainInfo:         chainInfo,
+			Asserter:          common.NewAddressFromEth(eventVal.Asserter),
+			Challenger:        common.NewAddressFromEth(eventVal.Challenger),
+			ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
+			ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
+		}, nil
+	} else if ethLog.Topics[0] == rollupChallengeCompletedID {
+		eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ChallengeCompletedEvent{
+			ChainInfo:         chainInfo,
+			Winner:            common.NewAddressFromEth(eventVal.Winner),
+			Loser:             common.NewAddressFromEth(eventVal.Loser),
+			ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
+		}, nil
+	} else if ethLog.Topics[0] == rollupRefundedID {
+		eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.StakeRefundedEvent{
+			ChainInfo: chainInfo,
+			Staker:    common.NewAddressFromEth(eventVal.Staker),
+		}, nil
+	} else if ethLog.Topics[0] == rollupPrunedID {
+		eventVal, err := vm.ArbRollup.ParseRollupPruned(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.PrunedEvent{
+			ChainInfo: chainInfo,
+			Leaf:      eventVal.Leaf,
+		}, nil
+	} else if ethLog.Topics[0] == rollupStakeMovedID {
+		eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.StakeMovedEvent{
+			ChainInfo: chainInfo,
+			Staker:    common.NewAddressFromEth(eventVal.Staker),
+			Location:  eventVal.ToNodeHash,
+		}, nil
+	} else if ethLog.Topics[0] == rollupAssertedID {
+		eventVal, err := vm.ArbRollup.ParseRollupAsserted(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.AssertedEvent{
+			ChainInfo:    chainInfo,
+			PrevLeafHash: eventVal.Fields[0],
+			Params: &structures.AssertionParams{
+				NumSteps: eventVal.NumSteps,
+				TimeBounds: &protocol.TimeBoundsBlocks{
+					common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
+					common.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+				},
+				ImportedMessageCount: eventVal.ImportedMessageCount,
+			},
+			Claim: &structures.AssertionClaim{
+				AfterPendingTop:       eventVal.Fields[2],
+				ImportedMessagesSlice: eventVal.Fields[3],
+				AssertionStub: &valprotocol.ExecutionAssertionStub{
+					AfterHash:        eventVal.Fields[4],
+					DidInboxInsn:     eventVal.DidInboxInsn,
+					NumGas:           eventVal.NumArbGas,
+					FirstMessageHash: [32]byte{},
+					LastMessageHash:  eventVal.Fields[5],
+					FirstLogHash:     [32]byte{},
+					LastLogHash:      eventVal.Fields[6],
+				},
+			},
+			MaxPendingTop:   eventVal.Fields[1],
+			MaxPendingCount: eventVal.PendingCount,
+		}, nil
+	} else if ethLog.Topics[0] == rollupConfirmedID {
+		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ConfirmedEvent{
+			ChainInfo: chainInfo,
+			NodeHash:  eventVal.NodeHash,
+		}, nil
+	} else if ethLog.Topics[0] == confirmedAssertionID {
+		eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ConfirmedAssertionEvent{
+			LogsAccHash: eventVal.LogsAccHash,
+		}, nil
 	}
-	return nil
+	return vm.ProcessMessageDeliveredEvents(chainInfo, ethLog)
 }
 
 func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {

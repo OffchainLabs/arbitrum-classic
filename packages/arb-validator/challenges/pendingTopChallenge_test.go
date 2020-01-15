@@ -46,18 +46,26 @@ func TestPendingTopChallenge(t *testing.T) {
 	if err := testChallenge(
 		structures.InvalidPendingChildType,
 		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendPendingTopClaim(
 				client,
 				challengeAddress,
+				blockId,
+				0,
 				messageStack,
 				bottomHash,
 				topHash,
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
-			return ChallengePendingTopClaim(client, challengeAddress, messageStack)
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+			return ChallengePendingTopClaim(
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+			)
 		},
 	); err != nil {
 		t.Fatal(err)

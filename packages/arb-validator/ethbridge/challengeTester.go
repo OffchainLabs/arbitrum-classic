@@ -20,9 +20,10 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -33,10 +34,10 @@ import (
 type ChallengeTester struct {
 	contract *challengetester.ChallengeTester
 	client   *ethclient.Client
-	auth     *bind.TransactOpts
+	auth     *TransactAuth
 }
 
-func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeTester, error) {
+func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*ChallengeTester, error) {
 	vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
@@ -52,10 +53,11 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, error) {
-	con.auth.Context = ctx
+) (common.Address, *structures.BlockId, error) {
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.contract.StartChallenge(
-		con.auth,
+		con.auth.getAuth(ctx),
 		factory.ToEthAddress(),
 		asserter.ToEthAddress(),
 		challenger.ToEthAddress(),
@@ -64,17 +66,17 @@ func (con *ChallengeTester) StartChallenge(
 		challengeType,
 	)
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
+		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
 	}
 
-	receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")
+	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChallenge")
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
 
 	if len(receipt.Logs) != 1 {
-		return common.Address{}, errors2.New("Wrong receipt count")
+		return common.Address{}, nil, errors2.New("Wrong receipt count")
 	}
 
-	return common.NewAddressFromEth(receipt.Logs[0].Address), nil
+	return common.NewAddressFromEth(receipt.Logs[0].Address), getTxBlockID(receipt), nil
 }

@@ -97,8 +97,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         
             if(valid){
                 _deliverTransactionMessage(
-                    msg.sender,
                     address(bytes20(bytes32(vmAddress))),
+                    address(bytes20(bytes32(contractAddress))),
+                    msg.sender,
                     seqNumber,
                     value,
                     messageData
@@ -172,6 +173,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function forwardTransactionMessage(
         address _vmAddress,
+        address _contractAddress,
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data,
@@ -181,6 +183,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             keccak256(
                 abi.encodePacked(
                     _vmAddress,
+                    _contractAddress,
                     _seqNumber,
                     _value,
                     Value.deserializeHashed(_data)
@@ -190,8 +193,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         );
 
         _deliverTransactionMessage(
-            sender,
             _vmAddress,
+            _contractAddress,
+            sender,
             _seqNumber,
             _value,
             _data
@@ -200,13 +204,15 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function sendTransactionMessage(
         address _vmAddress,
+        address _contractAddress,
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data) external
     {
         _deliverTransactionMessage(
-            msg.sender,
             _vmAddress,
+            _contractAddress,
+            msg.sender,
             _seqNumber,
             _value,
             _data
@@ -271,8 +277,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function _deliverTransactionMessage(
-        address _sender,
         address _vmAddress,
+        address _contractAddress,
+        address _sender,
         uint256 _seqNumber,
         uint256 _value,
         bytes memory _data) private
@@ -291,10 +298,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 )
             );
 
-            Value.Data[] memory msgValues = new Value.Data[](3);
-            msgValues[0] = Value.newInt(_seqNumber);
-            msgValues[1] = Value.newInt(_value);
-            msgValues[2] = Value.newHashOnly(dataHash);
+            Value.Data[] memory msgValues = new Value.Data[](4);
+            msgValues[0] = Value.newInt(uint256(_contractAddress));
+            msgValues[1] = Value.newInt(_seqNumber);
+            msgValues[2] = Value.newInt(_value);
+            msgValues[3] = Value.newHashOnly(dataHash);
 
             Value.Data[] memory msgType = new Value.Data[](3);
             msgType[0] = Value.newInt(TRANSACTION_MSG);

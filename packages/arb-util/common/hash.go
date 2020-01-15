@@ -35,6 +35,10 @@ func (h Hash) Bytes() []byte {
 	return h[:]
 }
 
+func (h Hash) Equals(h2 Hash) bool {
+	return h == h2
+}
+
 func (h Hash) ToEthHash() ethcommon.Hash {
 	return ethcommon.Hash(h)
 }

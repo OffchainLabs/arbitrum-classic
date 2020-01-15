@@ -28,13 +28,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -140,21 +141,6 @@ func createRollupChain() {
 	fmt.Println(address.Hex())
 }
 
-func setupChainObserver(
-	client arbbridge.ArbClient,
-	rollupAddress common.Address,
-	codeFile string,
-) (*rollup.ChainObserver, error) {
-	ctx := context.Background()
-	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
-	if err != nil {
-		return nil, err
-	}
-	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	return chainObserver, nil
-}
-
 func validateRollupChain() error {
 	// Check number of args
 
@@ -201,19 +187,29 @@ func validateRollupChain() error {
 		return err
 	}
 
-	chainObserver, err := setupChainObserver(client, address, validateCmd.Arg(0))
+	rollupActor, err := client.NewRollup(address)
 	if err != nil {
 		return err
 	}
-	validatorListener := rollup.NewValidatorChainListener(chainObserver)
+
+	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
-	chainObserver.AddListener(validatorListener)
+
+	ctx := context.Background()
+	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, "")
+	if err != nil {
+		return err
+	}
+	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
-		rollupvalidator.LaunchRPC(chainObserver, "1235")
+		if err := rollupvalidator.LaunchRPC(manager, "1235"); err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		wait := make(chan bool)
 		<-wait

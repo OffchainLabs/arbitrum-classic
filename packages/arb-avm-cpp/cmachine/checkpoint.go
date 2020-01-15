@@ -120,6 +120,20 @@ func (checkpoint *CheckpointStorage) DeleteValue(hashValue common.Hash) bool {
 }
 
 func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
+	if len(key) == 0 {
+		return false
+	}
+
+	if len(data) == 0 {
+		success := C.saveData(checkpoint.c,
+			unsafe.Pointer(&key[0]),
+			C.int(len(key)),
+			unsafe.Pointer(nil),
+			C.int(0),
+		)
+		return success == 1
+	}
+
 	success := C.saveData(checkpoint.c,
 		unsafe.Pointer(&key[0]),
 		C.int(len(key)),

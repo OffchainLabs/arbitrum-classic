@@ -19,7 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"math/big"
+	"log"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -79,92 +79,78 @@ func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	headers := make(chan *types.Header)
-	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
+func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	filter := ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{c.topics()},
 	}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
-
-	if err := getLogs(ctx, c.client, filter, big.NewInt(0), logChan, logErrChan); err != nil {
-		return err
+	logCtx, cancelFunc := context.WithCancel(ctx)
+	maybeLogChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+	if err != nil {
+		return nil, err
 	}
 
+	eventChan := make(chan arbbridge.MaybeEvent, 1024)
 	go func() {
-		defer headersSub.Unsubscribe()
-
+		defer close(eventChan)
+		defer cancelFunc()
 		for {
 			select {
 			case <-ctx.Done():
-				break
-			case evmLog, ok := <-logChan:
+				log.Println("pendingTopChallengeWatcher context canceled")
+				return
+			case maybeLog, ok := <-maybeLogChan:
 				if !ok {
-					errChan <- errors.New("logChan terminated early")
+					log.Println("maybeLogChan terminated")
+					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
 					return
 				}
-				if err := c.processEvents(ctx, evmLog, outChan); err != nil {
-					errChan <- err
+				if maybeLog.err != nil {
+					log.Println("maybeLog had error", err)
+					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}
-			case err := <-logErrChan:
-				errChan <- err
-				return
-			case err := <-headersSub.Err():
-				errChan <- err
-				return
+				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
+				if err != nil {
+					log.Println("header had error", err)
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				chainInfo := getChainInfo(maybeLog.log, header)
+				event, err := c.parsePendingTopEvent(chainInfo, maybeLog.log)
+				if err != nil {
+					log.Println("Failed parsing event", err)
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				eventChan <- arbbridge.MaybeEvent{Event: event}
 			}
 		}
 	}()
-	return nil
+	return eventChan, nil
 }
 
-func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == pendingTopBisectedID {
-			eventVal, err := c.contract.ParseBisected(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.PendingTopBisectionEvent{
-				ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
-				TotalLength: eventVal.TotalLength,
-				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
-			}, nil
-		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-			_, err := c.contract.ParseOneStepProofCompleted(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.OneStepProofEvent{}, nil
-		} else {
-			event, err := c.bisectionChallengeWatcher.parseBisectionEvent(log)
-			if event != nil || err != nil {
-				return event, err
-			}
+func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == pendingTopBisectedID {
+		eventVal, err := c.contract.ParseBisected(log)
+		if err != nil {
+			return nil, err
 		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-
-	if err != nil {
-		return err
+		return arbbridge.PendingTopBisectionEvent{
+			ChainInfo:   chainInfo,
+			ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
+			TotalLength: eventVal.TotalLength,
+			Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
+		}, nil
+	} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
+		_, err := c.contract.ParseOneStepProofCompleted(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.OneStepProofEvent{
+			ChainInfo: chainInfo,
+		}, nil
 	}
-
-	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-	outChan <- arbbridge.Notification{
-		BlockId: getBlockID(header),
-		Event:   event,
-		TxHash:  log.TxHash,
-	}
-	return nil
+	return c.bisectionChallengeWatcher.parseBisectionEvent(chainInfo, log)
 }

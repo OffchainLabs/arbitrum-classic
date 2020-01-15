@@ -34,55 +34,73 @@ const (
 	ChallengeChallengerTimedOut
 )
 
-var challengeNoEvents = errors.New("PendingTopChallengeContract notification channel terminated unexpectedly")
+var replayTimeout = time.Second
 
-func handleNextEvent(note arbbridge.Notification) (outNote arbbridge.Notification, state ChallengeState, err error) {
-	switch note.Event.(type) {
+var challengeNoEvents = errors.New("challenge event channel terminated unexpectedly")
+
+func getAfterState(event arbbridge.Event) ChallengeState {
+	switch event.(type) {
 	case arbbridge.AsserterTimeoutEvent:
-		return note, ChallengeAsserterTimedOut, nil
+		return ChallengeAsserterTimedOut
 	case arbbridge.ChallengerTimeoutEvent:
-		return note, ChallengeChallengerTimedOut, nil
+		return ChallengeChallengerTimedOut
 	}
-	return note, 0, nil
+	return ChallengeContinuing
 }
 
-func getNextEvent(outChan chan arbbridge.Notification) (note arbbridge.Notification, state ChallengeState, err error) {
-	note, ok := <-outChan
+func getNextEvent(eventChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
+	event, ok := <-eventChan
 	if !ok {
-		return note, 0, challengeNoEvents
+		return nil, 0, challengeNoEvents
 	}
-	return handleNextEvent(note)
+	return event, getAfterState(event), nil
 }
 
 func getNextEventWithTimeout(
 	ctx context.Context,
-	outChan chan arbbridge.Notification,
+	eventChan <-chan arbbridge.Event,
 	deadline common.TimeTicks,
 	contract arbbridge.Challenge,
 	client arbbridge.ArbClient,
-) (note arbbridge.Notification, state ChallengeState, err error) {
+) (arbbridge.Event, ChallengeState, error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-			return note, state, errors.New("context cancelled while waiting for event")
+			return nil, 0, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
 			blockId, err := client.CurrentBlockId(ctx)
 			if err != nil {
-				return note, 0, err
+				return nil, 0, err
 			}
 			if common.TimeFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
-					return note, 0, err
+					return nil, 0, err
 				}
 				ticker.Stop()
 			}
-		case note, ok := <-outChan:
+		case event, ok := <-eventChan:
 			if !ok {
-				return note, 0, challengeNoEvents
+				return nil, 0, challengeNoEvents
 			}
-			return handleNextEvent(note)
+			return event, getAfterState(event), nil
+		}
+	}
+}
+
+func getNextEventIfExists(ctx context.Context, eventChan <-chan arbbridge.Event, timeout time.Duration) (bool, arbbridge.Event, ChallengeState, error) {
+	for {
+		select {
+		case event, ok := <-eventChan:
+			if !ok {
+				return false, nil, 0, challengeNoEvents
+			}
+			return false, event, getAfterState(event), nil
+		case <-time.After(timeout):
+			return true, nil, 0, nil
+		case <-ctx.Done():
+			return false, nil, 0, errors.New("context cancelled while waiting for event")
 		}
 	}
 }

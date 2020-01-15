@@ -18,44 +18,75 @@ package arbbridge
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher) chan Notification {
-	outChan := make(chan Notification, 1024)
-	errChan := make(chan error, 1024)
-	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {
-		log.Println("Bad conn 1", err)
-		close(outChan)
-		close(errChan)
-		return nil
+func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures.BlockId, startLogIndex uint, contract ContractWatcher) (context.Context, <-chan Event, error) {
+	rawEventChan, err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	noteChan := make(chan Notification, 1024)
+	reorgCtx, cancelFunc := context.WithCancel(ctx)
+
+	eventChan := make(chan Event, 1024)
 	go func() {
-		defer close(outChan)
-		defer close(errChan)
-		defer close(noteChan)
+		defer cancelFunc()
+		defer close(eventChan)
+
+		latestBlockId := startBlockId
+		latestLogIndex := startLogIndex
+
 		for {
-			hitError := false
+			var err error
 			select {
 			case <-ctx.Done():
-				break
-			case notification, ok := <-outChan:
+				log.Println("Event monitor canceled")
+				return
+			case maybeEvent, ok := <-rawEventChan:
 				if !ok {
-					hitError = true
+					log.Println("rawEventChan channel closed")
+					err = errors.New("rawEventChan closed")
 					break
 				}
-				noteChan <- notification
-			case <-errChan:
-				hitError = true
+				if maybeEvent.Err != nil {
+					log.Println("HandleBlockchainNotifications rawEventChan had error", maybeEvent.Err)
+					err = maybeEvent.Err
+					break
+				}
+
+				chainInfo := maybeEvent.Event.GetChainInfo()
+				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
+				case -1:
+					// reorg
+					log.Printf("Earlier reorg occured: Saw block %v with previous block %v\n", chainInfo.BlockId.Height, latestBlockId.Height)
+					return
+				case 0:
+					if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
+						// reorg
+						log.Printf("Same height reorg occured: Saw block %v with previous block %v\n", chainInfo.BlockId.HeaderHash, latestBlockId.HeaderHash)
+						return
+					}
+					if chainInfo.LogIndex >= latestLogIndex {
+						latestLogIndex = chainInfo.LogIndex
+						eventChan <- maybeEvent.Event
+					}
+				case 1:
+					latestBlockId = chainInfo.BlockId
+					latestLogIndex = chainInfo.LogIndex
+					eventChan <- maybeEvent.Event
+				}
 			}
 
-			if hitError {
+			if err != nil {
 				// Ignore error and try to reset connection
+				log.Println("Restarting connection due to error", err)
 				for {
-					err := contract.StartConnection(ctx, outChan, errChan)
+					rawEventChan, err = contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1)
 					if err == nil {
 						break
 					}
@@ -70,5 +101,5 @@ func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher
 			}
 		}
 	}()
-	return noteChan
+	return reorgCtx, eventChan, nil
 }

@@ -22,54 +22,68 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+type maybeLog struct {
+	log types.Log
+	err error
+}
+
 func getLogs(
 	ctx context.Context,
 	client *ethclient.Client,
 	filter ethereum.FilterQuery,
-	startHeight *big.Int,
-	logChan chan types.Log,
-	errChan chan error,
-) error {
+	startHeight *common.TimeBlocks,
+	startIndex uint,
+) (<-chan maybeLog, error) {
+	header, err := client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 	streamingLogChan := make(chan types.Log)
 	logSub, err := client.SubscribeFilterLogs(ctx, filter, streamingLogChan)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	header, err := client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-	//debug.PrintStack()
+	logChan := make(chan maybeLog, 1024)
 	go func() {
 		defer close(logChan)
 		defer logSub.Unsubscribe()
+
 		// Get initial old logs
-		filter.FromBlock = startHeight
+		filter.FromBlock = startHeight.AsInt()
 		filter.ToBlock = header.Number
 		log.Println("Filter1 from", filter.FromBlock, "to", filter.ToBlock)
 		logs, err := client.FilterLogs(ctx, filter)
 		if err != nil {
-			errChan <- err
+			logChan <- maybeLog{err: err}
 			return
 		}
 		for _, ethLog := range logs {
-			logChan <- ethLog
+			if ethLog.BlockNumber > startHeight.AsInt().Uint64() || ethLog.Index >= startIndex {
+				logChan <- maybeLog{log: ethLog}
+			}
 		}
 
-		// Retreive for log from stream
+		// Retrieve for log from stream
 		var ethStreamLog types.Log
+		var ok bool
 		select {
 		case <-ctx.Done():
 			return
-		case ethStreamLog = <-streamingLogChan:
+		case ethStreamLog, ok = <-streamingLogChan:
+			if !ok {
+				logChan <- maybeLog{err: errors.New("streamingLogChan terminated early1")}
+				return
+			}
 			log.Println("First stream log", ethStreamLog.BlockNumber)
 		case err := <-logSub.Err():
-			errChan <- err
+			logChan <- maybeLog{err: err}
 			return
 		}
 
@@ -80,14 +94,15 @@ func getLogs(
 			log.Println("Filter2 from", filter.FromBlock, "to", filter.ToBlock)
 			logs, err := client.FilterLogs(ctx, filter)
 			if err != nil {
-				errChan <- err
+				logChan <- maybeLog{err: err}
 				return
 			}
 			for _, ethLog := range logs {
-				logChan <- ethLog
+				logChan <- maybeLog{log: ethLog}
 			}
 		}
-		logChan <- ethStreamLog
+
+		logChan <- maybeLog{log: ethStreamLog}
 
 		for {
 			select {
@@ -95,16 +110,16 @@ func getLogs(
 				return
 			case ethLog, ok := <-streamingLogChan:
 				if !ok {
-					errChan <- errors.New("streamingLogChan terminated early2")
+					logChan <- maybeLog{err: errors.New("streamingLogChan terminated early2")}
 					return
 				}
-				logChan <- ethLog
+				logChan <- maybeLog{log: ethLog}
 			case err := <-logSub.Err():
-				errChan <- err
+				logChan <- maybeLog{err: err}
 				return
 			}
 		}
 	}()
 
-	return nil
+	return logChan, nil
 }

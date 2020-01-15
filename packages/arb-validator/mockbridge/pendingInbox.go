@@ -23,7 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type PendingInbox struct {
@@ -39,78 +38,42 @@ func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*Pendi
 	return &PendingInbox{client}, nil
 }
 
-func (con *PendingInbox) SendMessage(
-	ctx context.Context,
-	msg valprotocol.Message,
-) error {
-	//var dataBuf bytes.Buffer
-	//if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-	//	return err
-	//}
-	//tx, err := con.GlobalPendingInbox.SendMessage(
-	//	auth,
-	//	msg.Destination,
-	//	msg.TokenType,
-	//	msg.Currency,
-	//	dataBuf.Bytes(),
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return waitForReceipt(auth.Context, con.client, auth.From, tx, "SendMessage")
-	return nil
-}
-
-func (con *PendingInbox) ForwardMessage(
-	ctx context.Context,
-	msg valprotocol.Message,
-	sig []byte,
-) error {
-	//var dataBuf bytes.Buffer
-	//if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-	//	return err
-	//}
-	//tx, err := con.GlobalPendingInbox.ForwardMessage(
-	//	auth,
-	//	msg.Destination,
-	//	msg.TokenType,
-	//	msg.Currency,
-	//	dataBuf.Bytes(),
-	//	sig,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return waitForReceipt(auth.Context, con.client, auth.From, tx, "ForwardMessage")
-	return nil
-}
-
 func (con *PendingInbox) SendTransactionMessage(
 	ctx context.Context,
 	data value.Value,
-	destination common.Address,
+	vmAddress common.Address,
 	amount *big.Int,
 	seqNumber *big.Int,
 ) error {
-	//var dataBuf bytes.Buffer
-	//if err := value.MarshalValue(data, &dataBuf); err != nil {
-	//	return 0, err
-	//}
-	//tx, err := con.GlobalPendingInbox.SendEthMessage(
-	//	&bind.TransactOpts{
-	//		From:     auth.From,
-	//		Signer:   auth.Signer,
-	//		GasLimit: auth.GasLimit,
-	//		Value:    amount,
-	//	},
-	//	destination,
-	//	dataBuf.Bytes(),
-	//)
-	//if err != nil {
-	//	return 0, err
-	//}
-	//receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
-	//return receipt.Status, err
+	return nil
+}
+
+func (con *PendingInbox) DepositEthMessage(
+	ctx context.Context,
+	vmAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+	return nil
+}
+
+func (con *PendingInbox) DepositERC20Message(
+	ctx context.Context,
+	vmAddress common.Address,
+	tokenAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+	return nil
+}
+
+func (con *PendingInbox) DepositERC721Message(
+	ctx context.Context,
+	vmAddress common.Address,
+	tokenAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
 	return nil
 }
 
