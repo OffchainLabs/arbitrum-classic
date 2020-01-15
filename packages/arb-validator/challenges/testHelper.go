@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -112,20 +113,49 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		endState, err := asserterFunc(challengeAddress, client1, blockId)
-		if err != nil {
-			asserterErrChan <- err
-		} else {
-			asserterEndChan <- endState
+		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		tryCount := 0
+		for {
+			endState, err := asserterFunc(challengeAddress, client1, cBlockId)
+			if err == nil {
+				asserterEndChan <- endState
+				return
+			}
+			if tryCount > 5 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting asserter")
+			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
 		}
+
 	}()
 
 	go func() {
-		endState, err := challengerFunc(challengeAddress, client2, blockId)
-		if err != nil {
-			challengerErrChan <- err
-		} else {
-			challengerEndChan <- endState
+		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		tryCount := 0
+		for {
+			endState, err := challengerFunc(challengeAddress, client2, cBlockId)
+			if err == nil {
+				asserterEndChan <- endState
+				return
+			}
+			if tryCount > 5 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting challenger")
+			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
 		}
 	}()
 
