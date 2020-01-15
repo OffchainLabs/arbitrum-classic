@@ -145,6 +145,11 @@ func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
 
 func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
 	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
+
+	if cData.length == 0 {
+		return nil
+	}
+
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))
