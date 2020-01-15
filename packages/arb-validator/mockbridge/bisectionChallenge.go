@@ -49,7 +49,7 @@ func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (
 //	return nil
 //}
 
-func (c *BisectionChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
+func (c *BisectionChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	//if _, _, err := c.Challenge.StartConnection(ctx, startHeight, startLogIndex, eventChan); err != nil {
 	//	return nil, nil, err
 	//}
@@ -104,7 +104,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, startHeight *c
 	//		}
 	//	}
 	//}()
-	return nil, nil, nil
+	return nil, nil
 }
 
 //func (c *bisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {

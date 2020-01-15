@@ -22,6 +22,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type MaybeEvent struct {
+	Event Event
+	Err   error
+}
+
 type ContractWatcher interface {
-	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan Event, <-chan error, error)
+	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan MaybeEvent, error)
 }

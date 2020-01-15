@@ -79,52 +79,51 @@ func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
+func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	filter := ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{c.topics()},
 	}
 
 	logCtx, cancelFunc := context.WithCancel(ctx)
-	logChan, logErrChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+	maybeLogChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	eventChan := make(chan arbbridge.Event, 1024)
-	errChan := make(chan error, 1024)
+	eventChan := make(chan arbbridge.MaybeEvent, 1024)
 	go func() {
 		defer close(eventChan)
-		defer close(errChan)
 		defer cancelFunc()
 		for {
 			select {
 			case <-ctx.Done():
 				break
-			case evmLog, ok := <-logChan:
+			case maybeLog, ok := <-maybeLogChan:
 				if !ok {
-					errChan <- errors.New("logChan terminated early")
+					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
 					return
 				}
-				header, err := c.client.HeaderByHash(ctx, evmLog.BlockHash)
+				if maybeLog.err != nil {
+					eventChan <- arbbridge.MaybeEvent{Err: err}
+					return
+				}
+				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
 				if err != nil {
-					errChan <- err
+					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}
-				chainInfo := getChainInfo(evmLog, header)
-				event, err := c.parseMessagesEvent(chainInfo, evmLog)
+				chainInfo := getChainInfo(maybeLog.log, header)
+				event, err := c.parseMessagesEvent(chainInfo, maybeLog.log)
 				if err != nil {
-					errChan <- err
+					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}
-				eventChan <- event
-			case err := <-logErrChan:
-				errChan <- err
-				return
+				eventChan <- arbbridge.MaybeEvent{Event: event}
 			}
 		}
 	}()
-	return eventChan, errChan, nil
+	return eventChan, nil
 }
 
 func (c *messagesChallengeWatcher) parseMessagesEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {

@@ -26,7 +26,7 @@ import (
 )
 
 func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures.BlockId, startLogIndex uint, contract ContractWatcher) (context.Context, <-chan Event, error) {
-	rawEventChan, errChan, err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex)
+	rawEventChan, err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,18 +40,23 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 
 		latestBlockId := startBlockId
 		latestLogIndex := startLogIndex
+
 		for {
 			var err error
 			select {
 			case <-ctx.Done():
-				break
-			case event, ok := <-rawEventChan:
+				return
+			case maybeEvent, ok := <-rawEventChan:
 				if !ok {
 					err = errors.New("rawEventChan closed")
 					break
 				}
+				if maybeEvent.Err != nil {
+					err = maybeEvent.Err
+					break
+				}
 
-				chainInfo := event.GetChainInfo()
+				chainInfo := maybeEvent.Event.GetChainInfo()
 				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 				case -1:
 					// reorg
@@ -63,21 +68,20 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 					}
 					if chainInfo.LogIndex >= latestLogIndex {
 						latestLogIndex = chainInfo.LogIndex
-						eventChan <- event
+						eventChan <- maybeEvent.Event
 					}
 				case 1:
 					latestBlockId = chainInfo.BlockId
 					latestLogIndex = chainInfo.LogIndex
-					eventChan <- event
+					eventChan <- maybeEvent.Event
 				}
-			case err = <-errChan:
 			}
 
 			if err != nil {
 				// Ignore error and try to reset connection
 				log.Println("Restarting connection due to error", err)
 				for {
-					rawEventChan, errChan, err = contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1)
+					rawEventChan, err = contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1)
 					if err == nil {
 						break
 					}

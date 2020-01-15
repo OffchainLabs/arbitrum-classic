@@ -36,8 +36,7 @@ const (
 
 var replayTimeout = time.Second
 
-var challengeNoEvents = errors.New("challenge notification channel terminated unexpectedly")
-var challengeReorg = errors.New("reorg occurred during challenge")
+var challengeNoEvents = errors.New("challenge event channel terminated unexpectedly")
 
 func getAfterState(event arbbridge.Event) ChallengeState {
 	switch event.(type) {
@@ -101,7 +100,7 @@ func getNextEventIfExists(ctx context.Context, eventChan <-chan arbbridge.Event,
 		case <-time.After(timeout):
 			return true, nil, 0, nil
 		case <-ctx.Done():
-			return false, nil, 0, challengeNoEvents
+			return false, nil, 0, errors.New("context cancelled while waiting for event")
 		}
 	}
 }

@@ -60,7 +60,7 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
+func (vm *EthRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	//if err := vm.setupContracts(); err != nil {
 	//	return err
 	//}
@@ -175,7 +175,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 	//		}
 	//	}
 	//}()
-	return nil, nil, nil
+	return nil, nil
 }
 
 //func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {

@@ -46,7 +46,7 @@ func NewChallenge(address common.Address, client arbbridge.ArbClient) (*Challeng
 //	return nil
 //}
 
-func (c *Challenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
+func (c *Challenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	//if err := c.setupContracts(); err != nil {
 	//	return err
 	//}
@@ -114,7 +114,7 @@ func (c *Challenge) StartConnection(ctx context.Context, startHeight *common.Tim
 	//		}
 	//	}
 	//}()
-	return nil, nil, nil
+	return nil, nil
 }
 
 //func (c *challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
