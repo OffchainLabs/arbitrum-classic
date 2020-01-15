@@ -126,7 +126,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			if ok {
 				if newOpinion == structures.ValidChildType {
 					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(nil, validExecution, correctNode.assertionTxHash)
+						lis.AdvancedKnownAssertion(chain, validExecution, correctNode.assertionTxHash)
 					}
 				}
 				chain.RUnlock()
@@ -144,7 +144,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.Unlock()
 				chain.RLock()
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownValidNode(nil, chain.calculatedValidNode.hash)
+					listener.AdvancedKnownValidNode(chain, chain.calculatedValidNode.hash)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
@@ -182,7 +182,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						if prepared.params.TimeBounds.IsValidTime(chain.latestBlockId.Height) == nil {
 							for _, lis := range chain.listeners {
-								lis.AssertionPrepared(nil, prepared.Clone())
+								lis.AssertionPrepared(chain, prepared.Clone())
 							}
 						} else {
 							// Prepared assertion is out of date

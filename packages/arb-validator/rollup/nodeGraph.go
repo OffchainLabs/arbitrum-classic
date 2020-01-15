@@ -49,14 +49,14 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 }
 
 func MakeInitialNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
-	nodeBuf, nodeHashBuf := MakeInitialNodeBuf(machineHash)
+	nodeBuf := MakeInitialNodeBuf(machineHash)
 	return &NodeGraphBuf{
 		Nodes:               []*NodeBuf{nodeBuf},
-		OldestNodeHash:      nodeHashBuf,
-		LatestConfirmedHash: nodeHashBuf,
-		LeafHashes:          []*common.HashBuf{nodeHashBuf},
+		OldestNodeHash:      nodeBuf.Hash,
+		LatestConfirmedHash: nodeBuf.Hash,
+		LeafHashes:          []*common.HashBuf{nodeBuf.Hash},
 		Params:              params.MarshalToBuf(),
-	}, nodeHashBuf
+	}, nodeBuf.Hash
 }
 
 func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
@@ -88,7 +88,8 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 
 	// unmarshal nodes; their prev/successors will not be set up yet
 	for _, nodeBuf := range buf.Nodes {
-		_ = nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
+		node := nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
+		chain.nodeFromHash[node.hash] = node
 	}
 	// now set up prevs and successors for all nodes
 	for _, nodeBuf := range buf.Nodes {

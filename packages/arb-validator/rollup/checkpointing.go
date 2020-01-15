@@ -176,13 +176,13 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
 	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
 
-	params, err := getParamsForChain(client, contractAddr)
-	if err != nil {
-		return nil, nil, nil
-	}
-
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
+		params, err := getParamsForChain(client, contractAddr)
+		if err != nil {
+			return nil, nil, nil
+		}
+
 		initMachine, err := rcp.GetInitialMachine()
 		if err != nil {
 			return nil, nil, nil
@@ -553,12 +553,13 @@ func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structure
 
 func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient) {
 	metadataBuf := csc.RestoreMetadata()
+	if len(metadataBuf) == 0 {
+		return
+	}
 	metadata := &structures.CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBuf, metadata); err != nil {
 		return
 	}
-
-	log.Println("Metadata", metadata)
 
 	oldestId := metadata.Oldest.Unmarshal()
 	newestId := metadata.Newest.Unmarshal()

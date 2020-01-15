@@ -25,6 +25,7 @@ message ChainParamsBuf {
     common.BigIntegerBuf stakeRequirement = 1;
     common.TimeTicksBuf gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
+    uint64 ArbGasSpeedLimitPerTick = 4;
 }
 
 message VMProtoDataBuf {

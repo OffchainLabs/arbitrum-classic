@@ -64,8 +64,9 @@ type ValidatorChainListener struct {
 	broadcastLeafPrunes    map[common.Hash]bool
 }
 
-func NewValidatorChainListener(rollupAddress common.Address) *ValidatorChainListener {
+func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
 	return &ValidatorChainListener{
+		actor:                  actor,
 		rollupAddress:          rollupAddress,
 		stakingKeys:            make(map[common.Address]*StakingKey),
 		broadcastAssertions:    make(map[common.Hash]bool),

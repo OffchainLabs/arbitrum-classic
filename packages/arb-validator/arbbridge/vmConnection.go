@@ -50,6 +50,7 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 					err = errors.New("rawEventChan closed")
 					break
 				}
+
 				chainInfo := event.GetChainInfo()
 				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 				case -1:

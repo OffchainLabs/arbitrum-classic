@@ -187,22 +187,29 @@ func validateRollupChain() error {
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(address)
+	rollupActor, err := client.NewRollup(address)
+	if err != nil {
+		return err
+	}
+
+	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	chainObserver, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client)
+	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client)
 	if err != nil {
 		return err
 	}
-	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	chainObserver.AddListener(validatorListener)
+	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
-		rollupvalidator.LaunchRPC(chainObserver, "1235")
+		if err := rollupvalidator.LaunchRPC(manager, "1235"); err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		wait := make(chan bool)
 		<-wait

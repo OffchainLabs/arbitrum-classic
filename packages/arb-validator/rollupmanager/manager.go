@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -39,6 +40,7 @@ const (
 )
 
 type Manager struct {
+	sync.Mutex
 	RollupAddress common.Address
 	client        arbbridge.ArbClient
 	listeners     []rollup.ChainListener
@@ -81,8 +83,9 @@ func CreateManager(
 			if err != nil {
 				log.Fatal(err)
 			}
-			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, watcher)
+			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
 
+			man.Lock()
 			// Clear pending listeners
 			for len(man.listenerAddChan) > 0 {
 				<-man.listenerAddChan
@@ -91,6 +94,7 @@ func CreateManager(
 			for _, listener := range man.listeners {
 				chain.AddListener(listener)
 			}
+			man.Unlock()
 
 			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, rollupWatcher)
 			if err != nil {
@@ -101,6 +105,7 @@ func CreateManager(
 			for {
 				select {
 				case <-reorgCtx.Done():
+					log.Println("Reorg context done")
 					break runLoop
 				case listener := <-man.listenerAddChan:
 					chain.AddListener(listener)
@@ -135,8 +140,10 @@ func CreateManager(
 }
 
 func (man *Manager) AddListener(listener rollup.ChainListener) {
+	man.Lock()
 	man.listeners = append(man.listeners, listener)
 	man.listenerAddChan <- listener
+	man.Unlock()
 }
 
 func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*protocol.ExecutionAssertion, uint32) {
@@ -168,10 +175,11 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 	return <-retChan
 }
 
-func handleNotification(notification arbbridge.Event, chain *rollup.ChainObserver) {
+func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
+	log.Printf("Handling event %T\n", event)
 	chain.Lock()
 	defer chain.Unlock()
-	switch ev := notification.(type) {
+	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
 		chain.MessageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:

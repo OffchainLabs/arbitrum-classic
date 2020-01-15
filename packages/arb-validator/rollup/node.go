@@ -90,9 +90,11 @@ func newInitialNode_hashOnly(machHash common.Hash) *Node {
 	return ret
 }
 
-func MakeInitialNodeBuf(machineHash common.Hash) (*NodeBuf, *common.HashBuf) {
+func MakeInitialNodeBuf(machineHash common.Hash) *NodeBuf {
 	initNode := newInitialNode_hashOnly(machineHash)
-	return initNode.MarshalForCheckpoint(nil), initNode.hash.MarshalToBuf()
+	nodeBuf := initNode.MarshalForCheckpoint(nil)
+	nodeBuf.MachineHash = machineHash.MarshalToBuf()
+	return nodeBuf
 }
 
 func NewNodeFromValidPrev(

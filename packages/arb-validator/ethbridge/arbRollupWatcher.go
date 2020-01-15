@@ -261,7 +261,8 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 			return err
 		}
 		outChan <- arbbridge.PrunedEvent{
-			Leaf: eventVal.Leaf,
+			ChainInfo: chainInfo,
+			Leaf:      eventVal.Leaf,
 		}
 	} else if ethLog.Topics[0] == rollupStakeMovedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
