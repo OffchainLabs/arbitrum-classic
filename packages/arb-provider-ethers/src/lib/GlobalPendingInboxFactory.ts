@@ -47,7 +47,7 @@ const _abi = [
                 type: 'uint256',
             },
         ],
-        name: 'DepositERC20MessageDelivered',
+        name: 'ERC20DepositMessageDelivered',
         type: 'event',
     },
     {
@@ -84,7 +84,7 @@ const _abi = [
                 type: 'uint256',
             },
         ],
-        name: 'DepositERC721MessageDelivered',
+        name: 'ERC721DepositMessageDelivered',
         type: 'event',
     },
     {
@@ -131,12 +131,6 @@ const _abi = [
                 indexed: true,
                 internalType: 'address',
                 name: 'vmReceiverId',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                internalType: 'address',
-                name: 'contractAddress',
                 type: 'address',
             },
             {
@@ -549,6 +543,41 @@ const _abi = [
                 type: 'address',
             },
             {
+                internalType: 'uint256',
+                name: '_seqNumber',
+                type: 'uint256',
+            },
+            {
+                internalType: 'uint256',
+                name: '_value',
+                type: 'uint256',
+            },
+            {
+                internalType: 'bytes',
+                name: '_data',
+                type: 'bytes',
+            },
+            {
+                internalType: 'bytes',
+                name: '_signature',
+                type: 'bytes',
+            },
+        ],
+        name: 'forwardTransactionMessage',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_vmAddress',
+                type: 'address',
+            },
+            {
                 internalType: 'address',
                 name: '_contractAddress',
                 type: 'address',
@@ -584,17 +613,22 @@ const _abi = [
                 type: 'address',
             },
             {
-                internalType: 'address payable',
-                name: '_destination',
-                type: 'address',
+                internalType: 'uint256',
+                name: '_seqNumber',
+                type: 'uint256',
             },
             {
                 internalType: 'uint256',
                 name: '_value',
                 type: 'uint256',
             },
+            {
+                internalType: 'bytes',
+                name: '_data',
+                type: 'bytes',
+            },
         ],
-        name: 'depositEthMessage',
+        name: 'sendTransactionMessage',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -605,6 +639,11 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address payable',
+                name: '_vmAddress',
+                type: 'address',
+            },
+            {
+                internalType: 'address',
                 name: '_destination',
                 type: 'address',
             },
@@ -628,21 +667,6 @@ const _abi = [
                 name: '_vmAddress',
                 type: 'address',
             },
-            {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-        ],
-        name: 'depositEthMessage',
-        outputs: [],
-        payable: true,
-        stateMutability: 'payable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
             {
                 internalType: 'address',
                 name: '_destination',

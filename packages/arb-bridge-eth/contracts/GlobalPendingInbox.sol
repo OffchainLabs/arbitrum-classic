@@ -117,6 +117,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             if(valid){
                 transferEth(address(bytes20(bytes32(destination))), value);
+            
+                emit IGlobalPendingInbox.EthDepositMessageDelivered(
+                address(bytes20(bytes32(destination))), //wrong vmId
+                msg.sender,
+                address(bytes20(bytes32(destination))),
+                value);
             }   
 
         }else if(messageType == ERC20_DEPOSIT)
@@ -207,7 +213,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         );
     }
 
-    function depositEthMessage(address _vmAddress, address _destination) external payable 
+    function depositEthMessage(
+        address _vmAddress, 
+        address _destination) external payable 
     {
         depositEth(_vmAddress);
         
@@ -224,25 +232,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             msg.sender,
             _destination,
             msg.value);
-    }
-
-    function depositEthMessage(address _vmAddress, address payable _destination, uint256 _value) public
-    {
-        transferEth(_vmAddress, _value);
-        
-        _deliverEthMessage(
-            _vmAddress,
-            msg.sender,
-            _destination,
-            ETH_DEPOSIT,
-            _value
-        );
-
-        emit IGlobalPendingInbox.EthDepositMessageDelivered(
-            _vmAddress,
-            msg.sender,
-            _destination,
-            _value);
     }
 
     function depositERC20Message(

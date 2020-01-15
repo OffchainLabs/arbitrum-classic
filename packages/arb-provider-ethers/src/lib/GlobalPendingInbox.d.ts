@@ -83,7 +83,7 @@ interface GlobalPendingInboxInterface extends Interface {
     };
 
     events: {
-        DepositERC20MessageDelivered: TypedEventDescription<{
+        ERC20DepositMessageDelivered: TypedEventDescription<{
             encodeTopics([vmReceiverId, sender, destination, tokenAddress, value]: [
                 string | null,
                 null,
@@ -93,7 +93,7 @@ interface GlobalPendingInboxInterface extends Interface {
             ]): string[];
         }>;
 
-        DepositERC721MessageDelivered: TypedEventDescription<{
+        ERC721DepositMessageDelivered: TypedEventDescription<{
             encodeTopics([vmReceiverId, sender, destination, tokenAddress, value]: [
                 string | null,
                 null,
@@ -108,10 +108,9 @@ interface GlobalPendingInboxInterface extends Interface {
         }>;
 
         TransactionMessageDelivered: TypedEventDescription<{
-            encodeTopics([vmSenderId, vmReceiverId, contractAddress, seqNumber, value, data]: [
+            encodeTopics([vmSenderId, vmReceiverId, seqNumber, value, data]: [
                 string | null,
                 string | null,
-                null,
                 null,
                 null,
                 null,
@@ -248,7 +247,7 @@ export class GlobalPendingInbox extends Contract {
     };
 
     filters: {
-        DepositERC20MessageDelivered(
+        ERC20DepositMessageDelivered(
             vmReceiverId: string | null,
             sender: null,
             destination: null,
@@ -256,7 +255,7 @@ export class GlobalPendingInbox extends Contract {
             value: null,
         ): EventFilter;
 
-        DepositERC721MessageDelivered(
+        ERC721DepositMessageDelivered(
             vmReceiverId: string | null,
             sender: null,
             destination: null,
@@ -274,7 +273,6 @@ export class GlobalPendingInbox extends Contract {
         TransactionMessageDelivered(
             vmSenderId: string | null,
             vmReceiverId: string | null,
-            contractAddress: null,
             seqNumber: null,
             value: null,
             data: null,

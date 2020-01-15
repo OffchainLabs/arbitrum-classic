@@ -31,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type pendingInbox struct {
@@ -48,77 +47,102 @@ func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *
 	return &pendingInbox{globalPendingInboxContract, client, auth}, nil
 }
 
-func (con *pendingInbox) SendMessage(
-	ctx context.Context,
-	msg valprotocol.Message,
-) error {
-	var dataBuf bytes.Buffer
-	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return err
-	}
-	con.auth.Context = ctx
-	tx, err := con.GlobalPendingInbox.SendMessage(
-		con.auth,
-		msg.Destination.ToEthAddress(),
-		msg.TokenType,
-		msg.Currency,
-		dataBuf.Bytes(),
-	)
-	if err != nil {
-		return err
-	}
-	return con.waitForReceipt(ctx, tx, "SendMessage")
-}
-
-func (con *pendingInbox) ForwardMessage(
-	ctx context.Context,
-	msg valprotocol.Message,
-	sig []byte,
-) error {
-	var dataBuf bytes.Buffer
-	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return err
-	}
-	con.auth.Context = ctx
-	tx, err := con.GlobalPendingInbox.ForwardMessage(
-		con.auth,
-		msg.Destination.ToEthAddress(),
-		msg.TokenType,
-		msg.Currency,
-		dataBuf.Bytes(),
-		sig,
-	)
-	if err != nil {
-		return err
-	}
-	return con.waitForReceipt(ctx, tx, "ForwardMessage")
-}
-
-func (con *pendingInbox) SendEthMessage(
+func (con *pendingInbox) SendTransactionMessage(
 	ctx context.Context,
 	data value.Value,
-	destination common.Address,
+	vmAddress common.Address,
 	amount *big.Int,
+	seqNumber *big.Int,
 ) error {
 	var dataBuf bytes.Buffer
+
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
 		return err
 	}
-	tx, err := con.GlobalPendingInbox.SendEthMessage(
+
+	tx, err := con.GlobalPendingInbox.SendTransactionMessage(
+		con.auth,
+		vmAddress.ToEthAddress(),
+		seqNumber,
+		amount,
+		dataBuf.Bytes(),
+	)
+	if err != nil {
+		return err
+	}
+	return con.waitForReceipt(ctx, tx, "SendTransactionMessage")
+}
+
+func (con *pendingInbox) DepositEthMessage(
+	ctx context.Context,
+	vmAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+
+	tx, err := con.GlobalPendingInbox.DepositEthMessage(
 		&bind.TransactOpts{
 			From:     con.auth.From,
 			Signer:   con.auth.Signer,
 			GasLimit: con.auth.GasLimit,
-			Value:    amount,
+			Value:    value,
 			Context:  ctx,
 		},
+		vmAddress.ToEthAddress(),
 		destination.ToEthAddress(),
-		dataBuf.Bytes(),
 	)
+
 	if err != nil {
 		return err
 	}
-	return con.waitForReceipt(ctx, tx, "SendEthMessage")
+
+	return con.waitForReceipt(ctx, tx, "DepositEthMessage")
+}
+
+func (con *pendingInbox) DepositERC20Message(
+	ctx context.Context,
+	vmAddress common.Address,
+	tokenAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+
+	tx, err := con.GlobalPendingInbox.DepositERC20Message(
+		con.auth,
+		vmAddress.ToEthAddress(),
+		tokenAddress.ToEthAddress(),
+		destination.ToEthAddress(),
+		value,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return con.waitForReceipt(ctx, tx, "DepositERC20Message")
+}
+
+func (con *pendingInbox) DepositERC721Message(
+	ctx context.Context,
+	vmAddress common.Address,
+	tokenAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+
+	tx, err := con.GlobalPendingInbox.DepositERC721Message(
+		con.auth,
+		vmAddress.ToEthAddress(),
+		tokenAddress.ToEthAddress(),
+		destination.ToEthAddress(),
+		value,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return con.waitForReceipt(ctx, tx, "DepositERC721Message")
 }
 
 func (con *pendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {

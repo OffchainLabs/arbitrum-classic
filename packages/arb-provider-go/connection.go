@@ -168,7 +168,9 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 	if err != nil {
 		return err
 	}
-	return conn.pendingInbox.SendEthMessage(ctx, arbCallValue, conn.vmId, tx.Value())
+	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
+	//seq number bug
+	return conn.pendingInbox.SendTransactionMessage(ctx, arbCallValue, conn.vmId, tx.Value(), seqNumValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -428,6 +430,7 @@ func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
 	}
 	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
 	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
+	//seq number bug
 
 	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
 }

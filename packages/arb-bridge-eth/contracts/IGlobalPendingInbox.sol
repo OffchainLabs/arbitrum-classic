@@ -55,9 +55,14 @@ interface IGlobalPendingInbox {
 
     function registerForInbox() external;
 
-    function depositEthMessage(address _destination) external payable;
+    function depositEthMessage(
+        address _vmAddress, 
+        address _destination) external payable;
 
-    function depositEthMessage(address payable _destination, uint256 _value) external;
+    function depositEthMessage(
+        address payable _vmAddress, 
+        address _destination, 
+        uint256 _value) external;
 
     function forwardTransactionMessage(
         address _vmAddress,

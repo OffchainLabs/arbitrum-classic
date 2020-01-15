@@ -85,11 +85,12 @@ func (con *PendingInbox) ForwardMessage(
 	return nil
 }
 
-func (con *PendingInbox) SendEthMessage(
+func (con *PendingInbox) SendTransactionMessage(
 	ctx context.Context,
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
+	seqNumber *big.Int,
 ) error {
 	//var dataBuf bytes.Buffer
 	//if err := value.MarshalValue(data, &dataBuf); err != nil {
