@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -97,24 +98,29 @@ func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startH
 		for {
 			select {
 			case <-ctx.Done():
+				log.Println("pendingTopChallengeWatcher context canceled")
 				return
 			case maybeLog, ok := <-maybeLogChan:
 				if !ok {
+					log.Println("maybeLogChan terminated")
 					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
 					return
 				}
 				if maybeLog.err != nil {
+					log.Println("maybeLog had error", err)
 					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}
 				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
 				if err != nil {
+					log.Println("header had error", err)
 					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}
 				chainInfo := getChainInfo(maybeLog.log, header)
 				event, err := c.parsePendingTopEvent(chainInfo, maybeLog.log)
 				if err != nil {
+					log.Println("Failed parsing event", err)
 					eventChan <- arbbridge.MaybeEvent{Err: err}
 					return
 				}

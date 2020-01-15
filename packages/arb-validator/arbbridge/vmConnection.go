@@ -45,13 +45,16 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 			var err error
 			select {
 			case <-ctx.Done():
+				log.Println("Event monitor canceled")
 				return
 			case maybeEvent, ok := <-rawEventChan:
 				if !ok {
+					log.Println("rawEventChan channel closed")
 					err = errors.New("rawEventChan closed")
 					break
 				}
 				if maybeEvent.Err != nil {
+					log.Println("HandleBlockchainNotifications rawEventChan had error", maybeEvent.Err)
 					err = maybeEvent.Err
 					break
 				}
@@ -60,10 +63,12 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 				case -1:
 					// reorg
+					log.Println("Reorg occured")
 					return
 				case 0:
 					if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
 						// reorg
+						log.Println("Reorg occured")
 						return
 					}
 					if chainInfo.LogIndex >= latestLogIndex {

@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -41,14 +42,18 @@ func DefendPendingTopClaim(
 		return 0, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	defer log.Println("Canceled challenge context")
 	defer cancel()
 
 	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
 	if err != nil {
+		log.Println("Error initializing event handling")
 		return 0, err
 	}
 	contract, err := client.NewPendingTopChallenge(address)
-
+	if err != nil {
+		return 0, err
+	}
 	return defendPendingTop(
 		reorgCtx,
 		eventChan,
