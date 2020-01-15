@@ -33,6 +33,7 @@ add_executable(avm_tests main.cpp opcodes.cpp value.cpp checkpointstorage.cpp ch
 target_link_libraries(
 	avm_tests
 PRIVATE
+    cavm
 	avm
     avm_utils
 	CONAN_PKG::Catch2
