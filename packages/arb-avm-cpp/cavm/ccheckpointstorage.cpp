@@ -41,7 +41,7 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
         } else {
             return nullptr;
         }
-    } catch (std::exception exp) {
+    } catch (const std::exception& exp) {
         return nullptr;
     }
 }
@@ -154,7 +154,7 @@ int saveData(CCheckpointStorage* storage_ptr,
              const void* data,
              int data_length) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto transaction = storage->makeTransaction();
+    auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto data_ptr = reinterpret_cast<const char*>(data);
@@ -163,49 +163,37 @@ int saveData(CCheckpointStorage* storage_ptr,
     auto data_vector =
         std::vector<unsigned char>(data_ptr, data_ptr + data_length);
 
-    auto results = transaction->saveData(key_vector, data_vector);
-
-    if (!results.status.ok()) {
-        return false;
-    }
-
-    auto status = transaction->commit();
+    auto status = keyvalue_store->saveData(key_vector, data_vector);
     return status.ok();
 }
 
-ByteSlice getData(const CCheckpointStorage* storage_ptr,
+ByteSlice getData(CCheckpointStorage* storage_ptr,
                   const void* key,
                   int key_length) {
-    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
 
-    auto results = storage->getValue(key_vector);
+    auto results = keyvalue_store->getData(key_vector);
 
-    auto value_data = (unsigned char*)malloc(results.stored_value.size());
-    std::copy(results.stored_value.begin(), results.stored_value.end(),
-              value_data);
+    auto value_data = (unsigned char*)malloc(results.data.size());
+    std::copy(results.data.begin(), results.data.end(), value_data);
 
     auto void_data = reinterpret_cast<void*>(value_data);
-    return {void_data, static_cast<int>(results.stored_value.size())};
+    return {void_data, static_cast<int>(results.data.size())};
 }
 
 int deleteData(CCheckpointStorage* storage_ptr,
                const void* key,
                int key_length) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto transaction = storage->makeTransaction();
+    auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
 
-    auto results = transaction->deleteData(key_vector);
-
-    if (results.status.ok()) {
-        return false;
-    }
-
-    auto status = transaction->commit();
+    auto status = keyvalue_store->deleteData(key_vector);
     return status.ok();
 }

@@ -77,3 +77,9 @@ std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_unique<Transaction>(transaction);
 }
+
+std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
+    rocksdb::WriteOptions writeOptions;
+    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
+    return std::make_unique<KeyValueStore>(transaction);
+}
