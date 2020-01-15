@@ -63,12 +63,12 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 				case -1:
 					// reorg
-					log.Println("Reorg occured")
+					log.Printf("Earlier reorg occured: Saw block %v with previous block %v\n", chainInfo.BlockId.Height, latestBlockId.Height)
 					return
 				case 0:
 					if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
 						// reorg
-						log.Println("Reorg occured")
+						log.Printf("Same height reorg occured: Saw block %v with previous block %v\n", chainInfo.BlockId.HeaderHash, latestBlockId.HeaderHash)
 						return
 					}
 					if chainInfo.LogIndex >= latestLogIndex {
