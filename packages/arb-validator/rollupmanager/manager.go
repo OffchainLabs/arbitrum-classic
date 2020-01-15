@@ -55,6 +55,7 @@ func CreateManager(
 	arbitrumCodeFilePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
+	dbPrefix string,
 ) (*Manager, error) {
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
@@ -75,6 +76,7 @@ func CreateManager(
 				rollupAddr,
 				arbitrumCodeFilePath,
 				big.NewInt(maxReorgDepth),
+				dbPrefix,
 				false,
 			)
 

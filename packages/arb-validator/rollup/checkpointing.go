@@ -84,8 +84,8 @@ type ProductionCheckpointer struct {
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func makeCheckpointDatabasePath(rollupAddr common.Address) string {
-	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
+func makeCheckpointDatabasePath(rollupAddr common.Address, dbPrefix string) string {
+	return checkpointDatabasePathBase + dbPrefix + rollupAddr.Hex()[2:]
 }
 
 func NewProductionCheckpointer(
@@ -93,9 +93,10 @@ func NewProductionCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth *big.Int,
+	dbPrefix string,
 	forceFreshStart bool, // this should be false in production use
 ) RollupCheckpointer {
-	databasePath := makeCheckpointDatabasePath(rollupAddr)
+	databasePath := makeCheckpointDatabasePath(rollupAddr, dbPrefix)
 	if forceFreshStart {
 		// for testing only -- use production checkpointer but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {

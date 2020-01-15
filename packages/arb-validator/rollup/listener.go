@@ -59,7 +59,7 @@ type ValidatorChainListener struct {
 	actor                  arbbridge.ArbRollup
 	rollupAddress          common.Address
 	stakingKeys            map[common.Address]*StakingKey
-	broadcastAssertions    map[common.Hash]bool
+	broadcastAssertions    map[common.Hash]*structures.AssertionParams
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
 }
@@ -69,7 +69,7 @@ func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.Arb
 		actor:                  actor,
 		rollupAddress:          rollupAddress,
 		stakingKeys:            make(map[common.Address]*StakingKey),
-		broadcastAssertions:    make(map[common.Hash]bool),
+		broadcastAssertions:    make(map[common.Hash]*structures.AssertionParams),
 		broadcastConfirmations: make(map[common.Hash]bool),
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
 	}
@@ -121,10 +121,11 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *pr
 func (lis *ValidatorChainListener) AssertionPrepared(chain *ChainObserver, prepared *preparedAssertion) {
 	// Anyone confirm a node
 	// No need to have your own stake
-	_, alreadySent := lis.broadcastAssertions[prepared.leafHash]
-	if alreadySent {
+	prevParams, alreadySent := lis.broadcastAssertions[prepared.leafHash]
+	if alreadySent && prevParams.Equals(prepared.params) {
 		return
 	}
+
 	leaf, ok := chain.nodeGraph.nodeFromHash[prepared.leafHash]
 	if !ok {
 		log.Println("Prepared assertion on top of invalid node")
@@ -142,7 +143,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(chain *ChainObserver, prepa
 			// staker can't move to new asertion
 			continue
 		}
-		lis.broadcastAssertions[prepared.leafHash] = true
+		lis.broadcastAssertions[prepared.leafHash] = prepared.params
 		go makeAssertion(context.TODO(), stakingKey.contract, prepared, proof)
 		return
 	}

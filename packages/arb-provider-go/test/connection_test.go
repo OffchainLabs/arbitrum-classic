@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -80,7 +82,6 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 
 	checkpointer1 := rollup.NewDummyCheckpointer(contract)
-	checkpointer2 := rollup.NewDummyCheckpointer(contract)
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
@@ -107,34 +108,43 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		common.Address{},
 	)
 
-	chainObserver1, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer1, true, client1)
+	rollupActor1, err := client1.NewRollup(rollupAddress)
 	if err != nil {
 		return err
 	}
-	chainObserver1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
+	rollupActor2, err := client2.NewRollup(rollupAddress)
+	if err != nil {
+		return err
+	}
 
-	validatorListener1 := rollup.NewValidatorChainListener(chainObserver1)
+	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client1, "testman1-")
+	if err != nil {
+		return err
+	}
+	manager1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
+
+	validatorListener1 := rollup.NewValidatorChainListener(rollupAddress, rollupActor1)
 	err = validatorListener1.AddStaker(client1)
 	if err != nil {
 		return err
 	}
-	chainObserver1.AddListener(validatorListener1)
+	manager1.AddListener(validatorListener1)
 
-	chainObserver2, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer2, true, client2)
+	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client2, "testman2-")
 	if err != nil {
 		return err
 	}
-	chainObserver2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
+	manager2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
 
-	validatorListener2 := rollup.NewValidatorChainListener(chainObserver2)
+	validatorListener2 := rollup.NewValidatorChainListener(rollupAddress, rollupActor2)
 	err = validatorListener2.AddStaker(client2)
 	if err != nil {
 		return err
 	}
-	chainObserver2.AddListener(validatorListener2)
+	manager2.AddListener(validatorListener2)
 
 	go func() {
-		err := rollupvalidator.LaunchRPC(chainObserver2, "1235")
+		err := rollupvalidator.LaunchRPC(manager2, "1235")
 		if err != nil {
 			t.Fatal(err)
 		}
