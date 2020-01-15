@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	jsonenc "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -95,20 +94,9 @@ func createRollupChain() {
 	// 3) URL
 	ethURL := flag.Arg(3)
 
-	// 4) Global EthBridge addresses json
-	jsonFile, err := os.Open(flag.Arg(4))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	byteValue, _ = ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-
-	var connectionInfo ethbridge.ArbAddresses
-	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		log.Fatalln(err)
-	}
+	// 4) Rollup factory address
+	addressString := flag.Arg(4)
+	factoryAddress := common.HexToAddress(addressString)
 
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
@@ -124,7 +112,7 @@ func createRollupChain() {
 		log.Fatal(err)
 	}
 
-	factory, err := client.NewArbFactory(connectionInfo.ArbFactoryAddress())
+	factory, err := client.NewArbFactory(factoryAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -152,7 +140,7 @@ func validateRollupChain() error {
 	}
 
 	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <bridge_eth_addresses.json>")
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
 	}
 
 	// 2) Private key
