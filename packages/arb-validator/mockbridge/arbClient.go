@@ -18,7 +18,8 @@ package mockbridge
 
 import (
 	"context"
-
+	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -58,20 +59,16 @@ func (c *MockArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSt
 	return newOneStepProof(address, c)
 }
 
-func (c *MockArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return newPendingInbox(address, c)
+func (c *MockArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+	return c.MockEthClient.LatestBlock, nil
 }
 
-func (c *MockArbClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return newRollup(address, c)
-}
-
-func (c *MockArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	return common.NewTimeBlocks(c.MockEthClient.LatestHeight), nil
-}
-
-func (c *MockArbClient) CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error) {
-	return common.NewTimeBlocks(c.MockEthClient.LatestHeight), c.MockEthClient.headerNumber[c.MockEthClient.LatestHeight], nil
+func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+	block, err := c.MockEthClient.blockNumbers[height]
+	if err {
+		return nil, errors.New("block height not found")
+	}
+	return block, nil
 }
 
 type MockArbAuthClient struct {
@@ -120,4 +117,25 @@ func (c *MockArbAuthClient) NewMessagesChallenge(address common.Address) (arbbri
 
 func (c *MockArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
 	return NewPendingTopChallenge(address, c)
+}
+
+func (c *MockArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
+	//testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if err := waitForReceipt(
+	//	context.Background(),
+	//	c.client,
+	//	c.auth.From,
+	//	tx,
+	//	"DeployChallengeTester",
+	//); err != nil {
+	//	return nil, err
+	//}
+	tester, err := NewChallengeTester(common.Address{}, c, c.auth)
+	if err != nil {
+		return nil, err
+	}
+	return tester, nil
 }

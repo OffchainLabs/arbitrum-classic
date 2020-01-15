@@ -18,135 +18,31 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-type MessagesChallenge struct {
-	*BisectionChallenge
+type messagesChallenge struct {
+	*bisectionChallenge
 }
 
-func newMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+func newMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*messagesChallenge, error) {
+	bisectionChallenge, err := newBisectionChallenge(address, client) //, auth??
 	if err != nil {
 		return nil, err
 	}
-	vm := &MessagesChallenge{BisectionChallenge: bisectionChallenge}
-	err = vm.setupContracts()
-	return vm, err
+	//messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
+	//if err != nil {
+	//	return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
+	//}
+	return &messagesChallenge{bisectionChallenge: bisectionChallenge}, nil
 }
 
-func (c *MessagesChallenge) setupContracts() error {
-	//challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.Client)
-	//if err != nil {
-	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
-	//}
-	//
-	//c.challenge = challengeManagerContract
-	return nil
-}
-
-func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
-	}
-	if err := c.setupContracts(); err != nil {
-		return err
-	}
-	//header, err := c.Client.HeaderByNumber(ctx, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//filter := ethereum.FilterQuery{
-	//	Addresses: []common.Address{c.address},
-	//	Topics: [][]common.Hash{{
-	//		messagesBisectedID,
-	//		messagesOneStepProofCompletedID,
-	//	}},
-	//}
-	//
-	//logs, err := c.Client.FilterLogs(ctx, filter)
-	//if err != nil {
-	//	return err
-	//}
-	//for _, log := range logs {
-	//	if err := c.processEvents(ctx, log, outChan); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//filter.FromBlock = header.Number
-	//logChan := make(chan types.Log)
-	//logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//go func() {
-	//	defer logSub.Unsubscribe()
-	//
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			break
-	//		case log := <-logChan:
-	//			if err := c.processEvents(ctx, log, outChan); err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//		case err := <-logSub.Err():
-	//			errChan <- err
-	//			return
-	//		}
-	//	}
-	//}()
-	return nil
-}
-
-//func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-//	event, err := func() (arbbridge.Event, error) {
-//		if log.Topics[0] == messagesBisectedID {
-//			eventVal, err := c.challenge.ParseBisected(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.MessagesBisectionEvent{
-//				ChainHashes:   eventVal.ChainHashes,
-//				SegmentHashes: eventVal.SegmentHashes,
-//				TotalLength:   eventVal.TotalLength,
-//				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
-//			}, nil
-//		} else if log.Topics[0] == messagesOneStepProofCompletedID {
-//			_, err := c.challenge.ParseOneStepProofCompleted(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.OneStepProofEvent{}, nil
-//		}
-//		return nil, errors2.New("unknown arbitrum event type")
-//	}()
-//
-//	if err != nil {
-//		return err
-//	}
-//
-//	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
-//	if err != nil {
-//		return err
-//	}
-//	outChan <- arbbridge.Notification{
-//		Header: header,
-//		VMID:   c.address,
-//		Event:  event,
-//		TxHash: log.TxHash,
-//	}
-//	return nil
-//}
-
-func (c *MessagesChallenge) Bisect(
+func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	segmentHashes []common.Hash,
@@ -166,7 +62,7 @@ func (c *MessagesChallenge) Bisect(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProof(
+func (c *messagesChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	topHashA common.Hash,
@@ -190,7 +86,7 @@ func (c *MessagesChallenge) OneStepProof(
 	return nil
 }
 
-func (c *MessagesChallenge) ChooseSegment(
+func (c *messagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,

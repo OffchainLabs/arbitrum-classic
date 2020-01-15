@@ -27,24 +27,24 @@ import (
 
 var continuedChallengeID ethcommon.Hash
 
-type BisectionChallenge struct {
-	*Challenge
+type bisectionChallenge struct {
+	*challenge
 }
 
-func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*BisectionChallenge, error) {
+func newBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
-	vm := &BisectionChallenge{
-		Challenge: challenge,
+	vm := &bisectionChallenge{
+		challenge: challenge,
 	}
 	//err = vm.setupContracts()
 	return vm, nil
 }
 
 //func (c *bisectionChallenge) setupContracts() error {
-//	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.Client)
+//	challengeManagerContract, err := executionchallenge.newBisectionChallenge(c.address, c.Client)
 //	if err != nil {
 //		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 //	}
@@ -53,63 +53,63 @@ func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (
 //	return nil
 //}
 
-func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.Challenge.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
-	}
-	//if err := c.setupContracts(); err != nil {
-	//	return err
-	//}
-	//
-	//header, err := c.Client.HeaderByNumber(ctx, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//filter := ethereum.FilterQuery{
-	//	Addresses: []common.Address{c.address},
-	//	Topics: [][]common.Hash{{
-	//		continuedChallengeID,
-	//	}},
-	//}
-	//
-	//logs, err := c.Client.FilterLogs(ctx, filter)
-	//if err != nil {
-	//	return err
-	//}
-	//for _, log := range logs {
-	//	if err := c.processEvents(ctx, log, outChan); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//filter.FromBlock = header.Number
-	//logChan := make(chan types.Log)
-	//logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//go func() {
-	//	defer logSub.Unsubscribe()
-	//
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			break
-	//		case log := <-logChan:
-	//			if err := c.processEvents(ctx, log, outChan); err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//		case err := <-logSub.Err():
-	//			errChan <- err
-	//			return
-	//		}
-	//	}
-	//}()
-	return nil
-}
+//func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+//	if err := c.challenge.StartConnection(ctx, outChan, errChan); err != nil {
+//		return err
+//	}
+//	//if err := c.setupContracts(); err != nil {
+//	//	return err
+//	//}
+//	//
+//	//header, err := c.Client.HeaderByNumber(ctx, nil)
+//	//if err != nil {
+//	//	return err
+//	//}
+//	//
+//	//filter := ethereum.FilterQuery{
+//	//	Addresses: []common.Address{c.address},
+//	//	Topics: [][]common.Hash{{
+//	//		continuedChallengeID,
+//	//	}},
+//	//}
+//	//
+//	//logs, err := c.Client.FilterLogs(ctx, filter)
+//	//if err != nil {
+//	//	return err
+//	//}
+//	//for _, log := range logs {
+//	//	if err := c.processEvents(ctx, log, outChan); err != nil {
+//	//		return err
+//	//	}
+//	//}
+//	//
+//	//filter.FromBlock = header.Number
+//	//logChan := make(chan types.Log)
+//	//logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+//	//if err != nil {
+//	//	return err
+//	//}
+//	//
+//	//go func() {
+//	//	defer logSub.Unsubscribe()
+//	//
+//	//	for {
+//	//		select {
+//	//		case <-ctx.Done():
+//	//			break
+//	//		case log := <-logChan:
+//	//			if err := c.processEvents(ctx, log, outChan); err != nil {
+//	//				errChan <- err
+//	//				return
+//	//			}
+//	//		case err := <-logSub.Err():
+//	//			errChan <- err
+//	//			return
+//	//		}
+//	//	}
+//	//}()
+//	return nil
+//}
 
 //func (c *bisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
@@ -135,7 +135,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 //	return nil
 //}
 
-func (c *BisectionChallenge) ChooseSegment(
+func (c *bisectionChallenge) ChooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
 	segments []common.Hash,
@@ -166,7 +166,7 @@ func newBisectionChallengeWatcher(address ethcommon.Address, client arbbridge.Ar
 	if err != nil {
 		return nil, err
 	}
-	//bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	//bisectionContract, err := executionchallenge.newBisectionChallenge(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	//}

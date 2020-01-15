@@ -19,15 +19,12 @@ package mockbridge
 import (
 	"context"
 	"errors"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
@@ -35,14 +32,14 @@ import (
 var bisectedAssertionID ethcommon.Hash
 var oneStepProofCompletedID ethcommon.Hash
 
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
-	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
+//func init() {
+//	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
+//	if err != nil {
+//		panic(err)
+//	}
+//	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
+//	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+//}
 
 type executionChallengeWatcher struct {
 	*bisectionChallengeWatcher
@@ -76,7 +73,7 @@ func (c *executionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *executionChallengeWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
 	//headers := make(chan *types.Header)
 	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	//if err != nil {
@@ -176,11 +173,9 @@ func (c *executionChallengeWatcher) processEvents(ctx context.Context, log types
 	//	return err
 	//}
 	outChan <- arbbridge.Notification{
-		BlockHeader: common.Hash{},
-		BlockHeight: nil,
-		VMID:        common.NewAddressFromEth(c.address),
-		Event:       event,
-		TxHash:      log.TxHash,
+		//BlockId: common.Hash{},
+		Event:  event,
+		TxHash: log.TxHash,
 	}
 	return nil
 }

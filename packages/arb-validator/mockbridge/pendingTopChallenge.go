@@ -29,7 +29,7 @@ type PendingTopChallenge struct {
 }
 
 func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) 
 func (c *PendingTopChallenge) setupContracts() error {
 	//challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
 	//if err != nil {
-	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
+	//	return errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	//}
 	//
 	//c.challenge = challengeManagerContract

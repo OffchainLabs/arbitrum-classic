@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	rand2 "math/rand"
 	"sync"
@@ -84,15 +85,18 @@ var Void void
 
 // mockEthData one per 'URL'
 type mockEthdata struct {
-	Vm           map[common.Address]*VmData
-	channels     map[common.Address]*channelData
-	rollups      map[common.Address]*rollupData
-	nextAddress  common.Address // unique 'address'
-	BlockNumber  uint64
-	pending      map[common.Address][32]byte
-	LatestHeight *big.Int
-	headerNumber map[*big.Int]common.Hash
-	headerhash   map[common.Hash]*big.Int
+	Vm          map[common.Address]*VmData
+	channels    map[common.Address]*channelData
+	rollups     map[common.Address]*rollupData
+	nextAddress common.Address // unique 'address'
+	BlockNumber uint64
+	pending     map[common.Address][32]byte
+	LatestBlock *structures.BlockId
+	//LatestHeight *big.Int
+	blockNumbers map[*common.TimeBlocks]*structures.BlockId
+	blockHashes  map[common.Hash]*structures.BlockId
+	//headerNumber map[*big.Int]common.Hash
+	//headerhash   map[common.Hash]*big.Int
 
 	// need to hold list of out chans to publish to
 	outchans map[chan arbbridge.Notification]void
@@ -114,15 +118,16 @@ func getMockEth(ethURL string) *mockEthdata {
 	// once for each ethURL, set up data
 	tmpOnce := once[ethURL]
 	tmpOnce.Do(func() {
+		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
 		mEthData := new(mockEthdata)
 		MockEth[ethURL] = mEthData
 		//init header number to 0 at startup
-		mEthData.LatestHeight = big.NewInt(0)
-		mEthData.headerNumber = make(map[*big.Int]common.Hash)
-		mEthData.headerhash = make(map[common.Hash]*big.Int)
-		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
-		mEthData.headerNumber[mEthData.LatestHeight] = blockHash
-		mEthData.headerhash[blockHash] = mEthData.LatestHeight
+		mEthData.LatestBlock = new(structures.BlockId)
+		mEthData.LatestBlock.Height = common.NewTimeBlocks(big.NewInt(0))
+		mEthData.LatestBlock.HeaderHash = blockHash
+		mEthData.blockHashes[blockHash] = mEthData.LatestBlock
+		mEthData.blockNumbers[mEthData.LatestBlock.Height] = mEthData.LatestBlock
+
 		mEthData.outchans = make(map[chan arbbridge.Notification]void)
 		mEthData.cm = make(chan chan arbbridge.Notification)
 		mEthData.pubchan = make(chan arbbridge.Notification)
@@ -156,22 +161,23 @@ func (m *mockEthdata) registerOutChan(oc chan arbbridge.Notification) {
 
 func (m *mockEthdata) pubMsg(msg arbbridge.Notification) {
 	//fmt.Println("publishing block number", msg.Header.Number, " message", msg)
-	fmt.Println("publishing block number", *msg.BlockHeight, " message", msg)
+	fmt.Println("publishing block number", *msg.BlockId, " message", msg)
 	m.pubchan <- msg
 }
 
 func mine(m *mockEthdata, t time.Time) {
 	fmt.Println("mining - time = ", t)
-	nextBlock := m.LatestHeight.Add(m.LatestHeight, big.NewInt(1))
-	m.LatestHeight = nextBlock
+	nextBlock := new(structures.BlockId)
+	nextBlock.Height = common.NewTimeBlocks(nextBlock.Height.AsInt().Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
 	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
-	m.headerNumber[nextBlock] = blockHash
-	m.headerhash[blockHash] = nextBlock
+	nextBlock.HeaderHash = blockHash
+	m.LatestBlock = nextBlock
+	m.blockNumbers[nextBlock.Height] = nextBlock
+	m.blockHashes[nextBlock.HeaderHash] = nextBlock
 	fmt.Println("mined block number", nextBlock)
 	m.pubMsg(arbbridge.Notification{
-		BlockHeader: blockHash,
-		BlockHeight: nextBlock,
-		Event:       arbbridge.NewTimeEvent{},
+		BlockId: nextBlock,
+		Event:   arbbridge.NewTimeEvent{},
 	})
 }
 

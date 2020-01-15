@@ -24,19 +24,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type EthRollupWatcher struct {
+type ethRollupWatcher struct {
 	client arbbridge.ArbClient
 
 	address common.Address
 }
 
-func newRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
-	vm := &EthRollupWatcher{client: client, address: address}
+func newRollupWatcher(address common.Address, client arbbridge.ArbClient) (*ethRollupWatcher, error) {
+	vm := &ethRollupWatcher{client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
 }
 
-func (vm *EthRollupWatcher) setupContracts() error {
+func (vm *ethRollupWatcher) setupContracts() error {
 	//	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	//	if err != nil {
 	//		return errors2.Wrap(err, "Failed to connect to ArbRollup")
@@ -59,7 +59,7 @@ func (vm *EthRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
 	if err := vm.setupContracts(); err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	return nil
 }
 
-func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	//	event, err := func() (arbbridge.Event, error) {
 	//		if log.Topics[0] == rollupStakeCreatedID {
 	//			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)
@@ -241,7 +241,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	return nil
 }
 
-func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	return structures.ChainParams{
 		StakeRequirement:        nil,
 		GracePeriod:             common.TimeTicks{},
@@ -250,6 +250,6 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 	}, nil
 }
 
-func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	return common.Address{}, nil
 }

@@ -75,7 +75,7 @@ func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
 	//headers := make(chan *types.Header)
 	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	//if err != nil {
@@ -159,11 +159,11 @@ func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log type
 	//	return err
 	//}
 	outChan <- arbbridge.Notification{
-		BlockHeader: common.Hash{},
-		BlockHeight: nil,
-		VMID:        common.NewAddressFromEth(c.address),
-		Event:       event,
-		TxHash:      log.TxHash,
+		//BlockHeader: common.Hash{},
+		//BlockHeight: nil,
+		//VMID:        common.NewAddressFromEth(c.address),
+		Event:  event,
+		TxHash: log.TxHash,
 	}
 	return nil
 }
