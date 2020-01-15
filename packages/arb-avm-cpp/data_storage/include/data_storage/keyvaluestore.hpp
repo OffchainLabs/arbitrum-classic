@@ -18,6 +18,7 @@
 #define keyvaluestore_hpp
 
 #include <memory>
+#include <vector>
 
 struct DataResults;
 
