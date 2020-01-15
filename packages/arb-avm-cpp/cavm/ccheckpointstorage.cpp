@@ -177,12 +177,11 @@ ByteSlice getData(const CCheckpointStorage* storage_ptr,
                   const void* key,
                   int key_length) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto transaction = storage->makeConstTransaction();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
 
-    auto results = transaction->getData(key_vector);
+    auto results = storage->getValue(key_vector);
 
     auto value_data = (unsigned char*)malloc(results.stored_value.size());
     std::copy(results.stored_value.begin(), results.stored_value.end(),
