@@ -51,6 +51,7 @@ func (con *pendingInbox) SendTransactionMessage(
 	ctx context.Context,
 	data value.Value,
 	vmAddress common.Address,
+	contactAddress common.Address,
 	amount *big.Int,
 	seqNumber *big.Int,
 ) error {
@@ -65,6 +66,7 @@ func (con *pendingInbox) SendTransactionMessage(
 	tx, err := con.GlobalPendingInbox.SendTransactionMessage(
 		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
+		contactAddress.ToEthAddress(),
 		seqNumber,
 		amount,
 		dataBuf.Bytes(),

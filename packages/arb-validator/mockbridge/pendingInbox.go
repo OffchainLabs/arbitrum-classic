@@ -42,6 +42,7 @@ func (con *PendingInbox) SendTransactionMessage(
 	ctx context.Context,
 	data value.Value,
 	vmAddress common.Address,
+	contactAddress common.Address,
 	amount *big.Int,
 	seqNumber *big.Int,
 ) error {

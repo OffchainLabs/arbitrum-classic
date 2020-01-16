@@ -70,7 +70,7 @@ interface GlobalPendingInboxInterface extends Interface {
         }>;
 
         depositEthMessage: TypedFunctionDescription<{
-            encode([_vmAddress, _destination, _value]: [string, string, BigNumberish]): string;
+            encode([_vmAddress, _destination]: [string, string]): string;
         }>;
 
         depositERC20Message: TypedFunctionDescription<{
@@ -225,7 +225,6 @@ export class GlobalPendingInbox extends Contract {
         depositEthMessage(
             _vmAddress: string,
             _destination: string,
-            _value: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -319,7 +318,7 @@ export class GlobalPendingInbox extends Contract {
             _data: Arrayish,
         ): Promise<BigNumber>;
 
-        depositEthMessage(_vmAddress: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+        depositEthMessage(_vmAddress: string, _destination: string): Promise<BigNumber>;
 
         depositERC20Message(
             _vmAddress: string,
