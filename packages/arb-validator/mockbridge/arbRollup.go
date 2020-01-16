@@ -381,50 +381,48 @@ func (vm *ArbRollup) makeAssertion(prevPrevLeafHash common.Hash,
 	//deadlineTicks = data.prevDeadlineTicks;
 	//}
 	//deadlineTicks += checkTimeTicks;
+	//
+	//bytes32 invalidPending = generateInvalidPendingTopLeaf(
+	//data,
+	//prevLeaf,
+	//deadlineTicks,
+	//pendingValue,
+	//pendingCount,
+	//vmProtoHashBefore,
+	//gracePeriodTicks
+	//);
+	//bytes32 invalidMessages = generateInvalidMessagesLeaf(
+	//data,
+	//prevLeaf,
+	//deadlineTicks,
+	//vmProtoHashBefore,
+	//gracePeriodTicks
+	//);
+	//bytes32 invalidExec = generateInvalidExecutionLeaf(
+	//data,
+	//prevLeaf,
+	//deadlineTicks,
+	//vmProtoHashBefore,
+	//gracePeriodTicks,
+	//checkTimeTicks
+	//);
+	//bytes32 validHash = generateValidLeaf(
+	//data,
+	//prevLeaf,
+	//deadlineTicks
+	//);
+	//
+	//leaves[invalidPending] = true;
+	//leaves[invalidMessages] = true;
+	//leaves[invalidExec] = true;
+	//leaves[validHash] = true;
+	//delete leaves[prevLeaf];
+	//
+	//emitAssertedEvent(data, prevLeaf, pendingValue, pendingCount);
+	//return (prevLeaf, validHash);
 
 	return common.Hash{}, common.Hash{}, nil
 }
-
-//
-//
-//bytes32 invalidPending = generateInvalidPendingTopLeaf(
-//data,
-//prevLeaf,
-//deadlineTicks,
-//pendingValue,
-//pendingCount,
-//vmProtoHashBefore,
-//gracePeriodTicks
-//);
-//bytes32 invalidMessages = generateInvalidMessagesLeaf(
-//data,
-//prevLeaf,
-//deadlineTicks,
-//vmProtoHashBefore,
-//gracePeriodTicks
-//);
-//bytes32 invalidExec = generateInvalidExecutionLeaf(
-//data,
-//prevLeaf,
-//deadlineTicks,
-//vmProtoHashBefore,
-//gracePeriodTicks,
-//checkTimeTicks
-//);
-//bytes32 validHash = generateValidLeaf(
-//data,
-//prevLeaf,
-//deadlineTicks
-//);
-//
-//leaves[invalidPending] = true;
-//leaves[invalidMessages] = true;
-//leaves[invalidExec] = true;
-//leaves[validHash] = true;
-//delete leaves[prevLeaf];
-//
-//emitAssertedEvent(data, prevLeaf, pendingValue, pendingCount);
-//return (prevLeaf, validHash);
 
 func (vm *ArbRollup) ConfirmValid(
 	ctx context.Context,
