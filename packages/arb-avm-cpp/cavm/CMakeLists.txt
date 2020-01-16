@@ -27,6 +27,10 @@ set_target_properties(
     SOVERSION ${AVM_VERSION_MAJOR}
 )
 
+target_include_directories(cavm PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
 target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 
 target_link_libraries(cavm PUBLIC data_storage avm PRIVATE avm_utils)

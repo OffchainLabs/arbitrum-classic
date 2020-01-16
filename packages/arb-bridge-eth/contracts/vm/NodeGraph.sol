@@ -75,6 +75,8 @@ contract NodeGraph is ChallengeType {
 
     event RollupPruned(bytes32 leaf);
 
+    event RollupCreated(bytes32 initVmState);
+
     IGlobalPendingInbox public globalInbox;
     VM.Params public vmParams;
     mapping (bytes32 => bool) private leaves;
@@ -165,6 +167,8 @@ contract NodeGraph is ChallengeType {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
+
+        emit RollupCreated(_vmState);
     }
 
     function makeAssertion(MakeAssertionData memory data) internal returns(bytes32, bytes32) {
