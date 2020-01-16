@@ -173,6 +173,10 @@ interface ArbRollupInterface extends Interface {
             encodeTopics([nodeHash]: [null]): string[];
         }>;
 
+        RollupCreated: TypedEventDescription<{
+            encodeTopics([initVmState]: [null]): string[];
+        }>;
+
         RollupPruned: TypedEventDescription<{
             encodeTopics([leaf]: [null]): string[];
         }>;
@@ -357,6 +361,8 @@ export class ArbRollup extends Contract {
         ): EventFilter;
 
         RollupConfirmed(nodeHash: null): EventFilter;
+
+        RollupCreated(initVmState: null): EventFilter;
 
         RollupPruned(leaf: null): EventFilter;
 

@@ -178,6 +178,10 @@ ByteSlice getData(CCheckpointStorage* storage_ptr,
 
     auto results = keyvalue_store->getData(key_vector);
 
+    if (!results.status.ok() || results.data.empty()) {
+        return {nullptr, 0};
+    }
+
     auto value_data = (unsigned char*)malloc(results.data.size());
     std::copy(results.data.begin(), results.data.end(), value_data);
 

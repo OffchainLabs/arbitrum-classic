@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func TestPendingInboxInsert(t *testing.T) {
+func TestCheckpoint(t *testing.T) {
 	codeFile := "contract.ao"
 	dePath := "dbPath"
 
@@ -30,23 +30,16 @@ func TestPendingInboxInsert(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	mach1, err := New(codeFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	checkpointStorage, err := NewCheckpoint("dbPath", codeFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
-	mach2, err := checkpointStorage.GetInitialMachine()
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	if mach1.Hash() != mach2.Hash() {
-		t.Error("Machine hashes not equal")
+	val := checkpointStorage.GetData([]byte("key"))
+
+	if len(val) != 0 {
+		t.Error("should have empty value")
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
