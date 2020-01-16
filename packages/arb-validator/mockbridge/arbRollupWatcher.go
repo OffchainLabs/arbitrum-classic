@@ -103,7 +103,7 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	//				return nil, err
 	//			}
 	//			return arbbridge.StakeCreatedEvent{
-	//				Staker:   eventVal.Staker,
+	//				staker:   eventVal.staker,
 	//				NodeHash: eventVal.NodeHash,
 	//			}, nil
 	//		} else if log.Topics[0] == rollupChallengeStartedID {
@@ -133,7 +133,7 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	//				return nil, err
 	//			}
 	//			return arbbridge.StakeRefundedEvent{
-	//				Staker: eventVal.Staker,
+	//				staker: eventVal.staker,
 	//			}, nil
 	//		} else if log.Topics[0] == rollupPrunedID {
 	//			eventVal, err := vm.ArbRollup.ParseRollupPruned(log)
@@ -149,7 +149,7 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	//				return nil, err
 	//			}
 	//			return arbbridge.StakeMovedEvent{
-	//				Staker:   eventVal.Staker,
+	//				staker:   eventVal.staker,
 	//				Location: eventVal.ToNodeHash,
 	//			}, nil
 	//		} else if log.Topics[0] == rollupAssertedID {

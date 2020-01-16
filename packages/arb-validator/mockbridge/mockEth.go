@@ -136,9 +136,9 @@ func getMockEth(ethURL string) *mockEthdata {
 		go func() {
 			for {
 				select {
-				case ch := <-mEthData.cm:
+				case ch := <-mEthData.cm: // register outchan
 					mEthData.outchans[ch] = Void
-				case msg := <-mEthData.pubchan:
+				case msg := <-mEthData.pubchan: // publish to outchans
 					for ch, _ := range mEthData.outchans {
 						ch <- msg
 					}
@@ -160,7 +160,6 @@ func (m *mockEthdata) registerOutChan(oc chan arbbridge.Notification) {
 }
 
 func (m *mockEthdata) pubMsg(msg arbbridge.Notification) {
-	//fmt.Println("publishing block number", msg.Header.Number, " message", msg)
 	fmt.Println("publishing block number", *msg.BlockId, " message", msg)
 	m.pubchan <- msg
 }

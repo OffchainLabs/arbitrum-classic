@@ -21,6 +21,7 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -71,12 +72,21 @@ func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.Tim
 	return block, nil
 }
 
-type MockArbAuthClient struct {
-	*MockArbClient
-	auth *bind.TransactOpts
+type transOpts struct {
+	From  common.Address // Ethereum account to send the transaction from
+	Nonce *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
+
+	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
+	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
+	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
 }
 
-func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*MockArbAuthClient, error) {
+type MockArbAuthClient struct {
+	*MockArbClient
+	auth *transOpts
+}
+
+func NewEthAuthClient(ethURL string, auth *transOpts) (*MockArbAuthClient, error) {
 	client, err := NewEthClient(ethURL)
 	if err != nil {
 		return nil, err
@@ -88,7 +98,7 @@ func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*MockArbAuthClien
 }
 
 func (c *MockArbAuthClient) Address() common.Address {
-	return common.NewAddressFromEth(c.auth.From)
+	return c.auth.From
 }
 
 func (c *MockArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {

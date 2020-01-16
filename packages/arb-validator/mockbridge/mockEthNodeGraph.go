@@ -22,10 +22,57 @@ import (
 	"math/big"
 )
 
-type NodeGraph struct {
-	//vmParams
-	leaves        map[common.Hash]bool
-	lastConfirmed common.Hash
+type staker struct {
+	location           common.Hash
+	creationTimeBlocks *common.TimeBlocks
+	inChallenge        bool
+	balance            *big.Int
+}
+
+type nodeGraph struct {
+	stakeRequirement *big.Int
+	stakers          map[common.Address]*staker
+	stakerCount      int64
+	leaves           map[common.Hash]bool
+	lastConfirmed    common.Hash
+}
+
+func newNodeGraph(auth *transOpts) *nodeGraph {
+
+	//		register for inbox
+	//		init protocol state
+	//		create initial node
+	//		  latestConfirmedPriv = initialNode;
+	//        leaves[initialNode] = true;
+	//
+	//        // VM parameters
+	//        vmParams.gracePeriodTicks = _gracePeriodTicks;
+	//        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
+	//        vmParams.maxExecutionSteps = _maxExecutionSteps;
+	ng := &nodeGraph{
+		stakeRequirement: auth.GasPrice,
+		stakers:          make(map[common.Address]*staker),
+		stakerCount:      0,
+		leaves:           nil,
+		lastConfirmed:    common.Hash{},
+	}
+
+	return ng
+}
+
+func (ng *nodeGraph) pruneLeaf(from common.Hash, leafProof []common.Hash, latestConfirmedProof []common.Hash) error {
+	leaf := calculatePath(from, leafProof)
+	if !ng.leaves[leaf] {
+		return errors.New("PRUNE_LEAF invalid")
+	}
+	if (leafProof[0] == latestConfirmedProof[0]) ||
+		(calculatePath(from, latestConfirmedProof) != ng.lastConfirmed) {
+		return errors.New("PRUNE_CONFLICT")
+	}
+	delete(ng.leaves, leaf)
+	// emit RollupPruned(leaf)
+
+	return nil
 }
 
 type MakeAssertionData struct {
@@ -51,33 +98,4 @@ type MakeAssertionData struct {
 	numArbGas       uint64
 	messagesAccHash common.Hash
 	logsAccHash     common.Hash
-}
-
-func initNodeGraph() {
-	//		register for inbox
-	//		init protocol state
-	//		create initial node
-	//		  latestConfirmedPriv = initialNode;
-	//        leaves[initialNode] = true;
-	//
-	//        // VM parameters
-	//        vmParams.gracePeriodTicks = _gracePeriodTicks;
-	//        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
-	//        vmParams.maxExecutionSteps = _maxExecutionSteps;
-
-}
-
-func (ng *NodeGraph) pruneLeaf(from common.Hash, leafProof []common.Hash, latestConfirmedProof []common.Hash) error {
-	leaf := calculatePath(from, leafProof)
-	if !ng.leaves[leaf] {
-		return errors.New("PRUNE_LEAF invalid")
-	}
-	if (leafProof[0] == latestConfirmedProof[0]) ||
-		(calculatePath(from, latestConfirmedProof) != ng.lastConfirmed) {
-		return errors.New("PRUNE_CONFLICT")
-	}
-	delete(ng.leaves, leaf)
-	// emit RollupPruned(leaf)
-
-	return nil
 }
