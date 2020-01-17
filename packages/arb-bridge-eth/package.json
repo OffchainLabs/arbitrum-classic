@@ -23,8 +23,8 @@
     "truffle": "truffle",
     "docker:build:parity": "docker build -t arb-bridge-eth .",
     "docker:build:ganache": "docker build -t arb-bridge-eth-ganache -f ganache.Dockerfile .",
-    "docker:parity": "docker run --name 'arb-bridge-eth' -p 7545:7545 -p 7546:7546 -it arb-bridge-eth --geth --chain parity/poa.json",
-    "docker:ganache": "docker run  --name 'arb-bridge-eth-ganache' -p 7545:7545 -it arb-bridge-eth-ganache -m \"jar deny prosper gasp flush glass core corn alarm treat leg smart\" -a 15 -b2"
+    "docker:parity": "./scripts/launch-parity",
+    "docker:ganache": "./scripts/launch-ganache"
   },
   "module": {
     "loaders": [

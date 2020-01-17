@@ -68,10 +68,10 @@ func (con *arbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, err
 	}
-	if len(receipt.Logs) != 1 {
+	if len(receipt.Logs) != 2 {
 		return common.Address{}, errors2.New("Wrong receipt count")
 	}
-	event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
+	event, err := con.contract.ParseRollupCreated(*receipt.Logs[1])
 	if err != nil {
 		return common.Address{}, err
 	}
