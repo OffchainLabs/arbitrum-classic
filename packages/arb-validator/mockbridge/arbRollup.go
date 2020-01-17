@@ -192,7 +192,7 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 	//???
 	//require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
 	//require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
-	if vm.Client.MockEthClient.LatestBlock.Height.Cmp(deadlineTicks) < 0 {
+	if common.TimeFromBlockNum(vm.Client.MockEthClient.LatestBlock.Height).Val.Cmp(deadlineTicks) < 0 {
 		return errors.New("Node is not passed deadline")
 	}
 	//refundStaker(stakerAddress);
@@ -343,11 +343,12 @@ func (vm *ArbRollup) makeAssertion(prevPrevLeafHash common.Hash,
 	//data.prevChildType,
 	//vmProtoHashBefore
 	//);
-	prevLeaf := childNodeHash(prevPrevLeafHash,
+	//rollupUtils in solidity
+	prevLeaf, _ := structures.NodeHash(prevPrevLeafHash,
+		protoHashBefore,
 		prevDeadline,
 		prevDataHash,
 		prevChildType,
-		protoHashBefore,
 	)
 	//require(isValidLeaf(prevLeaf), MAKE_LEAF);
 	if !vm.leaves[prevLeaf] {

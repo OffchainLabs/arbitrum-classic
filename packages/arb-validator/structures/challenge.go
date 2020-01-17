@@ -70,3 +70,21 @@ func ExecutionDataHash(
 		hashing.Bytes32(assertionHash),
 	)
 }
+
+func NodeHash(prevHash common.Hash,
+	protoHash common.Hash,
+	deadline common.TimeTicks,
+	nodeDataHash common.Hash,
+	linkType ChildType) (common.Hash, common.Hash) {
+	innerHash := hashing.SoliditySHA3(
+		hashing.Bytes32(protoHash),
+		hashing.TimeTicks(deadline),
+		hashing.Bytes32(nodeDataHash),
+		hashing.Uint256(new(big.Int).SetUint64(uint64(linkType))),
+	)
+	hash := hashing.SoliditySHA3(
+		hashing.Bytes32(prevHash),
+		hashing.Bytes32(innerHash),
+	)
+	return hash, innerHash
+}
