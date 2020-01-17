@@ -56,10 +56,14 @@ func CreateManager(
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 	dbPrefix string,
+	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
+	}
+	if stressTest {
+		rollupWatcher = NewStressTestWatcher(rollupWatcher, 10*time.Second)
 	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
