@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"log"
 	"math/big"
 	"strings"
 
@@ -113,7 +112,6 @@ func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client)
 
 func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
-	log.Println("Getting events for block hash", bh.Hex())
 	addressIndex := ethcommon.Hash{}
 	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32))
 	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{

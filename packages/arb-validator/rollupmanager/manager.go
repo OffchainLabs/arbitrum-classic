@@ -90,7 +90,7 @@ func CreateManager(
 				watcher = NewStressTestWatcher(watcher, 30*time.Second)
 			}
 			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
-			log.Println("Loaded chain observer")
+
 			man.Lock()
 			// Clear pending listeners
 			for len(man.listenerAddChan) > 0 {
@@ -101,13 +101,11 @@ func CreateManager(
 				chain.AddListener(listener)
 			}
 			man.Unlock()
-			log.Println("Set up listeners", latestBlockId.HeaderHash, latestBlockId.Height.AsInt())
 
 			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, latestBlockId)
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Println("Getting headers")
 		runLoop:
 			for {
 				select {
@@ -124,13 +122,11 @@ func CreateManager(
 
 					chain.NotifyNewBlock(blockId)
 
-					log.Println(dbPrefix, "getting events at height", blockId.Height.AsInt(), blockId.HeaderHash)
 					events, err := watcher.GetEvents(runCtx, blockId)
 					if err != nil {
 						break runLoop
 					}
 					for _, event := range events {
-						log.Printf("%v is handling event %T at height %v with hash %v\n", dbPrefix, event, event.GetChainInfo().BlockId.Height.AsInt(), event.GetChainInfo().BlockId.HeaderHash)
 						handleNotification(runCtx, event, chain)
 					}
 				case action := <-man.actionChan:

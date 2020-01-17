@@ -170,19 +170,17 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
 					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
-					log.Println("Opinion thread preparing new assertion", newMessages, chain.calculatedValidNode.machine.LastBlockReason())
 					if chain.calculatedValidNode.machine != nil &&
 						!machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages) {
 						preparingAssertions[chain.calculatedValidNode.hash] = true
+						log.Println("Opinion thread preparing new assertion", newMessages, chain.calculatedValidNode.machine.LastBlockReason())
 						go func() {
 							assertionPreparedChan <- chain.prepareAssertion()
 						}()
 					}
 				} else {
-					log.Println("Opinion thread already preparing new assertion")
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						log.Println("Opinion thread has prepared new assertion")
 						startTime := prepared.params.TimeBounds.Start
 						endTime := prepared.params.TimeBounds.End
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
