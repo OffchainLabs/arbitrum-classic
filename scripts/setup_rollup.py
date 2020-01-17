@@ -84,7 +84,7 @@ def deploy(args, sudo_flag=False):
             factory_address,
         ),
         capture_stdout=True,
-        quiet=True,
+        quiet=False,
     )
 
     with open("validator-states/config.json", "w") as outfile:
