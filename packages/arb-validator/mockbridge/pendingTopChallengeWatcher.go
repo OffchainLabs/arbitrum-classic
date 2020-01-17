@@ -18,14 +18,10 @@ package mockbridge
 
 import (
 	"context"
-	"errors"
 	"strings"
-
-	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
@@ -46,11 +42,11 @@ func init() {
 type pendingTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	contract *pendingtopchallenge.PendingTopChallenge
-	client   arbbridge.ArbClient
+	client   *MockArbClient
 	address  ethcommon.Address
 }
 
-func newPendingTopChallengeWatcher(address ethcommon.Address, client arbbridge.ArbClient) (*pendingTopChallengeWatcher, error) {
+func newPendingTopChallengeWatcher(address ethcommon.Address, client *MockArbClient) (*pendingTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -75,7 +71,9 @@ func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
+func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
+	headers := make(chan arbbridge.MaybeEvent)
+	c.client.MockEthClient.registerOutChan(headers)
 	//headers := make(chan *types.Header)
 	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	//if err != nil {
@@ -87,8 +85,8 @@ func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startH
 	//	Topics:    [][]ethcommon.Hash{c.topics()},
 	//}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
+	//logChan := make(chan types.Log, 1024)
+	//logErrChan := make(chan error, 10)
 
 	//if err := getLogs(ctx, c.client, filter, big.NewInt(0), logChan, logErrChan); err != nil {
 	//	return err
@@ -101,69 +99,69 @@ func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startH
 			select {
 			case <-ctx.Done():
 				break
-			case evmLog, ok := <-logChan:
-				if !ok {
-					errChan <- errors.New("logChan terminated early")
-					return
-				}
-				if err := c.processEvents(ctx, evmLog, outChan); err != nil {
-					errChan <- err
-					return
-				}
-			case err := <-logErrChan:
-				errChan <- err
-				return
-				//case err := <-headersSub.Err():
+				//case evmLog, ok := <-logChan:
+				//	if !ok {
+				//		errChan <- errors.New("logChan terminated early")
+				//		return
+				//	}
+				//	if err := c.processEvents(ctx, evmLog, outChan); err != nil {
+				//		errChan <- err
+				//		return
+				//	}
+				//case err := <-logErrChan:
 				//	errChan <- err
+				//	return
+				//	//case err := <-headersSub.Err():
+				//	//	errChan <- err
 				//	return
 			}
 		}
 	}()
-	return nil
+	return headers, nil
 }
 
-func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == pendingTopBisectedID {
-			eventVal, err := c.contract.ParseBisected(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.PendingTopBisectionEvent{
-				//ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
-				ChainHashes: nil,
-				TotalLength: eventVal.TotalLength,
-				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
-			}, nil
-		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-			_, err := c.contract.ParseOneStepProofCompleted(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.OneStepProofEvent{}, nil
-		} else {
-			event, err := c.bisectionChallengeWatcher.parseBisectionEvent(log)
-			if event != nil || err != nil {
-				return event, err
-			}
-		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-
-	if err != nil {
-		return err
-	}
-
-	//header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-	//if err != nil {
-	//	return err
-	//}
-	outChan <- arbbridge.Notification{
-		//BlockHeader: common.Hash{},
-		//BlockHeight: nil,
-		//VMID:        common.NewAddressFromEth(c.address),
-		Event:  event,
-		TxHash: log.TxHash,
-	}
-	return nil
-}
+//func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+//	event, err := func() (arbbridge.Event, error) {
+//		if log.Topics[0] == pendingTopBisectedID {
+//			eventVal, err := c.contract.ParseBisected(log)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return arbbridge.PendingTopBisectionEvent{
+//				//ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
+//				ChainHashes: nil,
+//				TotalLength: eventVal.TotalLength,
+//				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
+//			}, nil
+//		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
+//			_, err := c.contract.ParseOneStepProofCompleted(log)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return arbbridge.OneStepProofEvent{}, nil
+//		} else {
+//			event, err := c.bisectionChallengeWatcher.parseBisectionEvent(log)
+//			if event != nil || err != nil {
+//				return event, err
+//			}
+//		}
+//		return nil, errors2.New("unknown arbitrum event type")
+//	}()
+//
+//	if err != nil {
+//		return err
+//	}
+//
+//	//header, err := c.client.HeaderByHash(ctx, log.BlockHash)
+//	//if err != nil {
+//	//	return err
+//	//}
+//	outChan <- arbbridge.Notification{
+//		//BlockHeader: common.Hash{},
+//		//BlockHeight: nil,
+//		//VMID:        common.NewAddressFromEth(c.address),
+//		Event:  event,
+//		TxHash: log.TxHash,
+//	}
+//	return nil
+//}

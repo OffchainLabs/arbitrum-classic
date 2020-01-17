@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 )
@@ -29,10 +28,10 @@ import (
 type ChallengeTester struct {
 	contract *challengetester.ChallengeTester
 	client   arbbridge.ArbClient
-	auth     *bind.TransactOpts
+	auth     *transOpts
 }
 
-func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ChallengeTester, error) {
+func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth *transOpts) (*ChallengeTester, error) {
 	//vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")

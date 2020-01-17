@@ -99,9 +99,9 @@ type mockEthdata struct {
 	//headerhash   map[common.Hash]*big.Int
 
 	// need to hold list of out chans to publish to
-	outchans map[chan arbbridge.Notification]void
-	cm       chan chan arbbridge.Notification
-	pubchan  chan arbbridge.Notification
+	outchans map[chan arbbridge.MaybeEvent]void
+	cm       chan chan arbbridge.MaybeEvent
+	pubchan  chan arbbridge.MaybeEvent
 	//ChannelWallet map[common.Address]protocol.TokenTracker
 	//create channel manager for adding, removing and publishing to list of outchans
 }
@@ -128,9 +128,9 @@ func getMockEth(ethURL string) *mockEthdata {
 		mEthData.blockHashes[blockHash] = mEthData.LatestBlock
 		mEthData.blockNumbers[mEthData.LatestBlock.Height] = mEthData.LatestBlock
 
-		mEthData.outchans = make(map[chan arbbridge.Notification]void)
-		mEthData.cm = make(chan chan arbbridge.Notification)
-		mEthData.pubchan = make(chan arbbridge.Notification)
+		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
+		mEthData.cm = make(chan chan arbbridge.MaybeEvent)
+		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
 		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
 		go func() {
@@ -154,13 +154,13 @@ func getMockEth(ethURL string) *mockEthdata {
 	return MockEth[ethURL]
 }
 
-func (m *mockEthdata) registerOutChan(oc chan arbbridge.Notification) {
+func (m *mockEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 	fmt.Println("registering outchan")
 	m.cm <- oc
 }
 
-func (m *mockEthdata) pubMsg(msg arbbridge.Notification) {
-	fmt.Println("publishing block number", *msg.BlockId, " message", msg)
+func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
+	fmt.Println("publishing event", msg)
 	m.pubchan <- msg
 }
 
@@ -174,9 +174,12 @@ func mine(m *mockEthdata, t time.Time) {
 	m.blockNumbers[nextBlock.Height] = nextBlock
 	m.blockHashes[nextBlock.HeaderHash] = nextBlock
 	fmt.Println("mined block number", nextBlock)
-	m.pubMsg(arbbridge.Notification{
-		BlockId: nextBlock,
-		Event:   arbbridge.NewTimeEvent{},
+	m.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.NewTimeEvent{
+			arbbridge.ChainInfo{
+				BlockId: nextBlock,
+			},
+		},
 	})
 }
 

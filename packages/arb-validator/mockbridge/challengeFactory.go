@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengefactory"
 )
@@ -29,10 +28,10 @@ import (
 type challengeFactory struct {
 	contract *challengefactory.ChallengeFactory
 	client   arbbridge.ArbClient
-	auth     *bind.TransactOpts
+	auth     *transOpts
 }
 
-func newChallengeFactory(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*challengeFactory, error) {
+func newChallengeFactory(address common.Address, client arbbridge.ArbClient, auth *transOpts) (*challengeFactory, error) {
 	//vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")

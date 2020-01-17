@@ -25,12 +25,12 @@ import (
 )
 
 type ethRollupWatcher struct {
-	client arbbridge.ArbClient
+	client *MockArbClient
 
 	address common.Address
 }
 
-func newRollupWatcher(address common.Address, client arbbridge.ArbClient) (*ethRollupWatcher, error) {
+func newRollupWatcher(address common.Address, client *MockArbClient) (*ethRollupWatcher, error) {
 	vm := &ethRollupWatcher{client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
@@ -59,43 +59,122 @@ func (vm *ethRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
+//func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan MaybeEvent, error) {
+//	if err := vm.setupContracts(); err != nil {
+//		return nil, err
+//	}
+//
+//	logChan := make(chan types.Log, 1024)
+//	logErrChan := make(chan error, 10)
+//	headers := make(chan *types.Header)
+//	headersSub, err := vm.client.SubscribeNewHead(ctx, headers)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	//if err := getLogs(ctx, vm.client, vm.rollupFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
+//	//	return err
+//	//}
+//	//
+//	//if err := getLogs(ctx, vm.client, vm.messageFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
+//	//	return err
+//	//}
+//
+//	eventChan := make(chan arbbridge.MaybeEvent, 1024)
+//	go func() {
+//
+//		for {
+//			select {
+//			case <-ctx.Done():
+//				break
+//			case ethLog := <-logChan:
+//				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
+//					errChan <- err
+//					return
+//				}
+//			case err := <-logErrChan:
+//				errChan <- err
+//				return
+//			}
+//		}
+//	}()
+//	return eventChan, nil
+//}
+
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	if err := vm.setupContracts(); err != nil {
-		return err
+		return nil, err
 	}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
-
-	//if err := getLogs(ctx, vm.client, vm.rollupFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
-	//	return err
-	//}
-	//
-	//if err := getLogs(ctx, vm.client, vm.messageFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
-	//	return err
+	headers := make(chan arbbridge.MaybeEvent)
+	vm.client.MockEthClient.registerOutChan(headers)
+	//headersSub, err := vm.client.MockEthClient.registerOutChan(headers)
+	//if err != nil {
+	//	return nil, err
 	//}
 
+	//logCtx, cancelFunc := context.WithCancel(ctx)
+
+	//rollupMaybeLogChan, err := getLogs(logCtx, vm.client, vm.rollupFilter(), startHeight, startLogIndex)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//inboxMaybeLogChan, err := getLogs(logCtx, vm.client, vm.messageFilter(), startHeight, startLogIndex)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	eventChan := make(chan arbbridge.MaybeEvent, 1024)
 	go func() {
+		defer close(eventChan)
+		//defer cancelFunc()
 
 		for {
 			select {
 			case <-ctx.Done():
-				break
-			case ethLog := <-logChan:
-				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
-					errChan <- err
-					return
-				}
-			case err := <-logErrChan:
-				errChan <- err
 				return
+			case header := <-headers:
+				eventChan <- header
+				//case maybeLog, ok := <-rollupMaybeLogChan:
+				//	if !ok {
+				//		eventChan <- arbbridge.MaybeEvent{Err: errors.New("rollupMaybeLogChan terminated early")}
+				//		return
+				//	}
+				//	if maybeLog.err != nil {
+				//		eventChan <- arbbridge.MaybeEvent{Err: err}
+				//		return
+				//	}
+				//	event, err := vm.processEvents(ctx, maybeLog.log)
+				//	if err != nil {
+				//		eventChan <- arbbridge.MaybeEvent{Err: err}
+				//		return
+				//	}
+				//	eventChan <- arbbridge.MaybeEvent{Event: event}
+				//case maybeLog, ok := <-inboxMaybeLogChan:
+				//	if !ok {
+				//		eventChan <- arbbridge.MaybeEvent{Err: errors.New("inboxMaybeLogChan terminated early")}
+				//		return
+				//	}
+				//	if maybeLog.err != nil {
+				//		eventChan <- arbbridge.MaybeEvent{Err: err}
+				//		return
+				//	}
+				//	event, err := vm.processEvents(ctx, maybeLog.log)
+				//	if err != nil {
+				//		eventChan <- arbbridge.MaybeEvent{Err: err}
+				//		return
+				//	}
+				//	eventChan <- arbbridge.MaybeEvent{Event: event}
+				//case err := <-headersSub.Err():
+				//	eventChan <- arbbridge.MaybeEvent{Err: err}
+				//	return
 			}
 		}
 	}()
-	return nil
+	return eventChan, nil
 }
 
-func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.MaybeEvent) error {
 	//	event, err := func() (arbbridge.Event, error) {
 	//		if log.Topics[0] == rollupStakeCreatedID {
 	//			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)

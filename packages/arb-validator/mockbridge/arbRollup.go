@@ -29,10 +29,10 @@ import (
 
 type ArbRollup struct {
 	*nodeGraph
-	Client MockArbAuthClient
+	Client *MockArbAuthClient
 }
 
-func newRollup(address common.Address, client MockArbAuthClient) (*ArbRollup, error) {
+func newRollup(address common.Address, client *MockArbAuthClient) (*ArbRollup, error) {
 	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
@@ -68,9 +68,11 @@ func (vm *ArbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	}
 
 	//emit RollupStakeCreated(msg.sender, location);
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeCreatedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
 			Staker:   vm.Client.auth.From,
 			NodeHash: vm.Client.MockEthClient.LatestBlock.HeaderHash,
 		},
@@ -97,9 +99,11 @@ func (vm *ArbRollup) refundStaker(staker common.Address) {
 	delete(vm.stakers, staker)
 	//transfer stake requirement
 	// ???
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
 			Staker: staker,
 		},
 	})
@@ -123,9 +127,11 @@ func (vm *ArbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	vm.refundStaker(vm.Client.auth.From)
 
 	//emit RollupStakeRefunded(address(_stakerAddress));
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
 			Staker: vm.Client.auth.From,
 		},
 	})
@@ -215,9 +221,11 @@ func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	}
 	vm.stakers[vm.Client.auth.From].location = newLocation
 	//emit RollupStakeRefunded(address(_stakerAddress));
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
 			Staker: vm.Client.auth.From,
 		},
 	})
@@ -245,10 +253,12 @@ func (vm *ArbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	delete(vm.leaves, leaf)
 	//
 	//emit RollupPruned(leaf);
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.PrunedEvent{
-			leaf,
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
+			Leaf: leaf,
 		},
 	})
 
@@ -311,9 +321,11 @@ func (vm *ArbRollup) MakeAssertion(
 	//updateStakerLocation(msg.sender, newValid);
 	vm.stakers[vm.Client.auth.From].location = newValid
 	//emit RollupStakeRefunded(address(_stakerAddress));
-	vm.Client.MockEthClient.pubMsg(arbbridge.Notification{
-		BlockId: vm.Client.MockEthClient.LatestBlock,
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
 			Staker: vm.Client.auth.From,
 		},
 	})
