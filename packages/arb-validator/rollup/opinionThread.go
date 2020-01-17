@@ -169,8 +169,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
-					log.Println("Opinion thread preparing new assertion")
 					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+					log.Println("Opinion thread preparing new assertion", newMessages, chain.calculatedValidNode.machine.LastBlockReason())
 					if chain.calculatedValidNode.machine != nil &&
 						!machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages) {
 						preparingAssertions[chain.calculatedValidNode.hash] = true

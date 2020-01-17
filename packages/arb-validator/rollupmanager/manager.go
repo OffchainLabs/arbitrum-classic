@@ -108,24 +108,33 @@ func CreateManager(
 				log.Fatal(err)
 			}
 			log.Println("Getting headers")
-			for maybeBlockId := range headersChan {
-				if maybeBlockId.Err != nil {
-					log.Println("Error getting new header", maybeBlockId.Err)
-					break
-				}
+		runLoop:
+			for {
+				select {
+				case maybeBlockId, ok := <-headersChan:
+					if !ok {
+						break runLoop
+					}
+					if maybeBlockId.Err != nil {
+						log.Println("Error getting new header", maybeBlockId.Err)
+						break runLoop
+					}
 
-				blockId := maybeBlockId.BlockId
+					blockId := maybeBlockId.BlockId
 
-				chain.NotifyNewBlock(blockId)
+					chain.NotifyNewBlock(blockId)
 
-				log.Println(dbPrefix, "getting events at height", blockId.Height.AsInt(), blockId.HeaderHash)
-				events, err := watcher.GetEvents(runCtx, blockId)
-				if err != nil {
-					break
-				}
-				for _, event := range events {
-					log.Printf("%v is handling event %T at height %v with hash %v\n", dbPrefix, event, event.GetChainInfo().BlockId.Height.AsInt(), event.GetChainInfo().BlockId.HeaderHash)
-					handleNotification(runCtx, event, chain)
+					log.Println(dbPrefix, "getting events at height", blockId.Height.AsInt(), blockId.HeaderHash)
+					events, err := watcher.GetEvents(runCtx, blockId)
+					if err != nil {
+						break runLoop
+					}
+					for _, event := range events {
+						log.Printf("%v is handling event %T at height %v with hash %v\n", dbPrefix, event, event.GetChainInfo().BlockId.Height.AsInt(), event.GetChainInfo().BlockId.HeaderHash)
+						handleNotification(runCtx, event, chain)
+					}
+				case action := <-man.actionChan:
+					action(chain)
 				}
 			}
 
