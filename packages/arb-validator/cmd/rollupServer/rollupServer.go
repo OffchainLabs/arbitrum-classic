@@ -18,12 +18,9 @@ package main
 
 import (
 	"context"
-	jsonenc "encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -31,13 +28,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -103,20 +101,9 @@ func createRollupChain() {
 	// 3) URL
 	ethURL := flag.Arg(3)
 
-	// 4) Global EthBridge addresses json
-	jsonFile, err := os.Open(flag.Arg(4))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	byteValue, _ = ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-
-	var connectionInfo ethbridge.ArbAddresses
-	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		log.Fatalln(err)
-	}
+	// 4) Rollup factory address
+	addressString := flag.Arg(4)
+	factoryAddress := common.HexToAddress(addressString)
 
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
@@ -133,7 +120,7 @@ func createRollupChain() {
 		log.Fatal(err)
 	}
 
-	factory, err := client.NewArbFactory(connectionInfo.ArbFactoryAddress())
+	factory, err := client.NewArbFactory(factoryAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,21 +138,6 @@ func createRollupChain() {
 	fmt.Println(address.Hex())
 }
 
-func setupChainObserver(
-	client arbbridge.ArbClient,
-	rollupAddress common.Address,
-	codeFile string,
-) (*rollup.ChainObserver, error) {
-	ctx := context.Background()
-	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollupmanager.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
-	if err != nil {
-		return nil, err
-	}
-	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	return chainObserver, nil
-}
-
 func validateRollupChain() error {
 	// Check number of args
 
@@ -177,7 +149,7 @@ func validateRollupChain() error {
 	}
 
 	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <bridge_eth_addresses.json>")
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
 	}
 
 	// 2) Private key
@@ -213,19 +185,29 @@ func validateRollupChain() error {
 		return err
 	}
 
-	chainObserver, err := setupChainObserver(client, address, validateCmd.Arg(0))
+	rollupActor, err := client.NewRollup(address)
 	if err != nil {
 		return err
 	}
-	validatorListener := rollup.NewValidatorChainListener(chainObserver)
+
+	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
-	chainObserver.AddListener(validatorListener)
+
+	ctx := context.Background()
+	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, "", true) // note: stress test is ON
+	if err != nil {
+		return err
+	}
+	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
-		rollupvalidator.LaunchRPC(chainObserver, "1235")
+		if err := rollupvalidator.LaunchRPC(manager, "1235"); err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		wait := make(chan bool)
 		<-wait

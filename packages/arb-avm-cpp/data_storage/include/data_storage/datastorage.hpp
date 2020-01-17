@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include <data_storage/keyvaluestore.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <rocksdb/utilities/transaction.h>
@@ -39,6 +40,7 @@ class DataStorage {
     rocksdb::Status closeDb();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
+    std::unique_ptr<KeyValueStore> makeKeyValueStore();
 };
 
 #endif /* datastorage_hpp */

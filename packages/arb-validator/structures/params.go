@@ -31,17 +31,19 @@ type ChainParams struct {
 
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
-		StakeRequirement:  common.MarshalBigInt(params.StakeRequirement),
-		GracePeriod:       params.GracePeriod.MarshalToBuf(),
-		MaxExecutionSteps: params.MaxExecutionSteps,
+		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
+		GracePeriod:             params.GracePeriod.MarshalToBuf(),
+		MaxExecutionSteps:       params.MaxExecutionSteps,
+		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
 	}
 }
 
 func (m *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
-		StakeRequirement:  m.StakeRequirement.Unmarshal(),
-		GracePeriod:       m.GracePeriod.Unmarshal(),
-		MaxExecutionSteps: m.MaxExecutionSteps,
+		StakeRequirement:        m.StakeRequirement.Unmarshal(),
+		GracePeriod:             m.GracePeriod.Unmarshal(),
+		MaxExecutionSteps:       m.MaxExecutionSteps,
+		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }
 

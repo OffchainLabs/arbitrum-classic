@@ -18,9 +18,15 @@ package arbbridge
 
 import (
 	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type MaybeEvent struct {
+	Event Event
+	Err   error
+}
+
 type ContractWatcher interface {
-	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan Notification) error
+	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan MaybeEvent, error)
 }

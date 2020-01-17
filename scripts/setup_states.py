@@ -32,16 +32,8 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Retrieve bridge_eth_addresses.json
 # arb-bridge-eth must be have been built first
-def setup_validator_states_docker(contract, n_validators, node_type, sudo=False):
+def setup_validator_states_docker(contract, n_validators, image_name, sudo=False):
     ethaddrs = "bridge_eth_addresses.json"
-
-    if node_type == "parity":
-        image_name = "arb-bridge-eth"
-    elif node_type == "ganache":
-        image_name = "arb-bridge-eth-ganache"
-    else:
-        print(node_type, "is bad")
-        raise Exception("Unknown node type " + node_type)
 
     layer = run(
         "docker create %s" % image_name, capture_stdout=True, quiet=True, sudo=sudo

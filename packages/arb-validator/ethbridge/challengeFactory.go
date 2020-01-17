@@ -22,7 +22,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -33,10 +32,10 @@ import (
 type challengeFactory struct {
 	contract *challengefactory.ChallengeFactory
 	client   *ethclient.Client
-	auth     *bind.TransactOpts
+	auth     *TransactAuth
 }
 
-func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challengeFactory, error) {
+func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challengeFactory, error) {
 	vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
@@ -52,9 +51,10 @@ func (con *challengeFactory) CreateChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {
-	con.auth.Context = ctx
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.contract.CreateChallenge(
-		con.auth,
+		con.auth.getAuth(ctx),
 		asserter.ToEthAddress(),
 		challenger.ToEthAddress(),
 		challengePeriod.Val,
@@ -65,7 +65,7 @@ func (con *challengeFactory) CreateChallenge(
 		return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
 	}
 
-	receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")
+	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChallenge")
 	if err != nil {
 		return common.Address{}, err
 	}

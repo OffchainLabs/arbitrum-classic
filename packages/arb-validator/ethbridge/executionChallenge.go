@@ -18,11 +18,9 @@ package ethbridge
 
 import (
 	"context"
-	"log"
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -37,7 +35,7 @@ type executionChallenge struct {
 	challenge *executionchallenge.ExecutionChallenge
 }
 
-func newExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*executionChallenge, error) {
+func newExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*executionChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -70,9 +68,10 @@ func (c *executionChallenge) BisectAssertion(
 		logAccs = append(logAccs, assertion.LastLogHash)
 		gasses = append(gasses, assertion.NumGas)
 	}
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.challenge.BisectAssertion(
-		c.auth,
+		c.auth.getAuth(ctx),
 		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
@@ -94,10 +93,10 @@ func (c *executionChallenge) OneStepProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
-	log.Println("Calling OneStepProof proof with size", len(proof))
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.challenge.OneStepProof(
-		c.auth,
+		c.auth.getAuth(ctx),
 		precondition.BeforeHash,
 		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),

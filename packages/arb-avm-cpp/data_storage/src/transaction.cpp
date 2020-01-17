@@ -116,9 +116,9 @@ GetResults Transaction::getData(
     auto get_status = transaction->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
-        auto tuple = parseCountAndValue(return_value);
-        auto stored_val = std::get<1>(tuple);
-        auto ref_count = std::get<0>(tuple);
+        auto parsed_values = parseCountAndValue(return_value);
+        auto stored_val = std::get<1>(parsed_values);
+        auto ref_count = std::get<0>(parsed_values);
 
         return GetResults{ref_count, get_status, stored_val};
     } else {

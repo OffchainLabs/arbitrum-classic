@@ -5,10 +5,11 @@ package rollup
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	structures "github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -206,7 +207,7 @@ func (m *NodeGraphBuf) GetParams() *structures.ChainParamsBuf {
 
 type StakedNodeGraphBuf struct {
 	NodeGraph            *NodeGraphBuf `protobuf:"bytes,1,opt,name=nodeGraph,proto3" json:"nodeGraph,omitempty"`
-	Stakers              []*StakerBuf  `protobuf:"bytes,2,rep,name=stakers,proto3" json:"stakers,omitempty"`
+	Stakers              []*StakerBuf  `protobuf:"bytes,2,rep,name=stakingKeys,proto3" json:"stakingKeys,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`

@@ -53,3 +53,7 @@ std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
     const {
     return datastorage->makeTransaction();
 }
+
+std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {
+    return datastorage->makeKeyValueStore();
+}

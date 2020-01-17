@@ -1,0 +1,8 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### launch-ganache
+### --------------------------------------------------------------------
+
+docker network inspect arb-network >/dev/null 2>&1 || \
+    docker network create --driver bridge arb-network
+docker run --rm -p 7545:7545 -it --name arb-bridge-eth-ganache --network=arb-network arb-bridge-eth-ganache -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -a 15 -b2

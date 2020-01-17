@@ -18,11 +18,17 @@ package rollupmanager
 
 import (
 	"context"
-	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"log"
 	"math/big"
+	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
@@ -34,8 +40,13 @@ const (
 )
 
 type Manager struct {
-	rollupAddr common.Address
-	client     arbbridge.ArbClient
+	sync.Mutex
+	RollupAddress common.Address
+	client        arbbridge.ArbClient
+	listeners     []rollup.ChainListener
+
+	listenerAddChan chan rollup.ChainListener
+	actionChan      chan func(*rollup.ChainObserver)
 }
 
 func CreateManager(
@@ -44,94 +55,84 @@ func CreateManager(
 	arbitrumCodeFilePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
+	dbPrefix string,
+	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
 	}
-
+	if stressTest {
+		rollupWatcher = NewStressTestWatcher(rollupWatcher, 10*time.Second)
+	}
+	man := &Manager{
+		RollupAddress:   rollupAddr,
+		client:          clnt,
+		listenerAddChan: make(chan rollup.ChainListener, 10),
+		actionChan:      make(chan func(*rollup.ChainObserver), 10),
+	}
 	go func() {
 		for {
-			reorgCtx, cancelFunc := context.WithCancel(ctx)
+			runCtx, cancelFunc := context.WithCancel(ctx)
 
 			checkpointer := rollup.NewProductionCheckpointer(
-				reorgCtx,
+				runCtx,
 				rollupAddr,
 				arbitrumCodeFilePath,
 				big.NewInt(maxReorgDepth),
+				dbPrefix,
 				false,
 			)
 
-			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, true)
+			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, updateOpinion)
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
-			chain := chainObserverBuf.UnmarshalFromCheckpoint(reorgCtx, restoreCtx, watcher)
+			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
 
-			fmt.Println("Starting connection")
+			man.Lock()
+			// Clear pending listeners
+			for len(man.listenerAddChan) > 0 {
+				<-man.listenerAddChan
+			}
+			// Add manager's listeners
+			for _, listener := range man.listeners {
+				chain.AddListener(listener)
+			}
+			man.Unlock()
 
-			outChan := make(chan arbbridge.Notification, 1024)
-			errChan := make(chan error, 1024)
-			if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, 0, errChan, outChan); err != nil {
+			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, rollupWatcher)
+			if err != nil {
 				log.Fatal(err)
 			}
 
-			fmt.Println("Started connection")
+		runLoop:
+			for {
+				select {
+				case <-reorgCtx.Done():
+					log.Println("Reorg context done")
+					break runLoop
+				case listener := <-man.listenerAddChan:
+					chain.AddListener(listener)
+				case action := <-man.actionChan:
+					action(chain)
+				case event, ok := <-eventChan:
+					if !ok {
+						break runLoop
+					}
+					chainInfo := event.GetChainInfo()
 
-			chain.Start(reorgCtx)
-
-			go func() {
-				latestLogIndex := uint(0)
-				for {
-					hitError := false
-					select {
-					case <-ctx.Done():
-						return
-					case notification, ok := <-outChan:
-						if !ok {
-							hitError = true
-							break
-						}
-						switch notification.BlockId.Height.Cmp(latestBlockId.Height) {
-						case -1:
-							// reorg
-							cancelFunc()
-							return
-						case 0:
-							if !notification.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
-								// reorg
-								cancelFunc()
-								return
-							}
-							if notification.LogIndex > latestLogIndex {
-								latestLogIndex = notification.LogIndex
-								handleNotification(notification, chain)
-							}
-						case 1:
-							latestBlockId = notification.BlockId
-							latestLogIndex = notification.LogIndex
-							chain.NotifyNewBlock(notification.BlockId)
-							handleNotification(notification, chain)
-						}
-					case <-errChan:
-						hitError = true
+					if chainInfo.BlockId.Height.Cmp(latestBlockId.Height) > 0 {
+						chain.NotifyNewBlock(chainInfo.BlockId)
 					}
 
-					if hitError {
-						// Ignore error and try to reset connection
-						for {
-							if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, errChan, outChan); err == nil {
-								break
-							}
-							log.Println("Error: Can't connect to blockchain")
-							time.Sleep(5 * time.Second)
-						}
-					}
+					handleNotification(event, chain)
+					latestBlockId = chainInfo.BlockId
 				}
-			}()
+			}
+			cancelFunc()
 
-			<-reorgCtx.Done()
 			select {
 			case <-ctx.Done():
 				return
@@ -141,17 +142,54 @@ func CreateManager(
 		}
 	}()
 
-	return &Manager{rollupAddr, clnt}, nil
+	return man, nil
 }
 
-func handleNotification(notification arbbridge.Notification, chain *rollup.ChainObserver) {
+func (man *Manager) AddListener(listener rollup.ChainListener) {
+	man.Lock()
+	man.listeners = append(man.listeners, listener)
+	man.listenerAddChan <- listener
+	man.Unlock()
+}
+
+func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*protocol.ExecutionAssertion, uint32) {
+	retChan := make(chan struct {
+		*protocol.ExecutionAssertion
+		uint32
+	}, 1)
+	man.actionChan <- func(chain *rollup.ChainObserver) {
+		mach := chain.LatestKnownValidMachine()
+		latestTime := chain.CurrentBlockId().Height
+		timeBounds := &protocol.TimeBoundsBlocks{latestTime, latestTime}
+		go func() {
+			assertion, numSteps := mach.ExecuteAssertion(maxSteps, timeBounds, messages)
+			retChan <- struct {
+				*protocol.ExecutionAssertion
+				uint32
+			}{assertion, numSteps}
+		}()
+	}
+	ret := <-retChan
+	return ret.ExecutionAssertion, ret.uint32
+}
+
+func (man *Manager) CurrentBlockId() *structures.BlockId {
+	retChan := make(chan *structures.BlockId, 1)
+	man.actionChan <- func(chain *rollup.ChainObserver) {
+		retChan <- chain.CurrentBlockId()
+	}
+	return <-retChan
+}
+
+func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
+	log.Printf("Handling event %T\n", event)
 	chain.Lock()
 	defer chain.Unlock()
-	switch ev := notification.Event.(type) {
+	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
 		chain.MessageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(notification.BlockId.Height)
+		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
 		chain.CreateStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.NewChallenge(ev)
@@ -164,7 +202,7 @@ func handleNotification(notification arbbridge.Notification, chain *rollup.Chain
 	case arbbridge.StakeMovedEvent:
 		chain.MoveStake(ev)
 	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ev, notification.BlockId.Height, notification.TxHash)
+		err := chain.NotifyAssert(ev, ev.BlockId.Height, ev.TxHash)
 		if err != nil {
 			panic(err)
 		}

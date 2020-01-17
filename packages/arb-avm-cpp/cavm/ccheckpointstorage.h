@@ -44,7 +44,7 @@ int saveData(CCheckpointStorage* storage_ptr,
              int key_length,
              const void* data,
              int data_length);
-ByteSlice getData(const CCheckpointStorage* storage_ptr,
+ByteSlice getData(CCheckpointStorage* storage_ptr,
                   const void* key,
                   int key_length);
 int deleteData(CCheckpointStorage* storage_ptr,

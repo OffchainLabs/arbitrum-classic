@@ -23,6 +23,7 @@ set(LIB_HEADERS
   include/data_storage/datastorage.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/transaction.hpp
+  include/data_storage/keyvaluestore.hpp
   include/data_storage/checkpoint/machinestatesaver.hpp
   include/data_storage/checkpoint/machinestatefetcher.hpp
   include/data_storage/checkpoint/machinestatedeleter.hpp
@@ -33,6 +34,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/datastorage.cpp
   src/transaction.cpp
+  src/keyvaluestore.cpp
   src/checkpoint/machinestatesaver.cpp
   src/checkpoint/machinestatefetcher.cpp
   src/checkpoint/machinestatedeleter.cpp

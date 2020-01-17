@@ -21,12 +21,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --tstypes_out=../../arb-provider-ethers/src/lib --go_out=paths=source_relative,plugins=grpc:. *.proto"
@@ -35,8 +35,8 @@ type RPCServer struct {
 	*Server
 }
 
-func LaunchRPC(chainObserver *rollup.ChainObserver, port string) error {
-	server, err := NewRPCServer(chainObserver, 200000)
+func LaunchRPC(man *rollupmanager.Manager, port string) error {
+	server, err := NewRPCServer(man, 200000)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func LaunchRPC(chainObserver *rollup.ChainObserver, port string) error {
 }
 
 // NewServer returns a new instance of the Server class
-func NewRPCServer(chainObserver *rollup.ChainObserver, maxCallSteps uint32) (*RPCServer, error) {
-	server, err := NewServer(chainObserver, maxCallSteps)
+func NewRPCServer(man *rollupmanager.Manager, maxCallSteps uint32) (*RPCServer, error) {
+	server, err := NewServer(man, maxCallSteps)
 	return &RPCServer{server}, err
 }
 

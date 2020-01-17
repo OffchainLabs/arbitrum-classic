@@ -25,71 +25,58 @@ import (
 )
 
 type Event interface {
+	GetChainInfo() ChainInfo
 }
 
-type Notification struct {
+type ChainInfo struct {
 	BlockId  *structures.BlockId
 	LogIndex uint
-	Event    Event
 	TxHash   [32]byte
 }
 
+func (c ChainInfo) GetChainInfo() ChainInfo {
+	return c
+}
+
 type StakeCreatedEvent struct {
+	ChainInfo
 	Staker   common.Address
 	NodeHash common.Hash
 }
 
-func (e StakeCreatedEvent) RelatedToStaker(staker common.Address) bool {
-	return staker == e.Staker
-}
-
 type ChallengeStartedEvent struct {
+	ChainInfo
 	Asserter          common.Address
 	Challenger        common.Address
 	ChallengeType     structures.ChildType
 	ChallengeContract common.Address
 }
 
-func (e ChallengeStartedEvent) RelatedToStaker(staker common.Address) bool {
-	return staker == e.Asserter || staker == e.Challenger
-}
-
 type ChallengeCompletedEvent struct {
+	ChainInfo
 	Winner            common.Address
 	Loser             common.Address
 	ChallengeContract common.Address
 }
 
-func (e ChallengeCompletedEvent) RelatedToStaker(staker common.Address) bool {
-	return staker == e.Winner || staker == e.Loser
-}
-
 type StakeRefundedEvent struct {
+	ChainInfo
 	Staker common.Address
 }
 
-func (e StakeRefundedEvent) RelatedToStaker(staker common.Address) bool {
-	return staker == e.Staker
-}
-
 type PrunedEvent struct {
+	ChainInfo
 	Leaf common.Hash
 }
 
-func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
-	return false
-}
-
 type StakeMovedEvent struct {
+	ChainInfo
 	Staker   common.Address
 	Location common.Hash
 }
 
-func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
-	return staker == e.Staker
-}
-
 type AssertedEvent struct {
+	ChainInfo
 	PrevLeafHash    common.Hash
 	Params          *structures.AssertionParams
 	Claim           *structures.AssertionClaim
@@ -97,44 +84,48 @@ type AssertedEvent struct {
 	MaxPendingCount *big.Int
 }
 
-func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
-	return false
-}
-
 type ConfirmedEvent struct {
+	ChainInfo
 	NodeHash common.Hash
 }
 
-func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
-	return false
-}
-
 type ConfirmedAssertionEvent struct {
+	ChainInfo
 	LogsAccHash common.Hash
 }
 
 type InitiateChallengeEvent struct {
+	ChainInfo
 	Deadline common.TimeTicks
 }
 
-type AsserterTimeoutEvent struct{}
+type AsserterTimeoutEvent struct {
+	ChainInfo
+}
 
-type ChallengerTimeoutEvent struct{}
+type ChallengerTimeoutEvent struct {
+	ChainInfo
+}
 
 type ContinueChallengeEvent struct {
+	ChainInfo
 	SegmentIndex *big.Int
 	Deadline     common.TimeTicks
 }
 
-type OneStepProofEvent struct{}
+type OneStepProofEvent struct {
+	ChainInfo
+}
 
 type PendingTopBisectionEvent struct {
+	ChainInfo
 	ChainHashes []common.Hash
 	TotalLength *big.Int
 	Deadline    common.TimeTicks
 }
 
 type MessagesBisectionEvent struct {
+	ChainInfo
 	ChainHashes   []common.Hash
 	SegmentHashes []common.Hash
 	TotalLength   *big.Int
@@ -142,13 +133,17 @@ type MessagesBisectionEvent struct {
 }
 
 type ExecutionBisectionEvent struct {
+	ChainInfo
 	Assertions []*valprotocol.ExecutionAssertionStub
 	TotalSteps uint32
 	Deadline   common.TimeTicks
 }
 
 type MessageDeliveredEvent struct {
+	ChainInfo
 	Msg valprotocol.Message
 }
 
-type NewTimeEvent struct{}
+type NewTimeEvent struct {
+	ChainInfo
+}

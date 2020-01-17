@@ -18,12 +18,13 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -83,8 +84,8 @@ type ProductionCheckpointer struct {
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func makeCheckpointDatabasePath(rollupAddr common.Address) string {
-	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
+func makeCheckpointDatabasePath(rollupAddr common.Address, dbPrefix string) string {
+	return checkpointDatabasePathBase + dbPrefix + rollupAddr.Hex()[2:]
 }
 
 func NewProductionCheckpointer(
@@ -92,9 +93,10 @@ func NewProductionCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth *big.Int,
+	dbPrefix string,
 	forceFreshStart bool, // this should be false in production use
 ) RollupCheckpointer {
-	databasePath := makeCheckpointDatabasePath(rollupAddr)
+	databasePath := makeCheckpointDatabasePath(rollupAddr, dbPrefix)
 	if forceFreshStart {
 		// for testing only -- use production checkpointer but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {
@@ -175,13 +177,13 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
 	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
 
-	params, err := getParamsForChain(client, contractAddr)
-	if err != nil {
-		return nil, nil, nil
-	}
-
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
+		params, err := getParamsForChain(client, contractAddr)
+		if err != nil {
+			return nil, nil, nil
+		}
+
 		initMachine, err := rcp.GetInitialMachine()
 		if err != nil {
 			return nil, nil, nil
@@ -552,6 +554,9 @@ func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structure
 
 func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient) {
 	metadataBuf := csc.RestoreMetadata()
+	if len(metadataBuf) == 0 {
+		return
+	}
 	metadata := &structures.CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBuf, metadata); err != nil {
 		return
