@@ -58,13 +58,6 @@ func CreateManager(
 	dbPrefix string,
 	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
-	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
-	if err != nil {
-		return nil, err
-	}
-	if stressTest {
-		rollupWatcher = NewStressTestWatcher(rollupWatcher, 10*time.Second)
-	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
 		client:          clnt,
@@ -89,6 +82,9 @@ func CreateManager(
 			if err != nil {
 				log.Fatal(err)
 			}
+			if stressTest {
+				watcher = NewStressTestWatcher(watcher, 30*time.Second)
+			}
 			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
 
 			man.Lock()
@@ -102,7 +98,7 @@ func CreateManager(
 			}
 			man.Unlock()
 
-			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, rollupWatcher)
+			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, watcher)
 			if err != nil {
 				log.Fatal(err)
 			}
