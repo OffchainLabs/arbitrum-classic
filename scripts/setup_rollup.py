@@ -76,11 +76,11 @@ def deploy(args, sudo_flag=False):
         factory_address = data["ArbFactory"]
 
     rollup_address = run(
-        "docker run -it --link '%s' -v %s:/home/user/state arb-validator create state/contract.ao state/private_key.txt ws://%s:7545 %s"
+        "docker run -it --network=arb-network -v %s:/home/user/state arb-validator create state/contract.ao state/private_key.txt ws://%s:%s %s"
         % (
-            image_name,
             os.path.abspath("validator-states/validator0"),
             image_name,
+            ws_port,
             factory_address,
         ),
         capture_stdout=True,
