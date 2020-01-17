@@ -70,6 +70,14 @@ func getChainInfo(log types.Log, header *types.Header) arbbridge.ChainInfo {
 	}
 }
 
+func getChainInfo2(log types.Log, blockId *structures.BlockId) arbbridge.ChainInfo {
+	return arbbridge.ChainInfo{
+		BlockId:  blockId,
+		LogIndex: log.Index,
+		TxHash:   log.TxHash,
+	}
+}
+
 func waitForReceipt(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) error {
 	_, err := WaitForReceiptWithResults(ctx, client, from, tx, methodName)
 	return err

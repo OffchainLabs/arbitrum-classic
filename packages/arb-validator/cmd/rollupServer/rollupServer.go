@@ -188,7 +188,7 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, "", *stressTest)
+	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, false, "", *stressTest)
 	if err != nil {
 		return err
 	}

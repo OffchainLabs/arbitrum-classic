@@ -37,7 +37,7 @@ import (
 )
 
 type RollupCheckpointer interface {
-	RestoreLatestState(arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext)
+	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext, err error)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
 }
@@ -54,16 +54,12 @@ func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
 	return &DummyCheckpointer{theMachine}
 }
 
-func (dcp *DummyCheckpointer) RestoreLatestState(
-	client arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
+func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, contractAddr common.Address, beOpinionated bool) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext, error) {
 	blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
 	cob := &ChainObserverBuf{}
 	resCtx := structures.NewSimpleRestoreContext()
 	resCtx.AddMachine(dcp.initialMachine)
-	return blockId, cob, resCtx
+	return blockId, cob, resCtx, nil
 }
 
 func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -171,43 +167,47 @@ func getParamsForChain(client arbbridge.ArbClient, contractAddr common.Address) 
 }
 
 func (rcp *ProductionCheckpointer) RestoreLatestState(
+	ctx context.Context,
 	client arbbridge.ArbClient,
 	contractAddr common.Address,
 	beOpinionated bool,
-) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
+) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext, error) {
 	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
 
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
 		params, err := getParamsForChain(client, contractAddr)
 		if err != nil {
-			return nil, nil, nil
+			return nil, nil, nil, err
 		}
 
 		initMachine, err := rcp.GetInitialMachine()
 		if err != nil {
-			return nil, nil, nil
+			return nil, nil, nil, err
 		}
-		blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
+		blockId, err := client.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), &params, beOpinionated)
 		resCtx := structures.NewSimpleRestoreContext()
 		resCtx.AddMachine(initMachine)
-		return blockId, cob, resCtx
+		return blockId, cob, resCtx, nil
 	}
 	metadata := &structures.CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
-		return nil, nil, nil
+		return nil, nil, nil, err
 	}
 	newestId := metadata.Newest.Unmarshal()
 	cobBytes, resCtx, err := rcp.RestoreCheckpoint(newestId)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil, nil, err
 	}
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(cobBytes, cob); err != nil {
-		return nil, nil, nil
+		return nil, nil, nil, err
 	}
-	return newestId, cob, resCtx
+	return newestId, cob, resCtx, nil
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext, error) {

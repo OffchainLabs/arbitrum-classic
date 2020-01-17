@@ -17,6 +17,7 @@
 package challenges
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -59,6 +60,7 @@ func TestMessagesChallenge(t *testing.T) {
 		challengeHash,
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,
@@ -72,6 +74,7 @@ func TestMessagesChallenge(t *testing.T) {
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengeMessagesClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,

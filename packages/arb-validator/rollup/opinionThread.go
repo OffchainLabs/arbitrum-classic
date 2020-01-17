@@ -126,7 +126,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			if ok {
 				if newOpinion == structures.ValidChildType {
 					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(chain, validExecution, correctNode.assertionTxHash)
+						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
 					}
 				}
 				chain.RUnlock()
@@ -144,7 +144,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.Unlock()
 				chain.RLock()
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownValidNode(chain, chain.calculatedValidNode.hash)
+					listener.AdvancedKnownValidNode(ctx, chain, chain.calculatedValidNode.hash)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
@@ -169,6 +169,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
+					log.Println("Opinion thread preparing new assertion")
 					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
 					if chain.calculatedValidNode.machine != nil &&
 						!machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages) {
@@ -178,13 +179,19 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						}()
 					}
 				} else {
+					log.Println("Opinion thread already preparing new assertion")
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						if prepared.params.TimeBounds.IsValidTime(chain.latestBlockId.Height) == nil {
+						log.Println("Opinion thread has prepared new assertion")
+						startTime := prepared.params.TimeBounds.Start
+						endTime := prepared.params.TimeBounds.End
+						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
+						if chain.latestBlockId.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
 							for _, lis := range chain.listeners {
-								lis.AssertionPrepared(chain, prepared.Clone())
+								lis.AssertionPrepared(ctx, chain, prepared.Clone())
 							}
 						} else {
+							log.Println("Throwing out out of date assertion")
 							// Prepared assertion is out of date
 							delete(preparingAssertions, chain.calculatedValidNode.hash)
 							delete(preparedAssertions, chain.calculatedValidNode.hash)
@@ -219,7 +226,12 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	timeBounds := chain.currentTimeBounds()
 	chain.RUnlock()
 
+	newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+	isBlocked := machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages)
+
 	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, messagesVal)
+
+	log.Println("Made assertion", newMessages, isBlocked, stepsRun)
 
 	log.Println("Prepared assertion of", stepsRun, "steps, ending with", mach.LastBlockReason())
 	var params *structures.AssertionParams

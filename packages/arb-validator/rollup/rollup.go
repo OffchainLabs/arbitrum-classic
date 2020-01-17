@@ -177,14 +177,14 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, latestBlockId, client, checkpointer), nil
 }
 
-func (chain *ChainObserver) MessageDelivered(ev arbbridge.MessageDeliveredEvent) {
+func (chain *ChainObserver) MessageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
 	chain.pendingInbox.DeliverMessage(ev.Msg.AsValue())
 	for _, lis := range chain.listeners {
-		lis.MessageDelivered(chain, ev)
+		lis.MessageDelivered(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) PruneLeaf(ev arbbridge.PrunedEvent) {
+func (chain *ChainObserver) PruneLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {
 	leaf, found := chain.nodeGraph.nodeFromHash[ev.Leaf]
 	if !found {
 		panic("Tried to prune nonexistant leaf")
@@ -192,32 +192,32 @@ func (chain *ChainObserver) PruneLeaf(ev arbbridge.PrunedEvent) {
 	chain.nodeGraph.leaves.Delete(leaf)
 	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
 	for _, lis := range chain.listeners {
-		lis.PrunedLeaf(chain, ev)
+		lis.PrunedLeaf(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
-	chain.nodeGraph.CreateStake(ev, currentTime)
+func (chain *ChainObserver) CreateStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
+	chain.nodeGraph.CreateStake(ev)
 	for _, lis := range chain.listeners {
-		lis.StakeCreated(chain, ev)
+		lis.StakeCreated(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) RemoveStake(ev arbbridge.StakeRefundedEvent) {
+func (chain *ChainObserver) RemoveStake(ctx context.Context, ev arbbridge.StakeRefundedEvent) {
 	chain.nodeGraph.RemoveStake(ev.Staker)
 	for _, lis := range chain.listeners {
-		lis.StakeRemoved(chain, ev)
+		lis.StakeRemoved(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) MoveStake(ev arbbridge.StakeMovedEvent) {
+func (chain *ChainObserver) MoveStake(ctx context.Context, ev arbbridge.StakeMovedEvent) {
 	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
 	for _, lis := range chain.listeners {
-		lis.StakeMoved(chain, ev)
+		lis.StakeMoved(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) NewChallenge(ev arbbridge.ChallengeStartedEvent) {
+func (chain *ChainObserver) NewChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
 	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
@@ -232,18 +232,18 @@ func (chain *ChainObserver) NewChallenge(ev arbbridge.ChallengeStartedEvent) {
 		ev.ChallengeType,
 	)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(chain, ev, asserterAncestor, challengerAncestor)
+		lis.StartedChallenge(ctx, chain, ev, asserterAncestor, challengerAncestor)
 	}
 }
 
-func (chain *ChainObserver) ChallengeResolved(ev arbbridge.ChallengeCompletedEvent) {
+func (chain *ChainObserver) ChallengeResolved(ctx context.Context, ev arbbridge.ChallengeCompletedEvent) {
 	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 	for _, lis := range chain.listeners {
-		lis.CompletedChallenge(chain, ev)
+		lis.CompletedChallenge(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) ConfirmNode(ev arbbridge.ConfirmedEvent) {
+func (chain *ChainObserver) ConfirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
 	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
 	if newNode.depth > chain.knownValidNode.depth {
 		chain.knownValidNode = newNode
@@ -252,7 +252,7 @@ func (chain *ChainObserver) ConfirmNode(ev arbbridge.ConfirmedEvent) {
 	chain.nodeGraph.considerPruningNode(newNode.prev)
 	chain.updateOldest(newNode)
 	for _, listener := range chain.listeners {
-		listener.ConfirmedNode(chain, ev)
+		listener.ConfirmedNode(ctx, chain, ev)
 	}
 }
 
@@ -278,11 +278,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 	}
 }
 
-func (chain *ChainObserver) NotifyAssert(
-	ev arbbridge.AssertedEvent,
-	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash,
-) error {
+func (chain *ChainObserver) NotifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
 	disputableNode := structures.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
@@ -293,11 +289,11 @@ func (chain *ChainObserver) NotifyAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
 		disputableNode,
 		nil,
-		currentTime,
-		assertionTxHash,
+		ev.BlockId.Height,
+		ev.TxHash,
 	)
 	for _, listener := range chain.listeners {
-		listener.SawAssertion(chain, ev, currentTime, assertionTxHash)
+		listener.SawAssertion(ctx, chain, ev)
 	}
 	if chain.assertionMadeChan != nil {
 		chain.assertionMadeChan <- true
@@ -308,13 +304,13 @@ func (chain *ChainObserver) NotifyAssert(
 func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.latestBlockId = blockId
+	chain.latestBlockId = blockId.Clone()
 	ckptCtx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId, buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {

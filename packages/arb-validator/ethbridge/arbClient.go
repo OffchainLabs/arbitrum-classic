@@ -18,7 +18,15 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
+	"log"
+	"math/big"
 	"sync"
+	"time"
+
+	"github.com/ethereum/go-ethereum"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -37,6 +45,68 @@ type EthArbClient struct {
 func NewEthClient(ethURL string) (*EthArbClient, error) {
 	client, err := ethclient.Dial(ethURL)
 	return &EthArbClient{client}, err
+}
+
+var reorgError = errors.New("reorg occured")
+var headerRetryDelay = time.Second * 2
+var maxFetchAttempts = 5
+
+func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (chan arbbridge.MaybeBlockId, error) {
+	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
+
+	header, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	prevBlockId := getBlockID(header)
+	blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+
+	go func() {
+		defer close(blockIdChan)
+
+		for {
+			var nextHeader *types.Header
+			fetchErrorCount := 0
+			for {
+				var err error
+				nextHeader, err = c.client.HeaderByNumber(ctx, new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
+				if err == nil {
+					// Got next header
+					break
+				}
+
+				select {
+				case <-ctx.Done():
+					// Getting header must have failed due to context cancellation
+					return
+				default:
+				}
+
+				if err != nil && err.Error() != ethereum.NotFound.Error() {
+					log.Printf("Failed to fetch next header on attempt %v with error: %v", fetchErrorCount, err)
+					fetchErrorCount++
+				}
+
+				if fetchErrorCount >= maxFetchAttempts {
+					blockIdChan <- arbbridge.MaybeBlockId{Err: err}
+					return
+				}
+
+				// Header was not found so wait before checking again
+				time.Sleep(headerRetryDelay)
+			}
+
+			if nextHeader.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
+				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				return
+			}
+
+			prevBlockId = getBlockID(nextHeader)
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+		}
+	}()
+
+	return blockIdChan, nil
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {

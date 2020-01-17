@@ -17,6 +17,7 @@
 package challenges
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -48,6 +49,7 @@ func TestPendingTopChallenge(t *testing.T) {
 		challengeHash,
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendPendingTopClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,
@@ -60,6 +62,7 @@ func TestPendingTopChallenge(t *testing.T) {
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengePendingTopClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,

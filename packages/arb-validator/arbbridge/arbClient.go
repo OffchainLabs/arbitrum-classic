@@ -24,7 +24,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type MaybeBlockId struct {
+	BlockId *structures.BlockId
+	Err     error
+}
+
 type ArbClient interface {
+	SubscribeBlockHeaders(ctx context.Context, prevBlockId *structures.BlockId) (chan MaybeBlockId, error)
+
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)

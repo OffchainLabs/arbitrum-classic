@@ -18,9 +18,9 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
-	"log"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	errors2 "github.com/pkg/errors"
 
@@ -52,6 +52,7 @@ type pendingTopChallengeWatcher struct {
 	contract *pendingtopchallenge.PendingTopChallenge
 	client   *ethclient.Client
 	address  ethcommon.Address
+	topics   [][]ethcommon.Hash
 }
 
 func newPendingTopChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*pendingTopChallengeWatcher, error) {
@@ -63,72 +64,40 @@ func newPendingTopChallengeWatcher(address ethcommon.Address, client *ethclient.
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
 	}
+	tops := []ethcommon.Hash{
+		pendingTopBisectedID,
+		pendingTopOneStepProofCompletedID,
+	}
+	tops = append(tops, bisectionChallenge.topics()...)
+
 	return &pendingTopChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
 		contract:                  pendingTopContract,
 		client:                    client,
 		address:                   address,
+		topics:                    [][]ethcommon.Hash{tops},
 	}, nil
 }
 
-func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		pendingTopBisectedID,
-		pendingTopOneStepProofCompletedID,
-	}
-	return append(tops, c.bisectionChallengeWatcher.topics()...)
-}
-
-func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	filter := ethereum.FilterQuery{
+func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	bh := blockId.HeaderHash.ToEthHash()
+	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{c.topics()},
-	}
-
-	logCtx, cancelFunc := context.WithCancel(ctx)
-	maybeLogChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+		Topics:    c.topics,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	eventChan := make(chan arbbridge.MaybeEvent, 1024)
-	go func() {
-		defer close(eventChan)
-		defer cancelFunc()
-		for {
-			select {
-			case <-ctx.Done():
-				log.Println("pendingTopChallengeWatcher context canceled")
-				return
-			case maybeLog, ok := <-maybeLogChan:
-				if !ok {
-					log.Println("maybeLogChan terminated")
-					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
-					return
-				}
-				if maybeLog.err != nil {
-					log.Println("maybeLog had error", err)
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
-				if err != nil {
-					log.Println("header had error", err)
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				chainInfo := getChainInfo(maybeLog.log, header)
-				event, err := c.parsePendingTopEvent(chainInfo, maybeLog.log)
-				if err != nil {
-					log.Println("Failed parsing event", err)
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				eventChan <- arbbridge.MaybeEvent{Event: event}
-			}
+	events := make([]arbbridge.Event, 0, len(logs))
+	for _, evmLog := range logs {
+		event, err := c.parsePendingTopEvent(getChainInfo2(evmLog, blockId), evmLog)
+		if err != nil {
+			return nil, err
 		}
-	}()
-	return eventChan, nil
+		events = append(events, event)
+	}
+	return events, nil
 }
 
 func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {

@@ -55,6 +55,7 @@ func CreateManager(
 	arbitrumCodeFilePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
+	forceFreshStart bool,
 	dbPrefix string,
 	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
@@ -74,10 +75,13 @@ func CreateManager(
 				arbitrumCodeFilePath,
 				big.NewInt(maxReorgDepth),
 				dbPrefix,
-				false,
+				forceFreshStart,
 			)
 
-			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, updateOpinion)
+			latestBlockId, chainObserverBuf, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
+			if err != nil {
+				log.Fatal(err)
+			}
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
@@ -86,7 +90,7 @@ func CreateManager(
 				watcher = NewStressTestWatcher(watcher, 30*time.Second)
 			}
 			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
-
+			log.Println("Loaded chain observer")
 			man.Lock()
 			// Clear pending listeners
 			for len(man.listenerAddChan) > 0 {
@@ -97,36 +101,34 @@ func CreateManager(
 				chain.AddListener(listener)
 			}
 			man.Unlock()
+			log.Println("Set up listeners", latestBlockId.HeaderHash, latestBlockId.Height.AsInt())
 
-			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, watcher)
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, latestBlockId)
 			if err != nil {
 				log.Fatal(err)
 			}
+			log.Println("Getting headers")
+			for maybeBlockId := range headersChan {
+				if maybeBlockId.Err != nil {
+					log.Println("Error getting new header", maybeBlockId.Err)
+					break
+				}
 
-		runLoop:
-			for {
-				select {
-				case <-reorgCtx.Done():
-					log.Println("Reorg context done")
-					break runLoop
-				case listener := <-man.listenerAddChan:
-					chain.AddListener(listener)
-				case action := <-man.actionChan:
-					action(chain)
-				case event, ok := <-eventChan:
-					if !ok {
-						break runLoop
-					}
-					chainInfo := event.GetChainInfo()
+				blockId := maybeBlockId.BlockId
 
-					if chainInfo.BlockId.Height.Cmp(latestBlockId.Height) > 0 {
-						chain.NotifyNewBlock(chainInfo.BlockId)
-					}
+				chain.NotifyNewBlock(blockId)
 
-					handleNotification(event, chain)
-					latestBlockId = chainInfo.BlockId
+				log.Println(dbPrefix, "getting events at height", blockId.Height.AsInt(), blockId.HeaderHash)
+				events, err := watcher.GetEvents(runCtx, blockId)
+				if err != nil {
+					break
+				}
+				for _, event := range events {
+					log.Printf("%v is handling event %T at height %v with hash %v\n", dbPrefix, event, event.GetChainInfo().BlockId.Height.AsInt(), event.GetChainInfo().BlockId.HeaderHash)
+					handleNotification(runCtx, event, chain)
 				}
 			}
+
 			cancelFunc()
 
 			select {
@@ -177,32 +179,30 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 	return <-retChan
 }
 
-func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
-	log.Printf("Handling event %T\n", event)
+func handleNotification(ctx context.Context, event arbbridge.Event, chain *rollup.ChainObserver) {
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		chain.MessageDelivered(ev)
+		chain.MessageDelivered(ctx, ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
-		chain.CreateStake(ev, currentTime)
+		chain.CreateStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
-		chain.NewChallenge(ev)
+		chain.NewChallenge(ctx, ev)
 	case arbbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ev)
+		chain.ChallengeResolved(ctx, ev)
 	case arbbridge.StakeRefundedEvent:
-		chain.RemoveStake(ev)
+		chain.RemoveStake(ctx, ev)
 	case arbbridge.PrunedEvent:
-		chain.PruneLeaf(ev)
+		chain.PruneLeaf(ctx, ev)
 	case arbbridge.StakeMovedEvent:
-		chain.MoveStake(ev)
+		chain.MoveStake(ctx, ev)
 	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ev, ev.BlockId.Height, ev.TxHash)
+		err := chain.NotifyAssert(ctx, ev)
 		if err != nil {
 			panic(err)
 		}
 	case arbbridge.ConfirmedEvent:
-		chain.ConfirmNode(ev)
+		chain.ConfirmNode(ctx, ev)
 	}
 }

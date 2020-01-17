@@ -17,6 +17,8 @@
 package rollup
 
 import (
+	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -31,28 +33,35 @@ type AssertionListener struct {
 	CompletedAssertionChan chan FinalizedAssertion
 }
 
-func (al *AssertionListener) StakeCreated(*ChainObserver, arbbridge.StakeCreatedEvent)  {}
-func (al *AssertionListener) StakeRemoved(*ChainObserver, arbbridge.StakeRefundedEvent) {}
-func (al *AssertionListener) StakeMoved(*ChainObserver, arbbridge.StakeMovedEvent)      {}
-func (al *AssertionListener) StartedChallenge(*ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AssertionListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
 }
-func (al *AssertionListener) CompletedChallenge(observer *ChainObserver, event arbbridge.ChallengeCompletedEvent) {
+func (al *AssertionListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
 }
-func (al *AssertionListener) SawAssertion(*ChainObserver, arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {
+func (al *AssertionListener) StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent) {}
+func (al *AssertionListener) StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
 }
-func (al *AssertionListener) ConfirmedNode(*ChainObserver, arbbridge.ConfirmedEvent)           {}
-func (al *AssertionListener) PrunedLeaf(*ChainObserver, arbbridge.PrunedEvent)                 {}
-func (al *AssertionListener) MessageDelivered(*ChainObserver, arbbridge.MessageDeliveredEvent) {}
+func (al *AssertionListener) CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent) {
+}
+func (al *AssertionListener) SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent) {
+}
+func (al *AssertionListener) ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent) {
+}
+func (al *AssertionListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {}
+func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
+}
 
-func (al *AssertionListener) AssertionPrepared(*ChainObserver, *preparedAssertion)              {}
-func (al *AssertionListener) ValidNodeConfirmable(*ChainObserver, *confirmValidOpportunity)     {}
-func (al *AssertionListener) InvalidNodeConfirmable(*ChainObserver, *confirmInvalidOpportunity) {}
-func (al *AssertionListener) PrunableLeafs(*ChainObserver, []pruneParams)                       {}
-func (al *AssertionListener) MootableStakes(*ChainObserver, []recoverStakeMootedParams)         {}
-func (al *AssertionListener) OldStakes(*ChainObserver, []recoverStakeOldParams)                 {}
+func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
+func (al *AssertionListener) ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity) {
+}
+func (al *AssertionListener) InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity) {
+}
+func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {}
+func (al *AssertionListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {
+}
+func (al *AssertionListener) OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams) {}
 
-func (al *AssertionListener) AdvancedKnownValidNode(*ChainObserver, common.Hash) {}
-func (al *AssertionListener) AdvancedKnownAssertion(chain *ChainObserver, assertion *protocol.ExecutionAssertion, txHash common.Hash) {
+func (al *AssertionListener) AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash) {}
+func (al *AssertionListener) AdvancedKnownAssertion(ctx context.Context, chain *ChainObserver, assertion *protocol.ExecutionAssertion, txHash common.Hash) {
 	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,
 		OnChainTxHash: txHash,

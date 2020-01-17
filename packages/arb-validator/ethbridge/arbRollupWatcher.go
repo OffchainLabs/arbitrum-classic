@@ -19,7 +19,7 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"errors"
+	"log"
 	"math/big"
 	"strings"
 
@@ -79,32 +79,57 @@ type ethRollupWatcher struct {
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
-	address             ethcommon.Address
-	pendingInboxAddress ethcommon.Address
-	client              *ethclient.Client
+	rollupAddress ethcommon.Address
+	inboxAddress  ethcommon.Address
+	client        *ethclient.Client
 }
 
-func newRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*ethRollupWatcher, error) {
-	vm := &ethRollupWatcher{client: client, address: address}
-	err := vm.setupContracts()
-	return vm, err
+func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client) (*ethRollupWatcher, error) {
+	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
+	}
+
+	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
+		Pending: false,
+		Context: context.Background(),
+	})
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
+	}
+	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+	}
+
+	return &ethRollupWatcher{
+		ArbRollup:          arbitrumRollupContract,
+		GlobalPendingInbox: globalPendingContract,
+		rollupAddress:      rollupAddress,
+		inboxAddress:       globalPendingInboxAddress,
+		client:             client,
+	}, nil
 }
 
-func (vm *ethRollupWatcher) messageFilter() ethereum.FilterQuery {
+func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	bh := blockId.HeaderHash.ToEthHash()
+	log.Println("Getting events for block hash", bh.Hex())
 	addressIndex := ethcommon.Hash{}
-	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.address.Bytes(), 32))
-	return ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
+	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32))
+	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
+		Addresses: []ethcommon.Address{vm.inboxAddress},
 		Topics: [][]ethcommon.Hash{
 			{messageDeliveredID},
 			{addressIndex},
 		},
+	})
+	if err != nil {
+		return nil, err
 	}
-}
-
-func (vm *ethRollupWatcher) rollupFilter() ethereum.FilterQuery {
-	return ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{vm.address},
+	rollupLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
+		Addresses: []ethcommon.Address{vm.rollupAddress},
 		Topics: [][]ethcommon.Hash{
 			{
 				rollupStakeCreatedID,
@@ -118,114 +143,29 @@ func (vm *ethRollupWatcher) rollupFilter() ethereum.FilterQuery {
 				confirmedAssertionID,
 			},
 		},
-	}
-}
-
-func (vm *ethRollupWatcher) setupContracts() error {
-	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to arbRollup")
-	}
-
-	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
-		Pending: false,
-		Context: context.Background(),
 	})
 	if err != nil {
-		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
-	}
-	vm.pendingInboxAddress = globalPendingInboxAddress
-	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
-	}
-
-	vm.ArbRollup = arbitrumRollupContract
-	vm.GlobalPendingInbox = globalPendingContract
-	return nil
-}
-
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	if err := vm.setupContracts(); err != nil {
 		return nil, err
 	}
-
-	headers := make(chan *types.Header)
-	headersSub, err := vm.client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return nil, err
-	}
-
-	logCtx, cancelFunc := context.WithCancel(ctx)
-
-	rollupMaybeLogChan, err := getLogs(logCtx, vm.client, vm.rollupFilter(), startHeight, startLogIndex)
-	if err != nil {
-		return nil, err
-	}
-	inboxMaybeLogChan, err := getLogs(logCtx, vm.client, vm.messageFilter(), startHeight, startLogIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	eventChan := make(chan arbbridge.MaybeEvent, 1024)
-	go func() {
-		defer close(eventChan)
-		defer cancelFunc()
-		defer headersSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case header := <-headers:
-				eventChan <- arbbridge.MaybeEvent{Event: arbbridge.NewTimeEvent{arbbridge.ChainInfo{
-					BlockId: getBlockID(header),
-				}}}
-			case maybeLog, ok := <-rollupMaybeLogChan:
-				if !ok {
-					eventChan <- arbbridge.MaybeEvent{Err: errors.New("rollupMaybeLogChan terminated early")}
-					return
-				}
-				if maybeLog.err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				event, err := vm.processEvents(ctx, maybeLog.log)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				eventChan <- arbbridge.MaybeEvent{Event: event}
-			case maybeLog, ok := <-inboxMaybeLogChan:
-				if !ok {
-					eventChan <- arbbridge.MaybeEvent{Err: errors.New("inboxMaybeLogChan terminated early")}
-					return
-				}
-				if maybeLog.err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				event, err := vm.processEvents(ctx, maybeLog.log)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				eventChan <- arbbridge.MaybeEvent{Event: event}
-			case err := <-headersSub.Err():
-				eventChan <- arbbridge.MaybeEvent{Err: err}
-				return
-			}
+	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(inboxLogs))
+	for _, evmLog := range inboxLogs {
+		event, err := vm.processEvents(getChainInfo2(evmLog, blockId), evmLog)
+		if err != nil {
+			return nil, err
 		}
-	}()
-	return eventChan, nil
+		events = append(events, event)
+	}
+	for _, evmLog := range rollupLogs {
+		event, err := vm.processEvents(getChainInfo2(evmLog, blockId), evmLog)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, nil
 }
 
-func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log) (arbbridge.Event, error) {
-	header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
-	if err != nil {
-		return nil, err
-	}
-	chainInfo := getChainInfo(ethLog, header)
+func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == rollupStakeCreatedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {

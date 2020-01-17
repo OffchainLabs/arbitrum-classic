@@ -18,8 +18,9 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -52,6 +53,7 @@ type executionChallengeWatcher struct {
 	challenge *executionchallenge.ExecutionChallenge
 	client    *ethclient.Client
 	address   ethcommon.Address
+	topics    [][]ethcommon.Hash
 }
 
 func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*executionChallengeWatcher, error) {
@@ -63,67 +65,39 @@ func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.C
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
+	tops := []ethcommon.Hash{
+		bisectedAssertionID,
+		oneStepProofCompletedID,
+	}
+	tops = append(tops, bisectionChallenge.topics()...)
 	return &executionChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
 		challenge:                 executionContract,
 		client:                    client,
 		address:                   address,
+		topics:                    [][]ethcommon.Hash{tops},
 	}, nil
 }
 
-func (c *executionChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		bisectedAssertionID,
-		oneStepProofCompletedID,
-	}
-	return append(tops, c.bisectionChallengeWatcher.topics()...)
-}
-
-func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	filter := ethereum.FilterQuery{
+func (c *executionChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	bh := blockId.HeaderHash.ToEthHash()
+	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{c.topics()},
-	}
-
-	logCtx, cancelFunc := context.WithCancel(ctx)
-	maybeLogChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+		Topics:    c.topics,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	eventChan := make(chan arbbridge.MaybeEvent, 1024)
-	go func() {
-		defer close(eventChan)
-		defer cancelFunc()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case maybeLog, ok := <-maybeLogChan:
-				if !ok {
-					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
-					return
-				}
-				if maybeLog.err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				chainInfo := getChainInfo(maybeLog.log, header)
-				event, err := c.parseExecutionEvent(chainInfo, maybeLog.log)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				eventChan <- arbbridge.MaybeEvent{Event: event}
-			}
+	events := make([]arbbridge.Event, 0, len(logs))
+	for _, evmLog := range logs {
+		event, err := c.parseExecutionEvent(getChainInfo2(evmLog, blockId), evmLog)
+		if err != nil {
+			return nil, err
 		}
-	}()
-	return eventChan, nil
+		events = append(events, event)
+	}
+	return events, nil
 }
 
 func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {

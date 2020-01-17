@@ -118,6 +118,13 @@ type BlockId struct {
 	HeaderHash common.Hash
 }
 
+func (id *BlockId) Clone() *BlockId {
+	return &BlockId{
+		Height:     id.Height.Clone(),
+		HeaderHash: id.HeaderHash,
+	}
+}
+
 func (id *BlockId) MarshalToBuf() *BlockIdBuf {
 	return &BlockIdBuf{
 		Height:     id.Height.Marshal(),

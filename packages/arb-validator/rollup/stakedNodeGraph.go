@@ -80,7 +80,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		s.stakers.Equals(s2.stakers)
 }
 
-func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
+func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	node, ok := chain.nodeFromHash[ev.NodeHash]
 	if !ok {
 		log.Println("Bad location", ev.NodeHash)
@@ -89,7 +89,7 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, curren
 	chain.stakers.Add(&Staker{
 		ev.Staker,
 		node,
-		currentTime,
+		common.TimeFromBlockNum(ev.BlockId.Height),
 		common.Address{},
 	})
 }

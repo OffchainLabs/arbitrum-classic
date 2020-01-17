@@ -42,6 +42,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	contract := "contract.ao"
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
+
 	if err != nil {
 		t.Errorf("setupValidators Open error %v", err)
 		return err
@@ -69,6 +70,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 
 	auth1 := bind.NewKeyedTransactor(key1)
+
 	auth2 := bind.NewKeyedTransactor(key2)
 
 	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
@@ -117,7 +119,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client1, "testman1-")
+	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client1, true, "testman1-", false)
 	if err != nil {
 		return err
 	}
@@ -129,8 +131,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 	manager1.AddListener(validatorListener1)
-
-	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client2, "testman2-")
+	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client2, true, "testman2-", false)
 	if err != nil {
 		return err
 	}

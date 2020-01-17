@@ -19,6 +19,7 @@ package rollup
 import (
 	"context"
 	"log"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 
@@ -29,25 +30,25 @@ import (
 )
 
 type ChainListener interface {
-	StakeCreated(*ChainObserver, arbbridge.StakeCreatedEvent)
-	StakeRemoved(*ChainObserver, arbbridge.StakeRefundedEvent)
-	StakeMoved(*ChainObserver, arbbridge.StakeMovedEvent)
-	StartedChallenge(*ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node)
-	CompletedChallenge(*ChainObserver, arbbridge.ChallengeCompletedEvent)
-	SawAssertion(*ChainObserver, arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash)
-	ConfirmedNode(*ChainObserver, arbbridge.ConfirmedEvent)
-	PrunedLeaf(*ChainObserver, arbbridge.PrunedEvent)
-	MessageDelivered(*ChainObserver, arbbridge.MessageDeliveredEvent)
+	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
+	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
+	StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent)
+	StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node)
+	CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent)
+	SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent)
+	ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent)
+	PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent)
+	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
 
-	AssertionPrepared(*ChainObserver, *preparedAssertion)
-	ValidNodeConfirmable(*ChainObserver, *confirmValidOpportunity)
-	InvalidNodeConfirmable(*ChainObserver, *confirmInvalidOpportunity)
-	PrunableLeafs(*ChainObserver, []pruneParams)
-	MootableStakes(*ChainObserver, []recoverStakeMootedParams)
-	OldStakes(*ChainObserver, []recoverStakeOldParams)
+	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
+	ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity)
+	InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity)
+	PrunableLeafs(context.Context, *ChainObserver, []pruneParams)
+	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
+	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
-	AdvancedKnownValidNode(*ChainObserver, common.Hash)
-	AdvancedKnownAssertion(*ChainObserver, *protocol.ExecutionAssertion, common.Hash)
+	AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash)
+	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash)
 }
 
 type StakingKey struct {
@@ -56,6 +57,7 @@ type StakingKey struct {
 }
 
 type ValidatorChainListener struct {
+	sync.Mutex
 	actor                  arbbridge.ArbRollup
 	rollupAddress          common.Address
 	stakingKeys            map[common.Address]*StakingKey
@@ -99,9 +101,9 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	return nil
 }
 
-func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) {
-	err := rollup.MakeAssertion(
-		context.TODO(),
+func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) error {
+	return rollup.MakeAssertion(
+		ctx,
 		prepared.prevPrevLeafHash,
 		prepared.prevDataHash,
 		prepared.prevDeadline,
@@ -111,17 +113,14 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *pr
 		prepared.claim,
 		proof,
 	)
-	if err != nil {
-		log.Println("Error making assertion", err)
-	} else {
-		log.Println("Successfully made assertion")
-	}
 }
 
-func (lis *ValidatorChainListener) AssertionPrepared(chain *ChainObserver, prepared *preparedAssertion) {
+func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *preparedAssertion) {
 	// Anyone confirm a node
 	// No need to have your own stake
+	lis.Lock()
 	prevParams, alreadySent := lis.broadcastAssertions[prepared.leafHash]
+	lis.Unlock()
 	if alreadySent && prevParams.Equals(prepared.params) {
 		return
 	}
@@ -143,11 +142,24 @@ func (lis *ValidatorChainListener) AssertionPrepared(chain *ChainObserver, prepa
 			// staker can't move to new asertion
 			continue
 		}
+		lis.Lock()
 		lis.broadcastAssertions[prepared.leafHash] = prepared.params
-		go makeAssertion(context.TODO(), stakingKey.contract, prepared, proof)
+		lis.Unlock()
+		log.Printf("%v is making an assertion\n", stakingAddress)
+		go func() {
+			err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
+			if err != nil {
+				log.Println("Error making assertion", err)
+				lis.Lock()
+				delete(lis.broadcastAssertions, prepared.leafHash)
+				lis.Unlock()
+			} else {
+				log.Println("Successfully made assertion")
+			}
+		}()
 		return
 	}
-
+	log.Println("No stake is currently down, so setting up a stake")
 	for stakingAddress, stakingKey := range lis.stakingKeys {
 		stakerPos := chain.nodeGraph.stakers.Get(stakingAddress)
 		if stakerPos != nil {
@@ -155,7 +167,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(chain *ChainObserver, prepa
 			continue
 		}
 		// Put down new stake so that we can assert next time
-		go stakeLatestValid(context.TODO(), chain, stakingKey)
+		go stakeLatestValid(ctx, chain, stakingKey)
 		return
 	}
 }
@@ -179,7 +191,7 @@ func (lis *ValidatorChainListener) initiateChallenge(ctx context.Context, opp *c
 	)
 }
 
-func (lis *ValidatorChainListener) StakeCreated(chain *ChainObserver, ev arbbridge.StakeCreatedEvent) {
+func (lis *ValidatorChainListener) StakeCreated(ctx context.Context, chain *ChainObserver, ev arbbridge.StakeCreatedEvent) {
 	_, ok := lis.stakingKeys[ev.Staker]
 	if ok {
 		staker := chain.nodeGraph.stakers.Get(ev.Staker)
@@ -188,15 +200,15 @@ func (lis *ValidatorChainListener) StakeCreated(chain *ChainObserver, ev arbbrid
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityAny(staker)
 		if opp != nil {
-			go lis.initiateChallenge(context.TODO(), opp)
+			go lis.initiateChallenge(ctx, opp)
 		}
 	} else {
-		lis.challengeStakerIfPossible(context.TODO(), chain, ev.Staker)
+		lis.challengeStakerIfPossible(ctx, chain, ev.Staker)
 	}
 }
 
-func (lis *ValidatorChainListener) StakeMoved(chain *ChainObserver, ev arbbridge.StakeMovedEvent) {
-	lis.challengeStakerIfPossible(context.TODO(), chain, ev.Staker)
+func (lis *ValidatorChainListener) StakeMoved(ctx context.Context, chain *ChainObserver, ev arbbridge.StakeMovedEvent) {
+	lis.challengeStakerIfPossible(ctx, chain, ev.Staker)
 }
 
 func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, chain *ChainObserver, stakerAddr common.Address) {
@@ -219,20 +231,20 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
 		if opp != nil {
-			go lis.initiateChallenge(context.TODO(), opp)
+			go lis.initiateChallenge(ctx, opp)
 			return
 		}
 	}
 	opp := chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 	if opp != nil {
-		go lis.initiateChallenge(context.TODO(), opp)
+		go lis.initiateChallenge(ctx, opp)
 		return
 	}
 }
 
 // All functions below are either only called if you have a stake down, or don't require a stake
 
-func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
 	// Must already be staked to be challenged
 	startBlockId := ev.BlockId
 	startLogIndex := ev.LogIndex - 1
@@ -241,6 +253,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
 			go challenges.DefendPendingTopClaim(
+				ctx,
 				asserterKey.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -252,6 +265,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 			)
 		case structures.InvalidMessagesChildType:
 			go challenges.DefendMessagesClaim(
+				ctx,
 				asserterKey.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -264,6 +278,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 			)
 		case structures.InvalidExecutionChildType:
 			go challenges.DefendExecutionClaim(
+				ctx,
 				asserterKey.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -281,6 +296,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
 			go challenges.ChallengePendingTopClaim(
+				ctx,
 				challenger.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -289,6 +305,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 			)
 		case structures.InvalidMessagesChildType:
 			go challenges.ChallengeMessagesClaim(
+				ctx,
 				challenger.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -299,6 +316,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 			)
 		case structures.InvalidExecutionChildType:
 			go challenges.ChallengeExecutionClaim(
+				ctx,
 				challenger.client,
 				ev.ChallengeContract,
 				startBlockId,
@@ -311,7 +329,7 @@ func (lis *ValidatorChainListener) StartedChallenge(chain *ChainObserver, ev arb
 	}
 }
 
-func (lis *ValidatorChainListener) CompletedChallenge(chain *ChainObserver, ev arbbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeCompletedEvent) {
 	// Must be staked to have challenge completed
 	_, ok := lis.stakingKeys[ev.Winner]
 	if ok {
@@ -322,10 +340,10 @@ func (lis *ValidatorChainListener) CompletedChallenge(chain *ChainObserver, ev a
 	if ok {
 		lis.lostChallenge(ev)
 	}
-	lis.challengeStakerIfPossible(context.TODO(), chain, ev.Winner)
+	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) ValidNodeConfirmable(observer *ChainObserver, conf *confirmValidOpportunity) {
+func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmValidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
@@ -335,7 +353,7 @@ func (lis *ValidatorChainListener) ValidNodeConfirmable(observer *ChainObserver,
 	lis.broadcastConfirmations[conf.nodeHash] = true
 	go func() {
 		lis.actor.ConfirmValid(
-			context.TODO(),
+			ctx,
 			conf.deadlineTicks,
 			conf.messages,
 			conf.logsAcc,
@@ -347,7 +365,7 @@ func (lis *ValidatorChainListener) ValidNodeConfirmable(observer *ChainObserver,
 	}()
 }
 
-func (lis *ValidatorChainListener) InvalidNodeConfirmable(observer *ChainObserver, conf *confirmInvalidOpportunity) {
+func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmInvalidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
@@ -357,7 +375,7 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(observer *ChainObserve
 	lis.broadcastConfirmations[conf.nodeHash] = true
 	go func() {
 		lis.actor.ConfirmInvalid(
-			context.TODO(),
+			ctx,
 			conf.deadlineTicks,
 			conf.challengeNodeData,
 			conf.branch,
@@ -369,7 +387,7 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(observer *ChainObserve
 	}()
 }
 
-func (lis *ValidatorChainListener) PrunableLeafs(observer *ChainObserver, params []pruneParams) {
+func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []pruneParams) {
 	// Anyone can prune a leaf
 	for _, prune := range params {
 		_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
@@ -380,7 +398,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(observer *ChainObserver, params
 		pruneCopy := prune.Clone()
 		go func() {
 			lis.actor.PruneLeaf(
-				context.TODO(),
+				ctx,
 				pruneCopy.ancestorHash,
 				pruneCopy.leafProof,
 				pruneCopy.ancProof,
@@ -389,12 +407,12 @@ func (lis *ValidatorChainListener) PrunableLeafs(observer *ChainObserver, params
 	}
 }
 
-func (lis *ValidatorChainListener) MootableStakes(observer *ChainObserver, params []recoverStakeMootedParams) {
+func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {
 	// Anyone can moot any stake
 	for _, moot := range params {
 		go func() {
 			lis.actor.RecoverStakeMooted(
-				context.TODO(),
+				ctx,
 				moot.ancestorHash,
 				moot.addr,
 				moot.lcProof,
@@ -404,12 +422,12 @@ func (lis *ValidatorChainListener) MootableStakes(observer *ChainObserver, param
 	}
 }
 
-func (lis *ValidatorChainListener) OldStakes(observer *ChainObserver, params []recoverStakeOldParams) {
+func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeOldParams) {
 	// Anyone can remove an old stake
 	for _, old := range params {
 		go func() {
 			lis.actor.RecoverStakeOld(
-				context.TODO(),
+				ctx,
 				old.addr,
 				old.proof,
 			)
@@ -417,15 +435,20 @@ func (lis *ValidatorChainListener) OldStakes(observer *ChainObserver, params []r
 	}
 }
 
-func (lis *ValidatorChainListener) StakeRemoved(*ChainObserver, arbbridge.StakeRefundedEvent) {}
-func (lis *ValidatorChainListener) lostChallenge(arbbridge.ChallengeCompletedEvent)           {}
-func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEvent)            {}
-func (lis *ValidatorChainListener) SawAssertion(*ChainObserver, arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {
+func (lis *ValidatorChainListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
 }
-func (lis *ValidatorChainListener) ConfirmedNode(*ChainObserver, arbbridge.ConfirmedEvent)           {}
-func (lis *ValidatorChainListener) PrunedLeaf(*ChainObserver, arbbridge.PrunedEvent)                 {}
-func (lis *ValidatorChainListener) MessageDelivered(*ChainObserver, arbbridge.MessageDeliveredEvent) {}
+func (lis *ValidatorChainListener) lostChallenge(arbbridge.ChallengeCompletedEvent) {}
+func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEvent)  {}
+func (lis *ValidatorChainListener) SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent) {
+}
+func (lis *ValidatorChainListener) ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent) {
+}
+func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
+}
+func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
+}
 
-func (lis *ValidatorChainListener) AdvancedKnownValidNode(*ChainObserver, common.Hash) {}
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(*ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
+func (lis *ValidatorChainListener) AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash) {
+}
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
 }

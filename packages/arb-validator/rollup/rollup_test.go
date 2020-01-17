@@ -253,11 +253,16 @@ func createSomeStakers(chain *ChainObserver) {
 }
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
-	chain.CreateStake(
-		arbbridge.StakeCreatedEvent{
-			Staker:   stakerAddr,
-			NodeHash: nodeHash,
+	chain.CreateStake(context.Background(), arbbridge.StakeCreatedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: &structures.BlockId{
+				Height:     common.NewTimeBlocks(big.NewInt(73)),
+				HeaderHash: common.Hash{},
+			},
+			LogIndex: 0,
+			TxHash:   [32]byte{},
 		},
-		common.TimeFromSeconds(73),
-	)
+		Staker:   stakerAddr,
+		NodeHash: nodeHash,
+	})
 }

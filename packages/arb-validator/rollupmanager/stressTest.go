@@ -18,11 +18,11 @@ package rollupmanager
 
 import (
 	"context"
+	"time"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-	"time"
 )
 
 type ReorgStressTestWatcher struct {
@@ -34,47 +34,51 @@ func NewStressTestWatcher(watcher arbbridge.ArbRollupWatcher, reorgInterval time
 	return &ReorgStressTestWatcher{watcher, reorgInterval}
 }
 
+func (w *ReorgStressTestWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	return nil, nil
+}
+
 func (w *ReorgStressTestWatcher) StartConnection(
 	ctx context.Context,
 	startHeight *common.TimeBlocks,
 	startLogIndex uint,
 ) (<-chan arbbridge.MaybeEvent, error) {
-	ch, err := w.watcher.StartConnection(ctx, startHeight, startLogIndex)
-	if err != nil {
-		return ch, err
-	}
+	//ch, err := w.watcher.StartConnection(ctx, startHeight, startLogIndex)
+	//if err != nil {
+	//	return ch, err
+	//}
 	newCh := make(chan arbbridge.MaybeEvent)
-	go func() {
-		defer close(newCh)
-		ticker := time.NewTicker(w.reorgInterval)
-		defer ticker.Stop()
-		fakeBlockId := &structures.BlockId{}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				log.Println("Stress tester triggering fake reorg")
-				newCh <- arbbridge.MaybeEvent{
-					&arbbridge.NewTimeEvent{
-						arbbridge.ChainInfo{
-							fakeBlockId,
-							0,
-							common.Hash{},
-						},
-					},
-					nil,
-				}
-			case maybeEvent, ok := <-ch:
-				if !ok {
-					return
-				}
-				bid := maybeEvent.Event.GetChainInfo().BlockId
-				fakeBlockId = &structures.BlockId{bid.Height, common.Hash{}}
-				newCh <- maybeEvent
-			}
-		}
-	}()
+	//go func() {
+	//	defer close(newCh)
+	//	ticker := time.NewTicker(w.reorgInterval)
+	//	defer ticker.Stop()
+	//	fakeBlockId := &structures.BlockId{}
+	//	for {
+	//		select {
+	//		case <-ctx.Done():
+	//			return
+	//		case <-ticker.C:
+	//			log.Println("Stress tester triggering fake reorg")
+	//			newCh <- arbbridge.MaybeEvent{
+	//				&arbbridge.NewTimeEvent{
+	//					arbbridge.ChainInfo{
+	//						fakeBlockId,
+	//						0,
+	//						common.Hash{},
+	//					},
+	//				},
+	//				nil,
+	//			}
+	//		case maybeEvent, ok := <-ch:
+	//			if !ok {
+	//				return
+	//			}
+	//			bid := maybeEvent.Event.GetChainInfo().BlockId
+	//			fakeBlockId = &structures.BlockId{bid.Height, common.Hash{}}
+	//			newCh <- maybeEvent
+	//		}
+	//	}
+	//}()
 	return newCh, nil
 }
 
