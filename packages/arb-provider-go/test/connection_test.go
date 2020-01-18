@@ -131,6 +131,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 	manager1.AddListener(validatorListener1)
+
 	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client2, true, "testman2-", false)
 	if err != nil {
 		return err
