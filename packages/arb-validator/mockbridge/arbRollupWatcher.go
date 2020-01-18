@@ -222,3 +222,7 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	return common.Address{}, nil
 }
+
+func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+	return nil, nil
+}
