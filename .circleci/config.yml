@@ -29,11 +29,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v4-{{ .Branch }}-
-      - go-mod-v4-
+      - go-mod-v5-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v5-{{ .Branch }}-
+      - go-mod-v5-
   - &save_go_cache
-    key: go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v5-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
