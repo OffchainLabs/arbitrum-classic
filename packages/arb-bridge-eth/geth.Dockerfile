@@ -7,8 +7,8 @@
 
 FROM ethereum/client-go:stable
 
-RUN apk add --no-cache nodejs npm
-RUN addgroup -g 1000 -S user && \
+RUN apk add --no-cache nodejs npm && \
+    addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 WORKDIR /home/user/

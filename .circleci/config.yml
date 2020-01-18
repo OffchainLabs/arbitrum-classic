@@ -129,7 +129,7 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/ethbridge-base:0.1.0
+      - image: offchainlabs/ethbridge-base:0.2.0
     steps:
       - checkout
       - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
@@ -137,12 +137,12 @@ jobs:
           command: |
             yarn --production
             echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share/io.parity.ethereum/
-            cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
-            parity --chain=parity/poa.json account import parity/keystore/
+            mkdir data
+            geth --datadir data init geth/ethbridge.json
+            cp geth/keystore/* data/keystore
           working_directory: /home/user/arb-bridge-eth
       - run:
-          command: parity --chain parity/poa.json --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/arb-bridge-eth
       - run:
@@ -151,11 +151,11 @@ jobs:
             truffle migrate --network parity
           working_directory: /home/user/arb-bridge-eth
       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
-      - run: killall -HUP parity
+      - run: killall -HUP geth
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/.local/share/
+          root: /home/user/arb-bridge-eth
           paths:
-            - io.parity.ethereum
+            - data
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.1.0
@@ -201,9 +201,8 @@ jobs:
           at: /home/user/workspace
       - run:
           command: |
-            echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share
-            cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
+            echo arbitrum > /home/user/project/packages/password.txt
+            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
@@ -212,8 +211,8 @@ jobs:
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
       - run:
-          name: start parity
-          command: parity --chain parity/poa.json --geth --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+          name: start geth
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
