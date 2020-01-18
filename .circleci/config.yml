@@ -151,7 +151,7 @@ jobs:
             truffle migrate --network parity
           working_directory: /home/user/arb-bridge-eth
       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
-      - run: killall -HUP geth
+      - run: killall geth
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/arb-bridge-eth
           paths:
