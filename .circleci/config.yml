@@ -191,7 +191,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.1.0
+      - image: offchainlabs/backend-base:0.2.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
