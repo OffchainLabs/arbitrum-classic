@@ -29,11 +29,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v6-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v6-{{ .Branch }}-
-      - go-mod-v6-
+      - go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v7-{{ .Branch }}-
+      - go-mod-v7-
   - &save_go_cache
-    key: go-mod-v6-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
@@ -63,7 +63,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.2.0
+      - image: offchainlabs/backend-base:0.2.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -191,7 +191,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.2.0
+      - image: offchainlabs/backend-base:0.2.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
