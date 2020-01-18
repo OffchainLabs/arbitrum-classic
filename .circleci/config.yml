@@ -212,7 +212,7 @@ jobs:
             go install -v ./...
       - run:
           name: start geth
-          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
