@@ -86,7 +86,7 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 	for {
 		select {
 		case _ = <-time.After(time.Second):
-			receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 			if err != nil {
 				if err.Error() == ethereum.NotFound.Error() {
 					continue

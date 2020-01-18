@@ -209,7 +209,7 @@ func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbr
 	return newPendingTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
+func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context) (*ChallengeTester, error) {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client)
@@ -217,7 +217,7 @@ func (c *EthArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
 		return nil, err
 	}
 	if err := waitForReceipt(
-		context.Background(),
+		ctx,
 		c.client,
 		c.auth.auth.From,
 		tx,

@@ -164,7 +164,7 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	contractAddr common.Address,
 	beOpinionated bool,
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext, error) {
-	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
+	rcp.cp.QueueReorgedCheckpointsForDeletion(ctx, client)
 
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
@@ -318,7 +318,7 @@ type checkpointerWithMetadata interface {
 	)
 	RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) // returns nil, nil if no data at blockHeight
 	QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks)
-	QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient)
+	QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient)
 	QueueCheckpointForDeletion(blockId *structures.BlockId)
 
 	GetInitialMachine() (machine.Machine, error)
@@ -548,7 +548,7 @@ func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structure
 	csc.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
-func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient) {
+func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient) {
 	metadataBuf := csc.RestoreMetadata()
 	if len(metadataBuf) == 0 {
 		return
@@ -561,7 +561,7 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arb
 	oldestId := metadata.Oldest.Unmarshal()
 	newestId := metadata.Newest.Unmarshal()
 	for oldestId.Height.Cmp(newestId.Height) < 0 {
-		onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+		onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
 		if err != nil {
 			return
 		}
@@ -585,7 +585,7 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arb
 	}
 
 	// now only a single checkpoint remains
-	onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+	onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
 	if err != nil {
 		return
 	}

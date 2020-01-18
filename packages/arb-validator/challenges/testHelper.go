@@ -89,7 +89,7 @@ func testChallenge(
 		return err
 	}
 
-	tester, err := client1.DeployChallengeTest()
+	tester, err := client1.DeployChallengeTest(context.Background())
 	if err != nil {
 		return err
 	}
