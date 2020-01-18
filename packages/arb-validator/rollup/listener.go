@@ -19,6 +19,7 @@ package rollup
 import (
 	"context"
 	"log"
+	"math/big"
 	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
@@ -64,6 +65,7 @@ type ValidatorChainListener struct {
 	broadcastAssertions    map[common.Hash]*structures.AssertionParams
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
+	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
 }
 
 func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
@@ -74,6 +76,7 @@ func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.Arb
 		broadcastAssertions:    make(map[common.Hash]*structures.AssertionParams),
 		broadcastConfirmations: make(map[common.Hash]bool),
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
+		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
 	}
 }
 
@@ -159,16 +162,37 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 		}()
 		return
 	}
-	log.Println("No stake is currently down, so setting up a stake")
+
+	log.Println("Maybe putting down stake")
 	for stakingAddress, stakingKey := range lis.stakingKeys {
 		stakerPos := chain.nodeGraph.stakers.Get(stakingAddress)
 		if stakerPos != nil {
-			// stakingKey is already
+			// stakingKey is already down
 			continue
 		}
-		// Put down new stake so that we can assert next time
-		go stakeLatestValid(ctx, chain, stakingKey)
-		return
+		lis.Lock()
+		stakeTime, placedStake := lis.broadcastCreateStakes[stakingAddress]
+		if placedStake {
+			log.Println("Thinking about placing stake", chain.latestBlockId.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
+		}
+		if !placedStake || chain.latestBlockId.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
+			lis.broadcastCreateStakes[stakingAddress] = chain.latestBlockId.Height
+			log.Println("No stake is currently down, so setting up a stake")
+			lis.Unlock()
+			// Put down new stake so that we can assert next time
+			go func() {
+				err := stakeLatestValid(ctx, chain, stakingKey)
+				if err != nil {
+					lis.Lock()
+					delete(lis.broadcastCreateStakes, stakingAddress)
+					lis.Unlock()
+					log.Println("Error placing stake", err)
+				}
+			}()
+			return
+		} else {
+			lis.Unlock()
+		}
 	}
 }
 

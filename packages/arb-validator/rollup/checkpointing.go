@@ -158,14 +158,6 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	return nil
 }
 
-func getParamsForChain(client arbbridge.ArbClient, contractAddr common.Address) (structures.ChainParams, error) {
-	rollupWatcher, err := client.NewRollupWatcher(contractAddr)
-	if err != nil {
-		return structures.ChainParams{}, err
-	}
-	return rollupWatcher.GetParams(context.TODO())
-}
-
 func (rcp *ProductionCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	client arbbridge.ArbClient,
@@ -176,16 +168,20 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
-		params, err := getParamsForChain(client, contractAddr)
+		rollupWatcher, err := client.NewRollupWatcher(contractAddr)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		params, err := rollupWatcher.GetParams(ctx)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		blockId, err := rollupWatcher.GetCreationHeight(ctx)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
 		initMachine, err := rcp.GetInitialMachine()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		blockId, err := client.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
 		if err != nil {
 			return nil, nil, nil, err
 		}

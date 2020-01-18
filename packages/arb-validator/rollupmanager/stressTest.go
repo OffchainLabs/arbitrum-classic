@@ -38,6 +38,10 @@ func (w *ReorgStressTestWatcher) GetEvents(ctx context.Context, blockId *structu
 	return nil, nil
 }
 
+func (con *ReorgStressTestWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+	return con.watcher.GetCreationHeight(ctx)
+}
+
 func (w *ReorgStressTestWatcher) StartConnection(
 	ctx context.Context,
 	startHeight *common.TimeBlocks,

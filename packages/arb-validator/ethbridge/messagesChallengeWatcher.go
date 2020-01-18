@@ -92,7 +92,7 @@ func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *struc
 	}
 	events := make([]arbbridge.Event, 0, len(logs))
 	for _, evmLog := range logs {
-		event, err := c.parseMessagesEvent(getChainInfo2(evmLog, blockId), evmLog)
+		event, err := c.parseMessagesEvent(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}

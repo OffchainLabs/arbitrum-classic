@@ -102,15 +102,32 @@ func CreateManager(
 			}
 			man.Unlock()
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, latestBlockId)
+			chain.Start(runCtx)
+
+			current, err := clnt.CurrentBlockId(runCtx)
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, latestBlockId)
+			if err != nil {
+				blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
+				if err != nil {
+					panic(err)
+				}
+				log.Println("Error subscribing to block headers", latestBlockId.HeaderHash, latestBlockId.Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
+
+				cancelFunc()
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			reachedHead := false
 		runLoop:
 			for {
 				select {
 				case maybeBlockId, ok := <-headersChan:
 					if !ok {
+						log.Println("Manager stopped receiving headers")
 						break runLoop
 					}
 					if maybeBlockId.Err != nil {
@@ -120,10 +137,18 @@ func CreateManager(
 
 					blockId := maybeBlockId.BlockId
 
-					chain.NotifyNewBlock(blockId)
+					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
+						log.Println("Reached head")
+						reachedHead = true
+						chain.NowAtHead()
+						log.Println("Now at head")
+					}
+
+					chain.NotifyNewBlock(blockId.Clone())
 
 					events, err := watcher.GetEvents(runCtx, blockId)
 					if err != nil {
+						log.Println("Manager hit error getting events", err)
 						break runLoop
 					}
 					for _, event := range events {
@@ -140,7 +165,7 @@ func CreateManager(
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(15 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
+				time.Sleep(5 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
 			}
 		}
 	}()

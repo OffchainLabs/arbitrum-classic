@@ -48,7 +48,7 @@ type ChainObserver struct {
 	listeners           []ChainListener
 	checkpointer        RollupCheckpointer
 	isOpinionated       bool
-	assertionMadeChan   chan bool
+	atHead              bool
 }
 
 func NewChain(
@@ -74,13 +74,12 @@ func NewChain(
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       false,
-		assertionMadeChan:   nil,
+		atHead:              false,
 	}
 	ret.Lock()
 	defer ret.Unlock()
 	if updateOpinion {
 		ret.isOpinionated = true
-		ret.assertionMadeChan = make(chan bool, 20)
 	}
 	return ret, nil
 }
@@ -97,6 +96,12 @@ func (chain *ChainObserver) Start(ctx context.Context) {
 func (chain *ChainObserver) AddListener(listener ChainListener) {
 	chain.Lock()
 	chain.listeners = append(chain.listeners, listener)
+	chain.Unlock()
+}
+
+func (chain *ChainObserver) NowAtHead() {
+	chain.Lock()
+	chain.atHead = true
 	chain.Unlock()
 }
 
@@ -141,7 +146,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	checkpointer RollupCheckpointer,
 ) *ChainObserver {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
-	chain := &ChainObserver{
+	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
@@ -152,21 +157,8 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       m.IsOpinionated,
-		assertionMadeChan:   make(chan bool, 10),
+		atHead:              false,
 	}
-	chain.Lock()
-	defer chain.Unlock()
-	if client != nil {
-		log.Println("Starting confirm thread")
-		chain.startConfirmThread(ctx)
-		log.Println("Starting cleanup thread")
-		chain.startCleanupThread(ctx)
-	}
-	if m.IsOpinionated {
-		log.Println("Starting opinion thread")
-		chain.startOpinionUpdateThread(ctx)
-	}
-	return chain
 }
 
 func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, latestBlockId *structures.BlockId, client arbbridge.ArbRollupWatcher, checkpointer RollupCheckpointer) (*ChainObserver, error) {
@@ -295,16 +287,13 @@ func (chain *ChainObserver) NotifyAssert(ctx context.Context, ev arbbridge.Asser
 	for _, listener := range chain.listeners {
 		listener.SawAssertion(ctx, chain, ev)
 	}
-	if chain.assertionMadeChan != nil {
-		chain.assertionMadeChan <- true
-	}
 	return nil
 }
 
 func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.latestBlockId = blockId.Clone()
+	chain.latestBlockId = blockId
 	ckptCtx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {

@@ -166,6 +166,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					updateCurrent()
 					chain.RLock()
 				}
+				if !chain.atHead {
+					chain.RUnlock()
+					break
+				}
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
@@ -189,7 +193,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 								lis.AssertionPrepared(ctx, chain, prepared.Clone())
 							}
 						} else {
-							log.Println("Throwing out out of date assertion")
+							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", startTime.AsInt(), endTime.AsInt(), chain.latestBlockId.Height.AsInt())
 							// Prepared assertion is out of date
 							delete(preparingAssertions, chain.calculatedValidNode.hash)
 							delete(preparedAssertions, chain.calculatedValidNode.hash)
@@ -222,16 +226,12 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
+	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	chain.RUnlock()
 
-	newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
-	isBlocked := machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal)
 
-	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, messagesVal)
-
-	log.Println("Made assertion", newMessages, isBlocked, stepsRun)
-
-	log.Println("Prepared assertion of", stepsRun, "steps, ending with", mach.LastBlockReason())
+	log.Printf("Prepared assertion of %v steps, [%v, %v] timebounds, ending with %v\n", stepsRun, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), mach.LastBlockReason())
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
 	if assertion.DidInboxInsn {

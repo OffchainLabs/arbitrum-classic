@@ -61,6 +61,10 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 				return
 			case <-ticker.C:
 				chain.RLock()
+				if !chain.atHead {
+					chain.RUnlock()
+					break
+				}
 				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()

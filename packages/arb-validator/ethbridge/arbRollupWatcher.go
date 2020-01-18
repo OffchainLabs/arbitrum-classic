@@ -41,6 +41,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
+var rollupCreatedID ethcommon.Hash
 var rollupStakeCreatedID ethcommon.Hash
 var rollupChallengeStartedID ethcommon.Hash
 var rollupChallengeCompletedID ethcommon.Hash
@@ -61,6 +62,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID()
 	rollupStakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
 	rollupChallengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
 	rollupChallengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
@@ -147,14 +149,14 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 	}
 	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(inboxLogs))
 	for _, evmLog := range inboxLogs {
-		event, err := vm.processEvents(getChainInfo2(evmLog, blockId), evmLog)
+		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}
 		events = append(events, event)
 	}
 	for _, evmLog := range rollupLogs {
-		event, err := vm.processEvents(getChainInfo2(evmLog, blockId), evmLog)
+		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}
@@ -330,4 +332,17 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	addr, err := vm.ArbRollup.GlobalInbox(nil)
 	return common.NewAddressFromEth(addr), err
+}
+
+func (con *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+	addressIndex := ethcommon.Hash{}
+	copy(addressIndex[:], ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32))
+	logs, err := con.client.FilterLogs(ctx, ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{con.rollupAddress},
+		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return getLogBlockID(logs[0]), nil
 }

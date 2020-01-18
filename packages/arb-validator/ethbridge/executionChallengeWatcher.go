@@ -91,7 +91,7 @@ func (c *executionChallengeWatcher) GetEvents(ctx context.Context, blockId *stru
 	}
 	events := make([]arbbridge.Event, 0, len(logs))
 	for _, evmLog := range logs {
-		event, err := c.parseExecutionEvent(getChainInfo2(evmLog, blockId), evmLog)
+		event, err := c.parseExecutionEvent(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}

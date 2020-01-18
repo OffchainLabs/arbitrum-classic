@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -55,6 +56,13 @@ func getBlockID(header *types.Header) *structures.BlockId {
 	}
 }
 
+func getLogBlockID(ethLog types.Log) *structures.BlockId {
+	return &structures.BlockId{
+		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
+	}
+}
+
 func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
 	return &structures.BlockId{
 		Height:     common.NewTimeBlocks(receipt.BlockNumber),
@@ -62,17 +70,9 @@ func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
 	}
 }
 
-func getChainInfo(log types.Log, header *types.Header) arbbridge.ChainInfo {
+func getLogChainInfo(log types.Log) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
-		BlockId:  getBlockID(header),
-		LogIndex: log.Index,
-		TxHash:   log.TxHash,
-	}
-}
-
-func getChainInfo2(log types.Log, blockId *structures.BlockId) arbbridge.ChainInfo {
-	return arbbridge.ChainInfo{
-		BlockId:  blockId,
+		BlockId:  getLogBlockID(log),
 		LogIndex: log.Index,
 		TxHash:   log.TxHash,
 	}
