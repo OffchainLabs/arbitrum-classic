@@ -201,7 +201,7 @@ jobs:
           at: /home/user/workspace
       - run:
           command: |
-            echo arbitrum > /home/user/project/packages/password.txt
+            echo arbitrum > ~/password.txt
             cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
