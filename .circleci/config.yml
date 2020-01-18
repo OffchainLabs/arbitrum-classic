@@ -142,7 +142,7 @@ jobs:
             cp geth/keystore/* data/keystore
           working_directory: /home/user/arb-bridge-eth
       - run:
-          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
+          command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/arb-bridge-eth
       - run:
