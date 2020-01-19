@@ -42,7 +42,7 @@ func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startB
 	if err != nil {
 		return nil, err
 	}
-
+	ticker := time.NewTicker(st.reorgInterval)
 	headerChan := make(chan arbbridge.MaybeBlockId, 10)
 	go func() {
 		defer close(headerChan)
@@ -57,7 +57,7 @@ func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startB
 					return
 				}
 
-			case <-time.After(st.reorgInterval):
+			case <-ticker.C:
 				log.Println("Manually triggering reorg")
 				headerChan <- arbbridge.MaybeBlockId{Err: reorgError}
 				return
