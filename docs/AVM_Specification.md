@@ -78,9 +78,13 @@ A Tuple marshals to
 
 ## Hashing Values
 
-The Hash of an Integer is the Keccak-256 of the 8-byte big endian encoding of the integer, encoded as an Integer in big-endian fashion.
+The Hash of an Integer is the Keccak-256 of the 32-byte big endian encoding of the integer, encoded as an Integer in big-endian fashion.
 
-For other Values, the Hash of a value is computed by Marshaling the Value into a sequence of bytes, then computing the Keccak-256 hash of that byte sequence, encoded as an Integer in big-endian fashion.
+The Hash of a Tuple is computed by concatenating the byte value (3 + number of items in the tuple) followed by the Hashes of the items in tuple, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
+
+The Hash of a Codepoint containing a BasicOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
+
+The Hash of a Codepoint containing an ImmediateOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte Hash of the immediate value, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
 
 ## Virtual Machine State
 
