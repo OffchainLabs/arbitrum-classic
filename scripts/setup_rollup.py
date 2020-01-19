@@ -60,11 +60,14 @@ def deploy(args, sudo_flag=False):
     elif args.is_ganache:
         image_name = "arb-bridge-eth-ganache"
         ws_port = 7545
+    elif args.is_geth:
+        image_name = "arb-bridge-eth-geth"
+        ws_port = 7546
     else:
         raise Exception("Must select either parity or ganache")
 
     setup_states.setup_validator_states_docker(
-        args.contract, args.n_validators, image_name, sudo_flag
+        args.contract, args.n_validators, image_name, args.is_geth, sudo_flag
     )
 
     with open(
@@ -132,6 +135,12 @@ def main():
         "--ganache",
         action="store_true",
         dest="is_ganache",
+        help="Generate states based on arb-bridge-eth docker images",
+    )
+    group.add_argument(
+        "--geth",
+        action="store_true",
+        dest="is_geth",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(
