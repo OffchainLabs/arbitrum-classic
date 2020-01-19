@@ -59,6 +59,9 @@ func CreateManager(
 	dbPrefix string,
 	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
+	if stressTest {
+		clnt = NewStressTestClient(clnt, 10*time.Second)
+	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
 		client:          clnt,
@@ -85,9 +88,6 @@ func CreateManager(
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
-			}
-			if stressTest {
-				watcher = NewStressTestWatcher(watcher, 30*time.Second)
 			}
 			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
 

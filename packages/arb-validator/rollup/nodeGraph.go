@@ -97,7 +97,10 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		node := chain.nodeFromHash[nodeHash]
 		if nodeBuf.PrevHash != nil {
 			prevHash := nodeBuf.PrevHash.Unmarshal()
-			prev := chain.nodeFromHash[prevHash]
+			prev, ok := chain.nodeFromHash[prevHash]
+			if !ok {
+				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", prevHash, nodeHash)
+			}
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
 		}

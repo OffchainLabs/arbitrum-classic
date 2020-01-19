@@ -18,78 +18,51 @@ package rollupmanager
 
 import (
 	"context"
+	"errors"
+	"log"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type ReorgStressTestWatcher struct {
-	watcher       arbbridge.ArbRollupWatcher
+type ArbClientStressTest struct {
+	arbbridge.ArbClient
 	reorgInterval time.Duration
 }
 
-func NewStressTestWatcher(watcher arbbridge.ArbRollupWatcher, reorgInterval time.Duration) arbbridge.ArbRollupWatcher {
-	return &ReorgStressTestWatcher{watcher, reorgInterval}
+func NewStressTestClient(client arbbridge.ArbClient, reorgInterval time.Duration) *ArbClientStressTest {
+	return &ArbClientStressTest{client, reorgInterval}
 }
 
-func (w *ReorgStressTestWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	return nil, nil
-}
+var reorgError = errors.New("reorg occured")
 
-func (con *ReorgStressTestWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
-	return con.watcher.GetCreationHeight(ctx)
-}
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
+	if err != nil {
+		return nil, err
+	}
 
-func (w *ReorgStressTestWatcher) StartConnection(
-	ctx context.Context,
-	startHeight *common.TimeBlocks,
-	startLogIndex uint,
-) (<-chan arbbridge.MaybeEvent, error) {
-	//ch, err := w.watcher.StartConnection(ctx, startHeight, startLogIndex)
-	//if err != nil {
-	//	return ch, err
-	//}
-	newCh := make(chan arbbridge.MaybeEvent)
-	//go func() {
-	//	defer close(newCh)
-	//	ticker := time.NewTicker(w.reorgInterval)
-	//	defer ticker.Stop()
-	//	fakeBlockId := &structures.BlockId{}
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			return
-	//		case <-ticker.C:
-	//			log.Println("Stress tester triggering fake reorg")
-	//			newCh <- arbbridge.MaybeEvent{
-	//				&arbbridge.NewTimeEvent{
-	//					arbbridge.ChainInfo{
-	//						fakeBlockId,
-	//						0,
-	//						common.Hash{},
-	//					},
-	//				},
-	//				nil,
-	//			}
-	//		case maybeEvent, ok := <-ch:
-	//			if !ok {
-	//				return
-	//			}
-	//			bid := maybeEvent.Event.GetChainInfo().BlockId
-	//			fakeBlockId = &structures.BlockId{bid.Height, common.Hash{}}
-	//			newCh <- maybeEvent
-	//		}
-	//	}
-	//}()
-	return newCh, nil
-}
+	headerChan := make(chan arbbridge.MaybeBlockId, 10)
+	go func() {
+		defer close(headerChan)
+		for {
+			select {
+			case maybeHeader, ok := <-rawHeadersChan:
+				if !ok {
+					return
+				}
+				headerChan <- maybeHeader
+				if maybeHeader.Err != nil {
+					return
+				}
 
-func (w *ReorgStressTestWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
-	return w.watcher.GetParams(ctx)
-}
-
-func (w *ReorgStressTestWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return w.watcher.InboxAddress(ctx)
+			case <-time.After(st.reorgInterval):
+				log.Println("Manually triggering reorg")
+				headerChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				return
+			}
+		}
+	}()
+	return headerChan, nil
 }
