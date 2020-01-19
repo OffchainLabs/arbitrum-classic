@@ -39,6 +39,7 @@ type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures
 func testChallenge(
 	challengeType structures.ChildType,
 	challengeHash [32]byte,
+	asserterKey, challengerKey string,
 	asserterFunc, challengerFunc ChallengeFunc,
 ) error {
 	bridge_eth_addresses := "../bridge_eth_addresses.json"
@@ -61,11 +62,11 @@ func testChallenge(
 		return err
 	}
 
-	auth1, err := test.SetupAuth("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	auth1, err := test.SetupAuth(asserterKey)
 	if err != nil {
 		return err
 	}
-	auth2, err := test.SetupAuth("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
+	auth2, err := test.SetupAuth(challengerKey)
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func testChallenge(
 				asserterEndChan <- endState
 				return
 			}
-			if tryCount > 5 {
+			if tryCount > 20 {
 				asserterErrChan <- err
 				return
 			}
@@ -145,7 +146,7 @@ func testChallenge(
 				asserterEndChan <- endState
 				return
 			}
-			if tryCount > 5 {
+			if tryCount > 20 {
 				asserterErrChan <- err
 				return
 			}
@@ -182,7 +183,7 @@ func testChallenge(
 			return err
 		case err := <-challengerErrChan:
 			return err
-		case <-time.After(60 * time.Second):
+		case <-time.After(80 * time.Second):
 			return errors.New("Challenge never completed")
 		}
 	}
