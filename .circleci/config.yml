@@ -221,6 +221,11 @@ jobs:
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
           working_directory: /home/user/project/packages/arb-util
       - run:
+          name: test arb-avm-cpp
+          command: |
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
+          working_directory: /home/user/project/packages/arb-avm-cpp
+      - run:
           name: test arb-avm-go
           command: |
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
@@ -229,13 +234,13 @@ jobs:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-cpp/...,../arb-avm-go/... ./...
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-cpp/...,../arb-avm-go/...,../arb-validator/... ./...
           working_directory: /home/user/project/packages/arb-provider-go
       - run: codecovbash -R /home/user/project
       - store_test_results:
