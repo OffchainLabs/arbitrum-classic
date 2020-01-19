@@ -156,7 +156,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				break
+				return
 			case prepped := <-assertionPreparedChan:
 				preparedAssertions[prepped.leafHash] = prepped
 			case <-ticker.C:
@@ -164,6 +164,11 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Catch up to current head
 				for !chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 					updateCurrent()
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
 					chain.RLock()
 				}
 				if !chain.atHead {

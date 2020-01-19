@@ -85,6 +85,7 @@ func CreateManager(
 			if err != nil {
 				log.Fatal(err)
 			}
+			log.Println("Starting validator from", latestBlockId.Height.AsInt())
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
@@ -165,7 +166,7 @@ func CreateManager(
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(5 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
+				time.Sleep(10 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
 			}
 		}
 	}()

@@ -50,7 +50,7 @@ func (al *AnnouncerListener) CompletedChallenge(ctx context.Context, observer *C
 }
 
 func (al *AnnouncerListener) SawAssertion(ctx context.Context, observer *ChainObserver, ev arbbridge.AssertedEvent) {
-	log.Println(al.Prefix, "SawAssertion")
+	log.Println(al.Prefix, "SawAssertion on leaf", ev.PrevLeafHash)
 	log.Println(al.Prefix, "Params:", ev.Params)
 	log.Println(al.Prefix, "Claim:", ev.Claim)
 }
