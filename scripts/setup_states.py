@@ -63,10 +63,14 @@ def setup_validator_states_docker(
 
 
 def setup_validator_funds(web3, source_address, addresses):
+    hashes = []
     for dest in addresses:
-        web3.eth.sendTransaction(
+        tx_hash = web3.eth.sendTransaction(
             {"to": dest, "from": source_address, "value": 100000000000000000000}
         )
+        hashes.append(tx_hash)
+    for tx_hash in hashes:
+        web3.eth.waitForTransactionReceipt(tx_hash)
 
 
 def setup_validator_states_folder(contract, n_validators, ethaddrs):
