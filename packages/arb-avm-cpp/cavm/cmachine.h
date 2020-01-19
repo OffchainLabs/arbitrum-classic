@@ -41,8 +41,7 @@ typedef enum {
 
 typedef struct {
     enum CBlockType blockType;
-    ByteSlice val1;
-    ByteSlice val2;
+    ByteSlice val;
 } CBlockReason;
 
 typedef struct {

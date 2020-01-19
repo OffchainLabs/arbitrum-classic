@@ -98,7 +98,7 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
+		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val.data), cBlockReason.val.length)
 		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
@@ -107,7 +107,7 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 		if !ok {
 			panic("Inbox hash must be an int")
 		}
-		C.free(cBlockReason.val1.data)
+		C.free(cBlockReason.val.data)
 		return machine.InboxBlocked{Timeout: timeoutInt}
 	default:
 	}

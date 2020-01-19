@@ -48,7 +48,7 @@ struct CheckpointSerializer {
         std::vector<unsigned char> return_value{block_type};
 
         std::vector<unsigned char> inbox_char_vector;
-        marshal_uint256_t(val.inbox, inbox_char_vector);
+        marshal_uint256_t(val.timout, inbox_char_vector);
 
         return_value.insert(return_value.end(), inbox_char_vector.begin(),
                             inbox_char_vector.end());
@@ -68,8 +68,8 @@ BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
     switch (blocktype) {
         case Inbox: {
             auto buff = reinterpret_cast<const char*>(&data[2]);
-            auto inbox = deserializeUint256t(buff);
-            return InboxBlocked(inbox);
+            auto timeout = deserializeUint256t(buff);
+            return InboxBlocked(timeout);
         }
         case Halt: {
             return HaltBlocked();

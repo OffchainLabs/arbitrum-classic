@@ -27,12 +27,12 @@ void serializeBlockReason(BlockReason& block_reason, BlockType expected_type) {
 }
 
 void deserializeInboxBlocked(std::vector<unsigned char> serialized,
-                             uint256_t expected_inbox) {
+                             uint256_t expected_timeout) {
     auto deserialized = deserializeBlockReason(serialized);
 
     auto inbox_block = nonstd::get<InboxBlocked>(deserialized);
     REQUIRE(inbox_block.type == Inbox);
-    REQUIRE(inbox_block.inbox == expected_inbox);
+    REQUIRE(inbox_block.timout == expected_timeout);
 }
 
 TEST_CASE("Serialize blockreason") {
@@ -53,14 +53,14 @@ TEST_CASE("Serialize blockreason") {
         serializeBlockReason(breakpoint_blocked, Breakpoint);
     }
     SECTION("BreakpointBlocked") {
-        BlockReason inbox_blocked = InboxBlocked();
+        BlockReason inbox_blocked = InboxBlocked(231241);
         serializeBlockReason(inbox_blocked, Inbox);
     }
 }
 
 TEST_CASE("deserialize inbox blocked") {
     SECTION("0 inbox") {
-        auto inbox_blocked = InboxBlocked();
+        auto inbox_blocked = InboxBlocked(0);
         auto serialized = serializeForCheckpoint(inbox_blocked);
         deserializeInboxBlocked(serialized, 0);
     }

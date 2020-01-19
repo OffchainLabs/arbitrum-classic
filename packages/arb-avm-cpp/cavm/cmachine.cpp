@@ -110,34 +110,29 @@ CStatus machineCurrentStatus(CMachine* m) {
 
 struct ReasonConverter {
     CBlockReason operator()(const NotBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const HaltBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const ErrorBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const BreakpointBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(val.inbox, inboxDataVec);
+        marshal_value(val.timout, inboxDataVec);
         unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
         std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
         return CBlockReason{
             BLOCK_TYPE_INBOX,
-            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())},
-            ByteSlice{nullptr, 0}};
+            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())}};
     }
 };
 
