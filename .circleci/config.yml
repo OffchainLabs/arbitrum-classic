@@ -38,13 +38,13 @@ aliases:
       - ~/go/pkg/mod
   - &restore_conan_cache
     keys:
-      - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - conan-packages-v1-{{ .Branch }}-
-      - conan-packages-v1-
+      - conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+      - conan-packages-v2-{{ .Branch }}-
+      - conan-packages-v2-
   - &save_conan_cache
     paths:
       - ~/.conan/data
-    key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+    key: conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
   - &test-path /tmp/test-results
 version: 2
 workflows:
@@ -158,7 +158,7 @@ jobs:
             - data
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.1.0
+      - image: offchainlabs/cpp-base:0.2.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
