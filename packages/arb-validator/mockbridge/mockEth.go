@@ -73,7 +73,7 @@ type channelData struct {
 
 type rollupData struct {
 	state          EthState
-	gracePeriod    uint64
+	gracePeriod    common.TimeTicks
 	maxSteps       uint32
 	escrowRequired *big.Int
 	owner          common.Address
@@ -90,7 +90,7 @@ type mockEthdata struct {
 	rollups     map[common.Address]*rollupData
 	nextAddress common.Address // unique 'address'
 	BlockNumber uint64
-	pending     map[common.Address][32]byte
+	pending     map[common.Address]*PendingInbox
 	LatestBlock *structures.BlockId
 	//LatestHeight *big.Int
 	blockNumbers map[*common.TimeBlocks]*structures.BlockId
@@ -100,7 +100,7 @@ type mockEthdata struct {
 
 	// need to hold list of out chans to publish to
 	outchans map[chan arbbridge.MaybeEvent]void
-	cm       chan chan arbbridge.MaybeEvent
+	chanMgr  chan chan arbbridge.MaybeEvent
 	pubchan  chan arbbridge.MaybeEvent
 	//ChannelWallet map[common.Address]protocol.TokenTracker
 	//create channel manager for adding, removing and publishing to list of outchans
@@ -129,14 +129,14 @@ func getMockEth(ethURL string) *mockEthdata {
 		mEthData.blockNumbers[mEthData.LatestBlock.Height] = mEthData.LatestBlock
 
 		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
-		mEthData.cm = make(chan chan arbbridge.MaybeEvent)
+		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
 		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
 		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
 		go func() {
 			for {
 				select {
-				case ch := <-mEthData.cm: // register outchan
+				case ch := <-mEthData.chanMgr: // register outchan
 					mEthData.outchans[ch] = Void
 				case msg := <-mEthData.pubchan: // publish to outchans
 					for ch, _ := range mEthData.outchans {
@@ -156,7 +156,7 @@ func getMockEth(ethURL string) *mockEthdata {
 
 func (m *mockEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 	fmt.Println("registering outchan")
-	m.cm <- oc
+	m.chanMgr <- oc
 }
 
 func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {

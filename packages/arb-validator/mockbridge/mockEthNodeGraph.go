@@ -37,7 +37,7 @@ type nodeGraph struct {
 	lastConfirmed    common.Hash
 }
 
-func newNodeGraph(auth *transOpts) *nodeGraph {
+func newNodeGraph(auth *TransOpts) *nodeGraph {
 
 	//		register for inbox
 	//		init protocol state

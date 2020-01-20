@@ -28,10 +28,10 @@ import (
 type challengeFactory struct {
 	contract *challengefactory.ChallengeFactory
 	client   arbbridge.ArbClient
-	auth     *transOpts
+	auth     *TransOpts
 }
 
-func newChallengeFactory(address common.Address, client arbbridge.ArbClient, auth *transOpts) (*challengeFactory, error) {
+func newChallengeFactory(address common.Address, client arbbridge.ArbClient, auth *TransOpts) (*challengeFactory, error) {
 	//vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")

@@ -18,25 +18,28 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type PendingInbox struct {
 	//GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
-	client arbbridge.ArbClient
+	pending *structures.PendingInbox
+	client  *MockArbClient
 }
 
-func newPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
+func newPendingInbox(address common.Address, client *MockArbClient) (*PendingInbox, error) {
 	//globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	//}
-	return &PendingInbox{client}, nil
+	client.MockEthClient.pending[address] = &PendingInbox{client: client}
+	return &PendingInbox{structures.NewPendingInbox(), client}, nil
 }
 
 func (con *PendingInbox) SendMessage(
@@ -58,6 +61,61 @@ func (con *PendingInbox) SendMessage(
 	//	return err
 	//}
 	//return waitForReceipt(auth.Context, con.client, auth.From, tx, "SendMessage")
+	// if token type NFT
+	if msg.TokenType[20] == 1 {
+		//transferNFT()
+	} else {
+		//transferToken()
+	}
+	//
+	// if send successful
+	//
+	//PendingInbox storage pendingInbox = pending[_destination];
+	//if (pendingInbox.value != 0) {
+	//	bytes32 dataHash = Value.deserializeHashed(_data);
+	//	bytes32 txHash = keccak256(
+	//		abi.encodePacked(
+	//			_destination,
+	//			dataHash,
+	//			_value,
+	//			_tokenType
+	//	)
+	//);
+	//	Value.Data[] memory dataValues = new Value.Data[](3);
+	//	dataValues[0] = Value.newHashOnly(dataHash);
+	//	dataValues[1] = Value.newInt(block.number);
+	//	dataValues[2] = Value.newInt(uint(txHash));
+	//
+	//	Value.Data[] memory values = new Value.Data[](4);
+	//	values[0] = Value.newTuple(dataValues);
+	//	values[1] = Value.newInt(uint256(_sender));
+	//	values[2] = Value.newInt(_value);
+	//	values[3] = Value.newInt(uint256(bytes32(_tokenType)));
+	//	bytes32 messageHash =  Value.newTuple(values).hash().hash;
+	//
+	//	pendingInbox.value = Protocol.addMessageToPending(
+	//		pendingInbox.value,
+	//		messageHash
+	//	);
+	//	pendingInbox.count++;
+	//}
+	con.pending.DeliverMessage(msg.AsValue())
+	//
+	//emit IGlobalPendingInbox.MessageDelivered(
+	//	_destination,
+	//	_sender,
+	//	_tokenType,
+	//	_value,
+	//	_data
+	//)
+	con.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.MessageDeliveredEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: con.client.MockEthClient.LatestBlock,
+			},
+			Msg: msg,
+		},
+	})
 	return nil
 }
 
@@ -110,6 +168,14 @@ func (con *PendingInbox) SendEthMessage(
 	//}
 	//receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
 	//return receipt.Status, err
+
+	//depositEth(_destination);
+	con.SendMessage(ctx, valprotocol.Message{
+		Data:        data,
+		TokenType:   [21]byte{}, //???
+		Currency:    amount,
+		Destination: destination,
+	})
 	return nil
 }
 

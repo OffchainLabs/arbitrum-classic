@@ -19,6 +19,7 @@ package mockbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -28,10 +29,10 @@ import (
 type ChallengeTester struct {
 	contract *challengetester.ChallengeTester
 	client   arbbridge.ArbClient
-	auth     *transOpts
+	auth     *TransOpts
 }
 
-func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth *transOpts) (*ChallengeTester, error) {
+func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth *TransOpts) (*ChallengeTester, error) {
 	//vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
@@ -47,7 +48,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, error) {
+) (common.Address, *structures.BlockId, error) {
 	//con.auth.Context = ctx
 	//tx, err := con.contract.StartChallenge(
 	//	con.auth,
@@ -71,5 +72,5 @@ func (con *ChallengeTester) StartChallenge(
 	//	return common.Address{}, errors2.New("Wrong receipt count")
 	//}
 
-	return common.Address{}, nil
+	return common.Address{}, &structures.BlockId{}, nil
 }

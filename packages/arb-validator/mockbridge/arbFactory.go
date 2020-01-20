@@ -10,10 +10,10 @@ import (
 
 type ArbFactory struct {
 	contract common.Address
-	client   arbbridge.ArbClient
+	client   *MockArbClient
 }
 
-func newArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFactory, error) {
+func newArbFactory(address common.Address, client *MockArbClient) (*ArbFactory, error) {
 	return &ArbFactory{address, client}, nil
 }
 
@@ -23,31 +23,17 @@ func (con *ArbFactory) CreateRollup(
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
-	//con.contract =
-	//tx, err := con.contract.CreateRollup(
-	//	auth,
-	//	vmState,
-	//	params.GracePeriod.Val,
-	//	new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
-	//	params.MaxExecutionSteps,
-	//	params.StakeRequirement,
-	//	owner,
-	//)
-	//if err != nil {
-	//	return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
-	//}
-	//receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "CreateChain")
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	//if len(receipt.Logs) != 1 {
-	//	return common.Address{}, errors2.New("Wrong receipt count")
-	//}
+	con.client.MockEthClient.rollups[owner] = &rollupData{Uninitialized,
+		params.GracePeriod,
+		params.MaxExecutionSteps,
+		params.StakeRequirement,
+		owner,
+	}
 	//event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
 	//if err != nil {
 	//	return common.Address{}, err
 	//}
-	return common.Address{}, nil
+	return owner, nil
 }
 
 type arbFactoryWatcher struct {

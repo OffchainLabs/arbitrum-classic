@@ -71,7 +71,7 @@ func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.Tim
 	return block, nil
 }
 
-type transOpts struct {
+type TransOpts struct {
 	From  common.Address // Ethereum account to send the transaction from
 	Nonce *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 
@@ -82,10 +82,10 @@ type transOpts struct {
 
 type MockArbAuthClient struct {
 	*MockArbClient
-	auth *transOpts
+	auth *TransOpts
 }
 
-func NewEthAuthClient(ethURL string, auth *transOpts) (*MockArbAuthClient, error) {
+func NewEthAuthClient(ethURL string, auth *TransOpts) (*MockArbAuthClient, error) {
 	client, err := NewEthClient(ethURL)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (c *MockArbAuthClient) Address() common.Address {
 }
 
 func (c *MockArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return newArbFactory(address, c)
+	return newArbFactory(address, c.MockArbClient)
 }
 
 func (c *MockArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
@@ -109,7 +109,7 @@ func (c *MockArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRoll
 }
 
 func (c *MockArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return newPendingInbox(address, c)
+	return newPendingInbox(address, c.MockArbClient)
 }
 
 func (c *MockArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
