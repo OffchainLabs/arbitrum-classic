@@ -43,8 +43,8 @@ type RollupCheckpointer interface {
 }
 
 type ProductionCheckpointer struct {
+	st            machine.CheckpointStorage
 	maxReorgDepth *big.Int
-	cp            checkpointerWithMetadata
 	asyncWriter   *AsyncCheckpointWriter
 }
 
@@ -69,9 +69,13 @@ func NewProductionCheckpointer(
 			log.Fatal(err)
 		}
 	}
+	cCheckpointer, err := cmachine.NewCheckpoint(databasePath, arbitrumCodeFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	ret := &ProductionCheckpointer{
 		maxReorgDepth: maxReorgDepth,
-		cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath, maxReorgDepth),
+		st:            cCheckpointer,
 	}
 	ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
 	return ret
@@ -85,7 +89,7 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	// read in metadata
 	var metadataBuf *structures.CheckpointMetadata
 	var newestInCp *structures.BlockId
-	rawMetadata := rcp.cp.RestoreMetadata()
+	rawMetadata := rcp.RestoreMetadata()
 
 	// read in metadata, or create it if it doesn't already exist
 	if rawMetadata == nil || len(rawMetadata) == 0 {
@@ -99,7 +103,7 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 		if err != nil {
 			return err
 		}
-		rcp.cp.SaveMetadata(buf)
+		rcp.SaveMetadata(buf)
 	} else {
 		metadataBuf = &structures.CheckpointMetadata{}
 		if err := proto.Unmarshal(rawMetadata, metadataBuf); err != nil {
@@ -108,7 +112,7 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	}
 	newestInCp = metadataBuf.Newest.Unmarshal()
 	// save all of the data for this checkpoint
-	rcp.cp.SaveCheckpoint(
+	rcp.SaveCheckpoint(
 		id,
 		newestInCp,
 		contents,
@@ -123,13 +127,13 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	if err != nil {
 		return err
 	}
-	rcp.cp.SaveMetadata(buf)
+	rcp.SaveMetadata(buf)
 
 	return nil
 }
 
 func (rcp *ProductionCheckpointer) HasCheckpointedState() bool {
-	metadataBytes := rcp.cp.RestoreMetadata()
+	metadataBytes := rcp.RestoreMetadata()
 	return metadataBytes != nil && len(metadataBytes) > 0
 }
 
@@ -139,9 +143,9 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	contractAddr common.Address,
 	beOpinionated bool,
 ) ([]byte, structures.RestoreContext, error) {
-	rcp.cp.QueueReorgedCheckpointsForDeletion(ctx, client)
+	rcp.QueueReorgedCheckpointsForDeletion(ctx, client)
 
-	metadataBytes := rcp.cp.RestoreMetadata()
+	metadataBytes := rcp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
 		return nil, nil, errors.New("no checkpoints in database")
 	}
@@ -161,7 +165,7 @@ func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	var metadataBuf *structures.CheckpointMetadata
 	var oldestHeightInCp *common.TimeBlocks
 	var newestHeightInCp *common.TimeBlocks
-	rawMetadata := rcp.cp.RestoreMetadata()
+	rawMetadata := rcp.RestoreMetadata()
 	if rawMetadata == nil {
 		return nil, nil, nil
 	}
@@ -178,12 +182,12 @@ func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 		return nil, nil, nil
 	}
 
-	buf, checkpointCtx := rcp.cp.RestoreCheckpoint(blockId)
+	buf, checkpointCtx := rcp.RestoreCheckpoint2(blockId)
 	return buf, checkpointCtx, nil
 }
 
 func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return cp.cp.GetInitialMachine()
+	return cp.st.GetInitialMachine()
 }
 
 func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
@@ -196,11 +200,11 @@ func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockI
 }
 
 func (cp *ProductionCheckpointer) Close() {
-	cp.cp.Close()
+	cp.st.CloseCheckpointStorage()
 }
 
 type AsyncCheckpointWriter struct {
-	*sync.Mutex
+	sync.Mutex
 	checkpointer *ProductionCheckpointer
 	notifyChan   chan interface{}
 	nextJob      func()
@@ -208,7 +212,7 @@ type AsyncCheckpointWriter struct {
 }
 
 func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *AsyncCheckpointWriter {
-	ret := &AsyncCheckpointWriter{&sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
+	ret := &AsyncCheckpointWriter{sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
 	go func() {
 		deleteTicker := time.NewTicker(time.Minute)
 		defer deleteTicker.Stop()
@@ -234,7 +238,7 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *
 				ret.Unlock()
 			case <-deleteTicker.C:
 				ret.Lock()
-				ret.checkpointer.cp.(*productionCheckpointer).deleteSomeOldCheckpoints()
+				ret.checkpointer.deleteSomeOldCheckpoints()
 				ret.Unlock()
 			case <-ctx.Done():
 				ret.checkpointer.Close() //BUGBUG: must ensure this finishes before allowing db to be reopened
@@ -256,6 +260,7 @@ func (acw *AsyncCheckpointWriter) SubmitJob(job func(), doneChan chan struct{}) 
 	}
 }
 
+/*
 type checkpointerWithMetadata interface {
 	SaveMetadata([]byte)
 	RestoreMetadata() []byte
@@ -276,6 +281,7 @@ type checkpointerWithMetadata interface {
 
 	Close()
 }
+*/
 
 func getKeyForId(prefix []byte, id *structures.BlockId) []byte {
 	idBytes, err := proto.Marshal(id.MarshalToBuf())
@@ -297,31 +303,31 @@ func getLinksKey(blockId *structures.BlockId) []byte {
 	return getKeyForId([]byte("links:"), blockId)
 }
 
-type productionCheckpointer struct {
+type innerProductionCheckpointer struct {
 	st            machine.CheckpointStorage
 	maxReorgDepth *big.Int
 }
 
-func newProductionCheckpointer(dbpath, contractpath string, maxReorgDepth *big.Int) *productionCheckpointer {
+func newInnerProductionCheckpointer(dbpath, contractpath string, maxReorgDepth *big.Int) *innerProductionCheckpointer {
 	checkpoint, err := cmachine.NewCheckpoint(dbpath, contractpath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &productionCheckpointer{checkpoint, maxReorgDepth}
+	return &innerProductionCheckpointer{checkpoint, maxReorgDepth}
 }
 
-func (csc *productionCheckpointer) SaveMetadata(data []byte) {
+func (csc *ProductionCheckpointer) SaveMetadata(data []byte) {
 	ok := csc.st.SaveData([]byte("metadata"), data)
 	if !ok {
 		log.Fatal("metadata checkpointing failure")
 	}
 }
 
-func (csc *productionCheckpointer) RestoreMetadata() []byte {
+func (csc *ProductionCheckpointer) RestoreMetadata() []byte {
 	return csc.st.GetData([]byte("metadata"))
 }
 
-func (csc *productionCheckpointer) SaveCheckpoint(
+func (csc *ProductionCheckpointer) SaveCheckpoint(
 	blockId *structures.BlockId,
 	prevBlockId *structures.BlockId,
 	contents []byte,
@@ -352,7 +358,7 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	csc._setBothPointers(blockId, prevBlockId, blockId)
 }
 
-func (csc *productionCheckpointer) _setBothPointers(id, prev, next *structures.BlockId) {
+func (csc *ProductionCheckpointer) _setBothPointers(id, prev, next *structures.BlockId) {
 	links := &structures.CheckpointLinks{
 		Prev: prev.MarshalToBuf(),
 		Next: next.MarshalToBuf(),
@@ -364,7 +370,7 @@ func (csc *productionCheckpointer) _setBothPointers(id, prev, next *structures.B
 	csc.st.SaveData(getLinksKey(id), linksBuf)
 }
 
-func (csc *productionCheckpointer) _updatePrevPointer(id, prev *structures.BlockId) {
+func (csc *innerProductionCheckpointer) _updatePrevPointer(id, prev *structures.BlockId) {
 	key := getLinksKey(id)
 	linksBuf := csc.st.GetData(key)
 	links := &structures.CheckpointLinks{}
@@ -379,7 +385,7 @@ func (csc *productionCheckpointer) _updatePrevPointer(id, prev *structures.Block
 	csc.st.SaveData(key, linksBuf)
 }
 
-func (csc *productionCheckpointer) _updateNextPointer(id, next *structures.BlockId) {
+func (csc *ProductionCheckpointer) _updateNextPointer(id, next *structures.BlockId) {
 	key := getLinksKey(id)
 	linksBuf := csc.st.GetData(key)
 	links := &structures.CheckpointLinks{}
@@ -394,7 +400,7 @@ func (csc *productionCheckpointer) _updateNextPointer(id, next *structures.Block
 	csc.st.SaveData(key, linksBuf)
 }
 
-func (csc *productionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) { // returns nil, nil if no data at blockHeight
+func (csc *ProductionCheckpointer) RestoreCheckpoint2(blockId *structures.BlockId) ([]byte, structures.RestoreContext) { // returns nil, nil if no data at blockHeight
 	// check for consistency with metadata
 	metadataBytes := csc.RestoreMetadata()
 	metadataBuf := &structures.CheckpointMetadata{}
@@ -415,7 +421,7 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	return contentBytes, csc
 }
 
-func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structures.BlockId) {
+func (csc *ProductionCheckpointer) QueueCheckpointForDeletion(blockId *structures.BlockId) {
 	// make a best effort to delete an old checkpoint, but ignore any errors
 	// errors might cause some harmless extra info to remain in the database
 
@@ -434,7 +440,7 @@ func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structure
 	csc.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
-func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient) {
+func (csc *ProductionCheckpointer) QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient) {
 	metadataBuf := csc.RestoreMetadata()
 	if len(metadataBuf) == 0 {
 		return
@@ -481,7 +487,7 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(ctx contex
 	}
 }
 
-func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks) {
+func (csc *ProductionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks) {
 	for {
 		metadataBytes := csc.RestoreMetadata()
 		metadataBuf := &structures.CheckpointMetadata{}
@@ -511,7 +517,7 @@ func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollba
 	}
 }
 
-func (csc *productionCheckpointer) deleteSomeOldCheckpoints() {
+func (csc *ProductionCheckpointer) deleteSomeOldCheckpoints() {
 	queueBytes := csc.st.GetData([]byte("deadqueue"))
 	queue := &structures.BlockIdBufList{}
 	if err := proto.Unmarshal(queueBytes, queue); err != nil {
@@ -536,7 +542,7 @@ func (csc *productionCheckpointer) deleteSomeOldCheckpoints() {
 	csc.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
-func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.BlockId) {
+func (csc *ProductionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.BlockId) {
 	// assume metadata has already been updated to reflect deletion
 	manifestBytes := csc.st.GetData(getManifestKey(blockId))
 	if manifestBytes == nil {
@@ -559,11 +565,11 @@ func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.Bl
 	csc.st.DeleteData(getLinksKey(blockId))
 }
 
-func (csc *productionCheckpointer) GetValue(h common.Hash) value.Value {
+func (csc *ProductionCheckpointer) GetValue(h common.Hash) value.Value {
 	return csc.st.GetValue(h)
 }
 
-func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
+func (csc *ProductionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	ret, err := csc.st.GetInitialMachine()
 	if err != nil {
 		log.Fatal(err)
@@ -581,14 +587,6 @@ func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	return ret
 }
 
-func (csc *productionCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return csc.st.GetInitialMachine()
-}
-
-func (csc *productionCheckpointer) Close() {
-	csc.st.CloseCheckpointStorage()
-}
-
-func (csc *productionCheckpointer) DeleteMetadata() {
+func (csc *ProductionCheckpointer) DeleteMetadata() {
 	csc.st.DeleteData([]byte("metadata"))
 }
