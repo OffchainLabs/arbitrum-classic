@@ -83,85 +83,7 @@ contract GlobalWallet {
         return (addresses, tokens);
     }
 
-    function depositERC20(address _tokenContract, address _destination, uint256 _value) public {
-        uint256 currentBalance = getTokenBalance(msg.sender, _tokenContract);
-
-        if (currentBalance >= _value) {
-            require(transferToken(msg.sender, _destination, _tokenContract, _value));
-        } else if (currentBalance == 0){
-            IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-            addToken(_destination, _tokenContract, _value);
-        }else{
-            require(transferToken(msg.sender, _destination, _tokenContract, currentBalance));
-            uint remaining = _value - currentBalance;
-
-            IERC20(_tokenContract).transferFrom(msg.sender, address(this), remaining);
-            addToken(_destination, _tokenContract, remaining);
-        }
-    }
-
-    function withdrawERC20(address _tokenContract, address _destination, uint256 _value) public {
-        require(
-            removeToken(msg.sender, _tokenContract, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-        IERC20(_tokenContract).transfer(_destination, _value);
-    }
-
-    function onERC721Received(
-        address,
-        address _from,
-        uint256 _tokenId,
-        bytes calldata
-    )
-        external
-        returns(bytes4)
-    {
-        addNFTToken(_from, msg.sender, _tokenId);
-        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
-    }
-
-    function depositERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
-        bool hasToken = hasNFT(_tokenContract, msg.sender, _tokenId);
-
-        if(hasToken){
-            require(transferNFT(msg.sender, _destination, _tokenContract, _tokenId));
-        }else{
-            IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
-            addNFTToken(_destination, _tokenContract, _tokenId);
-        }
-    }
-
-    function withdrawERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
-        require(
-            removeNFTToken(msg.sender, _tokenContract, _tokenId),
-            "Wallet doesn't own token"
-        );
-        IERC721(_tokenContract).safeTransferFrom(address(this), _destination, _tokenId);
-    }
-
-    function depositEth(address _destination) public payable {
-        addToken(_destination, ETH_ADDRESS, msg.value);
-    }
-
-    function withdrawEth(uint256 _value) external {
-        require(
-            removeToken(msg.sender, ETH_ADDRESS, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-        msg.sender.transfer(_value);
-    }
-
-    function transferEth(address payable _destination, uint256 _value) public {
-        require(
-            removeToken(msg.sender, ETH_ADDRESS, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-
-        _destination.transfer(_value);
-    }
-
-    function getTokenBalance(address _tokenContract, address _owner) public view returns (uint256) {
+    function getTokenBalance(address _tokenContract, address _owner) external view returns (uint256) {
         Wallet storage wallet = wallets[_owner];
         uint256 index = wallet.tokenIndex[_tokenContract];
         if (index == 0) {
@@ -170,7 +92,7 @@ contract GlobalWallet {
         return wallet.tokenList[index - 1].balance;
     }
 
-    function hasNFT(address _tokenContract, address _owner, uint256 _tokenId) public view returns (bool) {
+    function hasNFT(address _tokenContract, address _owner, uint256 _tokenId) external view returns (bool) {
         Wallet storage wallet = wallets[_owner];
         uint256 index = wallet.nftWalletIndex[_tokenContract];
         if (index == 0) {
@@ -179,7 +101,46 @@ contract GlobalWallet {
         return wallet.nftWalletList[index - 1].tokenIndex[_tokenId] != 0;
     }
 
-    function transferToken(
+    function withdrawERC20(address _tokenContract, address _destination, uint256 _value) external {
+        require(
+            removeToken(msg.sender, _tokenContract, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+        IERC20(_tokenContract).transfer(_destination, _value);
+    }
+
+    function withdrawERC721(address _tokenContract, address _destination, uint256 _tokenId) external {
+        require(
+            removeNFTToken(msg.sender, _tokenContract, _tokenId),
+            "Wallet doesn't own token"
+        );
+        IERC721(_tokenContract).safeTransferFrom(address(this), _destination, _tokenId);
+    }
+
+    function withdrawEth(address payable _destination, uint256 _value) external {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+
+        _destination.transfer(_value);
+    }
+
+    function depositEth(address _destination) internal {
+        addToken(_destination, ETH_ADDRESS, msg.value);
+    }
+
+    function depositERC20(address _tokenContract, address _destination, uint256 _value) internal {
+        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
+        addToken(_destination, _tokenContract, _value);
+    }
+
+    function depositERC721(address _tokenContract, address _destination, uint256 _tokenId) internal {
+        IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
+        addNFTToken(_destination, _tokenContract, _tokenId);
+    }
+
+    function transferERC20(
         address _from,
         address _to,
         address _tokenContract,
@@ -192,6 +153,21 @@ contract GlobalWallet {
             return false;
         }
         addToken(_to, _tokenContract, _value);
+        return true;
+    }
+
+    function transferEth(
+        address _from,
+        address _to,
+        uint256 _value
+    )
+        internal
+        returns (bool)
+    {
+        if (!removeToken(_from, ETH_ADDRESS, _value)) {
+            return false;
+        }
+        addToken(_to, ETH_ADDRESS, _value);
         return true;
     }
 
