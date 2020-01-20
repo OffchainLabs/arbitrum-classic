@@ -61,6 +61,7 @@ struct ValueSerializer {
         value_vector.push_back(type_code);
 
         auto hash_key = hash(val);
+        value_vector.push_back(NUM);
         marshal_uint256_t(hash_key, value_vector);
 
         return value_vector;
@@ -71,6 +72,7 @@ struct ValueSerializer {
         auto type_code = static_cast<unsigned char>(NUM);
         value_vector.push_back(type_code);
 
+        value_vector.push_back(NUM);
         marshal_uint256_t(val, value_vector);
 
         return value_vector;
