@@ -60,7 +60,8 @@ func (al *AssertionListener) MootableStakes(context.Context, *ChainObserver, []r
 }
 func (al *AssertionListener) OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams) {}
 
-func (al *AssertionListener) AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash) {}
+func (al *AssertionListener) AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash) {
+}
 func (al *AssertionListener) AdvancedKnownAssertion(ctx context.Context, chain *ChainObserver, assertion *protocol.ExecutionAssertion, txHash common.Hash) {
 	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,

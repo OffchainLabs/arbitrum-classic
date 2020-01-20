@@ -145,7 +145,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					}
 				}
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownValidNode(ctx, chain, correctNode.hash)
+					listener.AdvancedCalculatedValidNode(ctx, chain, correctNode.hash)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
