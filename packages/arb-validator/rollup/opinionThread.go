@@ -68,7 +68,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
-			log.Println("Building opinion on top of", currentOpinion.hash)
+			currentHash := currentOpinion.hash
+			log.Println("Building opinion on top of", currentHash)
 			successorHashes := [4]common.Hash{}
 			copy(successorHashes[:], currentOpinion.successorHashes[:])
 			successor := func() *Node {
@@ -87,7 +88,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			var newOpinion structures.ChildType
 			var nextMachine machine.Machine
 			var validExecution *protocol.ExecutionAssertion
-			prepped, found := preparedAssertions[currentOpinion.hash]
+			prepped, found := preparedAssertions[currentHash]
 
 			if successor.disputable == nil {
 				panic("Node was created with disputable assertion")
@@ -121,36 +122,34 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			preparedAssertions = make(map[common.Hash]*preparedAssertion)
 
 			chain.RLock()
-			log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentOpinion.hash)
 			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
 			if ok {
-				if newOpinion == structures.ValidChildType {
-					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
-					}
-				}
 				chain.RUnlock()
 				chain.Lock()
 				if newOpinion == structures.ValidChildType {
 					correctNode.machine = nextMachine
 					correctNode.assertion = validExecution
 				} else {
-					correctNode.machine = chain.calculatedValidNode.machine.Clone()
+					correctNode.machine = currentOpinion.machine.Clone()
 				}
+				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
 				chain.calculatedValidNode = correctNode
 				if correctNode.depth > chain.knownValidNode.depth {
 					chain.knownValidNode = correctNode
 				}
 				chain.Unlock()
 				chain.RLock()
+				if newOpinion == structures.ValidChildType {
+					for _, lis := range chain.listeners {
+						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
+					}
+				}
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownValidNode(ctx, chain, chain.calculatedValidNode.hash)
+					listener.AdvancedKnownValidNode(ctx, chain, correctNode.hash)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
 			}
-			chain.RUnlock()
-
 		}
 
 		for {
@@ -164,6 +163,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Catch up to current head
 				for !chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 					updateCurrent()
+					chain.RUnlock()
 					select {
 					case <-ctx.Done():
 						return
@@ -202,7 +202,6 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 							delete(preparingAssertions, chain.calculatedValidNode.hash)
 							delete(preparedAssertions, chain.calculatedValidNode.hash)
 						}
-
 					}
 				}
 				chain.RUnlock()
@@ -287,7 +286,7 @@ func getNodeOpinion(
 	claimHeight *big.Int,
 	messageStack *structures.MessageStack,
 	messagesVal value.TupleValue,
-	prevMach machine.Machine,
+	mach machine.Machine,
 ) (structures.ChildType, *protocol.ExecutionAssertion) {
 	correctAfterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
 	if claimHeight == nil || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
@@ -297,7 +296,6 @@ func getNodeOpinion(
 		return structures.InvalidMessagesChildType, nil
 	}
 
-	mach := prevMach
 	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, messagesVal)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
 		return structures.InvalidExecutionChildType, nil

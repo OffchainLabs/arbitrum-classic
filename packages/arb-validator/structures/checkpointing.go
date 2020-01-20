@@ -17,6 +17,8 @@
 package structures
 
 import (
+	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -137,4 +139,8 @@ func (idb *BlockIdBuf) Unmarshal() *BlockId {
 		Height:     idb.Height.Unmarshal(),
 		HeaderHash: idb.HeaderHash.Unmarshal(),
 	}
+}
+
+func (id *BlockId) String() string {
+	return fmt.Sprintf("Block(%v, %v)", id.Height.AsInt(), id.HeaderHash)
 }

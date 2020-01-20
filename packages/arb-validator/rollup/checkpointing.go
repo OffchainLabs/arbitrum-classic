@@ -91,7 +91,7 @@ func NewProductionCheckpointer(
 	maxReorgDepth *big.Int,
 	dbPrefix string,
 	forceFreshStart bool, // this should be false in production use
-) RollupCheckpointer {
+) *ProductionCheckpointer {
 	databasePath := makeCheckpointDatabasePath(rollupAddr, dbPrefix)
 	if forceFreshStart {
 		// for testing only -- use production checkpointer but delete old database first
@@ -451,7 +451,11 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	}
 
 	for _, mach := range machines {
-		mach.Checkpoint(csc.st)
+		log.Println("Checkpointing machine", mach.Hash())
+		savedMachine := mach.Checkpoint(csc.st)
+		if !savedMachine {
+			log.Fatalln("Failed to checkpoint machine")
+		}
 	}
 
 	manifestBuf, err := proto.Marshal(manifest)
@@ -682,7 +686,13 @@ func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ret.RestoreCheckpoint(csc.st, h)
+	if ret.Hash() == h {
+		return ret
+	}
+	restored := ret.RestoreCheckpoint(csc.st, h)
+	if !restored {
+		log.Fatalln("Failed to restore machine", h, "from checkpoint")
+	}
 	return ret
 }
 
