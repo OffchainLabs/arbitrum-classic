@@ -163,7 +163,8 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto status_str = static_cast<unsigned char>(state);
 
-    auto hash_key = GetHashKey(hash());
+    std::vector<unsigned char> hash_key;
+    marshal_uint256_t(hash(), hash_key);
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&

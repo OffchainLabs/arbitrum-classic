@@ -148,7 +148,8 @@ bool Machine::restoreCheckpoint(
 }
 
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
-    auto checkpoint_key = GetHashKey(hash());
+    std::vector<unsigned char> checkpoint_key;
+    marshal_uint256_t(hash(), checkpoint_key);
 
     return ::deleteCheckpoint(storage, checkpoint_key);
 }

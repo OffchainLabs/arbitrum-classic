@@ -80,7 +80,7 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     auto hash = deserializeUint256t(machine_hash_ptr);
 
     std::vector<unsigned char> hash_vector;
-    marshal_value(hash, hash_vector);
+    marshal_uint256_t(hash, hash_vector);
 
     auto result = deleteCheckpoint(*storage, hash_vector);
 
