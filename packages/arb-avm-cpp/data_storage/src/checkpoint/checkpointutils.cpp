@@ -198,25 +198,20 @@ MachineStateKeys extractStateKeys(
 
     auto status = extractStatus(current_iter);
 
-    auto static_val = extractHashKey(current_iter);
     auto register_val = extractHashKey(current_iter);
     auto datastack = extractHashKey(current_iter);
     auto auxstack = extractHashKey(current_iter);
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return MachineStateKeys{static_val, register_val, datastack, auxstack,
-                            pc,         err_pc,       status};
+    return MachineStateKeys{register_val, datastack, auxstack,
+                            pc,           err_pc,    status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.static_val_key.begin(),
-                             state_data.static_val_key.end());
 
     state_data_vector.insert(state_data_vector.end(),
                              state_data.register_val_key.begin(),

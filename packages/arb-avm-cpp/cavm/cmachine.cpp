@@ -144,7 +144,7 @@ CBlockReason machineIsBlocked(CMachine* m,
     Machine* mach = static_cast<Machine*>(m);
     auto currentTimePtr = reinterpret_cast<const char*>(currentTimeData);
     auto currentTime = deserializeUint256t(currentTimePtr);
-    auto blockReason = mach->isBlocked(currentTime, newMessages == 0);
+    auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 

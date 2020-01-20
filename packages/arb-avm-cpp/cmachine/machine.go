@@ -92,9 +92,9 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	if err != nil {
 		log.Fatal(err)
 	}
-	newMessagesInt := 1
+	newMessagesInt := 0
 	if newMessages {
-		newMessagesInt = 0
+		newMessagesInt = 1
 	}
 	currentTimeData := currentTimeBuf.Bytes()
 	cBlockReason := C.machineIsBlocked(m.c, unsafe.Pointer(&currentTimeData[0]), C.int(newMessagesInt))

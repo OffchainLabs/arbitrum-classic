@@ -156,7 +156,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
 
-    auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto err_code_point = stateSaver.saveValue(errpc);
     auto pc_results = stateSaver.saveValue(code[pc]);
@@ -167,16 +166,12 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     marshal_uint256_t(hash(), hash_key);
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        static_val_results.status.ok() && register_val_results.status.ok() &&
-        pc_results.status.ok() && err_code_point.status.ok()) {
-        auto machine_state_data =
-            MachineStateKeys{static_val_results.storage_key,
-                             register_val_results.storage_key,
-                             datastack_results.storage_key,
-                             auxstack_results.storage_key,
-                             pc_results.storage_key,
-                             err_code_point.storage_key,
-                             status_str};
+        register_val_results.status.ok() && pc_results.status.ok() &&
+        err_code_point.status.ok()) {
+        auto machine_state_data = MachineStateKeys{
+            register_val_results.storage_key, datastack_results.storage_key,
+            auxstack_results.storage_key,     pc_results.storage_key,
+            err_code_point.storage_key,       status_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -193,17 +188,17 @@ bool MachineState::restoreCheckpoint(
     auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
-    auto initial_vales = storage.getInitialVmValues();
+    auto initial_values = storage.getInitialVmValues();
+    if (!initial_values.valid_state) {
+        return false;
+    }
 
-    code = initial_vales.code;
+    code = initial_values.code;
+    staticVal = initial_values.staticVal;
     pool = storage.pool;
 
     if (results.status.ok()) {
         auto state_data = results.data;
-
-        auto static_val_results =
-            stateFetcher.getValue(state_data.static_val_key);
-        staticVal = static_val_results.data;
 
         auto register_results =
             stateFetcher.getValue(state_data.register_val_key);

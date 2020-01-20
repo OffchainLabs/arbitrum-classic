@@ -64,6 +64,8 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error(err)
 	}
 
+	t.Log("Initial machine hash", mach.Hash())
+
 	_, numSteps := mach.ExecuteAssertion(1000, &protocol.TimeBoundsBlocks{
 		Start: common.NewTimeBlocks(big.NewInt(100)),
 		End:   common.NewTimeBlocks(big.NewInt(120)),
@@ -82,6 +84,10 @@ func TestCheckpointMachine(t *testing.T) {
 
 	if !mach2.RestoreCheckpoint(checkpointStorage, mach.Hash()) {
 		t.Error("Failed to restore machine")
+	}
+
+	if mach.Hash() != mach2.Hash() {
+		t.Error("Restored machine with wrong hash", mach.Hash(), mach2.Hash())
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
