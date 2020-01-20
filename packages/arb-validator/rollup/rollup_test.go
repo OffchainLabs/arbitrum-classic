@@ -183,13 +183,14 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		chain.pendingInbox.GetTopHash(),
 		big.NewInt(0),
 	)
+
 	chain.nodeGraph.CreateNodesOnAssert(
 		baseNode,
 		disputableNode,
-		theMachine,
 		common.NewTimeBlocks(big.NewInt(10)),
 		common.Hash{},
 	)
+	chain.nodeGraph.nodeFromHash[baseNode.successorHashes[3]].machine = theMachine
 }
 
 func TestCreateStakers(t *testing.T) {
