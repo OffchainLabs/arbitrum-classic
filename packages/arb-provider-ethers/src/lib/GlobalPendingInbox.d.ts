@@ -8,37 +8,15 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface GlobalPendingInboxInterface extends Interface {
     functions: {
-        depositERC20: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
-        }>;
-
-        depositERC721: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _tokenId]: [string, string, BigNumberish]): string;
-        }>;
-
-        depositEth: TypedFunctionDescription<{
-            encode([_destination]: [string]): string;
-        }>;
-
-        onERC721Received: TypedFunctionDescription<{
-            encode([, _from, _tokenId]: [string, string, BigNumberish, Arrayish]): string;
-        }>;
-
-        transferEth: TypedFunctionDescription<{
-            encode([_destination, _value]: [string, BigNumberish]): string;
-        }>;
-
         withdrawERC20: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
+            encode([_tokenContract]: [string]): string;
         }>;
 
         withdrawERC721: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _tokenId]: [string, string, BigNumberish]): string;
+            encode([_tokenContract, _tokenId]: [string, BigNumberish]): string;
         }>;
 
-        withdrawEth: TypedFunctionDescription<{
-            encode([_value]: [BigNumberish]): string;
-        }>;
+        withdrawEth: TypedFunctionDescription<{ encode([]: []): string }>;
 
         getPending: TypedFunctionDescription<{ encode([]: []): string }>;
 
@@ -151,51 +129,15 @@ export class GlobalPendingInbox extends Contract {
 
         hasNFT(_tokenContract: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
 
-        depositERC20(
-            _tokenContract: string,
-            _destination: string,
-            _value: BigNumberish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
-        depositERC721(
-            _tokenContract: string,
-            _destination: string,
-            _tokenId: BigNumberish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
-        depositEth(_destination: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
-        onERC721Received(
-            arg0: string,
-            _from: string,
-            _tokenId: BigNumberish,
-            arg3: Arrayish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
-        transferEth(
-            _destination: string,
-            _value: BigNumberish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
-        withdrawERC20(
-            _tokenContract: string,
-            _destination: string,
-            _value: BigNumberish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
+        withdrawERC20(_tokenContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         withdrawERC721(
             _tokenContract: string,
-            _destination: string,
             _tokenId: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        withdrawEth(_value: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+        withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -279,21 +221,11 @@ export class GlobalPendingInbox extends Contract {
     };
 
     estimate: {
-        depositERC20(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+        withdrawERC20(_tokenContract: string): Promise<BigNumber>;
 
-        depositERC721(_tokenContract: string, _destination: string, _tokenId: BigNumberish): Promise<BigNumber>;
+        withdrawERC721(_tokenContract: string, _tokenId: BigNumberish): Promise<BigNumber>;
 
-        depositEth(_destination: string): Promise<BigNumber>;
-
-        onERC721Received(arg0: string, _from: string, _tokenId: BigNumberish, arg3: Arrayish): Promise<BigNumber>;
-
-        transferEth(_destination: string, _value: BigNumberish): Promise<BigNumber>;
-
-        withdrawERC20(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
-
-        withdrawERC721(_tokenContract: string, _destination: string, _tokenId: BigNumberish): Promise<BigNumber>;
-
-        withdrawEth(_value: BigNumberish): Promise<BigNumber>;
+        withdrawEth(): Promise<BigNumber>;
 
         getPending(): Promise<BigNumber>;
 
