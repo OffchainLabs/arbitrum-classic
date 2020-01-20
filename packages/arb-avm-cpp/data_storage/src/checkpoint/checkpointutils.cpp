@@ -38,7 +38,7 @@ std::unordered_map<int, int> blockreason_type_length = {{0, 1},
 
 namespace checkpoint {
 
-uint64_t deserialize_int64(const char*& bufptr) {
+uint64_t deserialize_uint64(const char*& bufptr) {
     uint64_t ret_value;
     memcpy(&ret_value, bufptr, UINT64_SIZE);
     auto val = boost::endian::big_to_native(ret_value);
@@ -82,12 +82,7 @@ struct ValueSerializer {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(CODEPT);
         value_vector.push_back(type_code);
-
-        std::vector<unsigned char> pc_vector;
-        marshal_uint64_t(val.pc, pc_vector);
-
-        value_vector.insert(value_vector.end(), pc_vector.begin(),
-                            pc_vector.end());
+        marshal_uint64_t(val.pc, value_vector);
         return value_vector;
     }
 };
@@ -99,29 +94,6 @@ unsigned char extractStatus(iterator& iter) {
     ++iter;
 
     return status;
-}
-
-std::vector<unsigned char> extractBlockReason(iterator& iter) {
-    auto block_type = *iter;
-    auto length_of_block_reason = blockreason_type_length[block_type];
-
-    auto end_iter = iter + length_of_block_reason;
-    std::vector<unsigned char> blockreason_vector(iter, end_iter);
-    iter = end_iter;
-
-    return blockreason_vector;
-}
-
-std::vector<unsigned char> extractBalanceTracker(iterator& iter) {
-    unsigned int tracker_length;
-    memcpy(&tracker_length, &(*iter), sizeof(tracker_length));
-    iter += sizeof(tracker_length);
-
-    auto end_iter = iter + tracker_length;
-    std::vector<unsigned char> balance_track_vector(iter, end_iter);
-    iter = end_iter;
-
-    return balance_track_vector;
 }
 
 std::vector<unsigned char> extractHashKey(iterator& iter) {
@@ -175,7 +147,7 @@ std::vector<std::vector<unsigned char>> parseTuple(
 CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code) {
     auto buff = reinterpret_cast<const char*>(&val[1]);
-    auto pc_val = deserialize_int64(buff);
+    auto pc_val = deserialize_uint64(buff);
     if (pc_val == pc_default) {
         return getErrCodePoint();
     } else {

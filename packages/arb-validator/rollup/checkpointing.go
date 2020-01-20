@@ -693,6 +693,9 @@ func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	if !restored {
 		log.Fatalln("Failed to restore machine", h, "from checkpoint")
 	}
+	if ret.Hash() != h {
+		log.Fatalln("Restore machine", h, "from checkpoint with wrong hash", ret.Hash())
+	}
 	return ret
 }
 

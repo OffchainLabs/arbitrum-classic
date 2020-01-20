@@ -118,6 +118,10 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
 
     auto results = fetcher.getValue(hash_key_vector);
 
+    if (!results.status.ok()) {
+        return {nullptr, 0};
+    }
+
     std::vector<unsigned char> value;
     marshal_value(results.data, value);
 
