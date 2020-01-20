@@ -75,7 +75,7 @@ func CreateManager(
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := checkpointing.NewProductionCheckpointer(
+			checkpointer := checkpointing.NewRollupCheckpointerImpl(
 				runCtx,
 				rollupAddr,
 				arbitrumCodeFilePath,
