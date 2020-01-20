@@ -43,11 +43,6 @@ struct MessageStack {
     }
 
     void clear() { messages = Tuple{}; }
-
-    MessageStackSaveResults checkpointState(MachineStateSaver& msSaver);
-
-    bool initializeMessageStack(const MachineStateFetcher& fetcher,
-                                const std::vector<unsigned char>& msgs_key);
 };
 
 #endif /* messagestack_hpp */
