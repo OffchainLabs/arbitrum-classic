@@ -32,15 +32,14 @@ import (
 
 type Machine struct {
 	// implements Machinestate
-	stack       stack.Stack
-	auxstack    stack.Stack
-	register    *MachineValue
-	static      *MachineValue
-	pc          *MachinePC
-	errHandler  value.CodePointValue
-	context     Context
-	status      machine.Status
-	blockReason machine.BlockReason
+	stack      stack.Stack
+	auxstack   stack.Stack
+	register   *MachineValue
+	static     *MachineValue
+	pc         *MachinePC
+	errHandler value.CodePointValue
+	context    Context
+	status     machine.Status
 
 	sizeLimit     int64
 	sizeException bool
@@ -108,7 +107,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		errHandler,
 		&NoContext{},
 		machine.Extensive,
-		nil,
 		sizeLimit,
 		false,
 		wh,
@@ -231,8 +229,35 @@ func (m *Machine) CurrentStatus() machine.Status {
 	return m.status
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	return m.blockReason
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	if m.status == machine.ErrorStop {
+		return machine.ErrorBlocked{}
+	}
+	if m.status == machine.Halt {
+		return machine.HaltBlocked{}
+	}
+	op := m.GetOperation()
+	if op.GetOp() == code.INBOX {
+		if newMessages {
+			return nil
+		}
+		var param value.Value
+		if immediate, ok := op.(value.ImmediateOperation); ok {
+			param = immediate.Val
+		} else {
+			param, _ = m.stack.Pop()
+			m.stack.Push(param)
+		}
+		paramInt, ok := param.(value.IntValue)
+		if !ok {
+			return nil
+		}
+		if currentTime.AsInt().Cmp(paramInt.BigInt()) < 0 {
+			return machine.InboxBlocked{Timeout: paramInt}
+		}
+		return nil
+	}
+	return nil
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
@@ -242,11 +267,9 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		timeBounds,
 		inbox,
 	)
-	m.blockReason = nil
 	for assCtx.StepCount() < maxSteps {
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
-			m.blockReason = blocked
 			break
 		}
 	}
@@ -380,7 +403,6 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.errHandler,
 		&NoContext{},
 		m.status,
-		m.blockReason,
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,

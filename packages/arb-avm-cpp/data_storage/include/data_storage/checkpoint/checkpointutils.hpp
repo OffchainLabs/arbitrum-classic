@@ -28,7 +28,6 @@ struct MachineStateKeys {
     std::vector<unsigned char> pc_key;
     std::vector<unsigned char> err_pc_key;
     unsigned char status_char;
-    std::vector<unsigned char> blockreason_str;
 };
 
 extern std::unordered_map<int, int> blockreason_type_length;

@@ -195,7 +195,6 @@ MachineStateKeys extractStateKeys(
     auto current_iter = stored_state.begin();
 
     auto status = extractStatus(current_iter);
-    auto blockreason_vector = extractBlockReason(current_iter);
 
     auto static_val = extractHashKey(current_iter);
     auto register_val = extractHashKey(current_iter);
@@ -204,19 +203,14 @@ MachineStateKeys extractStateKeys(
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return MachineStateKeys{
-        static_val, register_val, datastack, auxstack,
-        pc,         err_pc,       status,    blockreason_vector};
+    return MachineStateKeys{static_val, register_val, datastack, auxstack,
+                            pc,         err_pc,       status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.blockreason_str.begin(),
-                             state_data.blockreason_str.end());
 
     state_data_vector.insert(state_data_vector.end(),
                              state_data.static_val_key.begin(),

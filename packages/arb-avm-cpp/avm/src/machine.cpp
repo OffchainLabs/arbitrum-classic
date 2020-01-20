@@ -55,10 +55,9 @@ Assertion Machine::run(uint64_t stepCount,
                        Tuple messages) {
     machine_state.context = AssertionContext{
         TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
-    machine_state.blockReason = NotBlocked{};
     while (machine_state.context.numSteps < stepCount) {
-        runOne();
-        if (!nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
+        auto blockReason = runOne();
+        if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
         }
     }
@@ -72,15 +71,13 @@ bool isErrorCodePoint(const CodePoint& cp) {
     return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
 }
 
-void Machine::runOne() {
+BlockReason Machine::runOne() {
     if (machine_state.state == Status::Error) {
-        machine_state.blockReason = ErrorBlocked();
-        return;
+        return ErrorBlocked();
     }
 
     if (machine_state.state == Status::Halted) {
-        machine_state.blockReason = HaltBlocked();
-        return;
+        return HaltBlocked();
     }
 
     auto& instruction = machine_state.code[machine_state.pc];
@@ -94,7 +91,7 @@ void Machine::runOne() {
             machine_state.pc = machine_state.errpc.pc;
             machine_state.state = Status::Extensive;
         }
-        return;
+        return NotBlocked();
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
@@ -102,17 +99,16 @@ void Machine::runOne() {
         }
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = machine_state.stack.stacksize();
-
+        BlockReason blockReason = NotBlocked();
         try {
-            machine_state.blockReason =
-                machine_state.runOp(instruction.op.opcode);
+            blockReason = machine_state.runOp(instruction.op.opcode);
         } catch (const bad_pop_type& e) {
             machine_state.state = Status::Error;
         } catch (const bad_tuple_index& e) {
             machine_state.state = Status::Error;
         }
         // if not blocked, increment step count and gas count
-        if (nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
+        if (nonstd::get_if<NotBlocked>(&blockReason)) {
             machine_state.context.numSteps++;
             machine_state.context.numGas +=
                 InstructionArbGasCost.at(instruction.op.opcode);
@@ -123,7 +119,7 @@ void Machine::runOne() {
         }
 
         if (machine_state.state != Status::Error) {
-            return;
+            return blockReason;
         }
         // if state is Error, clean up stack
         // Clear stack to base for instruction
@@ -137,9 +133,8 @@ void Machine::runOne() {
             machine_state.pc = machine_state.errpc.pc;
             machine_state.state = Status::Extensive;
         }
+        return blockReason;
     }
-
-    return;
 }
 
 SaveResults Machine::checkpoint(CheckpointStorage& storage) {

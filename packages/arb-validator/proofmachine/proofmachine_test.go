@@ -78,15 +78,12 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 
 	for cont {
 		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
-		lastReason := mach.LastBlockReason()
-		if lastReason != nil {
-			if lastReason.IsBlocked(mach, common.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
-				t.Fatal("Machine in error state")
-				break
-			}
+		if mach.CurrentStatus() == machine.ErrorStop {
+			t.Fatal("Machine in error state")
 		}
 		if stepsExecuted == 0 {
-			if lastReason.IsBlocked(mach, common.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
+			blocked := mach.IsBlocked(common.NewTimeBlocks(big.NewInt(0)), false)
+			if blocked != nil {
 				cont = false
 			}
 			fmt.Println(" machine halted ")

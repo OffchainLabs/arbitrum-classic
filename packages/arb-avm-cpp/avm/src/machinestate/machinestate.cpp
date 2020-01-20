@@ -162,7 +162,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto pc_results = stateSaver.saveValue(code[pc]);
 
     auto status_str = static_cast<unsigned char>(state);
-    auto blockreason_str = serializeForCheckpoint(blockReason);
 
     auto hash_key = GetHashKey(hash());
 
@@ -176,8 +175,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
                              auxstack_results.storage_key,
                              pc_results.storage_key,
                              err_code_point.storage_key,
-                             status_str,
-                             blockreason_str};
+                             status_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -227,9 +225,42 @@ bool MachineState::restoreCheckpoint(
         }
 
         state = static_cast<Status>(state_data.status_char);
-        blockReason = deserializeBlockReason(state_data.blockreason_str);
     }
     return results.status.ok();
+}
+
+BlockReason MachineState::isBlocked(uint256_t currentTime,
+                                    bool newMessages) const {
+    if (state == Status::Error) {
+        return ErrorBlocked();
+    } else if (state == Status::Halted) {
+        return HaltBlocked();
+    }
+    auto& instruction = code[pc];
+    if (instruction.op.opcode == OpCode::INBOX) {
+        if (newMessages) {
+            return NotBlocked();
+        }
+
+        auto& immediate = instruction.op.immediate;
+        const value* param;
+        if (immediate) {
+            param = immediate.get();
+        } else {
+            param = &stack[0];
+        }
+        auto paramNum = nonstd::get_if<uint256_t>(immediate.get());
+        if (!paramNum) {
+            return NotBlocked();
+        }
+        if (currentTime < *paramNum) {
+            return InboxBlocked(*paramNum);
+        } else {
+            return NotBlocked();
+        }
+    } else {
+        return NotBlocked();
+    }
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {

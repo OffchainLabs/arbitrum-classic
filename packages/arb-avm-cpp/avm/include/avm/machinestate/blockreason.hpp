@@ -54,7 +54,11 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     BreakpointBlocked,
                                     InboxBlocked>;
 
-std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);
+std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
+std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);
+std::ostream& operator<<(std::ostream& os, const ErrorBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BreakpointBlocked& val);
+std::ostream& operator<<(std::ostream& os, const InboxBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BlockReason& val);
 
 #endif /* blockreason_hpp */

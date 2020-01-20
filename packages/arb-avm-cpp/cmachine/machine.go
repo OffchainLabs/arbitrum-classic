@@ -86,8 +86,18 @@ func (m *Machine) CurrentStatus() machine.Status {
 	}
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	cBlockReason := C.machineLastBlockReason(m.c)
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	var currentTimeBuf bytes.Buffer
+	err := value.NewIntValue(currentTime.AsInt()).Marshal(&currentTimeBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	newMessagesInt := 1
+	if newMessages {
+		newMessagesInt = 0
+	}
+	currentTimeData := currentTimeBuf.Bytes()
+	cBlockReason := C.machineIsBlocked(m.c, unsafe.Pointer(&currentTimeData[0]), C.int(newMessagesInt))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil

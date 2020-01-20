@@ -84,13 +84,14 @@ void machineHash(CMachine* m, void* ret) {
 
 void* machineClone(CMachine* m) {
     assert(m);
-    Machine* mach = new Machine(*(static_cast<Machine*>(m)));
-    return static_cast<void*>(mach);
+    Machine* mach = static_cast<Machine*>(m);
+    Machine* cloneMach = new Machine(*mach);
+    return static_cast<void*>(cloneMach);
 }
 
 void machinePrint(CMachine* m) {
     assert(m);
-    Machine* mach = new Machine(*(static_cast<Machine*>(m)));
+    Machine* mach = static_cast<Machine*>(m);
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
@@ -136,10 +137,15 @@ struct ReasonConverter {
     }
 };
 
-CBlockReason machineLastBlockReason(CMachine* m) {
+CBlockReason machineIsBlocked(CMachine* m,
+                              void* currentTimeData,
+                              int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    return nonstd::visit(ReasonConverter{}, mach->lastBlockReason());
+    auto currentTimePtr = reinterpret_cast<const char*>(currentTimeData);
+    auto currentTime = deserializeUint256t(currentTimePtr);
+    auto blockReason = mach->isBlocked(currentTime, newMessages == 0);
+    return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
 ByteSlice machineMarshallForProof(CMachine* m) {

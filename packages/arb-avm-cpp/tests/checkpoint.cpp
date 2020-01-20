@@ -482,7 +482,6 @@ void getSavedState(MachineStateFetcher& fetcher,
     auto data = results.data;
 
     REQUIRE(data.status_char == expected_data.status_char);
-    REQUIRE(data.blockreason_str == expected_data.blockreason_str);
     REQUIRE(data.static_val_key == expected_data.static_val_key);
     REQUIRE(data.pc_key == expected_data.pc_key);
     REQUIRE(data.datastack_key == expected_data.datastack_key);
@@ -574,7 +573,6 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
     auto err_pc_results = stateSaver.saveValue(err_pc);
 
     auto status_str = (unsigned char)state;
-    auto blockreason_str = serializeForCheckpoint(blockReason);
 
     return MachineStateKeys{static_val_results.storage_key,
                             register_val_results.storage_key,
@@ -582,8 +580,7 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
                             auxstack_results.storage_key,
                             pc_results.storage_key,
                             err_pc_results.storage_key,
-                            status_str,
-                            blockreason_str};
+                            status_str};
 }
 
 MessageStack getMsgStack1() {
