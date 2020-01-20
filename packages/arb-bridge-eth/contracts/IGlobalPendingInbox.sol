@@ -21,7 +21,7 @@ interface IGlobalPendingInbox {
     event TransactionMessageDelivered(
         address indexed vmSenderId,
         address indexed vmReceiverId,
-        address contactAddress,
+        address contractAddress,
         uint256 seqNumber,
         uint256 value,
         bytes data
@@ -57,7 +57,7 @@ interface IGlobalPendingInbox {
     function registerForInbox() external;
 
     function depositEthMessage(
-        address _vmAddress, 
+        address _vmAddress,
         address _destination) external payable;
 
     function forwardTransactionMessage(
@@ -69,8 +69,8 @@ interface IGlobalPendingInbox {
         bytes calldata _signature) external;
 
     function sendTransactionMessage(
-        address _vmAddress, 
-        address _contractAddress, 
+        address _vmAddress,
+        address _contractAddress,
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data) external;

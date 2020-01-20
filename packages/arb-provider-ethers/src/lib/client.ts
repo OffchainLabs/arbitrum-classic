@@ -327,13 +327,14 @@ export class ArbClient {
         });
     }
 
-    public call(value: ArbValue.Value, sender: string): Promise<Uint8Array> {
+    public call(contractAddress: string, sender: string, data: ArbValue.Value): Promise<Uint8Array> {
         return new Promise((resolve, reject): void => {
             this.client.request(
                 'Validator.CallMessage',
                 [
                     {
-                        data: ethers.utils.hexlify(ArbValue.marshal(value)),
+                        contractAddress,
+                        data: ethers.utils.hexlify(ArbValue.marshal(data)),
                         sender,
                     },
                 ],

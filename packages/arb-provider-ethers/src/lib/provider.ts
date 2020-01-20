@@ -315,7 +315,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             throw Error('Cannot create call without a destination');
         }
         const dest = await transaction.to;
-        const contractData = this.contracts.get(dest.toLowerCase());
         let maxSeq = ethers.utils.bigNumberify(2);
         for (let i = 0; i < 255; i++) {
             maxSeq = maxSeq.mul(2);
@@ -325,9 +324,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (transaction.data) {
             txData = ArbValue.hexToSizedByteRange(await transaction.data);
         }
-        const arbMsg = new ArbValue.TupleValue([txData, new ArbValue.IntValue(dest), new ArbValue.IntValue(maxSeq)]);
         const sender = await this.provider.getSigner(0).getAddress();
-        const resultData = await this.client.call(arbMsg, sender);
+        const resultData = await this.client.call(dest, sender, txData);
         return ethers.utils.hexlify(resultData);
     }
 

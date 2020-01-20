@@ -86,7 +86,7 @@ interface GlobalPendingInboxInterface extends Interface {
         }>;
 
         TransactionMessageDelivered: TypedEventDescription<{
-            encodeTopics([vmSenderId, vmReceiverId, contactAddress, seqNumber, value, data]: [
+            encodeTopics([vmSenderId, vmReceiverId, contractAddress, seqNumber, value, data]: [
                 string | null,
                 string | null,
                 null,
@@ -215,7 +215,7 @@ export class GlobalPendingInbox extends Contract {
         TransactionMessageDelivered(
             vmSenderId: string | null,
             vmReceiverId: string | null,
-            contactAddress: null,
+            contractAddress: null,
             seqNumber: null,
             value: null,
             data: null,

@@ -174,6 +174,8 @@ class App {
         this.arbwalletAddress
       );
 
+      $("#arbBalance").html(arbBalance.toString());
+
       console.log("arbBalance xx : " + arbBalance);
 
       $("#arbBalance").html(arbBalance.toString());
