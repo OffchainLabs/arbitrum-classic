@@ -280,7 +280,6 @@ func (chain *ChainObserver) NotifyAssert(ctx context.Context, ev arbbridge.Asser
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
 		disputableNode,
-		nil,
 		ev.BlockId.Height,
 		ev.TxHash,
 	)

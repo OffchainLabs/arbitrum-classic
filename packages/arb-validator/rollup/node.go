@@ -83,8 +83,7 @@ func newInitialNode_hashOnly(machHash common.Hash) *Node {
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
-		machine: nil,
-		depth:   0,
+		depth: 0,
 	}
 	ret.setHash(common.Hash{})
 	return ret
@@ -100,7 +99,6 @@ func MakeInitialNodeBuf(machineHash common.Hash) *NodeBuf {
 func NewNodeFromValidPrev(
 	prev *Node,
 	disputable *structures.DisputableNode,
-	machine machine.Machine,
 	params structures.ChainParams,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
@@ -112,7 +110,6 @@ func NewNodeFromValidPrev(
 		params,
 		currentTime,
 		disputable.ValidAfterVMProtoData(prev.vmProtoData),
-		machine,
 		assertionTxHash,
 	)
 }
@@ -132,7 +129,6 @@ func NewNodeFromInvalidPrev(
 		params,
 		currentTime,
 		prev.vmProtoData,
-		prev.machine,
 		assertionTxHash,
 	)
 }
@@ -144,7 +140,6 @@ func NewNodeFromPrev(
 	params structures.ChainParams,
 	currentTime *common.TimeBlocks,
 	vmProtoData *structures.VMProtoData,
-	machine machine.Machine,
 	assertionTxHash common.Hash,
 ) *Node {
 	checkTime := disputable.CheckTime(params)
@@ -161,7 +156,6 @@ func NewNodeFromPrev(
 		disputable:      disputable,
 		linkType:        kind,
 		vmProtoData:     vmProtoData,
-		machine:         machine,
 		depth:           prev.depth + 1,
 		assertionTxHash: assertionTxHash,
 	}
@@ -310,7 +304,6 @@ func (m *NodeBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, chain *
 		disputable:   disputableNode,
 		linkType:     structures.ChildType(m.LinkType),
 		vmProtoData:  m.VmProtoData.Unmarshal(),
-		machine:      nil,
 		depth:        m.Depth,
 		nodeDataHash: m.NodeDataHash.Unmarshal(),
 		innerHash:    m.InnerHash.Unmarshal(),

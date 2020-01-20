@@ -178,7 +178,6 @@ func (chain *NodeGraph) getLeaf(node *Node) *Node {
 func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
-	afterMachine machine.Machine,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) {
@@ -194,12 +193,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		chain.leaves.Add(newNode)
 	}
 
-	// create node for valid branch
-	if afterMachine != nil {
-		afterMachine = afterMachine.Clone()
-	}
-
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 }
