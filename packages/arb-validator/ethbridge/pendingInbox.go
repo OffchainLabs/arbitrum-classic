@@ -151,25 +151,6 @@ func (con *pendingInbox) DepositERC721Message(
 	return con.waitForReceipt(ctx, tx, "DepositERC721Message")
 }
 
-func (con *pendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
-	con.auth.Lock()
-	defer con.auth.Unlock()
-	tx, err := con.GlobalPendingInbox.DepositEth(
-		&bind.TransactOpts{
-			From:     con.auth.auth.From,
-			Signer:   con.auth.auth.Signer,
-			GasLimit: con.auth.auth.GasLimit,
-			Value:    amount,
-			Context:  ctx,
-		},
-		dest.ToEthAddress(),
-	)
-	if err != nil {
-		return err
-	}
-	return con.waitForReceipt(ctx, tx, "DepositFunds")
-}
-
 func (con *pendingInbox) GetTokenBalance(
 	ctx context.Context,
 	user common.Address,

@@ -162,71 +162,6 @@ const _abi = [
         type: 'event',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                internalType: 'address',
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-            {
-                internalType: 'uint256',
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
-        name: 'depositERC20',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                internalType: 'address',
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-            {
-                internalType: 'uint256',
-                name: '_tokenId',
-                type: 'uint256',
-            },
-        ],
-        name: 'depositERC721',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-        ],
-        name: 'depositEth',
-        outputs: [],
-        payable: true,
-        stateMutability: 'payable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [
             {
@@ -340,74 +275,8 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '',
-                type: 'address',
-            },
-            {
-                internalType: 'address',
-                name: '_from',
-                type: 'address',
-            },
-            {
-                internalType: 'uint256',
-                name: '_tokenId',
-                type: 'uint256',
-            },
-            {
-                internalType: 'bytes',
-                name: '',
-                type: 'bytes',
-            },
-        ],
-        name: 'onERC721Received',
-        outputs: [
-            {
-                internalType: 'bytes4',
-                name: '',
-                type: 'bytes4',
-            },
-        ],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                internalType: 'address payable',
-                name: '_destination',
-                type: 'address',
-            },
-            {
-                internalType: 'uint256',
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
-        name: 'transferEth',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                internalType: 'address',
                 name: '_tokenContract',
                 type: 'address',
-            },
-            {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-            {
-                internalType: 'uint256',
-                name: '_value',
-                type: 'uint256',
             },
         ],
         name: 'withdrawERC20',
@@ -425,11 +294,6 @@ const _abi = [
                 type: 'address',
             },
             {
-                internalType: 'address',
-                name: '_destination',
-                type: 'address',
-            },
-            {
                 internalType: 'uint256',
                 name: '_tokenId',
                 type: 'uint256',
@@ -443,13 +307,7 @@ const _abi = [
     },
     {
         constant: false,
-        inputs: [
-            {
-                internalType: 'uint256',
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
+        inputs: [],
         name: 'withdrawEth',
         outputs: [],
         payable: false,

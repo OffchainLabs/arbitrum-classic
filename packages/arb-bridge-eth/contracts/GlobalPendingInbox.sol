@@ -66,108 +66,74 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
         while (offset < totalLength) {
             (
-                valid, 
-                offset, 
-                messageHash, 
-                messageType, 
-                sender, 
+                valid,
+                offset,
+                messageHash,
+                messageType,
+                sender,
                 messageData) = Value.deserializeMessage(_messages, offset);
 
-            if(valid){
+            if (valid) {
                 sendDeserializedMsgs(messageData, messageType);
             }
         }
     }
 
     function sendDeserializedMsgs(bytes memory messageData, uint256 messageType) private {
-        if(messageType == TRANSACTION_MSG)
-        {
-            bool valid;
-            uint256 vmAddress;
-            uint256 contractAddress;
-            uint256 seqNumber;
-            uint256 value;
-            (   valid,
-                vmAddress,
-                contractAddress,
-                seqNumber,
-                value,
-                messageData
-            ) = Value.getTransactionMsgData(messageData);
-        
-            if(valid){
-                _deliverTransactionMessage(
-                    address(bytes20(bytes32(vmAddress))),
-                    address(bytes20(bytes32(contractAddress))),
-                    msg.sender,
-                    seqNumber,
-                    value,
-                    messageData
-                );
-            }
-        }else if(messageType == ETH_DEPOSIT)
-        {
-            bool valid;
-            uint256 destination;
-            uint256 value;
-
-            (   valid,
-                destination,
-                value
+        if (messageType == ETH_DEPOSIT) {
+            (
+                bool valid,
+                uint256 destination,
+                uint256 value
             ) = Value.getEthMsgData(messageData);
 
-            if(valid){
-                transferEth(address(bytes20(bytes32(destination))), value);
-            
-                emit IGlobalPendingInbox.EthDepositMessageDelivered(
-                address(bytes20(bytes32(destination))), //wrong vmId
-                msg.sender,
-                address(bytes20(bytes32(destination))),
-                value);
-            }   
+            if (valid) {
+                require(
+                    transferEth(
+                        msg.sender,
+                        address(bytes20(bytes32(destination))),
+                        value
+                    )
+                );
+            }
 
-        }else if(messageType == ERC20_DEPOSIT)
-        {
-            bool valid;
-            uint256 destination;
-            uint256 tokenContract;
-            uint256 value;
-
-            (   valid,
-                tokenContract,
-                destination,
-                value
+        } else if (messageType == ERC20_DEPOSIT) {
+            (
+                bool valid,
+                uint256 tokenContract,
+                uint256 destination,
+                uint256 value
             ) = Value.getERCTokenMsgData(messageData);
 
-            if(valid){
-                depositERC20Message(
-                    address(bytes20(bytes32(destination))), //wrong
-                    address(bytes20(bytes32(tokenContract))), 
-                    address(bytes20(bytes32(destination))), 
-                    value);
-            }   
+            if (valid) {
+                require(
+                    transferERC20(
+                        msg.sender,
+                        address(bytes20(bytes32(destination))),
+                        address(bytes20(bytes32(tokenContract))),
+                        value
+                    )
+                );
+            }
 
-        }else if(messageType == ERC721_DEPOSIT)
-        {
-            bool valid;
-            uint256 destination;
-            uint256 tokenContract;
-            uint256 value;
-
-            (   valid,
-                tokenContract,
-                destination,
-                value
+        } else if (messageType == ERC721_DEPOSIT) {
+            (
+                bool valid,
+                uint256 tokenContract,
+                uint256 destination,
+                uint256 value
             ) = Value.getERCTokenMsgData(messageData);
 
-            if(valid){
-                depositERC721Message(
-                    address(bytes20(bytes32(destination))), //wrong
-                    address(bytes20(bytes32(tokenContract))), 
-                    address(bytes20(bytes32(destination))), 
-                    value);
-            }   
-
+            if (valid) {
+                require(
+                    transferNFT(
+                        msg.sender,
+                            address(bytes20(bytes32(destination))),
+                            address(bytes20(bytes32(tokenContract))),
+                            value
+                    )
+                );
+            }
         }
     }
 
@@ -177,7 +143,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data,
-        bytes calldata _signature) external
+        bytes calldata _signature
+    )
+        external
     {
         address sender = SigUtils.recoverAddress(
             keccak256(
@@ -207,7 +175,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _contractAddress,
         uint256 _seqNumber,
         uint256 _value,
-        bytes calldata _data) external
+        bytes calldata _data
+    )
+        external
     {
         _deliverTransactionMessage(
             _vmAddress,
@@ -219,12 +189,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         );
     }
 
-    function depositEthMessage(
-        address _vmAddress, 
-        address _destination) external payable 
-    {
+    function depositEthMessage(address _vmAddress, address _destination) external payable {
         depositEth(_vmAddress);
-        
+
         _deliverEthMessage(
             _vmAddress,
             msg.sender,
@@ -270,7 +237,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _vmAddress,
         address _tokenContract,
         address _destination,
-        uint256 _value) public
+        uint256 _value
+    )
+        external
     {
         depositERC721(_tokenContract, _vmAddress, _value);
 
@@ -289,7 +258,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _sender,
         uint256 _seqNumber,
         uint256 _value,
-        bytes memory _data) private
+        bytes memory _data
+    )
+        private
     {
         PendingInbox storage pendingInbox = pending[_vmAddress];
 
@@ -340,9 +311,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _sender,
         address _destination,
         uint256 _messageType,
-        uint256 _value) private
+        uint256 _value
+    )
+        private
     {
-        if (pending[_vmAddress].value != 0) 
+        if (pending[_vmAddress].value != 0)
         {
             bytes32 txHash = keccak256(
                 abi.encodePacked(
@@ -379,9 +352,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _destination,
         uint256 _messageType,
         address _tokenContract,
-        uint256 _value) private
+        uint256 _value
+    )
+        private
     {
-        if (pending[_vmAddress].value != 0) 
+        if (pending[_vmAddress].value != 0)
         {
             bytes32 txHash = keccak256(
                 abi.encodePacked(
@@ -412,8 +387,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             _deliverMessage(_vmAddress, messageHash);
 
-            if(_messageType == ERC20_DEPOSIT){
-
+            if (_messageType == ERC20_DEPOSIT) {
                 emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
                     _vmAddress,
                     _sender,
@@ -421,8 +395,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _tokenContract,
                     _value);
 
-            }else if(_messageType == ERC721_DEPOSIT){
-
+            } else if (_messageType == ERC721_DEPOSIT) {
                 emit IGlobalPendingInbox.ERC721DepositMessageDelivered(
                     _vmAddress,
                     _sender,
@@ -431,13 +404,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _value);
             }
         }
-
     }
 
-    function _deliverMessage(
-        address _destination,
-        bytes32 _messageHash) private 
-    {
+    function _deliverMessage(address _destination, bytes32 _messageHash) private {
         PendingInbox storage pendingInbox = pending[_destination];
 
         pendingInbox.value = Protocol.addMessageToPending(

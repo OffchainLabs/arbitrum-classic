@@ -18,8 +18,9 @@ package arbbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -53,7 +54,6 @@ type PendingInbox interface {
 		destination common.Address,
 		value *big.Int,
 	) error
-	DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error
 	GetTokenBalance(
 		ctx context.Context,
 		user common.Address,

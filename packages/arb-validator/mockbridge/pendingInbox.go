@@ -78,23 +78,6 @@ func (con *PendingInbox) DepositERC721Message(
 	return nil
 }
 
-func (con *PendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
-	//tx, err := con.GlobalPendingInbox.DepositEth(
-	//	&bind.TransactOpts{
-	//		From:     auth.From,
-	//		Signer:   auth.Signer,
-	//		GasLimit: auth.GasLimit,
-	//		Value:    amount,
-	//	},
-	//	dest,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return waitForReceipt(auth.Context, con.client, auth.From, tx, "DepositFunds")
-	return nil
-}
-
 func (con *PendingInbox) GetTokenBalance(
 	ctx context.Context,
 	user common.Address,
