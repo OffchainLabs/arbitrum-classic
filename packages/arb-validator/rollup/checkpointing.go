@@ -451,7 +451,6 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	}
 
 	for _, mach := range machines {
-		log.Println("Checkpointing machine", mach.Hash())
 		savedMachine := mach.Checkpoint(csc.st)
 		if !savedMachine {
 			log.Fatalln("Failed to checkpoint machine")
