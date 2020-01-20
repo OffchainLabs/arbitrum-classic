@@ -21,6 +21,9 @@ import (
 	"math/big"
 	"testing"
 
+	proto "github.com/golang/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -57,13 +60,13 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil, nil, nil)
+	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if !chain.equals(chain2) {
 		t.Fail()
 	}
 }
 
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
+func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
 	blockId := &structures.BlockId{
 		common.NewTimeBlocks(big.NewInt(7337)),
 		common.Hash{},
@@ -76,7 +79,11 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpoi
 	doneChan := make(chan struct{})
 	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
 	<-doneChan
-	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, blockId, nil, cp)
+	cob := &ChainObserverBuf{}
+	if err := proto.Unmarshal(buf, cob); err != nil {
+		t.Fatal(err)
+	}
+	chain2 := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,13 +190,14 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		chain.pendingInbox.GetTopHash(),
 		big.NewInt(0),
 	)
+
 	chain.nodeGraph.CreateNodesOnAssert(
 		baseNode,
 		disputableNode,
-		theMachine,
 		common.NewTimeBlocks(big.NewInt(10)),
 		common.Hash{},
 	)
+	chain.nodeGraph.nodeFromHash[baseNode.successorHashes[3]].machine = theMachine
 }
 
 func TestCreateStakers(t *testing.T) {
@@ -210,12 +218,12 @@ func testCreateStakers(dummyRollupAddress common.Address, checkpointType string,
 }
 
 func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
-	var checkpointer RollupCheckpointer
+	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointer = NewDummyCheckpointer(contractPath)
+		checkpointer = checkpointing.NewDummyCheckpointer(contractPath)
 	case "fresh_rocksdb":
-		checkpointer = NewProductionCheckpointer(
+		checkpointer = checkpointing.NewProductionCheckpointer(
 			context.TODO(),
 			rollupAddress,
 			contractPath,
@@ -253,11 +261,16 @@ func createSomeStakers(chain *ChainObserver) {
 }
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
-	chain.CreateStake(
-		arbbridge.StakeCreatedEvent{
-			Staker:   stakerAddr,
-			NodeHash: nodeHash,
+	chain.createStake(context.Background(), arbbridge.StakeCreatedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: &structures.BlockId{
+				Height:     common.NewTimeBlocks(big.NewInt(73)),
+				HeaderHash: common.Hash{},
+			},
+			LogIndex: 0,
+			TxHash:   [32]byte{},
 		},
-		common.TimeFromSeconds(73),
-	)
+		Staker:   stakerAddr,
+		NodeHash: nodeHash,
+	})
 }

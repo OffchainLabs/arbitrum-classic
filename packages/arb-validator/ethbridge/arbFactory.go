@@ -81,6 +81,7 @@ func (con *arbFactory) CreateRollup(
 type arbFactoryWatcher struct {
 	contract *arbfactory.ArbFactory
 	client   *ethclient.Client
+	address  ethcommon.Address
 }
 
 func newArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (*arbFactoryWatcher, error) {
@@ -88,7 +89,7 @@ func newArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
-	return &arbFactoryWatcher{vmCreatorContract, client}, nil
+	return &arbFactoryWatcher{contract: vmCreatorContract, client: client, address: address}, nil
 }
 
 func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {

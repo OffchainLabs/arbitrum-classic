@@ -80,7 +80,7 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     auto hash = deserializeUint256t(machine_hash_ptr);
 
     std::vector<unsigned char> hash_vector;
-    marshal_value(hash, hash_vector);
+    marshal_uint256_t(hash, hash_vector);
 
     auto result = deleteCheckpoint(*storage, hash_vector);
 
@@ -117,6 +117,10 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
     marshal_value(hash, hash_key_vector);
 
     auto results = fetcher.getValue(hash_key_vector);
+
+    if (!results.status.ok()) {
+        return {nullptr, 0};
+    }
 
     std::vector<unsigned char> value;
     marshal_value(results.data, value);

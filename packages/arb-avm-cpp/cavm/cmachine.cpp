@@ -52,9 +52,9 @@ void machineDestroy(CMachine* m) {
 }
 
 int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
-    auto machine = *(static_cast<Machine*>(m));
+    auto machine = static_cast<Machine*>(m);
     auto result =
-        machine.checkpoint(*(static_cast<CheckpointStorage*>(storage)));
+        machine->checkpoint(*(static_cast<CheckpointStorage*>(storage)));
 
     return result.status.ok();
 }
@@ -62,15 +62,15 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
 int restoreMachine(CMachine* m,
                    CCheckpointStorage* storage,
                    const void* machine_hash) {
-    auto machine = *(static_cast<Machine*>(m));
+    auto machine = static_cast<Machine*>(m);
 
     auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
     auto hash = deserializeUint256t(machine_hash_ptr);
 
     std::vector<unsigned char> hash_vector;
-    marshal_value(hash, hash_vector);
+    marshal_uint256_t(hash, hash_vector);
 
-    return machine.restoreCheckpoint(
+    return machine->restoreCheckpoint(
         *(static_cast<CheckpointStorage*>(storage)), hash_vector);
 }
 
@@ -84,13 +84,14 @@ void machineHash(CMachine* m, void* ret) {
 
 void* machineClone(CMachine* m) {
     assert(m);
-    Machine* mach = new Machine(*(static_cast<Machine*>(m)));
-    return static_cast<void*>(mach);
+    Machine* mach = static_cast<Machine*>(m);
+    Machine* cloneMach = new Machine(*mach);
+    return static_cast<void*>(cloneMach);
 }
 
 void machinePrint(CMachine* m) {
     assert(m);
-    Machine* mach = new Machine(*(static_cast<Machine*>(m)));
+    Machine* mach = static_cast<Machine*>(m);
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
@@ -110,41 +111,41 @@ CStatus machineCurrentStatus(CMachine* m) {
 
 struct ReasonConverter {
     CBlockReason operator()(const NotBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const HaltBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const ErrorBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const BreakpointBlocked&) const {
-        return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0},
-                            ByteSlice{nullptr, 0}};
+        return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(val.inbox, inboxDataVec);
+        marshal_value(val.timout, inboxDataVec);
         unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
         std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
         return CBlockReason{
             BLOCK_TYPE_INBOX,
-            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())},
-            ByteSlice{nullptr, 0}};
+            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())}};
     }
 };
 
-CBlockReason machineLastBlockReason(CMachine* m) {
+CBlockReason machineIsBlocked(CMachine* m,
+                              void* currentTimeData,
+                              int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    return nonstd::visit(ReasonConverter{}, mach->lastBlockReason());
+    auto currentTimePtr = reinterpret_cast<const char*>(currentTimeData);
+    auto currentTime = deserializeUint256t(currentTimePtr);
+    auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
+    return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
 ByteSlice machineMarshallForProof(CMachine* m) {

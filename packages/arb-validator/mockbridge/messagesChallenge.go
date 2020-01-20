@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -33,11 +35,23 @@ func newMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*
 	if err != nil {
 		return nil, err
 	}
-	//messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
+	vm := &MessagesChallenge{BisectionChallenge: bisectionChallenge}
+	err = vm.setupContracts()
+	return vm, err
+}
+
+func (c *MessagesChallenge) setupContracts() error {
+	//challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.Client)
 	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
+	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	//}
-	return &messagesChallenge{bisectionChallenge: bisectionChallenge}, nil
+	//
+	//c.challenge = challengeManagerContract
+	return nil
+}
+
+func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	return nil, nil
 }
 
 func (c *messagesChallenge) Bisect(

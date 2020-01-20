@@ -18,70 +18,51 @@ package rollupmanager
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"errors"
 	"log"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type ReorgStressTestWatcher struct {
-	watcher       arbbridge.ArbRollupWatcher
+type ArbClientStressTest struct {
+	arbbridge.ArbClient
 	reorgInterval time.Duration
 }
 
-func NewStressTestWatcher(watcher arbbridge.ArbRollupWatcher, reorgInterval time.Duration) arbbridge.ArbRollupWatcher {
-	return &ReorgStressTestWatcher{watcher, reorgInterval}
+func NewStressTestClient(client arbbridge.ArbClient, reorgInterval time.Duration) *ArbClientStressTest {
+	return &ArbClientStressTest{client, reorgInterval}
 }
 
-func (w *ReorgStressTestWatcher) StartConnection(
-	ctx context.Context,
-	startHeight *common.TimeBlocks,
-	startLogIndex uint,
-) (<-chan arbbridge.MaybeEvent, error) {
-	ch, err := w.watcher.StartConnection(ctx, startHeight, startLogIndex)
+var reorgError = errors.New("reorg occured")
+
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
 	if err != nil {
-		return ch, err
+		return nil, err
 	}
-	newCh := make(chan arbbridge.MaybeEvent)
+	ticker := time.NewTicker(st.reorgInterval)
+	headerChan := make(chan arbbridge.MaybeBlockId, 10)
 	go func() {
-		defer close(newCh)
-		ticker := time.NewTicker(w.reorgInterval)
-		defer ticker.Stop()
-		fakeBlockId := &structures.BlockId{}
+		defer close(headerChan)
 		for {
 			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				log.Println("Stress tester triggering fake reorg")
-				newCh <- arbbridge.MaybeEvent{
-					&arbbridge.NewTimeEvent{
-						arbbridge.ChainInfo{
-							fakeBlockId,
-							0,
-							common.Hash{},
-						},
-					},
-					nil,
-				}
-			case maybeEvent, ok := <-ch:
+			case maybeHeader, ok := <-rawHeadersChan:
 				if !ok {
 					return
 				}
-				bid := maybeEvent.Event.GetChainInfo().BlockId
-				fakeBlockId = &structures.BlockId{bid.Height, common.Hash{}}
-				newCh <- maybeEvent
+				headerChan <- maybeHeader
+				if maybeHeader.Err != nil {
+					return
+				}
+
+			case <-ticker.C:
+				log.Println("Manually triggering reorg")
+				headerChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				return
 			}
 		}
 	}()
-	return newCh, nil
-}
-
-func (w *ReorgStressTestWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
-	return w.watcher.GetParams(ctx)
-}
-
-func (w *ReorgStressTestWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return w.watcher.InboxAddress(ctx)
+	return headerChan, nil
 }

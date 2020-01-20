@@ -320,6 +320,9 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	return nil
 }
 
+func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	return nil, nil
+
 func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	return structures.ChainParams{
 		StakeRequirement:        nil,
@@ -331,4 +334,8 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 
 func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	return common.Address{}, nil
+}
+
+func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+	return nil, nil
 }

@@ -19,6 +19,8 @@ package mockbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -37,6 +39,59 @@ func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (
 	//err = vm.setupContracts()
 	return vm, err
 }
+
+func (c *ExecutionChallenge) setupContracts() error {
+	//	challengeManagerContract, err := executionchallenge.NewExecutionChallenge(c.address, c.Client)
+	//	if err != nil {
+	//		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	//	}
+	//
+	//	c.challenge = challengeManagerContract
+	return nil
+}
+
+func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	return nil, nil
+}
+
+//func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+//	event, err := func() (arbbridge.Event, error) {
+//		if log.Topics[0] == bisectedAssertionID {
+//			bisectChal, err := c.challenge.ParseBisectedAssertion(log)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return arbbridge.ExecutionBisectionEvent{
+//				Assertions: translateBisectionEvent(bisectChal),
+//				TotalSteps: bisectChal.TotalSteps,
+//				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
+//			}, nil
+//		} else if log.Topics[0] == oneStepProofCompletedID {
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return arbbridge.OneStepProofEvent{}, nil
+//		}
+//		return nil, errors2.New("unknown arbitrum event type")
+//	}()
+//
+//	if err != nil {
+//		return err
+//	}
+//
+//	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+//	if err != nil {
+//		return err
+//	}
+//	outChan <- arbbridge.Notification{
+//		Header: header,
+//		VMID:   c.address,
+//		Event:  event,
+//		TxHash: log.TxHash,
+//	}
+//	return nil
+//}
 
 func (c *ExecutionChallenge) BisectAssertion(
 	ctx context.Context,

@@ -14,10 +14,11 @@
 * limitations under the License.
  */
 
-package rollup
+package checkpointing
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math/big"
 	"os"
@@ -32,48 +33,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type RollupCheckpointer interface {
-	RestoreLatestState(arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext)
+	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (content []byte, resCtx structures.RestoreContext, err error)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
-}
-
-type DummyCheckpointer struct {
-	initialMachine machine.Machine
-}
-
-func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "test")
-	if err != nil {
-		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
-	}
-	return &DummyCheckpointer{theMachine}
-}
-
-func (dcp *DummyCheckpointer) RestoreLatestState(
-	client arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
-	blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
-	cob := &ChainObserverBuf{}
-	resCtx := structures.NewSimpleRestoreContext()
-	resCtx.AddMachine(dcp.initialMachine)
-	return blockId, cob, resCtx
-}
-
-func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return dcp.initialMachine.Clone(), nil
-}
-
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
-	if closeWhenDone != nil {
-		closeWhenDone <- struct{}{}
-	}
 }
 
 type ProductionCheckpointer struct {
@@ -95,7 +61,7 @@ func NewProductionCheckpointer(
 	maxReorgDepth *big.Int,
 	dbPrefix string,
 	forceFreshStart bool, // this should be false in production use
-) RollupCheckpointer {
+) *ProductionCheckpointer {
 	databasePath := makeCheckpointDatabasePath(rollupAddr, dbPrefix)
 	if forceFreshStart {
 		// for testing only -- use production checkpointer but delete old database first
@@ -162,52 +128,33 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	return nil
 }
 
-func getParamsForChain(client arbbridge.ArbClient, contractAddr common.Address) (structures.ChainParams, error) {
-	rollupWatcher, err := client.NewRollupWatcher(contractAddr)
-	if err != nil {
-		return structures.ChainParams{}, err
-	}
-	return rollupWatcher.GetParams(context.TODO())
+func (rcp *ProductionCheckpointer) HasCheckpointedState() bool {
+	metadataBytes := rcp.cp.RestoreMetadata()
+	return metadataBytes != nil && len(metadataBytes) > 0
 }
 
 func (rcp *ProductionCheckpointer) RestoreLatestState(
+	ctx context.Context,
 	client arbbridge.ArbClient,
 	contractAddr common.Address,
 	beOpinionated bool,
-) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
-	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
+) ([]byte, structures.RestoreContext, error) {
+	rcp.cp.QueueReorgedCheckpointsForDeletion(ctx, client)
 
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
-		params, err := getParamsForChain(client, contractAddr)
-		if err != nil {
-			return nil, nil, nil
-		}
-
-		initMachine, err := rcp.GetInitialMachine()
-		if err != nil {
-			return nil, nil, nil
-		}
-		blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
-		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), &params, beOpinionated)
-		resCtx := structures.NewSimpleRestoreContext()
-		resCtx.AddMachine(initMachine)
-		return blockId, cob, resCtx
+		return nil, nil, errors.New("no checkpoints in database")
 	}
 	metadata := &structures.CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
-		return nil, nil, nil
+		return nil, nil, err
 	}
 	newestId := metadata.Newest.Unmarshal()
 	cobBytes, resCtx, err := rcp.RestoreCheckpoint(newestId)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil, err
 	}
-	cob := &ChainObserverBuf{}
-	if err := proto.Unmarshal(cobBytes, cob); err != nil {
-		return nil, nil, nil
-	}
-	return newestId, cob, resCtx
+	return cobBytes, resCtx, nil
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext, error) {
@@ -322,80 +269,12 @@ type checkpointerWithMetadata interface {
 	)
 	RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) // returns nil, nil if no data at blockHeight
 	QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks)
-	QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient)
+	QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient)
 	QueueCheckpointForDeletion(blockId *structures.BlockId)
 
 	GetInitialMachine() (machine.Machine, error)
 
 	Close()
-}
-
-type dummyCheckpointer struct {
-	metadata       []byte
-	cp             map[*structures.BlockId]*dummyCheckpoint
-	initialMachine machine.Machine
-}
-
-func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile(contractPath, true, "test")
-	if err != nil {
-		log.Fatal("newDummyCheckpointer: error loading ", contractPath)
-	}
-	return &dummyCheckpointer{
-		nil,
-		make(map[*structures.BlockId]*dummyCheckpoint),
-		theMachine,
-	}
-}
-
-type dummyCheckpoint struct {
-	contents []byte
-	manifest *structures.CheckpointManifest
-	values   map[common.Hash]value.Value
-	machines map[common.Hash]machine.Machine
-}
-
-func (dcp *dummyCheckpoint) GetValue(h common.Hash) value.Value {
-	return dcp.values[h]
-}
-
-func (dcp *dummyCheckpoint) GetMachine(h common.Hash) machine.Machine {
-	return dcp.machines[h]
-}
-
-func (cp *dummyCheckpointer) SaveMetadata(data []byte) {
-	cp.metadata = append([]byte{}, data...)
-}
-
-func (cp *dummyCheckpointer) RestoreMetadata() []byte {
-	return append([]byte{}, cp.metadata...)
-}
-
-func (cp *dummyCheckpointer) SaveCheckpoint(
-	id *structures.BlockId,
-	contents []byte,
-	manifest *structures.CheckpointManifest,
-	values map[common.Hash]value.Value,
-	machines map[common.Hash]machine.Machine,
-) {
-	cp.cp[id] = &dummyCheckpoint{contents, manifest, values, machines}
-}
-
-func (cp *dummyCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) {
-	dcp := cp.cp[blockId]
-	if dcp == nil {
-		return nil, nil
-	} else {
-		return dcp.contents, dcp
-	}
-}
-
-func (cp *dummyCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *big.Int) {
-	// ignore cleanup requests; we're being simple and inefficient for debugging
-}
-
-func (cp *dummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return cp.initialMachine.Clone(), nil
 }
 
 func getKeyForId(prefix []byte, id *structures.BlockId) []byte {
@@ -455,7 +334,10 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	}
 
 	for _, mach := range machines {
-		mach.Checkpoint(csc.st)
+		savedMachine := mach.Checkpoint(csc.st)
+		if !savedMachine {
+			log.Fatalln("Failed to checkpoint machine")
+		}
 	}
 
 	manifestBuf, err := proto.Marshal(manifest)
@@ -552,7 +434,7 @@ func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structure
 	csc.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
-func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient) {
+func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(ctx context.Context, client arbbridge.ArbClient) {
 	metadataBuf := csc.RestoreMetadata()
 	if len(metadataBuf) == 0 {
 		return
@@ -565,7 +447,7 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arb
 	oldestId := metadata.Oldest.Unmarshal()
 	newestId := metadata.Newest.Unmarshal()
 	for oldestId.Height.Cmp(newestId.Height) < 0 {
-		onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+		onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
 		if err != nil {
 			return
 		}
@@ -589,7 +471,7 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arb
 	}
 
 	// now only a single checkpoint remains
-	onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+	onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
 	if err != nil {
 		return
 	}
@@ -686,7 +568,16 @@ func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ret.RestoreCheckpoint(csc.st, h)
+	if ret.Hash() == h {
+		return ret
+	}
+	restored := ret.RestoreCheckpoint(csc.st, h)
+	if !restored {
+		log.Fatalln("Failed to restore machine", h, "from checkpoint")
+	}
+	if ret.Hash() != h {
+		log.Fatalln("Restore machine", h, "from checkpoint with wrong hash", ret.Hash())
+	}
 	return ret
 }
 
