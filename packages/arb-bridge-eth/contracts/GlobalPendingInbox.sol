@@ -250,6 +250,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     {
         depositERC20(_tokenContract, _vmAddress, _value);
 
+        emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
+                    _vmAddress,
+                    msg.sender,
+                    _destination,
+                    _tokenContract,
+                    _value);
+
         _deliverERCTokenMessage(
             _vmAddress,
             msg.sender,

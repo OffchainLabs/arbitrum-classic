@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log"
 	"math/big"
 	"strings"
 
@@ -190,7 +191,10 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 				eventChan <- arbbridge.MaybeEvent{Event: arbbridge.NewTimeEvent{arbbridge.ChainInfo{
 					BlockId: getBlockID(header),
 				}}}
+
 			case maybeLog, ok := <-rollupMaybeLogChan:
+				log.Println("event check 1111")
+
 				if !ok {
 					eventChan <- arbbridge.MaybeEvent{Err: errors.New("rollupMaybeLogChan terminated early")}
 					return
@@ -206,6 +210,7 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 				}
 				eventChan <- arbbridge.MaybeEvent{Event: event}
 			case maybeLog, ok := <-inboxMaybeLogChan:
+				log.Println("event check 2222")
 				if !ok {
 					eventChan <- arbbridge.MaybeEvent{Err: errors.New("inboxMaybeLogChan terminated early")}
 					return
@@ -221,6 +226,7 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 				}
 				eventChan <- arbbridge.MaybeEvent{Event: event}
 			case err := <-headersSub.Err():
+				log.Println("event check 33333")
 				eventChan <- arbbridge.MaybeEvent{Err: err}
 				return
 			}
@@ -238,6 +244,7 @@ func AddressToIntValue(address common.Address) value.IntValue {
 }
 
 func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
+	log.Println("event check")
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
 		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
@@ -326,6 +333,10 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
+		log.Printf("event")
+
+		log.Printf("%+v\n", val)
+
 		messageHash := hashing.SoliditySHA3(
 			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
 			hashing.Address(common.NewAddressFromEth(val.Sender)),
@@ -404,6 +415,9 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 }
 
 func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log) (arbbridge.Event, error) {
+
+	log.Println("processEvents: ", ethLog.Topics[0], " message")
+
 	header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
 	if err != nil {
 		return nil, err

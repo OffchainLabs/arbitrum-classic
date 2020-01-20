@@ -124,13 +124,13 @@ class App {
 
   // Listen for events emitted from the contract
   async listenForEvents() {
-    const arbsigner = await this.arbProvider.getSigner();
-    const inboxManager = await arbsigner.globalInboxConn();
+    const inboxManager = await this.arbProvider.globalInboxConn();
     inboxManager.on(
-      "DepositERC20MessageDelivered",
-      (dest, sender, contract, value) => {
+      "ERC20DepositMessageDelivered",
+      (vmid, sender, dest, contract, value) => {
         console.log(
           "deposit ERC20 triggered",
+          "vmid address: " + vmid,
           "arb address: " + dest,
           "eth address: " + sender,
           "token address: " + contract,
@@ -163,16 +163,20 @@ class App {
       $("#ethBalance").html(ethBalance.toString());
       console.log("ethbalance: " + ethBalance);
 
+      const vmId = await this.arbProvider.getVmID();
       const inboxManager = await this.arbProvider.globalInboxConn();
-      const tx = await inboxManager.getTokenBalances(this.arbwalletAddress);
+      const tx = await inboxManager.getTokenBalances(vmId);
+
+      console.log("vmId address: " + vmId);
       console.log("arbBalance in GolbalWallet: " + tx[1]);
 
       const arbBalance = await this.contracts.ArbTestToken.balanceOf(
         this.arbwalletAddress
       );
-      $("#arbBalance").html(arbBalance.toString());
 
-      console.log("arbBalance : " + arbBalance);
+      console.log("arbBalance xx : " + arbBalance);
+
+      $("#arbBalance").html(arbBalance.toString());
     } else {
       $("#accountAddress").html("Loading");
     }
@@ -221,6 +225,8 @@ class App {
     $("#depositMessage").html("Depositing into EthBridge");
     $("#depositMessage").hide();
     $("#depositForm").show();
+
+    this.render();
   }
 
   async withdraw() {

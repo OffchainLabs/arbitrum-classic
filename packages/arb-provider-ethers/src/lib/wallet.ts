@@ -95,8 +95,10 @@ export class ArbWallet extends ethers.Signer {
         const vmAddress = await this.provider.getVmID();
 
         const inboxManager = await this.globalInboxConn();
+        console.log('vm add: ' + vmAddress);
         const blockchainTx = await inboxManager.depositERC20Message(vmAddress, tokenAddress, destAddress, sendValue);
         await blockchainTx.wait();
+        console.log('vm add22: ' + vmAddress);
 
         return this.wrapTransaction(vmAddress, tokenAddress, destAddress, value);
     }

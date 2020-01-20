@@ -179,10 +179,12 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 
 func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
 	log.Printf("Handling event %T\n", event)
+	log.Printf("testing log event %T\n", event)
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
+		log.Printf("message delievered event %T\n", event)
 		chain.MessageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
 		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
