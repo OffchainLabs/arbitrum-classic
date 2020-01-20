@@ -151,8 +151,6 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
-	log.Println("CallMessage(), sender ", args.Sender)
-	log.Println("CallMessage(), receiver ", args.Data)
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err

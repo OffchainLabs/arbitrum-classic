@@ -297,8 +297,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             _deliverMessage(_vmAddress, messageHash);
 
             emit IGlobalPendingInbox.TransactionMessageDelivered(
-                _vmAddress,
                 _sender,
+                _vmAddress,
                 _contractAddress,
                 _seqNumber,
                 _value,

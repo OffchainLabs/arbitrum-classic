@@ -126,13 +126,13 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{vm.inboxAddress},
-		Topics: [][]ethcommon.Hash{
-			{transactionMessageDeliveredID},
-			{ethDepositMessageDeliveredID},
-			{depositERC20MessageDeliveredID},
-			{depositERC721MessageDeliveredID},
-			{addressIndex},
-		},
+		Topics: [][]ethcommon.Hash{{
+			transactionMessageDeliveredID,
+			ethDepositMessageDeliveredID,
+			depositERC20MessageDeliveredID,
+			depositERC721MessageDeliveredID,
+			addressIndex,
+		}},
 	})
 	if err != nil {
 		return nil, err
