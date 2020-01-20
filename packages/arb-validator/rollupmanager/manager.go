@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -72,7 +75,7 @@ func CreateManager(
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := rollup.NewProductionCheckpointer(
+			checkpointer := checkpointing.NewProductionCheckpointer(
 				runCtx,
 				rollupAddr,
 				arbitrumCodeFilePath,
@@ -81,16 +84,42 @@ func CreateManager(
 				forceFreshStart,
 			)
 
-			latestBlockId, chainObserverBuf, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Println("Starting validator from", latestBlockId.Height.AsInt())
+			var chain *rollup.ChainObserver
+
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
-			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
+
+			if checkpointer.HasCheckpointedState() {
+				latestBlockId, chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Println("Starting validator from", latestBlockId.Height.AsInt())
+				watcher, err := clnt.NewRollupWatcher(rollupAddr)
+				if err != nil {
+					log.Fatal(err)
+				}
+				chainObserverBuf := &rollup.ChainObserverBuf{}
+				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+					log.Fatal(err)
+				}
+				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
+			} else {
+				params, err := watcher.GetParams(ctx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				blockId, err := watcher.GetCreationHeight(ctx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				chain, err = rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 
 			man.Lock()
 			// Clear pending listeners
@@ -110,13 +139,13 @@ func CreateManager(
 				log.Fatal(err)
 			}
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, latestBlockId)
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, chain.CurrentBlockId())
 			if err != nil {
 				blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
 				if err != nil {
 					panic(err)
 				}
-				log.Println("Error subscribing to block headers", latestBlockId.HeaderHash, latestBlockId.Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
+				log.Println("Error subscribing to block headers", chain.CurrentBlockId().HeaderHash, chain.CurrentBlockId().Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
 
 				cancelFunc()
 				time.Sleep(2 * time.Second)

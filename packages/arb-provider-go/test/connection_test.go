@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -83,7 +85,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	checkpointer1 := rollup.NewDummyCheckpointer(contract)
+	checkpointer1 := checkpointing.NewDummyCheckpointer(contract)
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},

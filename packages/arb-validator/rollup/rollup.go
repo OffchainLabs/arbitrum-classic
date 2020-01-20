@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -46,14 +48,14 @@ type ChainObserver struct {
 	calculatedValidNode *Node
 	latestBlockId       *structures.BlockId
 	listeners           []ChainListener
-	checkpointer        RollupCheckpointer
+	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
 	atHead              bool
 }
 
 func NewChain(
 	rollupAddr common.Address,
-	checkpointer RollupCheckpointer,
+	checkpointer checkpointing.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
 	startBlockId *structures.BlockId,
@@ -143,7 +145,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	restoreCtx structures.RestoreContext,
 	latestBlockId *structures.BlockId,
 	client arbbridge.ArbRollupWatcher,
-	checkpointer RollupCheckpointer,
+	checkpointer checkpointing.RollupCheckpointer,
 ) *ChainObserver {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
 	return &ChainObserver{
@@ -161,7 +163,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	}
 }
 
-func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, latestBlockId *structures.BlockId, client arbbridge.ArbRollupWatcher, checkpointer RollupCheckpointer) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, latestBlockId *structures.BlockId, client arbbridge.ArbRollupWatcher, checkpointer checkpointing.RollupCheckpointer) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err

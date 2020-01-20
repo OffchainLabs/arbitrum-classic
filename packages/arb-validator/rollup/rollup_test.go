@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -63,7 +65,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	}
 }
 
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
+func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
 	blockId := &structures.BlockId{
 		common.NewTimeBlocks(big.NewInt(7337)),
 		common.Hash{},
@@ -211,12 +213,12 @@ func testCreateStakers(dummyRollupAddress common.Address, checkpointType string,
 }
 
 func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
-	var checkpointer RollupCheckpointer
+	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointer = NewDummyCheckpointer(contractPath)
+		checkpointer = checkpointing.NewDummyCheckpointer(contractPath)
 	case "fresh_rocksdb":
-		checkpointer = NewProductionCheckpointer(
+		checkpointer = checkpointing.NewProductionCheckpointer(
 			context.TODO(),
 			rollupAddress,
 			contractPath,
