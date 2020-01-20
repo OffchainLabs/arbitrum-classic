@@ -261,7 +261,7 @@ func createSomeStakers(chain *ChainObserver) {
 }
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
-	chain.CreateStake(context.Background(), arbbridge.StakeCreatedEvent{
+	chain.createStake(context.Background(), arbbridge.StakeCreatedEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: &structures.BlockId{
 				Height:     common.NewTimeBlocks(big.NewInt(73)),
