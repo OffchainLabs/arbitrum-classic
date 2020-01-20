@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"errors"
 	"log"
 	"math/big"
 	"strings"
@@ -210,6 +209,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 		msgVal, _ := value.NewTupleFromSlice([]value.Value{
+			AddressToIntValue(common.NewAddressFromEth(val.ContactAddress)),
 			value.NewIntValue(val.SeqNumber),
 			value.NewIntValue(val.Value),
 			msgData,

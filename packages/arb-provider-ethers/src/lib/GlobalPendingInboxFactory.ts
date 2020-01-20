@@ -135,6 +135,12 @@ const _abi = [
             },
             {
                 indexed: false,
+                internalType: 'address',
+                name: 'contactAddress',
+                type: 'address',
+            },
+            {
+                indexed: false,
                 internalType: 'uint256',
                 name: 'seqNumber',
                 type: 'uint256',

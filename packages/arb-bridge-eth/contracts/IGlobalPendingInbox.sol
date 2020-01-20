@@ -21,6 +21,7 @@ interface IGlobalPendingInbox {
     event TransactionMessageDelivered(
         address indexed vmSenderId,
         address indexed vmReceiverId,
+        address contactAddress,
         uint256 seqNumber,
         uint256 value,
         bytes data

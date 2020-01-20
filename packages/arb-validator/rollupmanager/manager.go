@@ -235,35 +235,3 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 	}
 	return <-retChan
 }
-
-func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
-	log.Printf("Handling event %T\n", event)
-	log.Printf("testing log event %T\n", event)
-	chain.Lock()
-	defer chain.Unlock()
-	switch ev := event.(type) {
-	case arbbridge.MessageDeliveredEvent:
-		log.Printf("message delievered event %T\n", event)
-		chain.MessageDelivered(ev)
-	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
-		chain.CreateStake(ev, currentTime)
-	case arbbridge.ChallengeStartedEvent:
-		chain.NewChallenge(ev)
-	case arbbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ev)
-	case arbbridge.StakeRefundedEvent:
-		chain.RemoveStake(ev)
-	case arbbridge.PrunedEvent:
-		chain.PruneLeaf(ev)
-	case arbbridge.StakeMovedEvent:
-		chain.MoveStake(ev)
-	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ev, ev.BlockId.Height, ev.TxHash)
-		if err != nil {
-			panic(err)
-		}
-	case arbbridge.ConfirmedEvent:
-		chain.ConfirmNode(ev)
-	}
-}
