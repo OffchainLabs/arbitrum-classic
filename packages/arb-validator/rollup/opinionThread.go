@@ -180,7 +180,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				if !isPreparing {
 					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
 					if chain.calculatedValidNode.machine != nil &&
-						!machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockId.Height, newMessages) {
+						chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
 						preparingAssertions[chain.calculatedValidNode.hash] = true
 						log.Println("Opinion thread preparing new assertion", newMessages, chain.calculatedValidNode.machine.LastBlockReason())
 						go func() {
@@ -234,9 +234,14 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	chain.RUnlock()
 
+	beforeHash := mach.Hash()
+
 	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal)
 
-	log.Printf("Prepared assertion of %v steps, [%v, %v] timebounds, ending with %v\n", stepsRun, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), mach.LastBlockReason())
+	afterHash := mach.Hash()
+
+	log.Printf("Prepared assertion of %v steps, [%v, %v] timebounds from %v to %v on top of leaf %v\n", stepsRun, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), beforeHash, afterHash, currentOpinionHash)
+
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
 	if assertion.DidInboxInsn {
