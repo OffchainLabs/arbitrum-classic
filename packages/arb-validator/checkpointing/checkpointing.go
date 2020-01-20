@@ -37,7 +37,7 @@ import (
 )
 
 type RollupCheckpointer interface {
-	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content []byte, resCtx structures.RestoreContext, err error)
+	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (content []byte, resCtx structures.RestoreContext, err error)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
 }
@@ -138,23 +138,23 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	client arbbridge.ArbClient,
 	contractAddr common.Address,
 	beOpinionated bool,
-) (*structures.BlockId, []byte, structures.RestoreContext, error) {
+) ([]byte, structures.RestoreContext, error) {
 	rcp.cp.QueueReorgedCheckpointsForDeletion(ctx, client)
 
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
-		return nil, nil, nil, errors.New("no checkpoints in database")
+		return nil, nil, errors.New("no checkpoints in database")
 	}
 	metadata := &structures.CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	newestId := metadata.Newest.Unmarshal()
 	cobBytes, resCtx, err := rcp.RestoreCheckpoint(newestId)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return newestId, cobBytes, resCtx, nil
+	return cobBytes, resCtx, nil
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext, error) {

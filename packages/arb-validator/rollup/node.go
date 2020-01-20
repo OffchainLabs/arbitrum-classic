@@ -72,30 +72,6 @@ func NewInitialNode(mach machine.Machine) *Node {
 	return ret
 }
 
-func newInitialNode_hashOnly(machHash common.Hash) *Node {
-	ret := &Node{
-		prev:       nil,
-		deadline:   common.TimeTicks{big.NewInt(0)},
-		disputable: nil,
-		linkType:   0,
-		vmProtoData: structures.NewVMProtoData(
-			machHash,
-			value.NewEmptyTuple().Hash(),
-			big.NewInt(0),
-		),
-		depth: 0,
-	}
-	ret.setHash(common.Hash{})
-	return ret
-}
-
-func MakeInitialNodeBuf(machineHash common.Hash) *NodeBuf {
-	initNode := newInitialNode_hashOnly(machineHash)
-	nodeBuf := initNode.MarshalForCheckpoint(nil)
-	nodeBuf.MachineHash = machineHash.MarshalToBuf()
-	return nodeBuf
-}
-
 func NewNodeFromValidPrev(
 	prev *Node,
 	disputable *structures.DisputableNode,

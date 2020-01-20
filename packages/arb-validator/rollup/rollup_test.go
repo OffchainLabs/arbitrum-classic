@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"testing"
 
+	proto "github.com/golang/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -59,7 +60,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil, nil, nil)
+	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if !chain.equals(chain2) {
 		t.Fail()
 	}
@@ -78,7 +79,11 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.
 	doneChan := make(chan struct{})
 	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
 	<-doneChan
-	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, blockId, nil, cp)
+	cob := &ChainObserverBuf{}
+	if err := proto.Unmarshal(buf, cob); err != nil {
+		t.Fatal(err)
+	}
+	chain2 := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
 	if err != nil {
 		t.Fatal(err)
 	}

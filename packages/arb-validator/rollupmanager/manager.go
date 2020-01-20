@@ -92,12 +92,7 @@ func CreateManager(
 			}
 
 			if checkpointer.HasCheckpointedState() {
-				latestBlockId, chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
-				if err != nil {
-					log.Fatal(err)
-				}
-				log.Println("Starting validator from", latestBlockId.Height.AsInt())
-				watcher, err := clnt.NewRollupWatcher(rollupAddr)
+				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -105,7 +100,7 @@ func CreateManager(
 				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 					log.Fatal(err)
 				}
-				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
+				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
 			} else {
 				params, err := watcher.GetParams(ctx)
 				if err != nil {
@@ -120,6 +115,8 @@ func CreateManager(
 					log.Fatal(err)
 				}
 			}
+
+			log.Println("Starting validator from", chain.CurrentBlockId())
 
 			man.Lock()
 			// Clear pending listeners
@@ -182,7 +179,7 @@ func CreateManager(
 						break runLoop
 					}
 					for _, event := range events {
-						handleNotification(runCtx, event, chain)
+						chain.HandleNotification(runCtx, event)
 					}
 				case action := <-man.actionChan:
 					action(chain)
@@ -237,32 +234,4 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 		retChan <- chain.CurrentBlockId()
 	}
 	return <-retChan
-}
-
-func handleNotification(ctx context.Context, event arbbridge.Event, chain *rollup.ChainObserver) {
-	chain.Lock()
-	defer chain.Unlock()
-	switch ev := event.(type) {
-	case arbbridge.MessageDeliveredEvent:
-		chain.MessageDelivered(ctx, ev)
-	case arbbridge.StakeCreatedEvent:
-		chain.CreateStake(ctx, ev)
-	case arbbridge.ChallengeStartedEvent:
-		chain.NewChallenge(ctx, ev)
-	case arbbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ctx, ev)
-	case arbbridge.StakeRefundedEvent:
-		chain.RemoveStake(ctx, ev)
-	case arbbridge.PrunedEvent:
-		chain.PruneLeaf(ctx, ev)
-	case arbbridge.StakeMovedEvent:
-		chain.MoveStake(ctx, ev)
-	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ctx, ev)
-		if err != nil {
-			panic(err)
-		}
-	case arbbridge.ConfirmedEvent:
-		chain.ConfirmNode(ctx, ev)
-	}
 }

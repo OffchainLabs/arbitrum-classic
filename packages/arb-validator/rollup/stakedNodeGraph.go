@@ -45,14 +45,6 @@ func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) 
 	}
 }
 
-func MakeInitialStakedNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*StakedNodeGraphBuf, *common.HashBuf) {
-	initialNodeGraphBuf, initialNodeHashBuf := MakeInitialNodeGraphBuf(machineHash, params)
-	return &StakedNodeGraphBuf{
-		NodeGraph: initialNodeGraphBuf,
-		Stakers:   []*StakerBuf{},
-	}, initialNodeHashBuf
-}
-
 func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	chain.stakers.forall(func(staker *Staker) {

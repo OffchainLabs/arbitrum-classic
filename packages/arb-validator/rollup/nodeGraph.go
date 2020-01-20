@@ -48,17 +48,6 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func MakeInitialNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
-	nodeBuf := MakeInitialNodeBuf(machineHash)
-	return &NodeGraphBuf{
-		Nodes:               []*NodeBuf{nodeBuf},
-		OldestNodeHash:      nodeBuf.Hash,
-		LatestConfirmedHash: nodeBuf.Hash,
-		LeafHashes:          []*common.HashBuf{nodeBuf.Hash},
-		Params:              params.MarshalToBuf(),
-	}, nodeBuf.Hash
-}
-
 func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*NodeBuf
 	for _, n := range chain.nodeFromHash {
