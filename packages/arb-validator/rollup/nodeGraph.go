@@ -48,17 +48,6 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func MakeInitialNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
-	nodeBuf := MakeInitialNodeBuf(machineHash)
-	return &NodeGraphBuf{
-		Nodes:               []*NodeBuf{nodeBuf},
-		OldestNodeHash:      nodeBuf.Hash,
-		LatestConfirmedHash: nodeBuf.Hash,
-		LeafHashes:          []*common.HashBuf{nodeBuf.Hash},
-		Params:              params.MarshalToBuf(),
-	}, nodeBuf.Hash
-}
-
 func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*NodeBuf
 	for _, n := range chain.nodeFromHash {
@@ -97,7 +86,10 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		node := chain.nodeFromHash[nodeHash]
 		if nodeBuf.PrevHash != nil {
 			prevHash := nodeBuf.PrevHash.Unmarshal()
-			prev := chain.nodeFromHash[prevHash]
+			prev, ok := chain.nodeFromHash[prevHash]
+			if !ok {
+				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", prevHash, nodeHash)
+			}
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
 		}
@@ -175,7 +167,6 @@ func (chain *NodeGraph) getLeaf(node *Node) *Node {
 func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
-	afterMachine machine.Machine,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) {
@@ -191,12 +182,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		chain.leaves.Add(newNode)
 	}
 
-	// create node for valid branch
-	if afterMachine != nil {
-		afterMachine = afterMachine.Clone()
-	}
-
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 }

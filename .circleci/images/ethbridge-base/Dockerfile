@@ -1,17 +1,14 @@
-FROM debian:buster-slim
+FROM ethereum/client-go:stable
 
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
-    apt-get install -y curl gnupg && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt-get update && \
-    apt-get install -y git node-gyp psmisc python2 sudo yarn && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl https://get.parity.io -L | bash /dev/stdin -r stable && \
-    useradd -ms /bin/bash user
+RUN apk add --no-cache bash curl findutils git mercurial nodejs npm psmisc python2 sudo && \
+    addgroup -g 1000 -S user && \
+    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 WORKDIR /home/user/
-ENV PATH="/home/user/bin:/home/user/.local/bin:/home/user/.yarn/bin:${PATH}"
-RUN mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
-    chmod +x /home/user/bin/codecovbash && \
-    yarn global add truffle
+ENV PATH="/home/user/bin:/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
+RUN mkdir -p /home/user/.npm-global && \
+    npm config set prefix "/home/user/.npm-global" && \
+    npm install -g truffle yarn && \
+    mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
+    chmod +x /home/user/bin/codecovbash
+ENTRYPOINT ["/bin/ash"]

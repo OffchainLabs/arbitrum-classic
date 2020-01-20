@@ -60,121 +60,7 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	//if err := vm.setupContracts(); err != nil {
-	//	return err
-	//}
-	//
-	//start := uint64(0)
-	//watch := &bind.WatchOpts{
-	//	Context: ctx,
-	//	Start:   &start,
-	//}
-	//
-	//headers := make(chan *types.Header)
-	//headersSub, err := vm.Client.SubscribeNewHead(ctx, headers)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//filter := ethereum.FilterQuery{
-	//	Addresses: []common.Address{vm.address},
-	//	Topics: [][]common.Hash{
-	//		{
-	//			rollupStakeCreatedID,
-	//			rollupChallengeStartedID,
-	//			rollupChallengeCompletedID,
-	//			rollupRefundedID,
-	//			rollupPrunedID,
-	//			rollupStakeMovedID,
-	//			rollupAssertedID,
-	//			rollupConfirmedID,
-	//			confirmedAssertionID,
-	//			debugEventID,
-	//		},
-	//	},
-	//}
-	//
-	//logChan := make(chan types.Log)
-	//logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//messageDeliveredChan := make(chan *rollup.IGlobalPendingInboxMessageDelivered)
-	//messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//go func() {
-	//	defer headersSub.Unsubscribe()
-	//	defer messageDeliveredSub.Unsubscribe()
-	//	defer logSub.Unsubscribe()
-	//
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			break
-	//		case header := <-headers:
-	//			outChan <- arbbridge.Notification{
-	//				Header: header,
-	//				Event:  arbbridge.NewTimeEvent{},
-	//			}
-	//		case val := <-messageDeliveredChan:
-	//			header, err := vm.Client.HeaderByHash(context.Background(), val.Raw.BlockHash)
-	//			if err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//			rd := bytes.NewReader(val.Data)
-	//			msgData, err := value.UnmarshalValue(rd)
-	//			if err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//
-	//			messageHash := solsha3.SoliditySHA3(
-	//				solsha3.Address(val.VmId),
-	//				solsha3.Bytes32(msgData.Hash()),
-	//				solsha3.Uint256(val.Value),
-	//				val.TokenType[:],
-	//			)
-	//			msgHashInt := new(big.Int).SetBytes(messageHash[:])
-	//
-	//			msgVal, _ := value.NewTupleFromSlice([]value.Value{
-	//				msgData,
-	//				value.NewIntValue(new(big.Int).SetUint64(header.Time)),
-	//				value.NewIntValue(header.Number),
-	//				value.NewIntValue(msgHashInt),
-	//			})
-	//
-	//			msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
-	//			outChan <- arbbridge.Notification{
-	//				Header: header,
-	//				VMID:   val.VmId,
-	//				Event: arbbridge.MessageDeliveredEvent{
-	//					Msg: msg,
-	//				},
-	//				TxHash: val.Raw.TxHash,
-	//			}
-	//		case log := <-logChan:
-	//			if err := vm.processEvents(ctx, log, outChan); err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//		case err := <-headersSub.Err():
-	//			errChan <- err
-	//			return
-	//		case err := <-messageDeliveredSub.Err():
-	//			errChan <- err
-	//			return
-	//		case err := <-logSub.Err():
-	//			errChan <- err
-	//			return
-	//		}
-	//	}
-	//}()
+func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
@@ -335,4 +221,8 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 
 func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	return common.Address{}, nil
+}
+
+func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+	return nil, nil
 }

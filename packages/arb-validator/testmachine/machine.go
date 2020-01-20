@@ -84,17 +84,17 @@ func (m *Machine) CurrentStatus() machine.Status {
 	return b1
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	b1 := m.cppmachine.LastBlockReason()
-	b2 := m.gomachine.LastBlockReason()
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	b1 := m.cppmachine.IsBlocked(currentTime, newMessages)
+	b2 := m.gomachine.IsBlocked(currentTime, newMessages)
 	if b1 == nil || b2 == nil {
 		if b1 != nil || b2 != nil {
-			log.Fatalln("LastBlockReason error at pc", m.gomachine.GetPC())
+			log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
 		}
 		return nil
 	}
 	if !b1.Equals(b2) {
-		log.Fatalln("LastBlockReason error at pc", m.gomachine.GetPC())
+		log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
 	}
 	return b1
 }
@@ -123,8 +123,6 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			pcEnd := m.gomachine.GetPC()
 			log.Println("cpp num steps", ranSteps1, a1.NumGas)
 			log.Println("go num steps", ranSteps2, a2.NumGas)
-			log.Println("cpp stopped for", m.cppmachine.LastBlockReason())
-			log.Println("go stopped for", m.gomachine.LastBlockReason())
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		} else if !a1.Equals(a2) {
 			pcEnd := m.gomachine.GetPC()

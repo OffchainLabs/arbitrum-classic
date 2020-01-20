@@ -29,22 +29,22 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v4-{{ .Branch }}-
-      - go-mod-v4-
+      - go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v7-{{ .Branch }}-
+      - go-mod-v7-
   - &save_go_cache
-    key: go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
     keys:
-      - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - conan-packages-v1-{{ .Branch }}-
-      - conan-packages-v1-
+      - conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+      - conan-packages-v2-{{ .Branch }}-
+      - conan-packages-v2-
   - &save_conan_cache
     paths:
       - ~/.conan/data
-    key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+    key: conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
   - &test-path /tmp/test-results
 version: 2
 workflows:
@@ -63,7 +63,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.1.0
+      - image: offchainlabs/backend-base:0.2.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -129,7 +129,7 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/ethbridge-base:0.1.0
+      - image: offchainlabs/ethbridge-base:0.2.0
     steps:
       - checkout
       - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
@@ -137,12 +137,12 @@ jobs:
           command: |
             yarn --production
             echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share/io.parity.ethereum/
-            cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
-            parity --chain=parity/poa.json account import parity/keystore/
+            mkdir data
+            geth --datadir data init geth/ethbridge.json
+            cp geth/keystore/* data/keystore
           working_directory: /home/user/arb-bridge-eth
       - run:
-          command: parity --chain parity/poa.json --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+          command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/arb-bridge-eth
       - run:
@@ -151,14 +151,14 @@ jobs:
             truffle migrate --network parity
           working_directory: /home/user/arb-bridge-eth
       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
-      - run: killall -HUP parity
+      - run: killall geth
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/.local/share/
+          root: /home/user/arb-bridge-eth
           paths:
-            - io.parity.ethereum
+            - data
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.1.0
+      - image: offchainlabs/cpp-base:0.2.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -191,7 +191,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.1.0
+      - image: offchainlabs/backend-base:0.2.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -202,8 +202,7 @@ jobs:
       - run:
           command: |
             echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share
-            cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
+            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
@@ -212,8 +211,8 @@ jobs:
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
       - run:
-          name: start parity
-          command: parity --chain parity/poa.json --geth --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+          name: start geth
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
@@ -221,6 +220,12 @@ jobs:
           command: |
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
           working_directory: /home/user/project/packages/arb-util
+      - run:
+          name: test arb-avm-cpp
+          command: |
+            export CGO_LDFLAGS="-lgcov --coverage"
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
+          working_directory: /home/user/project/packages/arb-avm-cpp
       - run:
           name: test arb-avm-go
           command: |
@@ -230,13 +235,13 @@ jobs:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-cpp/...,../arb-avm-go/... ./...
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-cpp/...,../arb-avm-go/...,../arb-validator/... ./...
           working_directory: /home/user/project/packages/arb-provider-go
       - run: codecovbash -R /home/user/project
       - store_test_results:

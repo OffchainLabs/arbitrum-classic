@@ -64,7 +64,6 @@ struct MachineState {
     uint64_t pc = 0;
     CodePoint errpc;
     AssertionContext context;
-    BlockReason blockReason;
 
     MachineState();
     MachineState(const std::vector<CodePoint>& code_,
@@ -75,6 +74,7 @@ struct MachineState {
     std::vector<unsigned char> marshalForProof();
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
+    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
     SaveResults checkpointState(CheckpointStorage& storage);
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);

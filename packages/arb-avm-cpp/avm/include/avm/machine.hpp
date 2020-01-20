@@ -35,7 +35,7 @@ class Machine {
     MachineState machine_state;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    void runOne();
+    BlockReason runOne();
 
    public:
     bool initializeMachine(const std::string& filename);
@@ -47,8 +47,10 @@ class Machine {
                   Tuple messages);
 
     Status currentStatus() { return machine_state.state; }
-    BlockReason lastBlockReason() { return machine_state.blockReason; }
     uint256_t hash() const { return machine_state.hash(); }
+    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const {
+        return machine_state.isBlocked(currentTime, newMessages);
+    }
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }

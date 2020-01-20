@@ -78,9 +78,13 @@ A Tuple marshals to
 
 ## Hashing Values
 
-The Hash of an Integer is the Keccak-256 of the 8-byte big endian encoding of the integer, encoded as an Integer in big-endian fashion.
+The Hash of an Integer is the Keccak-256 of the 32-byte big endian encoding of the integer, encoded as an Integer in big-endian fashion.
 
-For other Values, the Hash of a value is computed by Marshaling the Value into a sequence of bytes, then computing the Keccak-256 hash of that byte sequence, encoded as an Integer in big-endian fashion.
+The Hash of a Tuple is computed by concatenating the byte value (3 + number of items in the tuple) followed by the Hashes of the items in tuple, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
+
+The Hash of a Codepoint containing a BasicOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
+
+The Hash of a Codepoint containing an ImmediateOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte Hash of the immediate value, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
 
 ## Virtual Machine State
 
@@ -126,15 +130,12 @@ Implementers and developers can assume that the Runtime Environment will satisfy
 
 Each VM has an Inbox, which is supplied by the Runtime Environment. At any time the inbox holds a single value representing a sequence of messages. An Inbox contains either:
 
--   None, indicating that the Inbox contains no messages;
--   a 3-tuple [0, b, v], where b is an Inbox and v is a value, indicating that the inbox contains the sequence of messages in b followed by the message v; or
--   a 3-tuple [1, b, c], where b and c are Inboxes, indicating that the Inbox contains the sequence of messages in b followed by the sequence of messages in c.
+-   None, indicating that the Inbox is empty and contains no messages; or
+-   a 2-tuple [b, v], where b is an Inbox and v is a value, indicating that the inbox contains the sequence of messages in b followed by the message v.
 
-A VM can receive from its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack and empties the Inbox.
+A VM can receive the contents of its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack and empties the Inbox.
 
-Note that different values of the Inbox can denote the same sequence of messages.
-
-Messages may arrive in the inbox at any time (but not during the execution of an inbox instruction).
+Messages may arrive in the Inbox at any time (but not during the execution of an inbox instruction).  Any newly arriving messages will be in sequence after the messages that were previously in the Inbox.
 
 ## Errors
 

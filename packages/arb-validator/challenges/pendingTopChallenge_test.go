@@ -17,6 +17,7 @@
 package challenges
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -26,7 +27,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func TestPendingTopChallenge(t *testing.T) {
+func testPendingTopChallenge(t *testing.T) {
+	t.Parallel()
 	messageStack := structures.NewMessageStack()
 	messageStack.DeliverMessage(value.NewInt64Value(0))
 	messageStack.DeliverMessage(value.NewInt64Value(1))
@@ -46,8 +48,11 @@ func TestPendingTopChallenge(t *testing.T) {
 	if err := testChallenge(
 		structures.InvalidPendingChildType,
 		challengeHash,
+		"ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39",
+		"979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendPendingTopClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,
@@ -60,6 +65,7 @@ func TestPendingTopChallenge(t *testing.T) {
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengePendingTopClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,

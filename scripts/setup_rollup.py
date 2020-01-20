@@ -60,11 +60,14 @@ def deploy(args, sudo_flag=False):
     elif args.is_ganache:
         image_name = "arb-bridge-eth-ganache"
         ws_port = 7545
+    elif args.is_geth:
+        image_name = "arb-bridge-eth-geth"
+        ws_port = 7546
     else:
         raise Exception("Must select either parity or ganache")
 
     setup_states.setup_validator_states_docker(
-        args.contract, args.n_validators, image_name, sudo_flag
+        args.contract, args.n_validators, image_name, args.is_geth, sudo_flag
     )
 
     with open(
@@ -75,17 +78,17 @@ def deploy(args, sudo_flag=False):
         data = json.load(json_file)
         factory_address = data["ArbFactory"]
 
-    rollup_address = run(
+    rollup_creation_cmd = (
         "docker run -it --network=arb-network -v %s:/home/user/state arb-validator create state/contract.ao state/private_key.txt ws://%s:%s %s"
         % (
             os.path.abspath("validator-states/validator0"),
             image_name,
             ws_port,
             factory_address,
-        ),
-        capture_stdout=True,
-        quiet=False,
+        )
     )
+    rollup_address = run(rollup_creation_cmd, capture_stdout=True, quiet=False)
+    print("rollup_address", rollup_address)
 
     with open("validator-states/config.json", "w") as outfile:
         json.dump(
@@ -132,6 +135,12 @@ def main():
         "--ganache",
         action="store_true",
         dest="is_ganache",
+        help="Generate states based on arb-bridge-eth docker images",
+    )
+    group.add_argument(
+        "--geth",
+        action="store_true",
+        dest="is_geth",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(

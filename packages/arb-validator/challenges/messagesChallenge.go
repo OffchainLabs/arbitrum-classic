@@ -28,6 +28,7 @@ import (
 )
 
 func DefendMessagesClaim(
+	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
 	startBlockId *structures.BlockId,
@@ -42,17 +43,14 @@ func DefendMessagesClaim(
 	if err != nil {
 		return 0, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
-	if err != nil {
-		return 0, err
-	}
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
 	}
+
 	return defendMessages(
 		reorgCtx,
 		eventChan,
@@ -67,6 +65,7 @@ func DefendMessagesClaim(
 }
 
 func ChallengeMessagesClaim(
+	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
 	startBlockId *structures.BlockId,
@@ -79,17 +78,14 @@ func ChallengeMessagesClaim(
 	if err != nil {
 		return ChallengeContinuing, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
-	if err != nil {
-		return 0, err
-	}
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
 	}
+
 	return challengeMessages(
 		reorgCtx,
 		eventChan,

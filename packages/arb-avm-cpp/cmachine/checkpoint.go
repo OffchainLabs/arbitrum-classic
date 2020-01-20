@@ -101,6 +101,9 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 
 func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value {
 	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
+	if cData.data == nil {
+		return nil
+	}
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))

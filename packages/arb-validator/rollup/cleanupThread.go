@@ -61,23 +61,27 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 				return
 			case <-ticker.C:
 				chain.RLock()
+				if !chain.atHead {
+					chain.RUnlock()
+					break
+				}
 				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()
 
 				if len(prunesToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.PrunableLeafs(chain, prunesToDo)
+						listener.PrunableLeafs(ctx, chain, prunesToDo)
 					}
 				}
 				if len(mootedToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.MootableStakes(chain, mootedToDo)
+						listener.MootableStakes(ctx, chain, mootedToDo)
 					}
 				}
 				if len(oldToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.OldStakes(chain, oldToDo)
+						listener.OldStakes(ctx, chain, oldToDo)
 					}
 				}
 

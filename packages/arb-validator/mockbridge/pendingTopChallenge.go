@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -48,55 +50,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *PendingTopChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	//header, err := c.Client.HeaderByNumber(ctx, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//filter := ethereum.FilterQuery{
-	//	Addresses: []common.Address{c.address},
-	//	Topics: [][]common.Hash{{
-	//		pendingTopBisectedID,
-	//		pendingTopOneStepProofCompletedID,
-	//	}},
-	//}
-	//
-	//logs, err := c.Client.FilterLogs(ctx, filter)
-	//if err != nil {
-	//	return err
-	//}
-	//for _, log := range logs {
-	//	if err := c.processEvents(ctx, log, outChan); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//filter.FromBlock = header.Number
-	//logChan := make(chan types.Log)
-	//logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//go func() {
-	//	defer logSub.Unsubscribe()
-	//
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			break
-	//		case log := <-logChan:
-	//			if err := c.processEvents(ctx, log, outChan); err != nil {
-	//				errChan <- err
-	//				return
-	//			}
-	//		case err := <-logSub.Err():
-	//			errChan <- err
-	//			return
-	//		}
-	//	}
-	//}()
+func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
