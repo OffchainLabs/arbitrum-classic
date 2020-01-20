@@ -56,11 +56,11 @@ func CreateManager(
 	ctx context.Context,
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
+	databasePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 	forceFreshStart bool,
-	dbPrefix string,
-	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
+	stressTest bool,
 ) (*Manager, error) {
 	if stressTest {
 		clnt = NewStressTestClient(clnt, 10*time.Second)
@@ -75,14 +75,7 @@ func CreateManager(
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := checkpointing.NewRollupCheckpointerImpl(
-				runCtx,
-				rollupAddr,
-				arbitrumCodeFilePath,
-				big.NewInt(maxReorgDepth),
-				dbPrefix,
-				forceFreshStart,
-			)
+			checkpointer := checkpointing.NewRollupCheckpointerImpl(runCtx, rollupAddr, arbitrumCodeFilePath, databasePath, forceFreshStart, big.NewInt(maxReorgDepth))
 
 			var chain *rollup.ChainObserver
 
