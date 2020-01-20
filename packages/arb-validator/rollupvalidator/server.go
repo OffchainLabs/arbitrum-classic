@@ -203,7 +203,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().Data.TxHash
+	logHash := lastLog.GetEthMsg().TxHash
 	if logHash != messageHash {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")

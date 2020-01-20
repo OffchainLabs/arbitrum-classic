@@ -52,7 +52,7 @@ type findLogsRequest struct {
 }
 
 type logsInfo struct {
-	msg  evm.EthMsg
+	msg  evm.EthBridgeMessage
 	Logs []evm.Log
 }
 
@@ -77,7 +77,7 @@ type assertionInfo struct {
 
 type logResponse struct {
 	Log evm.Log
-	Msg evm.EthMsg
+	Msg evm.EthBridgeMessage
 }
 
 func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logResponse {
@@ -219,8 +219,8 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 		}
 
 		msg := evmVal.GetEthMsg()
-		log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
-		tr.transactions[msg.Data.TxHash] = txInfo
+		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
+		tr.transactions[msg.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
 }
@@ -263,16 +263,16 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 				for _, topic := range evmLog.Log.Topics {
 					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
 				}
-				txHash := evmLog.Msg.MsgHash(tr.vmID)
+
 				logs = append(logs, &LogInfo{
 					Address:          hexutil.Encode(addressBytes[12:]),
-					BlockHash:        hexutil.Encode(txHash[:]),
+					BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
 					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
 					Data:             hexutil.Encode(evmLog.Log.Data[:]),
 					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 					Topics:           topicStrings,
 					TransactionIndex: "0x0",
-					TransactionHash:  hexutil.Encode(txHash[:]),
+					TransactionHash:  hexutil.Encode(evmLog.Msg.TxHash[:]),
 				})
 			}
 		}

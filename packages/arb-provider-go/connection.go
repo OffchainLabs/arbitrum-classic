@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -94,13 +92,7 @@ func (conn *ArbConnection) CallContract(
 	if err != nil {
 		return nil, err
 	}
-	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(call.To[:]))
-	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
-	arbCallValue, err := value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
-	if err != nil {
-		panic("Unexpected error building arbCallValue")
-	}
-	retValue, err := conn.proxy.CallMessage(arbCallValue, call.From)
+	retValue, err := conn.proxy.CallMessage(*call.To, call.From, dataValue)
 	if err != nil {
 		return nil, err
 	}
@@ -164,13 +156,15 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	arbCallValue, err := conn.TxToVal(tx)
+	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
 	if err != nil {
+		log.Println("Error converting to SizedByteArray")
 		return err
 	}
+
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 	//seq number bug
-	return conn.pendingInbox.SendTransactionMessage(ctx, arbCallValue, conn.vmId, tx.Value(), seqNumValue)
+	return conn.pendingInbox.SendTransactionMessage(ctx, dataValue, conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seqNumValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -397,7 +391,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
 				Topics:      evmParsedTopics,
 				Data:        l.Data,
-				BlockNumber: ethMsg.Data.Number.Uint64(),
+				BlockNumber: ethMsg.BlockNumber.Uint64(),
 				TxHash:      txHash,
 				TxIndex:     0,
 				BlockHash:   txHash,
@@ -417,7 +411,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
 		GasUsed:           1,
 		BlockHash:         txHash,
-		BlockNumber:       ethMsg.Data.Number,
+		BlockNumber:       ethMsg.BlockNumber,
 		TransactionIndex:  0,
 	}, nil
 }
@@ -435,16 +429,12 @@ func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
 	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
 }
 
-func (conn *ArbConnection) TxHash(tx *types.Transaction) (common.Hash, error) {
-	arbCallValue, err := conn.TxToVal(tx)
+func (conn *ArbConnection) TxHash(tx *types.Transaction, sender common.Address) (common.Hash, error) {
+	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
+	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
 	if err != nil {
+		log.Println("Error converting to SizedByteArray")
 		return common.Hash{}, err
 	}
-	tokenType := [21]byte{}
-	return hashing.SoliditySHA3(
-		hashing.Address(conn.vmId),
-		hashing.Bytes32(arbCallValue.Hash()),
-		hashing.Uint256(big.NewInt(0)), // amount
-		tokenType[:],
-	), nil
+	return ethbridge.GetTransactionHash(sender, conn.vmId, seqNumValue, tx.Value(), dataValue), nil
 }

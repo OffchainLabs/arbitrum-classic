@@ -17,7 +17,6 @@
 package evm
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -26,24 +25,24 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Result interface {
 	IsResult()
 
-	GetEthMsg() EthMsg
+	GetEthMsg() EthBridgeMessage
 }
 
 type Return struct {
-	Msg       EthMsg
+	Msg     EthBridgeMessage
+	ArbCall ArbMessage
+
 	ReturnVal []byte
 	Logs      []Log
 }
 
-func (e Return) GetEthMsg() EthMsg {
+func (e Return) GetEthMsg() EthBridgeMessage {
 	return e.Msg
 }
 
@@ -52,7 +51,7 @@ func (e Return) IsResult() {}
 func (e Return) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMReturn(func: ")
-	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", returnVal: ")
 	sb.WriteString(hexutil.Encode(e.ReturnVal))
 	sb.WriteString(", logs: [")
@@ -67,11 +66,12 @@ func (e Return) String() string {
 }
 
 type Revert struct {
-	Msg       EthMsg
+	Msg       EthBridgeMessage
+	ArbCall   ArbMessage
 	ReturnVal []byte
 }
 
-func (e Revert) GetEthMsg() EthMsg {
+func (e Revert) GetEthMsg() EthBridgeMessage {
 	return e.Msg
 }
 
@@ -80,7 +80,7 @@ func (e Revert) IsResult() {}
 func (e Revert) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMRevert(func: ")
-	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", returnVal: ")
 	sb.WriteString(hexutil.Encode(e.ReturnVal))
 	sb.WriteString(")")
@@ -88,11 +88,12 @@ func (e Revert) String() string {
 }
 
 type Stop struct {
-	Msg  EthMsg
-	Logs []Log
+	Msg     EthBridgeMessage
+	ArbCall ArbMessage
+	Logs    []Log
 }
 
-func (e Stop) GetEthMsg() EthMsg {
+func (e Stop) GetEthMsg() EthBridgeMessage {
 	return e.Msg
 }
 
@@ -101,7 +102,7 @@ func (e Stop) IsResult() {}
 func (e Stop) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMStop(func: ")
-	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", logs: [")
 	for i, log := range e.Logs {
 		sb.WriteString(log.String())
@@ -114,10 +115,11 @@ func (e Stop) String() string {
 }
 
 type BadSequenceNum struct {
-	Msg EthMsg
+	Msg     EthBridgeMessage
+	ArbCall ArbMessage
 }
 
-func (e BadSequenceNum) GetEthMsg() EthMsg {
+func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
 	return e.Msg
 }
 
@@ -126,16 +128,17 @@ func (e BadSequenceNum) IsResult() {}
 func (e BadSequenceNum) String() string {
 	var sb strings.Builder
 	sb.WriteString("BadSequenceNum(func: ")
-	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString("])")
 	return sb.String()
 }
 
 type Invalid struct {
-	Msg EthMsg
+	Msg     EthBridgeMessage
+	ArbCall ArbMessage
 }
 
-func (e Invalid) GetEthMsg() EthMsg {
+func (e Invalid) GetEthMsg() EthBridgeMessage {
 	return e.Msg
 }
 
@@ -144,7 +147,7 @@ func (e Invalid) IsResult() {}
 func (e Invalid) String() string {
 	var sb strings.Builder
 	sb.WriteString("Invalid(func: ")
-	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString("])")
 	return sb.String()
 }
@@ -231,140 +234,236 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 	return logs, nil
 }
 
-type EthCallData struct {
-	Data        []byte
-	ContractID  *big.Int
-	SequenceNum *big.Int
+type ArbMessage interface {
+	GetFuncName() string
 }
 
-func NewEthCallDataFromValue(val value.Value) (EthCallData, error) {
+type EthTransferMessage struct {
+	Dest   common.Address
+	Amount *big.Int
+}
+
+func (m EthTransferMessage) GetFuncName() string {
+	return "EthTransfer"
+}
+
+func NewEthTransferMessageFromValue(val value.Value) (EthTransferMessage, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
-		return EthCallData{}, errors.New("msg must be tuple value")
+		return EthTransferMessage{}, errors.New("msg must be tuple value")
+	}
+	if tup.Len() != 2 {
+		return EthTransferMessage{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+	}
+	destVal, _ := tup.GetByInt64(0)
+	amountVal, _ := tup.GetByInt64(1)
+
+	destInt, ok := destVal.(value.IntValue)
+	if !ok {
+		return EthTransferMessage{}, errors.New("dest must be an int")
+	}
+
+	destBytes := destInt.ToBytes()
+	var destAddress common.Address
+	copy(destAddress[:], destBytes[:20])
+
+	amountInt, ok := amountVal.(value.IntValue)
+	if !ok {
+		return EthTransferMessage{}, errors.New("amount must be an int")
+	}
+
+	return EthTransferMessage{
+		Dest:   destAddress,
+		Amount: amountInt.BigInt(),
+	}, nil
+}
+
+type TokenTransferMessage struct {
+	TokenAddress common.Address
+	Dest         common.Address
+	Amount       *big.Int
+}
+
+func (m TokenTransferMessage) GetFuncName() string {
+	return "TokenTransfer"
+}
+
+func NewTokenTransferMessageFromValue(val value.Value) (TokenTransferMessage, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok {
+		return TokenTransferMessage{}, errors.New("msg must be tuple value")
 	}
 	if tup.Len() != 3 {
-		return EthCallData{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return TokenTransferMessage{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
-	dataVal, _ := tup.GetByInt64(0)
-	contractIDVal, _ := tup.GetByInt64(1)
-	sequenceNumVal, _ := tup.GetByInt64(2)
+	tokenAddressVal, _ := tup.GetByInt64(0)
+	destVal, _ := tup.GetByInt64(1)
+	amountVal, _ := tup.GetByInt64(2)
 
-	contractIDInt, ok := contractIDVal.(value.IntValue)
+	tokenAddressInt, ok := tokenAddressVal.(value.IntValue)
 	if !ok {
-		return EthCallData{}, errors.New("contractID must be an int")
+		return TokenTransferMessage{}, errors.New("token address must be an int")
 	}
+
+	tokenAddressBytes := tokenAddressInt.ToBytes()
+	var tokenAddress common.Address
+	copy(tokenAddress[:], tokenAddressBytes[:20])
+
+	destInt, ok := destVal.(value.IntValue)
+	if !ok {
+		return TokenTransferMessage{}, errors.New("dest must be an int")
+	}
+
+	destBytes := destInt.ToBytes()
+	var destAddress common.Address
+	copy(destAddress[:], destBytes[:20])
+
+	amountInt, ok := amountVal.(value.IntValue)
+	if !ok {
+		return TokenTransferMessage{}, errors.New("amount must be an int")
+	}
+
+	return TokenTransferMessage{
+		TokenAddress: tokenAddress,
+		Dest:         destAddress,
+		Amount:       amountInt.BigInt(),
+	}, nil
+}
+
+type TxMessage struct {
+	To          common.Address
+	SequenceNum *big.Int
+	Amount      *big.Int
+	Data        []byte
+}
+
+func (m TxMessage) GetFuncName() string {
+	return hexutil.Encode(m.Data[:4])
+}
+
+func NewTxMessageFromValue(val value.Value) (TxMessage, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok {
+		return TxMessage{}, errors.New("msg must be tuple value")
+	}
+	if tup.Len() != 4 {
+		return TxMessage{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+	}
+	toVal, _ := tup.GetByInt64(0)
+	sequenceNumVal, _ := tup.GetByInt64(1)
+	valueVal, _ := tup.GetByInt64(2)
+	dataVal, _ := tup.GetByInt64(3)
+
+	toValInt, ok := toVal.(value.IntValue)
+	if !ok {
+		return TxMessage{}, errors.New("to must be an int")
+	}
+
+	toBytes := toValInt.ToBytes()
+	var toAddress common.Address
+	copy(toAddress[:], toBytes[:20])
 
 	sequenceNumInt, ok := sequenceNumVal.(value.IntValue)
 	if !ok {
-		return EthCallData{}, errors.New("sequenceNum must be an int")
+		return TxMessage{}, errors.New("sequenceNum must be an int")
+	}
+
+	valueInt, ok := valueVal.(value.IntValue)
+	if !ok {
+		return TxMessage{}, errors.New("value must be an int")
 	}
 
 	data, err := SizedByteArrayToHex(dataVal)
 	if err != nil {
-		return EthCallData{}, nil
+		return TxMessage{}, nil
 	}
 
-	return EthCallData{
-		data,
-		contractIDInt.BigInt(),
-		sequenceNumInt.BigInt(),
+	return TxMessage{
+		To:          toAddress,
+		SequenceNum: sequenceNumInt.BigInt(),
+		Amount:      valueInt.BigInt(),
+		Data:        data,
 	}, nil
 }
 
-func (data EthCallData) Equals(data2 EthCallData) bool {
-	return bytes.Equal(data.Data, data2.Data) &&
-		data.ContractID.Cmp(data2.ContractID) == 0 &&
-		data.SequenceNum.Cmp(data2.SequenceNum) == 0
+type EthBridgeMessage struct {
+	Type        uint8
+	BlockNumber *big.Int
+	TxHash      common.Hash
+	Sender      common.Address
 }
 
-type EthMsgData struct {
-	CallData EthCallData
-	Number   *big.Int
-	TxHash   common.Hash
-
-	dataHash common.Hash
-}
-
-func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
+func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Value, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
-		return EthMsgData{}, errors.New("msg must be tuple value")
+		return EthBridgeMessage{}, nil, errors.New("msg must be tuple value")
 	}
 	if tup.Len() != 3 {
-		return EthMsgData{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return EthBridgeMessage{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
-	dataVal, _ := tup.GetByInt64(0)
-	numberVal, _ := tup.GetByInt64(1)
-	txHashVal, _ := tup.GetByInt64(2)
+	blockNumberVal, _ := tup.GetByInt64(0)
+	txHashVal, _ := tup.GetByInt64(1)
+	restVal, _ := tup.GetByInt64(2)
 
-	callData, err := NewEthCallDataFromValue(dataVal)
-	if err != nil {
-		return EthMsgData{}, err
-	}
-
-	numberInt, ok := numberVal.(value.IntValue)
+	blockNumberInt, ok := blockNumberVal.(value.IntValue)
 	if !ok {
-		return EthMsgData{}, errors.New("number must be an int")
+		return EthBridgeMessage{}, nil, errors.New("block number must be an int")
 	}
 
 	txHashInt, ok := txHashVal.(value.IntValue)
 	if !ok {
-		return EthMsgData{}, errors.New("txhash must be an int")
+		return EthBridgeMessage{}, nil, errors.New("tx hash must be an int")
 	}
 
-	return EthMsgData{
-		callData,
-		numberInt.BigInt(),
-		txHashInt.ToBytes(),
-		dataVal.Hash(),
-	}, nil
-}
+	txHashBytes := txHashInt.ToBytes()
+	var txHash common.Hash
+	copy(txHash[:], txHashBytes[:])
 
-func (data EthMsgData) Equals(data2 EthMsgData) bool {
-	return data.CallData.Equals(data2.CallData) &&
-		data.Number.Cmp(data2.Number) == 0 &&
-		data.TxHash == data2.TxHash &&
-		data.dataHash == data2.dataHash
-}
-
-type EthMsg struct {
-	Data      EthMsgData
-	TokenType [21]byte
-	Currency  *big.Int
-	Caller    common.Address
-}
-
-func (msg EthMsg) MsgHash(vmID common.Address) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Address(vmID),
-		hashing.Bytes32(msg.Data.dataHash),
-		hashing.Uint256(msg.Currency),
-		msg.TokenType[:],
-	)
-}
-
-func NewEthMsgFromValue(val value.Value) (EthMsg, error) {
-	msg, err := valprotocol.NewMessageFromValue(val)
-	if err != nil {
-		return EthMsg{}, err
+	restValTup, ok := restVal.(value.TupleValue)
+	if !ok {
+		return EthBridgeMessage{}, nil, errors.New("message must be a tup")
 	}
-	ethMsgData, err := NewEthMsgDataFromValue(msg.Data)
-	if err != nil {
-		return EthMsg{}, err
+
+	typeVal, _ := restValTup.GetByInt64(0)
+	senderVal, _ := restValTup.GetByInt64(1)
+	messageVal, _ := restValTup.GetByInt64(2)
+
+	typeInt, ok := typeVal.(value.IntValue)
+	if !ok {
+		return EthBridgeMessage{}, nil, errors.New("type must be an int")
 	}
-	return EthMsg{
-		ethMsgData,
-		msg.TokenType,
-		msg.Currency,
-		msg.Destination,
-	}, nil
+	typecode := uint8(typeInt.BigInt().Uint64())
+
+	senderInt, ok := senderVal.(value.IntValue)
+	if !ok {
+		return EthBridgeMessage{}, nil, errors.New("sender must be an int")
+	}
+
+	senderBytes := senderInt.ToBytes()
+	var senderAddress common.Address
+	copy(senderAddress[:], senderBytes[:20])
+
+	return EthBridgeMessage{
+		Type:        typecode,
+		BlockNumber: blockNumberInt.BigInt(),
+		TxHash:      txHash,
+		Sender:      senderAddress,
+	}, messageVal, nil
 }
 
-func (msg EthMsg) Equals(msg2 EthMsg) bool {
-	return msg.Data.Equals(msg2.Data) &&
-		msg.TokenType == msg2.TokenType &&
-		msg.Currency.Cmp(msg2.Currency) == 0 &&
-		msg.Caller == msg2.Caller
+func ParseArbMessage(typecode uint8, messageVal value.Value) (ArbMessage, error) {
+	switch typecode {
+	case 0:
+		return NewTxMessageFromValue(messageVal)
+	case 1:
+		return NewEthTransferMessageFromValue(messageVal)
+	case 2:
+		return NewTokenTransferMessageFromValue(messageVal)
+	case 3:
+		return NewTokenTransferMessageFromValue(messageVal)
+	default:
+		return nil, errors.New("Invalid message type")
+	}
 }
 
 func ProcessLog(val value.Value) (Result, error) {
@@ -383,7 +482,11 @@ func ProcessLog(val value.Value) (Result, error) {
 
 	origMsgVal, _ := tup.GetByInt64(0)
 
-	ethMsg, err := NewEthMsgFromValue(origMsgVal)
+	ethMsg, messageVal, err := NewEthBridgeMessageFromValue(origMsgVal)
+	if err != nil {
+		return nil, err
+	}
+	arbMessage, err := ParseArbMessage(ethMsg.Type, messageVal)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +504,7 @@ func ProcessLog(val value.Value) (Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Return{ethMsg, returnBytes, logs}, nil
+		return Return{ethMsg, arbMessage, returnBytes, logs}, nil
 	case RevertCode:
 		// EVM Revert
 		returnVal, _ := tup.GetByInt64(2)
@@ -409,7 +512,7 @@ func ProcessLog(val value.Value) (Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Revert{ethMsg, returnBytes}, nil
+		return Revert{ethMsg, arbMessage, returnBytes}, nil
 	case StopCode:
 		// EVM Stop
 		logVal, _ := tup.GetByInt64(1)
@@ -417,11 +520,11 @@ func ProcessLog(val value.Value) (Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Stop{ethMsg, logs}, nil
+		return Stop{ethMsg, arbMessage, logs}, nil
 	case BadSequenceCode:
-		return BadSequenceNum{ethMsg}, nil
+		return BadSequenceNum{ethMsg, arbMessage}, nil
 	case InvalidCode:
-		return Invalid{ethMsg}, nil
+		return Invalid{ethMsg, arbMessage}, nil
 	default:
 		// Unknown type
 		return nil, errors.New("unknown return code")

@@ -188,6 +188,22 @@ const (
 	TRANSACTION_MESSAGE_ID = 0
 )
 
+func GetTransactionHash(
+	sender common.Address,
+	rollupAddress common.Address,
+	sequenceNum *big.Int,
+	val *big.Int,
+	data value.Value,
+) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Address(rollupAddress),
+		hashing.Address(sender),
+		hashing.Uint256(sequenceNum),
+		hashing.Uint256(val),
+		hashing.Bytes32(data.Hash()),
+	)
+}
+
 func GetTransactionMessage(
 	sender common.Address,
 	rollupAddress common.Address,
@@ -197,13 +213,7 @@ func GetTransactionMessage(
 	data value.Value,
 	blockNum *big.Int,
 ) (value.Value, common.Hash) {
-	messageHash := hashing.SoliditySHA3(
-		hashing.Address(rollupAddress),
-		hashing.Address(sender),
-		hashing.Uint256(sequenceNum),
-		hashing.Uint256(val),
-		hashing.Bytes32(data.Hash()),
-	)
+	messageHash := GetTransactionHash(sender, rollupAddress, sequenceNum, val, data)
 
 	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 

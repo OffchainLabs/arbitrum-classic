@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict';
 
-import { ArbClient, EVMCode, EVMResult } from './client';
+import { ArbClient, EVMCode, EVMResult, TxMessage } from './client';
 import * as ArbValue from './value';
 import { ArbWallet } from './wallet';
 import { Contract } from './contract';
@@ -180,12 +180,13 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
         const vmId = await this.getVmID();
         const txHashCheck = ethers.utils.solidityKeccak256(
-            ['address', 'bytes32', 'uint256', 'bytes21'],
+            ['address', 'address', 'uint256', 'uint256', 'bytes32'],
             [
                 vmId,
-                evmVal.orig.calldataHash,
-                evmVal.orig.value,
-                ethers.utils.hexZeroPad(ethers.utils.hexDataSlice(evmVal.orig.tokenType, 21), 21),
+                evmVal.bridgeData.sender,
+                (evmVal.orig as TxMessage).sequenceNum,
+                (evmVal.orig as TxMessage).amount,
+                evmVal.bridgeData.calldataHash,
             ],
         );
 
@@ -240,14 +241,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     }
                     return {
                         blockHash: result.txHash,
-                        blockNumber: result.evmVal.orig.blockHeight.toNumber(),
+                        blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
                         confirmations: 1000,
                         cumulativeGasUsed: ethers.utils.bigNumberify(1),
-                        from: result.evmVal.orig.caller,
+                        from: result.evmVal.bridgeData.sender,
                         gasUsed: ethers.utils.bigNumberify(1),
                         logs,
                         status,
-                        to: result.evmVal.orig.contractID,
+                        to: result.evmVal.orig.getDest(),
                         transactionHash: result.txHash,
                         transactionIndex: 0,
                         byzantium: true,
@@ -262,16 +263,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     if (result) {
                         const tx = {
                             blockHash: result.txHash,
-                            blockNumber: result.evmVal.orig.blockHeight.toNumber(),
+                            blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
                             confirmations: 1000,
-                            data: ethers.utils.hexlify(result.evmVal.orig.data),
-                            from: result.evmVal.orig.caller,
+                            data: ethers.utils.hexlify((result.evmVal.orig as TxMessage).data),
+                            from: result.evmVal.bridgeData.sender,
                             gasLimit: ethers.utils.bigNumberify(1),
                             gasPrice: ethers.utils.bigNumberify(1),
                             hash: result.txHash,
                             nonce: 0,
-                            to: result.evmVal.orig.contractID,
-                            value: result.evmVal.orig.value,
+                            to: result.evmVal.orig.getDest(),
+                            value: (result.evmVal.orig as TxMessage).amount,
                             chainId: 123456789,
                         } as ethers.providers.TransactionResponse;
                         return this.provider._wrapTransaction(tx);
