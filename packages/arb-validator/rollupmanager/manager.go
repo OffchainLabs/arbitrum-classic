@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -55,11 +58,12 @@ func CreateManager(
 	arbitrumCodeFilePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
+	forceFreshStart bool,
 	dbPrefix string,
+	stressTest bool, // if true, generate artificial chaos to stress-test the implementation
 ) (*Manager, error) {
-	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
-	if err != nil {
-		return nil, err
+	if stressTest {
+		clnt = NewStressTestClient(clnt, 10*time.Second)
 	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
@@ -71,21 +75,48 @@ func CreateManager(
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := rollup.NewProductionCheckpointer(
+			checkpointer := checkpointing.NewProductionCheckpointer(
 				runCtx,
 				rollupAddr,
 				arbitrumCodeFilePath,
 				big.NewInt(maxReorgDepth),
 				dbPrefix,
-				false,
+				forceFreshStart,
 			)
 
-			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, updateOpinion)
+			var chain *rollup.ChainObserver
+
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
-			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, latestBlockId, watcher, checkpointer)
+
+			if checkpointer.HasCheckpointedState() {
+				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
+				if err != nil {
+					log.Fatal(err)
+				}
+				chainObserverBuf := &rollup.ChainObserverBuf{}
+				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+					log.Fatal(err)
+				}
+				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+			} else {
+				params, err := watcher.GetParams(ctx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				blockId, err := watcher.GetCreationHeight(ctx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				chain, err = rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			log.Println("Starting validator from", chain.CurrentBlockId())
 
 			man.Lock()
 			// Clear pending listeners
@@ -98,42 +129,70 @@ func CreateManager(
 			}
 			man.Unlock()
 
-			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, rollupWatcher)
+			chain.Start(runCtx)
+
+			current, err := clnt.CurrentBlockId(runCtx)
 			if err != nil {
 				log.Fatal(err)
 			}
 
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, chain.CurrentBlockId())
+			if err != nil {
+				blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
+				if err != nil {
+					panic(err)
+				}
+				log.Println("Error subscribing to block headers", chain.CurrentBlockId().HeaderHash, chain.CurrentBlockId().Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
+
+				cancelFunc()
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			reachedHead := false
 		runLoop:
 			for {
 				select {
-				case <-reorgCtx.Done():
-					log.Println("Reorg context done")
-					break runLoop
-				case listener := <-man.listenerAddChan:
-					chain.AddListener(listener)
-				case action := <-man.actionChan:
-					action(chain)
-				case event, ok := <-eventChan:
+				case maybeBlockId, ok := <-headersChan:
 					if !ok {
+						log.Println("Manager stopped receiving headers")
 						break runLoop
 					}
-					chainInfo := event.GetChainInfo()
-
-					if chainInfo.BlockId.Height.Cmp(latestBlockId.Height) > 0 {
-						chain.NotifyNewBlock(chainInfo.BlockId)
+					if maybeBlockId.Err != nil {
+						log.Println("Error getting new header", maybeBlockId.Err)
+						break runLoop
 					}
 
-					handleNotification(event, chain)
-					latestBlockId = chainInfo.BlockId
+					blockId := maybeBlockId.BlockId
+
+					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
+						log.Println("Reached head")
+						reachedHead = true
+						chain.NowAtHead()
+						log.Println("Now at head")
+					}
+
+					chain.NotifyNewBlock(blockId.Clone())
+
+					events, err := watcher.GetEvents(runCtx, blockId)
+					if err != nil {
+						log.Println("Manager hit error getting events", err)
+						break runLoop
+					}
+					for _, event := range events {
+						chain.HandleNotification(runCtx, event)
+					}
+				case action := <-man.actionChan:
+					action(chain)
 				}
 			}
+
 			cancelFunc()
 
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(15 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
+				time.Sleep(10 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
 			}
 		}
 	}()
@@ -175,34 +234,4 @@ func (man *Manager) CurrentBlockId() *structures.BlockId {
 		retChan <- chain.CurrentBlockId()
 	}
 	return <-retChan
-}
-
-func handleNotification(event arbbridge.Event, chain *rollup.ChainObserver) {
-	log.Printf("Handling event %T\n", event)
-	chain.Lock()
-	defer chain.Unlock()
-	switch ev := event.(type) {
-	case arbbridge.MessageDeliveredEvent:
-		chain.MessageDelivered(ev)
-	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
-		chain.CreateStake(ev, currentTime)
-	case arbbridge.ChallengeStartedEvent:
-		chain.NewChallenge(ev)
-	case arbbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ev)
-	case arbbridge.StakeRefundedEvent:
-		chain.RemoveStake(ev)
-	case arbbridge.PrunedEvent:
-		chain.PruneLeaf(ev)
-	case arbbridge.StakeMovedEvent:
-		chain.MoveStake(ev)
-	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ev, ev.BlockId.Height, ev.TxHash)
-		if err != nil {
-			panic(err)
-		}
-	case arbbridge.ConfirmedEvent:
-		chain.ConfirmNode(ev)
-	}
 }

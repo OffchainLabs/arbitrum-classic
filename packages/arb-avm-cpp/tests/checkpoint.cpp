@@ -482,8 +482,6 @@ void getSavedState(MachineStateFetcher& fetcher,
     auto data = results.data;
 
     REQUIRE(data.status_char == expected_data.status_char);
-    REQUIRE(data.blockreason_str == expected_data.blockreason_str);
-    REQUIRE(data.static_val_key == expected_data.static_val_key);
     REQUIRE(data.pc_key == expected_data.pc_key);
     REQUIRE(data.datastack_key == expected_data.datastack_key);
     REQUIRE(data.auxstack_key == expected_data.auxstack_key);
@@ -555,7 +553,6 @@ void deleteCheckpointSavedTwiceReordered(
 }
 
 MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
-                                 value staticVal,
                                  value registerVal,
                                  Datastack stack,
                                  Datastack auxstack,
@@ -568,22 +565,16 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
     auto datastack_results = stack.checkpointState(stateSaver, &pool);
     auto auxstack_results = auxstack.checkpointState(stateSaver, &pool);
 
-    auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto pc_results = stateSaver.saveValue(pc);
     auto err_pc_results = stateSaver.saveValue(err_pc);
 
     auto status_str = (unsigned char)state;
-    auto blockreason_str = serializeForCheckpoint(blockReason);
 
-    return MachineStateKeys{static_val_results.storage_key,
-                            register_val_results.storage_key,
-                            datastack_results.storage_key,
-                            auxstack_results.storage_key,
-                            pc_results.storage_key,
-                            err_pc_results.storage_key,
-                            status_str,
-                            blockreason_str};
+    return MachineStateKeys{
+        register_val_results.storage_key, datastack_results.storage_key,
+        auxstack_results.storage_key,     pc_results.storage_key,
+        err_pc_results.storage_key,       status_str};
 }
 
 MessageStack getMsgStack1() {
@@ -643,15 +634,14 @@ MachineStateKeys getStateValues(MachineStateSaver& saver) {
     auto inbox_blocked = InboxBlocked(::hash(inbox_stack.messages));
 
     auto saved_data =
-        makeStorageData(saver, static_val, register_val, data_stack, aux_stack,
-                        state, pc_codepoint, err_pc_codepoint, inbox_blocked);
+        makeStorageData(saver, register_val, data_stack, aux_stack, state,
+                        pc_codepoint, err_pc_codepoint, inbox_blocked);
 
     return saved_data;
 }
 
 MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     TuplePool pool;
-    uint256_t static_val = 0;
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
@@ -661,9 +651,8 @@ MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     Status state = Status::Extensive;
     CodePoint code_point(0, Operation(), 0);
 
-    auto data =
-        makeStorageData(saver, static_val, Tuple(), Datastack(), Datastack(),
-                        state, code_point, code_point, NotBlocked());
+    auto data = makeStorageData(saver, Tuple(), Datastack(), Datastack(), state,
+                                code_point, code_point, NotBlocked());
 
     return data;
 }
@@ -676,7 +665,6 @@ std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
     hash_keys.push_back(data.pc_key);
     hash_keys.push_back(data.err_pc_key);
     hash_keys.push_back(data.register_val_key);
-    hash_keys.push_back(data.static_val_key);
 
     return hash_keys;
 }

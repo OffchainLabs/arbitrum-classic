@@ -43,10 +43,9 @@ struct BreakpointBlocked {
 
 struct InboxBlocked {
     static constexpr BlockType type = Inbox;
-    uint256_t inbox;
-    InboxBlocked() {}
+    uint256_t timout;
 
-    InboxBlocked(uint256_t inbox_) { inbox = inbox_; }
+    InboxBlocked(uint256_t timeout_) { timout = timeout_; }
 };
 
 using BlockReason = nonstd::variant<NotBlocked,
@@ -55,7 +54,11 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     BreakpointBlocked,
                                     InboxBlocked>;
 
-std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);
+std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
+std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);
+std::ostream& operator<<(std::ostream& os, const ErrorBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BreakpointBlocked& val);
+std::ostream& operator<<(std::ostream& os, const InboxBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BlockReason& val);
 
 #endif /* blockreason_hpp */

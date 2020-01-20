@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func TestPendingInboxInsert(t *testing.T) {
+func TestMachineCreation(t *testing.T) {
 	codeFile := "contract.ao"
 	dePath := "dbPath"
 

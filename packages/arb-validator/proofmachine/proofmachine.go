@@ -82,8 +82,8 @@ func (m *Machine) CurrentStatus() machine.Status {
 	return m.machine.CurrentStatus()
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	return m.machine.LastBlockReason()
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	return m.machine.IsBlocked(currentTime, newMessages)
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {

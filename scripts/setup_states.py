@@ -19,6 +19,7 @@ import json
 import os
 import shutil
 from web3 import Web3
+from web3.middleware import geth_poa_middleware
 from eth_account import Account
 
 from support.run import run
@@ -32,7 +33,9 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Retrieve bridge_eth_addresses.json
 # arb-bridge-eth must be have been built first
-def setup_validator_states_docker(contract, n_validators, image_name, sudo=False):
+def setup_validator_states_docker(
+    contract, n_validators, image_name, is_geth, sudo=False
+):
     ethaddrs = "bridge_eth_addresses.json"
 
     layer = run(
@@ -47,18 +50,30 @@ def setup_validator_states_docker(contract, n_validators, image_name, sudo=False
     )
     run("docker rm %s" % layer, quiet=True, sudo=sudo)
 
-    setup_validator_states(
-        contract,
-        n_validators,
-        ethaddrs,
-        "0x81183C9C61bdf79DB7330BBcda47Be30c0a85064",
-        "7545",
-    )
+    addresses = setup_validator_states_folder(contract, n_validators, ethaddrs)
+
+    web3 = Web3(Web3.HTTPProvider("http://localhost:7545"))
+
+    if is_geth:
+        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+    setup_validator_funds(web3, "0x81183C9C61bdf79DB7330BBcda47Be30c0a85064", addresses)
 
     os.remove(ethaddrs)
 
 
-def setup_validator_states(contract, n_validators, ethaddrs, source_address, port):
+def setup_validator_funds(web3, source_address, addresses):
+    hashes = []
+    for dest in addresses:
+        tx_hash = web3.eth.sendTransaction(
+            {"to": dest, "from": source_address, "value": 100000000000000000000}
+        )
+        hashes.append(tx_hash)
+    for tx_hash in hashes:
+        web3.eth.waitForTransactionReceipt(tx_hash)
+
+
+def setup_validator_states_folder(contract, n_validators, ethaddrs):
     ARB_VALIDATOR = os.path.join(ROOT_DIR, "packages", "arb-validator")
 
     # Check for validator_states in cwd
@@ -69,12 +84,6 @@ def setup_validator_states(contract, n_validators, ethaddrs, source_address, por
     accounts = [Account.create() for _ in range(n_validators)]
     addresses = [account.address for account in accounts]
     privates = [account.key.hex()[2:] for account in accounts]
-
-    web3 = Web3(Web3.HTTPProvider("http://localhost:" + str(port)))
-    for dest in addresses:
-        web3.eth.sendTransaction(
-            {"to": dest, "from": source_address, "value": 100000000000000000000}
-        )
 
     # Create VALIDATOR_STATES
     os.mkdir(VALIDATOR_STATES)
@@ -94,6 +103,7 @@ def setup_validator_states(contract, n_validators, ethaddrs, source_address, por
         # private_key.txt
         with open(os.path.join(state, "private_key.txt"), "w") as f:
             f.write(privates[i])
+    return addresses
 
 
 def check_file(name):
@@ -127,15 +137,21 @@ def main():
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--ganache-docker",
+        "--ganache",
         action="store_true",
         dest="is_ganache",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(
-        "--parity-docker",
+        "--parity",
         action="store_true",
         dest="is_parity",
+        help="Generate states based on arb-bridge-eth docker images",
+    )
+    group.add_argument(
+        "--geth",
+        action="store_true",
+        dest="is_geth",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(
@@ -169,17 +185,22 @@ def main():
     args = parser.parse_args()
 
     if args.is_local:
-        setup_validator_states(
-            args.contract,
-            args.n_validators,
-            args.funder_key,
-            args.bridge_eth_addresses,
-            args.port,
+        addresses = setup_validator_states_folder(
+            args.contract, args.n_validators, args.bridge_eth_addresses
         )
+        setup_validator_funds(args.funder_key, args.port, addresses)
     elif args.is_parity:
-        setup_validator_states_docker(args.contract, args.n_validators, "parity")
+        setup_validator_states_docker(
+            args.contract, args.n_validators, "arb-bridge-eth", False
+        )
+    elif args.is_geth:
+        setup_validator_states_docker(
+            args.contract, args.n_validators, "arb-bridge-eth-geth", True
+        )
     elif args.is_ganache:
-        setup_validator_states_docker(args.contract, args.n_validators, "ganache")
+        setup_validator_states_docker(
+            args.contract, args.n_validators, "arb-bridge-eth-ganache", False
+        )
 
 
 if __name__ == "__main__":

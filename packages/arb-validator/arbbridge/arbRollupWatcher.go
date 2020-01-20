@@ -28,4 +28,5 @@ type ArbRollupWatcher interface {
 
 	GetParams(ctx context.Context) (structures.ChainParams, error)
 	InboxAddress(ctx context.Context) (common.Address, error)
+	GetCreationHeight(ctx context.Context) (*structures.BlockId, error)
 }

@@ -19,7 +19,7 @@ package arbbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type MaybeEvent struct {
@@ -28,5 +28,5 @@ type MaybeEvent struct {
 }
 
 type ContractWatcher interface {
-	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan MaybeEvent, error)
+	GetEvents(ctx context.Context, blockId *structures.BlockId) ([]Event, error)
 }

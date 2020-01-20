@@ -18,8 +18,9 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	errors2 "github.com/pkg/errors"
 
@@ -51,6 +52,7 @@ type messagesChallengeWatcher struct {
 	contract *messageschallenge.MessagesChallenge
 	client   *ethclient.Client
 	address  ethcommon.Address
+	topics   [][]ethcommon.Hash
 }
 
 func newMessagesChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*messagesChallengeWatcher, error) {
@@ -63,67 +65,40 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client *ethclient.Cl
 		return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}
 
+	tops := []ethcommon.Hash{
+		messagesBisectedID,
+		messagesOneStepProofCompletedID,
+	}
+	tops = append(tops, bisectionChallenge.topics()...)
+
 	return &messagesChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
 		contract:                  messagesContract,
 		client:                    client,
 		address:                   address,
+		topics:                    [][]ethcommon.Hash{tops},
 	}, nil
 }
 
-func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		messagesBisectedID,
-		messagesOneStepProofCompletedID,
-	}
-	return append(tops, c.bisectionChallengeWatcher.topics()...)
-}
-
-func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	filter := ethereum.FilterQuery{
+func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	bh := blockId.HeaderHash.ToEthHash()
+	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{c.topics()},
-	}
-
-	logCtx, cancelFunc := context.WithCancel(ctx)
-	maybeLogChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+		Topics:    c.topics,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	eventChan := make(chan arbbridge.MaybeEvent, 1024)
-	go func() {
-		defer close(eventChan)
-		defer cancelFunc()
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case maybeLog, ok := <-maybeLogChan:
-				if !ok {
-					eventChan <- arbbridge.MaybeEvent{Err: errors.New("logChan terminated early")}
-					return
-				}
-				if maybeLog.err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				header, err := c.client.HeaderByHash(ctx, maybeLog.log.BlockHash)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				chainInfo := getChainInfo(maybeLog.log, header)
-				event, err := c.parseMessagesEvent(chainInfo, maybeLog.log)
-				if err != nil {
-					eventChan <- arbbridge.MaybeEvent{Err: err}
-					return
-				}
-				eventChan <- arbbridge.MaybeEvent{Event: event}
-			}
+	events := make([]arbbridge.Event, 0, len(logs))
+	for _, evmLog := range logs {
+		event, err := c.parseMessagesEvent(getLogChainInfo(evmLog), evmLog)
+		if err != nil {
+			return nil, err
 		}
-	}()
-	return eventChan, nil
+		events = append(events, event)
+	}
+	return events, nil
 }
 
 func (c *messagesChallengeWatcher) parseMessagesEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {

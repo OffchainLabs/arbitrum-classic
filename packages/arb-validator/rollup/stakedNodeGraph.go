@@ -45,14 +45,6 @@ func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) 
 	}
 }
 
-func MakeInitialStakedNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*StakedNodeGraphBuf, *common.HashBuf) {
-	initialNodeGraphBuf, initialNodeHashBuf := MakeInitialNodeGraphBuf(machineHash, params)
-	return &StakedNodeGraphBuf{
-		NodeGraph: initialNodeGraphBuf,
-		Stakers:   []*StakerBuf{},
-	}, initialNodeHashBuf
-}
-
 func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	chain.stakers.forall(func(staker *Staker) {
@@ -80,7 +72,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		s.stakers.Equals(s2.stakers)
 }
 
-func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
+func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	node, ok := chain.nodeFromHash[ev.NodeHash]
 	if !ok {
 		log.Println("Bad location", ev.NodeHash)
@@ -89,7 +81,7 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, curren
 	chain.stakers.Add(&Staker{
 		ev.Staker,
 		node,
-		currentTime,
+		common.TimeFromBlockNum(ev.BlockId.Height),
 		common.Address{},
 	})
 }

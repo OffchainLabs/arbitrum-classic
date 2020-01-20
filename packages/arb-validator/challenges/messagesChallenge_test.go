@@ -17,6 +17,7 @@
 package challenges
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -26,7 +27,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func TestMessagesChallenge(t *testing.T) {
+func testMessagesChallenge(t *testing.T) {
+	t.Parallel()
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
 		messageStack.DeliverMessage(value.NewInt64Value(i))
@@ -57,8 +59,11 @@ func TestMessagesChallenge(t *testing.T) {
 	if err := testChallenge(
 		structures.InvalidMessagesChildType,
 		challengeHash,
+		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
+		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,
@@ -72,6 +77,7 @@ func TestMessagesChallenge(t *testing.T) {
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengeMessagesClaim(
+				context.Background(),
 				client,
 				challengeAddress,
 				blockId,

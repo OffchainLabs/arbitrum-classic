@@ -134,13 +134,14 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	stressTest := validateCmd.Bool("stresstest", false, "stresstest")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--rpc] [--stresstest] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
 	}
 
 	// 2) Private key
@@ -187,7 +188,7 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, "")
+	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client, false, "", *stressTest)
 	if err != nil {
 		return err
 	}

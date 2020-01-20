@@ -18,21 +18,23 @@ package cmachine
 
 import (
 	"log"
+	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func TestCheckpoint(t *testing.T) {
 	codeFile := "contract.ao"
 	dePath := "dbPath"
 
-	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
-	}
-
-	checkpointStorage, err := NewCheckpoint("dbPath", codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
@@ -40,6 +42,52 @@ func TestCheckpoint(t *testing.T) {
 
 	if len(val) != 0 {
 		t.Error("should have empty value")
+	}
+
+	if err := os.RemoveAll(dePath); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestCheckpointMachine(t *testing.T) {
+	codeFile := "contract.ao"
+	dePath := "dbPath2"
+
+	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer checkpointStorage.CloseCheckpointStorage()
+
+	mach, err := checkpointStorage.GetInitialMachine()
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log("Initial machine hash", mach.Hash())
+
+	_, numSteps := mach.ExecuteAssertion(1000, &protocol.TimeBoundsBlocks{
+		Start: common.NewTimeBlocks(big.NewInt(100)),
+		End:   common.NewTimeBlocks(big.NewInt(120)),
+	}, value.NewEmptyTuple())
+
+	t.Log("Ran machine for", numSteps, "steps")
+
+	if !mach.Checkpoint(checkpointStorage) {
+		t.Error("Failed to checkpoint machine")
+	}
+
+	mach2, err := checkpointStorage.GetInitialMachine()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !mach2.RestoreCheckpoint(checkpointStorage, mach.Hash()) {
+		t.Error("Failed to restore machine")
+	}
+
+	if mach.Hash() != mach2.Hash() {
+		t.Error("Restored machine with wrong hash", mach.Hash(), mach2.Hash())
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {

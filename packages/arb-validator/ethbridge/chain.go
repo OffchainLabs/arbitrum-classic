@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -55,6 +56,13 @@ func getBlockID(header *types.Header) *structures.BlockId {
 	}
 }
 
+func getLogBlockID(ethLog types.Log) *structures.BlockId {
+	return &structures.BlockId{
+		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
+	}
+}
+
 func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
 	return &structures.BlockId{
 		Height:     common.NewTimeBlocks(receipt.BlockNumber),
@@ -62,9 +70,9 @@ func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
 	}
 }
 
-func getChainInfo(log types.Log, header *types.Header) arbbridge.ChainInfo {
+func getLogChainInfo(log types.Log) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
-		BlockId:  getBlockID(header),
+		BlockId:  getLogBlockID(log),
 		LogIndex: log.Index,
 		TxHash:   log.TxHash,
 	}
@@ -78,7 +86,7 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 	for {
 		select {
 		case _ = <-time.After(time.Second):
-			receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 			if err != nil {
 				if err.Error() == ethereum.NotFound.Error() {
 					continue
