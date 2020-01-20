@@ -302,7 +302,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 _contractAddress,
                 _seqNumber,
                 _value,
-                _data);
+                _data
+            );
         }
     }
 

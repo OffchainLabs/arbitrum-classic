@@ -25,17 +25,17 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
@@ -163,6 +163,13 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		return nil, err
 	}
 
+	contractAddressBytes, err := hexutil.Decode(args.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+	var contractAddress common.Address
+	copy(contractAddress[:], contractAddressBytes)
+
 	senderBytes, err := hexutil.Decode(args.Sender)
 	if err != nil {
 		return nil, err
@@ -170,27 +177,20 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	messageHash := hashing.SoliditySHA3(
-		hashing.Address(msg.Destination),
-		hashing.Bytes32(msg.Data.Hash()),
-		hashing.Uint256(msg.Currency),
-		msg.TokenType[:],
+	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
+
+	callingMessage, messageHash := ethbridge.GetTransactionMessage(
+		sender,
+		m.rollupAddress,
+		contractAddress,
+		seqNumValue,
+		big.NewInt(0),
+		dataVal,
+		m.man.CurrentBlockId().Height.AsInt(),
 	)
-	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-	val, _ := value.NewTupleFromSlice([]value.Value{
-		msg.Data,
-		value.NewIntValue(m.man.CurrentBlockId().Height.AsInt()),
-		value.NewIntValue(msgHashInt),
-	})
-	callingMessage := valprotocol.Message{
-		Data:        val.Clone(),
-		TokenType:   msg.TokenType,
-		Currency:    msg.Currency,
-		Destination: msg.Destination,
-	}
+
 	messageStack := protocol.NewMessageStack()
-	messageStack.AddMessage(callingMessage.AsValue())
+	messageStack.AddMessage(callingMessage)
 
 	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
 

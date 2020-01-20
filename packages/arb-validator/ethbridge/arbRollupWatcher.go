@@ -184,6 +184,50 @@ func AddressToIntValue(address common.Address) value.IntValue {
 	return value.NewIntValue(addressVal)
 }
 
+const (
+	TRANSACTION_MESSAGE_ID = 0
+)
+
+func GetTransactionMessage(
+	sender common.Address,
+	rollupAddress common.Address,
+	contractAddress common.Address,
+	sequenceNum *big.Int,
+	val *big.Int,
+	data value.Value,
+	blockNum *big.Int,
+) (value.Value, common.Hash) {
+	messageHash := hashing.SoliditySHA3(
+		hashing.Address(rollupAddress),
+		hashing.Address(sender),
+		hashing.Uint256(sequenceNum),
+		hashing.Uint256(val),
+		hashing.Bytes32(data.Hash()),
+	)
+
+	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+	msgVal, _ := value.NewTupleFromSlice([]value.Value{
+		AddressToIntValue(contractAddress),
+		value.NewIntValue(sequenceNum),
+		value.NewIntValue(val),
+		data,
+	})
+
+	msgType, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(big.NewInt(TRANSACTION_MESSAGE_ID)),
+		AddressToIntValue(sender),
+		msgVal,
+	})
+
+	dataMsg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(blockNum),
+		value.NewIntValue(msgHashInt),
+		msgType,
+	})
+	return dataMsg, messageHash
+}
+
 func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	log.Println("event check")
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
@@ -198,34 +242,15 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := hashing.SoliditySHA3(
-			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
-			hashing.Address(common.NewAddressFromEth(val.VmSenderId)),
-			hashing.Uint256(val.SeqNumber),
-			hashing.Uint256(val.Value),
-			hashing.Bytes32(msgData.Hash()),
-		)
-
-		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.ContactAddress)),
-			value.NewIntValue(val.SeqNumber),
-			value.NewIntValue(val.Value),
+		dataMsg, _ := GetTransactionMessage(
+			common.NewAddressFromEth(val.VmSenderId),
+			common.NewAddressFromEth(val.VmReceiverId),
+			common.NewAddressFromEth(val.ContractAddress),
+			val.SeqNumber,
+			val.Value,
 			msgData,
-		})
-
-		msgType, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(big.NewInt(0)),
-			AddressToIntValue(common.NewAddressFromEth(val.VmSenderId)),
-			msgVal,
-		})
-
-		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
-			value.NewIntValue(msgHashInt),
-			msgType,
-		})
+			new(big.Int).SetUint64(ethLog.BlockNumber),
+		)
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,

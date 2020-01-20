@@ -5,4 +5,4 @@
 
 docker network inspect arb-network >/dev/null 2>&1 || \
     docker network create --driver bridge arb-network
-docker run --rm -p 7545:7545 -p 7546:7546 --network=arb-network -it --name arb-bridge-eth-geth arb-bridge-eth-geth --rpc --rpcaddr 0.0.0.0 --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug
+docker run --rm -p 7545:7545 -p 7546:7546 --network=arb-network -it --name arb-bridge-eth-geth arb-bridge-eth-geth --rpc --rpcaddr 0.0.0.0 --rpcport 7545 --rpccorsdomain="*" --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug

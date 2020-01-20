@@ -136,7 +136,7 @@ const _abi = [
             {
                 indexed: false,
                 internalType: 'address',
-                name: 'contactAddress',
+                name: 'contractAddress',
                 type: 'address',
             },
             {
