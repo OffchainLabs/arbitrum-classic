@@ -18,39 +18,31 @@ class App {
 
   async initWeb3() {
     // Modern dapp browsers...
-    let web3ProviderArb = null;
-
+    var standardProvider = null;
     if (window.ethereum) {
-      web3ProviderArb = window.ethereum;
+      standardProvider = window.ethereum;
       try {
-        // Request account access
+        // Request account access if needed
         await window.ethereum.enable();
       } catch (error) {
-        // User denied account access...
-        console.error("User denied account access");
+        console.log("User denied account access");
       }
-    }
-    // Legacy dapp browsers...
-    else if (window.web3) {
-      web3ProviderArb = window.web3.currentProvider;
-    }
-    // If no injected web3 instance is detected, fall back to Ganache
-    else {
-      web3ProviderArb = new ethers.providers.JsonRpcProvider(
-        "http://localhost:7545"
+    } else if (window.web3) {
+      // Legacy dapp browsers...
+      standardProvider = window.web3.currentProvider;
+    } else {
+      // Non-dapp browsers...
+      console.log(
+        "Non-Ethereum browser detected. You should consider trying MetaMask!"
       );
     }
 
-    let web3Provider = new ethers.providers.JsonRpcProvider(
-      "http://localhost:7545"
-    );
-
     const contracts = require("../compiled.json");
-    this.ethProvider = web3Provider;
+    this.ethProvider = new ethers.providers.Web3Provider(standardProvider);
     this.arbProvider = new ArbProvider(
       "http://localhost:1235",
       contracts,
-      new ethers.providers.Web3Provider(web3ProviderArb)
+      new ethers.providers.Web3Provider(standardProvider)
     );
     return this.initContracts();
   }
