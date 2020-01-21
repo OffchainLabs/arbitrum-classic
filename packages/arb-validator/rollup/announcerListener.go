@@ -86,8 +86,8 @@ func (al *AnnouncerListener) OldStakes(context.Context, *ChainObserver, []recove
 	log.Println(al.Prefix, "OldStakes")
 }
 
-func (al *AnnouncerListener) AdvancedKnownValidNode(ctx context.Context, observer *ChainObserver, nodeHash common.Hash) {
-	log.Println(al.Prefix, "AdvancedKnownValidNode", nodeHash)
+func (al *AnnouncerListener) AdvancedCalculatedValidNode(ctx context.Context, observer *ChainObserver, nodeHash common.Hash) {
+	log.Println(al.Prefix, "AdvancedCalculatedValidNode", nodeHash)
 }
 
 func (al *AnnouncerListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {

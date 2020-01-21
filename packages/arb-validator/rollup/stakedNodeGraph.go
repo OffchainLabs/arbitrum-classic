@@ -302,7 +302,7 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 		challengerAncestor = staker2Ancestor
 	}
 
-	asserterDataHash, asserterPeriodTicks := challengerAncestor.ChallengeNodeData(chain.params)
+	challengerDataHash, challengerPeriodTicks := challengerAncestor.ChallengeNodeData(chain.params)
 
 	return &challengeOpportunity{
 		asserter:              asserterStaker.address,
@@ -315,9 +315,9 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 		challengerVMProtoHash: challengerAncestor.vmProtoData.Hash(),
 		asserterProof:         GeneratePathProof(asserterAncestor, asserterStaker.location),
 		challengerProof:       GeneratePathProof(challengerAncestor, challengerStaker.location),
-		asserterNodeHash:      challengerAncestor.nodeDataHash,
-		challengerDataHash:    asserterDataHash,
-		challengerPeriodTicks: asserterPeriodTicks,
+		asserterNodeHash:      asserterAncestor.nodeDataHash,
+		challengerDataHash:    challengerDataHash,
+		challengerPeriodTicks: challengerPeriodTicks,
 	}
 }
 
