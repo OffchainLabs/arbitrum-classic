@@ -38,23 +38,29 @@ def runTertiaryOp(vm, arg1, arg2, arg3, op):
     op()
 
 
+def ntimes(vm, times, op):
+    ret = []
+    for i in range(times):
+        ret.append(op(vm))
+    return ret
+
+
 def speedtestUnaryOp(vm, arg, op):
     vm.push(arg)
-    for i in range(10000):
-        op()
+    vm.while_loop(lambda v: [v.push(1)], lambda v: ntimes(v, 1000, op))
 
 
 def speedtestBinaryOp_Dup(vm, arg, op):
-    speedtestUnaryOp(vm, arg, lambda: [vm.dup0(), op()])
+    speedtestUnaryOp(vm, arg, lambda v: [v.dup0(), op(v)])
 
 
 def speedtestBinaryOp_Pushes(vm, arg1, arg2, op):
-    speedtestUnaryOp(vm, 0, lambda: [vm.push(arg2), vm.push(arg1), op(), vm.pop()])
+    speedtestUnaryOp(vm, 0, lambda v: [v.push(arg2), v.push(arg1), op(v), v.pop()])
 
 
 def speedtestTernaryOp_Pushes(vm, arg1, arg2, arg3, op):
     speedtestUnaryOp(
-        vm, 0, lambda: [vm.push(arg3), vm.push(arg2), vm.push(arg1), op(), vm.pop()]
+        vm, 0, lambda v: [v.push(arg3), v.push(arg2), v.push(arg1), op(v), v.pop()]
     )
 
 
@@ -501,29 +507,29 @@ def test_tuple(vm):
 
 def speedTest(vm, name):
     if name == "hash":
-        speedtestUnaryOp(vm, 0, vm.hash)
+        speedtestUnaryOp(vm, 0, lambda v: v.hash())
     elif name == "pushPop":
-        speedtestUnaryOp(vm, 0, lambda: [vm.push(0), vm.pop()])
+        speedtestUnaryOp(vm, 0, lambda v: [v.push(0), v.pop()])
     elif name == "dupPop":
-        speedtestUnaryOp(vm, 0, lambda: [vm.dup0(), vm.pop()])
+        speedtestUnaryOp(vm, 0, lambda v: [v.dup0(), v.pop()])
     elif name == "add":
-        speedtestBinaryOp_Dup(vm, 3, vm.add)
+        speedtestBinaryOp_Dup(vm, 3, lambda v: v.add())
     elif name == "mul":
-        speedtestBinaryOp_Dup(vm, 3, vm.mul)
+        speedtestBinaryOp_Dup(vm, 3, lambda v: v.mul())
     elif name == "div":
-        speedtestBinaryOp_Pushes(vm, 571, 9, vm.div)
+        speedtestBinaryOp_Pushes(vm, 571, 9, lambda v: v.div())
     elif name == "sdiv":
-        speedtestBinaryOp_Pushes(vm, 571, 9, vm.sdiv)
+        speedtestBinaryOp_Pushes(vm, 571, 9, lambda v: v.sdiv())
     elif name == "mod":
-        speedtestBinaryOp_Pushes(vm, 571, 9, vm.mod)
+        speedtestBinaryOp_Pushes(vm, 571, 9, lambda v: v.mod())
     elif name == "smod":
-        speedtestBinaryOp_Pushes(vm, 571, 9, vm.smod)
+        speedtestBinaryOp_Pushes(vm, 571, 9, lambda v: v.smod())
     elif name == "addmod":
-        speedtestTernaryOp_Pushes(vm, 57112352, 8386423523, 6312, vm.addmod)
+        speedtestTernaryOp_Pushes(vm, 57112352, 8386423523, 6312, lambda v: v.addmod())
     elif name == "mulmod":
-        speedtestTernaryOp_Pushes(vm, 57112352, 8386423523, 6312, vm.mulmod)
+        speedtestTernaryOp_Pushes(vm, 57112352, 8386423523, 6312, lambda v: v.mulmod())
     elif name == "exp":
-        speedtestBinaryOp_Pushes(vm, 57112352, 8386423523, vm.exp)
+        speedtestBinaryOp_Pushes(vm, 57112352, 8386423523, lambda v: v.exp())
     else:
         pass
 

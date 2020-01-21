@@ -75,7 +75,7 @@ func testAoAndPrint(filePath, nickname string) {
 	fmt.Println("===", nickname)
 	dur, nsteps, err := runningTimeForAoFile(filePath)
 	if err == nil {
-		durPerStep := 1000000000.0 * float64(nsteps) / float64(dur.Nanoseconds())
+		durPerStep := 1000.0 * float64(nsteps) / float64(dur.Nanoseconds())
 		fmt.Println(nickname, dur, nsteps, durPerStep)
 	}
 }
