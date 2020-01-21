@@ -238,7 +238,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 
 	afterHash := mach.Hash()
 
-	blockReason := chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, false)
+	blockReason := mach.IsBlocked(chain.latestBlockId.Height, false)
 
 	log.Printf(
 		"Prepared assertion of %v steps, from %v to %v with block reason %v and timebounds [%v, %v] on top of leaf %v\n",
