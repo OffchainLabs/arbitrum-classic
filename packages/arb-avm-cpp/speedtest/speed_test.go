@@ -21,11 +21,29 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"io/ioutil"
 	"log"
+	"strconv"
 	"strings"
 	"testing"
 )
 
+func getInsnMultiplier(filePath string) int32 {
+	ll := len(filePath)
+	numPopsStr := filePath[ll-4 : ll-3]
+	numPops, err := strconv.Atoi(numPopsStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	numPushesStr := filePath[ll-6 : ll-5]
+	numPushes, err := strconv.Atoi(numPushesStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	numExtraUnderscores := strings.Count(filePath, "_") - 2
+	return int32(1 + numExtraUnderscores + numPops + numPushes)
+}
+
 func runAoFile(b *testing.B, filePath string) {
+	insnMultiplier := getInsnMultiplier(filePath)
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
 		b.Fail()
@@ -40,13 +58,36 @@ func runAoFile(b *testing.B, filePath string) {
 	}
 	unusedTimeBounds := protocol.NewTimeBounds(0, 0)
 	b.ResetTimer()
-	_ = mach.ExecuteAssertion(int32(b.N), unusedTimeBounds)
+	_ = mach.ExecuteAssertion(int32(b.N)*insnMultiplier, unusedTimeBounds)
 }
 
-func BenchmarkInstructions(b *testing.B) {
+func nameFromFn(fn string) string {
+	ll := len(fn)
+	fnSlices := strings.Split(fn[:ll-7], "/")
+	ret := fnSlices[len(fnSlices)-1]
+	numPopsStr := fn[ll-4 : ll-3]
+	numPops, err := strconv.Atoi(numPopsStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	numPushesStr := fn[ll-6 : ll-5]
+	numPushes, err := strconv.Atoi(numPushesStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for i := 0; i < numPushes; i++ {
+		ret = "push_" + ret
+	}
+	for i := 0; i < numPops; i++ {
+		ret = ret + "_pop"
+	}
+	return ret
+}
+
+func BenchmarkInsns(b *testing.B) {
 	_aos := getAos()
 	for _, fn := range _aos {
-		b.Run(fn, func(b *testing.B) {
+		b.Run(nameFromFn(fn), func(b *testing.B) {
 			runAoFile(b, fn)
 		})
 	}
