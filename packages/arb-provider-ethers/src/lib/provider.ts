@@ -179,20 +179,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         } = result;
 
         const vmId = await this.getVmID();
-        const txHashCheck = ethers.utils.solidityKeccak256(
-            ['address', 'address', 'uint256', 'uint256', 'bytes32'],
-            [
-                vmId,
-                evmVal.bridgeData.sender,
-                (evmVal.orig as TxMessage).sequenceNum,
-                (evmVal.orig as TxMessage).amount,
-                evmVal.bridgeData.calldataHash,
-            ],
-        );
+        const txHashCheck = evmVal.bridgeData.txHash;
 
         // Check txHashCheck matches txHash
         if (txHash !== txHashCheck) {
-            throw Error('txHash did not match its pre-image ' + txHash + ' ' + txHashCheck);
+            throw Error('txHash did not match its queried transaction ' + txHash + ' ' + txHashCheck);
         }
 
         // Step 1: prove that val is in logPostHash
@@ -393,12 +384,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
 
         // Check correct logs hash
-        if (cda.values.logsAccHash !== logPostHash) {
+        if (cda.values.fields[6] !== logPostHash) {
             throw Error(
-                'RollupAsserted Event on-chain logPostHash is: ' +
-                    cda.values.logsAccHash +
-                    '\nExpected: ' +
-                    logPostHash,
+                'RollupAsserted Event on-chain logPostHash is: ' + cda.values.fields[6] + '\nExpected: ' + logPostHash,
             );
         }
 

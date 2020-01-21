@@ -208,6 +208,12 @@ class App {
       inboxManager.address,
       val
     );
+
+    $("#depositForm").hide();
+    $("#depositMessage").html("Approving transfer to Arbitrum chain");
+    $("#depositMessage").show();
+
+    await tx1.wait();
     console.log("approved from : " + this.ethwalletAddress);
 
     const tx2 = await this.arbWallet.depositERC20(
@@ -216,7 +222,12 @@ class App {
       val
     );
 
-    $("#depositMessage").html("Depositing into EthBridge");
+    $("#depositMessage").html("Depositing token to Arbitrum chain");
+
+    console.log("Waiting on tx");
+    await tx2.wait(0);
+    console.log("Finished waiting");
+
     $("#depositMessage").hide();
     $("#depositForm").show();
 
