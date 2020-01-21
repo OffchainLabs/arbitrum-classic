@@ -77,6 +77,7 @@ type rollupData struct {
 	maxSteps       uint32
 	escrowRequired *big.Int
 	owner          common.Address
+	events         []arbbridge.Event
 }
 
 type void struct{}
@@ -121,6 +122,12 @@ func getMockEth(ethURL string) *mockEthdata {
 		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
 		mEthData := new(mockEthdata)
 		MockEth[ethURL] = mEthData
+		mEthData.Vm = make(map[common.Address]*VmData)
+		mEthData.channels = make(map[common.Address]*channelData)
+		mEthData.rollups = make(map[common.Address]*rollupData)
+		mEthData.pending = make(map[common.Address]*PendingInbox)
+		mEthData.blockHashes = make(map[common.Hash]*structures.BlockId)
+		mEthData.blockNumbers = make(map[*common.TimeBlocks]*structures.BlockId)
 		//init header number to 0 at startup
 		mEthData.LatestBlock = new(structures.BlockId)
 		mEthData.LatestBlock.Height = common.NewTimeBlocks(big.NewInt(0))
@@ -167,7 +174,7 @@ func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
 func mine(m *mockEthdata, t time.Time) {
 	fmt.Println("mining - time = ", t)
 	nextBlock := new(structures.BlockId)
-	nextBlock.Height = common.NewTimeBlocks(nextBlock.Height.AsInt().Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
+	nextBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
 	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
 	nextBlock.HeaderHash = blockHash
 	m.LatestBlock = nextBlock

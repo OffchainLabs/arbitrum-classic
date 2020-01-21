@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 
-	//"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -110,7 +109,7 @@ func testChallenge(
 		return err
 	}
 
-	tester, err := client1.DeployChallengeTest(context.Background())
+	tester, err := client1.DeployChallengeTest()
 	if err != nil {
 		return err
 	}

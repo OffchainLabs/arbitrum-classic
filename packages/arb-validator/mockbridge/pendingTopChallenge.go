@@ -21,8 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -36,12 +34,12 @@ func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) 
 	if err != nil {
 		return nil, err
 	}
-	vm := &PendingTopChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &pendingTopChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *PendingTopChallenge) setupContracts() error {
+func (c *pendingTopChallenge) setupContracts() error {
 	//challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
 	//if err != nil {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
@@ -51,7 +49,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *pendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

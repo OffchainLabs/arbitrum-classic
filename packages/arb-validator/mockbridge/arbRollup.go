@@ -29,19 +29,19 @@ import (
 
 const VALID_CHILD_TYPE = 3
 
-type ArbRollup struct {
+type arbRollup struct {
 	*nodeGraph
 	address common.Address
 	params  structures.ChainParams
 	Client  *MockArbAuthClient
 }
 
-func newRollup(address common.Address, client *MockArbAuthClient) (*ArbRollup, error) {
+func newRollup(address common.Address, client *MockArbAuthClient) (*arbRollup, error) {
 	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
 	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
+	//	return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	//}
-	//vm := &ArbRollup{Client: client.(*MockArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
+	//vm := &arbRollup{Client: client.(*MockArbClient).client, arbRollup: arbitrumRollupContract, auth: auth}
 
 	// arbRollup init()
 	// 	NodeGraph init()
@@ -54,9 +54,20 @@ func newRollup(address common.Address, client *MockArbAuthClient) (*ArbRollup, e
 	//        // VM parameters
 	//        stakeRequirement = _stakeRequirement;
 
-	ru := client.MockEthClient.rollups[address]
+	ru, ok := client.MockEthClient.rollups[address]
+	if !ok {
+		var events []arbbridge.Event
+		ru = &rollupData{Uninitialized,
+			common.TimeTicks{},
+			0,
+			big.NewInt(0),
+			address,
+			events,
+		}
+		client.MockEthClient.rollups[address] = ru
+	}
 	vm := newNodeGraph(client.auth)
-	return &ArbRollup{
+	return &arbRollup{
 		nodeGraph: vm,
 		address:   address,
 		params: structures.ChainParams{
@@ -69,7 +80,7 @@ func newRollup(address common.Address, client *MockArbAuthClient) (*ArbRollup, e
 	}, nil
 }
 
-func (vm *ArbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
 	location := calculatePath(vm.lastConfirmed, proof1)
 	leaf := calculatePath(location, proof2)
 	if !vm.leaves[leaf] {
@@ -92,7 +103,7 @@ func (vm *ArbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	return nil
 }
 
-func (vm *ArbRollup) createStake(stakeAmount *big.Int, location common.Hash) error {
+func (vm *arbRollup) createStake(stakeAmount *big.Int, location common.Hash) error {
 	// require(msg.value == stakeRequirement, STK_AMT);
 	if vm.Client.auth.Value != vm.stakeRequirement {
 		return errors.New("invalid stake amount")
@@ -106,11 +117,19 @@ func (vm *ArbRollup) createStake(stakeAmount *big.Int, location common.Hash) err
 	return nil
 }
 
-func (vm *ArbRollup) refundStaker(staker common.Address) {
+func (vm *arbRollup) refundStaker(staker common.Address) {
 	//refundStaker(stakerAddress);
 	delete(vm.stakers, staker)
 	//transfer stake requirement
 	// ???
+	append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events, arbbridge.MaybeEvent{
+		Event: arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
+			Staker: staker,
+		},
+	})
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
 			ChainInfo: arbbridge.ChainInfo{
@@ -121,7 +140,7 @@ func (vm *ArbRollup) refundStaker(staker common.Address) {
 	})
 
 }
-func (vm *ArbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error {
+func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error {
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
 	//require(RollupUtils.calculatePath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
 	//refundStaker(stakerAddress);
@@ -151,7 +170,7 @@ func (vm *ArbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	return nil
 }
 
-func (vm *ArbRollup) RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error {
+func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error {
 	//require(proof.length > 0, RECVOLD_LENGTH);
 	if len(proof) <= 0 {
 		return errors.New("proof must be non-zero length")
@@ -171,7 +190,7 @@ func (vm *ArbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 	return nil
 }
 
-func (vm *ArbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error {
+func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error {
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
 	//require(
 	//	latestConfirmedProof[0] != stakerProof[0] &&
@@ -190,7 +209,7 @@ func (vm *ArbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 	return nil
 }
 
-func (vm *ArbRollup) RecoverStakePassedDeadline(
+func (vm *arbRollup) RecoverStakePassedDeadline(
 	ctx context.Context,
 	stakerAddress common.Address,
 	deadlineTicks *big.Int,
@@ -219,7 +238,7 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 	return nil
 }
 
-func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error {
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
 	//bytes32 newLocation = RollupUtils.calculatePath(stakerLocation, proof1);
 	//bytes32 leaf = RollupUtils.calculatePath(newLocation, proof2);
@@ -245,7 +264,7 @@ func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return nil
 }
 
-func (vm *ArbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof []common.Hash, ancProof []common.Hash) error {
+func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof []common.Hash, ancProof []common.Hash) error {
 	//bytes32 leaf = RollupUtils.calculatePath(from, leafProof);
 	leaf := calculatePath(from, leafProof)
 	//require(isValidLeaf(leaf), PRUNE_LEAF);
@@ -277,7 +296,7 @@ func (vm *ArbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	return nil
 }
 
-func (vm *ArbRollup) MakeAssertion(
+func (vm *arbRollup) MakeAssertion(
 	ctx context.Context,
 
 	prevPrevLeafHash common.Hash,
@@ -291,7 +310,7 @@ func (vm *ArbRollup) MakeAssertion(
 	stakerProof []common.Hash,
 ) error {
 	//vm.auth.Context = ctx
-	//tx, err := vm.ArbRollup.MakeAssertion(
+	//tx, err := vm.arbRollup.MakeAssertion(
 	//	vm.auth,
 	//	[9][32]byte{
 	//		beforeState.MachineHash,
@@ -446,7 +465,7 @@ func (vm *ArbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *ArbRollup) ConfirmValid(
+func (vm *arbRollup) ConfirmValid(
 	ctx context.Context,
 	deadline common.TimeTicks,
 	outMsgs []value.Value,
@@ -458,7 +477,7 @@ func (vm *ArbRollup) ConfirmValid(
 ) error {
 	//vm.auth.Context = ctx
 	//messages := hashing.CombineMessages(outMsgs)
-	//tx, err := vm.ArbRollup.ConfirmValid(
+	//tx, err := vm.arbRollup.ConfirmValid(
 	//	vm.auth,
 	//	deadline.Val,
 	//	messages,
@@ -474,10 +493,10 @@ func (vm *ArbRollup) ConfirmValid(
 	//return vm.waitForReceipt(ctx, tx, "ConfirmValid")
 
 	//confirmNode
-	err := vm.confirmNode(ctx, deadline, outMsgs, logsAccHash, protoHash, stakerAddresses, stakerProofs, stakerProofOffsets)
-	if err != nil {
-		return err
-	}
+	//err := vm.confirmNode(ctx, deadline, outMsgs, logsAccHash, protoHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+	//if err != nil {
+	//	return err
+	//}
 
 	//
 	//globalInbox.sendMessages(_messages);
@@ -488,7 +507,7 @@ func (vm *ArbRollup) ConfirmValid(
 	return nil
 }
 
-func (vm *ArbRollup) confirmNode(
+func (vm *arbRollup) confirmNode(
 	ctx context.Context,
 	deadline common.TimeTicks,
 	challengeNodeData []common.Address,
@@ -566,7 +585,7 @@ func (vm *ArbRollup) confirmNode(
 	return nil
 }
 
-func (vm *ArbRollup) ConfirmInvalid(
+func (vm *arbRollup) ConfirmInvalid(
 	ctx context.Context,
 	deadline common.TimeTicks,
 	challengeNodeData common.Hash,
@@ -577,7 +596,7 @@ func (vm *ArbRollup) ConfirmInvalid(
 	stakerProofOffsets []*big.Int,
 ) error {
 	//vm.auth.Context = ctx
-	//tx, err := vm.ArbRollup.ConfirmInvalid(
+	//tx, err := vm.arbRollup.ConfirmInvalid(
 	//	vm.auth,
 	//	deadline.Val,
 	//	challengeNodeData,
@@ -596,10 +615,11 @@ func (vm *ArbRollup) ConfirmInvalid(
 		return errors.New("Type is not invalid")
 	}
 
-	return vm.confirmNode(ctx, deadline, challengeNodeData, branch, protoHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+	//return vm.confirmNode(ctx, deadline, challengeNodeData, branch, protoHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+	return nil
 }
 
-func (vm *ArbRollup) StartChallenge(
+func (vm *arbRollup) StartChallenge(
 	ctx context.Context,
 	asserterAddress common.Address,
 	challengerAddress common.Address,
@@ -616,7 +636,7 @@ func (vm *ArbRollup) StartChallenge(
 	challengerPeriodTicks common.TimeTicks,
 ) error {
 	//vm.auth.Context = ctx
-	//tx, err := vm.ArbRollup.StartChallenge(
+	//tx, err := vm.arbRollup.StartChallenge(
 	//	vm.auth,
 	//	asserterAddress,
 	//	challengerAddress,
@@ -643,18 +663,18 @@ func (vm *ArbRollup) StartChallenge(
 	return nil
 }
 
-func (vm *ArbRollup) IsStaked(address common.Address) (bool, error) {
+func (vm *arbRollup) IsStaked(address common.Address) (bool, error) {
 	return false, nil
 }
 
-//func (vm *ArbRollup) VerifyVM(
+//func (vm *arbRollup) VerifyVM(
 //	auth *bind.CallOpts,
 //	config *valmessage.VMConfiguration,
 //	machine [32]byte,
 //) error {
 //	//code, err := vm.contract.Client.CodeAt(auth.Context, vm.address, nil)
 //	// Verify that VM has correct code
-//	vmInfo, err := vm.ArbRollup.Vm(auth)
+//	vmInfo, err := vm.arbRollup.Vm(auth)
 //	if err != nil {
 //		return err
 //	}
@@ -675,7 +695,7 @@ func (vm *ArbRollup) IsStaked(address common.Address) (bool, error) {
 //		return errors.New("VM has different mxa steps")
 //	}
 //
-//	owner, err := vm.ArbRollup.Owner(auth)
+//	owner, err := vm.arbRollup.Owner(auth)
 //	if err != nil {
 //		return err
 //	}
@@ -685,6 +705,6 @@ func (vm *ArbRollup) IsStaked(address common.Address) (bool, error) {
 //	return nil
 //}
 
-//func (vm *ArbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+//func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 //	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, methodName)
 //}

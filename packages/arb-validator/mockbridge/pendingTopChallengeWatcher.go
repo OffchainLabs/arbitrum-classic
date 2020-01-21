@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -61,6 +62,28 @@ func newPendingTopChallengeWatcher(address ethcommon.Address, client *MockArbCli
 		client:                    client,
 		address:                   address,
 	}, nil
+}
+
+func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	//bh := blockId.HeaderHash.ToEthHash()
+	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
+	//	BlockHash: &bh,
+	//	Addresses: []ethcommon.Address{c.address},
+	//	Topics:    c.topics,
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//events := make([]arbbridge.Event, 0, len(logs))
+	//for _, evmLog := range logs {
+	//	event, err := c.parsePendingTopEvent(getLogChainInfo(evmLog), evmLog)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	events = append(events, event)
+	//}
+	//return events, nil
+	return nil, nil
 }
 
 func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {

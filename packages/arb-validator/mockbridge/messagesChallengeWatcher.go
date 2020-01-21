@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -58,6 +59,28 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client *MockArbClien
 	//}
 
 	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, contract: nil}, nil
+}
+
+func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	//bh := blockId.HeaderHash.ToEthHash()
+	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
+	//	BlockHash: &bh,
+	//	Addresses: []ethcommon.Address{c.address},
+	//	Topics:    c.topics,
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//events := make([]arbbridge.Event, 0, len(logs))
+	//for _, evmLog := range logs {
+	//	event, err := c.parseMessagesEvent(getLogChainInfo(evmLog), evmLog)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	events = append(events, event)
+	//}
+	//return events, nil
+	return nil, nil
 }
 
 func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {

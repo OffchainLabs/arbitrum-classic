@@ -35,12 +35,12 @@ func newMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*
 	if err != nil {
 		return nil, err
 	}
-	vm := &MessagesChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &messagesChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *MessagesChallenge) setupContracts() error {
+func (c *messagesChallenge) setupContracts() error {
 	//challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.Client)
 	//if err != nil {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
@@ -50,7 +50,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *messagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
