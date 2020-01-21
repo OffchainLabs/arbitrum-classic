@@ -240,7 +240,16 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 
 	blockReason := chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, false)
 
-	log.Printf("Prepared assertion of %v steps, [%v, %v] with block reason %v and timebounds [%v, %v] on top of leaf %v\n", stepsRun, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), blockReason, beforeHash, afterHash, currentOpinionHash)
+	log.Printf(
+		"Prepared assertion of %v steps, from %v to %v with block reason %v and timebounds [%v, %v] on top of leaf %v\n",
+		stepsRun,
+		beforeHash,
+		afterHash,
+		blockReason,
+		timeBounds.Start.AsInt(),
+		timeBounds.End.AsInt(),
+		currentOpinionHash,
+	)
 
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
