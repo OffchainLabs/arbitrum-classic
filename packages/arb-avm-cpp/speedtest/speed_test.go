@@ -14,81 +14,53 @@
  * limitations under the License.
  */
 
-package main
+package speedtest
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"io/ioutil"
 	"log"
-	"runtime"
 	"strings"
-	"time"
+	"testing"
 )
 
-func runningTimeForAoFile(filePath string) (time.Duration, uint32, error) {
+func runAoFile(b *testing.B, filePath string) {
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
-		return time.Duration(0), 0, err
+		b.Fail()
 	}
 	ckp, err := cmachine.NewCheckpoint(ckpDir, filePath)
 	if err != nil {
-		return time.Duration(0), 0, err
+		b.Fail()
 	}
 	mach, err := ckp.GetInitialMachine()
 	if err != nil {
-		return time.Duration(0), 0, err
+		b.Fail()
 	}
-
-	runtime.GC()
-	oneStepDuration, nsteps := TimeForSteps(mach.Clone(), 1)
-	if nsteps != 1 {
-		return time.Duration(0), 0, errors.New("one-step run didn't execute one step")
-	}
-	runtime.GC()
-	durationToCompletion, nsteps := TimeForSteps(mach.Clone(), 1<<25)
-
-	diffDuration := durationToCompletion - oneStepDuration
-	return diffDuration, nsteps - 1, nil
-}
-
-func TimeForSteps(mach machine.Machine, maxSteps int32) (time.Duration, uint32) {
 	unusedTimeBounds := protocol.NewTimeBounds(0, 0)
-	startTime := time.Now()
-	assn := mach.ExecuteAssertion(maxSteps, unusedTimeBounds)
-	endTime := time.Now()
-	timeDiff := endTime.Sub(startTime)
-	return timeDiff, assn.NumSteps
+	b.ResetTimer()
+	_ = mach.ExecuteAssertion(int32(b.N), unusedTimeBounds)
 }
 
-func main() {
+func BenchmarkInstructions(b *testing.B) {
 	_aos := getAos()
 	for _, fn := range _aos {
-		testAoAndPrint(fn, fn)
-	}
-}
-
-func testAoAndPrint(filePath, nickname string) {
-	fmt.Println("===", nickname)
-	dur, nsteps, err := runningTimeForAoFile(filePath)
-	if err == nil {
-		durPerStep := 1000.0 * float64(nsteps) / float64(dur.Nanoseconds())
-		fmt.Println(nickname, dur, nsteps, durPerStep)
+		b.Run(fn, func(b *testing.B) {
+			runAoFile(b, fn)
+		})
 	}
 }
 
 func getAos() []string {
 	ret := []string{}
-	fileInfos, err := ioutil.ReadDir(".")
+	fileInfos, err := ioutil.ReadDir("./aos/")
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".ao") {
-			ret = append(ret, fileInfo.Name())
+			ret = append(ret, "aos/"+fileInfo.Name())
 		}
 	}
 	return ret

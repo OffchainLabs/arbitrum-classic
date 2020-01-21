@@ -559,7 +559,7 @@ aos = [
 
 for ao in aos:
     makeAoFile(
-        lambda vm: speedTest(vm, ao), "../arb-avm-cpp/speedtest/speed_" + ao + ".ao"
+        lambda vm: speedTest(vm, ao), "../arb-avm-cpp/speedtest/aos/" + ao + ".ao"
     )
 
 # code = arb.compile_block(test_arithmetic)
