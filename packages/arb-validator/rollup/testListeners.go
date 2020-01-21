@@ -26,18 +26,42 @@ import (
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.
 //     If you call this in production, you will be sorry.
 
+type WrongAssertionType int
+
+const (
+	WrongPendingTopAssertion    = 0
+	WrongMessagesSliceAssertion = 1
+	WrongExecutionAssertion     = 2
+)
+
 type evil_WrongAssertionListener struct {
 	*ValidatorChainListener
+	kind WrongAssertionType
 }
 
-func NewEvil_WrongAssertionListener(rollupAddress common.Address, actor arbbridge.ArbRollup) *evil_WrongAssertionListener {
-	return &evil_WrongAssertionListener{NewValidatorChainListener(rollupAddress, actor)}
+func NewEvil_WrongAssertionListener(
+	rollupAddress common.Address,
+	actor arbbridge.ArbRollup,
+	kind WrongAssertionType,
+) *evil_WrongAssertionListener {
+	return &evil_WrongAssertionListener{NewValidatorChainListener(rollupAddress, actor), kind}
 }
 
 func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *preparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
-	assertion.claim.AssertionStub.AfterHash = badHash
-	log.Println("Prepared EVIL assertion")
+	switch lis.kind {
+	case WrongPendingTopAssertion:
+		assertion.claim.AfterPendingTop = badHash
+		log.Println("Prepared EVIL pending top assertion")
+	case WrongMessagesSliceAssertion:
+		assertion.claim.ImportedMessagesSlice = badHash
+		log.Println("Prepared EVIL imported messages assertion")
+	case WrongExecutionAssertion:
+		assertion.claim.AssertionStub.AfterHash = badHash
+		log.Println("Prepared EVIL execution assertion")
+	default:
+		log.Fatal("unrecognized evil listener type")
+	}
 	lis.ValidatorChainListener.AssertionPrepared(ctx, obs, assertion)
 }

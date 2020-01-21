@@ -186,7 +186,7 @@ func validateRollupChain() error {
 		return err
 	}
 
-	validatorListener := rollup.NewEvil_WrongAssertionListener(address, rollupActor)
+	validatorListener := rollup.NewEvil_WrongAssertionListener(address, rollupActor, rollup.WrongExecutionAssertion)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
