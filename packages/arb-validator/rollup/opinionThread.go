@@ -227,6 +227,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	beforePendingTop := beforeState.PendingTop
 	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
 	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
+	hasNewMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
@@ -238,7 +239,9 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 
 	afterHash := mach.Hash()
 
-	log.Printf("Prepared assertion of %v steps, [%v, %v] timebounds from %v to %v on top of leaf %v\n", stepsRun, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), beforeHash, afterHash, currentOpinionHash)
+	blockReason := chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, hasNewMessages)
+
+	log.Printf("Prepared assertion of %v steps, [%v, %v] with block reason %v and timebounds [%v, %v] on top of leaf %v\n", stepsRun, blockReason, timeBounds.Start.AsInt(), timeBounds.End.AsInt(), beforeHash, afterHash, currentOpinionHash)
 
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
