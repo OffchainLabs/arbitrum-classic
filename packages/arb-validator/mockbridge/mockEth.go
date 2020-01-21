@@ -78,6 +78,7 @@ type rollupData struct {
 	escrowRequired *big.Int
 	owner          common.Address
 	events         []arbbridge.Event
+	creation       *structures.BlockId
 }
 
 type void struct{}

@@ -63,6 +63,7 @@ func newRollup(address common.Address, client *MockArbAuthClient) (*arbRollup, e
 			big.NewInt(0),
 			address,
 			events,
+			client.MockEthClient.LatestBlock,
 		}
 		client.MockEthClient.rollups[address] = ru
 	}

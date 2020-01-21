@@ -347,7 +347,7 @@ func (vm *ethRollupWatcher) setupContracts() error {
 //}
 
 func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	return nil, nil
+	return vm.client.MockEthClient.rollups[vm.address].events, nil
 }
 
 func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
@@ -364,5 +364,5 @@ func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 }
 
 func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
-	return nil, nil
+	return vm.client.MockEthClient.rollups[vm.address].creation, nil
 }
