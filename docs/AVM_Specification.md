@@ -121,10 +121,7 @@ The runtime environment will supply values for:
 -   a Value that is the contents of VM’s Inbox
 -   a reference to a “Wallet” object
 
-Implementers and developers can assume that the Runtime Environment will satisfy the following properties:
-
--   Time consistency: if an execution of the gettime instruction returns a lower bound of L, then no later execution of the gettime instruction will return an upper bound less than L.
--   Inbox consistency: If the Inbox instruction returns V at one point in time, and returns a different value W at a later point in time, then (a) V appears as a subtree in the tuple-tree W, and (b) the sequence of messages represented by V is a prefix of the sequence of messages represented by W.
+Implementers and developers can assume that the Runtime Environment will satisfy the "time consistency" property: if the gettime instruction returns a lower bound of L, then all later executions of gettime will return an upper bound greater than or equal to L. This is equivalent to assuming that there is a hidden, non-decreasing time value that is always consistent with the bounds returned by gettime.
 
 ## Inbox and Messages
 
