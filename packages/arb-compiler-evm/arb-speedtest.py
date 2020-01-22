@@ -140,7 +140,7 @@ aos = (
         lambda vm: speedtestBinaryOp_Pushes(vm, 57112352, 5, lambda v: v.signextend()),
     ),
     (
-        "stackempty_stackempty_0_1",
+        "stackempty_pop_stackempty_0_0",
         lambda vm: speedtestUnaryOp(
             vm, 1, lambda v: [v.stackempty(), v.pop(), v.stackempty()]
         ),
