@@ -18,15 +18,18 @@ package speedtest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-func getInsnMultiplier(filePath string) int32 {
+func getInsnMultiplier(filePath string) uint32 {
 	ll := len(filePath)
 	numPopsStr := filePath[ll-4 : ll-3]
 	numPops, err := strconv.Atoi(numPopsStr)
@@ -39,7 +42,7 @@ func getInsnMultiplier(filePath string) int32 {
 		log.Fatal(err)
 	}
 	numExtraUnderscores := strings.Count(filePath, "_") - 2
-	return int32(1 + numExtraUnderscores + numPops + numPushes)
+	return uint32(1 + numExtraUnderscores + numPops + numPushes)
 }
 
 func runAoFile(b *testing.B, filePath string) {
@@ -56,9 +59,13 @@ func runAoFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fail()
 	}
-	unusedTimeBounds := protocol.NewTimeBounds(0, 0)
+
+	unusedTimeBounds := &protocol.TimeBoundsBlocks{
+		common.NewTimeBlocks(big.NewInt(0)),
+		common.NewTimeBlocks(big.NewInt(0)),
+	}
 	b.ResetTimer()
-	_ = mach.ExecuteAssertion(int32(b.N)*insnMultiplier, unusedTimeBounds)
+	_, _ = mach.ExecuteAssertion(uint32(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple())
 }
 
 func nameFromFn(fn string) string {

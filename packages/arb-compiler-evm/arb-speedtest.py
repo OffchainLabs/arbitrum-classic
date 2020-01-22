@@ -199,7 +199,10 @@ aos = (
         "gettime_0_1",
         lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.gettime(), v.pop()]),
     ),
-    ("inbox_0_1", lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.inbox(), v.pop()])),
+    (
+        "inbox_1_1",
+        lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.push(0), v.inbox(), v.pop()]),
+    ),
 )
 
 for ao in aos:
