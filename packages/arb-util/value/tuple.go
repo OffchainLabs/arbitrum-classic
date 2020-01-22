@@ -36,23 +36,23 @@ func init() {
 }
 
 type TupleValue struct {
-	contentsArr [MaxTupleSize]Value
-	itemCount   int8
-	cachedHash  common.Hash
-	size        int64
+	contentsArr     [MaxTupleSize]Value
+	itemCount       int8
+	cachedHash      common.Hash
+	size            int64
+	deferredHashing bool
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1}
+	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, common.Hash{}, 0}
+	ret := TupleValue{contents, size, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret, nil
 }
 
@@ -60,12 +60,12 @@ func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
 	if !IsValidTupleSize(big.NewInt(size)) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0}
+
+	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0, true}
 	for i := int64(0); i < size; i++ {
 		ret.contentsArr[i] = value
 	}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret, nil
 }
 
@@ -81,9 +81,8 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0}
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret
 }
 
@@ -92,7 +91,7 @@ func (tv TupleValue) init2(value1 Value, value2 Value) {
 	tv.contentsArr[1] = value2
 	tv.itemCount = 2
 	tv.size = tv.internalSize()
-	tv.cachedHash = tv.internalHash()
+	tv.deferredHashing = true
 }
 
 func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
@@ -181,7 +180,7 @@ func (tv TupleValue) Clone() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) CloneShallow() Value {
@@ -193,7 +192,7 @@ func (tv TupleValue) CloneShallow() Value {
 			newContents[i] = NewHashOnlyValueFromValue(b)
 		}
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
@@ -202,7 +201,7 @@ func (tv TupleValue) Equal(val Value) bool {
 	} else if val.TypeCode() != TypeCodeTuple {
 		return false
 	} else {
-		return tv.cachedHash == val.(TupleValue).cachedHash
+		return tv.Hash() == val.Hash()
 	}
 }
 
@@ -244,5 +243,9 @@ func (tv TupleValue) internalHash() common.Hash {
 }
 
 func (tv TupleValue) Hash() common.Hash {
+	if tv.deferredHashing {
+		tv.cachedHash = tv.internalHash()
+		tv.deferredHashing = false
+	}
 	return tv.cachedHash
 }
