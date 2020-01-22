@@ -35,7 +35,7 @@ truffle migrate --reset --compile-all --network arbitrum
 cd ../..
 ./scripts/setup_rollup.py --geth demos/pet-shop/contract.ao 3
 
-./scripts/arb_deploy.py validator_states
+./scripts/arb_deploy.py validator-states
 
 # In a third session:
 cd demos/pet-shop && yarn start
