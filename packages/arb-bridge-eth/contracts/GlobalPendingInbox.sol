@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./GlobalWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
+import "./arch/Protocol.sol";
 import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
@@ -32,23 +33,27 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     address internal constant ETH_ADDRESS = address(0);
 
-    mapping(address => bytes32) pending;
+    struct PendingInbox {
+        bytes32 value;
+        uint256 count;
+    }
 
-    function pullPendingMessages() external returns(bytes32) {
-        bytes32 messages = pending[msg.sender];
-        pending[msg.sender] = Value.hashEmptyTuple();
-        return messages;
+    mapping(address => PendingInbox) pending;
+
+    function getPending() external returns(bytes32, uint) {
+        PendingInbox storage pendingInbox = pending[msg.sender];
+        return (pendingInbox.value, pendingInbox.count);
     }
 
     function sendMessages(bytes calldata _messages) external {
-        uint offset = 0;
+        uint256 offset = 0;
         bool valid;
         bytes32 messageHash;
         uint256 destination;
         uint256 value;
         uint256 tokenType;
         bytes memory messageData;
-        uint totalLength = _messages.length;
+        uint256 totalLength = _messages.length;
         while (offset < totalLength) {
             (
                 valid,
@@ -72,8 +77,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function registerForInbox() external {
-        require(pending[msg.sender] == 0, "Pending must be uninitialized");
-        pending[msg.sender] = Value.hashEmptyTuple();
+        require(pending[msg.sender].value == 0, "Pending must be uninitialized");
+        pending[msg.sender].value = Value.hashEmptyTuple();
     }
 
     function sendMessage(
@@ -193,7 +198,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     )
         private
     {
-        if (pending[_destination] != 0) {
+        PendingInbox storage pendingInbox = pending[_destination];
+        if (pendingInbox.value != 0) {
             bytes32 dataHash = Value.deserializeHashed(_data);
             bytes32 txHash = keccak256(
                 abi.encodePacked(
@@ -203,11 +209,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _tokenType
                 )
             );
-            Value.Data[] memory dataValues = new Value.Data[](4);
+            Value.Data[] memory dataValues = new Value.Data[](3);
             dataValues[0] = Value.newHashOnly(dataHash);
-            dataValues[1] = Value.newInt(block.timestamp);
-            dataValues[2] = Value.newInt(block.number);
-            dataValues[3] = Value.newInt(uint(txHash));
+            dataValues[1] = Value.newInt(block.number);
+            dataValues[2] = Value.newInt(uint(txHash));
 
             Value.Data[] memory values = new Value.Data[](4);
             values[0] = Value.newTuple(dataValues);
@@ -216,11 +221,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             values[3] = Value.newInt(uint256(bytes32(_tokenType)));
             bytes32 messageHash =  Value.newTuple(values).hash().hash;
 
-            pending[_destination] = Value.hashTuple([
-                Value.newInt(0),
-                Value.newHashOnly(pending[_destination]),
-                Value.newHashOnly(messageHash)
-            ]);
+            pendingInbox.value = Protocol.addMessageToPending(
+                pendingInbox.value,
+                messageHash
+            );
+            pendingInbox.count++;
         }
 
         emit IGlobalPendingInbox.MessageDelivered(

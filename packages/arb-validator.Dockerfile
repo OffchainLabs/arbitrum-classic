@@ -57,7 +57,7 @@ COPY --chown=user arb-validator/ /home/user/arb-validator/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
-RUN go install -v ./cmd/followerServer ./cmd/coordinatorServer
+RUN go install -v ./cmd/rollupServer
 
 
 FROM alpine:3.9 as arb-validator
@@ -73,24 +73,9 @@ WORKDIR "/home/user/"
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
 COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 
-ENV ID=0 \
-    WAIT_FOR="host.docker.internal:7545" \
-    ETH_URL="ws://host.docker.internal:7546" \
-    COORDINATOR_URL="" \
-    AVM="cpp" \
-    PATH="/home/user/go/bin:${PATH}"
-
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
 COPY --from=arb-avm-cpp /home/user/build /cpp-build
 
-# 1) Waits for host:port if $WAIT_FOR is set
-# 2) Copies address files from ../ to ./ (state volume)
-# 3) Launches follower if $COORDINATOR_URL else launches coordinator
-CMD if [[ ! -z ${WAIT_FOR} ]]; then \
-sleep 2 && while ! nc -z ${WAIT_FOR//:/ }; do sleep 2; done && sleep 2; \
-echo "Finished waiting for ${WAIT_FOR}..."; else echo "Starting..."; fi && \
-T=follower; if [[ -z ${COORDINATOR_URL} ]]; then T=coordinator; fi; cd state &&\
-${T}Server --avm=${AVM} contract.ao private_key.txt validator_addresses.txt \
-    bridge_eth_addresses.json ${ETH_URL} ${COORDINATOR_URL}
+ENTRYPOINT ["/home/user/go/bin/rollupServer"]
 EXPOSE 1235 1236

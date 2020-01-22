@@ -16,6 +16,7 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <string>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
@@ -33,8 +34,12 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDB* db = nullptr;
     auto status =
         rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
+
     if (!status.ok()) {
-        std::cout << "db status " << status.ToString() << std::endl;
+        std::cerr << "rocksdb construction status: " << status.ToString()
+                  << std::endl;
+
+        throw std::exception();
     }
     assert(status.ok());
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
@@ -42,6 +47,10 @@ DataStorage::DataStorage(const std::string& db_path) {
 
 DataStorage::~DataStorage() {
     txn_db->Close();
+}
+
+rocksdb::Status DataStorage::closeDb() {
+    return txn_db->Close();
 }
 
 GetResults DataStorage::getValue(
@@ -67,4 +76,10 @@ std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_unique<Transaction>(transaction);
+}
+
+std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
+    rocksdb::WriteOptions writeOptions;
+    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
+    return std::make_unique<KeyValueStore>(transaction);
 }

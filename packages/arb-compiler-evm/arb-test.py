@@ -484,39 +484,39 @@ vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("math ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/test/opcodetestmath.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodetestmath.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_logic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("logic ", len(vm.code), " codepoints")
-with open("../arb-validator/test/opcodetestlogic.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodetestlogic.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_hash)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("hash ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/test/opcodetesthash.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodetesthash.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_stack)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 # vm.static = 4
 print("stack ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/test/opcodeteststack.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodeteststack.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_dup)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("dup ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/test/opcodetestdup.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodetestdup.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_tuple)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/test/opcodetesttuple.ao", "wb") as f:
+with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)

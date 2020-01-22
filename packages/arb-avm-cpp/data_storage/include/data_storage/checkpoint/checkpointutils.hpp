@@ -21,18 +21,12 @@
 #include <avm_values/tuple.hpp>
 
 struct MachineStateKeys {
-    std::vector<unsigned char> static_val_key;
     std::vector<unsigned char> register_val_key;
     std::vector<unsigned char> datastack_key;
     std::vector<unsigned char> auxstack_key;
-    std::vector<unsigned char> inbox_key;
-    std::vector<unsigned char> inbox_count_key;
-    std::vector<unsigned char> pending_key;
-    std::vector<unsigned char> pending_count_key;
     std::vector<unsigned char> pc_key;
     std::vector<unsigned char> err_pc_key;
     unsigned char status_char;
-    std::vector<unsigned char> blockreason_str;
 };
 
 extern std::unordered_map<int, int> blockreason_type_length;

@@ -1,0 +1,8 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### launch-parity
+### --------------------------------------------------------------------
+
+docker network inspect arb-network >/dev/null 2>&1 || \
+    docker network create --driver bridge arb-network
+docker run --rm -p 7545:7545 -p 7546:7546 --network=arb-network -it --name arb-bridge-eth arb-bridge-eth --geth --chain parity/poa.json

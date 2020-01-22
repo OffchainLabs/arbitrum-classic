@@ -6,7 +6,7 @@ package protocol
 import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	value "github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	math "math"
 )
 
@@ -21,401 +21,118 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type TokenTypeBuf struct {
-	Value                []byte   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type TimeBoundsBlocksBuf struct {
+	Start                *common.TimeBlocksBuf `protobuf:"bytes,1,opt,name=start,proto3" json:"start,omitempty"`
+	End                  *common.TimeBlocksBuf `protobuf:"bytes,2,opt,name=end,proto3" json:"end,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *TokenTypeBuf) Reset()         { *m = TokenTypeBuf{} }
-func (m *TokenTypeBuf) String() string { return proto.CompactTextString(m) }
-func (*TokenTypeBuf) ProtoMessage()    {}
-func (*TokenTypeBuf) Descriptor() ([]byte, []int) {
+func (m *TimeBoundsBlocksBuf) Reset()         { *m = TimeBoundsBlocksBuf{} }
+func (m *TimeBoundsBlocksBuf) String() string { return proto.CompactTextString(m) }
+func (*TimeBoundsBlocksBuf) ProtoMessage()    {}
+func (*TimeBoundsBlocksBuf) Descriptor() ([]byte, []int) {
 	return fileDescriptor_2bc2336598a3f7e0, []int{0}
 }
 
-func (m *TokenTypeBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TokenTypeBuf.Unmarshal(m, b)
+func (m *TimeBoundsBlocksBuf) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeBoundsBlocksBuf.Unmarshal(m, b)
 }
-func (m *TokenTypeBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TokenTypeBuf.Marshal(b, m, deterministic)
+func (m *TimeBoundsBlocksBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeBoundsBlocksBuf.Marshal(b, m, deterministic)
 }
-func (m *TokenTypeBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TokenTypeBuf.Merge(m, src)
+func (m *TimeBoundsBlocksBuf) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeBoundsBlocksBuf.Merge(m, src)
 }
-func (m *TokenTypeBuf) XXX_Size() int {
-	return xxx_messageInfo_TokenTypeBuf.Size(m)
+func (m *TimeBoundsBlocksBuf) XXX_Size() int {
+	return xxx_messageInfo_TimeBoundsBlocksBuf.Size(m)
 }
-func (m *TokenTypeBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_TokenTypeBuf.DiscardUnknown(m)
+func (m *TimeBoundsBlocksBuf) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeBoundsBlocksBuf.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_TokenTypeBuf proto.InternalMessageInfo
+var xxx_messageInfo_TimeBoundsBlocksBuf proto.InternalMessageInfo
 
-func (m *TokenTypeBuf) GetValue() []byte {
+func (m *TimeBoundsBlocksBuf) GetStart() *common.TimeBlocksBuf {
 	if m != nil {
-		return m.Value
+		return m.Start
 	}
 	return nil
 }
 
-type AddressBuf struct {
-	Value                []byte   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+func (m *TimeBoundsBlocksBuf) GetEnd() *common.TimeBlocksBuf {
+	if m != nil {
+		return m.End
+	}
+	return nil
 }
 
-func (m *AddressBuf) Reset()         { *m = AddressBuf{} }
-func (m *AddressBuf) String() string { return proto.CompactTextString(m) }
-func (*AddressBuf) ProtoMessage()    {}
-func (*AddressBuf) Descriptor() ([]byte, []int) {
+type ExecutionAssertionBuf struct {
+	AfterHash            *common.HashBuf `protobuf:"bytes,1,opt,name=afterHash,proto3" json:"afterHash,omitempty"`
+	DidInboxInsn         bool            `protobuf:"varint,2,opt,name=didInboxInsn,proto3" json:"didInboxInsn,omitempty"`
+	NumGas               uint64          `protobuf:"varint,3,opt,name=numGas,proto3" json:"numGas,omitempty"`
+	Messages             [][]byte        `protobuf:"bytes,4,rep,name=messages,proto3" json:"messages,omitempty"`
+	Logs                 [][]byte        `protobuf:"bytes,5,rep,name=logs,proto3" json:"logs,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *ExecutionAssertionBuf) Reset()         { *m = ExecutionAssertionBuf{} }
+func (m *ExecutionAssertionBuf) String() string { return proto.CompactTextString(m) }
+func (*ExecutionAssertionBuf) ProtoMessage()    {}
+func (*ExecutionAssertionBuf) Descriptor() ([]byte, []int) {
 	return fileDescriptor_2bc2336598a3f7e0, []int{1}
 }
 
-func (m *AddressBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_AddressBuf.Unmarshal(m, b)
+func (m *ExecutionAssertionBuf) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecutionAssertionBuf.Unmarshal(m, b)
 }
-func (m *AddressBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_AddressBuf.Marshal(b, m, deterministic)
+func (m *ExecutionAssertionBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecutionAssertionBuf.Marshal(b, m, deterministic)
 }
-func (m *AddressBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddressBuf.Merge(m, src)
+func (m *ExecutionAssertionBuf) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecutionAssertionBuf.Merge(m, src)
 }
-func (m *AddressBuf) XXX_Size() int {
-	return xxx_messageInfo_AddressBuf.Size(m)
+func (m *ExecutionAssertionBuf) XXX_Size() int {
+	return xxx_messageInfo_ExecutionAssertionBuf.Size(m)
 }
-func (m *AddressBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_AddressBuf.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AddressBuf proto.InternalMessageInfo
-
-func (m *AddressBuf) GetValue() []byte {
-	if m != nil {
-		return m.Value
-	}
-	return nil
+func (m *ExecutionAssertionBuf) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecutionAssertionBuf.DiscardUnknown(m)
 }
 
-type MessageBuf struct {
-	Value                *value.ValueBuf      `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	TokenType            *TokenTypeBuf        `protobuf:"bytes,2,opt,name=tokenType,proto3" json:"tokenType,omitempty"`
-	Amount               *value.BigIntegerBuf `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	Sender               *AddressBuf          `protobuf:"bytes,4,opt,name=sender,proto3" json:"sender,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
-}
+var xxx_messageInfo_ExecutionAssertionBuf proto.InternalMessageInfo
 
-func (m *MessageBuf) Reset()         { *m = MessageBuf{} }
-func (m *MessageBuf) String() string { return proto.CompactTextString(m) }
-func (*MessageBuf) ProtoMessage()    {}
-func (*MessageBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2bc2336598a3f7e0, []int{2}
-}
-
-func (m *MessageBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MessageBuf.Unmarshal(m, b)
-}
-func (m *MessageBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MessageBuf.Marshal(b, m, deterministic)
-}
-func (m *MessageBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MessageBuf.Merge(m, src)
-}
-func (m *MessageBuf) XXX_Size() int {
-	return xxx_messageInfo_MessageBuf.Size(m)
-}
-func (m *MessageBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_MessageBuf.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MessageBuf proto.InternalMessageInfo
-
-func (m *MessageBuf) GetValue() *value.ValueBuf {
-	if m != nil {
-		return m.Value
-	}
-	return nil
-}
-
-func (m *MessageBuf) GetTokenType() *TokenTypeBuf {
-	if m != nil {
-		return m.TokenType
-	}
-	return nil
-}
-
-func (m *MessageBuf) GetAmount() *value.BigIntegerBuf {
-	if m != nil {
-		return m.Amount
-	}
-	return nil
-}
-
-func (m *MessageBuf) GetSender() *AddressBuf {
-	if m != nil {
-		return m.Sender
-	}
-	return nil
-}
-
-type TimeBounds struct {
-	StartTime            uint64   `protobuf:"varint,1,opt,name=startTime,proto3" json:"startTime,omitempty"`
-	EndTime              uint64   `protobuf:"varint,2,opt,name=endTime,proto3" json:"endTime,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *TimeBounds) Reset()         { *m = TimeBounds{} }
-func (m *TimeBounds) String() string { return proto.CompactTextString(m) }
-func (*TimeBounds) ProtoMessage()    {}
-func (*TimeBounds) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2bc2336598a3f7e0, []int{3}
-}
-
-func (m *TimeBounds) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TimeBounds.Unmarshal(m, b)
-}
-func (m *TimeBounds) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TimeBounds.Marshal(b, m, deterministic)
-}
-func (m *TimeBounds) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TimeBounds.Merge(m, src)
-}
-func (m *TimeBounds) XXX_Size() int {
-	return xxx_messageInfo_TimeBounds.Size(m)
-}
-func (m *TimeBounds) XXX_DiscardUnknown() {
-	xxx_messageInfo_TimeBounds.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TimeBounds proto.InternalMessageInfo
-
-func (m *TimeBounds) GetStartTime() uint64 {
-	if m != nil {
-		return m.StartTime
-	}
-	return 0
-}
-
-func (m *TimeBounds) GetEndTime() uint64 {
-	if m != nil {
-		return m.EndTime
-	}
-	return 0
-}
-
-type Precondition struct {
-	BeforeHash           *value.HashBuf `protobuf:"bytes,1,opt,name=beforeHash,proto3" json:"beforeHash,omitempty"`
-	TimeBounds           *TimeBounds    `protobuf:"bytes,2,opt,name=timeBounds,proto3" json:"timeBounds,omitempty"`
-	BeforeInbox          *value.HashBuf `protobuf:"bytes,3,opt,name=beforeInbox,proto3" json:"beforeInbox,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
-	XXX_unrecognized     []byte         `json:"-"`
-	XXX_sizecache        int32          `json:"-"`
-}
-
-func (m *Precondition) Reset()         { *m = Precondition{} }
-func (m *Precondition) String() string { return proto.CompactTextString(m) }
-func (*Precondition) ProtoMessage()    {}
-func (*Precondition) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2bc2336598a3f7e0, []int{4}
-}
-
-func (m *Precondition) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Precondition.Unmarshal(m, b)
-}
-func (m *Precondition) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Precondition.Marshal(b, m, deterministic)
-}
-func (m *Precondition) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Precondition.Merge(m, src)
-}
-func (m *Precondition) XXX_Size() int {
-	return xxx_messageInfo_Precondition.Size(m)
-}
-func (m *Precondition) XXX_DiscardUnknown() {
-	xxx_messageInfo_Precondition.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Precondition proto.InternalMessageInfo
-
-func (m *Precondition) GetBeforeHash() *value.HashBuf {
-	if m != nil {
-		return m.BeforeHash
-	}
-	return nil
-}
-
-func (m *Precondition) GetTimeBounds() *TimeBounds {
-	if m != nil {
-		return m.TimeBounds
-	}
-	return nil
-}
-
-func (m *Precondition) GetBeforeInbox() *value.HashBuf {
-	if m != nil {
-		return m.BeforeInbox
-	}
-	return nil
-}
-
-type AssertionStub struct {
-	AfterHash            *value.HashBuf `protobuf:"bytes,1,opt,name=afterHash,proto3" json:"afterHash,omitempty"`
-	NumSteps             uint32         `protobuf:"varint,2,opt,name=numSteps,proto3" json:"numSteps,omitempty"`
-	NumGas               uint64         `protobuf:"varint,3,opt,name=numGas,proto3" json:"numGas,omitempty"`
-	FirstMessageHash     *value.HashBuf `protobuf:"bytes,4,opt,name=firstMessageHash,proto3" json:"firstMessageHash,omitempty"`
-	LastMessageHash      *value.HashBuf `protobuf:"bytes,5,opt,name=lastMessageHash,proto3" json:"lastMessageHash,omitempty"`
-	FirstLogHash         *value.HashBuf `protobuf:"bytes,6,opt,name=firstLogHash,proto3" json:"firstLogHash,omitempty"`
-	LastLogHash          *value.HashBuf `protobuf:"bytes,7,opt,name=lastLogHash,proto3" json:"lastLogHash,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
-	XXX_unrecognized     []byte         `json:"-"`
-	XXX_sizecache        int32          `json:"-"`
-}
-
-func (m *AssertionStub) Reset()         { *m = AssertionStub{} }
-func (m *AssertionStub) String() string { return proto.CompactTextString(m) }
-func (*AssertionStub) ProtoMessage()    {}
-func (*AssertionStub) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2bc2336598a3f7e0, []int{5}
-}
-
-func (m *AssertionStub) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_AssertionStub.Unmarshal(m, b)
-}
-func (m *AssertionStub) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_AssertionStub.Marshal(b, m, deterministic)
-}
-func (m *AssertionStub) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AssertionStub.Merge(m, src)
-}
-func (m *AssertionStub) XXX_Size() int {
-	return xxx_messageInfo_AssertionStub.Size(m)
-}
-func (m *AssertionStub) XXX_DiscardUnknown() {
-	xxx_messageInfo_AssertionStub.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AssertionStub proto.InternalMessageInfo
-
-func (m *AssertionStub) GetAfterHash() *value.HashBuf {
+func (m *ExecutionAssertionBuf) GetAfterHash() *common.HashBuf {
 	if m != nil {
 		return m.AfterHash
 	}
 	return nil
 }
 
-func (m *AssertionStub) GetNumSteps() uint32 {
+func (m *ExecutionAssertionBuf) GetDidInboxInsn() bool {
 	if m != nil {
-		return m.NumSteps
+		return m.DidInboxInsn
 	}
-	return 0
+	return false
 }
 
-func (m *AssertionStub) GetNumGas() uint64 {
-	if m != nil {
-		return m.NumGas
-	}
-	return 0
-}
-
-func (m *AssertionStub) GetFirstMessageHash() *value.HashBuf {
-	if m != nil {
-		return m.FirstMessageHash
-	}
-	return nil
-}
-
-func (m *AssertionStub) GetLastMessageHash() *value.HashBuf {
-	if m != nil {
-		return m.LastMessageHash
-	}
-	return nil
-}
-
-func (m *AssertionStub) GetFirstLogHash() *value.HashBuf {
-	if m != nil {
-		return m.FirstLogHash
-	}
-	return nil
-}
-
-func (m *AssertionStub) GetLastLogHash() *value.HashBuf {
-	if m != nil {
-		return m.LastLogHash
-	}
-	return nil
-}
-
-type AssertionBuf struct {
-	AfterHash            *value.HashBuf    `protobuf:"bytes,1,opt,name=afterHash,proto3" json:"afterHash,omitempty"`
-	NumSteps             uint32            `protobuf:"varint,2,opt,name=numSteps,proto3" json:"numSteps,omitempty"`
-	NumGas               uint64            `protobuf:"varint,3,opt,name=numGas,proto3" json:"numGas,omitempty"`
-	Messages             []*value.ValueBuf `protobuf:"bytes,4,rep,name=messages,proto3" json:"messages,omitempty"`
-	Logs                 []*value.ValueBuf `protobuf:"bytes,5,rep,name=logs,proto3" json:"logs,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
-}
-
-func (m *AssertionBuf) Reset()         { *m = AssertionBuf{} }
-func (m *AssertionBuf) String() string { return proto.CompactTextString(m) }
-func (*AssertionBuf) ProtoMessage()    {}
-func (*AssertionBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2bc2336598a3f7e0, []int{6}
-}
-
-func (m *AssertionBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_AssertionBuf.Unmarshal(m, b)
-}
-func (m *AssertionBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_AssertionBuf.Marshal(b, m, deterministic)
-}
-func (m *AssertionBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AssertionBuf.Merge(m, src)
-}
-func (m *AssertionBuf) XXX_Size() int {
-	return xxx_messageInfo_AssertionBuf.Size(m)
-}
-func (m *AssertionBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_AssertionBuf.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AssertionBuf proto.InternalMessageInfo
-
-func (m *AssertionBuf) GetAfterHash() *value.HashBuf {
-	if m != nil {
-		return m.AfterHash
-	}
-	return nil
-}
-
-func (m *AssertionBuf) GetNumSteps() uint32 {
-	if m != nil {
-		return m.NumSteps
-	}
-	return 0
-}
-
-func (m *AssertionBuf) GetNumGas() uint64 {
+func (m *ExecutionAssertionBuf) GetNumGas() uint64 {
 	if m != nil {
 		return m.NumGas
 	}
 	return 0
 }
 
-func (m *AssertionBuf) GetMessages() []*value.ValueBuf {
+func (m *ExecutionAssertionBuf) GetMessages() [][]byte {
 	if m != nil {
 		return m.Messages
 	}
 	return nil
 }
 
-func (m *AssertionBuf) GetLogs() []*value.ValueBuf {
+func (m *ExecutionAssertionBuf) GetLogs() [][]byte {
 	if m != nil {
 		return m.Logs
 	}
@@ -423,49 +140,30 @@ func (m *AssertionBuf) GetLogs() []*value.ValueBuf {
 }
 
 func init() {
-	proto.RegisterType((*TokenTypeBuf)(nil), "protocol.TokenTypeBuf")
-	proto.RegisterType((*AddressBuf)(nil), "protocol.AddressBuf")
-	proto.RegisterType((*MessageBuf)(nil), "protocol.MessageBuf")
-	proto.RegisterType((*TimeBounds)(nil), "protocol.TimeBounds")
-	proto.RegisterType((*Precondition)(nil), "protocol.Precondition")
-	proto.RegisterType((*AssertionStub)(nil), "protocol.AssertionStub")
-	proto.RegisterType((*AssertionBuf)(nil), "protocol.AssertionBuf")
+	proto.RegisterType((*TimeBoundsBlocksBuf)(nil), "protocol.TimeBoundsBlocksBuf")
+	proto.RegisterType((*ExecutionAssertionBuf)(nil), "protocol.ExecutionAssertionBuf")
 }
 
 func init() { proto.RegisterFile("protocol.proto", fileDescriptor_2bc2336598a3f7e0) }
 
 var fileDescriptor_2bc2336598a3f7e0 = []byte{
-	// 503 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x93, 0x4d, 0x6b, 0xd5, 0x4c,
-	0x14, 0xc7, 0xc9, 0x6d, 0xee, 0xed, 0xbd, 0xa7, 0x69, 0xfb, 0x3c, 0x43, 0x29, 0xa1, 0xb8, 0x28,
-	0x51, 0x41, 0xb0, 0x26, 0x52, 0xbb, 0x10, 0xc5, 0x45, 0x83, 0xa0, 0x05, 0x05, 0x49, 0x2f, 0x2e,
-	0xdc, 0x4d, 0x92, 0x49, 0x6e, 0x68, 0x32, 0x73, 0x99, 0x17, 0xd1, 0x2f, 0xe4, 0x07, 0x11, 0x5c,
-	0xfa, 0x9d, 0x64, 0x26, 0x93, 0x97, 0xd6, 0xe8, 0xce, 0x4d, 0xc8, 0x39, 0xe7, 0xf7, 0x3f, 0xe7,
-	0x7f, 0x0e, 0x09, 0x1c, 0x6c, 0x39, 0x93, 0x2c, 0x63, 0x75, 0x68, 0x5e, 0xd0, 0xb2, 0x8b, 0x4f,
-	0xfe, 0xff, 0x8c, 0x6b, 0x45, 0x22, 0xf3, 0x6c, 0x8b, 0xc1, 0x03, 0xf0, 0xd6, 0xec, 0x86, 0xd0,
-	0xf5, 0xd7, 0x2d, 0x89, 0x55, 0x81, 0x8e, 0x60, 0x6e, 0xca, 0xbe, 0x73, 0xea, 0x3c, 0xf2, 0x92,
-	0x36, 0x08, 0x02, 0x80, 0xcb, 0x3c, 0xe7, 0x44, 0x88, 0x3f, 0x33, 0x3f, 0x1c, 0x80, 0xf7, 0x44,
-	0x08, 0x5c, 0x9a, 0x46, 0x0f, 0xc7, 0xd0, 0xde, 0xf9, 0x61, 0xd8, 0x4e, 0xfd, 0xa8, 0x9f, 0xb1,
-	0x2a, 0xac, 0x0a, 0x5d, 0xc0, 0x4a, 0x76, 0xf3, 0xfd, 0x99, 0x41, 0x8f, 0xc3, 0x7e, 0x81, 0xb1,
-	0xb5, 0x64, 0x00, 0xd1, 0x19, 0x2c, 0x70, 0xc3, 0x14, 0x95, 0xfe, 0x8e, 0x91, 0x1c, 0xd9, 0xee,
-	0x71, 0x55, 0x5e, 0x51, 0x49, 0x4a, 0xc2, 0xb5, 0xc0, 0x32, 0x9a, 0x16, 0x84, 0xe6, 0x84, 0xfb,
-	0xae, 0xa5, 0xfb, 0x01, 0xc3, 0x56, 0x89, 0x65, 0x82, 0xd7, 0x00, 0xeb, 0xaa, 0x21, 0x31, 0x53,
-	0x34, 0x17, 0xe8, 0x1e, 0xac, 0x84, 0xc4, 0x5c, 0xea, 0x94, 0x59, 0xc5, 0x4d, 0x86, 0x04, 0xf2,
-	0x61, 0x97, 0xd0, 0xdc, 0xd4, 0x66, 0xa6, 0xd6, 0x85, 0xc1, 0x37, 0x07, 0xbc, 0x0f, 0x9c, 0x64,
-	0x8c, 0xe6, 0x95, 0xac, 0x18, 0x45, 0x21, 0x40, 0x4a, 0x0a, 0xc6, 0xc9, 0x5b, 0x2c, 0x36, 0xf6,
-	0x28, 0x07, 0xd6, 0xb6, 0x4e, 0x69, 0x0b, 0x23, 0x02, 0x5d, 0x00, 0xc8, 0xde, 0x86, 0xbd, 0xcc,
-	0xc8, 0xf8, 0x60, 0x31, 0x19, 0x71, 0xe8, 0x29, 0xec, 0xb5, 0x3d, 0xae, 0x68, 0xca, 0xbe, 0xd8,
-	0xeb, 0xdc, 0x1d, 0x33, 0x46, 0x82, 0x9f, 0x33, 0xd8, 0xbf, 0x14, 0x82, 0x70, 0xed, 0xf2, 0x5a,
-	0xaa, 0x14, 0x9d, 0xc1, 0x0a, 0x17, 0x92, 0xf0, 0xbf, 0x18, 0x1d, 0x00, 0x74, 0x02, 0x4b, 0xaa,
-	0x9a, 0x6b, 0x49, 0xb6, 0xad, 0xcb, 0xfd, 0xa4, 0x8f, 0xd1, 0x31, 0x2c, 0xa8, 0x6a, 0xde, 0x60,
-	0x61, 0x8c, 0xb8, 0x89, 0x8d, 0xd0, 0x0b, 0xf8, 0xaf, 0xa8, 0xb8, 0x90, 0xf6, 0x73, 0x31, 0x83,
-	0xdc, 0xc9, 0x41, 0xbf, 0x71, 0xe8, 0x39, 0x1c, 0xd6, 0xf8, 0xb6, 0x74, 0x3e, 0x29, 0xbd, 0x8b,
-	0xa1, 0x73, 0xf0, 0x4c, 0xb7, 0x77, 0xac, 0x34, 0xb2, 0xc5, 0xa4, 0xec, 0x16, 0xa3, 0xef, 0xa9,
-	0xdb, 0x74, 0x92, 0xdd, 0xe9, 0x7b, 0x8e, 0x90, 0xe0, 0xbb, 0x03, 0x5e, 0x7f, 0x4f, 0xfd, 0x23,
-	0xfc, 0xfb, 0x73, 0x3e, 0x86, 0x65, 0xd3, 0xee, 0x29, 0x7c, 0xf7, 0x74, 0x67, 0xea, 0x6f, 0xeb,
-	0x01, 0x74, 0x1f, 0xdc, 0x9a, 0x95, 0xc2, 0x9f, 0x4f, 0x83, 0xa6, 0x18, 0xbf, 0xfa, 0xf4, 0xb2,
-	0xac, 0xe4, 0x46, 0xa5, 0x61, 0xc6, 0x9a, 0x88, 0x15, 0x45, 0xb6, 0xc1, 0x15, 0xad, 0x71, 0x2a,
-	0x22, 0xcc, 0xd3, 0x4a, 0x72, 0xd5, 0x44, 0x5b, 0x9c, 0xdd, 0xe8, 0x8e, 0x3a, 0xf3, 0x44, 0xc9,
-	0xaa, 0x8e, 0xba, 0x8f, 0x33, 0x5d, 0x98, 0xb7, 0x67, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x87,
-	0xc9, 0xda, 0xf4, 0x8a, 0x04, 0x00, 0x00,
+	// 278 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x90, 0x41, 0x4b, 0xc3, 0x30,
+	0x1c, 0xc5, 0xa9, 0xeb, 0x46, 0x8d, 0x43, 0x21, 0x63, 0x52, 0x76, 0x2a, 0xbd, 0x58, 0x90, 0xad,
+	0xa0, 0x47, 0xf1, 0x60, 0x41, 0x74, 0xd7, 0xe2, 0xc9, 0x5b, 0x9a, 0xa6, 0x6d, 0x68, 0x93, 0x8c,
+	0xfc, 0x13, 0xd8, 0xe7, 0xf2, 0x13, 0x4a, 0xd2, 0x56, 0xf1, 0xe2, 0xa9, 0xef, 0xbd, 0xfe, 0xf2,
+	0x5e, 0x08, 0xba, 0x3e, 0x69, 0x65, 0x14, 0x55, 0xc3, 0xc1, 0x0b, 0x1c, 0xcd, 0x7e, 0xb7, 0xa1,
+	0x4a, 0x08, 0x25, 0xf3, 0xf1, 0x33, 0xfe, 0x4e, 0x7b, 0xb4, 0xf9, 0xe0, 0x82, 0x15, 0xca, 0xca,
+	0x1a, 0x8a, 0x41, 0xd1, 0x1e, 0x0a, 0xdb, 0xe0, 0x7b, 0xb4, 0x04, 0x43, 0xb4, 0x89, 0x83, 0x24,
+	0xc8, 0xae, 0x1e, 0xb6, 0x87, 0xe9, 0x90, 0x67, 0x67, 0xaa, 0x1c, 0x19, 0x7c, 0x87, 0x16, 0x4c,
+	0xd6, 0xf1, 0xc5, 0x7f, 0xa8, 0x23, 0xd2, 0xaf, 0x00, 0x6d, 0x5f, 0xcf, 0x8c, 0x5a, 0xc3, 0x95,
+	0x7c, 0x01, 0x60, 0xda, 0x09, 0xb7, 0xb7, 0x47, 0x97, 0xa4, 0x31, 0x4c, 0xbf, 0x13, 0xe8, 0xa6,
+	0xcd, 0x9b, 0xb9, 0xc8, 0x65, 0xae, 0xe2, 0x97, 0xc0, 0x29, 0x5a, 0xd7, 0xbc, 0x3e, 0xca, 0x4a,
+	0x9d, 0x8f, 0x12, 0xa4, 0x9f, 0x8e, 0xca, 0x3f, 0x19, 0xbe, 0x45, 0x2b, 0x69, 0xc5, 0x1b, 0x81,
+	0x78, 0x91, 0x04, 0x59, 0x58, 0x4e, 0x0e, 0xef, 0x50, 0x24, 0x18, 0x00, 0x69, 0x19, 0xc4, 0x61,
+	0xb2, 0xc8, 0xd6, 0xe5, 0x8f, 0xc7, 0x18, 0x85, 0x83, 0x6a, 0x21, 0x5e, 0xfa, 0xdc, 0xeb, 0xe2,
+	0xf9, 0xf3, 0xa9, 0xe5, 0xa6, 0xb3, 0x95, 0xbb, 0x4f, 0xae, 0x9a, 0x86, 0x76, 0x84, 0xcb, 0x81,
+	0x54, 0x90, 0x13, 0x5d, 0x71, 0xa3, 0xad, 0xc8, 0x4f, 0x84, 0xf6, 0xae, 0xc0, 0x25, 0x7b, 0x6b,
+	0xf8, 0x90, 0xcf, 0xaf, 0x5e, 0xad, 0xbc, 0x7a, 0xfc, 0x0e, 0x00, 0x00, 0xff, 0xff, 0xab, 0x81,
+	0x4d, 0x2a, 0x98, 0x01, 0x00, 0x00,
 }

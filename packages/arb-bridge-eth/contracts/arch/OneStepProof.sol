@@ -28,9 +28,10 @@ library OneStepProof {
 
     struct ValidateProofData {
         bytes32 beforeHash;
-        uint64[2] timeBounds;
+        uint128[2] timeBoundsBlocks;
         bytes32 beforeInbox;
         bytes32 afterHash;
+        bool    didInboxInsn;
         bytes32 firstMessage;
         bytes32 lastMessage;
         bytes32 firstLog;
@@ -41,9 +42,10 @@ library OneStepProof {
 
     function validateProof(
         bytes32 beforeHash,
-        uint64[2] memory timeBounds,
+        uint128[2] memory timeBoundsBlocks,
         bytes32 beforeInbox,
         bytes32 afterHash,
+        bool    didInboxInsn,
         bytes32 firstMessage,
         bytes32 lastMessage,
         bytes32 firstLog,
@@ -58,9 +60,10 @@ library OneStepProof {
         return checkProof(
             ValidateProofData(
                 beforeHash,
-                timeBounds,
+                timeBoundsBlocks,
                 beforeInbox,
                 afterHash,
+                didInboxInsn,
                 firstMessage,
                 lastMessage,
                 firstLog,
@@ -924,13 +927,18 @@ library OneStepProof {
     function executeInboxInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
-        Value.HashOnly memory beforeInbox
+        Value.HashOnly memory beforeInbox,
+        uint lowerTimeBound
     )
         internal
         pure
         returns (bool)
     {
-        require(val1.hash().hash != beforeInbox.hash, "Inbox instruction was blocked");
+        if (! val1.isInt()) {
+            return false;
+        }
+        require(lowerTimeBound<val1.intVal && beforeInbox.hash==Value.hashEmptyTuple(),
+            "Inbox instruction was blocked");
         machine.addDataStackHashValue(beforeInbox);
         return true;
     }
@@ -1123,7 +1131,7 @@ library OneStepProof {
         return popCount;
     }
 
-    function opGasCost(uint8 opCode) internal pure returns(uint64) {
+    function opGasCost(uint8) internal pure returns(uint64) {
         return 1;
     }
 
@@ -1209,6 +1217,8 @@ library OneStepProof {
         bool correct = true;
         bytes32 messageHash;
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
+        require((_data.didInboxInsn && opCode==OP_INBOX) || (!_data.didInboxInsn && opCode!=OP_INBOX),
+            "Invalid didInboxInsn claim");
         if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_MUL) {
@@ -1367,11 +1377,11 @@ library OneStepProof {
             }
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](2);
-            contents[0] = Value.newInt(_data.timeBounds[0]);
-            contents[1] = Value.newInt(_data.timeBounds[1]);
+            contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
+            contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox));
+            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {

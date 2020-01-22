@@ -61,7 +61,6 @@ class OrigMessage {
     public calldataHash: string;
     public contractID: string;
     public sequenceNum: string;
-    public timestamp: string;
     public blockHeight: ethers.utils.BigNumber;
     public txHash: string;
     public tokenType: string;
@@ -75,9 +74,8 @@ class OrigMessage {
         this.data = ArbValue.sizedByteRangeToBytes(calldata.get(0) as ArbValue.TupleValue);
         this.contractID = ethers.utils.getAddress((calldata.get(1) as ArbValue.IntValue).bignum.toHexString());
         this.sequenceNum = (calldata.get(2) as ArbValue.IntValue).bignum.toHexString();
-        this.timestamp = (wrappedData.get(1) as ArbValue.IntValue).bignum.toHexString();
-        this.blockHeight = (wrappedData.get(2) as ArbValue.IntValue).bignum;
-        this.txHash = (wrappedData.get(3) as ArbValue.IntValue).bignum.toHexString();
+        this.blockHeight = (wrappedData.get(1) as ArbValue.IntValue).bignum;
+        this.txHash = (wrappedData.get(2) as ArbValue.IntValue).bignum.toHexString();
         this.tokenType = (value.get(3) as ArbValue.IntValue).bignum.toHexString();
         this.value = (value.get(2) as ArbValue.IntValue).bignum;
         this.caller = ethers.utils.getAddress((value.get(1) as ArbValue.IntValue).bignum.toHexString());

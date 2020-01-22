@@ -49,48 +49,35 @@ void Machine::initializeMachine(const MachineState& initial_state) {
     machine_state = initial_state;
 }
 
-void Machine::sendOnchainMessage(const Message& msg) {
-    machine_state.sendOnchainMessage(msg);
-}
-
-void Machine::deliverOnchainMessages() {
-    machine_state.deliverOnchainMessages();
-}
-
-void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
-    machine_state.sendOffchainMessages(messages);
-}
-
 Assertion Machine::run(uint64_t stepCount,
-                       uint64_t timeBoundStart,
-                       uint64_t timeBoundEnd) {
-    machine_state.context =
-        AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
-    machine_state.blockReason = NotBlocked{};
+                       uint256_t timeBoundStart,
+                       uint256_t timeBoundEnd,
+                       Tuple messages) {
+    machine_state.context = AssertionContext{
+        TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
-        runOne();
-        if (!nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
+        auto blockReason = runOne();
+        if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
         }
     }
     return {machine_state.context.numSteps, machine_state.context.numGas,
             std::move(machine_state.context.outMessage),
-            std::move(machine_state.context.logs)};
+            std::move(machine_state.context.logs),
+            machine_state.context.didInboxInsn};
 }
 
 bool isErrorCodePoint(const CodePoint& cp) {
     return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
 }
 
-void Machine::runOne() {
+BlockReason Machine::runOne() {
     if (machine_state.state == Status::Error) {
-        machine_state.blockReason = ErrorBlocked();
-        return;
+        return ErrorBlocked();
     }
 
     if (machine_state.state == Status::Halted) {
-        machine_state.blockReason = HaltBlocked();
-        return;
+        return HaltBlocked();
     }
 
     auto& instruction = machine_state.code[machine_state.pc];
@@ -104,7 +91,7 @@ void Machine::runOne() {
             machine_state.pc = machine_state.errpc.pc;
             machine_state.state = Status::Extensive;
         }
-        return;
+        return NotBlocked();
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
@@ -112,24 +99,27 @@ void Machine::runOne() {
         }
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = machine_state.stack.stacksize();
-
+        BlockReason blockReason = NotBlocked();
         try {
-            machine_state.blockReason =
-                machine_state.runOp(instruction.op.opcode);
+            blockReason = machine_state.runOp(instruction.op.opcode);
         } catch (const bad_pop_type& e) {
             machine_state.state = Status::Error;
         } catch (const bad_tuple_index& e) {
             machine_state.state = Status::Error;
         }
         // if not blocked, increment step count and gas count
-        if (nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
+        if (nonstd::get_if<NotBlocked>(&blockReason)) {
             machine_state.context.numSteps++;
             machine_state.context.numGas +=
                 InstructionArbGasCost.at(instruction.op.opcode);
+        } else {
+            if (instruction.op.immediate) {
+                machine_state.stack.popClear();
+            }
         }
 
         if (machine_state.state != Status::Error) {
-            return;
+            return blockReason;
         }
         // if state is Error, clean up stack
         // Clear stack to base for instruction
@@ -143,9 +133,8 @@ void Machine::runOne() {
             machine_state.pc = machine_state.errpc.pc;
             machine_state.state = Status::Extensive;
         }
+        return blockReason;
     }
-
-    return;
 }
 
 SaveResults Machine::checkpoint(CheckpointStorage& storage) {
@@ -159,7 +148,8 @@ bool Machine::restoreCheckpoint(
 }
 
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
-    auto checkpoint_key = GetHashKey(hash());
+    std::vector<unsigned char> checkpoint_key;
+    marshal_uint256_t(hash(), checkpoint_key);
 
     return ::deleteCheckpoint(storage, checkpoint_key);
 }

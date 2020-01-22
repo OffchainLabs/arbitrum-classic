@@ -45,7 +45,6 @@ global_exec_state = Struct(
     [
         ("origin", value.IntType()),
         ("block_number", value.IntType()),
-        ("timestamp", value.IntType()),
         ("txhash", value.IntType()),
         ("current_msg", message.typ),
     ],
@@ -69,14 +68,12 @@ def make_global_exec_state():
     vm.push(0)
     vm.push(0)
     vm.push(0)
-    vm.push(0)
     message.new(vm)
 
     global_exec_state.new(vm)
     global_exec_state.set_val("current_msg")(vm)
     global_exec_state.set_val("origin")(vm)
     global_exec_state.set_val("block_number")(vm)
-    global_exec_state.set_val("timestamp")(vm)
     global_exec_state.set_val("txhash")(vm)
     return vm.stack.items[0]
 
@@ -88,43 +85,35 @@ def update_global_execution_state(vm):
     vm.auxpush()
 
     vm.swap1()
-    vm.dup0()
-    global_exec_state.get("timestamp")(vm)
-    vm.swap1()
     global_exec_state.get("block_number")(vm)
-    vm.swap2()
-    # msg old_timestamp old_block_number
+    vm.swap1()
+    # msg old_block_number
 
     message.get("data")(vm)
     vm.cast(message_blockchain_data.typ)
     vm.dup0()
-    message_blockchain_data.get("timestamp")(vm)
-    # timestamp msg old_timestamp old_block_number
-
-    vm.swap1()
-    vm.swap2()
-    std.arith.max(vm)
-    vm.swap2()
-    # old_block_number msg timestamp
-
-    vm.dup1()
     message_blockchain_data.get("block_number")(vm)
+    # block_number msg old_block_number
+
+    vm.swap1()
+    vm.swap2()
     std.arith.max(vm)
     vm.swap1()
-    # msg block_number timestamp
+    # msg block_number
+
+    # msg block_number
     message_blockchain_data.get("txhash")(vm)
     vm.auxpop()
     vm.dup0()
     message.get("sender")(vm)
 
-    # origin msg txhash block_number timestamp
+    # origin msg txhash block_number
     vm.push(global_exec_state.make())
     vm.cast(global_exec_state.typ)
     global_exec_state.set_val("origin")(vm)
     global_exec_state.set_val("current_msg")(vm)
     global_exec_state.set_val("txhash")(vm)
     global_exec_state.set_val("block_number")(vm)
-    global_exec_state.set_val("timestamp")(vm)
 
 
 @modifies_stack([], [chain_state.typ])
@@ -162,13 +151,6 @@ def get_scratch(vm):
 def get_call_frame(vm):
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
-
-
-@modifies_stack([], [value.IntType()])
-def get_timestamp(vm):
-    get_chain_state(vm)
-    chain_state.get("global_exec_state")(vm)
-    global_exec_state.get("timestamp")(vm)
 
 
 @modifies_stack([], [value.IntType()])

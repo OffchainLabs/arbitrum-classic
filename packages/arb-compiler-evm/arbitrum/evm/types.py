@@ -34,7 +34,6 @@ message_blockchain_data = std.Struct(
     "message_blockchain_data",
     [
         ("data", value.ValueType()),
-        ("timestamp", value.IntType()),
         ("block_number", value.IntType()),
         ("txhash", value.IntType()),
     ],

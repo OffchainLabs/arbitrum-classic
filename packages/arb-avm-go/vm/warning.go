@@ -45,7 +45,7 @@ func (hand *VerboseWarningHandler) Warn(wstr string) {
 		panic("Too many warnings")
 	}
 	if hand.pc != nil {
-		fmt.Println(hand.pc, ":", wstr)
+		fmt.Println(hand.pc.pc, hand.pc.GetCurrentInsnName(), ":", wstr)
 		// fmt.Println(hand.locations[hand.pc.pc], ":", wstr)
 	}
 }

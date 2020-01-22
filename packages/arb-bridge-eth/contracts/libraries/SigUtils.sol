@@ -21,13 +21,13 @@ library SigUtils {
 
     function parseSignature(
         bytes memory _signatures,
-        uint _pos
+        uint256 _pos
     )
-        public
+        internal
         pure
         returns (uint8 v, bytes32 r, bytes32 s)
     {
-        uint offset = _pos * 65;
+        uint256 offset = _pos * 65;
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
@@ -52,7 +52,7 @@ library SigUtils {
     /// @notice Counts the number of signatures in a signatures bytes array. Returns 0 if the length is invalid.
     /// @param _signatures The signatures bytes array
     /// @dev Signatures are 65 bytes long and are densely packed.
-    function countSignatures(bytes memory _signatures) public pure returns (uint) {
+    function countSignatures(bytes memory _signatures) internal pure returns (uint) {
         return _signatures.length % 65 == 0 ? _signatures.length / 65 : 0;
     }
 
@@ -63,18 +63,18 @@ library SigUtils {
         bytes32 _messageHash,
         bytes memory _signatures
     )
-        public
+        internal
         pure
         returns (address[] memory)
     {
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint count = countSignatures(_signatures);
+        uint256 count = countSignatures(_signatures);
         address[] memory addresses = new address[](count);
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        for (uint i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count; i++) {
             (v, r, s) = parseSignature(_signatures, i);
             addresses[i] = ecrecover(
                 prefixedHash,
@@ -93,7 +93,7 @@ library SigUtils {
         bytes32 _messageHash,
         bytes memory _signature
     )
-        public
+        internal
         pure
         returns (address)
     {

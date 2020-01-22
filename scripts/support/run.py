@@ -25,5 +25,6 @@ def run(command, sudo=False, capture_stdout=False, quiet=False):
         return os.system(command)
     try:
         return subprocess.check_output(command, shell=True).decode("utf-8")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as err:
+        print("Got subprocess error", err.output.decode("utf-8"))
         return ""

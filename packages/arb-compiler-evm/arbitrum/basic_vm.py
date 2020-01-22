@@ -48,15 +48,6 @@ class VMEnv:
         self.pending_messages = value.Tuple([])
         self.time_bounds = value.Tuple([0, 100000000])
 
-    def send_message(self, message):
-        self.pending_messages = value.Tuple(
-            [0, self.pending_messages, value.Tuple(message)]
-        )
-
-    def deliver_pending(self):
-        self.messages = value.Tuple([1, self.messages, self.pending_messages])
-        self.pending_messages = value.Tuple([])
-
 
 class Stack:
     def __init__(self, items=None):
@@ -117,11 +108,15 @@ class BasicVM:
             self.stack.push(val)
 
     def inbox(self):
-        if self.stack.peak() == self.env.messages:
+        if (
+            self.env.messages == value.Tuple([])
+            and self.stack.peak() > self.env.time_bounds[0]
+        ):
             raise VMBlocked()
 
         self.stack.pop()
         self.stack.push(self.env.messages)
+        self.env.messages = value.Tuple([])
 
     def send(self):
         msg = self.stack.pop()

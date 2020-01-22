@@ -9,36 +9,61 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 type ArbConnection struct {
-	proxy      ValidatorProxy
-	vmId       []byte
-	privateKey []byte
-	hexPubkey  string
+	proxy        ValidatorProxy
+	vmId         common.Address
+	pendingInbox arbbridge.PendingInbox
 }
 
-func Dial(url string, privateKey []byte, hexPubkey string) (*ArbConnection, error) {
+func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	auth := bind.NewKeyedTransactor(privateKey)
+	client, err := ethbridge.NewEthAuthClient(ethUrl, auth)
+	if err != nil {
+		return nil, err
+	}
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {
 		return nil, err
 	}
-	vmId, err := hexutil.Decode(vmIdStr)
+	vmId := common.HexToAddress(vmIdStr)
+	rollup, err := client.NewRollupWatcher(vmId)
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{proxy, vmId, append([]byte{}, privateKey...), hexPubkey}, nil
+	inboxAddr, err := rollup.InboxAddress(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	pendingInbox, err := client.NewPendingInbox(inboxAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &ArbConnection{proxy, vmId, pendingInbox}, nil
 }
 
 func _nyiError(funcname string) error {
@@ -52,7 +77,7 @@ func _nyiError(funcname string) error {
 // between contract internal errors and the local chain being out of sync.
 func (conn *ArbConnection) CodeAt(
 	ctx context.Context,
-	contract common.Address,
+	contract ethcommon.Address,
 	blockNumber *big.Int,
 ) ([]byte, error) {
 	return nil, _nyiError("CodeAt")
@@ -100,7 +125,7 @@ func (conn *ArbConnection) CallContract(
 // PendingCodeAt returns the code of the given account in the pending state.
 func (conn *ArbConnection) PendingCodeAt(
 	ctx context.Context,
-	account common.Address,
+	account ethcommon.Address,
 ) ([]byte, error) {
 	return nil, _nyiError("PendingCodeAt")
 }
@@ -108,7 +133,7 @@ func (conn *ArbConnection) PendingCodeAt(
 // PendingNonceAt retrieves the current pending nonce associated with an account.
 func (conn *ArbConnection) PendingNonceAt(
 	ctx context.Context,
-	account common.Address,
+	account ethcommon.Address,
 ) (uint64, error) {
 	return 0, nil
 }
@@ -139,63 +164,11 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
-	if err != nil {
-		log.Println("Error converting to SizedByteArray")
-		return err
-	}
-	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
-	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
-
-	arbCallValue, err := value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
-	if err != nil {
-		panic("Unexpected error building arbCallValue")
-	}
-
-	tokenType := [21]byte{}
-	messageHash := solsha3.SoliditySHA3(
-		solsha3.Address(conn.vmId),
-		solsha3.Bytes32(arbCallValue.Hash()),
-		solsha3.Uint256(big.NewInt(0)), // amount
-		tokenType[:],
-	)
-	signedMsg := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
-	sig, err := secp256k1.Sign(signedMsg, conn.privateKey)
+	arbCallValue, err := conn.TxToVal(tx)
 	if err != nil {
 		return err
 	}
-
-	txHash, err := conn.proxy.SendMessage(arbCallValue, conn.hexPubkey, sig)
-	if err != nil {
-		log.Println("SendTransaction: error returned from proxy.SendMessage:", err)
-		return err
-	}
-
-	return func() error {
-		for {
-			resultVal, ok, err := conn.proxy.GetMessageResult(txHash)
-			if err != nil {
-				log.Println("GetMessageResult error:", err)
-				return err
-			}
-			if !ok {
-				time.Sleep(2 * time.Second)
-			} else {
-				result, err := evm.ProcessLog(resultVal)
-				if err != nil {
-					log.Println("GetMessageResultLog error:", err)
-					return err
-				}
-				switch res := result.(type) {
-				case evm.Revert:
-					log.Println("call reverted:", string(res.ReturnVal))
-				default:
-					// do nothing
-				}
-				return nil
-			}
-		}
-	}()
+	return conn.pendingInbox.SendEthMessage(ctx, arbCallValue, conn.vmId, tx.Value())
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -236,7 +209,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	if len(query.Addresses) > 1 {
 		panic("GoArbitrum: subscription can't handle more than one contract address")
 	}
-	addr = query.Addresses[0]
+	addr = common.NewAddressFromEth(query.Addresses[0])
 
 	topics = make([][32]byte, len(query.Topics))
 	for i, sl := range query.Topics {
@@ -248,7 +221,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	return
 }
 
-func _decodeLogInfo(ins *coordinator.LogInfo) (*types.Log, error) {
+func _decodeLogInfo(ins *rollupvalidator.LogInfo) (*types.Log, error) {
 	outs := &types.Log{}
 	addr, err := hexutil.Decode(ins.Address)
 	if err != nil {
@@ -256,7 +229,7 @@ func _decodeLogInfo(ins *coordinator.LogInfo) (*types.Log, error) {
 		return nil, err
 	}
 	copy(outs.Address[:], addr)
-	outs.Topics = make([]common.Hash, len(ins.Topics))
+	outs.Topics = make([]ethcommon.Hash, len(ins.Topics))
 	for i, top := range ins.Topics {
 		decodedTopic, err := hexutil.Decode(top)
 		if err != nil {
@@ -370,4 +343,105 @@ func (sub *subscription) Unsubscribe() {
 // The error channel is closed by Unsubscribe.
 func (sub *subscription) Err() <-chan error {
 	return sub.errChan
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Methods of Deploy Backend
+// CodeAt is implemented above
+
+// TransactionReceipt returns the receipt of a transaction by transaction hash.
+// Note that the receipt is not available for pending transactions.
+func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	if err != nil {
+		log.Println("TransactionReceipt error:", err)
+		return nil, err
+	} else if !ok {
+		return nil, ethereum.NotFound
+	}
+
+	processed, err := evm.ProcessLog(result)
+	if err != nil {
+		log.Println("TransactionReceipt ProcessLog error:", err)
+		return nil, err
+	}
+
+	status := uint64(0)
+	var logs []evm.Log
+	switch res := processed.(type) {
+	case evm.Return:
+		status = 1
+		logs = res.Logs
+	case evm.Stop:
+		status = 1
+		logs = res.Logs
+	default:
+		// Transaction unsuccessful
+	}
+
+	ethMsg := processed.GetEthMsg()
+
+	var evmLogs []*types.Log
+	if logs != nil {
+		for i, l := range logs {
+			addressBytes := l.ContractID.ToBytes()
+
+			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
+			for j, t := range l.Topics {
+				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
+			}
+
+			evmLogs = append(evmLogs, &types.Log{
+				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
+				Topics:      evmParsedTopics,
+				Data:        l.Data,
+				BlockNumber: ethMsg.Data.Number.Uint64(),
+				TxHash:      txHash,
+				TxIndex:     0,
+				BlockHash:   txHash,
+				Index:       uint(i),
+				Removed:     false,
+			})
+		}
+	}
+
+	return &types.Receipt{
+		PostState:         []byte{0},
+		Status:            status,
+		CumulativeGasUsed: 1,
+		Bloom:             types.BytesToBloom([]byte{0}),
+		Logs:              evmLogs,
+		TxHash:            txHash,
+		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
+		GasUsed:           1,
+		BlockHash:         txHash,
+		BlockNumber:       ethMsg.Data.Number,
+		TransactionIndex:  0,
+	}, nil
+}
+
+func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
+	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
+	if err != nil {
+		log.Println("Error converting to SizedByteArray")
+		return nil, err
+	}
+	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
+	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
+
+	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
+}
+
+func (conn *ArbConnection) TxHash(tx *types.Transaction) (common.Hash, error) {
+	arbCallValue, err := conn.TxToVal(tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	tokenType := [21]byte{}
+	return hashing.SoliditySHA3(
+		hashing.Address(conn.vmId),
+		hashing.Bytes32(arbCallValue.Hash()),
+		hashing.Uint256(big.NewInt(0)), // amount
+		tokenType[:],
+	), nil
 }
