@@ -63,7 +63,6 @@ aos = (
         "push_pop_0_0",
         lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.push(0), v.pop()]),
     ),
-    ("dup_pop_0_0", lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.dup0(), v.pop()])),
     ("add_2_1", lambda vm: speedtestBinaryOp_Pushes(vm, 571, 992, lambda v: v.add())),
     ("mul_2_1", lambda vm: speedtestBinaryOp_Pushes(vm, 571, 992, lambda v: v.mul())),
     ("div_2_1", lambda vm: speedtestBinaryOp_Pushes(vm, 571, 9, lambda v: v.div())),
@@ -167,15 +166,34 @@ aos = (
     ),
     (
         "dup2_0_1",
-        lambda vm: speedtestUnaryOp_lis(vm, [0, 1, 2], lambda v: [v.dup1(), v.pop()]),
+        lambda vm: speedtestUnaryOp_lis(vm, [0, 1, 2], lambda v: [v.dup2(), v.pop()]),
+    ),
+    ("swap1_0_0", lambda vm: speedtestUnaryOp_lis(vm, [0, 1], lambda v: [v.swap1()])),
+    (
+        "swap2_0_0",
+        lambda vm: speedtestUnaryOp_lis(vm, [0, 1, 2], lambda v: [v.swap2()]),
     ),
     (
-        "swap1_0_1",
-        lambda vm: speedtestUnaryOp_lis(vm, [0, 1], lambda v: [v.dup1(), v.pop()]),
+        "dup0_tlen_0_1",
+        lambda vm: speedtestUnaryOp(
+            vm, arb.value.Tuple([1, 2, 3, 4]), lambda v: [v.dup0(), v.tlen(), v.pop()]
+        ),
     ),
     (
-        "swap2_0_1",
-        lambda vm: speedtestUnaryOp_lis(vm, [0, 1, 2], lambda v: [v.dup1(), v.pop()]),
+        "dup1_dup1_tget_0_1",
+        lambda vm: speedtestUnaryOp_lis(
+            vm,
+            [2, arb.value.Tuple([1, 2, 3, 4])],
+            lambda v: [v.dup1(), v.dup1(), v.tget(), v.pop()],
+        ),
+    ),
+    (
+        "dup2_dup2_dup2_tset_0_1",
+        lambda vm: speedtestUnaryOp_lis(
+            vm,
+            [2, arb.value.Tuple([1, 2, 3, 4]), 5],
+            lambda v: [v.dup2(), v.dup2(), v.dup2(), v.tset(), v.pop()],
+        ),
     ),
 )
 
