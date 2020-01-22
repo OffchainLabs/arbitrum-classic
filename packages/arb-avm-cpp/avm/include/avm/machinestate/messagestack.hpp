@@ -35,11 +35,8 @@ struct MessageStack {
 
     bool isEmpty() const { return messages == Tuple{}; }
 
-    void addMessages(Tuple&& new_messages) {
-        if (new_messages != Tuple()) {
-            messages = Tuple(uint256_t(1), std::move(messages),
-                             std::move(new_messages), pool);
-        }
+    void addMessage(Tuple new_message) {
+        messages = Tuple(std::move(messages), std::move(new_message), pool);
     }
 
     void clear() { messages = Tuple{}; }

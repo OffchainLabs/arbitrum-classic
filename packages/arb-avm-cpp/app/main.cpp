@@ -52,69 +52,36 @@ int main(int argc, char* argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
 
     auto msg1DataRaw = hexStringToBytes(
-        "0706050b03030303030303002d35a8a200000000000000000000000000000000000000"
+        "06000000000000000000000000000000000000000000000000000000000000000afe00"
+        "7ec3319c8348582438bc9155320d99b577975540efd44c0878246f4007110342060000"
         "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000400000000000000000000000000895521964d724c8362a36608aaf09a"
-        "3d7d0a0445000000000000000000000000000000000000000000000000000000000000"
-        "00000a0000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000");
-    auto msg2DataRaw = hexStringToBytes(
-        "0706050b030b0303030303030300000000010000000000000000000000000000000000"
-        "00000000000000000000000303030303003477ee2e0000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "00000000000000000000002400000000000000000000000000895521964d724c8362a3"
-        "6608aaf09a3d7d0a044500000000000000000000000000000000000000000000000000"
-        "000000000000000c000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000");
-    auto msg3DataRaw = hexStringToBytes(
-        "0706050b030b0303030303030300000000020000000000000000000000000000000000"
-        "00000000000000000000000303030303003477ee2e0000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "00000000000000000000002400000000000000000000000000895521964d724c8362a3"
-        "6608aaf09a3d7d0a044500000000000000000000000000000000000000000000000000"
-        "000000000000000e000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000");
+        "000000000000000000c7711f36b2c13e00821ffd9ec54b04a60aefbd1b070000000000"
+        "0000000000000000d02bec7ee5ee73a271b144e829eed1c19218d81300ffffffffffff"
+        "fffffffffffffffffffffffffffffffffffffffffffffffffffe000000000000000000"
+        "000000000000000000000000000000000000000000000000050b030b03030303030303"
+        "000aefbd1b000000000000000000000000000000000000000000000000000000000303"
+        "0303030070a08231000000000000000000000000c7711f36b2c13e00821ffd9ec54b04"
+        "a6000000000000000000000000000000000000000000000000000000000000000024");
 
     auto msg1DataRawPtr = const_cast<const char*>(msg1DataRaw.data());
-    auto msg2DataRawPtr = const_cast<const char*>(msg2DataRaw.data());
-    auto msg3DataRawPtr = const_cast<const char*>(msg3DataRaw.data());
 
-    auto msg1Data = deserialize_value(msg1DataRawPtr, mach.getPool());
-    auto msg2Data = deserialize_value(msg2DataRawPtr, mach.getPool());
-    auto msg3Data = deserialize_value(msg3DataRawPtr, mach.getPool());
-
-    auto msg1 = Tuple{msg1Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
-                      &mach.getPool()};
-    auto msg2 = Tuple{msg2Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
-                      &mach.getPool()};
-    auto msg3 = Tuple{msg3Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
-                      &mach.getPool()};
+    auto msg1 =
+        nonstd::get<Tuple>(deserialize_value(msg1DataRawPtr, mach.getPool()));
 
     MessageStack stack1{&mach.getPool()};
-    MessageStack stack2{&mach.getPool()};
-    MessageStack stack3{&mach.getPool()};
 
-    stack1.addMessages(Tuple{uint256_t{0}, Tuple{}, msg1, &mach.getPool()});
-    stack2.addMessages(Tuple{uint256_t{0}, Tuple{}, msg2, &mach.getPool()});
-    stack3.addMessages(Tuple{uint256_t{0}, Tuple{}, msg3, &mach.getPool()});
+    stack1.addMessage(std::move(msg1));
+
+    std::cout << "Msg " << msg1 << std::endl;
 
     Assertion assertion1 =
         mach.run(stepCount, 0, 0, std::move(stack1.messages));
-    Assertion assertion2 =
-        mach.run(stepCount, 0, 0, std::move(stack2.messages));
-    Assertion assertion3 =
-        mach.run(stepCount, 0, 0, std::move(stack3.messages));
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    std::cout << assertion1.stepCount << " " << assertion2.stepCount << " "
-              << assertion3.stepCount << " steps in " << elapsed.count() * 1000
-              << " milliseconds" << std::endl;
+    std::cout << assertion1.stepCount << " "
+              << " steps in " << elapsed.count() * 1000 << " milliseconds"
+              << std::endl;
     std::cout << to_hex_str(mach.hash()) << "\n" << mach << std::endl;
     std::this_thread::sleep_for(1s);
     return 0;

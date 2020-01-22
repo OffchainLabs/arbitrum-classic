@@ -587,8 +587,7 @@ MessageStack getMsgStack1() {
     uint256_t msg_token_type = 1;
     auto pending_msg =
         Tuple{val_data, destination, currency, msg_token_type, &pool};
-    auto msgs = Tuple{uint256_t{0}, Tuple(), pending_msg, &pool};
-    inbox_stack.addMessages(std::move(msgs));
+    inbox_stack.addMessage(std::move(pending_msg));
 
     return inbox_stack;
 }
@@ -604,8 +603,7 @@ MessageStack getMsgStack2() {
         Tuple{val_data, destination, currency, msg_token_type, &pool};
 
     auto pending_stack = MessageStack(&pool);
-    auto msgs = Tuple{uint256_t{0}, Tuple(), pending_msg, &pool};
-    pending_stack.addMessages(std::move(msgs));
+    pending_stack.addMessage(std::move(pending_msg));
 
     return pending_stack;
 }
