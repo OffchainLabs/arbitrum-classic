@@ -56,11 +56,11 @@ func newRollup(address common.Address, client *MockArbAuthClient) (*arbRollup, e
 
 	ru, ok := client.MockEthClient.rollups[address]
 	if !ok {
-		var events []arbbridge.Event
+		events := make(map[*structures.BlockId][]arbbridge.Event)
 		ru = &rollupData{Uninitialized,
-			common.TimeTicks{},
-			0,
-			big.NewInt(0),
+			common.TimeFromSeconds(10),
+			250000,
+			big.NewInt(10),
 			address,
 			events,
 			client.MockEthClient.LatestBlock,
@@ -123,22 +123,20 @@ func (vm *arbRollup) refundStaker(staker common.Address) {
 	delete(vm.stakers, staker)
 	//transfer stake requirement
 	// ???
-	append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events, arbbridge.MaybeEvent{
-		Event: arbbridge.StakeRefundedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.LatestBlock,
-			},
-			Staker: staker,
+	_ = append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events[vm.Client.MockEthClient.LatestBlock], arbbridge.StakeRefundedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: vm.Client.MockEthClient.LatestBlock,
 		},
+		Staker: staker,
 	})
-	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
-		Event: arbbridge.StakeRefundedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.LatestBlock,
-			},
-			Staker: staker,
-		},
-	})
+	//vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+	//	Event: arbbridge.StakeRefundedEvent{
+	//		ChainInfo: arbbridge.ChainInfo{
+	//			BlockId: vm.Client.MockEthClient.LatestBlock,
+	//		},
+	//		Staker: staker,
+	//	},
+	//})
 
 }
 func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error {

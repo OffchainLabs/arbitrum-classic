@@ -77,7 +77,7 @@ type rollupData struct {
 	maxSteps       uint32
 	escrowRequired *big.Int
 	owner          common.Address
-	events         []arbbridge.Event
+	events         map[*structures.BlockId][]arbbridge.Event
 	creation       *structures.BlockId
 }
 
@@ -87,6 +87,7 @@ var Void void
 
 // mockEthData one per 'URL'
 type mockEthdata struct {
+	sync.Mutex
 	Vm          map[common.Address]*VmData
 	channels    map[common.Address]*channelData
 	rollups     map[common.Address]*rollupData
@@ -174,6 +175,7 @@ func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
 
 func mine(m *mockEthdata, t time.Time) {
 	fmt.Println("mining - time = ", t)
+	m.Lock()
 	nextBlock := new(structures.BlockId)
 	nextBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
 	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
@@ -182,6 +184,7 @@ func mine(m *mockEthdata, t time.Time) {
 	m.blockNumbers[nextBlock.Height] = nextBlock
 	m.blockHashes[nextBlock.HeaderHash] = nextBlock
 	fmt.Println("mined block number", nextBlock)
+	m.Unlock()
 	m.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.NewTimeEvent{
 			arbbridge.ChainInfo{

@@ -18,7 +18,6 @@ package mockbridge
 
 import (
 	"context"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -35,6 +34,11 @@ func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (
 	if err != nil {
 		return nil, err
 	}
+	// create new execution challenge contract
+	//executionContract, err := executionchallenge.NewExecutionChallenge(address, client)
+	//if err != nil {
+	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	//}
 	vm := &ExecutionChallenge{bisectionChallenge: bisectionChallenge}
 	//err = vm.setupContracts()
 	return vm, err
@@ -158,6 +162,49 @@ func (c *ExecutionChallenge) OneStepProof(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "OneStepProof")
+	//return nil
+	//	bytes32 precondition = Protocol.generatePreconditionHash(
+	//		_beforeHash,
+	//		_timeBoundsBlocks,
+	//		_beforeInbox
+	//	);
+	//	requireMatchesPrevState(
+	//		ChallengeUtils.executionHash(
+	//			1,
+	//			precondition,
+	//			Protocol.generateAssertionHash(
+	//				_afterHash,
+	//				_didInboxInsns,
+	//				_gas,
+	//				_firstMessage,
+	//				_lastMessage,
+	//				_firstLog,
+	//				_lastLog
+	//	)
+	//)
+	//);
+	//
+	//	uint256 correctProof = OneStepProof.validateProof(
+	//		_beforeHash,
+	//		_timeBoundsBlocks,
+	//		_beforeInbox,
+	//		_afterHash,
+	//		_didInboxInsns,
+	//		_firstMessage,
+	//		_lastMessage,
+	//		_firstLog,
+	//		_lastLog,
+	//		_gas,
+	//		_proof
+	//	);
+	//
+	//	require(correctProof == 0, OSP_PROOF);
+	//	emit OneStepProofCompleted();
+
+	// verify precondition
+	// run one step
+	// verify post condition
+	// emit OneStepProofCompleted();
 	return nil
 }
 
@@ -168,19 +215,17 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) error {
-	//bisectionHashes := make([][32]byte, 0, len(assertions))
-	//for i := range assertions {
-	//	bisectionHash := [32]byte{}
-	//	copy(bisectionHash[:], solsha3.SoliditySHA3(
-	//		solsha3.Bytes32(preconditions[i].Hash()),
-	//		solsha3.Bytes32(assertions[i].Hash()),
-	//	))
-	//	bisectionHashes = append(bisectionHashes, bisectionHash)
-	//}
-	//return c.bisectionChallenge.ChooseSegment(
-	//	ctx,
-	//	assertionToChallenge,
-	//	bisectionHashes,
-	//)
-	return nil
+	bisectionHashes := make([]common.Hash, 0, len(assertions))
+	for i := range assertions {
+		stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
+		bisectionHashes = append(
+			bisectionHashes,
+			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
+		)
+	}
+	return c.bisectionChallenge.chooseSegment(
+		ctx,
+		assertionToChallenge,
+		bisectionHashes,
+	)
 }

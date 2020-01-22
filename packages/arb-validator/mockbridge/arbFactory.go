@@ -23,11 +23,14 @@ func (con *ArbFactory) CreateRollup(
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
+	events := make(map[*structures.BlockId][]arbbridge.Event)
 	con.client.MockEthClient.rollups[owner] = &rollupData{Uninitialized,
 		params.GracePeriod,
 		params.MaxExecutionSteps,
 		params.StakeRequirement,
 		owner,
+		events,
+		con.client.MockEthClient.LatestBlock,
 	}
 	//event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
 	//if err != nil {

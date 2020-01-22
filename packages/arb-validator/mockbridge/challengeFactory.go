@@ -70,5 +70,7 @@ func (con *challengeFactory) CreateChallenge(
 	//}
 	//
 	//return common.NewAddressFromEth(receipt.Logs[0].Address), nil
+	// create challenge
+	// return address of new challenge contract
 	return *new(common.Address), nil
 }
