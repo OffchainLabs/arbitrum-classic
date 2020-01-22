@@ -32,6 +32,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
+var db1 = "testman1db"
+var db2 = "testman2db"
+
 /********************************************/
 /*    Validators                            */
 /********************************************/
@@ -121,7 +124,15 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client1, true, "testman1-", false)
+	if err := os.RemoveAll(db1); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.RemoveAll(db2); err != nil {
+		log.Fatal(err)
+	}
+
+	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, db1, true, client1, true, false)
 	if err != nil {
 		return err
 	}
@@ -134,7 +145,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 	manager1.AddListener(validatorListener1)
 
-	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, true, client2, true, "testman2-", false)
+	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, db2, true, client2, true, false)
 	if err != nil {
 		return err
 	}
@@ -344,4 +355,11 @@ func TestFib(t *testing.T) {
 		}
 	})
 
+	if err := os.RemoveAll(db1); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.RemoveAll(db2); err != nil {
+		log.Fatal(err)
+	}
 }
