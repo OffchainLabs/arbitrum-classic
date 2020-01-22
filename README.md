@@ -33,7 +33,7 @@ yarn docker:geth
 cd demos/pet-shop
 truffle migrate --reset --compile-all --network arbitrum
 cd ../..
-./scripts/setup_rollup.py demos/pet-shop/contract.ao 3
+./scripts/setup_rollup.py --geth demos/pet-shop/contract.ao 3
 
 ./scripts/arb_deploy.py validator_states
 
