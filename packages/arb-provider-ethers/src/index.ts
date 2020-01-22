@@ -15,6 +15,9 @@
  */
 'use strict';
 
-import { ArbProvider } from './lib/provider';
+import * as ERC20 from './lib/ArbERC20.json';
+import * as ERC721 from './lib/ArbERC20.json';
 
-export = ArbProvider;
+export { ERC20 };
+export { ERC721 };
+export { ArbProvider } from './lib/provider';

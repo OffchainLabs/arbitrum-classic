@@ -3,7 +3,8 @@
 
 var $ = require("jquery");
 const ethers = require("ethers");
-const ArbProvider = require("arb-provider-ethers");
+const ArbProvider = require("arb-provider-ethers").ArbProvider;
+const ArbERC20 = require("arb-provider-ethers").ERC20;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
@@ -74,7 +75,7 @@ class App {
 
     let arbTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
-      testToken.abi,
+      ArbERC20.abi,
       this.arbProvider
     );
 

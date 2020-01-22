@@ -13,9 +13,15 @@
     "url": "https://github.com/offchainlabs/arbitrum/issues"
   },
   "homepage": "https://offchainlabs.com/",
+  "scripts": {
+    "build": "truffle compile"
+  },
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
     "arb-provider-truffle": "^0.2.0"
+  },
+  "devDependencies": {
+    "truffle": "^5.0.33"
   },
   "workspaces": {
     "nohoist": [
