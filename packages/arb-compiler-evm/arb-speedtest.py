@@ -195,6 +195,11 @@ aos = (
             lambda v: [v.dup2(), v.dup2(), v.dup2(), v.tset(), v.pop()],
         ),
     ),
+    (
+        "gettime_0_1",
+        lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.gettime(), v.pop()]),
+    ),
+    ("inbox_0_1", lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.inbox(), v.pop()])),
 )
 
 for ao in aos:
