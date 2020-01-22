@@ -23,10 +23,13 @@ git clone -b master --depth=1 -c advice.detachedHead=false https://github.com/Of
 cd arbitrum
 yarn
 yarn install:deps
+yarn build
 cd demos/pet-shop
 truffle migrate --reset --compile-all --network arbitrum
 cd ../..
-./scripts/arb_deploy.py demos/pet-shop/contract.ao 3
+./scripts/setup_rollup.py demos/pet-shop/contract.ao 3
+
+./scripts/arb_deploy.py validator_states
 
 # Start the frontend in another session:
 cd demos/pet-shop && yarn start
