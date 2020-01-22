@@ -462,6 +462,9 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *Chai
 func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
 	for stakingAddress, _ := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
+		if staker == nil {
+			continue
+		}
 		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
 		if newValidNode.depth > staker.location.depth {
 			proof1 := GeneratePathProof(staker.location, newValidNode)
