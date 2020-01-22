@@ -45,4 +45,9 @@ struct DbResult {
     T data;
 };
 
+struct DataResults {
+    rocksdb::Status status;
+    std::vector<unsigned char> data;
+};
+
 #endif /* checkpointresult_hpp */

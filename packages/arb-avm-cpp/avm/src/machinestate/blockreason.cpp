@@ -16,70 +16,33 @@
 
 #include <avm/machinestate/blockreason.hpp>
 
-struct CheckpointSerializer {
-    std::vector<unsigned char> operator()(const NotBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-        return return_value;
-    }
-    std::vector<unsigned char> operator()(const HaltBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-
-        return return_value;
-    }
-    std::vector<unsigned char> operator()(const ErrorBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-
-        return return_value;
-    }
-    std::vector<unsigned char> operator()(const BreakpointBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-
-        return return_value;
-    }
-
-    std::vector<unsigned char> operator()(const InboxBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-
-        std::vector<unsigned char> inbox_char_vector;
-        marshal_uint256_t(val.inbox, inbox_char_vector);
-
-        return_value.insert(return_value.end(), inbox_char_vector.begin(),
-                            inbox_char_vector.end());
-
-        return return_value;
-    }
-};
-
-std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
-    return nonstd::visit(CheckpointSerializer{}, val);
-}
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 constexpr BlockType InboxBlocked::type;
 
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
-    auto blocktype = static_cast<BlockType>(data[0]);
-    switch (blocktype) {
-        case Inbox: {
-            auto buff = reinterpret_cast<const char*>(&data[2]);
-            auto inbox = deserializeUint256t(buff);
-            return InboxBlocked(inbox);
-        }
-        case Halt: {
-            return HaltBlocked();
-        }
-        case Error: {
-            return ErrorBlocked();
-        }
-        case Breakpoint: {
-            return BreakpointBlocked();
-        }
-        default: {
-            return NotBlocked();
-        }
-    }
+std::ostream& operator<<(std::ostream& os, const NotBlocked&) {
+    return os << "NotBlocked";
+}
+
+std::ostream& operator<<(std::ostream& os, const HaltBlocked&) {
+    return os << "HaltBlocked";
+}
+
+std::ostream& operator<<(std::ostream& os, const ErrorBlocked&) {
+    return os << "ErrorBlocked";
+}
+
+std::ostream& operator<<(std::ostream& os, const BreakpointBlocked&) {
+    return os << "BreakpointBlocked";
+}
+
+std::ostream& operator<<(std::ostream& os, const InboxBlocked& val) {
+    return os << "InboxBlocked(" << val.timout << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const BlockReason& val) {
+    nonstd::visit([&](const auto& reason) { os << reason; }, val);
+    return os;
 }

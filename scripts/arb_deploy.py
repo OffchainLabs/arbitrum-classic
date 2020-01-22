@@ -21,19 +21,18 @@
 import argparse
 import os
 import sys
-import shutil
+import json
 
+import build_validator_docker
 import setup_states
 from support.run import run
 
 # package configuration
 NAME = "arb-deploy"
 DESCRIPTION = "Manage Arbitrum dockerized deployments"
-ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # filename constants
 DOCKER_COMPOSE_FILENAME = "docker-compose.yml"
-VALIDATOR_STATE_DIRNAME = "validator-states/validator"
 
 ### ----------------------------------------------------------------------------
 ### docker-compose template
@@ -48,39 +47,21 @@ services:
         image: qoomon/docker-host
         cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
         restart: on-failure
-
-    arb-validator-coordinator:
+    arb-validator0:
         depends_on:
             - dockerhost
         volumes:
             - %s:/home/user/state
-            - %s:/home/user/contract.ao
         image: arb-validator
-        build:
-            context: %s
-            dockerfile: %s
-        environment:
-            - ID=0
-            - WAIT_FOR=dockerhost:7545
-            - ETH_URL=ws://dockerhost:%s
-            - AVM=%s
+        command: validate --rpc state/contract.ao state/private_key.txt ws://dockerhost:%s %s
         ports:
             - '1235:1235'
             - '1236:1236'
 """
 
 
-def compose_header(
-    state_abspath, contract_abspath, cvalidator, dockerfile, ws_port, avm
-):
-    return COMPOSE_HEADER % (
-        state_abspath,
-        contract_abspath,
-        cvalidator,
-        dockerfile,
-        ws_port,
-        avm,
-    )
+def compose_header(state_abspath, ws_port, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, ws_port, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -91,35 +72,15 @@ COMPOSE_VALIDATOR = """
             - dockerhost
         volumes:
             - %s:/home/user/state
-            - %s:/home/user/contract.ao
         image: arb-validator
-        environment:
-            - ID=%d
-            - WAIT_FOR=arb-validator-coordinator:1236
-            - ETH_URL=ws://dockerhost:%s
-            - COORDINATOR_URL=wss://arb-validator-coordinator:1236/ws
-            - AVM=%s
+        command: validate state/contract.ao state/private_key.txt ws://dockerhost:%s %s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, contract_abspath, ws_port, avm):
-    return COMPOSE_VALIDATOR % (
-        validator_id,
-        state_abspath,
-        contract_abspath,
-        validator_id,
-        ws_port,
-        avm,
-    )
+def compose_validator(validator_id, state_abspath, ws_port, rollup_address):
+    return COMPOSE_VALIDATOR % (validator_id, state_abspath, ws_port, rollup_address)
 
-
-DOCKERFILE_CACHE = """FROM alpine:3.9
-RUN mkdir /build /cpp-build /rocksdb
-FROM scratch
-COPY --from=0 /cpp-build /cpp-build
-COPY --from=0 /rocksdb /rocksdb
-COPY --from=0 /build /build"""
 
 ### ----------------------------------------------------------------------------
 ### Deploy
@@ -127,47 +88,25 @@ COPY --from=0 /build /build"""
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(
-    contract_name, n_validators, sudo_flag, build_flag, up_flag, ws_port, avm, node_type
-):
-    # Bootstrap the build cache if it does not exist
-    def bootstrap_build_cache(name):
-        if (
-            run(
-                "docker images -q %s" % name,
-                capture_stdout=True,
-                quiet=True,
-                sudo=sudo_flag,
-            )
-            == ""
-        ):
-            run("mkdir -p .tmp")
-            run('echo "%s" > .tmp/Dockerfile' % DOCKERFILE_CACHE)
-            run("docker build -t %s .tmp" % name, sudo=sudo_flag)
-            run("rm -rf .tmp")
-
-    bootstrap_build_cache("arb-avm-cpp")
-    bootstrap_build_cache("arb-validator")
-
+def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
+    with open(os.path.join(validator_states_dir, "config.json")) as json_file:
+        data = json.load(json_file)
+        rollup_address = data["rollup_address"]
+        n_validators = data["validator_count"]
+        ws_port = data["websocket_port"]
+
     # Overwrite DOCKER_COMPOSE_FILENAME
     states_path = os.path.abspath(
-        os.path.join(setup_states.VALIDATOR_STATES, setup_states.VALIDATOR_STATE)
+        os.path.join(validator_states_dir, setup_states.VALIDATOR_STATE)
     )
     compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
-    contract = os.path.abspath(contract_name)
-    contents = compose_header(
-        states_path % 0,
-        contract,
-        os.path.abspath(os.path.join(ROOT_DIR, "packages")),
-        "arb-validator.Dockerfile",
-        ws_port,
-        avm,
-    ) + "".join(
+
+    contents = compose_header(states_path % 0, ws_port, rollup_address) + "".join(
         [
-            compose_validator(i, states_path % i, contract, ws_port, avm)
+            compose_validator(i, states_path % i, ws_port, rollup_address)
             for i in range(1, n_validators)
         ]
     )
@@ -176,25 +115,12 @@ def deploy(
 
     # Build
     if not up_flag or build_flag:
-        if run("docker-compose -f %s build" % compose, sudo=sudo_flag) != 0:
+        if build_validator_docker.build_validator(sudo_flag) != 0:
             exit(1)
-
-    # Nuke old validator states if it exists
-    if os.path.isdir(setup_states.VALIDATOR_STATES):
-        shutil.rmtree(setup_states.VALIDATOR_STATES)
-
-    # Setup validator states
-    setup_states.setup_validator_states_docker(
-        os.path.abspath(contract_name), n_validators, node_type, sudo_flag
-    )
-
-    # if not os.path.isdir(setup_states.VALIDATOR_STATES):
-    #     setup_states.setup_validator_states_ethbridge(
-    #         os.path.abspath(contract_name), n_validators, sudo_flag
-    #     )
 
     # Run
     if not build_flag or up_flag:
+        print("Deploying", n_validators, "validators for rollup", rollup_address)
         run("docker-compose -f %s up" % compose, sudo=sudo_flag)
 
 
@@ -238,20 +164,8 @@ def halt_docker(sudo_flag):
 def main():
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
-    parser.add_argument("contract", help="The Arbitrum bytecode contract to deploy.")
-    parser.add_argument(
-        "n_validators", type=int, help="The number of validators to deploy."
-    )
+    parser.add_argument("dir", help="The validator states directory.")
     # Optional
-    node_group = parser.add_mutually_exclusive_group()
-    node_group.add_argument(
-        "--parity",
-        action="store_true",
-        help="Run against a parity local node (default)",
-    )
-    node_group.add_argument(
-        "--ganache", action="store_true", help="Run against a ganache local node"
-    )
 
     parser.add_argument(
         "-s",
@@ -271,35 +185,10 @@ def main():
         "--up", action="store_true", dest="up", help="Run docker-compose up only"
     )
 
-    parser.add_argument(
-        "-a",
-        "--avm",
-        default="cpp",
-        dest="avm",
-        choices=["cpp", "go", "test"],
-        help="Control the avm backend (default cpp)",
-    )
-
     args = parser.parse_args()
 
-    ws_port = "7546"
-    if args.ganache:
-        ws_port = "7545"
-        node_type = "ganache"
-    else:
-        node_type = "parity"
-
     # Deploy
-    deploy(
-        args.contract,
-        args.n_validators,
-        args.sudo,
-        args.build,
-        args.up,
-        ws_port,
-        args.avm,
-        node_type,
-    )
+    deploy(args.sudo, args.build, args.up, args.dir)
 
 
 if __name__ == "__main__":

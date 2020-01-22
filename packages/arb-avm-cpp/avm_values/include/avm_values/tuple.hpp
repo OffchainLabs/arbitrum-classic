@@ -153,6 +153,12 @@ inline bool operator==(const Tuple& val1, const Tuple& val2) {
     return hash(val1) == hash(val2);
 }
 
+inline bool operator!=(const Tuple& val1, const Tuple& val2) {
+    if (val1.tuple_size() == val2.tuple_size())
+        return false;
+    return hash(val1) != hash(val2);
+}
+
 std::ostream& operator<<(std::ostream& os, const Tuple& val);
 
 #endif /* tuple_hpp */

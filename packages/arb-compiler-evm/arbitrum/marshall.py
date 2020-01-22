@@ -44,7 +44,7 @@ def marshall_op(val, file):
 
 
 def marshall_codepoint(val, file):
-    file.write(val.pc.to_bytes(8, byteorder="big", signed=True))
+    file.write(val.pc.to_bytes(8, byteorder="big", signed=False))
     marshall_op(val.op, file)
     val.next_hash = b"\0" * (32 - len(val.next_hash)) + val.next_hash
     file.write(val.next_hash)

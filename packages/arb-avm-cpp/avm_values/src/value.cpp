@@ -76,19 +76,20 @@ void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf) {
 }
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
-    buf.push_back(NUM);
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-    if (nonstd::holds_alternative<Tuple>(val))
+    if (nonstd::holds_alternative<Tuple>(val)) {
         marshal_Tuple(nonstd::get<Tuple>(val), buf);
-    else if (nonstd::holds_alternative<uint256_t>(val))
+    } else if (nonstd::holds_alternative<uint256_t>(val)) {
+        buf.push_back(NUM);
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-    else if (nonstd::holds_alternative<CodePoint>(val))
+    } else if (nonstd::holds_alternative<CodePoint>(val)) {
         marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
+    }
 }
 
 void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
@@ -121,6 +122,7 @@ void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
 }
 
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
+    buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
 

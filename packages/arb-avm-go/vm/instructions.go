@@ -19,13 +19,13 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -152,6 +152,9 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
+		if _, ok := op.(value.ImmediateOperation); ok {
+			PopStackBox(m, mods)
+		}
 		return mods, blocked.reason
 	}
 	m.context.NotifyStep(gas)
@@ -679,17 +682,19 @@ func insnRset(state *Machine) (StackMods, error) {
 
 func insnInbox(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 1)
-	x, mods, err := PopStackBox(state, mods)
+	timeout, mods, err := PopStackInt(state, mods)
 	if err != nil {
 		return mods, err
 	}
-	inboxVal := state.ReadInbox()
-	mods = PushStackBox(state, mods, inboxVal)
-	if value.Eq(x, inboxVal) {
-		return mods, BlockedError{machine.InboxBlocked{
-			Inbox: value.NewHashOnlyValueFromValue(inboxVal),
-		}}
+	biTimeout := timeout.BigInt()
+	lowerTimeBound := state.GetStartTime()
+	inboxVal := state.GetInbox()
+	if (biTimeout.Cmp(lowerTimeBound.BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
+		mods = PushStackInt(state, mods, timeout)
+		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
+	state.context.ReadInbox()
+	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
 }
@@ -921,7 +926,7 @@ func insnTget(state *Machine) (StackMods, error) {
 	if err != nil {
 		// index out of range
 		fmt.Println(state.stack)
-		fmt.Println("pc = ", state.pc.GetPC())
+		fmt.Println("pc = ", state.pc.pc, state.pc.GetPC().Op)
 		return mods, fmt.Errorf("insn_tget: index %v out of range %v", index.BigInt(), tuple.Len())
 	}
 
@@ -1011,13 +1016,16 @@ func insnSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackBox(state, mods, state.GetTimeBounds())
+	mods = PushStackTuple(state, mods, value.NewTuple2(state.GetStartTime(), state.GetEndTime()))
 	state.IncrPC()
 	return mods, nil
 }
 
 func insnDebug(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
+	val, _ := state.stack.Pop()
+	log.Println("Debug", val)
+	state.stack.Push(val)
 	state.IncrPC()
 	return mods, nil
 }

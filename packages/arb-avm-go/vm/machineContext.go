@@ -17,24 +17,72 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type MachineAssertionContext struct {
-	machine    *Machine
-	timeBounds *protocol.TimeBounds
-	numSteps   uint32
-	numGas     uint64
-	outMsgs    []value.Value
-	logs       []value.Value
+type Context interface {
+	Send(message value.Value)
+	GetStartTime() value.IntValue
+	GetEndTime() value.IntValue
+	NotifyStep(uint64)
+	LoggedValue(value.Value)
+	GetInbox() value.TupleValue
+	ReadInbox()
+
+	OutMessageCount() int
 }
 
-func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *MachineAssertionContext {
+type NoContext struct{}
+
+func (m *NoContext) LoggedValue(data value.Value) {
+
+}
+
+func (m *NoContext) GetInbox() value.TupleValue {
+	return value.NewEmptyTuple()
+}
+
+func (m *NoContext) ReadInbox() {
+
+}
+
+func (m *NoContext) Send(message value.Value) {
+
+}
+
+func (m *NoContext) OutMessageCount() int {
+	return 0
+}
+
+func (m *NoContext) GetStartTime() value.IntValue {
+	return value.NewInt64Value(0)
+}
+
+func (m *NoContext) GetEndTime() value.IntValue {
+	return value.NewInt64Value(0)
+}
+
+func (m *NoContext) NotifyStep(uint64) {
+}
+
+type MachineAssertionContext struct {
+	machine      *Machine
+	timeBounds   *protocol.TimeBoundsBlocks
+	inbox        value.TupleValue
+	didInboxInsn bool
+	numSteps     uint32
+	numGas       uint64
+	outMsgs      []value.Value
+	logs         []value.Value
+}
+
+func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) *MachineAssertionContext {
 	ret := &MachineAssertionContext{
 		m,
 		timeBounds,
+		inbox,
+		false,
 		0,
 		0,
 		make([]value.Value, 0),
@@ -46,6 +94,15 @@ func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *Ma
 
 func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
+}
+
+func (m *MachineAssertionContext) GetInbox() value.TupleValue {
+	return m.inbox
+}
+
+func (m *MachineAssertionContext) ReadInbox() {
+	m.didInboxInsn = true
+	m.inbox = value.NewEmptyTuple()
 }
 
 func (ac *MachineAssertionContext) Send(message value.Value) {
@@ -64,8 +121,12 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (ac *MachineAssertionContext) GetTimeBounds() value.Value {
-	return ac.timeBounds.AsValue()
+func (m *MachineAssertionContext) GetStartTime() value.IntValue {
+	return value.NewIntValue(m.timeBounds.Start.AsInt())
+}
+
+func (m *MachineAssertionContext) GetEndTime() value.IntValue {
+	return value.NewIntValue(m.timeBounds.End.AsInt())
 }
 
 func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
@@ -73,11 +134,11 @@ func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 	ac.numGas = ac.numGas + numGas
 }
 
-func (ac *MachineAssertionContext) Finalize(m *Machine) *protocol.Assertion {
-	ac.machine.SetContext(&machine.NoContext{})
-	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.numGas, ac.outMsgs, ac.logs)
+func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint32) {
+	ac.machine.SetContext(&NoContext{})
+	return protocol.NewExecutionAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
 }
 
 func (ac *MachineAssertionContext) EndContext() {
-	ac.machine.SetContext(&machine.NoContext{})
+	ac.machine.SetContext(&NoContext{})
 }

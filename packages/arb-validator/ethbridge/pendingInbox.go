@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,128 +18,144 @@ package ethbridge
 
 import (
 	"bytes"
+	"context"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type PendingInbox struct {
+type pendingInbox struct {
 	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
 	client             *ethclient.Client
+	auth               *TransactAuth
 }
 
-func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
+func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract, client}, nil
+	return &pendingInbox{globalPendingInboxContract, client, auth}, nil
 }
 
-func (con *PendingInbox) SendMessage(
-	auth *bind.TransactOpts,
-	msg protocol.Message,
-) (*types.Receipt, error) {
+func (con *pendingInbox) SendMessage(
+	ctx context.Context,
+	msg valprotocol.Message,
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return nil, err
+		return err
 	}
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.SendMessage(
-		auth,
-		msg.Destination,
+		con.auth.getAuth(ctx),
+		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth, tx, "SendMessage")
+	return con.waitForReceipt(ctx, tx, "SendMessage")
 }
 
-func (con *PendingInbox) ForwardMessage(
-	auth *bind.TransactOpts,
-	msg protocol.Message,
+func (con *pendingInbox) ForwardMessage(
+	ctx context.Context,
+	msg valprotocol.Message,
 	sig []byte,
-) (*types.Receipt, error) {
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return nil, err
+		return err
 	}
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.ForwardMessage(
-		auth,
-		msg.Destination,
+		con.auth.getAuth(ctx),
+		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
 		sig,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth, tx, "ForwardMessage")
+	return con.waitForReceipt(ctx, tx, "ForwardMessage")
 }
 
-func (con *PendingInbox) SendEthMessage(
-	auth *bind.TransactOpts,
+func (con *pendingInbox) SendEthMessage(
+	ctx context.Context,
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
-) (*types.Receipt, error) {
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
-		return nil, err
+		return err
 	}
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.SendEthMessage(
 		&bind.TransactOpts{
-			From:     auth.From,
-			Signer:   auth.Signer,
-			GasLimit: auth.GasLimit,
+			From:     con.auth.auth.From,
+			Signer:   con.auth.auth.Signer,
+			GasLimit: con.auth.auth.GasLimit,
 			Value:    amount,
+			Context:  ctx,
 		},
-		destination,
+		destination.ToEthAddress(),
 		dataBuf.Bytes(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth, tx, "SendEthMessage")
+	return con.waitForReceipt(ctx, tx, "SendEthMessage")
 }
 
-func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) (*types.Receipt, error) {
+func (con *pendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
-			From:     auth.From,
-			Signer:   auth.Signer,
-			GasLimit: auth.GasLimit,
+			From:     con.auth.auth.From,
+			Signer:   con.auth.auth.Signer,
+			GasLimit: con.auth.auth.GasLimit,
 			Value:    amount,
+			Context:  ctx,
 		},
-		dest,
+		dest.ToEthAddress(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth, tx, "DepositFunds")
+	return con.waitForReceipt(ctx, tx, "DepositFunds")
 }
 
-func (con *PendingInbox) GetTokenBalance(
-	auth *bind.CallOpts,
+func (con *pendingInbox) GetTokenBalance(
+	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
 	return con.GlobalPendingInbox.GetTokenBalance(
-		auth,
-		tokenContract,
-		user,
+		&bind.CallOpts{Context: ctx},
+		tokenContract.ToEthAddress(),
+		user.ToEthAddress(),
 	)
+}
+
+func (con *pendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+	return waitForReceipt(ctx, con.client, con.auth.auth.From, tx, methodName)
 }

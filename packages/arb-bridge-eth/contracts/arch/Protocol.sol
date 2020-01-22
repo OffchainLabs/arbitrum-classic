@@ -28,7 +28,7 @@ library Protocol {
         uint256 _value,
         address _destination
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -42,10 +42,10 @@ library Protocol {
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
-        uint64[2] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         bytes32 _beforeInbox
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -61,22 +61,22 @@ library Protocol {
 
     function generateAssertionHash(
         bytes32 _afterHash,
-        uint32 _numSteps,
-        uint64 _gas,
+        bool    _didInboxInsn,
+        uint64  _numGas,
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
         bytes32 _lastLogHash
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
         return keccak256(
             abi.encodePacked(
                 _afterHash,
-                _numSteps,
-                _gas,
+                _didInboxInsn,
+                _numGas,
                 _firstMessageHash,
                 _lastMessageHash,
                 _firstLogHash,
@@ -85,15 +85,22 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory _messages) public pure returns (bytes32){
+    function generateLastMessageHash(bytes memory _messages) internal pure returns (bytes32) {
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
-        uint amountCount = _messages.length;
-        for (uint i = 0; i < amountCount; i++) {
+        uint256 amountCount = _messages.length;
+        for (uint256 i = 0; i < amountCount; i++) {
             (offset, msgHash) = Value.deserializeValidHashed(_messages, offset);
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
         return hashVal;
+    }
+
+    function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
+        return Value.hashTuple([
+            Value.newHashOnly(pending),
+            Value.newHashOnly(message)
+        ]);
     }
 }

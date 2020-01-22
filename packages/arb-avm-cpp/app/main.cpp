@@ -88,15 +88,27 @@ int main(int argc, char* argv[]) {
     auto msg2Data = deserialize_value(msg2DataRawPtr, mach.getPool());
     auto msg3Data = deserialize_value(msg3DataRawPtr, mach.getPool());
 
-    mach.sendOnchainMessage(Message{msg1Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
-    Assertion assertion1 = mach.run(stepCount, 0, 0);
-    mach.sendOnchainMessage(Message{msg2Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
-    Assertion assertion2 = mach.run(stepCount, 0, 0);
-    mach.sendOnchainMessage(Message{msg3Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
-    Assertion assertion3 = mach.run(stepCount, 0, 0);
+    auto msg1 = Tuple{msg1Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+    auto msg2 = Tuple{msg2Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+    auto msg3 = Tuple{msg3Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+
+    MessageStack stack1{&mach.getPool()};
+    MessageStack stack2{&mach.getPool()};
+    MessageStack stack3{&mach.getPool()};
+
+    stack1.addMessages(Tuple{uint256_t{0}, Tuple{}, msg1, &mach.getPool()});
+    stack2.addMessages(Tuple{uint256_t{0}, Tuple{}, msg2, &mach.getPool()});
+    stack3.addMessages(Tuple{uint256_t{0}, Tuple{}, msg3, &mach.getPool()});
+
+    Assertion assertion1 =
+        mach.run(stepCount, 0, 0, std::move(stack1.messages));
+    Assertion assertion2 =
+        mach.run(stepCount, 0, 0, std::move(stack2.messages));
+    Assertion assertion3 =
+        mach.run(stepCount, 0, 0, std::move(stack3.messages));
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;

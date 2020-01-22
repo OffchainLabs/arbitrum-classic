@@ -29,9 +29,11 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"runtime"
 	"unsafe"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -58,7 +60,7 @@ func cdestroyVM(cMachine *Machine) {
 	C.machineDestroy(cMachine.c)
 }
 
-func (m *Machine) Hash() (ret [32]byte) {
+func (m *Machine) Hash() (ret common.Hash) {
 	C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	return
 }
@@ -84,8 +86,18 @@ func (m *Machine) CurrentStatus() machine.Status {
 	}
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	cBlockReason := C.machineLastBlockReason(m.c)
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	var currentTimeBuf bytes.Buffer
+	err := value.NewIntValue(currentTime.AsInt()).Marshal(&currentTimeBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	newMessagesInt := 0
+	if newMessages {
+		newMessagesInt = 1
+	}
+	currentTimeData := currentTimeBuf.Bytes()
+	cBlockReason := C.machineIsBlocked(m.c, unsafe.Pointer(&currentTimeData[0]), C.int(newMessagesInt))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -96,70 +108,61 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawInboxHash := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
-		inboxHash, err := value.UnmarshalValue(bytes.NewReader(rawInboxHash[:]))
+		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val.data), cBlockReason.val.length)
+		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
 		}
-		inboxHashInt, ok := inboxHash.(value.IntValue)
+		timeoutInt, ok := timeout.(value.IntValue)
 		if !ok {
 			panic("Inbox hash must be an int")
 		}
-		C.free(cBlockReason.val1.data)
-		return machine.InboxBlocked{Inbox: value.NewHashOnlyValue(inboxHashInt.ToBytes(), 0)}
+		C.free(cBlockReason.val.data)
+		return machine.InboxBlocked{Timeout: timeoutInt}
 	default:
 	}
 	return nil
-}
-
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	var hash [32]byte
-	C.machineInboxHash(m.c, unsafe.Pointer(&hash[0]))
-	return value.NewHashOnlyValue(hash, 0)
-}
-
-func (m *Machine) PendingMessageCount() uint64 {
-	return uint64(C.machinePendingMessageCount(m.c))
 }
 
 func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	var buf bytes.Buffer
-	err := value.MarshalValue(msg.AsValue(), &buf)
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint32,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+) (*protocol.ExecutionAssertion, uint32) {
+	startTime := timeBounds.Start.AsInt()
+	endTime := timeBounds.End.AsInt()
+
+	var startTimeBuf bytes.Buffer
+	err := value.NewIntValue(startTime).Marshal(&startTimeBuf)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	msgData := buf.Bytes()
-	C.machineSendOnchainMessage(m.c, unsafe.Pointer(&msgData[0]))
-}
 
-func (m *Machine) DeliverOnchainMessage() {
-	C.machineDeliverOnchainMessages(m.c)
-}
+	var endTimeBuf bytes.Buffer
+	err = value.NewIntValue(endTime).Marshal(&endTimeBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	var buf bytes.Buffer
-	for _, msg := range msgs {
-		err := value.MarshalValue(msg.AsValue(), &buf)
-		if err != nil {
-			panic(err)
-		}
+	err = value.MarshalValue(inbox, &buf)
+	if err != nil {
+		log.Fatal(err)
 	}
-	msgsData := buf.Bytes()
-	if len(msgsData) > 0 {
-		C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgs)))
-	}
-}
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
+	startTimeData := startTimeBuf.Bytes()
+	endTimeData := endTimeBuf.Bytes()
+	msgData := buf.Bytes()
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		C.uint64_t(timeBounds.StartTime),
-		C.uint64_t(timeBounds.EndTime),
+		unsafe.Pointer(&startTimeData[0]),
+		unsafe.Pointer(&endTimeData[0]),
+		unsafe.Pointer(&msgData[0]),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
@@ -167,13 +170,13 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
 	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
-	return protocol.NewAssertion(
+	return protocol.NewExecutionAssertion(
 		m.Hash(),
-		uint32(assertion.numSteps),
+		int(assertion.didInboxInsn) != 0,
 		uint64(assertion.numGas),
 		outMessageVals,
 		logVals,
-	)
+	), uint32(assertion.numSteps)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
@@ -188,14 +191,11 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return success == 1
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {
-		cCheckpointName := C.CString(checkpointName)
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, cCheckpointName)
-
-		C.free(unsafe.Pointer(cCheckpointName))
+		success := C.restoreMachine(m.c, cCheckpointStorage.c, unsafe.Pointer(&machineHash[0]))
 
 		return success == 1
 	} else {

@@ -19,6 +19,10 @@
 
 #include <rocksdb/utilities/transaction_db.h>
 
+#include <boost/algorithm/hex.hpp>
+
+#include <iostream>
+
 std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
     const std::string& string_value) {
     if (string_value.empty()) {
@@ -80,6 +84,19 @@ SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
     int ref_count;
 
     if (results.status.ok()) {
+        if (results.stored_value != value) {
+            std::cout << "Different value for key: ";
+            boost::algorithm::hex(hash_key.begin(), hash_key.end(),
+                                  std::ostream_iterator<char>{std::cout, ""});
+            std::cout << "\nPrevious value: ";
+            boost::algorithm::hex(results.stored_value.begin(),
+                                  results.stored_value.end(),
+                                  std::ostream_iterator<char>{std::cout, ""});
+            std::cout << "\nNew Value: ";
+            boost::algorithm::hex(value.begin(), value.end(),
+                                  std::ostream_iterator<char>{std::cout, ""});
+            std::cout << std::endl;
+        }
         assert(results.stored_value == value);
         ref_count = results.reference_count + 1;
     } else {
@@ -116,9 +133,9 @@ GetResults Transaction::getData(
     auto get_status = transaction->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
-        auto tuple = parseCountAndValue(return_value);
-        auto stored_val = std::get<1>(tuple);
-        auto ref_count = std::get<0>(tuple);
+        auto parsed_values = parseCountAndValue(return_value);
+        auto stored_val = std::get<1>(parsed_values);
+        auto ref_count = std::get<0>(parsed_values);
 
         return GetResults{ref_count, get_status, stored_val};
     } else {

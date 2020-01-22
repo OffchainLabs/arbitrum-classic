@@ -20,14 +20,21 @@ pragma solidity ^0.5.3;
 interface IChallengeFactory {
 
     function createChallenge(
-        address[2] calldata _players,
-        uint128[2] calldata _escrows,
-        uint32 _challengePeriod,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] calldata _timeBounds,
-        bytes32 _assertionHash
+        address payable _asserter,
+        address payable _challenger,
+        uint256 _challengePeriodTicks,
+        bytes32 _challengeHash,
+        uint256 challengeType
     )
         external
+        returns(address);
+
+    function generateCloneAddress(
+        address asserter,
+        address challenger,
+        bytes32 codeHash
+    )
+        external
+        view
         returns(address);
 }

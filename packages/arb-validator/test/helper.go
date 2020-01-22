@@ -19,6 +19,9 @@ package test
 import (
 	"net"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func checkPort(port string) bool {
@@ -40,4 +43,13 @@ func GetEthUrl() string {
 	} else {
 		return "ws://127.0.0.1:7545"
 	}
+}
+
+func SetupAuth(hexKey string) (*bind.TransactOpts, error) {
+	privateKey, err := crypto.HexToECDSA(hexKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return bind.NewKeyedTransactor(privateKey), nil
 }

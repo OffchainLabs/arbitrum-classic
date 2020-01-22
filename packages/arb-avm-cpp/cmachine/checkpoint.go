@@ -27,10 +27,12 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"runtime"
 	"unsafe"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type CheckpointStorage struct {
@@ -55,6 +57,12 @@ func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, erro
 	return returnVal, nil
 }
 
+func (checkpoint *CheckpointStorage) CloseCheckpointStorage() bool {
+	success := C.closeCheckpointStorage(checkpoint.c)
+
+	return success == 1
+}
+
 func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 	C.destroyCheckpointStorage(cCheckpointStorage.c)
 }
@@ -71,11 +79,8 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 	return ret, nil
 }
 
-func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) bool {
-	cCheckpointName := C.CString(checkpointName)
-	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
-
-	C.free(unsafe.Pointer(cCheckpointName))
+func (checkpoint *CheckpointStorage) DeleteCheckpoint(machineHash common.Hash) bool {
+	success := C.deleteCheckpoint(checkpoint.c, unsafe.Pointer(&machineHash[0]))
 
 	return success == 1
 }
@@ -94,8 +99,11 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetValue(hashValue [32]byte) value.Value {
+func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value {
 	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
+	if cData.data == nil {
+		return nil
+	}
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))
@@ -108,13 +116,27 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue [32]byte) value.Value {
 	return val
 }
 
-func (checkpoint *CheckpointStorage) DeleteValue(hashValue [32]byte) bool {
+func (checkpoint *CheckpointStorage) DeleteValue(hashValue common.Hash) bool {
 	success := C.deleteValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
 
 	return success == 1
 }
 
 func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
+	if len(key) == 0 {
+		return false
+	}
+
+	if len(data) == 0 {
+		success := C.saveData(checkpoint.c,
+			unsafe.Pointer(&key[0]),
+			C.int(len(key)),
+			unsafe.Pointer(nil),
+			C.int(0),
+		)
+		return success == 1
+	}
+
 	success := C.saveData(checkpoint.c,
 		unsafe.Pointer(&key[0]),
 		C.int(len(key)),
@@ -126,6 +148,11 @@ func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
 
 func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
 	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
+
+	if cData.length == 0 {
+		return nil
+	}
+
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))

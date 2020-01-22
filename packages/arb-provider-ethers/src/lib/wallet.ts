@@ -32,8 +32,15 @@ export class ArbWallet extends ethers.Signer {
     public inboxManagerCache?: GlobalPendingInbox;
     public seq: ethers.utils.BigNumber;
     public pubkey?: string;
+    public channelMode: boolean;
 
-    constructor(client: ArbClient, contracts: Map<string, Contract>, signer: ethers.Signer, provider: ArbProvider) {
+    constructor(
+        client: ArbClient,
+        contracts: Map<string, Contract>,
+        signer: ethers.Signer,
+        provider: ArbProvider,
+        channelMode: boolean,
+    ) {
         super();
         this.contracts = contracts;
         this.signer = signer;
@@ -41,6 +48,7 @@ export class ArbWallet extends ethers.Signer {
         this.client = client;
         this.seq = ethers.utils.bigNumberify(0);
         this.pubkey = undefined;
+        this.channelMode = channelMode;
     }
 
     public async initialize(): Promise<void> {
@@ -105,7 +113,7 @@ export class ArbWallet extends ethers.Signer {
             const args = [vmId, arbMsg.hash(), value, ethers.utils.hexZeroPad('0x00', 21)];
             const messageHash = ethers.utils.solidityKeccak256(['address', 'bytes32', 'uint256', 'bytes21'], args);
             const fromAddress = await this.getAddress();
-            if (value.eq(0)) {
+            if (this.channelMode && value.eq(0)) {
                 const messageHashBytes = ethers.utils.arrayify(messageHash);
                 const sig = await this.signer.signMessage(messageHashBytes);
                 if (!this.pubkey) {

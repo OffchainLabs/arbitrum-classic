@@ -20,14 +20,17 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+
 	"github.com/ethereum/go-ethereum/common/math"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 const BytesPerInt = 32
 
-var hashOfOne [32]byte
-var hashOfZero [32]byte
+var hashOfOne common.Hash
+var hashOfZero common.Hash
 var IntegerZero IntValue
 
 func init() {
@@ -55,16 +58,8 @@ func NewBooleanValue(val bool) IntValue {
 	return NewInt64Value(0)
 }
 
-func NewIntValueFromString(str string) Value {
-	val, valid := math.ParseBig256(str)
-	if !valid {
-		return NewEmptyTuple()
-	}
-	return NewIntValue(val)
-}
-
 func NewIntValueFromReader(rd io.Reader) (IntValue, error) {
-	var data [32]byte
+	var data common.Hash
 	_, err := rd.Read(data[:])
 	if err != nil {
 		return IntValue{}, err
@@ -111,13 +106,10 @@ func (iv IntValue) String() string {
 	return iv.val.String()
 }
 
-func (iv IntValue) hashImpl() [32]byte {
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Uint256(iv.BigInt()),
+func (iv IntValue) hashImpl() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint256(iv.BigInt()),
 	)
-	ret := [32]byte{}
-	copy(ret[:], hashVal)
-	return ret
 }
 
 func (iv IntValue) ToBytes() [32]byte {
@@ -126,7 +118,7 @@ func (iv IntValue) ToBytes() [32]byte {
 	return data
 }
 
-func (iv IntValue) Hash() [32]byte {
+func (iv IntValue) Hash() common.Hash {
 	if iv.val.Cmp(big.NewInt(0)) == 0 {
 		return hashOfZero
 	} else if iv.val.Cmp(big.NewInt(1)) == 0 {
@@ -137,7 +129,8 @@ func (iv IntValue) Hash() [32]byte {
 }
 
 func (iv IntValue) Marshal(w io.Writer) error {
-	_, err := w.Write(math.PaddedBigBytes(math.U256(new(big.Int).Set(iv.val)), 32))
+	bytesVal := iv.ToBytes()
+	_, err := w.Write(bytesVal[:])
 	return err
 }
 

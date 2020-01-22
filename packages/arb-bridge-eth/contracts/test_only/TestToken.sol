@@ -21,7 +21,7 @@ contract TestItem is ERC721Full {
 
     }
 
-    function mintItem(address player, uint itemId) public {
+    function mintItem(address player, uint256 itemId) public {
         _mint(player, itemId);
     }
 }

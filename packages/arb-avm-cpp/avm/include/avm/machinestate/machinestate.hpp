@@ -32,14 +32,25 @@ typedef std::array<uint256_t, 2> TimeBounds;
 class CheckpointStorage;
 
 struct AssertionContext {
-    uint32_t numSteps;
-    uint64_t numGas;
     TimeBounds timeBounds;
+    Tuple inbox;
+    uint32_t numSteps;
+    bool didInboxInsn;
+    uint64_t numGas;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    explicit AssertionContext(const TimeBounds& tb)
-        : numSteps{0}, numGas{0}, timeBounds(tb) {}
+    explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
+        : timeBounds(tb),
+          inbox(std::move(inbox)),
+          numSteps{0},
+          didInboxInsn(false),
+          numGas{0} {}
+
+    void executedInbox() {
+        didInboxInsn = true;
+        inbox = Tuple();
+    }
 };
 
 struct MachineState {
@@ -52,10 +63,7 @@ struct MachineState {
     Status state = Status::Extensive;
     uint64_t pc = 0;
     CodePoint errpc;
-    MessageStack pendingInbox;
     AssertionContext context;
-    MessageStack inbox;
-    BlockReason blockReason;
 
     MachineState();
     MachineState(const std::vector<CodePoint>& code_,
@@ -63,16 +71,10 @@ struct MachineState {
                  std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);
 
-    void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
-    uint64_t pendingMessageCount() const;
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
-    void setInbox(MessageStack ms);
-    void setPendingInbox(MessageStack ms);
+    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
     SaveResults checkpointState(CheckpointStorage& storage);
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);

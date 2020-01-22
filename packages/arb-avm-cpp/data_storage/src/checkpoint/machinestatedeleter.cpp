@@ -90,8 +90,6 @@ DeleteResults deleteCheckpoint(
             auto parsed_state =
                 checkpoint::utils::extractStateKeys(results.stored_value);
 
-            auto delete_static_res =
-                deleter.deleteValue(parsed_state.static_val_key);
             auto delete_register_res =
                 deleter.deleteValue(parsed_state.register_val_key);
             auto delete_cp_key = deleter.deleteValue(parsed_state.pc_key);
@@ -100,24 +98,12 @@ DeleteResults deleteCheckpoint(
                 deleter.deleteTuple(parsed_state.datastack_key);
             auto delete_auxstack_res =
                 deleter.deleteTuple(parsed_state.auxstack_key);
-            auto delete_inbox_res = deleter.deleteTuple(parsed_state.inbox_key);
-            auto delete_inbox_count =
-                deleter.deleteValue(parsed_state.inbox_count_key);
-            auto delete_pendinginbox_res =
-                deleter.deleteTuple(parsed_state.pending_key);
-            auto delete_pending_count =
-                deleter.deleteValue(parsed_state.pending_count_key);
 
-            if (not(delete_static_res.status.ok() &&
-                    delete_register_res.status.ok() &&
-                    delete_cp_key.status.ok() &&
-                    delete_datastack_res.status.ok() &&
-                    delete_auxstack_res.status.ok() &&
-                    delete_inbox_res.status.ok() &&
-                    delete_pendinginbox_res.status.ok() &&
-                    delete_inbox_count.status.ok() &&
-                    delete_pending_count.status.ok() &&
-                    delete_err_pc.status.ok())) {
+            if (!(delete_register_res.status.ok() &&
+                  delete_cp_key.status.ok() &&
+                  delete_datastack_res.status.ok() &&
+                  delete_auxstack_res.status.ok() &&
+                  delete_err_pc.status.ok())) {
                 std::cout << "error deleting checkpoint" << std::endl;
             }
         }

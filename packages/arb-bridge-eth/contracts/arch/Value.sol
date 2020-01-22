@@ -59,16 +59,16 @@ library Value {
         }
     }
 
-    function hashInt(uint256 val) public pure returns (bytes32) {
+    function hashInt(uint256 val) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
     }
 
     function hashCodePoint(
-            uint8 opcode,
-            bool immediate,
-            bytes32 immediateVal,
-            bytes32 nextCodePoint
-    ) public pure returns (bytes32) {
+        uint8 opcode,
+        bool immediate,
+        bytes32 immediateVal,
+        bytes32 nextCodePoint
+    ) internal pure returns (bytes32) {
         if (immediate) {
             return keccak256(
                 abi.encodePacked(
@@ -88,7 +88,7 @@ library Value {
         );
     }
 
-    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
+    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
                 CODE_POINT_TYPECODE,
@@ -103,7 +103,7 @@ library Value {
         bytes32 immediateVal,
         bytes32 nextCodePoint
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -117,7 +117,7 @@ library Value {
         );
     }
 
-    function hashEmptyTuple() public pure returns (bytes32) {
+    function hashEmptyTuple() internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](0);
         return keccak256(
             abi.encodePacked(
@@ -129,8 +129,8 @@ library Value {
 
     function hashTuple(Data[1] memory val) internal pure returns (bytes32) {
         Data[] memory vals = new Data[](val.length);
-        uint valCount = vals.length;
-        for (uint i = 0; i < valCount; i++) {
+        uint256 valCount = vals.length;
+        for (uint256 i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTuple(vals);
@@ -138,8 +138,8 @@ library Value {
 
     function hashTuple(Data[2] memory val) internal pure returns (bytes32) {
         Data[] memory vals = new Data[](val.length);
-        uint valCount = vals.length;
-        for (uint i = 0; i < valCount; i++) {
+        uint256 valCount = vals.length;
+        for (uint256 i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTuple(vals);
@@ -147,8 +147,8 @@ library Value {
 
     function hashTuple(Data[3] memory val) internal pure returns (bytes32) {
         Data[] memory vals = new Data[](val.length);
-        uint valCount = vals.length;
-        for (uint i = 0; i < valCount; i++) {
+        uint256 valCount = vals.length;
+        for (uint256 i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTuple(vals);
@@ -157,8 +157,8 @@ library Value {
     function hashTuple(Data[] memory val) private pure returns (bytes32) {
         require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);
-        uint hashCount = hashes.length;
-        for (uint i = 0; i < hashCount; i++) {
+        uint256 hashCount = hashes.length;
+        for (uint256 i = 0; i < hashCount; i++) {
             HashOnly memory hashVal = val[i].hash();
             hashes[i] = hashVal.hash;
         }
@@ -182,13 +182,13 @@ library Value {
 
     function deserializeHashOnly(
         bytes memory data,
-        uint startOffset
+        uint256 startOffset
     )
         internal
         pure
-        returns(uint retCode, uint, HashOnly memory)
+        returns(uint256 retCode, uint, HashOnly memory)
     {
-        uint offset = startOffset;
+        uint256 offset = startOffset;
         bytes32 valHash = data.toBytes32(offset);
         offset += 32;
         return (0, offset, HashOnly(valHash));
@@ -256,7 +256,7 @@ library Value {
         return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE);
     }
 
-    function isValidTupleSize(uint size) public pure returns (bool) {
+    function isValidTupleSize(uint256 size) internal pure returns (bool) {
         return size <= 8;
     }
 
@@ -267,8 +267,8 @@ library Value {
 
     function newTupleHashValues(HashOnly[] memory _val) internal pure returns (Data memory) {
         Data[] memory values = new Data[](_val.length);
-        uint valCount = _val.length;
-        for (uint i = 0; i < valCount; i++) {
+        uint256 valCount = _val.length;
+        for (uint256 i = 0; i < valCount; i++) {
             values[i] = newHashOnly(_val[i].hash);
         }
         return newTuple(values);
@@ -276,7 +276,7 @@ library Value {
 
     function newRepeatedTuple(Data memory _val, uint8 _count) internal pure returns (Data memory) {
         Data[] memory values = new Data[](_count);
-        for (uint i = 0; i < _count; i++) {
+        for (uint256 i = 0; i < _count; i++) {
             values[i] = _val;
         }
         return newTuple(values);
@@ -286,22 +286,22 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE);
     }
 
-    function deserializeInt(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
-        uint offset = startOffset;
+    function deserializeInt(bytes memory data, uint256 startOffset) internal pure returns (uint, uint256) {
+        uint256 offset = startOffset;
         uint256 intVal = data.toUint(offset);
         offset += 32;
         return (offset, intVal);
     }
 
-    function deserializeCodePoint(bytes memory data, uint startOffset) internal pure returns (uint, CodePoint memory) {
-        uint offset = startOffset;
+    function deserializeCodePoint(bytes memory data, uint256 startOffset) internal pure returns (uint, CodePoint memory) {
+        uint256 offset = startOffset;
         uint8 immediateType = uint8(data[offset]);
         offset ++;
         uint8 opCode = uint8(data[offset]);
         offset++;
         bytes32 immediateVal;
         if (immediateType == 1) {
-            uint valid;
+            uint256 valid;
             Data memory value;
             (valid, offset, value) = deserialize(data, offset);
             require(valid == 0, "Marshalled value must be valid");
@@ -318,14 +318,14 @@ library Value {
     function deserializeTuple(
         uint8 memberCount,
         bytes memory data,
-        uint startOffset
+        uint256 startOffset
     )
         internal
         pure
         returns (uint, uint, Data[] memory)
     {
-        uint offset = startOffset;
-        uint retVal;
+        uint256 offset = startOffset;
+        uint256 retVal;
         Data[] memory members = new Data[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
             (retVal, offset, members[i]) = deserialize(data, offset);
@@ -338,14 +338,14 @@ library Value {
 
     function deserialize(
         bytes memory data,
-        uint startOffset
+        uint256 startOffset
     )
         internal
         pure
-        returns(uint retCode, uint, Data memory)
+        returns(uint256 retCode, uint, Data memory)
     {
         require(startOffset < data.length, "Data offset out of bounds");
-        uint offset = startOffset;
+        uint256 offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
@@ -362,34 +362,34 @@ library Value {
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;
-            uint valid;
+            uint256 valid;
             (valid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
             return (valid, offset, newTuple(tupleVal));
         }
         return (10000 + uint(valType), 0, newInt(0));
     }
 
-    function deserializeValidHashed(bytes memory data, uint offset) public pure returns(uint, bytes32) {
-        uint valid;
-        uint newOffset;
+    function deserializeValidHashed(bytes memory data, uint256 offset) internal pure returns(uint, bytes32) {
+        uint256 valid;
+        uint256 newOffset;
         Data memory value;
         (valid, newOffset, value) = deserialize(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (newOffset, value.hash().hash);
     }
 
-    function getNextValid(bytes memory data, uint offset) public pure returns(uint, bytes memory) {
-        uint valid;
-        uint nextOffset;
+    function getNextValid(bytes memory data, uint256 offset) internal pure returns(uint, bytes memory) {
+        uint256 valid;
+        uint256 nextOffset;
         Data memory value;
         (valid, nextOffset, value) = deserialize(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (nextOffset, data.slice(offset, nextOffset - offset));
     }
 
-    function deserializeHashed(bytes memory data) public pure returns (bytes32) {
-        uint valid;
-        uint offset = 0;
+    function deserializeHashed(bytes memory data) internal pure returns (bytes32) {
+        uint256 valid;
+        uint256 offset = 0;
         Data memory value;
         (valid, offset, value) = deserialize(data, 0);
         require(valid == 0, "Marshalled value must be valid");
@@ -398,13 +398,13 @@ library Value {
 
     function deserializeMessage(
         bytes memory data,
-        uint startOffset
+        uint256 startOffset
     )
-        public
+        internal
         pure
         returns(
             bool valid,
-            uint offset,
+            uint256 offset,
             bytes32 messageHash,
             uint256 destination,
             uint256 value,

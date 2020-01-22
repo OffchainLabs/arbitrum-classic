@@ -126,7 +126,6 @@ void CodePoint::marshal(std::vector<unsigned char>& buf) const {
         static_cast<const char*>(static_cast<const void*>(&bepc)),
         static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
         std::back_inserter(buf));
-    buf.push_back(static_cast<unsigned char>(op.opcode));
     op.marshal(buf);
     std::array<unsigned char, 32> val;
     to_big_endian(nextHash, val.begin());

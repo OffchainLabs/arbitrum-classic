@@ -24,9 +24,9 @@ import "../libraries/DebugPrint.sol";
 library Machine {
     using Value for Value.Data;
 
-    uint internal constant MACHINE_EXTENSIVE = uint(0);
-    uint internal constant MACHINE_ERRORSTOP = uint(1);
-    uint internal constant MACHINE_HALT = uint(2);
+    uint256 internal constant MACHINE_EXTENSIVE = 0;
+    uint256 internal constant MACHINE_ERRORSTOP = 1;
+    uint256 internal constant MACHINE_HALT = 2;
 
     function addStackVal(
         Value.HashOnly memory stackVal,
@@ -52,7 +52,7 @@ library Machine {
         Value.HashOnly registerHash;
         Value.HashOnly staticHash;
         Value.HashOnly errHandler;
-        uint status;
+        uint256 status;
     }
 
     function toString(Data memory machine) internal pure returns (string memory) {
@@ -103,7 +103,7 @@ library Machine {
         machine.auxStackHash = addStackVal(machine.auxStackHash, val.hash());
     }
 
-    function addDataStackInt(Data memory machine, uint val) internal pure {
+    function addDataStackInt(Data memory machine, uint256 val) internal pure {
         machine.dataStackHash = addStackVal(
             machine.dataStackHash,
             Value.newInt(val).hash()
@@ -118,7 +118,7 @@ library Machine {
         bytes32 staticHash,
         bytes32 errHandlerHash
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -167,10 +167,10 @@ library Machine {
         );
     }
 
-    function deserializeMachine(bytes memory data, uint offset) internal pure returns (uint, uint, Data memory) {
+    function deserializeMachine(bytes memory data, uint256 offset) internal pure returns (uint, uint, Data memory) {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
-        uint retVal;
+        uint256 retVal;
         (retVal, offset, m.instructionStackHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
