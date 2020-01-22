@@ -227,6 +227,22 @@ def _perform_real_call(vm, call_num):
 
 
 @noreturn
+def _enter_exec(vm, call_num):
+    vm.dup0()
+    vm.tnewn(0)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [
+            vm.pop(),
+            vm.push(3),
+            vm.push(ast.AVMLabel("evm_call_{}".format(call_num))),
+            vm.jump(),
+        ],
+        lambda vm: [vm.jump()],
+    )
+
+
+@noreturn
 def _execute_call(vm, call_num):
     vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.swap2()
@@ -243,8 +259,7 @@ def _execute_call(vm, call_num):
     os.get_call_frame(vm)
     call_frame.call_frame.get("account_state")(vm)
     account_state.get("code_point")(vm)
-
-    vm.jump()
+    _enter_exec(vm, call_num)
 
     _complete_call(vm, call_num)
 
@@ -271,11 +286,8 @@ def _perform_callcode(vm, call_num):
     save_stacks(vm)
 
     # Enter call frame
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("account_state")(vm)
-    account_state.get("code_point")(vm)
-
-    vm.jump()
+    os.get_scratch(vm)
+    _enter_exec(vm, call_num)
 
     _complete_call(vm, call_num)
 
@@ -303,8 +315,7 @@ def _perform_delegatecall(vm, call_num):
 
     # Enter call frame
     os.get_scratch(vm)
-
-    vm.jump()
+    _enter_exec(vm, call_num)
 
     _complete_call(vm, call_num)
 

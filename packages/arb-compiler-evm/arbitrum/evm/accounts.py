@@ -24,7 +24,7 @@ account_state = std.Struct(
     [
         ("nonce", value.IntType()),
         ("code", std.byterange.typ),
-        ("code_point", value.CodePointType()),
+        ("code_point", value.ValueType()),
         ("code_size", value.IntType()),
         ("code_hash", value.IntType()),
         ("storage", std.keyvalue_int_int.typ),
