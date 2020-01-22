@@ -96,6 +96,19 @@ func (ms *MessageStack) BottomIndex() *big.Int {
 	}
 }
 
+func (ms *MessageStack) GetValues() []value.Value {
+	if ms.newest == nil {
+		return nil
+	}
+	values := make([]value.Value, 0)
+	item := ms.oldest
+	for item != ms.newest {
+		values = append(values, item.message)
+	}
+	values = append(values, ms.newest.message)
+	return values
+}
+
 func (pi *MessageStack) DeliverMessage(msg value.Value) {
 	newTopCount := new(big.Int).Add(pi.TopCount(), big.NewInt(1))
 	if pi.newest == nil {
@@ -170,14 +183,6 @@ func hash2(h1, h2 common.Hash) common.Hash {
 		value.NewHashOnlyValue(h1, 1),
 		value.NewHashOnlyValue(h2, 1),
 	).Hash()
-}
-
-func MakeInitialPendingInboxBuf() *PendingInboxBuf {
-	return &PendingInboxBuf{
-		TopCount:   common.MarshalBigInt(big.NewInt(0)),
-		ItemHashes: []*common.HashBuf{},
-		HashOfRest: value.NewEmptyTuple().Hash().MarshalToBuf(),
-	}
 }
 
 func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {

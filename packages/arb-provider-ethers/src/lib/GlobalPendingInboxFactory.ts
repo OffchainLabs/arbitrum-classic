@@ -19,25 +19,25 @@ const _abi = [
             {
                 indexed: true,
                 internalType: 'address',
-                name: 'vmReceiverId',
+                name: 'chain',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'to',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'from',
                 type: 'address',
             },
             {
                 indexed: false,
                 internalType: 'address',
-                name: 'sender',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                internalType: 'address',
-                name: 'destination',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                internalType: 'address',
-                name: 'tokenAddress',
+                name: 'erc20',
                 type: 'address',
             },
             {
@@ -56,31 +56,31 @@ const _abi = [
             {
                 indexed: true,
                 internalType: 'address',
-                name: 'vmReceiverId',
+                name: 'chain',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'to',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'from',
                 type: 'address',
             },
             {
                 indexed: false,
                 internalType: 'address',
-                name: 'sender',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                internalType: 'address',
-                name: 'destination',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                internalType: 'address',
-                name: 'tokenAddress',
+                name: 'erc721',
                 type: 'address',
             },
             {
                 indexed: false,
                 internalType: 'uint256',
-                name: 'value',
+                name: 'id',
                 type: 'uint256',
             },
         ],
@@ -93,19 +93,19 @@ const _abi = [
             {
                 indexed: true,
                 internalType: 'address',
-                name: 'vmReceiverId',
+                name: 'chain',
                 type: 'address',
             },
             {
-                indexed: false,
+                indexed: true,
                 internalType: 'address',
-                name: 'sender',
+                name: 'to',
                 type: 'address',
             },
             {
-                indexed: false,
+                indexed: true,
                 internalType: 'address',
-                name: 'destination',
+                name: 'from',
                 type: 'address',
             },
             {
@@ -124,19 +124,19 @@ const _abi = [
             {
                 indexed: true,
                 internalType: 'address',
-                name: 'vmSenderId',
+                name: 'chain',
                 type: 'address',
             },
             {
                 indexed: true,
                 internalType: 'address',
-                name: 'vmReceiverId',
+                name: 'to',
                 type: 'address',
             },
             {
-                indexed: false,
+                indexed: true,
                 internalType: 'address',
-                name: 'contractAddress',
+                name: 'from',
                 type: 'address',
             },
             {
@@ -363,12 +363,12 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '_vmAddress',
+                name: '_chain',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_contractAddress',
+                name: '_to',
                 type: 'address',
             },
             {
@@ -403,12 +403,12 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '_vmAddress',
+                name: '_chain',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_contractAddress',
+                name: '_to',
                 type: 'address',
             },
             {
@@ -438,12 +438,12 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '_vmAddress',
+                name: '_chain',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_destination',
+                name: '_to',
                 type: 'address',
             },
         ],
@@ -458,17 +458,17 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '_vmAddress',
+                name: '_chain',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_tokenContract',
+                name: '_to',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_destination',
+                name: '_erc20',
                 type: 'address',
             },
             {
@@ -488,22 +488,22 @@ const _abi = [
         inputs: [
             {
                 internalType: 'address',
-                name: '_vmAddress',
+                name: '_chain',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_tokenContract',
+                name: '_to',
                 type: 'address',
             },
             {
                 internalType: 'address',
-                name: '_destination',
+                name: '_erc721',
                 type: 'address',
             },
             {
                 internalType: 'uint256',
-                name: '_value',
+                name: '_id',
                 type: 'uint256',
             },
         ],

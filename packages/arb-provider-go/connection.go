@@ -429,12 +429,12 @@ func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
 	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
 }
 
-func (conn *ArbConnection) TxHash(tx *types.Transaction, sender common.Address) (common.Hash, error) {
+func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) (common.Hash, error) {
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
 	if err != nil {
 		log.Println("Error converting to SizedByteArray")
 		return common.Hash{}, err
 	}
-	return ethbridge.GetTransactionHash(sender, conn.vmId, seqNumValue, tx.Value(), dataValue), nil
+	return ethbridge.GetTransactionHash(conn.vmId, common.NewAddressFromEth(*tx.To()), from, seqNumValue, tx.Value(), dataValue), nil
 }

@@ -24,6 +24,13 @@ import { GlobalPendingInbox } from './GlobalPendingInbox';
 
 import * as ethers from 'ethers';
 
+export enum TxType {
+    Transaction = 0,
+    DepositEth = 1,
+    DepositERC20 = 2,
+    DepositERC721 = 3,
+}
+
 export class ArbWallet extends ethers.Signer {
     public client: ArbClient;
     public contracts: Map<string, Contract>;
@@ -87,47 +94,50 @@ export class ArbWallet extends ethers.Signer {
     }
 
     public async depositERC20(
-        tokenAddress: string,
-        destAddress: string,
-        value: number,
+        to: string,
+        erc20: string,
+        value: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
         const sendValue = ethers.utils.bigNumberify(value);
-        const vmAddress = await this.provider.getVmID();
+        const chain = await this.provider.getVmID();
+        const valueNum = ethers.utils.bigNumberify(value);
 
         const inboxManager = await this.globalInboxConn();
-        console.log('vm add: ' + vmAddress);
-        const blockchainTx = await inboxManager.depositERC20Message(vmAddress, tokenAddress, destAddress, sendValue);
+        console.log('vm add: ' + chain);
+        const blockchainTx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
         await blockchainTx.wait();
-        console.log('vm add22: ' + vmAddress);
+        console.log('vm add22: ' + chain);
 
-        return this.wrapTransaction(vmAddress, tokenAddress, destAddress, value);
+        return this.wrapTransaction(TxType.DepositERC20, chain, erc20, to, valueNum);
     }
 
     public async depositERC721(
         tokenAddress: string,
-        destAddress: string,
-        value: number,
+        to: string,
+        value: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
         const tokenValue = ethers.utils.bigNumberify(value);
-        const vmAddress = await this.provider.getVmID();
+        const chain = await this.provider.getVmID();
+        const valueNum = ethers.utils.bigNumberify(value);
 
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositERC721Message(vmAddress, tokenAddress, destAddress, tokenValue);
+        const blockchainTx = await inboxManager.depositERC721Message(chain, tokenAddress, to, tokenValue);
         await blockchainTx.wait();
 
-        return this.wrapTransaction(vmAddress, tokenAddress, destAddress, value);
+        return this.wrapTransaction(TxType.DepositERC721, chain, tokenAddress, to, valueNum);
     }
 
-    public async wrapTransaction(
-        vmAddress: string,
+    private async wrapTransaction(
+        messageType: TxType,
+        chain: string,
         tokenAddress: string,
-        destAddress: string,
-        value: number,
+        to: string,
+        value: ethers.utils.BigNumber,
     ): Promise<ethers.providers.TransactionResponse> {
         const fromAddress = await this.getAddress();
-        const args = [vmAddress, fromAddress, destAddress, tokenAddress, value];
+        const args = [messageType, chain, fromAddress, to, tokenAddress, value];
         const messageHash = ethers.utils.solidityKeccak256(
-            ['address', 'address', 'address', 'address', 'uint256'],
+            ['uint8', 'address', 'address', 'address', 'address', 'uint256'],
             args,
         );
 
@@ -139,101 +149,88 @@ export class ArbWallet extends ethers.Signer {
             gasPrice: ethers.utils.bigNumberify(1),
             hash: messageHash,
             nonce: 0,
-            to: destAddress,
+            to: to,
             chainId: 1578891852042,
         };
         return this.provider._wrapTransaction(tx, messageHash);
     }
 
     public async depositETH(
-        destAddress: string,
-        transaction: ethers.providers.TransactionRequest,
+        to: string,
+        value: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
-        if (!transaction.to) {
-            throw Error("Can't send transaction without destination");
-        }
-
-        const vmAddress = await this.provider.getVmID();
-
-        let value = ethers.utils.bigNumberify(0);
-        if (transaction.value) {
-            value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
-        }
-
-        let txData = '';
-        if (transaction.data) {
-            txData = ethers.utils.hexlify(await transaction.data);
-        }
-
-        const args = [vmAddress, destAddress, value, ethers.utils.hexZeroPad('0x00', 21)];
-        const messageHash = ethers.utils.solidityKeccak256(['address', 'address', 'uint256', 'bytes21'], args);
+        const chain = await this.provider.getVmID();
+        const valueNum = ethers.utils.bigNumberify(value);
         const fromAddress = await this.getAddress();
 
+        const args = [TxType.DepositEth, chain, to, fromAddress, value];
+        const messageHash = ethers.utils.solidityKeccak256(['uint8', 'address', 'address', 'address', 'uint256'], args);
+
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.sendEthMessage(vmAddress, destAddress, {
-            value,
-        });
+        const blockchainTx = await inboxManager.sendEthMessage(chain, to, { value });
 
         await blockchainTx.wait();
 
         const tx = {
-            data: txData,
+            data: '',
             from: fromAddress,
             gasLimit: ethers.utils.bigNumberify(1),
             gasPrice: ethers.utils.bigNumberify(1),
             hash: messageHash,
             nonce: 0,
-            to: vmAddress,
-            value: value,
+            to: chain,
+            value: valueNum,
             chainId: 1578891852042,
         };
         return this.provider._wrapTransaction(tx, messageHash);
     }
 
     public async sendTransactionMessage(
-        value: number,
-        transaction: ethers.providers.TransactionRequest,
+        to: string,
+        value: ethers.utils.BigNumberish,
+        data: ArbValue.Value,
     ): Promise<ethers.providers.TransactionResponse> {
-        const vmAddress = await this.provider.getVmID();
+        const from = await this.getAddress();
         this.seq = this.seq.add(2);
-
-        let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
-        if (transaction.data) {
-            encodedData = ArbValue.hexToSizedByteRange(await transaction.data);
-        }
-        const arbMsg = new ArbValue.TupleValue([
-            encodedData,
-            new ArbValue.IntValue(vmAddress),
-            new ArbValue.IntValue(this.seq),
-        ]);
-
-        const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.sendTransactionMessage(
-            vmAddress,
-            this.seq,
-            value,
-            ArbValue.marshal(arbMsg),
+        const vmId = await this.provider.getVmID();
+        const valueNum = ethers.utils.bigNumberify(value);
+        const args = [TxType.Transaction, vmId, to, from, this.seq, value, data.hash()];
+        const messageHash = ethers.utils.solidityKeccak256(
+            ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
+            args,
         );
-
-        await blockchainTx.wait();
-
         const fromAddress = await this.getAddress();
-        let txData = '';
-        if (transaction.data) {
-            txData = ethers.utils.hexlify(await transaction.data);
-        }
+        if (this.channelMode && valueNum.eq(0)) {
+            const messageHashBytes = ethers.utils.arrayify(messageHash);
+            const sig = await this.signer.signMessage(messageHashBytes);
+            if (!this.pubkey) {
+                this.pubkey = ethers.utils.recoverPublicKey(
+                    ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
+                    sig,
+                );
+            }
+            await this.client.sendMessage(to, this.seq, value, data, sig, this.pubkey);
+        } else {
+            const inboxManager = await this.globalInboxConn();
+            const blockchainTx = await inboxManager.sendTransactionMessage(
+                vmId,
+                to,
+                this.seq,
+                valueNum,
+                ArbValue.marshal(data),
+            );
 
-        const args = [vmAddress, this.seq, value, arbMsg.hash()];
-        const messageHash = ethers.utils.solidityKeccak256(['address', 'uint256', 'uint256', 'bytes21'], args);
+            await blockchainTx.wait();
+        }
 
         const tx = {
-            data: txData,
+            data: ethers.utils.hexlify(ArbValue.marshal(data)),
             from: fromAddress,
             gasLimit: ethers.utils.bigNumberify(1),
             gasPrice: ethers.utils.bigNumberify(1),
             hash: messageHash,
             nonce: 0,
-            to: vmAddress,
+            to: vmId,
             value: ethers.utils.bigNumberify(0),
             chainId: 1578891852042,
         };
@@ -246,64 +243,12 @@ export class ArbWallet extends ethers.Signer {
         if (!transaction.to) {
             throw Error("Can't send transaction without destination");
         }
-        const dest = await transaction.to;
-        const contract = this.contracts.get(dest.toLowerCase());
-        if (contract) {
-            this.seq = this.seq.add(2);
-            const vmId = await this.provider.getVmID();
-            let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
-            if (transaction.data) {
-                encodedData = ArbValue.hexToSizedByteRange(await transaction.data);
-            }
-            const arbMsg = new ArbValue.TupleValue([
-                encodedData,
-                new ArbValue.IntValue(dest),
-                new ArbValue.IntValue(this.seq),
-            ]);
-            let value = ethers.utils.bigNumberify(0);
-            if (transaction.value) {
-                value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
-            }
-            const args = [vmId, arbMsg.hash(), value, ethers.utils.hexZeroPad('0x00', 21)];
-            const messageHash = ethers.utils.solidityKeccak256(['address', 'bytes32', 'uint256', 'bytes21'], args);
-            const fromAddress = await this.getAddress();
-            if (this.channelMode && value.eq(0)) {
-                const messageHashBytes = ethers.utils.arrayify(messageHash);
-                const sig = await this.signer.signMessage(messageHashBytes);
-                if (!this.pubkey) {
-                    this.pubkey = ethers.utils.recoverPublicKey(
-                        ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
-                        sig,
-                    );
-                }
-                await this.client.sendMessage(arbMsg, sig, this.pubkey);
-            } else {
-                const inboxManager = await this.globalInboxConn();
-                const blockchainTx = await inboxManager.sendEthMessage(vmId, ArbValue.marshal(arbMsg), {
-                    value,
-                });
-
-                await blockchainTx.wait();
-            }
-            let txData = '';
-            if (transaction.data) {
-                txData = ethers.utils.hexlify(await transaction.data);
-            }
-
-            const tx = {
-                data: txData,
-                from: fromAddress,
-                gasLimit: ethers.utils.bigNumberify(1),
-                gasPrice: ethers.utils.bigNumberify(1),
-                hash: messageHash,
-                nonce: 0,
-                to: dest,
-                value: value,
-                chainId: 123456789,
-            };
-            return this.provider._wrapTransaction(tx, messageHash);
-        } else {
-            return this.signer.sendTransaction(transaction);
+        const to = await transaction.to;
+        const from = await this.getAddress();
+        let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
+        if (transaction.data) {
+            encodedData = ArbValue.hexToSizedByteRange(await transaction.data);
         }
+        return this.sendTransactionMessage(to, from, encodedData);
     }
 }

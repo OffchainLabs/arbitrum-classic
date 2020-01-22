@@ -47,8 +47,11 @@ interface MessageResult {
 }
 
 interface Message {
-    value: string;
-    sig: string;
+    to: string;
+    sequenceNum: ethers.utils.BigNumberish;
+    value: ethers.utils.BigNumberish;
+    data: string;
+    signature: string;
     pubkey: string;
 }
 
@@ -145,7 +148,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public async sendMessages(messages: Message[]): Promise<string> {
         let txHash: Promise<string> = new Promise<string>((): string => '');
         for (const message of messages) {
-            txHash = this.client.sendRawMessage(message.value, message.sig, message.pubkey);
+            txHash = this.client.sendRawMessage(
+                message.to,
+                message.sequenceNum,
+                message.value,
+                message.data,
+                message.signature,
+                message.pubkey,
+            );
             await sleep(1);
         }
         return txHash;

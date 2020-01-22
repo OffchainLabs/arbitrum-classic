@@ -185,40 +185,94 @@ func AddressToIntValue(address common.Address) value.IntValue {
 }
 
 const (
-	TRANSACTION_MESSAGE_ID = 0
+	TRANSACTION_MESSAGE_ID = iota
+	ETH_DEPOSIT_MESSAGE
+	ERC20_DEPOSIT_MESSAGE
+	ERC721_DEPOSIT_MESSAGE
 )
 
 func GetTransactionHash(
-	sender common.Address,
-	rollupAddress common.Address,
+	chain common.Address,
+	to common.Address,
+	from common.Address,
 	sequenceNum *big.Int,
-	val *big.Int,
+	value *big.Int,
 	data value.Value,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Address(rollupAddress),
-		hashing.Address(sender),
+		hashing.Uint8(TRANSACTION_MESSAGE_ID),
+		hashing.Address(chain),
+		hashing.Address(to),
+		hashing.Address(from),
 		hashing.Uint256(sequenceNum),
-		hashing.Uint256(val),
+		hashing.Uint256(value),
 		hashing.Bytes32(data.Hash()),
 	)
 }
 
+func EthDepositHash(
+	chain common.Address,
+	to common.Address,
+	from common.Address,
+	value *big.Int,
+) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(ETH_DEPOSIT_MESSAGE),
+		hashing.Address(chain),
+		hashing.Address(to),
+		hashing.Address(from),
+		hashing.Uint256(value),
+	)
+}
+
+func ERC20DepositHash(
+	chain common.Address,
+	to common.Address,
+	from common.Address,
+	erc20 common.Address,
+	value *big.Int,
+) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(ERC20_DEPOSIT_MESSAGE),
+		hashing.Address(chain),
+		hashing.Address(to),
+		hashing.Address(from),
+		hashing.Address(erc20),
+		hashing.Uint256(value),
+	)
+}
+
+func ERC721DepositHash(
+	chain common.Address,
+	to common.Address,
+	from common.Address,
+	erc721 common.Address,
+	id *big.Int,
+) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(ERC721_DEPOSIT_MESSAGE),
+		hashing.Address(chain),
+		hashing.Address(to),
+		hashing.Address(from),
+		hashing.Address(erc721),
+		hashing.Uint256(id),
+	)
+}
+
 func GetTransactionMessage(
-	sender common.Address,
-	rollupAddress common.Address,
-	contractAddress common.Address,
+	chain common.Address,
+	to common.Address,
+	from common.Address,
 	sequenceNum *big.Int,
 	val *big.Int,
 	data value.Value,
 	blockNum *big.Int,
 ) (value.Value, common.Hash) {
-	messageHash := GetTransactionHash(sender, rollupAddress, sequenceNum, val, data)
-
+	messageHash := GetTransactionHash(chain, to, from, sequenceNum, val, data)
 	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 	msgVal, _ := value.NewTupleFromSlice([]value.Value{
-		AddressToIntValue(contractAddress),
+		AddressToIntValue(to),
 		value.NewIntValue(sequenceNum),
 		value.NewIntValue(val),
 		data,
@@ -226,7 +280,7 @@ func GetTransactionMessage(
 
 	msgType, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(big.NewInt(TRANSACTION_MESSAGE_ID)),
-		AddressToIntValue(sender),
+		AddressToIntValue(from),
 		msgVal,
 	})
 
@@ -253,9 +307,9 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}
 
 		dataMsg, _ := GetTransactionMessage(
-			common.NewAddressFromEth(val.VmSenderId),
-			common.NewAddressFromEth(val.VmReceiverId),
-			common.NewAddressFromEth(val.ContractAddress),
+			common.NewAddressFromEth(val.Chain),
+			common.NewAddressFromEth(val.To),
+			common.NewAddressFromEth(val.From),
 			val.SeqNumber,
 			val.Value,
 			msgData,
@@ -273,23 +327,23 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := hashing.SoliditySHA3(
-			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
-			hashing.Address(common.NewAddressFromEth(val.Sender)),
-			hashing.Address(common.NewAddressFromEth(val.Destination)),
-			hashing.Uint256(val.Value),
+		messageHash := EthDepositHash(
+			common.NewAddressFromEth(val.Chain),
+			common.NewAddressFromEth(val.To),
+			common.NewAddressFromEth(val.From),
+			val.Value,
 		)
 
 		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
+			AddressToIntValue(common.NewAddressFromEth(val.To)),
 			value.NewIntValue(val.Value),
 		})
 
 		msgType, _ := value.NewTupleFromSlice([]value.Value{
 			value.NewIntValue(big.NewInt(1)),
-			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			AddressToIntValue(common.NewAddressFromEth(val.From)),
 			msgVal,
 		})
 
@@ -314,25 +368,25 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 
 		log.Printf("%+v\n", val)
 
-		messageHash := hashing.SoliditySHA3(
-			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
-			hashing.Address(common.NewAddressFromEth(val.Sender)),
-			hashing.Address(common.NewAddressFromEth(val.Destination)),
-			hashing.Address(common.NewAddressFromEth(val.TokenAddress)),
-			hashing.Uint256(val.Value),
+		messageHash := ERC20DepositHash(
+			common.NewAddressFromEth(val.Chain),
+			common.NewAddressFromEth(val.To),
+			common.NewAddressFromEth(val.From),
+			common.NewAddressFromEth(val.Erc20),
+			val.Value,
 		)
 
 		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.TokenAddress)),
-			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
+			AddressToIntValue(common.NewAddressFromEth(val.Erc20)),
+			AddressToIntValue(common.NewAddressFromEth(val.To)),
 			value.NewIntValue(val.Value),
 		})
 
 		msgType, _ := value.NewTupleFromSlice([]value.Value{
 			value.NewIntValue(big.NewInt(2)),
-			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			AddressToIntValue(common.NewAddressFromEth(val.From)),
 			msgVal,
 		})
 
@@ -353,25 +407,25 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := hashing.SoliditySHA3(
-			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
-			hashing.Address(common.NewAddressFromEth(val.Sender)),
-			hashing.Address(common.NewAddressFromEth(val.Destination)),
-			hashing.Address(common.NewAddressFromEth(val.TokenAddress)),
-			hashing.Uint256(val.Value),
+		messageHash := ERC721DepositHash(
+			common.NewAddressFromEth(val.Chain),
+			common.NewAddressFromEth(val.To),
+			common.NewAddressFromEth(val.From),
+			common.NewAddressFromEth(val.Erc721),
+			val.Id,
 		)
 
 		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.TokenAddress)),
-			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
-			value.NewIntValue(val.Value),
+			AddressToIntValue(common.NewAddressFromEth(val.Erc721)),
+			AddressToIntValue(common.NewAddressFromEth(val.To)),
+			value.NewIntValue(val.Id),
 		})
 
 		msgType, _ := value.NewTupleFromSlice([]value.Value{
 			value.NewIntValue(big.NewInt(3)),
-			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			AddressToIntValue(common.NewAddressFromEth(val.From)),
 			msgVal,
 		})
 

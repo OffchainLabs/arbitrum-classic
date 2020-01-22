@@ -178,9 +178,9 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 
 	callingMessage, messageHash := ethbridge.GetTransactionMessage(
-		sender,
 		m.rollupAddress,
 		contractAddress,
+		sender,
 		seqNumValue,
 		big.NewInt(0),
 		dataVal,

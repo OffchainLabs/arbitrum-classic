@@ -368,19 +368,36 @@ export class ArbClient {
         }
     }
 
-    public sendMessage(value: ArbValue.Value, sig: string, pubkey: string): Promise<string> {
-        return this.sendRawMessage(ethers.utils.hexlify(ArbValue.marshal(value)), sig, pubkey);
+    public sendMessage(
+        to: string,
+        sequenceNum: ethers.utils.BigNumberish,
+        value: ethers.utils.BigNumberish,
+        data: ArbValue.Value,
+        sig: string,
+        pubkey: string,
+    ): Promise<string> {
+        return this.sendRawMessage(to, sequenceNum, value, ethers.utils.hexlify(ArbValue.marshal(data)), sig, pubkey);
     }
 
-    public sendRawMessage(value: string, sig: string, pubkey: string): Promise<string> {
+    public sendRawMessage(
+        to: string,
+        sequenceNum: ethers.utils.BigNumberish,
+        value: ethers.utils.BigNumberish,
+        data: string,
+        signature: string,
+        pubkey: string,
+    ): Promise<string> {
         return new Promise((resolve, reject): void => {
             this.client.request(
                 'Validator.SendMessage',
                 [
                     {
-                        data: value,
+                        to,
+                        sequenceNum,
+                        value,
+                        data,
+                        signature,
                         pubkey,
-                        signature: sig,
                     },
                 ],
                 (err: Error, error: Error, result: SendMessageReply) => {

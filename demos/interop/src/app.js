@@ -217,8 +217,8 @@ class App {
     console.log("approved from : " + this.ethwalletAddress);
 
     const tx2 = await this.arbWallet.depositERC20(
-      this.contracts.EthTestToken.address,
       this.arbwalletAddress,
+      this.contracts.EthTestToken.address,
       val
     );
 
