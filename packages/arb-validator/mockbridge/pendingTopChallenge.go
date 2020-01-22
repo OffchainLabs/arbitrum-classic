@@ -110,7 +110,7 @@ func (c *pendingTopChallenge) ChooseSegment(
 			),
 		)
 	}
-	return c.bisectionChallenge.ChooseSegment(
+	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

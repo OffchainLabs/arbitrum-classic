@@ -21,7 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -50,20 +50,20 @@ import (
 func main() {
 	// Check number of args
 	flag.Parse()
-	//switch os.Args[1] {
-	//case "create":
-	//	createRollupChain()
-	//case "validate":
-	//	if err := validateRollupChain(); err != nil {
-	//		log.Fatal(err)
-	//	}
-	//default:
-	//}
-	createRollupChain()
-	time.Sleep(2 * time.Second)
-	if err := validateRollupChain(); err != nil {
-		log.Fatal(err)
+	switch os.Args[1] {
+	case "create":
+		createRollupChain()
+	case "validate":
+		if err := validateRollupChain(); err != nil {
+			log.Fatal(err)
+		}
+	default:
 	}
+	//createRollupChain()
+	//time.Sleep(2 * time.Second)
+	//if err := validateRollupChain(); err != nil {
+	//	log.Fatal(err)
+	//}
 	time.Sleep(7 * time.Second)
 }
 
@@ -114,8 +114,8 @@ func createRollupChain() {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
-	client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,8 +180,8 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
-	client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
 	if err != nil {
 		return err
 	}
