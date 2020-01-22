@@ -30,7 +30,7 @@ type OneStepProof struct {
 	client arbbridge.ArbClient
 }
 
-func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneStepProof, error) {
+func newOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneStepProof, error) {
 	//contract, err := onestepproof.NewOneStepProof(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")

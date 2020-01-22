@@ -21,11 +21,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -35,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -49,15 +50,21 @@ import (
 func main() {
 	// Check number of args
 	flag.Parse()
-	switch os.Args[1] {
-	case "create":
-		createRollupChain()
-	case "validate":
-		if err := validateRollupChain(); err != nil {
-			log.Fatal(err)
-		}
-	default:
+	//switch os.Args[1] {
+	//case "create":
+	//	createRollupChain()
+	//case "validate":
+	//	if err := validateRollupChain(); err != nil {
+	//		log.Fatal(err)
+	//	}
+	//default:
+	//}
+	createRollupChain()
+	time.Sleep(2 * time.Second)
+	if err := validateRollupChain(); err != nil {
+		log.Fatal(err)
 	}
+	time.Sleep(7 * time.Second)
 }
 
 func createRollupChain() {
@@ -107,7 +114,8 @@ func createRollupChain() {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -126,6 +134,7 @@ func createRollupChain() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("********************************************")
 	fmt.Println(address.Hex())
 }
 
@@ -171,7 +180,8 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	client, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
 	if err != nil {
 		return err
 	}

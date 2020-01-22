@@ -226,16 +226,21 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
-	innerHash := hashing.SoliditySHA3(
-		hashing.Bytes32(node.vmProtoData.Hash()),
-		hashing.TimeTicks(node.deadline),
-		hashing.Bytes32(nodeDataHash),
-		hashing.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
-	)
-	hash := hashing.SoliditySHA3(
-		hashing.Bytes32(prevHashArr),
-		hashing.Bytes32(innerHash),
-	)
+	hash, innerHash := structures.NodeHash(prevHashArr,
+		node.vmProtoData.Hash(),
+		node.deadline,
+		nodeDataHash,
+		node.linkType)
+	//innerHash := hashing.SoliditySHA3(
+	//	hashing.Bytes32(node.vmProtoData.Hash()),
+	//	hashing.TimeTicks(node.deadline),
+	//	hashing.Bytes32(nodeDataHash),
+	//	hashing.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
+	//)
+	//hash := hashing.SoliditySHA3(
+	//	hashing.Bytes32(prevHashArr),
+	//	hashing.Bytes32(innerHash),
+	//)
 	node.nodeDataHash = nodeDataHash
 	node.innerHash = innerHash
 	node.hash = hash

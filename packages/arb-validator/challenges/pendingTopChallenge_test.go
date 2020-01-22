@@ -23,7 +23,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -63,7 +63,7 @@ func testPendingTopChallenge(t *testing.T) {
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client arbbridge.ArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengePendingTopClaim(
 				context.Background(),
 				client,

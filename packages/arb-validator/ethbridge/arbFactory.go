@@ -62,9 +62,9 @@ func (con *arbFactory) CreateRollup(
 		owner.ToEthAddress(),
 	)
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
+		return common.Address{}, errors2.Wrap(err, "Failed to call to arbFactory.CreateRollup")
 	}
-	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChain")
+	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateRollup")
 	if err != nil {
 		return common.Address{}, err
 	}

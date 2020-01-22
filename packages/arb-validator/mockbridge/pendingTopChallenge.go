@@ -18,29 +18,28 @@ package mockbridge
 
 import (
 	"context"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-type PendingTopChallenge struct {
-	*BisectionChallenge
+type pendingTopChallenge struct {
+	*bisectionChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*pendingTopChallenge, error) {
+	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
-	vm := &PendingTopChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &pendingTopChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *PendingTopChallenge) setupContracts() error {
+func (c *pendingTopChallenge) setupContracts() error {
 	//challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
 	//if err != nil {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
@@ -50,50 +49,11 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *pendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
-//func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-//	event, err := func() (arbbridge.Event, error) {
-//		if log.Topics[0] == pendingTopBisectedID {
-//			eventVal, err := c.challenge.ParseBisected(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.PendingTopBisectionEvent{
-//				ChainHashes: eventVal.ChainHashes,
-//				TotalLength: eventVal.TotalLength,
-//				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
-//			}, nil
-//		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-//			_, err := c.challenge.ParseOneStepProofCompleted(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.OneStepProofEvent{}, nil
-//		}
-//		return nil, errors2.New("unknown arbitrum event type")
-//	}()
-//
-//	if err != nil {
-//		return err
-//	}
-//
-//	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
-//	if err != nil {
-//		return err
-//	}
-//	outChan <- arbbridge.Notification{
-//		Header: header,
-//		VMID:   c.address,
-//		Event:  event,
-//		TxHash: log.TxHash,
-//	}
-//	return nil
-//}
-
-func (c *PendingTopChallenge) Bisect(
+func (c *pendingTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	chainLength *big.Int,
@@ -111,7 +71,7 @@ func (c *PendingTopChallenge) Bisect(
 	return nil
 }
 
-func (c *PendingTopChallenge) OneStepProof(
+func (c *pendingTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	topHashA common.Hash,
@@ -131,11 +91,29 @@ func (c *PendingTopChallenge) OneStepProof(
 	return nil
 }
 
-func (c *PendingTopChallenge) ChooseSegment(
+func (c *pendingTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
 	chainLength uint32,
 ) error {
+	bisectionCount := uint32(len(chainHashes) - 1)
+	bisectionHashes := make([]common.Hash, 0, bisectionCount)
+	for i := uint32(0); i < bisectionCount; i++ {
+		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
+		bisectionHashes = append(
+			bisectionHashes,
+			structures.PendingTopChallengeDataHash(
+				chainHashes[i],
+				chainHashes[i+1],
+				new(big.Int).SetUint64(uint64(stepCount)),
+			),
+		)
+	}
+	return c.bisectionChallenge.ChooseSegment(
+		ctx,
+		assertionToChallenge,
+		bisectionHashes,
+	)
 	return nil
 }
