@@ -41,7 +41,9 @@ function logValToLog(val: ArbValue.Value, index: number, orig: EthBridgeMessage)
         transactionLogIndex: index,
         address: ethers.utils.hexlify((value.get(0) as ArbValue.IntValue).bignum),
         data: ethers.utils.hexlify(ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue)),
-        topics: value.contents.slice(2).map(rawTopic => ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum)),
+        topics: value.contents
+            .slice(2)
+            .map(rawTopic => ethers.utils.hexZeroPad(ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum), 32)),
         transactionHash: orig.txHash,
         logIndex: index,
     };
