@@ -80,7 +80,7 @@ contract Challenge {
     }
 
     function timeoutChallenge() public {
-        require(RollupTime.ticksToBlocks(block.number) > deadlineTicks, "Deadline hasn't expired");
+        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, "Deadline hasn't expired");
 
         if (state == State.AsserterTurn) {
             emit AsserterTimedOut();

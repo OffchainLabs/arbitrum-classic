@@ -19,6 +19,7 @@ package rollup
 import (
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -109,6 +110,34 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
+}
+
+func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
+	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
+}
+
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet, prefix string) string {
+	ret := prefix + strconv.Itoa(int(node.linkType)) + ":" + node.hash.ShortString()
+	if ng.leaves.IsLeaf(node) {
+		ret = ret + " leaf"
+	}
+	if node == ng.latestConfirmed {
+		ret = ret + " latestConfirmed"
+	}
+	stakers.forall(func(s *Staker) {
+		if s.location.Equals(node) {
+			ret = ret + " stake:" + s.address.ShortString()
+		}
+	})
+	ret = ret + "\n"
+	subPrefix := prefix + "  "
+	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
+		succi := node.successorHashes[i]
+		if !succi.Equals(common.Hash{}) {
+			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
+		}
+	}
+	return ret
 }
 
 func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {

@@ -24,14 +24,20 @@ cd arbitrum
 yarn
 yarn install:deps
 yarn build
+
+# In one session
+yarn docker:build:geth
+yarn docker:geth
+
+# In another session
 cd demos/pet-shop
 truffle migrate --reset --compile-all --network arbitrum
 cd ../..
-./scripts/setup_rollup.py demos/pet-shop/contract.ao 3
+./scripts/setup_rollup.py --geth demos/pet-shop/contract.ao 3
 
-./scripts/arb_deploy.py validator_states
+./scripts/arb_deploy.py validator-states
 
-# Start the frontend in another session:
+# In a third session:
 cd demos/pet-shop && yarn start
 ```
 
