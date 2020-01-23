@@ -38,7 +38,7 @@ func (a Address) String() string {
 }
 
 func (a Address) ShortString() string {
-	return a.String()[:8]
+	return a.Hex()[2:8]
 }
 
 func (a Address) IsZero() bool {
