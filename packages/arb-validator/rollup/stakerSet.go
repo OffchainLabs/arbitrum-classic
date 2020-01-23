@@ -111,7 +111,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 func (s *Staker) DebugString(prefix string) string {
 	ret := prefix + "addr:" + s.address.ShortString() + " loc:" + s.location.hash.ShortString()
 	if !s.challenge.IsZero() {
-		ret = ret + "chal:" + s.challenge.ShortString()
+		ret = ret + " chal:" + s.challenge.ShortString()
 	}
 	return ret + "\n"
 }
