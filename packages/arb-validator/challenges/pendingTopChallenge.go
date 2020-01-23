@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -48,6 +49,7 @@ func DefendPendingTopClaim(
 	if err != nil {
 		return 0, err
 	}
+	log.Println("=======> defending pending top claim")
 
 	return defendPendingTop(
 		reorgCtx,
@@ -80,6 +82,7 @@ func ChallengePendingTopClaim(
 	if err != nil {
 		return 0, err
 	}
+	log.Println("=======> challenging pending top claim")
 	return challengePendingTop(
 		reorgCtx,
 		eventChan,

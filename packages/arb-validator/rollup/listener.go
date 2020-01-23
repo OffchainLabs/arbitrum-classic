@@ -268,12 +268,15 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 
 // All functions below are either only called if you have a stake down, or don't require a stake
 
-func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, asserterAncestor *Node) {
+	log.Println("========> ValidatorChainListener: got StartedChallenge event")
 	// Must already be staked to be challenged
 	startBlockId := ev.BlockId
 	startLogIndex := ev.LogIndex - 1
 	asserterKey, ok := lis.stakingKeys[ev.Asserter]
 	if ok {
+		log.Println("========> ValidatorChainListener: I am defender")
+		log.Println("========> linkType:", conflictNode.linkType)
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
 			go challenges.DefendPendingTopClaim(
@@ -317,6 +320,8 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 
 	challenger, ok := lis.stakingKeys[ev.Challenger]
 	if ok {
+		log.Println("========> ValidatorChainListener: I am challenger")
+		log.Println("========> linkType:", conflictNode.linkType)
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
 			go challenges.ChallengePendingTopClaim(

@@ -267,7 +267,7 @@ func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.Chall
 		ev.ChallengeType,
 	)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, asserterAncestor, challengerAncestor)
+		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
 	}
 }
 
