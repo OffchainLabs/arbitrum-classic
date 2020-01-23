@@ -286,3 +286,4 @@ dmypy.json
 packages/arb-validator/cmd/rollupServer/rollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
+packages/arb-validator/cmd/evilRollupServer/evilRollupServer
