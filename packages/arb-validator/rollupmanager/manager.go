@@ -165,6 +165,7 @@ func CreateManager(
 					}
 
 					chain.NotifyNewBlock(blockId.Clone())
+					log.Print(chain.DebugString("== "))
 
 					events, err := watcher.GetEvents(runCtx, blockId)
 					if err != nil {
