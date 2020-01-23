@@ -99,6 +99,23 @@ func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	}
 }
 
+func (ss *StakerSet) DebugString(prefix string) string {
+	ret := prefix + "stakers:\n"
+	subPrefix := prefix + "  "
+	ss.forall(func(s *Staker) {
+		ret = ret + s.DebugString(subPrefix)
+	})
+	return ret
+}
+
+func (s *Staker) DebugString(prefix string) string {
+	ret := prefix + "addr:" + s.address.ShortString() + " loc:" + s.location.hash.ShortString()
+	if !s.challenge.IsZero() {
+		ret = ret + " chal:" + s.challenge.ShortString()
+	}
+	return ret + "\n"
+}
+
 func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
 	if len(ss.idx) != len(ss2.idx) {
 		return false
