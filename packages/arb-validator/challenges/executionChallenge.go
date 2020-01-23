@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -52,6 +53,9 @@ func DefendExecutionClaim(
 		return ChallengeContinuing, err
 	}
 
+	if startMachine == nil {
+		log.Fatal("nil startMachine in DefendExecutionClaim")
+	}
 	return defendExecution(
 		reorgCtx,
 		eventChan,

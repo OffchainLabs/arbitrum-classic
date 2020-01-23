@@ -308,7 +308,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startBlockId,
 				startLogIndex,
 				chain.executionPrecondition(conflictNode),
-				conflictNode.machine,
+				conflictNode.prev.machine,
 				conflictNode.disputable.AssertionParams.NumSteps,
 				50,
 			)
@@ -348,7 +348,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startBlockId,
 				startLogIndex,
 				chain.executionPrecondition(conflictNode),
-				conflictNode.machine,
+				conflictNode.prev.machine,
 				false,
 			)
 		default:
