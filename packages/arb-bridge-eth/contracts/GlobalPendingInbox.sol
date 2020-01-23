@@ -59,11 +59,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function sendMessages(bytes calldata _messages) external {
         bool valid;
-        uint offset = 0;
-        bytes32 messageHash;
+        uint256 offset = 0;
         uint256 messageType;
-        uint256 sender;
-        bytes memory messageData;
+        address sender;
         uint256 totalLength = _messages.length;
 
         emit AssertionEvent(inboxAddress, false, 0 , msg.sender, "event1");
@@ -73,80 +71,71 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             (
                 valid,
                 offset,
-                messageHash,
                 messageType,
-                sender,
-                messageData) = Value.deserializeMessage(_messages, offset);
-
-            if (valid) {
-                sendDeserializedMsg(messageData, messageType);
+                sender
+            ) = Value.deserializeMessageData(_messages, offset);
+            if (!valid) {
+                break;
+            }
+            (valid, offset) = sendDeserializedMsg(_messages, offset, messageType);
+            if (!valid) {
+                break;
             }
         }
     }
 
-    function sendDeserializedMsg(bytes memory messageData, uint256 messageType) private {
+    function sendDeserializedMsg(
+        bytes memory _messages,
+        uint256 startOffset,
+        uint256 messageType
+    )
+        private
+        returns(
+            bool, // valid
+            uint256 // offset
+        )
+    {
         if (messageType == ETH_DEPOSIT) {
             (
                 bool valid,
-                uint256 destination,
+                uint256 offset,
+                address to,
                 uint256 value
-            ) = Value.getEthMsgData(messageData);
+            ) = Value.getEthMsgData(_messages, startOffset);
 
-            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event2");
-            emit AssertionEvent(msg.sender, valid, messageType, address(bytes20(bytes32(destination))), "event2");
-
-            if (valid) {
-                require(
-                    transferEth(
-                        msg.sender,
-                        address(bytes20(bytes32(destination))),
-                        value
-                    )
-                );
+            if (!valid) {
+                return (false, startOffset);
             }
-
+            require(transferEth(msg.sender, to, value));
+            return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
                 bool valid,
-                uint256 tokenContract,
-                uint256 destination,
+                uint256 offset,
+                address erc20,
+                address to,
                 uint256 value
-            ) = Value.getERCTokenMsgData(messageData);
-
-            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event3");
-            emit AssertionEvent(msg.sender, valid, messageType, address(bytes20(bytes32(destination))), "event3");
-
-            if (valid) {
-                require(
-                    transferERC20(
-                        msg.sender,
-                        address(bytes20(bytes32(destination))),
-                        address(bytes20(bytes32(tokenContract))),
-                        value
-                    )
-                );
+            ) = Value.getERCTokenMsgData(_messages, startOffset);
+            if (!valid) {
+                return (false, startOffset);
             }
-
+            require(transferERC20(msg.sender, to, erc20, value));
+            return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
                 bool valid,
-                uint256 tokenContract,
-                uint256 destination,
+                uint256 offset,
+                address erc721,
+                address to,
                 uint256 value
-            ) = Value.getERCTokenMsgData(messageData);
-
-            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event4");
-
-            if (valid) {
-                require(
-                    transferNFT(
-                        msg.sender,
-                        address(bytes20(bytes32(destination))),
-                        address(bytes20(bytes32(tokenContract))),
-                        value
-                    )
-                );
+            ) = Value.getERCTokenMsgData(_messages, startOffset);
+            if (!valid) {
+                return (false, startOffset);
             }
+            require(transferNFT(msg.sender, to, erc721, value));
+            return (true, offset);
+        } else {
+            return (false, startOffset);
         }
     }
 
@@ -160,6 +149,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     )
         external
     {
+        (bool valid,, bytes32 valHash) = Value.deserializeHashed(_data, 0);
+        require(valid, "Transaction has invalid value");
         address sender = SigUtils.recoverAddress(
             keccak256(
                 abi.encodePacked(
@@ -167,7 +158,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _to,
                     _seqNumber,
                     _value,
-                    Value.deserializeHashed(_data)
+                    valHash
                 )
             ),
             _signature
@@ -264,7 +255,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         PendingInbox storage pendingInbox = pending[_chain];
 
         if (pendingInbox.value != 0) {
-            bytes32 dataHash = Value.deserializeHashed(_data);
+            (bool valid,, bytes32 dataHash) = Value.deserializeHashed(_data, 0);
+            require(valid, "Invalid transaction data");
             bytes32 txHash = keccak256(
                 abi.encodePacked(
                     TRANSACTION_MSG,
@@ -288,12 +280,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             msgType[1] = Value.newInt(uint256(_from));
             msgType[2] = Value.newTuple(msgValues);
 
-            Value.Data[] memory dataMsg = new Value.Data[](3);
-            dataMsg[0] = Value.newInt(block.number);
-            dataMsg[1] = Value.newInt(uint256(txHash));
-            dataMsg[2] = Value.newTuple(msgType);
-
-            bytes32 messageHash =  Value.newTuple(dataMsg).hash().hash;
+            bytes32 messageHash = Value.hashTuple([
+                Value.newInt(block.number),
+                Value.newInt(uint256(txHash)),
+                Value.newTuple(msgType)
+            ]);
 
             _deliverMessage(_chain, messageHash);
 

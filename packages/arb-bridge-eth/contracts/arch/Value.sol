@@ -186,12 +186,17 @@ library Value {
     )
         internal
         pure
-        returns(uint256 retCode, uint, HashOnly memory)
+        returns(
+            bool, // valid
+            uint256, // offset
+            HashOnly memory
+        )
     {
-        uint256 offset = startOffset;
-        bytes32 valHash = data.toBytes32(offset);
-        offset += 32;
-        return (0, offset, HashOnly(valHash));
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, HashOnly(0));
+        }
+        return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
@@ -286,14 +291,25 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE);
     }
 
-    function deserializeInt(bytes memory data, uint256 startOffset) internal pure returns (uint, uint256) {
-        uint256 offset = startOffset;
-        uint256 intVal = data.toUint(offset);
-        offset += 32;
-        return (offset, intVal);
+    function deserializeInt(bytes memory data, uint256 startOffset) internal pure returns (bool, uint256, uint256) {
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, 0);
+        }
+        return (true, startOffset + 32, data.toUint(startOffset));
     }
 
-    function deserializeCodePoint(bytes memory data, uint256 startOffset) internal pure returns (uint, CodePoint memory) {
+    function deserializeCodePoint(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            CodePoint memory // val
+        ) {
         uint256 offset = startOffset;
         uint8 immediateType = uint8(data[offset]);
         offset ++;
@@ -301,18 +317,20 @@ library Value {
         offset++;
         bytes32 immediateVal;
         if (immediateType == 1) {
-            uint256 valid;
+            bool valid;
             Data memory value;
             (valid, offset, value) = deserialize(data, offset);
-            require(valid == 0, "Marshalled value must be valid");
+            if (!valid) {
+                return (false, startOffset, CodePoint(0, 0, false, 0));
+            }
             immediateVal = value.hash().hash;
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
-            return (offset, CodePoint(opCode, nextHash, true, immediateVal));
+            return (true, offset, CodePoint(opCode, nextHash, true, immediateVal));
         }
-        return (offset, CodePoint(opCode, nextHash, false, 0));
+        return (true, offset, CodePoint(opCode, nextHash, false, 0));
     }
 
     function deserializeTuple(
@@ -322,18 +340,22 @@ library Value {
     )
         internal
         pure
-        returns (uint, uint, Data[] memory)
+        returns (
+            bool, // valid
+            uint, // offset
+            Data[] memory // val
+        )
     {
         uint256 offset = startOffset;
-        uint256 retVal;
+        bool valid;
         Data[] memory members = new Data[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (retVal, offset, members[i]) = deserialize(data, offset);
-            if (retVal != 0) {
-                return (retVal, offset, members);
+            (valid, offset, members[i]) = deserialize(data, offset);
+            if (!valid) {
+                return (false, startOffset, members);
             }
         }
-        return (0, offset, members);
+        return (true, offset, members);
     }
 
     function deserialize(
@@ -342,112 +364,121 @@ library Value {
     )
         internal
         pure
-        returns(uint256 retCode, uint, Data memory)
+        returns(
+            bool, // valid
+            uint, // offset
+            Data memory // val
+        )
     {
-        require(startOffset < data.length, "Data offset out of bounds");
+        if(startOffset >= data.length) {
+            return (false, startOffset, newInt(0));
+        }
+        bool valid;
         uint256 offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
         CodePoint memory cpVal;
         if (valType == INT_TYPECODE) {
-            (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newInt(intVal));
+            (valid, offset, intVal) = deserializeInt(data, offset);
+            return (valid, offset, newInt(intVal));
         } else if (valType == CODE_POINT_TYPECODE) {
-            (offset, cpVal) = deserializeCodePoint(data, offset);
-            return (0, offset, newCodePoint(cpVal));
+            (valid, offset, cpVal) = deserializeCodePoint(data, offset);
+            return (valid, offset, newCodePoint(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
-            (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newHashOnly(bytes32(intVal)));
+            (valid, offset, intVal) = deserializeInt(data, offset);
+            return (valid, offset, newHashOnly(bytes32(intVal)));
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;
-            uint256 valid;
             (valid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
             return (valid, offset, newTuple(tupleVal));
         }
-        return (10000 + uint(valType), 0, newInt(0));
+        return (false, 0, newInt(0));
     }
 
-    function deserializeValidHashed(bytes memory data, uint256 offset) internal pure returns(uint, bytes32) {
-        uint256 valid;
-        uint256 newOffset;
-        Data memory value;
-        (valid, newOffset, value) = deserialize(data, offset);
-        require(valid == 0, "Marshalled value must be valid");
-        return (newOffset, value.hash().hash);
-    }
-
-    function getNextValid(bytes memory data, uint256 offset) internal pure returns(uint, bytes memory) {
-        uint256 valid;
-        uint256 nextOffset;
-        Data memory value;
-        (valid, nextOffset, value) = deserialize(data, offset);
-        require(valid == 0, "Marshalled value must be valid");
-        return (nextOffset, data.slice(offset, nextOffset - offset));
-    }
-
-    function deserializeHashed(bytes memory data) internal pure returns (bytes32) {
-        uint256 valid;
-        uint256 offset = 0;
-        Data memory value;
-        (valid, offset, value) = deserialize(data, 0);
-        require(valid == 0, "Marshalled value must be valid");
-        return value.hash().hash;
-    }
-
-    function deserializeMessage(
+    function deserializeHashed(
         bytes memory data,
         uint256 startOffset
     )
         internal
         pure
         returns(
-            bool valid,
-            uint256 offset,
-            bytes32 messageHash,
-            uint256 msgType,
-            uint256 sender,
-            bytes memory messageData
+            bool, // valid
+            uint256, // offset
+            bytes32 // valHash
         )
     {
-        offset = startOffset;
+        (bool valid, uint256 offset, Data memory value) = deserialize(data, startOffset);
+        if (!valid) {
+            return (false, startOffset, 0);
+        }
+        return (true, offset, value.hash().hash);
+    }
+
+    function getNextValid(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset,
+            bytes memory // dataSlice
+        )
+    {
+        (bool valid, uint256 offset,) = deserialize(data, startOffset);
+        if (!valid) {
+            return (false, startOffset, new bytes(0));
+        }
+        return (true, offset, data.slice(startOffset, offset - startOffset));
+    }
+
+    function deserializeMessageData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256, // msgType
+            address // sender
+        )
+    {
+        bool valid;
+        uint256 msgType;
+        uint256 senderRaw;
+        uint256 offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
 
-        if(valType != TUPLE_TYPECODE + 3){ 
-            return (valid, offset, messageHash, msgType, sender, messageData); 
+        if(valType != TUPLE_TYPECODE + 3){
+            return (false, startOffset, 0, address(0));
         }
 
-        (msgType, offset) = deserializeInt(data, offset);
+        (valid, msgType, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, 0, address(0));
+        }
+        (valid, senderRaw, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, 0, address(0));
+        }
 
-        valType = uint8(data[offset]);
-        offset++;
-        (sender, offset) = deserializeInt(data, offset);
-
-        valType = uint8(data[offset]);
-        uint tmpOffset = offset;
-        offset++;
-
-        uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
-        Data[] memory tupleVal;
-        uint tupleValid;
-        (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);// just for offset
-
-        messageData = data.slice(tmpOffset, offset - tmpOffset); //make sure correct
-
-        valid = true;
-
-        bytes32[] memory hashes = new bytes32[](2);
-        hashes[0] = hashInt(msgType);
-        hashes[1] = hashInt(sender);
-        messageHash = hashTuple(hashes);
-
-        return (valid, offset, messageHash, msgType, sender, messageData);
+        return (
+            true,
+            offset,
+            msgType,
+            address(bytes20(bytes32((senderRaw))))
+        );
     }
 
     function getTransactionMsgData(
-        bytes memory data)
+        bytes memory data
+    )
         public
         pure
         returns(
@@ -467,20 +498,20 @@ library Value {
 
             valType = uint8(data[offset]);
             offset++;
-            (destination, offset) = deserializeInt(data, offset);
+            (valid, destination, offset) = deserializeInt(data, offset);
 
             valType = uint8(data[offset]);
             offset++;
-            (seqNumber, offset) = deserializeInt(data, offset);
-            
+            (valid, seqNumber, offset) = deserializeInt(data, offset);
+
 
             valType = uint8(data[offset]);
             offset++;
-            (value, offset) = deserializeInt(data, offset);
+            (valid, value, offset) = deserializeInt(data, offset);
 
             // fix incorrect
             bytes32 messageDataHash;
-            (offset, messageDataHash) = deserializeValidHashed(data, offset);
+            (valid, offset, messageDataHash) = deserializeHashed(data, offset);
             messageData = data.slice(1, offset - 1);// fix incorrect
 
             valid = true;
@@ -490,66 +521,94 @@ library Value {
     }
 
     function getEthMsgData(
-        bytes memory data)
+        bytes memory data,
+        uint256 startOffset
+    )
         public
         pure
         returns(
-            bool valid,
-            uint256 destination,
-            uint256 value)
+            bool, // valid
+            uint256, // offset
+            address, // destination
+            uint256 // value
+        )
     {
-        uint offset = 0;
+        bool valid;
+        uint256 destRaw;
+        uint256 value;
+        uint offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
 
-        if(valType == TUPLE_TYPECODE + 2){
-
-            uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
-            Data[] memory tupleVal;
-            uint tupleValid;
-            (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
-
-            // 0 means success?
-            if( tupleValid == 0 && 
-                tupleVal[0].typeCode == INT_TYPECODE && 
-                tupleVal[1].typeCode == INT_TYPECODE){
-                return (true, tupleVal[0].intVal, tupleVal[1].intVal);
-            }
+        if(valType != TUPLE_TYPECODE + 2) {
+            return (false, startOffset, address(0), 0);
         }
 
-        return (false, destination, value);
+        (valid, destRaw, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), 0);
+        }
+
+        (valid, value, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), 0);
+        }
+
+        return (
+            true,
+            offset,
+            address(bytes20(bytes32((destRaw)))),
+            value
+        );
     }
 
     function getERCTokenMsgData(
-        bytes memory data)
+        bytes memory data,
+        uint256 startOffset
+    )
         public
         pure
         returns(
-            bool valid,
-            uint256 tokenAddress,
-            uint256 destination,
-            uint256 value)
+            bool, // valid
+            uint256, // offset
+            address, // tokenAddress
+            address, // destination
+            uint256 // value
+        )
     {
-        uint offset = 0;
+        bool valid;
+        uint256 tokenAddressRaw;
+        uint256 destRaw;
+        uint256 value;
+        uint offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
 
-        if(valType == TUPLE_TYPECODE + 3){
-
-            uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
-            Data[] memory tupleVal;
-            uint tupleValid;
-            (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
-
-            // 0 means success?
-            if( tupleValid == 0 && 
-                tupleVal[0].typeCode == INT_TYPECODE && 
-                tupleVal[1].typeCode == INT_TYPECODE && 
-                tupleVal[2].typeCode == INT_TYPECODE){
-                return (true, tupleVal[0].intVal, tupleVal[1].intVal, tupleVal[2].intVal);
-            }
+        if(valType != TUPLE_TYPECODE + 3) {
+            return (false, startOffset, address(0), address(0), 0);
         }
 
-        return (false, tokenAddress, destination, value);
+        (valid, tokenAddressRaw, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
+        }
+
+        (valid, destRaw, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
+        }
+
+        (valid, value, offset) = deserializeInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
+        }
+
+        return (
+            true,
+            offset,
+            address(bytes20(bytes32((tokenAddressRaw)))),
+            address(bytes20(bytes32((destRaw)))),
+            value
+        );
     }
 }
