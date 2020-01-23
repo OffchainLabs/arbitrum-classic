@@ -112,11 +112,11 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 	return chain
 }
 
-func (ng *NodeGraph) DebugString(prefix string) string {
-	return ng.DebugStringForNodeRecursive(ng.oldestNode, prefix)
+func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
+	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
 }
 
-func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, prefix string) string {
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet, prefix string) string {
 	ret := prefix + strconv.Itoa(int(node.linkType)) + ":" + node.hash.ShortString()
 	if ng.leaves.IsLeaf(node) {
 		ret = ret + " leaf"
@@ -124,12 +124,17 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, prefix string) stri
 	if node == ng.latestConfirmed {
 		ret = ret + " latestConfirmed"
 	}
+	stakers.forall(func(s *Staker) {
+		if s.location.Equals(node) {
+			ret = ret + " stake:" + s.address.ShortString()
+		}
+	})
 	ret = ret + "\n"
 	subPrefix := prefix + "  "
 	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
 		succi := node.successorHashes[i]
 		if !succi.Equals(common.Hash{}) {
-			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], subPrefix)
+			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
 		}
 	}
 	return ret
