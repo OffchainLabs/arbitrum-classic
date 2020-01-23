@@ -88,10 +88,9 @@ library Protocol {
     function generateLastMessageHash(bytes memory _messages) internal pure returns (bytes32) {
         bool valid;
         bytes32 hashVal = 0x00;
-        uint256 offset = 0;
         bytes32 msgHash;
-        uint256 amountCount = _messages.length;
-        for (uint256 i = 0; i < amountCount; i++) {
+        uint256 messageLength = _messages.length;
+        for (uint256 offset = 0; offset < messageLength;) {
             (valid, offset, msgHash) = Value.deserializeHashed(_messages, offset);
             require(valid, "Invalid output message");
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
