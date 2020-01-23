@@ -169,12 +169,12 @@ func (m *mockEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 }
 
 func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
-	fmt.Println("publishing event", msg)
+	//fmt.Println("publishing event", msg)
 	m.pubchan <- msg
 }
 
 func mine(m *mockEthdata, t time.Time) {
-	fmt.Println("mining - time = ", t)
+	//fmt.Println("mining - time = ", t)
 	m.Lock()
 	nextBlock := new(structures.BlockId)
 	nextBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
@@ -183,7 +183,7 @@ func mine(m *mockEthdata, t time.Time) {
 	m.LatestBlock = nextBlock
 	m.blockNumbers[nextBlock.Height] = nextBlock
 	m.blockHashes[nextBlock.HeaderHash] = nextBlock
-	fmt.Println("mined block number", nextBlock)
+	//fmt.Println("mined block number", nextBlock)
 	m.Unlock()
 	m.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.NewTimeEvent{

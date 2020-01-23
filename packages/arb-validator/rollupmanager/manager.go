@@ -146,6 +146,7 @@ func CreateManager(
 			for {
 				select {
 				case maybeBlockId, ok := <-headersChan:
+					log.Println("Manager received headers")
 					if !ok {
 						log.Println("Manager stopped receiving headers")
 						break runLoop
