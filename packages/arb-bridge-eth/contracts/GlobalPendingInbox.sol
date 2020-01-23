@@ -106,7 +106,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferEth(msg.sender, to, value));
+            require(transferEth(msg.sender, to, value), "Failed to transfer eth");
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -119,7 +119,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferERC20(msg.sender, to, erc20, value));
+            require(transferERC20(msg.sender, to, erc20, value), "Failed to transfer erc20");
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -132,7 +132,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferNFT(msg.sender, to, erc721, value));
+            require(transferNFT(msg.sender, to, erc721, value), "Failed to transfer erc721");
             return (true, offset);
         } else {
             return (false, startOffset);
