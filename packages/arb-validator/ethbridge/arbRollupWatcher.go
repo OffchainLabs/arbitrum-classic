@@ -202,13 +202,56 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 	log.Println("test assertion events3", testLogs3)
 
 	for _, evmLog := range testLogs {
-		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
-		if err != nil {
-			return nil, err
+		if evmLog.Topics[0] == AssertionEventID {
+			val, err := vm.GlobalPendingInbox.ParseAssertionEvent(evmLog)
+			if err != nil {
+				return nil, err
+			}
+
+			log.Println("AssertionEvent.valid : ", val.Valid)
+			log.Println("AssertionEvent.value : ", val.Value)
+			log.Println("AssertionEvent.destination : ", val.Destination)
+			log.Println("AssertionEvent.type : ", val.MessageType)
 		}
 
-		log.Println(event)
+		if evmLog.Topics[0] == AssertionEvent2ID {
+			val, err := vm.ArbRollup.ParseAssertionEvent2(evmLog)
+			if err != nil {
+				return nil, err
+			}
+
+			log.Println("AssertionEvent2.valid : ", val.Value)
+			log.Println("AssertionEvent2.value : ", val.Value)
+			log.Println("AssertionEvent2.destination : ", val.Destination)
+			log.Println("AssertionEvent2.type : ", val.MessageType)
+		}
 	}
+
+	//for _, evmLog := range testLogs2 {
+	//	if evmLog.Topics[0] == AssertionEventID {
+	//		val, err := vm.GlobalPendingInbox.ParseAssertionEvent(evmLog)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		log.Println("AssertionEvent.valid : ", val.Valid)
+	//		log.Println("AssertionEvent.value : ", val.Value)
+	//		log.Println("AssertionEvent.destination : ", val.Destination)
+	//		log.Println("AssertionEvent.type : ", val.MessageType)
+	//	}
+	//
+	//	if evmLog.Topics[0] == AssertionEvent2ID {
+	//		val, err := vm.ArbRollup.ParseAssertionEvent2(evmLog)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		log.Println("AssertionEvent2.valid : ", val.Value)
+	//		log.Println("AssertionEvent2.value : ", val.Value)
+	//		log.Println("AssertionEvent2.destination : ", val.Destination)
+	//		log.Println("AssertionEvent2.type : ", val.MessageType)
+	//	}
+	//}
 
 	log.Println("test events over")
 
@@ -510,30 +553,6 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 
 func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	log.Println("processEvents(): ")
-	if ethLog.Topics[0] == AssertionEventID {
-		val, err := vm.GlobalPendingInbox.ParseAssertionEvent(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Println("AssertionEvent.valid : ", val.Valid)
-		log.Println("AssertionEvent.value : ", val.Value)
-		log.Println("AssertionEvent.destination : ", val.Destination)
-		log.Println("AssertionEvent.type : ", val.MessageType)
-	}
-
-	if ethLog.Topics[0] == AssertionEvent2ID {
-		val, err := vm.ArbRollup.ParseAssertionEvent2(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Println("AssertionEvent2.valid : ", val.Value)
-		log.Println("AssertionEvent2.value : ", val.Value)
-		log.Println("AssertionEvent2.destination : ", val.Destination)
-		log.Println("AssertionEvent2.type : ", val.MessageType)
-	}
-
 	if ethLog.Topics[0] == rollupStakeCreatedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {
