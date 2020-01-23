@@ -145,6 +145,10 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	}
 }
 
+func (chain *ChainObserver) DebugString(prefix string) string {
+	return chain.nodeGraph.DebugString(prefix)
+}
+
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) {
 	chain.Lock()
 	defer chain.Unlock()

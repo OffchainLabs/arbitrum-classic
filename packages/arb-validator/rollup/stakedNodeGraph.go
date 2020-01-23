@@ -67,6 +67,11 @@ func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreConte
 	return chain
 }
 
+func (m *StakedNodeGraph) DebugString(prefix string) string {
+	subPrefix := prefix + "  "
+	return prefix + "nodes:\n" + m.NodeGraph.DebugString(subPrefix) + m.stakers.DebugString(subPrefix)
+}
+
 func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 	return s.NodeGraph.Equals(s2.NodeGraph) &&
 		s.stakers.Equals(s2.stakers)

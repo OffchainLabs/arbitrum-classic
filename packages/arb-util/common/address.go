@@ -37,8 +37,16 @@ func (a Address) String() string {
 	return a.Hex()
 }
 
+func (a Address) ShortString() string {
+	return a.String()[:8]
+}
+
 func (a Address) IsZero() bool {
 	return a == zeroAddress
+}
+
+func (a Address) Equals(a2 Address) bool {
+	return a == a2
 }
 
 func (a Address) ToEthAddress() ethcommon.Address {
