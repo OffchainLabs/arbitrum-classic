@@ -26,7 +26,7 @@
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth"
   },
   "engines": {
-    "node": ">= 8.0.0 < 12.0.0",
+    "node": ">= 8.0.0 < 13.0.0",
     "npm": "^6.0.0",
     "yarn": "^1.0.0"
   },

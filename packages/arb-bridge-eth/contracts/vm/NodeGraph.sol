@@ -82,7 +82,7 @@ contract NodeGraph is ChallengeType {
 
     event RollupPruned(bytes32 leaf);
 
-    event RollupCreated(bytes32 initVmState);
+    event RollupCreated(bytes32 initVMHash);
 
     IGlobalPendingInbox public globalInbox;
     VM.Params public vmParams;

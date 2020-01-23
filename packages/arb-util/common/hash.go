@@ -31,6 +31,10 @@ func (h Hash) String() string {
 	return hexutil.Encode(h[:])
 }
 
+func (h Hash) ShortString() string {
+	return h.String()[2:8]
+}
+
 func (h Hash) Bytes() []byte {
 	return h[:]
 }

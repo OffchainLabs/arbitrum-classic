@@ -48,7 +48,7 @@ type ChainListener interface {
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
-	AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash)
+	AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash)
 	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash)
 }
 
@@ -459,6 +459,18 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *Chai
 	}
 }
 
+func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
+	for stakingAddress, _ := range lis.stakingKeys {
+		staker := chain.nodeGraph.stakers.idx[stakingAddress]
+		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
+		if newValidNode.depth > staker.location.depth {
+			proof1 := GeneratePathProof(staker.location, newValidNode)
+			proof2 := GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
+			lis.actor.MoveStake(ctx, proof1, proof2)
+		}
+	}
+}
+
 func (lis *ValidatorChainListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
 }
 func (lis *ValidatorChainListener) lostChallenge(arbbridge.ChallengeCompletedEvent) {}
@@ -470,9 +482,6 @@ func (lis *ValidatorChainListener) ConfirmedNode(context.Context, *ChainObserver
 func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
-}
-
-func (lis *ValidatorChainListener) AdvancedKnownValidNode(context.Context, *ChainObserver, common.Hash) {
 }
 func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
 }
