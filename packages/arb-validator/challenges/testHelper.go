@@ -21,9 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
-
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -32,6 +29,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
@@ -74,27 +72,11 @@ func testChallenge(
 		return err
 	}
 
-	//client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
-	mauth1 := &mockbridge.TransOpts{
-		From:     common.NewAddressFromEth(auth1.From),
-		Nonce:    auth1.Nonce,
-		Value:    auth1.Value,
-		GasPrice: auth1.GasPrice,
-		GasLimit: auth1.GasLimit,
-	}
-	client1, err := mockbridge.NewEthAuthClient(ethURL, mauth1)
+	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
 	if err != nil {
 		return err
 	}
-	//client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
-	mauth2 := &mockbridge.TransOpts{
-		From:     common.NewAddressFromEth(auth2.From),
-		Nonce:    auth2.Nonce,
-		Value:    auth2.Value,
-		GasPrice: auth2.GasPrice,
-		GasLimit: auth2.GasLimit,
-	}
-	client2, err := mockbridge.NewEthAuthClient(ethURL, mauth2)
+	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
 	if err != nil {
 		return err
 	}
@@ -109,7 +91,7 @@ func testChallenge(
 		return err
 	}
 
-	tester, err := client1.DeployChallengeTest()
+	tester, err := client1.DeployChallengeTest(context.Background())
 	if err != nil {
 		return err
 	}

@@ -189,7 +189,7 @@ func (c *MockArbAuthClient) NewPendingTopChallenge(address common.Address) (arbb
 	return NewPendingTopChallenge(address, c)
 }
 
-func (c *MockArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
+func (c *MockArbAuthClient) DeployChallengeTest(ctx context.Context) (*ChallengeTester, error) {
 	//testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c)
 	//if err != nil {
 	//	return nil, err
