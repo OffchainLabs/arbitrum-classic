@@ -310,6 +310,31 @@ library Value {
         return (true, startOffset + 32, data.toUint(startOffset));
     }
 
+    function deserializeCheckedInt(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256 // val
+        )
+    {
+        uint256 totalLength = data.length;
+        if (
+            totalLength < startOffset ||
+            totalLength - startOffset < 33 ||
+            uint8(data[startOffset]) != INT_TYPECODE
+        ) {
+            return (false, startOffset, 0);
+        }
+        return (true, startOffset + 33, data.toUint(startOffset + 1));
+    }
+
+
+
     function deserializeCodePoint(
         bytes memory data,
         uint256 startOffset
@@ -466,15 +491,16 @@ library Value {
         uint8 valType = uint8(data[offset]);
         offset++;
 
-        if(valType != TUPLE_TYPECODE + 3){
+        if(valType != TUPLE_TYPECODE + 3) {
             return (false, startOffset, 0, address(0));
         }
 
-        (valid, msgType, offset) = deserializeInt(data, offset);
+        (valid, offset, msgType) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, 0, address(0));
         }
-        (valid, senderRaw, offset) = deserializeInt(data, offset);
+
+        (valid, offset, senderRaw) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, 0, address(0));
         }
@@ -483,14 +509,14 @@ library Value {
             true,
             offset,
             msgType,
-            address(bytes20(bytes32((senderRaw))))
+            address(uint160((senderRaw)))
         );
     }
 
     function getTransactionMsgData(
         bytes memory data
     )
-        public
+        internal
         pure
         returns(
             bool valid,
@@ -507,18 +533,12 @@ library Value {
 
         if(valType == TUPLE_TYPECODE + 4){
 
-            valType = uint8(data[offset]);
-            offset++;
-            (valid, destination, offset) = deserializeInt(data, offset);
+            (valid, offset, destination) = deserializeCheckedInt(data, offset);
 
-            valType = uint8(data[offset]);
-            offset++;
-            (valid, seqNumber, offset) = deserializeInt(data, offset);
+            (valid, offset, seqNumber) = deserializeCheckedInt(data, offset);
 
 
-            valType = uint8(data[offset]);
-            offset++;
-            (valid, value, offset) = deserializeInt(data, offset);
+            (valid, offset, value) = deserializeCheckedInt(data, offset);
 
             // fix incorrect
             bytes32 messageDataHash;
@@ -535,7 +555,7 @@ library Value {
         bytes memory data,
         uint256 startOffset
     )
-        public
+        internal
         pure
         returns(
             bool, // valid
@@ -555,12 +575,12 @@ library Value {
             return (false, startOffset, address(0), 0);
         }
 
-        (valid, destRaw, offset) = deserializeInt(data, offset);
+        (valid, offset, destRaw) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, address(0), 0);
         }
 
-        (valid, value, offset) = deserializeInt(data, offset);
+        (valid, offset, value) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, address(0), 0);
         }
@@ -568,7 +588,7 @@ library Value {
         return (
             true,
             offset,
-            address(bytes20(bytes32((destRaw)))),
+            address(uint160((destRaw))),
             value
         );
     }
@@ -577,7 +597,7 @@ library Value {
         bytes memory data,
         uint256 startOffset
     )
-        public
+        internal
         pure
         returns(
             bool, // valid
@@ -599,17 +619,17 @@ library Value {
             return (false, startOffset, address(0), address(0), 0);
         }
 
-        (valid, tokenAddressRaw, offset) = deserializeInt(data, offset);
+        (valid, offset, tokenAddressRaw) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, address(0), address(0), 0);
         }
 
-        (valid, destRaw, offset) = deserializeInt(data, offset);
+        (valid, offset, destRaw) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, address(0), address(0), 0);
         }
 
-        (valid, value, offset) = deserializeInt(data, offset);
+        (valid, offset, value) = deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, address(0), address(0), 0);
         }
@@ -617,8 +637,8 @@ library Value {
         return (
             true,
             offset,
-            address(bytes20(bytes32((tokenAddressRaw)))),
-            address(bytes20(bytes32((destRaw)))),
+            address(uint160((tokenAddressRaw))),
+            address(uint160((destRaw))),
             value
         );
     }

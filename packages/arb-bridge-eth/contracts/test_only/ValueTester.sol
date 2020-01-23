@@ -33,4 +33,37 @@ contract ValueTester {
     {
         return Value.deserializeHashed(data, startOffset);
     }
+
+    function deserializeMessageData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        public
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256, // msgType
+            address // sender
+        )
+    {
+        return Value.deserializeMessageData(data, startOffset);
+    }
+
+    function getERCTokenMsgData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        public
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            address, // tokenAddress
+            address, // destination
+            uint256 // value
+        )
+    {
+        return Value.getERCTokenMsgData(data, startOffset);
+    }
 }

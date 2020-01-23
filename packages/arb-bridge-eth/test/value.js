@@ -39,4 +39,48 @@ contract("ArbRollup", accounts => {
       assert.equal("0x" + expectedHash, res["2"], "value hashes incorrectly");
     });
   }
+
+  it("should parse erc20 message", async () => {
+    let value_tester = await ValueTester.new();
+    const val = new ArbValue.TupleValue([
+      new ArbValue.IntValue(2),
+      new ArbValue.IntValue(
+        "1454660323771124265538360532739934987166685588469"
+      ),
+      new ArbValue.TupleValue([
+        new ArbValue.IntValue(
+          "641988807973089174688456409219473706566398216120"
+        ),
+        new ArbValue.IntValue(
+          "1454660323771124265538360532739934987166685588469"
+        ),
+        new ArbValue.IntValue(1543)
+      ])
+    ]);
+
+    const val_data = ArbValue.marshal(val);
+    let res = await value_tester.deserializeMessageData(val_data, 0);
+    let offset = res["1"].toNumber();
+    assert.isTrue(res["0"], "value didn't deserialize correctly");
+    assert.equal(res["2"].toNumber(), 2, "Incorrect message type");
+    assert.equal(
+      res["3"],
+      "0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5",
+      "Incorrect sender"
+    );
+
+    let res2 = await value_tester.getERCTokenMsgData(val_data, offset);
+    assert.isTrue(res2["0"], "value didn't deserialize correctly");
+    assert.equal(
+      res2["2"],
+      "0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8",
+      "Incorrect token contract"
+    );
+    assert.equal(
+      res2["3"],
+      "0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5",
+      "Incorrect dest"
+    );
+    assert.equal(res2["4"].toNumber(), 1543, "Incorrect value");
+  });
 });
