@@ -180,25 +180,6 @@ library Value {
         );
     }
 
-    function deserializeHashOnly(
-        bytes memory data,
-        uint256 startOffset
-    )
-        internal
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            HashOnly memory
-        )
-    {
-        uint256 totalLength = data.length;
-        if (totalLength < startOffset || totalLength - startOffset < 32) {
-            return (false, startOffset, HashOnly(0));
-        }
-        return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
-    }
-
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
         require(val.typeCode != 2, "Value must have a valid type code");
         if (val.typeCode == 0) {
@@ -291,7 +272,37 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE);
     }
 
-    function deserializeInt(bytes memory data, uint256 startOffset) internal pure returns (bool, uint256, uint256) {
+    function deserializeHashOnly(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            HashOnly memory
+        )
+    {
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, HashOnly(0));
+        }
+        return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
+    }
+
+    function deserializeInt(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256 // val
+        )
+    {
         uint256 totalLength = data.length;
         if (totalLength < startOffset || totalLength - startOffset < 32) {
             return (false, startOffset, 0);
@@ -312,7 +323,7 @@ library Value {
         ) {
         uint256 offset = startOffset;
         uint8 immediateType = uint8(data[offset]);
-        offset ++;
+        offset++;
         uint8 opCode = uint8(data[offset]);
         offset++;
         bytes32 immediateVal;
