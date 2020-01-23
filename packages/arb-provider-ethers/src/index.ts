@@ -16,7 +16,7 @@
 'use strict';
 
 import * as ERC20 from './lib/ArbERC20.json';
-import * as ERC721 from './lib/ArbERC20.json';
+import * as ERC721 from './lib/ArbERC721.json';
 
 export { ERC20 };
 export { ERC721 };

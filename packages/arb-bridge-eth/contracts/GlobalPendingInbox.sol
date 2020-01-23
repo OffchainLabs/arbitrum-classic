@@ -55,6 +55,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         pending[msg.sender].value = Value.hashEmptyTuple();
     }
 
+    address inboxAddress = 0xCAAd408788C192979384768DD5bE04eC1b3787dA;
+
     function sendMessages(bytes calldata _messages) external {
         bool valid;
         uint offset = 0;
@@ -63,6 +65,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         uint256 sender;
         bytes memory messageData;
         uint256 totalLength = _messages.length;
+
+        emit AssertionEvent(inboxAddress, false, 0 , msg.sender, "event1");
+        emit AssertionEvent(msg.sender, false, 0 , msg.sender, "event1");
 
         while (offset < totalLength) {
             (
@@ -87,6 +92,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 uint256 value
             ) = Value.getEthMsgData(messageData);
 
+            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event2");
+            emit AssertionEvent(msg.sender, valid, messageType, address(bytes20(bytes32(destination))), "event2");
+
             if (valid) {
                 require(
                     transferEth(
@@ -104,6 +112,9 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 uint256 destination,
                 uint256 value
             ) = Value.getERCTokenMsgData(messageData);
+
+            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event3");
+            emit AssertionEvent(msg.sender, valid, messageType, address(bytes20(bytes32(destination))), "event3");
 
             if (valid) {
                 require(
@@ -124,13 +135,15 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 uint256 value
             ) = Value.getERCTokenMsgData(messageData);
 
+            emit AssertionEvent(inboxAddress, valid, messageType, address(bytes20(bytes32(destination))), "event4");
+
             if (valid) {
                 require(
                     transferNFT(
                         msg.sender,
-                            address(bytes20(bytes32(destination))),
-                            address(bytes20(bytes32(tokenContract))),
-                            value
+                        address(bytes20(bytes32(destination))),
+                        address(bytes20(bytes32(tokenContract))),
+                        value
                     )
                 );
             }

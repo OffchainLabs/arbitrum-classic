@@ -5,6 +5,7 @@ var $ = require("jquery");
 const ethers = require("ethers");
 const ArbProvider = require("arb-provider-ethers").ArbProvider;
 const ArbERC20 = require("arb-provider-ethers").ERC20;
+const ArbERC721 = require("arb-provider-ethers").ERC721;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
@@ -56,26 +57,37 @@ class App {
     console.log("arb networkId: " + network2.chainId);
 
     const testToken = require("../build/contracts/TestToken.json");
+    const testItem = require("../build/contracts/TestItem.json");
 
-    let testTokenAddress =
+    this.testItemAddress =
+      testItem.networks[network.chainId.toString()].address;
+    this.testTokenAddress =
       testToken.networks[network.chainId.toString()].address;
-    this.testTokenAddres = testTokenAddress;
 
-    // let testTokenAddress2 =
-    //   testToken.networks[network2.chainId.toString()].address;
-    // this.testTokenAddres = testTokenAddress;
-
-    console.log("eth token contract addresss: " + testTokenAddress);
+    console.log("testToken contract addresss: " + this.testTokenAddress);
+    console.log("testItem contract addresss: " + this.testItemAddress);
 
     let ethTestTokenContractRaw = new ethers.Contract(
-      testTokenAddress,
+      this.testTokenAddress,
       testToken.abi,
       this.ethProvider
     );
 
     let arbTestTokenContractRaw = new ethers.Contract(
-      testTokenAddress,
+      this.testTokenAddress,
       ArbERC20.abi,
+      this.arbProvider
+    );
+
+    let ethTestItemContractRaw = new ethers.Contract(
+      this.testItemAddress,
+      testItem.abi,
+      this.ethProvider
+    );
+
+    let arbTestItemContractRaw = new ethers.Contract(
+      this.testItemAddress,
+      ArbERC721.abi,
       this.arbProvider
     );
 
@@ -94,6 +106,9 @@ class App {
     this.contracts.EthTestToken = ethTestTokenContractRaw.connect(
       this.ethWallet
     );
+
+    this.contracts.ArbTestItem = arbTestItemContractRaw.connect(this.arbWallet);
+    this.contracts.EthTestItem = ethTestItemContractRaw.connect(this.ethWallet);
 
     this.listenForEvents();
     this.setupHooks();
@@ -160,8 +175,11 @@ class App {
       const inboxManager = await this.arbProvider.globalInboxConn();
       const tx = await inboxManager.getTokenBalances(vmId);
 
-      console.log("vmId address: " + vmId);
-      console.log("arbBalance in GolbalWallet: " + tx[1]);
+      console.log("vm Balance in GolbalWallet: " + tx[1]);
+
+      const txx = await inboxManager.getTokenBalances(this.ethwalletAddress);
+
+      console.log("arbBalance in GolbalWallet: " + txx[1]);
 
       const arbBalance = await this.contracts.ArbTestToken.balanceOf(
         this.arbwalletAddress
@@ -201,9 +219,72 @@ class App {
     this.render();
   }
 
+  async mintERC721() {
+    let tokenId = parseInt($("#tokenId").val());
+
+    console.log("mint to " + this.ethwalletAddress);
+
+    const tx = await this.contracts.EthTestToken.mint(
+      this.ethwalletAddress,
+      tokenId
+    );
+
+    $("#mintForm").hide();
+    $("#mintMessage").html("ERC 721 Tokens are minting...");
+    $("#mintMessage").show();
+
+    await tx.wait();
+
+    console.log("minted");
+    $("#mintMessage").hide();
+    $("#mintForm").show();
+    this.render();
+  }
+
+  async depositEth() {
+    let ethDepositValue = parseInt($("#ethDepositValue").val());
+
+    const tx = await this.arbWallet.depositEth(
+      this.arbwalletAddress,
+      ethDepositValue
+    );
+  }
+
+  async depositERC721() {
+    let tokenID = parseInt($("#depositId").val());
+    const inboxManager = await this.arbProvider.globalInboxConn();
+    const tx = await this.contracts.EthTestItem.approve(
+      inboxManager.address,
+      tokenID
+    );
+
+    $("#depositForm").hide();
+    $("#depositMessage").html("Approving transfer to Arbitrum chain");
+    $("#depositMessage").show();
+
+    await tx.wait();
+    console.log("approved erc721 deposit from: " + this.ethwalletAddress);
+
+    const tx2 = await this.arbWallet.depositERC721(
+      this.arbwalletAddress,
+      this.contracts.EthTestItem.address,
+      tokenID
+    );
+
+    $("#depositMessage").html("Depositing 721 token to Arbitrum chain");
+
+    console.log("Waiting on tx");
+    await tx2.wait(0);
+    console.log("Finished waiting");
+
+    $("#depositMessage").hide();
+    $("#depositForm").show();
+
+    this.render();
+  }
+
   async deposit() {
     let val = parseInt($("#depositAmount").val());
-
     const inboxManager = await this.arbProvider.globalInboxConn();
     const tx1 = await this.contracts.EthTestToken.approve(
       inboxManager.address,
@@ -215,7 +296,7 @@ class App {
     $("#depositMessage").show();
 
     await tx1.wait();
-    console.log("approved from : " + this.ethwalletAddress);
+    console.log("erc20 approved from: " + this.ethwalletAddress);
 
     const tx2 = await this.arbWallet.depositERC20(
       this.arbwalletAddress,
@@ -223,7 +304,7 @@ class App {
       val
     );
 
-    $("#depositMessage").html("Depositing token to Arbitrum chain");
+    $("#depositMessage").html("Depositing 20 token to Arbitrum chain");
 
     console.log("Waiting on tx");
     await tx2.wait(0);
@@ -236,11 +317,11 @@ class App {
   }
 
   async withdraw() {
-    let val = parseInt($("#depositAmount").val());
-    const vmAddress = await this.arbProvider.getVmID();
-    const signer = await this.arbProvider.getSigner();
-    // Not yet implemented
-    const tx = signer.withdrawERC20(this.contracts.EthTestToken.address, val);
+    let val = parseInt($("#withdrawAmount").val());
+    const tx = await this.contracts.ArbTestToken.withdraw(
+      this.ethwalletAddress,
+      val
+    );
     $("#withdrawForm").hide();
     $("#withdrawMessage").html("Withdrawing from EthBridge");
     $("#withdrawMessage").show();

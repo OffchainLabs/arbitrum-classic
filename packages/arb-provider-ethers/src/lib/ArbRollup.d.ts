@@ -145,6 +145,16 @@ interface ArbRollupInterface extends Interface {
     };
 
     events: {
+        AssertionEvent2: TypedEventDescription<{
+            encodeTopics([chain, valid, messageType, destination, value]: [
+                string | null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
+
         ConfirmedAssertion: TypedEventDescription<{
             encodeTopics([logsAccHash]: [null]): string[];
         }>;
@@ -339,6 +349,14 @@ export class ArbRollup extends Contract {
     };
 
     filters: {
+        AssertionEvent2(
+            chain: string | null,
+            valid: null,
+            messageType: null,
+            destination: null,
+            value: null,
+        ): EventFilter;
+
         ConfirmedAssertion(logsAccHash: null): EventFilter;
 
         RollupAsserted(

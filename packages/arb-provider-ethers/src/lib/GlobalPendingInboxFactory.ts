@@ -23,6 +23,43 @@ const _abi = [
                 type: 'address',
             },
             {
+                indexed: false,
+                internalType: 'bool',
+                name: 'valid',
+                type: 'bool',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'messageType',
+                type: 'uint256',
+            },
+            {
+                indexed: false,
+                internalType: 'address',
+                name: 'destination',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                internalType: 'string',
+                name: 'value',
+                type: 'string',
+            },
+        ],
+        name: 'AssertionEvent',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'chain',
+                type: 'address',
+            },
+            {
                 indexed: true,
                 internalType: 'address',
                 name: 'to',

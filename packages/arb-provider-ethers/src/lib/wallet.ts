@@ -112,8 +112,8 @@ export class ArbWallet extends ethers.Signer {
     }
 
     public async depositERC721(
-        tokenAddress: string,
         to: string,
+        tokenAddress: string,
         value: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
         const tokenValue = ethers.utils.bigNumberify(value);
@@ -244,11 +244,14 @@ export class ArbWallet extends ethers.Signer {
             throw Error("Can't send transaction without destination");
         }
         const to = await transaction.to;
-        const from = await this.getAddress();
         let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
         if (transaction.data) {
             encodedData = ArbValue.hexToSizedByteRange(await transaction.data);
         }
-        return this.sendTransactionMessage(to, from, encodedData);
+        let value = ethers.utils.bigNumberify(0);
+        if (transaction.value) {
+            value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
+        }
+        return this.sendTransactionMessage(to, value, encodedData);
     }
 }

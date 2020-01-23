@@ -61,6 +61,16 @@ interface GlobalPendingInboxInterface extends Interface {
     };
 
     events: {
+        AssertionEvent: TypedEventDescription<{
+            encodeTopics([chain, valid, messageType, destination, value]: [
+                string | null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
+
         ERC20DepositMessageDelivered: TypedEventDescription<{
             encodeTopics([chain, to, from, erc20, value]: [
                 string | null,
@@ -185,6 +195,14 @@ export class GlobalPendingInbox extends Contract {
     };
 
     filters: {
+        AssertionEvent(
+            chain: string | null,
+            valid: null,
+            messageType: null,
+            destination: null,
+            value: null,
+        ): EventFilter;
+
         ERC20DepositMessageDelivered(
             chain: string | null,
             to: string | null,

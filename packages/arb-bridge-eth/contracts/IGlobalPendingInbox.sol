@@ -18,6 +18,13 @@ pragma solidity ^0.5.3;
 
 interface IGlobalPendingInbox {
 
+    event AssertionEvent(
+        address indexed chain,
+        bool valid, 
+        uint256 messageType, 
+        address destination, 
+        string value);
+
     event TransactionMessageDelivered(
         address indexed chain,
         address indexed to,
