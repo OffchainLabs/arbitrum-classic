@@ -82,7 +82,20 @@ func (c *executionChallenge) BisectAssertion(
 		totalSteps,
 	)
 	if err != nil {
-		return err
+		return c.challenge.BisectAssertionCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			precondition.BeforeInbox.Hash(),
+			precondition.TimeBounds.AsIntArray(),
+			machineHashes,
+			didInboxInsns,
+			messageAccs,
+			logAccs,
+			gasses,
+			totalSteps,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "BisectAssertion")
 }
@@ -110,7 +123,23 @@ func (c *executionChallenge) OneStepProof(
 		proof,
 	)
 	if err != nil {
-		return err
+		return c.challenge.OneStepProofCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			precondition.BeforeHash,
+			precondition.BeforeInbox.Hash(),
+			precondition.TimeBounds.AsIntArray(),
+			assertion.AfterHash,
+			assertion.DidInboxInsn,
+			assertion.FirstMessageHash,
+			assertion.LastMessageHash,
+			assertion.FirstLogHash,
+			assertion.LastLogHash,
+			assertion.NumGas,
+			proof,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }

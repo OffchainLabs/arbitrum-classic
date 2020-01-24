@@ -224,7 +224,14 @@ func (lis *ValidatorChainListener) StakeCreated(ctx context.Context, chain *Chai
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityAny(staker)
 		if opp != nil {
-			go lis.initiateChallenge(ctx, opp)
+			go func() {
+				err := lis.initiateChallenge(ctx, opp)
+				if err != nil {
+					log.Println("Failed to initiate challenge", err)
+				} else {
+					log.Println("Successfully initiated challenge")
+				}
+			}()
 		}
 	} else {
 		lis.challengeStakerIfPossible(ctx, chain, ev.Staker)
@@ -248,20 +255,34 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 
 	// Search for an already staked staking key
-	for myAddr, _ := range lis.stakingKeys {
+	for myAddr := range lis.stakingKeys {
 		meAsStaker := chain.nodeGraph.stakers.Get(myAddr)
 		if meAsStaker == nil {
 			continue
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
 		if opp != nil {
-			go lis.initiateChallenge(ctx, opp)
+			go func() {
+				err := lis.initiateChallenge(ctx, opp)
+				if err != nil {
+					log.Println("Failed to initiate challenge", err)
+				} else {
+					log.Println("Successfully initiated challenge")
+				}
+			}()
 			return
 		}
 	}
 	opp := chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 	if opp != nil {
-		go lis.initiateChallenge(ctx, opp)
+		go func() {
+			err := lis.initiateChallenge(ctx, opp)
+			if err != nil {
+				log.Println("Failed to initiate challenge", err)
+			} else {
+				log.Println("Successfully initiated challenge")
+			}
+		}()
 		return
 	}
 }
@@ -276,42 +297,63 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go challenges.DefendPendingTopClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.MaxPendingTop,
-				100,
-			)
+			go func() {
+				res, err := challenges.DefendPendingTopClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					conflictNode.disputable.MaxPendingTop,
+					100,
+				)
+				if err != nil {
+					log.Println("Failed defending pending top claim", err)
+				} else {
+					log.Println("Completed defending pending top claim", res)
+				}
+			}()
 		case structures.InvalidMessagesChildType:
-			go challenges.DefendMessagesClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-				100,
-			)
+			go func() {
+				res, err := challenges.DefendMessagesClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.vmProtoData.PendingTop,
+					conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+					100,
+				)
+				if err != nil {
+					log.Println("Failed defending messages claim", err)
+				} else {
+					log.Println("Completed defending messages claim", res)
+				}
+			}()
 		case structures.InvalidExecutionChildType:
-			go challenges.DefendExecutionClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.executionPrecondition(conflictNode),
-				conflictNode.prev.machine,
-				conflictNode.disputable.AssertionParams.NumSteps,
-				50,
-			)
+			go func() {
+				res, err := challenges.DefendExecutionClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.executionPrecondition(conflictNode),
+					conflictNode.prev.machine,
+					conflictNode.disputable.AssertionParams.NumSteps,
+					50,
+				)
+				if err != nil {
+					log.Println("Failed defending execution claim", err)
+				} else {
+					log.Println("Completed defending execution claim", res)
+				}
+			}()
 		default:
 			log.Fatal("unexpected challenge type")
 		}
@@ -321,36 +363,57 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go challenges.ChallengePendingTopClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-			)
+			go func() {
+				res, err := challenges.ChallengePendingTopClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+				)
+				if err != nil {
+					log.Println("Failed challenging pending top claim", err)
+				} else {
+					log.Println("Completed challenging pending top claim", res)
+				}
+			}()
 		case structures.InvalidMessagesChildType:
-			go challenges.ChallengeMessagesClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-			)
+			go func() {
+				res, err := challenges.ChallengeMessagesClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.vmProtoData.PendingTop,
+					conflictNode.disputable.AssertionClaim.AfterPendingTop,
+				)
+				if err != nil {
+					log.Println("Failed challenging messages claim", err)
+				} else {
+					log.Println("Completed challenging messages claim", res)
+				}
+			}()
 		case structures.InvalidExecutionChildType:
-			go challenges.ChallengeExecutionClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.executionPrecondition(conflictNode),
-				conflictNode.prev.machine,
-				false,
-			)
+			go func() {
+				res, err := challenges.ChallengeExecutionClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.executionPrecondition(conflictNode),
+					conflictNode.prev.machine,
+					false,
+				)
+				if err != nil {
+					log.Println("Failed challenging execution claim", err)
+				} else {
+					log.Println("Completed challenging execution claim", res)
+				}
+			}()
 		default:
 			log.Fatal("unexpected challenge type")
 		}
