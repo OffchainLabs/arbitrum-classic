@@ -51,6 +51,7 @@ enum class OpCode : uint8_t {
 
     HASH = 0x20,
     TYPE,
+    ETHHASH2,
 
     POP = 0x30,
     SPUSH,          // 31
@@ -92,7 +93,7 @@ enum class OpCode : uint8_t {
 inline bool isValidOpcode(OpCode op) {
     return (op >= OpCode::ADD && op <= OpCode::EXP) ||
            (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::TYPE) ||
+           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
            (op >= OpCode::POP && op <= OpCode::ERRSET) ||
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
@@ -128,6 +129,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
 
     {OpCode::HASH, "hash"},
     {OpCode::TYPE, "type"},
+    {OpCode::ETHHASH2, "ethhash2"},
 
     {OpCode::POP, "pop"},
     {OpCode::SPUSH, "spush"},
@@ -192,6 +194,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
 
     {OpCode::HASH, {false}},
     {OpCode::TYPE, {true}},
+    {OpCode::ETHHASH2, {true, true}},
 
     {OpCode::POP, {false}},
     {OpCode::SPUSH, {}},
@@ -256,6 +259,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
 
     {OpCode::HASH, {}},
     {OpCode::TYPE, {}},
+    {OpCode::ETHHASH2, {}},
 
     {OpCode::POP, {}},
     {OpCode::SPUSH, {}},
@@ -319,6 +323,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
 
     {OpCode::HASH, 40},
     {OpCode::TYPE, 3},
+    {OpCode::ETHHASH2, 40},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},

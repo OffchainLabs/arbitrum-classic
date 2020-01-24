@@ -103,6 +103,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodetestmath.ao",
 		"opcodetestlogic.ao",
 		"opcodetesthash.ao",
+		"opcodetestethhash2.ao",
 		"opcodeteststack.ao",
 		"opcodetestdup.ao",
 		"opcodetesttuple.ao",

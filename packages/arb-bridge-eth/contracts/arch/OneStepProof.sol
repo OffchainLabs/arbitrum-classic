@@ -598,6 +598,26 @@ library OneStepProof {
         return true;
     }
 
+    function executeEthhash2Insn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
+    ) 
+        internal 
+        pure
+        returns (bool)
+    {
+        if (!val1.isInt() || !val2.isInt()) {
+            return false;
+        }
+        uint a = val1.intVal;
+        uint b = val2.intVal;
+        bytes32 res = keccak256(abi.encodePacked(a, b));
+        machine.addDataStackInt(uint256(res));
+        return true;
+    }
+
+
     // Stack ops
 
     function executePopInsn(
@@ -972,6 +992,7 @@ library OneStepProof {
     // SHA3
     uint8 constant internal OP_SHA3 = 0x20;
     uint8 constant internal OP_TYPE = 0x21;
+    uint8 constant internal OP_ETHHASH2 = 0x22;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 constant internal OP_POP = 0x30;
@@ -1061,6 +1082,8 @@ library OneStepProof {
             return (1, 1);
         } else if (opCode == OP_TYPE) {
             return (1, 1);
+        } else if (opCode == OP_ETHHASH2) {
+            return (2, 1);
         } else if (opCode == OP_POP) {
             return (1, 0);
         } else if (opCode == OP_SPUSH) {
@@ -1180,6 +1203,8 @@ library OneStepProof {
             return 40;
         } else if (opCode == OP_TYPE) {
             return 3;
+       } else if (opCode == OP_ETHHASH2) {
+            return 40;
         } else if (opCode == OP_POP) {
             return 1;
         } else if (opCode == OP_SPUSH) {
@@ -1385,6 +1410,8 @@ library OneStepProof {
             correct = executeSha3Insn(endMachine, stackVals[0]);
         } else if (opCode == OP_TYPE) {
             correct = executeTypeInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_ETHHASH2) {
+            correct = executeEthhash2Insn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_POP) {
             correct = executePopInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_SPUSH) {
