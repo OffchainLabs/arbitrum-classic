@@ -187,7 +187,6 @@ The instructions are as follows:
 | 0x19                                       | not        | Pop one value (A) off the Data Stack. If A is an Integer, then push the bitwise negation of A on the Data Stack. Otherwise, raise an Error.                                                                                                                                                                    | 1           |
 | 0x1a                                       | byte       | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<32 (interpreting B as unsigned), then push the B’th byte of A onto the Data Stack, otherwise push Integer 0 onto the Data Stack). Otherwise, raise an Error.                                                                     | 4           |
 | 0x1b                                       | signextend | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<31 (interpreting B as unsigned), sign extend A from (B + 1) \* 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.                                     | 7           |
-
 | &nbsp; | | &nbsp; |
 | 20s: Hashing | | &nbsp; |
 | 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack. | 40 |
