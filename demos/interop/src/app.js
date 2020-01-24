@@ -6,6 +6,7 @@ const ethers = require("ethers");
 const ArbProvider = require("arb-provider-ethers").ArbProvider;
 const ArbERC20 = require("arb-provider-ethers").ERC20;
 const ArbERC721 = require("arb-provider-ethers").ERC721;
+const ArbSys = require("arb-provider-ethers").ArbSys;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
@@ -55,6 +56,8 @@ class App {
   async initContracts() {
     var network = await this.ethProvider.getNetwork();
 
+    console.log(network);
+
     const testToken = require("../build/contracts/TestToken.json");
     const testItem = require("../build/contracts/TestItem.json");
 
@@ -65,6 +68,12 @@ class App {
 
     console.log("testToken contract addresss: " + this.testTokenAddress);
     console.log("testItem contract addresss: " + this.testItemAddress);
+
+    // let arbSysContractRaw = new ethers.Contract(
+    //   100,
+    //   ArbSys.abi,
+    //   this.arbProvider
+    // );
 
     let ethTestTokenContractRaw = new ethers.Contract(
       this.testTokenAddress,
@@ -103,6 +112,7 @@ class App {
       this.ethWallet
     );
 
+    // this.contracts.Arbsys = arbSysContractRaw.connect(this.arbWallet);
     this.contracts.ArbTestItem = arbTestItemContractRaw.connect(this.arbWallet);
     this.contracts.EthTestItem = ethTestItemContractRaw.connect(this.ethWallet);
 
@@ -408,18 +418,15 @@ class App {
 
   async withdrawETH() {
     // let val = parseInt($("#withdrawEthAmount").val());
-    // const tx = await this.contracts.ArbTestToken.withdraw(
-    //   this.ethwalletAddress,
-    //   val
-    // );
-    // $("#withdrawForm").hide();
-    // $("#withdrawMessage").html("Withdrawing from EthBridge");
-    // $("#withdrawMessage").show();
+    // const tx1 = await this.contracts.Arbsys.send(this.ethwalletAddress, val);
+    // $("#withdrawETHForm").hide();
+    // $("#withdrawETHMessage").html("Withdrawing from EthBridge");
+    // $("#withdrawETHMessage").show();
     // await tx.wait();
     // await delay(5000);
-    // const tx2 = await this.arbWallet.withdrawERC20(this.contracts.EthTestToken.address);
-    // $("#withdrawMessage").hide();
-    // $("#withdrawForm").show();
+    // const tx2 = await this.arbWallet.withdrawEth();
+    // $("#withdrawETHMessage").hide();
+    // $("#withdrawETHForm").show();
     // this.render();
   }
 

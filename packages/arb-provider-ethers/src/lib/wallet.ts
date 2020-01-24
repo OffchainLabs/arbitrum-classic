@@ -93,9 +93,12 @@ export class ArbWallet extends ethers.Signer {
         return this.signer.signMessage(message);
     }
 
-    // public async getEthBalance(): Promise<BigNumber>{
-    //     return this.signer.getBalance();
-    // }
+    public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
+        const inboxManager = await this.globalInboxConn();
+        const blockchainTx = await inboxManager.withdrawEth();
+
+        return await blockchainTx.wait();
+    }
 
     public async withdrawERC20(erc20: string): Promise<ethers.providers.TransactionResponse> {
         const inboxManager = await this.globalInboxConn();
