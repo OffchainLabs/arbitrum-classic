@@ -106,7 +106,7 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 					Value:    tx.Value(),
 					Data:     tx.Data(),
 				}
-				_, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+				data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
 				if err != nil {
 					return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
 				}
