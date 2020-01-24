@@ -93,6 +93,27 @@ export class ArbWallet extends ethers.Signer {
         return this.signer.signMessage(message);
     }
 
+    // public async getEthBalance(): Promise<BigNumber>{
+    //     return this.signer.getBalance();
+    // }
+
+    public async withdrawERC20(erc20: string): Promise<ethers.providers.TransactionResponse> {
+        const inboxManager = await this.globalInboxConn();
+        const blockchainTx = await inboxManager.withdrawERC20(erc20);
+
+        return await blockchainTx.wait();
+    }
+
+    public async withdrawERC721(
+        erc721: string,
+        tokenId: ethers.utils.BigNumberish,
+    ): Promise<ethers.providers.TransactionResponse> {
+        const inboxManager = await this.globalInboxConn();
+        const blockchainTx = await inboxManager.withdrawERC721(erc721, tokenId);
+
+        return await blockchainTx.wait();
+    }
+
     public async depositERC20(
         to: string,
         erc20: string,
@@ -103,10 +124,8 @@ export class ArbWallet extends ethers.Signer {
         const valueNum = ethers.utils.bigNumberify(value);
 
         const inboxManager = await this.globalInboxConn();
-        console.log('vm add: ' + chain);
         const blockchainTx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
         await blockchainTx.wait();
-        console.log('vm add22: ' + chain);
 
         return this.wrapTransaction(TxType.DepositERC20, chain, erc20, to, valueNum);
     }
@@ -118,13 +137,12 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const tokenValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-        const valueNum = ethers.utils.bigNumberify(value);
 
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositERC721Message(chain, tokenAddress, to, tokenValue);
+        const blockchainTx = await inboxManager.depositERC721Message(chain, to, tokenAddress, value);
         await blockchainTx.wait();
 
-        return this.wrapTransaction(TxType.DepositERC721, chain, tokenAddress, to, valueNum);
+        return this.wrapTransaction(TxType.DepositERC721, chain, tokenAddress, to, tokenValue);
     }
 
     private async wrapTransaction(
@@ -167,7 +185,7 @@ export class ArbWallet extends ethers.Signer {
         const messageHash = ethers.utils.solidityKeccak256(['uint8', 'address', 'address', 'address', 'uint256'], args);
 
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.sendEthMessage(chain, to, { value });
+        const blockchainTx = await inboxManager.depositEthMessage(chain, to, { value });
 
         await blockchainTx.wait();
 

@@ -165,28 +165,6 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 
 	testLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
-		Addresses: []ethcommon.Address{vm.rollupAddress},
-		Topics: [][]ethcommon.Hash{
-			{
-				AssertionEventID,
-				AssertionEvent2ID,
-			},
-		},
-	})
-
-	testLogs2, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: &bh,
-		Addresses: []ethcommon.Address{vm.inboxAddress},
-		Topics: [][]ethcommon.Hash{
-			{
-				AssertionEventID,
-				AssertionEvent2ID,
-			},
-		},
-	})
-
-	testLogs3, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: &bh,
 		Topics: [][]ethcommon.Hash{
 			{
 				AssertionEventID,
@@ -198,8 +176,6 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(inboxLogs))
 
 	log.Println("test assertion events", testLogs)
-	log.Println("test assertion events2", testLogs2)
-	log.Println("test assertion events3", testLogs3)
 
 	for _, evmLog := range testLogs {
 		if evmLog.Topics[0] == AssertionEventID {
@@ -208,6 +184,7 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 				return nil, err
 			}
 
+			log.Println("AssertionEvent.valid : ", val.Chain)
 			log.Println("AssertionEvent.valid : ", val.Valid)
 			log.Println("AssertionEvent.value : ", val.Value)
 			log.Println("AssertionEvent.destination : ", val.Destination)
@@ -220,38 +197,13 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 				return nil, err
 			}
 
+			log.Println("AssertionEvent2.valid : ", val.Chain)
 			log.Println("AssertionEvent2.valid : ", val.Value)
 			log.Println("AssertionEvent2.value : ", val.Value)
 			log.Println("AssertionEvent2.destination : ", val.Destination)
 			log.Println("AssertionEvent2.type : ", val.MessageType)
 		}
 	}
-
-	//for _, evmLog := range testLogs2 {
-	//	if evmLog.Topics[0] == AssertionEventID {
-	//		val, err := vm.GlobalPendingInbox.ParseAssertionEvent(evmLog)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//
-	//		log.Println("AssertionEvent.valid : ", val.Valid)
-	//		log.Println("AssertionEvent.value : ", val.Value)
-	//		log.Println("AssertionEvent.destination : ", val.Destination)
-	//		log.Println("AssertionEvent.type : ", val.MessageType)
-	//	}
-	//
-	//	if evmLog.Topics[0] == AssertionEvent2ID {
-	//		val, err := vm.ArbRollup.ParseAssertionEvent2(evmLog)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//
-	//		log.Println("AssertionEvent2.valid : ", val.Value)
-	//		log.Println("AssertionEvent2.value : ", val.Value)
-	//		log.Println("AssertionEvent2.destination : ", val.Destination)
-	//		log.Println("AssertionEvent2.type : ", val.MessageType)
-	//	}
-	//}
 
 	log.Println("test events over")
 

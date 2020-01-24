@@ -9,12 +9,15 @@ const ArbERC721 = require("arb-provider-ethers").ERC721;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 class App {
   constructor() {
     this.ethProvider = null;
     this.arbProvider = null;
     this.arbWallet = null;
     this.contracts = {};
+    this.ethAddress = "0x0000000000000000000000000000000000000000";
     return this.initWeb3();
   }
 
@@ -51,10 +54,6 @@ class App {
 
   async initContracts() {
     var network = await this.ethProvider.getNetwork();
-    var network2 = await this.arbProvider.getNetwork();
-
-    console.log("eth networkId: " + network.chainId);
-    console.log("arb networkId: " + network2.chainId);
 
     const testToken = require("../build/contracts/TestToken.json");
     const testItem = require("../build/contracts/TestItem.json");
@@ -97,9 +96,6 @@ class App {
     this.ethwalletAddress = await this.ethWallet.getAddress();
     this.arbwalletAddress = await this.arbWallet.getAddress();
 
-    console.log("eth wallet address " + this.ethwalletAddress);
-    console.log("arb wallet address " + this.arbwalletAddress);
-
     this.contracts.ArbTestToken = arbTestTokenContractRaw.connect(
       this.arbWallet
     );
@@ -116,6 +112,17 @@ class App {
   }
 
   setupHooks() {
+    // ETH
+    $("#depositETHform").submit(event => {
+      this.depositEth();
+      event.preventDefault();
+    });
+    $("#withdrawETHForm").submit(event => {
+      this.withdrawETH();
+      event.preventDefault();
+    });
+
+    // ERC20
     $("#mintForm").submit(event => {
       this.mint();
       event.preventDefault();
@@ -126,6 +133,20 @@ class App {
     });
     $("#withdrawForm").submit(event => {
       this.withdraw();
+      event.preventDefault();
+    });
+
+    // ERC721
+    $("#mint721Form").submit(event => {
+      this.mintERC721();
+      event.preventDefault();
+    });
+    $("#deposit721Form").submit(event => {
+      this.depositERC721();
+      event.preventDefault();
+    });
+    $("#withdraw721Form").submit(event => {
+      this.withdrawERC721();
       event.preventDefault();
     });
   }
@@ -164,37 +185,96 @@ class App {
     if (this.ethwalletAddress) {
       $("#accountAddress").html(this.ethwalletAddress);
 
-      const ethBalance = await this.contracts.EthTestToken.balanceOf(
-        this.ethwalletAddress
-      );
-
-      $("#ethBalance").html(ethBalance.toString());
-      console.log("ethbalance: " + ethBalance);
-
-      const vmId = await this.arbProvider.getVmID();
-      const inboxManager = await this.arbProvider.globalInboxConn();
-      const tx = await inboxManager.getTokenBalances(vmId);
-
-      console.log("vm Balance in GolbalWallet: " + tx[1]);
-
-      const txx = await inboxManager.getTokenBalances(this.ethwalletAddress);
-
-      console.log("arbBalance in GolbalWallet: " + txx[1]);
-
-      const arbBalance = await this.contracts.ArbTestToken.balanceOf(
-        this.arbwalletAddress
-      );
-
-      $("#arbBalance").html(arbBalance.toString());
-
-      console.log("arbBalance xx : " + arbBalance);
-
-      $("#arbBalance").html(arbBalance.toString());
+      await this.renderETHInfo();
+      await this.renderERC20Info();
+      await this.renderERC721Info();
     } else {
       $("#accountAddress").html("Loading");
     }
 
     content.show();
+  }
+
+  getTokenBlance(tokenMap, tokenAddress) {
+    for (var i = 0; i < tokenMap[0].length; i++) {
+      if (tokenAddress == tokenMap[0][i].toString()) {
+        return tokenMap[1][i];
+      }
+    }
+
+    return 0;
+  }
+
+  async renderETHInfo() {
+    const eth = await this.ethWallet.getBalance();
+    $("#ethereumBalance").html(eth.toString());
+    console.log("ETH balance: " + eth);
+
+    const vmId = await this.arbProvider.getVmID();
+    const inboxManager = await this.arbProvider.globalInboxConn();
+    var tokenMap = await inboxManager.getTokenBalances(vmId);
+    var balance = this.getTokenBlance(tokenMap, this.ethAddress);
+    console.log("ETH vmBalance in GolbalWallet: " + balance);
+
+    tokenMap = await inboxManager.getTokenBalances(this.ethwalletAddress);
+    balance = this.getTokenBlance(tokenMap, this.ethAddress);
+    console.log("ETH balance in GolbalWallet: " + balance);
+
+    // const arbEth = await this.arbWallet.getBalance();
+    // $("#arbEthBalance").html(arbEth.toString());
+    // console.log("arbitrum ETH balance: " + arbEth);
+  }
+
+  async renderERC20Info() {
+    const ethBalance = await this.contracts.EthTestToken.balanceOf(
+      this.ethwalletAddress
+    );
+    $("#ethBalance").html(ethBalance.toString());
+    console.log("ERC20 token ethbalance: " + ethBalance);
+
+    const vmId = await this.arbProvider.getVmID();
+    const inboxManager = await this.arbProvider.globalInboxConn();
+    var tokenMap = await inboxManager.getTokenBalances(vmId);
+    var balance = this.getTokenBlance(
+      tokenMap,
+      this.contracts.EthTestToken.address
+    );
+    console.log("ERC20 token vmBalance in GolbalWallet: " + balance);
+
+    tokenMap = await inboxManager.getTokenBalances(this.ethwalletAddress);
+    balance = this.getTokenBlance(
+      tokenMap,
+      this.contracts.EthTestToken.address
+    );
+    console.log("ERC20 token balance in GolbalWallet: " + balance);
+
+    const arbBalance = await this.contracts.ArbTestToken.balanceOf(
+      this.arbwalletAddress
+    );
+    $("#arbBalance").html(arbBalance.toString());
+    console.log("ERC20 token arbBalance: " + arbBalance);
+  }
+
+  async renderERC721Info() {
+    const ethBalance = await this.contracts.EthTestItem.balanceOf(
+      this.ethwalletAddress
+    );
+    $("#eth721Balance").html(ethBalance.toString() + " number of tokens");
+    console.log("Number of ERC721 tokens in ethBlanace: " + ethBalance);
+
+    const vmId = await this.arbProvider.getVmID();
+    const inboxManager = await this.arbProvider.globalInboxConn();
+    var tokenMap = await inboxManager.getNFTTokens(vmId);
+    console.log("VM ERC721 token list in GolbalWallet: " + tokenMap[1]);
+
+    tokenMap = await inboxManager.getNFTTokens(this.ethwalletAddress);
+    console.log("ERC721 token list in GolbalWallet: " + tokenMap[1]);
+
+    const arbBalance = await this.contracts.ArbTestItem.balanceOf(
+      this.arbwalletAddress
+    );
+    $("#arb721Balance").html(arbBalance.toString() + " number of tokens");
+    console.log("Number of ERC721 tokens in arbBalance: " + arbBalance);
   }
 
   async mint() {
@@ -224,43 +304,54 @@ class App {
 
     console.log("mint to " + this.ethwalletAddress);
 
-    const tx = await this.contracts.EthTestToken.mint(
+    const tx = await this.contracts.EthTestItem.mintItem(
       this.ethwalletAddress,
       tokenId
     );
 
-    $("#mintForm").hide();
-    $("#mintMessage").html("ERC 721 Tokens are minting...");
-    $("#mintMessage").show();
+    $("#mint721Form").hide();
+    $("#mint721Message").html("ERC 721 Tokens are minting...");
+    $("#mint721Message").show();
 
     await tx.wait();
 
     console.log("minted");
-    $("#mintMessage").hide();
-    $("#mintForm").show();
+    $("#mint721Message").hide();
+    $("#mint721Form").show();
     this.render();
   }
 
   async depositEth() {
     let ethDepositValue = parseInt($("#ethDepositValue").val());
 
-    const tx = await this.arbWallet.depositEth(
+    const tx = await this.arbWallet.depositETH(
       this.arbwalletAddress,
       ethDepositValue
     );
+
+    $("#depositETHform").hide();
+    $("#depositETHMessage").html("Approving transfer to Arbitrum chain");
+    $("#depositETHMessage").show();
+
+    await tx.wait();
+
+    console.log("Finished waiting");
+    $("#depositETHMessage").hide();
+    $("#depositETHform").show();
   }
 
   async depositERC721() {
-    let tokenID = parseInt($("#depositId").val());
+    let tokenID = parseInt($("#deposittokenId").val());
+    console.log(tokenID);
     const inboxManager = await this.arbProvider.globalInboxConn();
     const tx = await this.contracts.EthTestItem.approve(
       inboxManager.address,
       tokenID
     );
 
-    $("#depositForm").hide();
-    $("#depositMessage").html("Approving transfer to Arbitrum chain");
-    $("#depositMessage").show();
+    $("#deposit721Form").hide();
+    $("#deposit721Message").html("Approving transfer to Arbitrum chain");
+    $("#deposit721Message").show();
 
     await tx.wait();
     console.log("approved erc721 deposit from: " + this.ethwalletAddress);
@@ -272,14 +363,13 @@ class App {
     );
 
     $("#depositMessage").html("Depositing 721 token to Arbitrum chain");
-
     console.log("Waiting on tx");
     await tx2.wait(0);
     console.log("Finished waiting");
+    $("#deposit721Message").hide();
+    $("#deposit721Form").show();
 
-    $("#depositMessage").hide();
-    $("#depositForm").show();
-
+    await delay(1000);
     this.render();
   }
 
@@ -309,11 +399,28 @@ class App {
     console.log("Waiting on tx");
     await tx2.wait(0);
     console.log("Finished waiting");
-
     $("#depositMessage").hide();
     $("#depositForm").show();
 
+    await delay(1000);
     this.render();
+  }
+
+  async withdrawETH() {
+    // let val = parseInt($("#withdrawEthAmount").val());
+    // const tx = await this.contracts.ArbTestToken.withdraw(
+    //   this.ethwalletAddress,
+    //   val
+    // );
+    // $("#withdrawForm").hide();
+    // $("#withdrawMessage").html("Withdrawing from EthBridge");
+    // $("#withdrawMessage").show();
+    // await tx.wait();
+    // await delay(5000);
+    // const tx2 = await this.arbWallet.withdrawERC20(this.contracts.EthTestToken.address);
+    // $("#withdrawMessage").hide();
+    // $("#withdrawForm").show();
+    // this.render();
   }
 
   async withdraw() {
@@ -326,8 +433,40 @@ class App {
     $("#withdrawMessage").html("Withdrawing from EthBridge");
     $("#withdrawMessage").show();
     await tx.wait();
+
+    await delay(5000);
+
+    const tx2 = await this.arbWallet.withdrawERC20(
+      this.contracts.EthTestToken.address
+    );
+
     $("#withdrawMessage").hide();
     $("#withdrawForm").show();
+
+    this.render();
+  }
+
+  async withdrawERC721() {
+    let val = parseInt($("#withdrawtokenId").val());
+    const tx = await this.contracts.ArbTestItem.withdraw(
+      this.ethwalletAddress,
+      val
+    );
+    $("#withdraw721Form").hide();
+    $("#withdraw721Message").html("Withdrawing from EthBridge");
+    $("#withdraw721Message").show();
+    await tx.wait();
+
+    await delay(15000);
+
+    const tx2 = await this.arbWallet.withdrawERC721(
+      this.contracts.EthTestItem.address,
+      val
+    );
+    $("#withdraw721Message").hide();
+    $("#withdraw721Form").show();
+
+    this.render();
   }
 }
 

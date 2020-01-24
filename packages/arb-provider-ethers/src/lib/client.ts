@@ -79,13 +79,13 @@ class EthBridgeMessage {
     getArbMessage(): ArbMessage {
         switch (this.typecode) {
             case 0:
-                return new EthTransferMessage(this.message);
-            case 1:
-                return new TokenTransferMessage(this.message);
-            case 2:
-                return new EthTransferMessage(this.message);
-            case 3:
                 return new TxMessage(this.message);
+            case 1:
+                return new EthTransferMessage(this.message);
+            case 2:
+                return new TokenTransferMessage(this.message);
+            case 3:
+                return new TokenTransferMessage(this.message);
             default:
                 throw 'Invalid arb message type';
         }
