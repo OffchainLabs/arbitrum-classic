@@ -217,6 +217,7 @@ aos = (
                 v.push(2),
                 v.tset(),
                 v.hash(),
+                v.pop(),
             ],
         ),
     ),
