@@ -1131,8 +1131,116 @@ library OneStepProof {
         return popCount;
     }
 
-    function opGasCost(uint8) internal pure returns(uint64) {
-        return 1;
+    function opGasCost(uint8 opCode) internal pure returns(uint64) {
+       if (opCode == OP_ADD) {
+            return 3;
+        } else if (opCode == OP_MUL) {
+            return 3;
+        } else if (opCode == OP_SUB) {
+            return 3;
+        } else if (opCode == OP_DIV) {
+            return 4;
+        } else if (opCode == OP_SDIV) {
+            return 7;
+        } else if (opCode == OP_MOD) {
+            return 4;
+        } else if (opCode == OP_SMOD) {
+            return 7;
+        } else if (opCode == OP_ADDMOD) {
+            return 4;
+        } else if (opCode == OP_MULMOD) {
+            return 4;
+        } else if (opCode == OP_EXP) {
+            return 25;
+        } else if (opCode == OP_LT) {
+            return 2;
+        } else if (opCode == OP_GT) {
+            return 2;
+        } else if (opCode == OP_SLT) {
+            return 2;
+        } else if (opCode == OP_SGT) {
+            return 2;
+        } else if (opCode == OP_EQ) {
+            return 2;
+        } else if (opCode == OP_ISZERO) {
+            return 1;
+        } else if (opCode == OP_AND) {
+            return 2;
+        } else if (opCode == OP_OR) {
+            return 2;
+        } else if (opCode == OP_XOR) {
+            return 2;
+        } else if (opCode == OP_NOT) {
+            return 1;
+        } else if (opCode == OP_BYTE) {
+            return 4;
+        } else if (opCode == OP_SIGNEXTEND) {
+            return 7;
+        } else if (opCode == OP_SHA3) {
+            return 40;
+        } else if (opCode == OP_TYPE) {
+            return 3;
+        } else if (opCode == OP_POP) {
+            return 1;
+        } else if (opCode == OP_SPUSH) {
+            return 1;
+        } else if (opCode == OP_RPUSH) {
+            return 1;
+        } else if (opCode == OP_RSET) {
+            return 2;
+        } else if (opCode == OP_JUMP) {
+            return 4;
+        } else if (opCode == OP_CJUMP) {
+            return 4;
+        } else if (opCode == OP_STACKEMPTY) {
+            return 2;
+        } else if (opCode == OP_PCPUSH) {
+            return 1;
+        } else if (opCode == OP_AUXPUSH) {
+            return 1;
+        } else if (opCode == OP_AUXPOP) {
+            return 1;
+        } else if (opCode == OP_AUXSTACKEMPTY) {
+            return 2;
+        } else if (opCode == OP_NOP) {
+            return 1;
+        } else if (opCode == OP_ERRPUSH) {
+            return 1;
+        } else if (opCode == OP_ERRSET) {
+            return 1;
+        } else if (opCode == OP_DUP0) {
+            return 1;
+        } else if (opCode == OP_DUP1) {
+            return 1;
+        } else if (opCode == OP_DUP2) {
+            return 1;
+        } else if (opCode == OP_SWAP1) {
+            return 1;
+        } else if (opCode == OP_SWAP2) {
+            return 1;
+        } else if (opCode == OP_TGET) {
+            return 2;
+        } else if (opCode == OP_TSET) {
+            return 15;
+        } else if (opCode == OP_TLEN) {
+            return 2;
+        } else if (opCode == OP_BREAKPOINT) {
+            return 100;
+        } else if (opCode == OP_LOG) {
+            return 100;
+        } else if (opCode == OP_SEND) {
+            return 100;
+        } else if (opCode == OP_GETTIME) {
+            return 40;
+        } else if (opCode == OP_INBOX) {
+            return 40;
+        } else if (opCode == OP_ERROR) {
+            return 5;
+        } else if (opCode == OP_STOP) {
+            return 10;
+        } else {
+            require(false, "Invalid opcode");
+        }
     }
 
     function loadMachine(
