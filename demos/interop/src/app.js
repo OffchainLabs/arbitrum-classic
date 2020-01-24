@@ -56,8 +56,6 @@ class App {
   async initContracts() {
     var network = await this.ethProvider.getNetwork();
 
-    console.log(network);
-
     const testToken = require("../build/contracts/TestToken.json");
     const testItem = require("../build/contracts/TestItem.json");
 
@@ -70,7 +68,7 @@ class App {
     console.log("testItem contract addresss: " + this.testItemAddress);
 
     // let arbSysContractRaw = new ethers.Contract(
-    //   100,
+    //   "100",
     //   ArbSys.abi,
     //   this.arbProvider
     // );
@@ -112,7 +110,7 @@ class App {
       this.ethWallet
     );
 
-    // this.contracts.Arbsys = arbSysContractRaw.connect(this.arbWallet);
+    // this.contracts.ArbSys = arbSysContractRaw.connect(this.arbWallet);
     this.contracts.ArbTestItem = arbTestItemContractRaw.connect(this.arbWallet);
     this.contracts.EthTestItem = ethTestItemContractRaw.connect(this.ethWallet);
 
@@ -230,7 +228,7 @@ class App {
     balance = this.getTokenBlance(tokenMap, this.ethAddress);
     console.log("ETH balance in GolbalWallet: " + balance);
 
-    // const arbEth = await this.arbWallet.getBalance();
+    // const arbEth = await this.contracts.ArbSys.getBalance();
     // $("#arbEthBalance").html(arbEth.toString());
     // console.log("arbitrum ETH balance: " + arbEth);
   }
@@ -418,7 +416,7 @@ class App {
 
   async withdrawETH() {
     // let val = parseInt($("#withdrawEthAmount").val());
-    // const tx1 = await this.contracts.Arbsys.send(this.ethwalletAddress, val);
+    // const tx1 = await this.contracts.ArbSys.sendEth(this.ethwalletAddress, val);
     // $("#withdrawETHForm").hide();
     // $("#withdrawETHMessage").html("Withdrawing from EthBridge");
     // $("#withdrawETHMessage").show();
