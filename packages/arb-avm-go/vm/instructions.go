@@ -19,6 +19,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 
@@ -62,6 +63,7 @@ var allInsns = []Instruction{ // code, not necessarily in order
 
 	{code.SHA3, insnHash, 40},
 	{code.TYPE, insnType, 3},
+	{code.ETHHASH2, insnEthhash2, 40},
 
 	{code.POP, insnPop, 1},
 	{code.SPUSH, insnSpush, 1},
@@ -641,6 +643,28 @@ func insnHash(state *Machine) (StackMods, error) {
 	intVal := big.NewInt(0)
 	intVal.SetBytes(hashVal[:])
 	mods = PushStackInt(state, mods, value.NewIntValue(intVal))
+	state.IncrPC()
+	return mods, nil
+}
+
+func insnEthhash2(state *Machine) (StackMods, error) {
+	mods := NewStackMods(2, 1)
+	arg1, mods, err := PopStackInt(state, mods)
+	if err != nil {
+		return mods, err
+	}
+	arg2, mods, err := PopStackInt(state, mods)
+	if err != nil {
+		return mods, err
+	}
+	hashAsBytes := hashing.SoliditySHA3(
+		hashing.Uint256(arg1.BigInt()),
+		hashing.Uint256(arg2.BigInt()),
+	)
+	hashAsBigInt := new(big.Int).SetBytes(hashAsBytes[:])
+	fmt.Println(hashAsBigInt.Text(10))
+	hashAsInt := value.NewIntValue(hashAsBigInt)
+	mods = PushStackInt(state, mods, hashAsInt)
 	state.IncrPC()
 	return mods, nil
 }

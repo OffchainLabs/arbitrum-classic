@@ -16,7 +16,7 @@
 # Credit to https://github.com/ethereum/pyethereum/blob/master/ethereum/vm.py
 # for EVM-like implementation details
 
-from eth_utils import big_endian_to_int
+from eth_utils import big_endian_to_int, keccak, encode_single_packed
 from . import instructions
 from .ast import AVMLabeledCodePoint
 from . import value
@@ -350,6 +350,12 @@ class BasicVM:
     def hash(self):
         op = self.stack.pop()
         self.stack.push(big_endian_to_int(value.value_hash(op)))
+
+    def ethhash2(self):
+        op1 = self.stack.pop()
+        op2 = self.stack.pop()
+        res = keccak(encode_single_packed("(uint256,uint256)", [op1, op2]))
+        self.stack.push(big_endian_to_int(res))
 
     def gettime(self):
         self.stack.push(self.env.time_bounds)

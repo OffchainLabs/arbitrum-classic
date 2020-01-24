@@ -340,9 +340,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HASH:
             machineoperation::hashOp(*this);
             break;
-
         case OpCode::TYPE:
             machineoperation::typeOp(*this);
+            break;
+        case OpCode::ETHHASH2:
+            machineoperation::ethhash2Op(*this);
             break;
 
             /***********************************************/
