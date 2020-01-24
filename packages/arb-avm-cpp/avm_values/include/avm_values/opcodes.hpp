@@ -321,9 +321,9 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::BYTE, 4},
     {OpCode::SIGNEXTEND, 7},
 
-    {OpCode::HASH, 40},
+    {OpCode::HASH, 7},
     {OpCode::TYPE, 3},
-    {OpCode::ETHHASH2, 40},
+    {OpCode::ETHHASH2, 8},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
@@ -347,7 +347,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SWAP2, 1},
 
     {OpCode::TGET, 2},
-    {OpCode::TSET, 15},
+    {OpCode::TSET, 40},
     {OpCode::TLEN, 2},
 
     {OpCode::BREAKPOINT, 100},
