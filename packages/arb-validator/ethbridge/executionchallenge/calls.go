@@ -27,6 +27,10 @@ func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx co
 	return callCheck(ctx, client, from, contractAddress, "oneStepProof", _beforeHash, _beforeInbox, _timeBoundsBlocks, _afterHash, _didInboxInsns, _firstMessage, _lastMessage, _firstLog, _lastLog, _gas, _proof)
 }
 
+func (_Challenge *ChallengeTransactor) TimeoutChallengeCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address) error {
+	return callCheck(ctx, client, from, contractAddress, "timeoutChallenge")
+}
+
 func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ExecutionChallengeABI)))
 	if err != nil {

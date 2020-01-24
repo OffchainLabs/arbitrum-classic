@@ -228,4 +228,12 @@ contract ExecutionChallenge is BisectionChallenge {
             deadlineTicks
         );
     }
+
+    function resolveChallengeAsserterWon() internal {
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_EXECUTION_TYPE);
+    }
+
+    function resolveChallengeChallengerWon() internal {
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_EXECUTION_TYPE);
+    }
 }

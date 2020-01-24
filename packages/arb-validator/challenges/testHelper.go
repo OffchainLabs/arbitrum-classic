@@ -90,14 +90,13 @@ func testChallenge(
 		return err
 	}
 
-	tester, err := client1.DeployChallengeTest(context.Background())
+	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
 	if err != nil {
 		return err
 	}
 
 	challengeAddress, blockId, err := tester.StartChallenge(
 		context.Background(),
-		challengeFactoryAddress,
 		client1.Address(),
 		client2.Address(),
 		common.TimeTicks{big.NewInt(13000 * 5)},
@@ -127,7 +126,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting asserter")
+			log.Println("Restarting asserter", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -151,7 +150,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting challenger")
+			log.Println("Restarting challenger", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err

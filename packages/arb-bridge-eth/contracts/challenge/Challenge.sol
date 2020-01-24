@@ -18,9 +18,10 @@ pragma solidity ^0.5.3;
 
 import "../vm/IStaking.sol";
 import "../libraries/RollupTime.sol";
+import "./ChallengeType.sol";
 
 
-contract Challenge {
+contract Challenge is ChallengeType {
 
     enum State {
         NoChallenge,
@@ -128,12 +129,16 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger);
+        resolveChallengeAsserterWon();
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter);
+        resolveChallengeChallengerWon();
         selfdestruct(msg.sender);
     }
+
+    function resolveChallengeAsserterWon() internal;
+
+    function resolveChallengeChallengerWon() internal;
 }
