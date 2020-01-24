@@ -73,10 +73,9 @@ class EVMLog:
 
 class LogMessage:
     def __init__(self, value):
-        self.timestamp = value[0]
-        self.block_number = value[1]
-        self.tx_hash = value[2]
-        wrapped_data = value[3]
+        self.block_number = value[0]
+        self.tx_hash = value[1]
+        wrapped_data = value[2]
         self.message_type = wrapped_data[0]
         self.caller = wrapped_data[1]
         if self.message_type == 0:
