@@ -192,6 +192,7 @@ The instructions are as follows:
 | 20s: Hashing | | &nbsp; |
 | 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack. | 40 |
 | 0x21 | type | Pop a Value (A) off of the Data Stack. If A is an Integer, Push Integer 0 onto the Data Stack. Otherwise, if A is a Codepoint, Push Integer 1 onto the Data Stack. Otherwise (A is a Tuple), push Integer 3 onto the Data Stack. | 3 |
+| 0x22 | ethhash2 | Pop two Values (A,B) off of the Data Stack. If A and B are both Integers, convert (big-endian) each of A and B into length-32 byte arrays, concatenate the two into a 64-byte array, compute the Ethereum hash of that byte-array, convert the result into an Integer (big-endian), and Push the resulting Integer onto the Data Stack. Otherwise, raise an Error. | 40 |
 | &nbsp; | | &nbsp; |
 | 30s: Stack, Memory, Storage and Flow Operations | | &nbsp; |
 | 0x30 | pop | Pop one value off of the Data Stack, and discard that value. | 1 |
