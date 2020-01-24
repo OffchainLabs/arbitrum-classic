@@ -16,7 +16,8 @@
 # Credit to https://github.com/ethereum/pyethereum/blob/master/ethereum/vm.py
 # for EVM-like implementation details
 
-from eth_utils import big_endian_to_int, keccak, encode_single_packed
+from eth_utils import big_endian_to_int, keccak
+from eth_abi.packed import encode_single_packed
 from . import instructions
 from .ast import AVMLabeledCodePoint
 from . import value
