@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 func calculatePath(from common.Hash, proof []common.Hash) common.Hash {
@@ -26,8 +27,11 @@ func calculatePath(from common.Hash, proof []common.Hash) common.Hash {
 
 func calculatePathOffset(from common.Hash, proof []common.Hash, start int, end int) common.Hash {
 	node := from
-	for i := start; i <= end; i++ {
-
+	if len(proof) > 0 {
+		for i := start; i <= end; i++ {
+			//node = keccak256(abi.encodePacked(node, proof[i]));
+			node = hashing.SoliditySHA3(node, hashing.Bytes32(proof[i]))
+		}
 	}
 	return node
 }

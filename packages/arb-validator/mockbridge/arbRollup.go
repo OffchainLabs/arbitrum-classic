@@ -31,12 +31,12 @@ const VALID_CHILD_TYPE = 3
 
 type arbRollup struct {
 	*nodeGraph
-	address common.Address
-	params  structures.ChainParams
-	Client  *MockArbAuthClient
+	contractAddress common.Address
+	params          structures.ChainParams
+	Client          *MockArbAuthClient
 }
 
-func newRollup(address common.Address, client *MockArbAuthClient) (*arbRollup, error) {
+func newRollup(contractAddress common.Address, client *MockArbAuthClient) (*arbRollup, error) {
 	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
@@ -54,23 +54,23 @@ func newRollup(address common.Address, client *MockArbAuthClient) (*arbRollup, e
 	//        // VM parameters
 	//        stakeRequirement = _stakeRequirement;
 
-	ru, ok := client.MockEthClient.rollups[address]
+	ru, ok := client.MockEthClient.rollups[contractAddress]
 	if !ok {
 		events := make(map[*structures.BlockId][]arbbridge.Event)
 		ru = &rollupData{Uninitialized,
 			common.TimeFromSeconds(10),
 			250000,
 			big.NewInt(10),
-			address,
+			contractAddress,
 			events,
 			client.MockEthClient.LatestBlock,
 		}
-		client.MockEthClient.rollups[address] = ru
+		client.MockEthClient.rollups[contractAddress] = ru
 	}
 	vm := newNodeGraph(client.auth)
 	return &arbRollup{
-		nodeGraph: vm,
-		address:   address,
+		nodeGraph:       vm,
+		contractAddress: contractAddress,
 		params: structures.ChainParams{
 			StakeRequirement:        ru.escrowRequired,
 			GracePeriod:             ru.gracePeriod,
@@ -92,13 +92,21 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	}
 
 	//emit RollupStakeCreated(msg.sender, location);
+	event := arbbridge.StakeCreatedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: vm.Client.MockEthClient.LatestBlock,
+		},
+		Staker:   vm.Client.auth.From,
+		NodeHash: location,
+	}
+	vm.Client.MockEthClient.rollups[vm.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeCreatedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: vm.Client.MockEthClient.LatestBlock,
 			},
 			Staker:   vm.Client.auth.From,
-			NodeHash: vm.Client.MockEthClient.LatestBlock.HeaderHash,
+			NodeHash: location,
 		},
 	})
 	return nil
@@ -114,6 +122,7 @@ func (vm *arbRollup) createStake(stakeAmount *big.Int, location common.Hash) err
 	}
 	// require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
 	vm.stakers[vm.Client.auth.From] = &staker{location, vm.Client.MockEthClient.LatestBlock.Height, false, stakeAmount}
+	//emit RollupStakeCreated(msg.sender, location);
 
 	return nil
 }
@@ -383,7 +392,7 @@ func (vm *arbRollup) MakeAssertion(
 		return errors.New("makeAssertion - Imported messages without reading them")
 	}
 	//(bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
-	pendingTop := vm.Client.MockEthClient.pending[vm.address].pending
+	pendingTop := vm.Client.MockEthClient.pending[vm.contractAddress].pending
 	//require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
 	if assertionParams.ImportedMessageCount.Cmp(pendingTop.TopCount().Sub(pendingTop.TopCount(), beforeState.PendingCount)) > 0 {
 		return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")

@@ -14,7 +14,7 @@ type ArbFactory struct {
 }
 
 func newArbFactory(address common.Address, client *MockArbClient) (*ArbFactory, error) {
-	return &ArbFactory{address, client}, nil
+	return &ArbFactory{client.MockEthClient.arbFactory, client}, nil
 }
 
 func (con *ArbFactory) CreateRollup(
@@ -24,7 +24,8 @@ func (con *ArbFactory) CreateRollup(
 	owner common.Address,
 ) (common.Address, error) {
 	events := make(map[*structures.BlockId][]arbbridge.Event)
-	con.client.MockEthClient.rollups[owner] = &rollupData{Uninitialized,
+	addr := con.client.MockEthClient.getNextAddress()
+	con.client.MockEthClient.rollups[addr] = &rollupData{Uninitialized,
 		params.GracePeriod,
 		params.MaxExecutionSteps,
 		params.StakeRequirement,
@@ -36,7 +37,7 @@ func (con *ArbFactory) CreateRollup(
 	//if err != nil {
 	//	return common.Address{}, err
 	//}
-	return owner, nil
+	return addr, nil
 }
 
 type arbFactoryWatcher struct {

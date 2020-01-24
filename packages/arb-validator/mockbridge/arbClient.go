@@ -19,8 +19,7 @@ package mockbridge
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/core/types"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -52,15 +51,19 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 		defer close(blockIdChan)
 
 		for {
-			var nextHeader *types.Header
+			var nextBlock *structures.BlockId
 			fetchErrorCount := 0
 			for {
-				var err error
-				//nextHeader, err = c.client.HeaderByNumber(ctx, new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
-				//if err == nil {
-				//	// Got next header
-				//	break
-				//}
+				//var err error
+				//var ok bool
+				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
+				//nextBlock, ok = c.MockEthClient.blockNumbers[nextHeight]
+				n, ok := c.MockEthClient.blockNumbers[nextHeight.AsInt().Uint64()]
+				if ok {
+					// Got next header
+					nextBlock = n
+					break
+				}
 
 				select {
 				case <-ctx.Done():
@@ -69,13 +72,14 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 				default:
 				}
 
-				if err != nil && err.Error() != ethereum.NotFound.Error() {
-					log.Printf("Failed to fetch next header on attempt %v with error: %v", fetchErrorCount, err)
+				if !ok {
+					log.Printf("Failed to fetch next header on attempt %v", fetchErrorCount)
 					fetchErrorCount++
 				}
 
 				if fetchErrorCount >= maxFetchAttempts {
-					blockIdChan <- arbbridge.MaybeBlockId{Err: err}
+					err := fmt.Sprint("Next header not found after ", fetchErrorCount, " attempts")
+					blockIdChan <- arbbridge.MaybeBlockId{Err: errors.New(err)}
 					return
 				}
 
@@ -83,13 +87,13 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 				time.Sleep(headerRetryDelay)
 			}
 
-			if nextHeader.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
+			if c.MockEthClient.parentHashes[nextBlock] != prevBlockId.HeaderHash {
 				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
 				return
 			}
 
-			//prevBlockId = getBlockID(nextHeader)
-			//blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+			prevBlockId = nextBlock
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
 		}
 	}()
 
@@ -125,7 +129,7 @@ func (c *MockArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId
 }
 
 func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
-	block, err := c.MockEthClient.blockNumbers[height]
+	block, err := c.MockEthClient.blockNumbers[height.AsInt().Uint64()]
 	if err {
 		return nil, errors.New("block height not found")
 	}
