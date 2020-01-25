@@ -58,9 +58,9 @@ func NewRollupCheckpointerImplFactory(
 	databasePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool,
-) *RollupCheckpointerImplFactory {
+) RollupCheckpointerFactory {
 	if databasePath == "" {
-		databasePath = makeCheckpointDatabasePath(rollupAddr)
+		databasePath = MakeCheckpointDatabasePath(rollupAddr)
 	}
 	return &RollupCheckpointerImplFactory{
 		rollupAddr,
@@ -79,7 +79,7 @@ type RollupCheckpointerImpl struct {
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func makeCheckpointDatabasePath(rollupAddr common.Address) string {
+func MakeCheckpointDatabasePath(rollupAddr common.Address) string {
 	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
 }
 

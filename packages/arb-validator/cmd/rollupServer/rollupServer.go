@@ -145,7 +145,7 @@ func validateRollupChain() error {
 	}
 
 	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] [--stresstest] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
 	}
 
 	// 2) Private key
