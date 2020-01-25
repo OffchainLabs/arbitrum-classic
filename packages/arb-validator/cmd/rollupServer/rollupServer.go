@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -39,6 +40,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+)
+
+const (
+	maxReorgDepth = 100
 )
 
 // Launches the rollup validator with the following command line arguments:
@@ -134,7 +139,6 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	stressTest := validateCmd.Bool("stresstest", false, "stresstest")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -188,7 +192,13 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), "", true, client, false, *stressTest)
+	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
+		address,
+		validateCmd.Arg(0),
+		"",
+		big.NewInt(maxReorgDepth),
+		false,
+	))
 	if err != nil {
 		return err
 	}

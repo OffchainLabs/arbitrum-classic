@@ -33,10 +33,42 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
+type RollupCheckpointerFactory interface {
+	New(ctx context.Context) RollupCheckpointer
+}
+
 type RollupCheckpointer interface {
+	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (content []byte, resCtx structures.RestoreContext, err error)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
+}
+
+type RollupCheckpointerImplFactory struct {
+	rollupAddr      common.Address
+	arbCodeFilePath string
+	databasePath    string
+	maxReorgDepth   *big.Int
+	forceFreshStart bool
+}
+
+func NewRollupCheckpointerImplFactory(
+	rollupAddr common.Address,
+	arbitrumCodeFilePath string,
+	databasePath string,
+	maxReorgDepth *big.Int,
+	forceFreshStart bool,
+) *RollupCheckpointerImplFactory {
+	if databasePath == "" {
+		databasePath = makeCheckpointDatabasePath(rollupAddr)
+	}
+	return &RollupCheckpointerImplFactory{
+		rollupAddr,
+		arbitrumCodeFilePath,
+		databasePath,
+		maxReorgDepth,
+		forceFreshStart,
+	}
 }
 
 type RollupCheckpointerImpl struct {
@@ -51,29 +83,20 @@ func makeCheckpointDatabasePath(rollupAddr common.Address) string {
 	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
 }
 
-func NewRollupCheckpointerImpl(
-	ctx context.Context,
-	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
-	databasePath string,
-	forceFreshStart bool,
-	maxReorgDepth *big.Int,
-) *RollupCheckpointerImpl {
-	if databasePath == "" {
-		databasePath = makeCheckpointDatabasePath(rollupAddr)
-	}
-	if forceFreshStart {
+func (fac *RollupCheckpointerImplFactory) New(ctx context.Context) RollupCheckpointer {
+	if fac.forceFreshStart {
 		// for testing only -- use production checkpointer but delete old database first
-		if err := os.RemoveAll(databasePath); err != nil {
+		if err := os.RemoveAll(fac.databasePath); err != nil {
 			log.Fatal(err)
 		}
+		fac.forceFreshStart = false
 	}
-	cCheckpointer, err := cmachine.NewCheckpoint(databasePath, arbitrumCodeFilePath)
+	cCheckpointer, err := cmachine.NewCheckpoint(fac.databasePath, fac.arbCodeFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	ret := &RollupCheckpointerImpl{
-		maxReorgDepth: maxReorgDepth,
+		maxReorgDepth: fac.maxReorgDepth,
 		st:            cCheckpointer,
 	}
 	ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)

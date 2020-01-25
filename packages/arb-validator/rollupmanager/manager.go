@@ -38,10 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-const (
-	maxReorgDepth = 100
-)
-
 type Manager struct {
 	sync.Mutex
 	RollupAddress common.Address
@@ -50,32 +46,28 @@ type Manager struct {
 
 	listenerAddChan chan rollup.ChainListener
 	actionChan      chan func(*rollup.ChainObserver)
+	ckpFac          checkpointing.RollupCheckpointerFactory
 }
 
 func CreateManager(
 	ctx context.Context,
 	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
-	databasePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
-	forceFreshStart bool,
-	stressTest bool,
+	ckpFac checkpointing.RollupCheckpointerFactory,
 ) (*Manager, error) {
-	if stressTest {
-		clnt = NewStressTestClient(clnt, 10*time.Second)
-	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
 		client:          clnt,
 		listenerAddChan: make(chan rollup.ChainListener, 10),
 		actionChan:      make(chan func(*rollup.ChainObserver), 10),
+		ckpFac:          ckpFac,
 	}
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := checkpointing.NewRollupCheckpointerImpl(runCtx, rollupAddr, arbitrumCodeFilePath, databasePath, forceFreshStart, big.NewInt(maxReorgDepth))
+			checkpointer := man.ckpFac.New(runCtx)
 
 			var chain *rollup.ChainObserver
 
