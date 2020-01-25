@@ -79,7 +79,7 @@ func (e evilRollupCheckpointer) RestoreLatestState(
 	contractAddr common.Address,
 	beOpinionated bool,
 ) (content []byte, resCtx structures.RestoreContext, err error) {
-	content, resCtx, err = e.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated)
+	content, resCtx, err = e.cp.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated)
 	if err == nil {
 		resCtx = e
 	}
