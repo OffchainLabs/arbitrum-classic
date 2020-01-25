@@ -52,6 +52,7 @@ const (
 const (
 	SHA3 = iota + 0x20
 	TYPE
+	ETHHASH2
 )
 
 // 0x50 range - 'storage' and execution.
@@ -131,8 +132,9 @@ var InstructionNames = map[value.Opcode]string{
 	BYTE:       "byte",
 	SIGNEXTEND: "signextend",
 
-	SHA3: "hash",
-	TYPE: "type",
+	SHA3:     "hash",
+	TYPE:     "type",
+	ETHHASH2: "ethhash2",
 
 	POP:           "pop",
 	SPUSH:         "spush",
@@ -195,8 +197,9 @@ var InstructionStackPops = map[value.Opcode][]byte{
 	BYTE:       {1, 1},
 	SIGNEXTEND: {1, 1},
 
-	SHA3: {0},
-	TYPE: {1},
+	SHA3:     {0},
+	TYPE:     {1},
+	ETHHASH2: {1, 1},
 
 	POP:   {0},
 	SPUSH: {},
@@ -260,8 +263,9 @@ var InstructionAuxStackPops = map[value.Opcode][]byte{
 	BYTE:       {},
 	SIGNEXTEND: {},
 
-	SHA3: {},
-	TYPE: {},
+	SHA3:     {},
+	TYPE:     {},
+	ETHHASH2: {},
 
 	POP:   {},
 	SPUSH: {},

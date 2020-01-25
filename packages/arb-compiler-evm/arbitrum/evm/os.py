@@ -502,12 +502,40 @@ def evm_sha3(vm):
             vm.hash(),
         ],
         lambda vm: [
-            # [pos, length]
             vm.dup1(),
-            # [length, pos, length]
-            vm.swap1(),
-            get_mem_segment(vm),
-            std.sha3.hash_byterange(vm),
+            vm.push(64),
+            vm.eq(),
+            vm.ifelse(
+                lambda vm: [
+                    vm.swap1(),
+                    vm.pop(),
+                    get_call_frame(vm),
+                    call_frame.call_frame.get("memory")(vm),
+                    std.sized_byterange.sized_byterange.get("data")(vm),
+                    # data offset
+                    vm.dup1(),
+                    vm.push(32),
+                    vm.add(),
+                    # offset+32 data offset
+                    vm.dup1(),
+                    std.byterange.get(vm),
+                    # data[offset+32] data offset
+                    vm.swap2(),
+                    vm.swap1(),
+                    # data offset data[offset+32]
+                    std.byterange.get(vm),
+                    # data[offset] data[offset+32]
+                    vm.ethhash2(),
+                ],
+                lambda vm: [
+                    # [pos, length]
+                    vm.dup1(),
+                    # [length, pos, length]
+                    vm.swap1(),
+                    get_mem_segment(vm),
+                    std.sha3.hash_byterange(vm),
+                ],
+            ),
         ],
     )
 

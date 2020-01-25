@@ -51,6 +51,7 @@ enum class OpCode : uint8_t {
 
     HASH = 0x20,
     TYPE,
+    ETHHASH2,
 
     POP = 0x30,
     SPUSH,          // 31
@@ -92,7 +93,7 @@ enum class OpCode : uint8_t {
 inline bool isValidOpcode(OpCode op) {
     return (op >= OpCode::ADD && op <= OpCode::EXP) ||
            (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::TYPE) ||
+           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
            (op >= OpCode::POP && op <= OpCode::ERRSET) ||
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
@@ -128,6 +129,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
 
     {OpCode::HASH, "hash"},
     {OpCode::TYPE, "type"},
+    {OpCode::ETHHASH2, "ethhash2"},
 
     {OpCode::POP, "pop"},
     {OpCode::SPUSH, "spush"},
@@ -192,6 +194,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
 
     {OpCode::HASH, {false}},
     {OpCode::TYPE, {true}},
+    {OpCode::ETHHASH2, {true, true}},
 
     {OpCode::POP, {false}},
     {OpCode::SPUSH, {}},
@@ -256,6 +259,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
 
     {OpCode::HASH, {}},
     {OpCode::TYPE, {}},
+    {OpCode::ETHHASH2, {}},
 
     {OpCode::POP, {}},
     {OpCode::SPUSH, {}},
@@ -293,44 +297,45 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::DEBUG, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
-    {OpCode::ADD, 1},
-    {OpCode::MUL, 1},
-    {OpCode::SUB, 1},
-    {OpCode::DIV, 1},
-    {OpCode::SDIV, 1},
-    {OpCode::MOD, 1},
-    {OpCode::SMOD, 1},
-    {OpCode::ADDMOD, 1},
-    {OpCode::MULMOD, 1},
-    {OpCode::EXP, 1},
+    {OpCode::ADD, 3},
+    {OpCode::MUL, 3},
+    {OpCode::SUB, 3},
+    {OpCode::DIV, 4},
+    {OpCode::SDIV, 7},
+    {OpCode::MOD, 4},
+    {OpCode::SMOD, 7},
+    {OpCode::ADDMOD, 4},
+    {OpCode::MULMOD, 4},
+    {OpCode::EXP, 25},
 
-    {OpCode::LT, 1},
-    {OpCode::GT, 1},
-    {OpCode::SLT, 1},
-    {OpCode::SGT, 1},
-    {OpCode::EQ, 1},
+    {OpCode::LT, 2},
+    {OpCode::GT, 2},
+    {OpCode::SLT, 2},
+    {OpCode::SGT, 2},
+    {OpCode::EQ, 2},
     {OpCode::ISZERO, 1},
-    {OpCode::BITWISE_AND, 1},
-    {OpCode::BITWISE_OR, 1},
-    {OpCode::BITWISE_XOR, 1},
+    {OpCode::BITWISE_AND, 2},
+    {OpCode::BITWISE_OR, 2},
+    {OpCode::BITWISE_XOR, 2},
     {OpCode::BITWISE_NOT, 1},
-    {OpCode::BYTE, 1},
-    {OpCode::SIGNEXTEND, 1},
+    {OpCode::BYTE, 4},
+    {OpCode::SIGNEXTEND, 7},
 
-    {OpCode::HASH, 1},
-    {OpCode::TYPE, 1},
+    {OpCode::HASH, 40},
+    {OpCode::TYPE, 3},
+    {OpCode::ETHHASH2, 40},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
     {OpCode::RPUSH, 1},
-    {OpCode::RSET, 1},
-    {OpCode::JUMP, 1},
-    {OpCode::CJUMP, 1},
-    {OpCode::STACKEMPTY, 1},
+    {OpCode::RSET, 2},
+    {OpCode::JUMP, 4},
+    {OpCode::CJUMP, 4},
+    {OpCode::STACKEMPTY, 2},
     {OpCode::PCPUSH, 1},
     {OpCode::AUXPUSH, 1},
     {OpCode::AUXPOP, 1},
-    {OpCode::AUXSTACKEMPTY, 1},
+    {OpCode::AUXSTACKEMPTY, 2},
     {OpCode::NOP, 1},
     {OpCode::ERRPUSH, 1},
     {OpCode::ERRSET, 1},
@@ -341,18 +346,18 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SWAP1, 1},
     {OpCode::SWAP2, 1},
 
-    {OpCode::TGET, 1},
-    {OpCode::TSET, 1},
-    {OpCode::TLEN, 1},
+    {OpCode::TGET, 2},
+    {OpCode::TSET, 15},
+    {OpCode::TLEN, 2},
 
-    {OpCode::BREAKPOINT, 1},
-    {OpCode::LOG, 1},
+    {OpCode::BREAKPOINT, 100},
+    {OpCode::LOG, 100},
 
-    {OpCode::SEND, 1},
-    {OpCode::GETTIME, 1},
-    {OpCode::INBOX, 1},
-    {OpCode::ERROR, 1},
-    {OpCode::HALT, 1},
+    {OpCode::SEND, 100},
+    {OpCode::GETTIME, 40},
+    {OpCode::INBOX, 40},
+    {OpCode::ERROR, 5},
+    {OpCode::HALT, 10},
     {OpCode::DEBUG, 1}};
 
 #endif /* opcodes_hpp */
