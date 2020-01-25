@@ -144,8 +144,8 @@ func validateRollupChain() error {
 		return err
 	}
 
-	if validateCmd.NArg() != 4 {
-		return errors.New("usage: evilRollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
+	if validateCmd.NArg() != 5 {
+		return errors.New("usage: evilRollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
 
 	// 2) Private key
@@ -172,6 +172,9 @@ func validateRollupChain() error {
 	// 4) Rollup contract address
 	addressString := validateCmd.Arg(3)
 	address := common.HexToAddress(addressString)
+
+	// 5) Database directory path
+	dbPath := validateCmd.Arg(4)
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
@@ -200,7 +203,7 @@ func validateRollupChain() error {
 		rolluptest.NewEvilRollupCheckpointerFactory(
 			address,
 			validateCmd.Arg(0),
-			"",
+			dbPath,
 			big.NewInt(maxReorgDepth),
 			false,
 		),

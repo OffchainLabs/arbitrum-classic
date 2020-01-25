@@ -144,8 +144,8 @@ func validateRollupChain() error {
 		return err
 	}
 
-	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
+	if validateCmd.NArg() != 5 {
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
 
 	// 2) Private key
@@ -173,6 +173,9 @@ func validateRollupChain() error {
 	addressString := validateCmd.Arg(3)
 	address := common.HexToAddress(addressString)
 
+	// 5) Database directory path
+	dbPath := validateCmd.Arg(4)
+
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
@@ -195,7 +198,7 @@ func validateRollupChain() error {
 	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
 		address,
 		validateCmd.Arg(0),
-		"",
+		dbPath,
 		big.NewInt(maxReorgDepth),
 		false,
 	))
