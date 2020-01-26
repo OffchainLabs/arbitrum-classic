@@ -42,6 +42,10 @@ func NewDummyCheckpointer(arbitrumCodefilePath string) *DummyCheckpointer {
 	return &DummyCheckpointer{theMachine}
 }
 
+func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
+	return false
+}
+
 func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, contractAddr common.Address, beOpinionated bool) ([]byte, structures.RestoreContext, error) {
 	return nil, nil, errors.New("no checkpoints in database")
 }
