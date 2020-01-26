@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
 )
 
@@ -47,20 +45,7 @@ func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *
 	return &pendingInbox{globalPendingInboxContract, client, auth}, nil
 }
 
-func (con *pendingInbox) SendTransactionMessage(
-	ctx context.Context,
-	data value.Value,
-	vmAddress common.Address,
-	contactAddress common.Address,
-	amount *big.Int,
-	seqNumber *big.Int,
-) error {
-	var dataBuf bytes.Buffer
-
-	if err := value.MarshalValue(data, &dataBuf); err != nil {
-		return err
-	}
-
+func (con *pendingInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.GlobalPendingInbox.SendTransactionMessage(
@@ -69,7 +54,7 @@ func (con *pendingInbox) SendTransactionMessage(
 		contactAddress.ToEthAddress(),
 		seqNumber,
 		amount,
-		dataBuf.Bytes(),
+		data,
 	)
 	if err != nil {
 		return err

@@ -44,14 +44,6 @@ func (pii *messageStackItem) skipNext(n uint64) *messageStackItem {
 	return ret
 }
 
-func (pii *messageStackItem) skipBack(n uint64) *messageStackItem {
-	ret := pii
-	for i := uint64(0); i < n && ret != nil; i++ {
-		ret = ret.prev
-	}
-	return ret
-}
-
 func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
 	return msi.hash == msi2.hash &&
 		msi.count.Cmp(msi2.count) == 0 &&

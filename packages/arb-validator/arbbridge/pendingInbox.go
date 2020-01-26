@@ -20,20 +20,11 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type PendingInbox interface {
-	SendTransactionMessage(
-		ctx context.Context,
-		data value.Value,
-		vmAddress common.Address,
-		contactAddress common.Address,
-		amount *big.Int,
-		seqNumber *big.Int,
-	) error
+	SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error
 	DepositEthMessage(
 		ctx context.Context,
 		vmAddress common.Address,

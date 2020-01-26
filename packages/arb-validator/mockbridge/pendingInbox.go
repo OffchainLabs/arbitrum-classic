@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
@@ -38,14 +37,7 @@ func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*Pendi
 	return &PendingInbox{client}, nil
 }
 
-func (con *PendingInbox) SendTransactionMessage(
-	ctx context.Context,
-	data value.Value,
-	vmAddress common.Address,
-	contactAddress common.Address,
-	amount *big.Int,
-	seqNumber *big.Int,
-) error {
+func (con *PendingInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
 	return nil
 }
 

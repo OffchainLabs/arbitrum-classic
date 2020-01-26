@@ -154,10 +154,9 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	dataValue := message.BytesToByteStack(tx.Data())
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 	//seq number bug
-	return conn.pendingInbox.SendTransactionMessage(ctx, dataValue, conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seqNumValue)
+	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seqNumValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
