@@ -202,7 +202,7 @@ func LogValToLog(val value.Value) (Log, error) {
 		return Log{}, errors.New("log contract id must be an int")
 	}
 	logDataByteVal, _ := tupVal.GetByInt64(1)
-	logData, err := SizedByteArrayToHex(logDataByteVal)
+	logData, err := ByteStackToHex(logDataByteVal)
 	if err != nil {
 		return Log{}, err
 	}
@@ -373,7 +373,7 @@ func NewTxMessageFromValue(val value.Value) (TxMessage, error) {
 		return TxMessage{}, errors.New("value must be an int")
 	}
 
-	data, err := SizedByteArrayToHex(dataVal)
+	data, err := ByteStackToHex(dataVal)
 	if err != nil {
 		return TxMessage{}, nil
 	}
@@ -500,7 +500,7 @@ func ProcessLog(val value.Value) (Result, error) {
 			return nil, err
 		}
 		returnVal, err := tup.GetByInt64(2)
-		returnBytes, err := SizedByteArrayToHex(returnVal)
+		returnBytes, err := ByteStackToHex(returnVal)
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +508,7 @@ func ProcessLog(val value.Value) (Result, error) {
 	case RevertCode:
 		// EVM Revert
 		returnVal, _ := tup.GetByInt64(2)
-		returnBytes, err := SizedByteArrayToHex(returnVal)
+		returnBytes, err := ByteStackToHex(returnVal)
 		if err != nil {
 			return nil, err
 		}

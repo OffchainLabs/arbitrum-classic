@@ -20,6 +20,7 @@ import "./GlobalEthWallet.sol";
 import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
 import "./IGlobalPendingInbox.sol";
+import "./Messages.sol";
 
 import "./arch/Protocol.sol";
 import "./arch/Value.sol";
@@ -206,7 +207,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
         address _erc20,
         uint256 _value
     )
-        public
+        external
     {
         depositERC20(_erc20, _chain, _value);
 
@@ -251,36 +252,16 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
         PendingInbox storage pendingInbox = pending[_chain];
 
         if (pendingInbox.value != 0) {
-            (bool valid,, bytes32 dataHash) = Value.deserializeHashed(_data, 0);
-            require(valid, "Invalid transaction data");
-            bytes32 txHash = keccak256(
-                abi.encodePacked(
-                    TRANSACTION_MSG,
-                    _chain,
-                    _to,
-                    _from,
-                    _seqNumber,
-                    _value,
-                    dataHash
-                )
+            (bool valid, bytes32 messageHash) = Messages.transactionMessageHash(
+                _chain,
+                _to,
+                _from,
+                _seqNumber,
+                _value,
+                _data,
+                block.number
             );
-
-            Value.Data[] memory msgValues = new Value.Data[](4);
-            msgValues[0] = Value.newInt(uint256(_to));
-            msgValues[1] = Value.newInt(_seqNumber);
-            msgValues[2] = Value.newInt(_value);
-            msgValues[3] = Value.newHashOnly(dataHash);
-
-            Value.Data[] memory msgType = new Value.Data[](3);
-            msgType[0] = Value.newInt(TRANSACTION_MSG);
-            msgType[1] = Value.newInt(uint256(_from));
-            msgType[2] = Value.newTuple(msgValues);
-
-            bytes32 messageHash = Value.hashTuple([
-                Value.newInt(block.number),
-                Value.newInt(uint256(txHash)),
-                Value.newTuple(msgType)
-            ]);
+            require(valid, "Invalid transaction message");
 
             _deliverMessage(_chain, messageHash);
 
@@ -305,31 +286,13 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     {
         if (pending[_chain].value != 0)
         {
-            bytes32 txHash = keccak256(
-                abi.encodePacked(
-                    ETH_DEPOSIT,
-                    _chain,
-                    _to,
-                    _from,
-                    _value
-                )
+            bytes32 messageHash = Messages.ethMessageHash(
+                _chain,
+                _from,
+                _to,
+                _value,
+                block.number
             );
-
-            Value.Data[] memory msgValues = new Value.Data[](3);
-            msgValues[0] = Value.newInt(uint256(_to));
-            msgValues[1] = Value.newInt(_value);
-
-            Value.Data[] memory msgType = new Value.Data[](3);
-            msgType[0] = Value.newInt(ETH_DEPOSIT);
-            msgType[1] = Value.newInt(uint256(_from));
-            msgType[2] = Value.newTuple(msgValues);
-
-            Value.Data[] memory ethMsg = new Value.Data[](3);
-            ethMsg[0] = Value.newInt(block.number);
-            ethMsg[1] = Value.newInt(uint256(txHash));
-            ethMsg[2] = Value.newTuple(msgType);
-
-            bytes32 messageHash =  Value.newTuple(ethMsg).hash().hash;
 
             _deliverMessage(_chain, messageHash);
 
@@ -353,13 +316,13 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     {
         if (pending[_chain].value != 0)
         {
-            bytes32 messageHash = _tokenMessageHash(
-                ERC20_DEPOSIT,
+            bytes32 messageHash = Messages.erc20MessageHash(
                 _chain,
                 _from,
                 _to,
                 _erc20,
-                _value
+                _value,
+                block.number
             );
 
             _deliverMessage(_chain, messageHash);
@@ -385,13 +348,13 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     {
         if (pending[_chain].value != 0)
         {
-            bytes32 messageHash = _tokenMessageHash(
-                ERC721_DEPOSIT,
+            bytes32 messageHash = Messages.erc721MessageHash(
                 _chain,
                 _from,
                 _to,
                 _erc721,
-                _id
+                _id,
+                block.number
             );
 
             _deliverMessage(_chain, messageHash);
@@ -404,47 +367,6 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
                 _id
             );
         }
-    }
-
-    function _tokenMessageHash(
-        uint8 _messageType,
-        address _chain,
-        address _from,
-        address _to,
-        address _tokenContract,
-        uint256 _value
-    )
-        private
-        view
-        returns(bytes32)
-    {
-        bytes32 txHash = keccak256(
-            abi.encodePacked(
-                _messageType,
-                _chain,
-                _from,
-                _to,
-                _tokenContract,
-                _value
-            )
-        );
-
-        Value.Data[] memory msgValues = new Value.Data[](3);
-        msgValues[0] = Value.newInt(uint256(_tokenContract));
-        msgValues[1] = Value.newInt(uint256(_to));
-        msgValues[2] = Value.newInt(_value);
-
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(_messageType);
-        msgType[1] = Value.newInt(uint256(_from));
-        msgType[2] = Value.newTuple(msgValues);
-
-        Value.Data[] memory ercTokenMsg = new Value.Data[](3);
-        ercTokenMsg[0] = Value.newInt(block.number);
-        ercTokenMsg[1] = Value.newInt(uint(txHash));
-        ercTokenMsg[2] = Value.newTuple(msgType);
-
-        return  Value.newTuple(ercTokenMsg).hash().hash;
     }
 
     function _deliverMessage(address _chain, bytes32 _messageHash) private {

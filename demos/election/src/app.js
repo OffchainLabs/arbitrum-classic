@@ -3,7 +3,7 @@
 
 var $ = require("jquery");
 const ethers = require("ethers");
-const ArbProvider = require("arb-provider-ethers");
+const ArbProvider = require("arb-provider-ethers").ArbProvider;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 

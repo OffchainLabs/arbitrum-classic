@@ -271,7 +271,7 @@ export class ArbWallet extends ethers.Signer {
         const to = await transaction.to;
         let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
         if (transaction.data) {
-            encodedData = ArbValue.hexToSizedByteRange(await transaction.data);
+            encodedData = ArbValue.hexToBytestack(await transaction.data);
         }
         let value = ethers.utils.bigNumberify(0);
         if (transaction.value) {

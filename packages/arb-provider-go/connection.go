@@ -88,7 +88,7 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	dataValue, err := evm.BytesToSizedByteArray(call.Data)
+	dataValue, err := evm.BytesToByteStack(call.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
+	dataValue, err := evm.BytesToByteStack(tx.Data())
 	if err != nil {
 		log.Println("Error converting to SizedByteArray")
 		return err

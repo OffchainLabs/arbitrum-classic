@@ -18,7 +18,7 @@ import eth_utils
 from .contract import Contract
 from . import log
 from . import contract_templates
-from ..std import sized_byterange
+from ..std import bytestack_frombytes
 from .. import value
 
 
@@ -33,7 +33,7 @@ def generate_func(func_id, func_abi, address):
         encoded_input = func_id + eth_abi.encode_abi(
             [inp["type"] for inp in func_abi["inputs"]], list(args)
         )
-        msg_data = sized_byterange.frombytes(encoded_input)
+        msg_data = bytestack_frombytes(encoded_input)
         return value.Tuple([address, seq, val, msg_data])
 
     return impl
