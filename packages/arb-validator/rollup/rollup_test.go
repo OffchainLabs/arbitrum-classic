@@ -183,14 +183,14 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		LastLogHash:      common.Hash{},
 	}
 	assertionClaim := &structures.AssertionClaim{
-		AfterPendingTop:       chain.pendingInbox.GetTopPendingHash(),
+		AfterPendingTop:       chain.pendingInbox.GetTopHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 		AssertionStub:         assertionStub,
 	}
 	disputableNode := structures.NewDisputableNode(
 		assertionParams,
 		assertionClaim,
-		chain.pendingInbox.GetTopPendingHash(),
+		chain.pendingInbox.GetTopHash(),
 		big.NewInt(0),
 	)
 
