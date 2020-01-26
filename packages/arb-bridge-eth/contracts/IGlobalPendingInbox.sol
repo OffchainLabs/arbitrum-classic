@@ -31,7 +31,8 @@ interface IGlobalPendingInbox {
         address indexed chain,
         address indexed to,
         address indexed from,
-        uint256 value
+        uint256 value,
+        uint256 messageNum
     );
 
     event ERC20DepositMessageDelivered(
@@ -39,7 +40,8 @@ interface IGlobalPendingInbox {
         address indexed to,
         address indexed from,
         address erc20,
-        uint256 value
+        uint256 value,
+        uint256 messageNum
     );
 
     event ERC721DepositMessageDelivered(
@@ -47,7 +49,8 @@ interface IGlobalPendingInbox {
         address indexed to,
         address indexed from,
         address erc721,
-        uint256 id
+        uint256 id,
+        uint256 messageNum
     );
 
     function getPending() external returns(bytes32, uint);

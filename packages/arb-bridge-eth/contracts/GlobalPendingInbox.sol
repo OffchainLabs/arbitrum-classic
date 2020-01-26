@@ -50,13 +50,6 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
         return (pendingInbox.value, pendingInbox.count);
     }
 
-    function registerForInbox() external {
-        require(pending[msg.sender].value == 0, "Pending must be uninitialized");
-        pending[msg.sender].value = Value.hashEmptyTuple();
-    }
-
-    address inboxAddress = 0xCAAd408788C192979384768DD5bE04eC1b3787dA;
-
     function sendMessages(bytes calldata _messages) external {
         bool valid;
         uint256 offset = 0;
@@ -146,8 +139,6 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     )
         external
     {
-        (bool valid,, bytes32 valHash) = Value.deserializeHashed(_data, 0);
-        require(valid, "Transaction has invalid value");
         address sender = SigUtils.recoverAddress(
             keccak256(
                 abi.encodePacked(
@@ -155,7 +146,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
                     _to,
                     _seqNumber,
                     _value,
-                    valHash
+                    _data
                 )
             ),
             _signature
@@ -195,8 +186,8 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverEthMessage(
             _chain,
-            msg.sender,
             _to,
+            msg.sender,
             msg.value
         );
     }
@@ -213,8 +204,8 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverERC20TokenMessage(
             _chain,
-            msg.sender,
             _to,
+            msg.sender,
             _erc20,
             _value
         );
@@ -232,8 +223,8 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverERC721TokenMessage(
             _chain,
-            msg.sender,
             _to,
+            msg.sender,
             _erc721,
             _id
         );
@@ -249,134 +240,121 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     )
         private
     {
-        PendingInbox storage pendingInbox = pending[_chain];
+        bytes32 messageHash = Messages.transactionHash(
+            _chain,
+            _to,
+            _from,
+            _seqNumber,
+            _value,
+            _data,
+            block.number
+        );
 
-        if (pendingInbox.value != 0) {
-            (bool valid, bytes32 messageHash) = Messages.transactionMessageHash(
-                _chain,
-                _to,
-                _from,
-                _seqNumber,
-                _value,
-                _data,
-                block.number
-            );
-            require(valid, "Invalid transaction message");
+        _deliverMessage(_chain, messageHash);
 
-            _deliverMessage(_chain, messageHash);
-
-            emit IGlobalPendingInbox.TransactionMessageDelivered(
-                _chain,
-                _to,
-                _from,
-                _seqNumber,
-                _value,
-                _data
-            );
-        }
+        emit IGlobalPendingInbox.TransactionMessageDelivered(
+            _chain,
+            _to,
+            _from,
+            _seqNumber,
+            _value,
+            _data
+        );
     }
 
     function _deliverEthMessage(
         address _chain,
-        address _from,
         address _to,
+        address _from,
         uint256 _value
     )
         private
     {
-        if (pending[_chain].value != 0)
-        {
-            bytes32 messageHash = Messages.ethMessageHash(
-                _chain,
-                _from,
-                _to,
-                _value,
-                block.number
-            );
+        uint256 messageNum = pending[_chain].count + 1;
+        bytes32 messageHash = Messages.ethHash(
+            _to,
+            _from,
+            _value,
+            block.number,
+            messageNum
+        );
 
-            _deliverMessage(_chain, messageHash);
+        _deliverMessage(_chain, messageHash);
 
-            emit IGlobalPendingInbox.EthDepositMessageDelivered(
-                _chain,
-                _to,
-                msg.sender,
-                msg.value
-            );
-        }
+        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+            _chain,
+            _to,
+            msg.sender,
+            msg.value,
+            messageNum
+        );
     }
 
     function _deliverERC20TokenMessage(
         address _chain,
-        address _from,
         address _to,
+        address _from,
         address _erc20,
         uint256 _value
     )
         private
     {
-        if (pending[_chain].value != 0)
-        {
-            bytes32 messageHash = Messages.erc20MessageHash(
-                _chain,
-                _from,
-                _to,
-                _erc20,
-                _value,
-                block.number
-            );
+        uint256 messageNum = pending[_chain].count + 1;
+        bytes32 messageHash = Messages.erc20Hash(
+            _to,
+            _from,
+            _erc20,
+            _value,
+            block.number,
+            messageNum
+        );
 
-            _deliverMessage(_chain, messageHash);
+        _deliverMessage(_chain, messageHash);
 
-            emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
-                _chain,
-                _to,
-                _from,
-                _erc20,
-                _value
-            );
-        }
+        emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
+            _chain,
+            _to,
+            _from,
+            _erc20,
+            _value,
+            messageNum
+        );
     }
 
     function _deliverERC721TokenMessage(
         address _chain,
-        address _from,
         address _to,
+        address _from,
         address _erc721,
         uint256 _id
     )
         private
     {
-        if (pending[_chain].value != 0)
-        {
-            bytes32 messageHash = Messages.erc721MessageHash(
-                _chain,
-                _from,
-                _to,
-                _erc721,
-                _id,
-                block.number
-            );
+        uint256 messageNum = pending[_chain].count + 1;
+        bytes32 messageHash = Messages.erc721Hash(
+            _to,
+            _from,
+            _erc721,
+            _id,
+            block.number,
+            messageNum
+        );
 
-            _deliverMessage(_chain, messageHash);
+        _deliverMessage(_chain, messageHash);
 
-            emit IGlobalPendingInbox.ERC721DepositMessageDelivered(
-                _chain,
-                _to,
-                _from,
-                _erc721,
-                _id
-            );
-        }
+        emit IGlobalPendingInbox.ERC721DepositMessageDelivered(
+            _chain,
+            _to,
+            _from,
+            _erc721,
+            _id,
+            messageNum
+        );
     }
 
     function _deliverMessage(address _chain, bytes32 _messageHash) private {
         PendingInbox storage pendingInbox = pending[_chain];
-
-        pendingInbox.value = Protocol.addMessageToPending(
-            pendingInbox.value,
-            _messageHash
-        );
-
+        pendingInbox.value = Protocol.addMessageToPending(pendingInbox.value, _messageHash);
         pendingInbox.count++;
     }
 }

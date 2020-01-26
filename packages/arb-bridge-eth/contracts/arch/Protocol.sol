@@ -98,10 +98,19 @@ library Protocol {
         return hashVal;
     }
 
-    function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
+    function addMessageToInbox(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
         return Value.hashTuple([
             Value.newHashOnly(pending),
             Value.newHashOnly(message)
         ]);
+    }
+
+    function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                pending,
+                message
+            )
+        );
     }
 }
