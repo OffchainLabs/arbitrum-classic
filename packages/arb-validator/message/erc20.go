@@ -43,6 +43,10 @@ func (m ERC20) Type() MessageType {
 	return ERC20Type
 }
 
+func (m ERC20) GetFuncName() string {
+	return "ERC20Transfer"
+}
+
 func (m ERC20) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
@@ -55,6 +59,20 @@ func (m ERC20) AsValue() value.Value {
 		val1,
 	})
 	return val2
+}
+
+func UnmarshalERC20(val value.Value) (ERC20, error) {
+	from, token, to, amount, err := unmarshalToken(val, ERC20Type)
+	if err != nil {
+		return ERC20{}, err
+	}
+
+	return ERC20{
+		To:           to,
+		From:         from,
+		TokenAddress: token,
+		Value:        amount,
+	}, nil
 }
 
 type DeliveredERC20 struct {
@@ -90,9 +108,7 @@ func (m DeliveredERC20) CommitmentHash() common.Hash {
 }
 
 func (m DeliveredERC20) ReceiptHash() common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], m.MessageNum.Bytes())
-	return ret
+	return value.NewIntValue(m.MessageNum).ToBytes()
 }
 
 func (m DeliveredERC20) CheckpointValue() value.Value {
@@ -107,7 +123,7 @@ func (m DeliveredERC20) CheckpointValue() value.Value {
 	return val
 }
 
-func UnmarshalERC20(v value.Value) (DeliveredERC20, error) {
+func UnmarshalERC20FromCheckpoint(v value.Value) (DeliveredERC20, error) {
 	tup, ok := v.(value.TupleValue)
 	if !ok || tup.Len() != 6 {
 		return DeliveredERC20{}, errors.New("tx val must be 6-tuple")

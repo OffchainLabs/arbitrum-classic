@@ -18,8 +18,16 @@ package challenges
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"math/big"
+	"math/rand"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -35,8 +43,7 @@ func DefendMessagesClaim(
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
-	afterPending common.Hash,
-	importedMessagesSlice common.Hash,
+	messageCount *big.Int,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewMessagesChallengeWatcher(address)
@@ -58,8 +65,7 @@ func DefendMessagesClaim(
 		client,
 		pendingInbox,
 		beforePending,
-		afterPending,
-		importedMessagesSlice,
+		messageCount.Uint64(),
 		bisectionCount,
 	)
 }
@@ -72,7 +78,8 @@ func ChallengeMessagesClaim(
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
-	afterPending common.Hash,
+	messageCount *big.Int,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewMessagesChallengeWatcher(address)
 	if err != nil {
@@ -93,7 +100,8 @@ func ChallengeMessagesClaim(
 		client,
 		pendingInbox,
 		beforePending,
-		afterPending,
+		messageCount.Uint64(),
+		challengeEverything,
 	)
 }
 
@@ -104,8 +112,7 @@ func defendMessages(
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
-	afterPending common.Hash,
-	importedMessagesSlice common.Hash,
+	messageCount uint64,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
@@ -117,36 +124,45 @@ func defendMessages(
 		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", event)
 	}
 
-	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
+	inbox, err := pendingInbox.GenerateInbox(beforePending, messageCount)
 	if err != nil {
 		return 0, err
 	}
 
+	log.Println("Pending inbox", pendingInbox)
+	log.Println("Full inbox", inbox)
+
 	startPending := beforePending
-	endPending := afterPending
 	startMessages := value.NewEmptyTuple().Hash()
-	endMessages := importedMessagesSlice
+	inboxStartCount := uint64(0)
 
 	for {
-		messageCount, err := pendingInbox.SegmentSize(startPending, endPending)
-		if err != nil {
-			return 0, err
-		}
-
+		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
-				pendingNextHash, pendingValueHash, err := pendingInbox.GenerateOneStepProof(startPending)
+				msg, err := pendingInbox.GenerateOneStepProof(startPending)
 				if err != nil {
 					return 0, err
 				}
-				messagesNextHash, _, err := messagesStack.GenerateOneStepProof(startMessages)
-				if err != nil {
-					return 0, err
+
+				log.Println("OneStepProofEthMessage", startPending, startMessages)
+
+				log.Println("pending after", hashing.SoliditySHA3(hashing.Bytes32(startPending), hashing.Bytes32(msg.CommitmentHash())))
+				log.Println("inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
+
+				switch msg := msg.(type) {
+				case message.DeliveredTransaction:
+					err = contract.OneStepProofTransactionMessage(ctx, startPending, startMessages, msg)
+				case message.DeliveredEth:
+					err = contract.OneStepProofEthMessage(ctx, startPending, startMessages, msg)
+				case message.DeliveredERC20:
+					err = contract.OneStepProofERC20Message(ctx, startPending, startMessages, msg)
+				case message.DeliveredERC721:
+					err = contract.OneStepProofERC721Message(ctx, startPending, startMessages, msg)
 				}
-				err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
 				if err != nil {
-					return 0, err
+					return 0, errors2.Wrap(err, "failing making one step proof")
 				}
 				event, state, err = getNextEvent(eventChan)
 			}
@@ -163,17 +179,18 @@ func defendMessages(
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
-			chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, bisectionCount)
+			chainHashes, err := pendingInbox.GenerateBisection(startPending, bisectionCount, messageCount)
+			inboxHashes, err := inbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
 			}
-			stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, bisectionCount)
+
+			log.Println("chainHashes", chainHashes)
+			log.Println("inboxHashes", inboxHashes)
+
+			err = contract.Bisect(ctx, chainHashes, inboxHashes, new(big.Int).SetUint64(messageCount))
 			if err != nil {
-				return 0, err
-			}
-			err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
-			if err != nil {
-				return 0, err
+				return 0, errors2.Wrap(err, "failing making bisection")
 			}
 
 			event, state, err = getNextEvent(eventChan)
@@ -202,9 +219,10 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		endPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()+1]
 		startMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
-		endMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()+1]
+		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
+		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
+		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 	}
 }
 
@@ -215,7 +233,8 @@ func challengeMessages(
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
-	afterPending common.Hash,
+	messageCount uint64,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
@@ -226,10 +245,12 @@ func challengeMessages(
 		return 0, fmt.Errorf("MessagesChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
-	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
+	inbox, err := pendingInbox.GenerateInbox(beforePending, messageCount)
 	if err != nil {
 		return 0, err
 	}
+
+	startInbox := uint64(0)
 
 	deadline := ev.Deadline
 	for {
@@ -255,20 +276,41 @@ func challengeMessages(
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
-			pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
+			pendingSegments, err := pendingInbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
-			}
-			messagesChallengedSegment, err := messagesStack.CheckBisection(ev.SegmentHashes)
-			if err != nil {
-				return 0, err
-			}
-			maxSegment := pendingChallengedSegment
-			if messagesChallengedSegment > maxSegment {
-				maxSegment = messagesChallengedSegment
 			}
 
-			err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
+			inboxSegments, err := inbox.GenerateBisection(startInbox, uint64(len(ev.SegmentHashes))-1, ev.TotalLength.Uint64())
+			if err != nil {
+				return 0, err
+			}
+
+			segmentToChallenge, found := func() (uint64, bool) {
+				// If any pending inbox segment is wrong, we can easily win
+				for i := uint64(1); i < uint64(len(pendingSegments)); i++ {
+					if pendingSegments[i] != ev.ChainHashes[i] {
+						return i - 1, true
+					}
+				}
+
+				for i := uint64(1); i < uint64(len(inboxSegments)); i++ {
+					if inboxSegments[i] != ev.SegmentHashes[i] {
+						return i - 1, true
+					}
+				}
+				return 0, false
+			}()
+
+			if !found {
+				if challengeEverything {
+					segmentToChallenge = uint64(rand.Int31n(int32(len(ev.ChainHashes) - 1)))
+				} else {
+					return 0, errors.New("Nothing to challenge")
+				}
+			}
+			log.Println("ChooseSegment", uint16(segmentToChallenge), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
+			err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
 			if err != nil {
 				return 0, err
 			}

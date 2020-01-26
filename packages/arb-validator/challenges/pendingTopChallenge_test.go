@@ -21,25 +21,63 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func testPendingTopChallenge(t *testing.T) {
 	t.Parallel()
+	msg1 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		MessageNum: big.NewInt(1),
+	}
+	msg2 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		MessageNum: big.NewInt(2),
+	}
+	msg3 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		MessageNum: big.NewInt(3),
+	}
+	msg4 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		MessageNum: big.NewInt(4),
+	}
 	messageStack := structures.NewMessageStack()
-	messageStack.DeliverMessage(value.NewInt64Value(0))
-	messageStack.DeliverMessage(value.NewInt64Value(1))
-	messageStack.DeliverMessage(value.NewInt64Value(2))
-	messageStack.DeliverMessage(value.NewInt64Value(3))
+	messageStack.DeliverMessage(msg1)
+	messageStack.DeliverMessage(msg2)
+	messageStack.DeliverMessage(msg3)
+	messageStack.DeliverMessage(msg4)
 
 	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}
-	topHash, err := messageStack.GetHashAtIndex(big.NewInt(3))
+	messageCount := big.NewInt(3)
+	topHash, err := messageStack.GetHashAtIndex(messageCount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +97,7 @@ func testPendingTopChallenge(t *testing.T) {
 				0,
 				messageStack,
 				bottomHash,
-				topHash,
+				messageCount,
 				2,
 			)
 		},
@@ -71,6 +109,7 @@ func testPendingTopChallenge(t *testing.T) {
 				blockId,
 				0,
 				messageStack,
+				true,
 			)
 		},
 	); err != nil {

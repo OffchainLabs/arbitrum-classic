@@ -61,9 +61,7 @@ module.exports = async function(deployer, network, accounts) {
 
   const fs = require("fs");
   let addresses = {
-    ArbFactory: ArbFactory.address,
-    GlobalPendingInbox: GlobalPendingInbox.address,
-    OneStepProof: OneStepProof.address
+    ArbFactory: ArbFactory.address
   };
   fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
 };

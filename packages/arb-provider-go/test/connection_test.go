@@ -276,10 +276,7 @@ func startFibTestEventListener(fibonacci *Fibonacci, ch chan interface{}, t *tes
 }
 
 func waitForReceipt(client *goarbitrum.ArbConnection, tx *types.Transaction, sender common.Address) (*types.Receipt, error) {
-	txhash, err := client.TxHash(tx, sender)
-	if err != nil {
-		return nil, err
-	}
+	txhash := client.TxHash(tx, sender)
 	for {
 		receipt, err := client.TransactionReceipt(context.Background(), txhash.ToEthHash())
 		if err == nil {

@@ -19,9 +19,10 @@ package message
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -35,6 +36,21 @@ type Transaction struct {
 	SequenceNum *big.Int
 	Value       *big.Int
 	Data        []byte
+}
+
+func (m Transaction) String() string {
+	return fmt.Sprintf("Transaction(chain: %v, to: %v, from: %v, seq: %v, value: %v, data: %v",
+		m.Chain,
+		m.To,
+		m.From,
+		m.SequenceNum,
+		m.Value,
+		m.Data,
+	)
+}
+
+func (m Transaction) GetFuncName() string {
+	return hexutil.Encode(m.Data[:4])
 }
 
 func (m Transaction) Equals(o Transaction) bool {
@@ -53,7 +69,9 @@ func (m Transaction) Type() MessageType {
 func (m Transaction) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
+		value.NewIntValue(m.SequenceNum),
 		value.NewIntValue(m.Value),
+		BytesToByteStack(m.Data),
 	})
 	val2, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(big.NewInt(int64(m.Type()))),
@@ -63,13 +81,58 @@ func (m Transaction) AsValue() value.Value {
 	return val2
 }
 
+func UnmarshalTransaction(val value.Value, chain common.Address) (Transaction, error) {
+	from, tup, err := unmarshalTxWrapped(val, TransactionType)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	if tup.Len() != 4 {
+		return Transaction{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+	}
+	destVal, _ := tup.GetByInt64(0)
+	seqVal, _ := tup.GetByInt64(1)
+	amountVal, _ := tup.GetByInt64(2)
+	dataVal, _ := tup.GetByInt64(3)
+
+	destInt, ok := destVal.(value.IntValue)
+	if !ok {
+		return Transaction{}, errors.New("dest must be an int")
+	}
+
+	seqInt, ok := seqVal.(value.IntValue)
+	if !ok {
+		return Transaction{}, errors.New("seq must be an int")
+	}
+
+	amountInt, ok := amountVal.(value.IntValue)
+	if !ok {
+		return Transaction{}, errors.New("amount must be an int")
+	}
+
+	data, err := ByteStackToHex(dataVal)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	return Transaction{
+		Chain:       chain,
+		To:          intValueToAddress(destInt),
+		From:        from,
+		SequenceNum: seqInt.BigInt(),
+		Value:       amountInt.BigInt(),
+		Data:        data,
+	}, nil
+}
+
 func (m Transaction) ReceiptHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.Chain),
 		hashing.Address(m.To),
 		hashing.Address(m.From),
-		hashing.Uint256(m.Value),
 		hashing.Uint256(m.SequenceNum),
+		hashing.Uint256(m.Value),
 		m.Data,
 	)
 }
@@ -95,12 +158,13 @@ func (m DeliveredTransaction) DeliveredHeight() *common.TimeBlocks {
 func (m DeliveredTransaction) CommitmentHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.Chain),
 		hashing.Address(m.To),
 		hashing.Address(m.From),
-		hashing.Uint256(m.Value),
 		hashing.Uint256(m.SequenceNum),
-		hashing.Uint256(m.BlockNum.AsInt()),
+		hashing.Uint256(m.Value),
 		m.Data,
+		hashing.Uint256(m.BlockNum.AsInt()),
 	)
 }
 
@@ -111,13 +175,13 @@ func (m DeliveredTransaction) CheckpointValue() value.Value {
 		addressToIntValue(m.From),
 		value.NewIntValue(m.SequenceNum),
 		value.NewIntValue(m.Value),
-		evm.BytesToByteStack(m.Data),
+		BytesToByteStack(m.Data),
 		value.NewIntValue(m.BlockNum.AsInt()),
 	})
 	return val
 }
 
-func UnmarshalTransaction(v value.Value) (DeliveredTransaction, error) {
+func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, error) {
 	tup, ok := v.(value.TupleValue)
 	if !ok || tup.Len() != 7 {
 		return DeliveredTransaction{}, errors.New("tx val must be 7-tuple")
@@ -148,7 +212,7 @@ func UnmarshalTransaction(v value.Value) (DeliveredTransaction, error) {
 		return DeliveredTransaction{}, errors.New("chain must be int")
 	}
 	data, _ := tup.GetByInt64(5)
-	dataBytes, err := evm.ByteStackToHex(data)
+	dataBytes, err := ByteStackToHex(data)
 	if err != nil {
 		return DeliveredTransaction{}, err
 	}

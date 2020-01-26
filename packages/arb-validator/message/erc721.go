@@ -29,25 +29,29 @@ type ERC721 struct {
 	To           common.Address
 	From         common.Address
 	TokenAddress common.Address
-	Value        *big.Int
+	Id           *big.Int
 }
 
 func (m ERC721) Equals(o ERC721) bool {
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.TokenAddress == o.TokenAddress &&
-		m.Value.Cmp(o.Value) == 0
+		m.Id.Cmp(o.Id) == 0
 }
 
 func (m ERC721) Type() MessageType {
 	return ERC721Type
 }
 
+func (m ERC721) GetFuncName() string {
+	return "ERC721Transfer"
+}
+
 func (m ERC721) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
-		value.NewIntValue(m.Value),
+		value.NewIntValue(m.Id),
 	})
 	val2, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(big.NewInt(int64(m.Type()))),
@@ -55,6 +59,20 @@ func (m ERC721) AsValue() value.Value {
 		val1,
 	})
 	return val2
+}
+
+func UnmarshalERC721(val value.Value) (ERC721, error) {
+	from, token, to, amount, err := unmarshalToken(val, ERC721Type)
+	if err != nil {
+		return ERC721{}, err
+	}
+
+	return ERC721{
+		To:           to,
+		From:         from,
+		TokenAddress: token,
+		Id:           amount,
+	}, nil
 }
 
 type DeliveredERC721 struct {
@@ -83,16 +101,14 @@ func (m DeliveredERC721) CommitmentHash() common.Hash {
 		hashing.Address(m.To),
 		hashing.Address(m.From),
 		hashing.Address(m.TokenAddress),
-		hashing.Uint256(m.Value),
+		hashing.Uint256(m.Id),
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.MessageNum),
 	)
 }
 
 func (m DeliveredERC721) ReceiptHash() common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], m.MessageNum.Bytes())
-	return ret
+	return value.NewIntValue(m.MessageNum).ToBytes()
 }
 
 func (m DeliveredERC721) CheckpointValue() value.Value {
@@ -100,14 +116,14 @@ func (m DeliveredERC721) CheckpointValue() value.Value {
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		addressToIntValue(m.TokenAddress),
-		value.NewIntValue(m.Value),
+		value.NewIntValue(m.Id),
 		value.NewIntValue(m.BlockNum.AsInt()),
 		value.NewIntValue(m.MessageNum),
 	})
 	return val
 }
 
-func UnmarshalERC721(v value.Value) (DeliveredERC721, error) {
+func UnmarshalERC721FromCheckpoint(v value.Value) (DeliveredERC721, error) {
 	tup, ok := v.(value.TupleValue)
 	if !ok || tup.Len() != 6 {
 		return DeliveredERC721{}, errors.New("tx val must be 6-tuple")
@@ -148,7 +164,7 @@ func UnmarshalERC721(v value.Value) (DeliveredERC721, error) {
 			To:           intValueToAddress(toInt),
 			From:         intValueToAddress(fromInt),
 			TokenAddress: intValueToAddress(tokenAddressInt),
-			Value:        valInt.BigInt(),
+			Id:           valInt.BigInt(),
 		},
 		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
 		MessageNum: messageNumInt.BigInt(),

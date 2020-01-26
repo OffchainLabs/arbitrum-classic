@@ -60,7 +60,10 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
+	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
+	if err != nil {
+		t.Error(err)
+	}
 	if !chain.equals(chain2) {
 		t.Fail()
 	}
@@ -83,7 +86,7 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		t.Fatal(err)
 	}
-	chain2 := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
+	chain2, err := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,14 +183,14 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		LastLogHash:      common.Hash{},
 	}
 	assertionClaim := &structures.AssertionClaim{
-		AfterPendingTop:       chain.pendingInbox.GetTopHash(),
+		AfterPendingTop:       chain.pendingInbox.GetTopPendingHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 		AssertionStub:         assertionStub,
 	}
 	disputableNode := structures.NewDisputableNode(
 		assertionParams,
 		assertionClaim,
-		chain.pendingInbox.GetTopHash(),
+		chain.pendingInbox.GetTopPendingHash(),
 		big.NewInt(0),
 	)
 

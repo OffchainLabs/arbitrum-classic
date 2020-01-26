@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -33,13 +35,32 @@ type MessagesChallenge interface {
 		chainLength *big.Int,
 	) error
 
-	OneStepProof(
+	OneStepProofTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		topHashA common.Hash,
 		lowerHashB common.Hash,
-		topHashB common.Hash,
-		value common.Hash,
+		msg message.DeliveredTransaction,
+	) error
+
+	OneStepProofEthMessage(
+		ctx context.Context,
+		lowerHashA common.Hash,
+		lowerHashB common.Hash,
+		msg message.DeliveredEth,
+	) error
+
+	OneStepProofERC20Message(
+		ctx context.Context,
+		lowerHashA common.Hash,
+		lowerHashB common.Hash,
+		msg message.DeliveredERC20,
+	) error
+
+	OneStepProofERC721Message(
+		ctx context.Context,
+		lowerHashA common.Hash,
+		lowerHashB common.Hash,
+		msg message.DeliveredERC721,
 	) error
 
 	ChooseSegment(

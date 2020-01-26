@@ -17,6 +17,7 @@
 package proofmachine
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -56,8 +57,21 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
+	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	osp, err := client.DeployOneStepProof(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	proofbounds := [2]uint32{0, 10000}
-	return NewEthConnection(connectionInfo.OneStepProofAddress(), ethURL, proofbounds)
+	return NewEthConnection(osp, proofbounds), nil
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {

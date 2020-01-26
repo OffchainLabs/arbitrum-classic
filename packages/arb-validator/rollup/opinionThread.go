@@ -104,18 +104,20 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			} else {
 				params := successor.disputable.AssertionParams.Clone()
 				claim := successor.disputable.AssertionClaim.Clone()
-				claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
-				var claimHeightCopy *big.Int
-				if found {
-					claimHeightCopy = new(big.Int).Set(claimHeight)
-				}
-				messageStack, _ := chain.pendingInbox.Substack(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
-				messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
-				nextMachine = currentOpinion.machine.Clone()
 				prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
+				afterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
+				afterPendingTopVal, err := chain.pendingInbox.GetHashAtIndex(afterPendingTopHeight)
+				var afterPendingTop *common.Hash
+				if err == nil {
+					afterPendingTop = &afterPendingTopVal
+				}
+				inbox, _ := chain.pendingInbox.GenerateInbox(currentOpinion.vmProtoData.PendingTop, params.ImportedMessageCount.Uint64())
+				messagesVal := inbox.AsValue()
+				nextMachine = currentOpinion.machine.Clone()
+
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, prevPendingCount, claimHeightCopy, messageStack, messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, prevPendingCount, afterPendingTop, inbox.Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
@@ -225,8 +227,10 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	}
 	afterPendingTop := chain.pendingInbox.GetTopHash()
 	beforePendingTop := beforeState.PendingTop
-	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
-	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
+	newMessageCount := new(big.Int).Sub(chain.pendingInbox.TopCount(), beforeState.PendingCount)
+
+	inbox, _ := chain.pendingInbox.GenerateInbox(beforePendingTop, newMessageCount.Uint64())
+	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
@@ -257,11 +261,11 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		params = &structures.AssertionParams{
 			NumSteps:             stepsRun,
 			TimeBounds:           timeBounds,
-			ImportedMessageCount: messageStack.TopCount(),
+			ImportedMessageCount: newMessageCount,
 		}
 		claim = &structures.AssertionClaim{
 			AfterPendingTop:       afterPendingTop,
-			ImportedMessagesSlice: messageStack.GetTopHash(),
+			ImportedMessagesSlice: inbox.Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
@@ -294,16 +298,15 @@ func getNodeOpinion(
 	params *structures.AssertionParams,
 	claim *structures.AssertionClaim,
 	prevPendingCount *big.Int,
-	claimHeight *big.Int,
-	messageStack *structures.MessageStack,
+	afterPendingTop *common.Hash,
+	calculatedMessagesSlice common.Hash,
 	messagesVal value.TupleValue,
 	mach machine.Machine,
 ) (structures.ChildType, *protocol.ExecutionAssertion) {
-	correctAfterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
-	if claimHeight == nil || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
+	if afterPendingTop == nil || claim.AfterPendingTop != *afterPendingTop {
 		return structures.InvalidPendingChildType, nil
 	}
-	if messageStack.GetTopHash() != claim.ImportedMessagesSlice {
+	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
 		return structures.InvalidMessagesChildType, nil
 	}
 

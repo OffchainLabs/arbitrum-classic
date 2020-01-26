@@ -129,7 +129,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting asserter")
+			log.Println("Restarting asserter", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -153,7 +153,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting challenger")
+			log.Println("Restarting challenger", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err

@@ -20,8 +20,6 @@ interface GlobalPendingInboxInterface extends Interface {
 
         getPending: TypedFunctionDescription<{ encode([]: []): string }>;
 
-        registerForInbox: TypedFunctionDescription<{ encode([]: []): string }>;
-
         sendMessages: TypedFunctionDescription<{
             encode([_messages]: [Arrayish]): string;
         }>;
@@ -62,27 +60,35 @@ interface GlobalPendingInboxInterface extends Interface {
 
     events: {
         ERC20DepositMessageDelivered: TypedEventDescription<{
-            encodeTopics([chain, to, from, erc20, value]: [
+            encodeTopics([chain, to, from, erc20, value, messageNum]: [
                 string | null,
                 string | null,
                 string | null,
+                null,
                 null,
                 null,
             ]): string[];
         }>;
 
         ERC721DepositMessageDelivered: TypedEventDescription<{
-            encodeTopics([chain, to, from, erc721, id]: [
+            encodeTopics([chain, to, from, erc721, id, messageNum]: [
                 string | null,
                 string | null,
                 string | null,
+                null,
                 null,
                 null,
             ]): string[];
         }>;
 
         EthDepositMessageDelivered: TypedEventDescription<{
-            encodeTopics([chain, to, from, value]: [string | null, string | null, string | null, null]): string[];
+            encodeTopics([chain, to, from, value, messageNum]: [
+                string | null,
+                string | null,
+                string | null,
+                null,
+                null,
+            ]): string[];
         }>;
 
         TransactionMessageDelivered: TypedEventDescription<{
@@ -136,8 +142,6 @@ export class GlobalPendingInbox extends Contract {
 
         getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        registerForInbox(overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         forwardTransactionMessage(
@@ -185,6 +189,7 @@ export class GlobalPendingInbox extends Contract {
             from: string | null,
             erc20: null,
             value: null,
+            messageNum: null,
         ): EventFilter;
 
         ERC721DepositMessageDelivered(
@@ -193,6 +198,7 @@ export class GlobalPendingInbox extends Contract {
             from: string | null,
             erc721: null,
             id: null,
+            messageNum: null,
         ): EventFilter;
 
         EthDepositMessageDelivered(
@@ -200,6 +206,7 @@ export class GlobalPendingInbox extends Contract {
             to: string | null,
             from: string | null,
             value: null,
+            messageNum: null,
         ): EventFilter;
 
         TransactionMessageDelivered(
@@ -220,8 +227,6 @@ export class GlobalPendingInbox extends Contract {
         withdrawEth(): Promise<BigNumber>;
 
         getPending(): Promise<BigNumber>;
-
-        registerForInbox(): Promise<BigNumber>;
 
         sendMessages(_messages: Arrayish): Promise<BigNumber>;
 

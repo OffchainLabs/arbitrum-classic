@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -22,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
@@ -88,16 +89,13 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	dataValue, err := evm.BytesToByteStack(call.Data)
-	if err != nil {
-		return nil, err
-	}
-	retValue, err := conn.proxy.CallMessage(*call.To, call.From, dataValue)
+
+	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
 	if err != nil {
 		return nil, err
 	}
 
-	logVal, err := evm.ProcessLog(retValue)
+	logVal, err := evm.ProcessLog(retValue, conn.vmId)
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +154,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	dataValue, err := evm.BytesToByteStack(tx.Data())
-	if err != nil {
-		log.Println("Error converting to SizedByteArray")
-		return err
-	}
-
+	dataValue := message.BytesToByteStack(tx.Data())
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 	//seq number bug
 	return conn.pendingInbox.SendTransactionMessage(ctx, dataValue, conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seqNumValue)
@@ -356,7 +349,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		return nil, ethereum.NotFound
 	}
 
-	processed, err := evm.ProcessLog(result)
+	processed, err := evm.ProcessLog(result, conn.vmId)
 	if err != nil {
 		log.Println("TransactionReceipt ProcessLog error:", err)
 		return nil, err
@@ -416,25 +409,19 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}, nil
 }
 
-func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
-	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
-	if err != nil {
-		log.Println("Error converting to SizedByteArray")
-		return nil, err
-	}
-	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
-	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
+func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
+	seqNum := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 	//seq number bug
-
-	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
+	return message.Transaction{
+		Chain:       conn.vmId,
+		To:          common.NewAddressFromEth(*tx.To()),
+		From:        from,
+		SequenceNum: seqNum,
+		Value:       tx.Value(),
+		Data:        tx.Data(),
+	}
 }
 
-func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) (common.Hash, error) {
-	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
-	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
-	if err != nil {
-		log.Println("Error converting to SizedByteArray")
-		return common.Hash{}, err
-	}
-	return ethbridge.GetTransactionHash(conn.vmId, common.NewAddressFromEth(*tx.To()), from, seqNumValue, tx.Value(), dataValue), nil
+func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) common.Hash {
+	return conn.TxToMessage(tx, from).ReceiptHash()
 }

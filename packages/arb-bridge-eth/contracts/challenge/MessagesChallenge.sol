@@ -36,8 +36,6 @@ contract MessagesChallenge is BisectionChallenge {
 
     // Incorrect previous state
     string constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
-    // Proof was incorrect
-    string constant HS_OSP_PROOF = "HS_OSP_PROOF";
 
     function bisect(
         bytes32[] memory _chainHashes,
@@ -90,9 +88,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofTransactionMessage(
         bytes32 _lowerHashA,
-        bytes32 _topHashA,
         bytes32 _lowerHashB,
-        bytes32 _topHashB,
         address _chain,
         address _to,
         address _from,
@@ -126,9 +122,7 @@ contract MessagesChallenge is BisectionChallenge {
 
         oneStepProof(
             _lowerHashA,
-            _topHashA,
             _lowerHashB,
-            _topHashB,
             messageHash,
             arbMessageHash
         );
@@ -136,9 +130,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofEthMessage(
         bytes32 _lowerHashA,
-        bytes32 _topHashA,
         bytes32 _lowerHashB,
-        bytes32 _topHashB,
         address _to,
         address _from,
         uint256 _value,
@@ -166,9 +158,7 @@ contract MessagesChallenge is BisectionChallenge {
 
         oneStepProof(
             _lowerHashA,
-            _topHashA,
             _lowerHashB,
-            _topHashB,
             messageHash,
             arbMessageHash
         );
@@ -176,9 +166,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofERC20Message(
         bytes32 _lowerHashA,
-        bytes32 _topHashA,
         bytes32 _lowerHashB,
-        bytes32 _topHashB,
         address _to,
         address _from,
         address _erc20,
@@ -209,9 +197,7 @@ contract MessagesChallenge is BisectionChallenge {
 
         oneStepProof(
             _lowerHashA,
-            _topHashA,
             _lowerHashB,
-            _topHashB,
             messageHash,
             arbMessageHash
         );
@@ -219,9 +205,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofERC721Message(
         bytes32 _lowerHashA,
-        bytes32 _topHashA,
         bytes32 _lowerHashB,
-        bytes32 _topHashB,
         address _to,
         address _from,
         address _erc721,
@@ -252,9 +236,7 @@ contract MessagesChallenge is BisectionChallenge {
 
         oneStepProof(
             _lowerHashA,
-            _topHashA,
             _lowerHashB,
-            _topHashB,
             messageHash,
             arbMessageHash
         );
@@ -262,9 +244,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProof(
         bytes32 _lowerHashA,
-        bytes32 _topHashA,
         bytes32 _lowerHashB,
-        bytes32 _topHashB,
         bytes32 _valueHashA,
         bytes32 _valueHashB
     )
@@ -273,15 +253,12 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
-                _topHashA,
+                Protocol.addMessageToPending(_lowerHashA, _valueHashA),
                 _lowerHashB,
-                _topHashB,
+                Protocol.addMessageToInbox(_lowerHashB, _valueHashB),
                 1
             )
         );
-
-        require(Protocol.addMessageToPending(_lowerHashA, _valueHashA) == _topHashA, HS_OSP_PROOF);
-        require(Protocol.addMessageToInbox(_lowerHashB, _valueHashB) == _topHashB, HS_OSP_PROOF);
 
         emit OneStepProofCompleted();
         _asserterWin();

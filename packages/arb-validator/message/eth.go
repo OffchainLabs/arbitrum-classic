@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -31,6 +32,10 @@ type Eth struct {
 	Value *big.Int
 }
 
+func (m Eth) String() string {
+	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, m.Value)
+}
+
 func (m Eth) Equals(o Eth) bool {
 	return m.To == o.To &&
 		m.From == o.From &&
@@ -39,6 +44,10 @@ func (m Eth) Equals(o Eth) bool {
 
 func (m Eth) Type() MessageType {
 	return EthType
+}
+
+func (m Eth) GetFuncName() string {
+	return "EthTransfer"
 }
 
 func (m Eth) AsValue() value.Value {
@@ -52,6 +61,35 @@ func (m Eth) AsValue() value.Value {
 		val1,
 	})
 	return val2
+}
+
+func UnmarshalEth(val value.Value) (Eth, error) {
+	from, tup, err := unmarshalTxWrapped(val, EthType)
+	if err != nil {
+		return Eth{}, err
+	}
+
+	if tup.Len() != 2 {
+		return Eth{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+	}
+	destVal, _ := tup.GetByInt64(0)
+	amountVal, _ := tup.GetByInt64(1)
+
+	destInt, ok := destVal.(value.IntValue)
+	if !ok {
+		return Eth{}, errors.New("dest must be an int")
+	}
+
+	amountInt, ok := amountVal.(value.IntValue)
+	if !ok {
+		return Eth{}, errors.New("amount must be an int")
+	}
+
+	return Eth{
+		To:    intValueToAddress(destInt),
+		From:  from,
+		Value: amountInt.BigInt(),
+	}, nil
 }
 
 type DeliveredEth struct {
@@ -86,9 +124,7 @@ func (m DeliveredEth) CommitmentHash() common.Hash {
 }
 
 func (m DeliveredEth) ReceiptHash() common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], m.MessageNum.Bytes())
-	return ret
+	return value.NewIntValue(m.MessageNum).ToBytes()
 }
 
 func (m DeliveredEth) CheckpointValue() value.Value {
@@ -102,7 +138,7 @@ func (m DeliveredEth) CheckpointValue() value.Value {
 	return val
 }
 
-func UnmarshalEth(v value.Value) (DeliveredEth, error) {
+func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
 	tup, ok := v.(value.TupleValue)
 	if !ok || tup.Len() != 5 {
 		return DeliveredEth{}, errors.New("tx val must be 5-tuple")

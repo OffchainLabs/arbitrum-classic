@@ -18,12 +18,15 @@ package challenges
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	errors2 "github.com/pkg/errors"
 )
 
 func DefendPendingTopClaim(
@@ -34,7 +37,7 @@ func DefendPendingTopClaim(
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
-	topPending common.Hash,
+	messageCount *big.Int,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewPendingTopChallengeWatcher(address)
@@ -56,7 +59,7 @@ func DefendPendingTopClaim(
 		client,
 		pendingInbox,
 		afterPendingTop,
-		topPending,
+		messageCount.Uint64(),
 		bisectionCount,
 	)
 }
@@ -68,6 +71,7 @@ func ChallengePendingTopClaim(
 	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewPendingTopChallengeWatcher(address)
 	if err != nil {
@@ -86,6 +90,7 @@ func ChallengePendingTopClaim(
 		contract,
 		client,
 		pendingInbox,
+		challengeEverything,
 	)
 }
 
@@ -96,7 +101,7 @@ func defendPendingTop(
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
-	topPending common.Hash,
+	messageCount uint64,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
@@ -109,24 +114,18 @@ func defendPendingTop(
 	}
 
 	startState := afterPendingTop
-	endState := topPending
 
 	for {
-		messageCount, err := pendingInbox.SegmentSize(startState, endState)
-		if err != nil {
-			return 0, err
-		}
-
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
-				nextHash, valueHash, err := pendingInbox.GenerateOneStepProof(startState)
+				msg, err := pendingInbox.GenerateOneStepProof(startState)
 				if err != nil {
 					return 0, err
 				}
-				err = contract.OneStepProof(ctx, startState, nextHash, valueHash)
+				err = contract.OneStepProof(ctx, startState, msg.CommitmentHash())
 				if err != nil {
-					return 0, err
+					return 0, errors2.Wrap(err, "Error making one step proof")
 				}
 				event, state, err = getNextEvent(eventChan)
 			}
@@ -143,13 +142,13 @@ func defendPendingTop(
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
-			chainHashes, err := pendingInbox.GenerateBisection(startState, endState, bisectionCount)
+			chainHashes, err := pendingInbox.GenerateBisection(startState, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
 			}
 			err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
 			if err != nil {
-				return 0, err
+				return 0, errors2.Wrap(err, "Error bisecting")
 			}
 			event, state, err = getNextEvent(eventChan)
 		}
@@ -177,7 +176,7 @@ func defendPendingTop(
 			return 0, fmt.Errorf("PendingTopChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startState = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		endState = ev.ChainHashes[contEv.SegmentIndex.Uint64()+1]
+		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 	}
 }
 
@@ -187,6 +186,7 @@ func challengePendingTop(
 	contract arbbridge.PendingTopChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
@@ -223,11 +223,23 @@ func challengePendingTop(
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
 			err = nil
-			challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
-			if err != nil {
-				return 0, err
+			segments, err := pendingInbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
+			segmentToChallenge, found := func() (uint64, bool) {
+				for i := uint64(1); i < uint64(len(segments)); i++ {
+					if segments[i] != ev.ChainHashes[i] {
+						return i - 1, true
+					}
+				}
+				return 0, false
+			}()
+			if !found {
+				if challengeEverything {
+					segmentToChallenge = uint64(rand.Int31n(int32(len(ev.ChainHashes) - 1)))
+				} else {
+					return 0, errors.New("can't find pending segment to challenge")
+				}
 			}
-			err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
+			err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
 			if err != nil {
 				return 0, err
 			}

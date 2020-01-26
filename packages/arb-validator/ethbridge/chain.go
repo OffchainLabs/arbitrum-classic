@@ -37,16 +37,11 @@ import (
 )
 
 type ArbAddresses struct {
-	ArbFactory   string `json:"ArbFactory"`
-	OneStepProof string `json:"OneStepProof"`
+	ArbFactory string `json:"ArbFactory"`
 }
 
 func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
-}
-
-func (a ArbAddresses) OneStepProofAddress() common.Address {
-	return common.NewAddressFromEth(ethcommon.HexToAddress(a.OneStepProof))
 }
 
 func getBlockID(header *types.Header) *structures.BlockId {

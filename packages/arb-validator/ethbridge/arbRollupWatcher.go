@@ -17,10 +17,11 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	errors2 "github.com/pkg/errors"
 
@@ -32,9 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -177,122 +176,6 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 	return events, nil
 }
 
-func AddressToIntValue(address common.Address) value.IntValue {
-	addressBytes := [32]byte{}
-	copy(addressBytes[12:], address[:])
-	addressVal := big.NewInt(0).SetBytes(addressBytes[:])
-
-	return value.NewIntValue(addressVal)
-}
-
-const (
-	TRANSACTION_MESSAGE_ID = iota
-	ETH_DEPOSIT_MESSAGE
-	ERC20_DEPOSIT_MESSAGE
-	ERC721_DEPOSIT_MESSAGE
-)
-
-func GetTransactionHash(
-	chain common.Address,
-	to common.Address,
-	from common.Address,
-	sequenceNum *big.Int,
-	value *big.Int,
-	data value.Value,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(TRANSACTION_MESSAGE_ID),
-		hashing.Address(chain),
-		hashing.Address(to),
-		hashing.Address(from),
-		hashing.Uint256(sequenceNum),
-		hashing.Uint256(value),
-		hashing.Bytes32(data.Hash()),
-	)
-}
-
-func EthDepositHash(
-	chain common.Address,
-	to common.Address,
-	from common.Address,
-	value *big.Int,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(ETH_DEPOSIT_MESSAGE),
-		hashing.Address(chain),
-		hashing.Address(to),
-		hashing.Address(from),
-		hashing.Uint256(value),
-	)
-}
-
-func ERC20DepositHash(
-	chain common.Address,
-	to common.Address,
-	from common.Address,
-	erc20 common.Address,
-	value *big.Int,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(ERC20_DEPOSIT_MESSAGE),
-		hashing.Address(chain),
-		hashing.Address(to),
-		hashing.Address(from),
-		hashing.Address(erc20),
-		hashing.Uint256(value),
-	)
-}
-
-func ERC721DepositHash(
-	chain common.Address,
-	to common.Address,
-	from common.Address,
-	erc721 common.Address,
-	id *big.Int,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(ERC721_DEPOSIT_MESSAGE),
-		hashing.Address(chain),
-		hashing.Address(to),
-		hashing.Address(from),
-		hashing.Address(erc721),
-		hashing.Uint256(id),
-	)
-}
-
-func GetTransactionMessage(
-	chain common.Address,
-	to common.Address,
-	from common.Address,
-	sequenceNum *big.Int,
-	val *big.Int,
-	data value.Value,
-	blockNum *big.Int,
-) (value.Value, common.Hash) {
-	messageHash := GetTransactionHash(chain, to, from, sequenceNum, val, data)
-	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-	msgVal, _ := value.NewTupleFromSlice([]value.Value{
-		AddressToIntValue(to),
-		value.NewIntValue(sequenceNum),
-		value.NewIntValue(val),
-		data,
-	})
-
-	msgType, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(big.NewInt(TRANSACTION_MESSAGE_ID)),
-		AddressToIntValue(from),
-		msgVal,
-	})
-
-	dataMsg, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(blockNum),
-		value.NewIntValue(msgHashInt),
-		msgType,
-	})
-	return dataMsg, messageHash
-}
-
 func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
 		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
@@ -300,25 +183,21 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		rd := bytes.NewReader(val.Data)
-		msgData, err := value.UnmarshalValue(rd)
-		if err != nil {
-			return nil, err
+		msg := message.DeliveredTransaction{
+			Transaction: message.Transaction{
+				Chain:       common.NewAddressFromEth(vm.rollupAddress),
+				To:          common.NewAddressFromEth(val.To),
+				From:        common.NewAddressFromEth(val.From),
+				SequenceNum: val.SeqNumber,
+				Value:       val.Value,
+				Data:        val.Data,
+			},
+			BlockNum: common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
 		}
-
-		dataMsg, _ := GetTransactionMessage(
-			common.NewAddressFromEth(val.Chain),
-			common.NewAddressFromEth(val.To),
-			common.NewAddressFromEth(val.From),
-			val.SeqNumber,
-			val.Value,
-			msgData,
-			new(big.Int).SetUint64(ethLog.BlockNumber),
-		)
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			MsgValue:  dataMsg,
+			Message:   msg,
 		}, nil
 
 	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
@@ -327,35 +206,19 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := EthDepositHash(
-			common.NewAddressFromEth(val.Chain),
-			common.NewAddressFromEth(val.To),
-			common.NewAddressFromEth(val.From),
-			val.Value,
-		)
-
-		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.To)),
-			value.NewIntValue(val.Value),
-		})
-
-		msgType, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(big.NewInt(1)),
-			AddressToIntValue(common.NewAddressFromEth(val.From)),
-			msgVal,
-		})
-
-		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
-			value.NewIntValue(msgHashInt),
-			msgType,
-		})
+		msg := message.DeliveredEth{
+			Eth: message.Eth{
+				To:    common.NewAddressFromEth(val.To),
+				From:  common.NewAddressFromEth(val.From),
+				Value: val.Value,
+			},
+			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			MessageNum: val.MessageNum,
+		}
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			MsgValue:  dataMsg,
+			Message:   msg,
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
@@ -364,37 +227,20 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := ERC20DepositHash(
-			common.NewAddressFromEth(val.Chain),
-			common.NewAddressFromEth(val.To),
-			common.NewAddressFromEth(val.From),
-			common.NewAddressFromEth(val.Erc20),
-			val.Value,
-		)
-
-		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.Erc20)),
-			AddressToIntValue(common.NewAddressFromEth(val.To)),
-			value.NewIntValue(val.Value),
-		})
-
-		msgType, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(big.NewInt(2)),
-			AddressToIntValue(common.NewAddressFromEth(val.From)),
-			msgVal,
-		})
-
-		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
-			value.NewIntValue(msgHashInt),
-			msgType,
-		})
+		msg := message.DeliveredERC20{
+			ERC20: message.ERC20{
+				To:           common.NewAddressFromEth(val.To),
+				From:         common.NewAddressFromEth(val.From),
+				TokenAddress: common.NewAddressFromEth(val.Erc20),
+				Value:        val.Value,
+			},
+			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			MessageNum: val.MessageNum,
+		}
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			MsgValue:  dataMsg,
+			Message:   msg,
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
@@ -403,37 +249,20 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			return nil, err
 		}
 
-		messageHash := ERC721DepositHash(
-			common.NewAddressFromEth(val.Chain),
-			common.NewAddressFromEth(val.To),
-			common.NewAddressFromEth(val.From),
-			common.NewAddressFromEth(val.Erc721),
-			val.Id,
-		)
-
-		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-		msgVal, _ := value.NewTupleFromSlice([]value.Value{
-			AddressToIntValue(common.NewAddressFromEth(val.Erc721)),
-			AddressToIntValue(common.NewAddressFromEth(val.To)),
-			value.NewIntValue(val.Id),
-		})
-
-		msgType, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(big.NewInt(3)),
-			AddressToIntValue(common.NewAddressFromEth(val.From)),
-			msgVal,
-		})
-
-		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
-			value.NewIntValue(msgHashInt),
-			msgType,
-		})
+		msg := message.DeliveredERC721{
+			ERC721: message.ERC721{
+				To:           common.NewAddressFromEth(val.To),
+				From:         common.NewAddressFromEth(val.From),
+				TokenAddress: common.NewAddressFromEth(val.Erc721),
+				Id:           val.Id,
+			},
+			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			MessageNum: val.MessageNum,
+		}
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			MsgValue:  dataMsg,
+			Message:   msg,
 		}, nil
 
 	} else {

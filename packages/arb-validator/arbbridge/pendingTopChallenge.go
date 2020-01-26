@@ -35,7 +35,6 @@ type PendingTopChallenge interface {
 	OneStepProof(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		topHashA common.Hash,
 		value common.Hash,
 	) error
 

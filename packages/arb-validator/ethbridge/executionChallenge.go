@@ -124,10 +124,10 @@ func (c *executionChallenge) ChooseSegment(
 ) error {
 	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
-		stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
+		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), uint64(totalSteps))
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
+			structures.ExecutionDataHash(uint32(stepCount), preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
 	return c.bisectionChallenge.chooseSegment(

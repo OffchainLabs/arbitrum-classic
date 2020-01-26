@@ -17,15 +17,15 @@ import (
 
 // Solidity: function confirmValid(uint256 deadlineTicks, bytes _messages, bytes32 logsAcc, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
 func (_ArbRollup *ArbRollupTransactor) ConfirmValidCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, deadlineTicks *big.Int, _messages []byte, logsAcc [32]byte, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return _ArbRollup.CallCheck(ctx, client, from, contractAddress, "confirmValid", deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+	return CallCheck(ctx, client, from, contractAddress, "confirmValid", deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
 // Solidity: function confirmInvalid(uint256 deadlineTicks, bytes32 challengeNodeData, uint256 branch, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
 func (_ArbRollup *ArbRollupTransactor) ConfirmInvalidCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, deadlineTicks *big.Int, challengeNodeData [32]byte, branch *big.Int, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return _ArbRollup.CallCheck(ctx, client, from, contractAddress, "confirmInvalid", deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+	return CallCheck(ctx, client, from, contractAddress, "confirmInvalid", deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-func (_ArbRollup *ArbRollupTransactor) CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
+func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ArbRollupABI)))
 	if err != nil {
 		return err

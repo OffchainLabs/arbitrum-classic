@@ -204,7 +204,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 			OnChainTxHash:  disputableTxHash,
 		}
 
-		evmVal, err := evm.ProcessLog(logVal)
+		evmVal, err := evm.ProcessLog(logVal, tr.vmID)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue

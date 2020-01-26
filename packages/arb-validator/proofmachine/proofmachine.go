@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -38,25 +37,14 @@ type Machine struct {
 
 type Connection struct {
 	osp         arbbridge.OneStepProof
-	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
 
-func NewEthConnection(contractAddress common.Address, ethURL string, proofbounds [2]uint32) (*Connection, error) {
-	client, err := ethbridge.NewEthClient(ethURL)
-	if err != nil {
-		log.Fatal("Connection failure ", err)
-	}
-	osp, err := client.NewOneStepProof(contractAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func NewEthConnection(osp arbbridge.OneStepProof, proofbounds [2]uint32) *Connection {
 	return &Connection{
 		osp:         osp,
-		client:      client,
 		proofbounds: proofbounds,
-	}, err
+	}
 }
 
 func New(mach machine.Machine, ethConn *Connection) (*Machine, error) {

@@ -642,7 +642,7 @@ library Value {
         );
     }
 
-    function bytesToBytestackHash(bytes memory data) public pure returns (bytes32) {
+    function bytesToBytestackHash(bytes memory data) internal pure returns (bytes32) {
         uint dataLength = data.length;
         uint wholeChunkCount = dataLength / 32;
         uint chunkCount = (dataLength + 31) / 32;
@@ -670,7 +670,7 @@ library Value {
         ]);
     }
 
-    function bytestackToBytes(bytes memory data) public pure returns (bytes memory) {
+    function bytestackToBytes(bytes memory data) internal pure returns (bytes memory) {
         uint byteCount = data.toUint(2);
         uint chunkCount = (byteCount + 31) / 32;
 

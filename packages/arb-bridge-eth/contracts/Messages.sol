@@ -67,7 +67,6 @@ library Messages {
         pure
         returns(bytes32)
     {
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
         bytes32 txHash = keccak256(
             abi.encodePacked(
                 TRANSACTION_MSG,
@@ -76,9 +75,10 @@ library Messages {
                 from,
                 seqNumber,
                 value,
-                dataHash
+                data
             )
         );
+        bytes32 dataHash = Value.bytesToBytestackHash(data);
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
@@ -131,7 +131,7 @@ library Messages {
         pure
         returns(bytes32)
     {
-        Value.Data[] memory msgValues = new Value.Data[](3);
+        Value.Data[] memory msgValues = new Value.Data[](2);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(value);
 
@@ -207,7 +207,7 @@ library Messages {
         returns(bytes32)
     {
         return tokenHash(
-            ERC20_DEPOSIT,
+            ERC721_DEPOSIT,
             to,
             from,
             erc721,
@@ -230,7 +230,7 @@ library Messages {
         returns(bytes32)
     {
         return tokenMessageHash(
-            ERC20_DEPOSIT,
+            ERC721_DEPOSIT,
             to,
             from,
             erc721,

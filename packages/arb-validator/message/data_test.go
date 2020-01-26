@@ -1,4 +1,4 @@
-package evm
+package message
 
 import (
 	"bytes"
@@ -11,10 +11,7 @@ import (
 func TestByteStackConversion(t *testing.T) {
 	data := make([]byte, 100)
 	rand.Read(data)
-	bytestack, err := BytesToByteStack(data)
-	if err != nil {
-		t.Error(err)
-	}
+	bytestack := BytesToByteStack(data)
 	data2, err := ByteStackToHex(bytestack)
 	if err != nil {
 		t.Error(err)

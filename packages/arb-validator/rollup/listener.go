@@ -284,7 +284,10 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startLogIndex,
 				chain.pendingInbox.MessageStack,
 				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.MaxPendingTop,
+				new(big.Int).Sub(
+					conflictNode.disputable.MaxPendingCount,
+					new(big.Int).Add(conflictNode.prev.vmProtoData.PendingCount, conflictNode.disputable.AssertionParams.ImportedMessageCount),
+				),
 				100,
 			)
 		case structures.InvalidMessagesChildType:
@@ -296,8 +299,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startLogIndex,
 				chain.pendingInbox.MessageStack,
 				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+				conflictNode.disputable.AssertionParams.ImportedMessageCount,
 				100,
 			)
 		case structures.InvalidExecutionChildType:
@@ -326,6 +328,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startBlockId,
 				startLogIndex,
 				chain.pendingInbox.MessageStack,
+				false,
 			)
 		case structures.InvalidMessagesChildType:
 			go challenges.ChallengeMessagesClaim(
@@ -336,7 +339,8 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				startLogIndex,
 				chain.pendingInbox.MessageStack,
 				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
+				conflictNode.disputable.AssertionParams.ImportedMessageCount,
+				false,
 			)
 		case structures.InvalidExecutionChildType:
 			go challenges.ChallengeExecutionClaim(

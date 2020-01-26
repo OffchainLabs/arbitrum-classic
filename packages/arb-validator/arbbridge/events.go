@@ -17,8 +17,9 @@
 package arbbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -142,7 +143,7 @@ type ExecutionBisectionEvent struct {
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	MsgValue value.Value
+	Message message.DeliveredMessage
 }
 
 type NewTimeEvent struct {

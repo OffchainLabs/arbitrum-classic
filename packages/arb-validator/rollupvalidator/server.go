@@ -25,7 +25,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -155,11 +155,6 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	if err != nil {
 		return nil, err
 	}
-	rd := bytes.NewReader(dataBytes)
-	dataVal, err := value.UnmarshalValue(rd)
-	if err != nil {
-		return nil, err
-	}
 
 	contractAddressBytes, err := hexutil.Decode(args.ContractAddress)
 	if err != nil {
@@ -177,15 +172,19 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 
 	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
 
-	callingMessage, messageHash := ethbridge.GetTransactionMessage(
-		m.rollupAddress,
-		contractAddress,
-		sender,
-		seqNumValue,
-		big.NewInt(0),
-		dataVal,
-		m.man.CurrentBlockId().Height.AsInt(),
-	)
+	msg := message.DeliveredTransaction{
+		Transaction: message.Transaction{
+			Chain:       m.rollupAddress,
+			To:          contractAddress,
+			From:        sender,
+			SequenceNum: seqNumValue,
+			Value:       big.NewInt(0),
+			Data:        dataBytes,
+		},
+		BlockNum: m.man.CurrentBlockId().Height,
+	}
+
+	callingMessage := message.DeliveredValue(msg)
 
 	messageStack := protocol.NewMessageStack()
 	messageStack.AddMessage(callingMessage)
@@ -199,12 +198,12 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal)
+	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
 	if err != nil {
 		return nil, err
 	}
 	logHash := lastLog.GetEthMsg().TxHash
-	if logHash != messageHash {
+	if logHash != msg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
