@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -116,19 +116,19 @@ def _perform_precompile_call(vm):
     vm.swap1()
     std.bitwise.shift_right(vm)
     vm.dup0()
-    vm.push(0x49DCBC5E)
+    vm.push(0x1B9A91A4)
     vm.eq()
     vm.ifelse(
         lambda vm: [vm.pop(), withdraw_eth_interrupt(vm)],
         lambda vm: [
             vm.dup0(),
-            vm.push(0x2DE55221),
+            vm.push(0xA1DB9782),
             vm.eq(),
             vm.ifelse(
                 lambda vm: [vm.pop(), withdraw_erc20_interrupt(vm)],
                 lambda vm: [
                     vm.dup0(),
-                    vm.push(0x33349079),
+                    vm.push(0xF3E414F8),
                     vm.eq(),
                     vm.ifelse(
                         lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],

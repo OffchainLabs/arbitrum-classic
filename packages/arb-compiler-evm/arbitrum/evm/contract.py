@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,11 +43,12 @@ def strip_cbor(code):
 def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
     erc20 = Contract(contract_templates.get_erc20_contract())
     erc721 = Contract(contract_templates.get_erc721_contract())
+    info = Contract(contract_templates.get_info_contract())
 
     code = {}
     storage = {}
 
-    for contract in [erc20, erc721]:
+    for contract in [erc20, erc721, info]:
         code[contract.address] = strip_cbor(contract.code)
         storage[contract.address] = contract.storage
 

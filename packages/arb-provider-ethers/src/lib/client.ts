@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,9 @@ export class TxMessage {
     public data: Uint8Array;
 
     constructor(value: ArbValue.TupleValue) {
-        this.to = ethers.utils.getAddress((value.get(0) as ArbValue.IntValue).bignum.toHexString());
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
         this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum;
         this.amount = (value.get(2) as ArbValue.IntValue).bignum;
         this.data = ArbValue.sizedByteRangeToBytes(value.get(3) as ArbValue.TupleValue);

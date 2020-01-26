@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import { ArbClient } from './client';
 import { Contract } from './contract';
 import { ArbProvider } from './provider';
 import * as ArbValue from './value';
-import { GlobalPendingInbox } from './GlobalPendingInbox';
+import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
+import { ArbSysFactory } from './abi/ArbSysFactory';
 
 import * as ethers from 'ethers';
 
@@ -93,6 +94,12 @@ export class ArbWallet extends ethers.Signer {
         return this.signer.signMessage(message);
     }
 
+    public async withdrawEthFromChain(value: ethers.utils.BigNumberish): Promise<ethers.providers.TransactionResponse> {
+        const valueNum = ethers.utils.bigNumberify(value);
+        const arbsys = ArbSysFactory.connect('0x0000000000000000000000000000000000000064', this);
+        return arbsys.withdrawEth(await this.getAddress(), valueNum);
+    }
+
     public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
         const inboxManager = await this.globalInboxConn();
         const blockchainTx = await inboxManager.withdrawEth();
@@ -124,13 +131,12 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const sendValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-        const valueNum = ethers.utils.bigNumberify(value);
 
         const inboxManager = await this.globalInboxConn();
         const blockchainTx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
         await blockchainTx.wait();
 
-        return this.wrapTransaction(TxType.DepositERC20, chain, erc20, to, valueNum);
+        return this.wrapTransaction(TxType.DepositERC20, chain, erc20, to, sendValue);
     }
 
     public async depositERC721(
@@ -190,8 +196,6 @@ export class ArbWallet extends ethers.Signer {
         const inboxManager = await this.globalInboxConn();
         const blockchainTx = await inboxManager.depositEthMessage(chain, to, { value });
 
-        await blockchainTx.wait();
-
         const tx = {
             data: '',
             from: fromAddress,
@@ -211,6 +215,7 @@ export class ArbWallet extends ethers.Signer {
         value: ethers.utils.BigNumberish,
         data: ArbValue.Value,
     ): Promise<ethers.providers.TransactionResponse> {
+        console.log('sendTransactionMessage', to, value, data);
         const from = await this.getAddress();
         this.seq = this.seq.add(2);
         const vmId = await this.provider.getVmID();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,13 @@
 pragma solidity ^0.5.0;
 
 import "./ArbSys.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721Enumerable.sol";
 
-contract ArbERC721 is ERC721 {
+contract ArbERC721 is ERC721Enumerable {
+    function tokensOfOwner(address owner) public view returns (uint256[] memory) {
+        return _tokensOfOwner(owner);
+    }
+
     function adminMint(address account, uint256 tokenId) public {
         require(msg.sender == address(1));
         _mint(account, tokenId);
@@ -27,6 +31,6 @@ contract ArbERC721 is ERC721 {
 
     function withdraw(address account, uint256 tokenId) public {
         _burn(msg.sender, tokenId);
-        ArbSys(100).sendERC721(account, tokenId);
+        ArbSys(100).withdrawERC721(account, tokenId);
     }
 }

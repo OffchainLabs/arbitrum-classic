@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -806,23 +806,23 @@ def process_deposit_eth_message(vm):
 
 @modifies_stack([value.IntType()] * 2, [value.IntType()])
 def process_eth_withdraw(vm):
-    # amount sender
+    # amount address
     vm.dup1()
     get_chain_state(vm)
     chain_state.get("accounts")(vm)
     account_store.get(vm)
-    # account amount sender
+    # account amount address
     vm.swap1()
     vm.dup1()
     account_state.get("balance")(vm)
-    # balance amount account sender
+    # balance amount account address
     vm.dup1()
     vm.dup1()
     std.comparison.gte(vm)
     vm.ifelse(
         lambda vm: [
             vm.sub(),
-            # new_balance account sender
+            # new_balance account address
             vm.swap1(),
             account_state.set_val("balance")(vm),
             # account sender

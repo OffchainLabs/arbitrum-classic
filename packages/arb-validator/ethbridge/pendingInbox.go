@@ -156,7 +156,7 @@ func (con *pendingInbox) GetTokenBalance(
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	return con.GlobalPendingInbox.GetTokenBalance(
+	return con.GlobalPendingInbox.GetERC20Balance(
 		&bind.CallOpts{Context: ctx},
 		tokenContract.ToEthAddress(),
 		user.ToEthAddress(),

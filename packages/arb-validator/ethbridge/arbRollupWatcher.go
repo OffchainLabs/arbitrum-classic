@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"log"
 	"math/big"
 	"strings"
 
@@ -56,8 +55,6 @@ var transactionMessageDeliveredID ethcommon.Hash
 var ethDepositMessageDeliveredID ethcommon.Hash
 var depositERC20MessageDeliveredID ethcommon.Hash
 var depositERC721MessageDeliveredID ethcommon.Hash
-var AssertionEventID ethcommon.Hash
-var AssertionEvent2ID ethcommon.Hash
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
@@ -79,8 +76,6 @@ func init() {
 	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
 	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
 
-	AssertionEventID = parsedInbox.Events["AssertionEvent"].ID()
-	AssertionEvent2ID = parsedRollup.Events["AssertionEvent2"].ID()
 	transactionMessageDeliveredID = parsedInbox.Events["TransactionMessageDelivered"].ID()
 	ethDepositMessageDeliveredID = parsedInbox.Events["EthDepositMessageDelivered"].ID()
 	depositERC20MessageDeliveredID = parsedInbox.Events["ERC20DepositMessageDelivered"].ID()
@@ -158,54 +153,11 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 			},
 		},
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
-	testLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: &bh,
-		Topics: [][]ethcommon.Hash{
-			{
-				AssertionEventID,
-				AssertionEvent2ID,
-			},
-		},
-	})
-
 	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(inboxLogs))
-
-	log.Println("test assertion events", testLogs)
-
-	for _, evmLog := range testLogs {
-		if evmLog.Topics[0] == AssertionEventID {
-			val, err := vm.GlobalPendingInbox.ParseAssertionEvent(evmLog)
-			if err != nil {
-				return nil, err
-			}
-
-			log.Println("AssertionEvent.valid : ", val.Chain)
-			log.Println("AssertionEvent.valid : ", val.Valid)
-			log.Println("AssertionEvent.value : ", val.Value)
-			log.Println("AssertionEvent.destination : ", val.Destination)
-			log.Println("AssertionEvent.type : ", val.MessageType)
-		}
-
-		if evmLog.Topics[0] == AssertionEvent2ID {
-			val, err := vm.ArbRollup.ParseAssertionEvent2(evmLog)
-			if err != nil {
-				return nil, err
-			}
-
-			log.Println("AssertionEvent2.valid : ", val.Chain)
-			log.Println("AssertionEvent2.valid : ", val.Value)
-			log.Println("AssertionEvent2.value : ", val.Value)
-			log.Println("AssertionEvent2.destination : ", val.Destination)
-			log.Println("AssertionEvent2.type : ", val.MessageType)
-		}
-	}
-
-	log.Println("test events over")
 
 	for _, evmLog := range inboxLogs {
 		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
@@ -342,9 +294,7 @@ func GetTransactionMessage(
 }
 
 func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
-	log.Println("ProcessMessageDeliveredEvents()")
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
-		log.Println("transactionMessageDeliveredID")
 		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -355,12 +305,6 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		if err != nil {
 			return nil, err
 		}
-
-		log.Println("event.chain: ", common.NewAddressFromEth(val.Chain), AddressToIntValue(common.NewAddressFromEth(val.Chain)))
-		log.Println("event.To: ", common.NewAddressFromEth(val.To), AddressToIntValue(common.NewAddressFromEth(val.To)))
-		log.Println("event.From: ", common.NewAddressFromEth(val.From), AddressToIntValue(common.NewAddressFromEth(val.From)))
-		log.Println(val.Value)
-		log.Println(msgData)
 
 		dataMsg, _ := GetTransactionMessage(
 			common.NewAddressFromEth(val.Chain),
@@ -378,7 +322,6 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
-		log.Println("ethDepositMessageDeliveredID")
 		val, err := vm.GlobalPendingInbox.ParseEthDepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -416,13 +359,10 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
-		log.Println("depositERC20MessageDeliveredID")
 		val, err := vm.GlobalPendingInbox.ParseERC20DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
-
-		log.Printf("%+v\n", val)
 
 		messageHash := ERC20DepositHash(
 			common.NewAddressFromEth(val.Chain),
@@ -458,7 +398,6 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
-		log.Println("depositERC721MessageDeliveredID")
 		val, err := vm.GlobalPendingInbox.ParseERC721DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -498,13 +437,11 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else {
-		log.Println("none event")
 		return nil, errors2.New("unknown arbitrum event type")
 	}
 }
 
 func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
-	log.Println("processEvents(): ")
 	if ethLog.Topics[0] == rollupStakeCreatedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {

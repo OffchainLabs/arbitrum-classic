@@ -232,9 +232,6 @@ contract ArbRollup is NodeGraph, Staking {
     )
         external
     {
-        emit AssertionEvent2(inboxAddress, false, 0, msg.sender, "event1");
-        emit AssertionEvent2(msg.sender, false, 0, msg.sender, "event1");
-
         _confirmNode(
             deadlineTicks,
             RollupUtils.validDataHash(
@@ -247,9 +244,6 @@ contract ArbRollup is NodeGraph, Staking {
             stakerProofs,
             stakerProofOffsets
         );
-
-        emit AssertionEvent2(inboxAddress, false, 0, msg.sender, "event2");
-        emit AssertionEvent2(msg.sender, false, 0, msg.sender, "event2");
 
         globalInbox.sendMessages(_messages);
 
@@ -314,8 +308,6 @@ contract ArbRollup is NodeGraph, Staking {
     )
         private
     {
-        emit AssertionEvent2(inboxAddress, false, 0, msg.sender, "event3");
-        emit AssertionEvent2(msg.sender, false, 0, msg.sender, "event3");
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
             deadlineTicks,
@@ -323,8 +315,6 @@ contract ArbRollup is NodeGraph, Staking {
             branch,
             vmProtoStateHash
         );
-        emit AssertionEvent2(inboxAddress, false, 0, msg.sender, "event4");
-        emit AssertionEvent2(msg.sender, false, 0, msg.sender, "event4");
         require(RollupTime.blocksToTicks(block.number) >= deadlineTicks, CONF_TIME);
         uint activeCount = checkAlignedStakers(
             to,
@@ -333,8 +323,6 @@ contract ArbRollup is NodeGraph, Staking {
             stakerProofs,
             stakerProofOffsets
         );
-        emit AssertionEvent2(inboxAddress, false, 0, msg.sender, "event5");
-        emit AssertionEvent2(msg.sender, false, 0, msg.sender, "event5");
         require(activeCount > 0, CONF_HAS_STAKER);
 
         confirmNode(to);

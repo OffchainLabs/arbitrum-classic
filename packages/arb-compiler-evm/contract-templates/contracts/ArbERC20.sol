@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,6 @@ contract ArbERC20 is ERC20 {
 
     function withdraw(address account, uint256 amount) public {
         _burn(msg.sender, amount);
-        ArbSys(100).sendERC20(account, amount);
+        ArbSys(100).withdrawERC20(account, amount);
     }
 }

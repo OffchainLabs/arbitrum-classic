@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -365,7 +365,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            arbsys_abi.sendEth(6, 0, dest_address_string, 150000),
+                            arbsys_abi.withdrawEth(6, 0, dest_address_string, 150000),
                         ]
                     )  # type  # sender
                 )
@@ -379,7 +379,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            arbsys_abi.sendEth(8, 0, dest_address_string, 50000),
+                            arbsys_abi.withdrawEth(8, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -492,10 +492,30 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
+                        [3, 2345, value.Tuple([erc721_abi.address, address, 150000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, erc721_abi.tokensOfOwner(6, 0, address_string)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
                         [
                             0,
                             address,
-                            erc721_abi.withdraw(6, 0, dest_address_string, 50000),
+                            erc721_abi.withdraw(8, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -509,7 +529,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc721_abi.withdraw(8, 0, dest_address_string, 100000),
+                            erc721_abi.withdraw(10, 0, dest_address_string, 100000),
                         ]
                     )  # type  # sender
                 )
@@ -517,13 +537,21 @@ class TestEVM(TestCase):
         )
         vm.env.messages = inbox
         run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 3)
+        self.assertEqual(len(vm.logs), 5)
         parsed_out0 = output_handler(vm.logs[0])
         parsed_out1 = output_handler(vm.logs[1])
         parsed_out2 = output_handler(vm.logs[2])
+        parsed_out3 = output_handler(vm.logs[3])
+        parsed_out4 = output_handler(vm.logs[4])
         self.assertIsInstance(parsed_out0, EVMStop)
-        self.assertIsInstance(parsed_out1, EVMRevert)
-        self.assertIsInstance(parsed_out2, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMStop)
+        self.assertIsInstance(parsed_out2, EVMCall)
+        self.assertIsInstance(parsed_out3, EVMRevert)
+        self.assertIsInstance(parsed_out4, EVMStop)
+
+        out = parsed_out2.output_values
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0], (100000, 150000))
 
         self.assertEqual(len(vm.sent_messages), 1)
         self.assertEqual(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 pragma solidity ^0.5.3;
 
-import "./GlobalWallet.sol";
+import "./GlobalEthWallet.sol";
+import "./GlobalFTWallet.sol";
+import "./GlobalNFTWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
 import "./arch/Protocol.sol";
@@ -24,16 +26,13 @@ import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-
-contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
+contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalPendingInbox {
 
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
     uint8 internal constant ERC20_DEPOSIT = 2;
     uint8 internal constant ERC721_DEPOSIT = 3;
 
-    using SafeMath for uint256;
     using Value for Value.Data;
 
     address internal constant ETH_ADDRESS = address(0);
@@ -63,9 +62,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         uint256 messageType;
         address sender;
         uint256 totalLength = _messages.length;
-
-        emit AssertionEvent(inboxAddress, false, 0 , msg.sender, "event1");
-        emit AssertionEvent(msg.sender, false, 0 , msg.sender, "event1");
 
         while (offset < totalLength) {
             (
@@ -106,7 +102,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferEth(msg.sender, to, value), "Failed to transfer eth");
+            transferEth(msg.sender, to, value);
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -119,7 +115,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferERC20(msg.sender, to, erc20, value), "Failed to transfer erc20");
+            transferERC20(msg.sender, to, erc20, value);
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -132,7 +128,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             if (!valid) {
                 return (false, startOffset);
             }
-            require(transferNFT(msg.sender, to, erc721, value), "Failed to transfer erc721");
+            transferNFT(msg.sender, to, erc721, value);
             return (true, offset);
         } else {
             return (false, startOffset);

@@ -21,189 +21,426 @@
                     <h1 class="text-center">Token Interop Demo</h1>
                     <p>Your address: <span id="accountAddress"></span></p>
                     <hr />
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a
+                                class="nav-link active"
+                                id="eth-tab"
+                                data-toggle="tab"
+                                href="#eth"
+                                role="tab"
+                                aria-controls="eth"
+                                aria-selected="true"
+                                >Eth</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link"
+                                id="erc20-tab"
+                                data-toggle="tab"
+                                href="#erc20"
+                                role="tab"
+                                aria-controls="erc20"
+                                aria-selected="false"
+                                >ERC-20</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link"
+                                id="erc721-tab"
+                                data-toggle="tab"
+                                href="#erc721"
+                                role="tab"
+                                aria-controls="erc721"
+                                aria-selected="true"
+                                >ERC-721</a
+                            >
+                        </li>
+                    </ul>
                     <br />
-                    <h3>ETH Info</h3>
-                    <p>Ethereum Balance: <span id="ethereumBalance">0</span></p>
-                    <p>
-                        Arbitrum ETH Balance: <span id="arbEthBalance">0</span>
-                    </p>
-                    <div>
-                        <h3>Deposit ETH</h3>
-                        <form id="depositETHform" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="ethDepositValue" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="ethDepositValue"
-                                    placeholder="ethDepositValue"
-                                />
+                    <div class="tab-content" id="tabContent">
+                        <div
+                            class="tab-pane fade show active"
+                            id="eth"
+                            role="tabpanel"
+                            aria-labelledby="eth-tab"
+                        >
+                            <h3>ETH Info</h3>
+                            <p>
+                                User Ethereum ETH Balance:
+                                <span id="ethereumBalance">0</span>
+                            </p>
+                            <p>
+                                User Arbitrum ETH Balance:
+                                <span id="arbEthBalance">0</span>
+                            </p>
+                            <p>
+                                VM ETH Balance: <span id="vmEthBalance">0</span>
+                            </p>
+                            <p>
+                                User Withdrawn Balance:
+                                <span id="withdrawnEthBalance">0</span>
+                            </p>
+                            <div>
+                                <h3>Deposit ETH</h3>
+                                <form id="depositETHform" class="form-inline">
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="ethDepositValue"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="ethDepositValue"
+                                            placeholder="ethDepositValue"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Deposit
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="depositETHMessage"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Deposit
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="depositETHMessage" style="display:none"></p>
-                    </div>
-                    <div>
-                        <h3>Withdraw ETH</h3>
-                        <form id="withdrawETHForm" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="withdrawEthAmount" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="withdrawEthAmount"
-                                    placeholder="withdrawEthAmount"
-                                />
+                            <div>
+                                <h3>Withdraw ETH</h3>
+                                <form id="withdrawETHForm" class="form-inline">
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="withdrawEthAmount"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="withdrawEthAmount"
+                                            placeholder="withdrawEthAmount"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawETHMessage"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Withdraw
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="withdrawETHMessage" style="display:none"></p>
-                    </div>
-                    <h3>ERC20 Info</h3>
-                    <p>
-                        Ethereum ERC-20 Balance: <span id="ethBalance">0</span>
-                    </p>
-                    <p>
-                        Arbitrum ERC-20 Balance: <span id="arbBalance">0</span>
-                    </p>
-                    <hr />
-                    <div>
-                        <h3>Mint ERC-20</h3>
-                        <form id="mintForm" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="mintAmount" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="mintAmount"
-                                    placeholder="Amount"
-                                />
+                            <div>
+                                <h3>Withdraw lockbox</h3>
+                                <form
+                                    id="withdrawLockboxETHForm"
+                                    class="form-inline"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw lockbox
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawLockboxETHMessage"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Mint
-                            </button>
+                        </div>
+                        <div
+                            class="tab-pane fade"
+                            id="erc20"
+                            role="tabpanel"
+                            aria-labelledby="erc20-tab"
+                        >
+                            <h3>ERC20 Info</h3>
+                            <p>
+                                Ethereum ERC-20 Balance:
+                                <span id="ethERC20Balance">0</span>
+                            </p>
+                            <p>
+                                Arbitrum ERC-20 Balance:
+                                <span id="arbERC20Balance">0</span>
+                            </p>
+                            <p>
+                                VM ERC-20 Balance:
+                                <span id="vmERC20Balance">0</span>
+                            </p>
+                            <p>
+                                User Withdrawn ERC-20 Balance:
+                                <span id="withdrawnERC20Balance">0</span>
+                            </p>
                             <hr />
-                        </form>
-                        <p id="mintMessage" style="display:none"></p>
-                    </div>
-                    <div>
-                        <h3>Deposit ERC-20</h3>
-                        <form id="depositForm" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="depositAmount" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="depositAmount"
-                                    placeholder="Amount"
-                                />
+                            <div>
+                                <h3>Mint ERC-20</h3>
+                                <form id="mintERC20Form" class="form-inline">
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="mintERC20Amount"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="mintERC20Amount"
+                                            placeholder="Amount"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Mint
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="mintERC20Message"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Deposit
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="depositMessage" style="display:none"></p>
-                    </div>
-                    <div>
-                        <h3>Withdraw ERC-20</h3>
-                        <form id="withdrawForm" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="withdrawAmount" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="withdrawAmount"
-                                    placeholder="Amount"
-                                />
+                            <div>
+                                <h3>Deposit ERC-20</h3>
+                                <form id="depositERC20Form" class="form-inline">
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="depositERC20Amount"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="depositERC20Amount"
+                                            placeholder="Amount"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Deposit
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="depositERC20Message"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Withdraw
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="withdrawMessage" style="display:none"></p>
-                    </div>
-                    <hr />
-                    <h3>ERC721 Info</h3>
-                    <p>
-                        Ethereum ERC-721 Balance:
-                        <span id="eth721Balance">0</span>
-                    </p>
-                    <p>
-                        Arbitrum ERC-721 Balance:
-                        <span id="arb721Balance">0</span>
-                    </p>
-                    <div>
-                        <h3>Mint ERC-721</h3>
-                        <form id="mint721Form" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="tokenId" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="tokenId"
-                                    placeholder="Token Id"
-                                />
+                            <div>
+                                <h3>Withdraw ERC-20</h3>
+                                <form
+                                    id="withdrawERC20Form"
+                                    class="form-inline"
+                                >
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="withdrawERC20Amount"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="withdrawERC20Amount"
+                                            placeholder="Amount"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawERC20Message"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Mint
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="mint721Message" style="display:none"></p>
-                    </div>
-                    <div>
-                        <h3>Deposit ERC-721</h3>
-                        <form id="deposit721Form" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="deposittokenId" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="deposittokenId"
-                                    placeholder="tokenId"
-                                />
+                            <div>
+                                <h3>Withdraw lockbox</h3>
+                                <form
+                                    id="withdrawLockboxERC20Form"
+                                    class="form-inline"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw lockbox
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawLockboxERC20Message"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Deposit
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="deposit721Message" style="display:none"></p>
-                    </div>
-                    <div>
-                        <h3>Withdraw ERC-721</h3>
-                        <form id="withdraw721Form" class="form-inline">
-                            <div class="form-group mx-sm-2">
-                                <label for="withdrawtokenId" class="sr-only">
-                                    Amount
-                                </label>
-                                <input
-                                    class="form-control"
-                                    id="withdrawtokenId"
-                                    placeholder="Token Id"
-                                />
+                        </div>
+                        <div
+                            class="tab-pane fade"
+                            id="erc721"
+                            role="tabpanel"
+                            aria-labelledby="erc721-tab"
+                        >
+                            <h3>ERC721 Info</h3>
+                            <p>
+                                Ethereum ERC-721 Balance:
+                                <span id="ethERC721Balance">[]</span>
+                            </p>
+                            <p>
+                                Arbitrum ERC-721 Balance:
+                                <span id="arbERC721Balance">[]</span>
+                            </p>
+                            <p>
+                                VM ERC-721 Balance:
+                                <span id="vmERC721Balance">[]</span>
+                            </p>
+                            <p>
+                                User Withdrawn ERC-721 Balance:
+                                <span id="withdrawnERC721Balance">[]</span>
+                            </p>
+                            <div>
+                                <h3>Mint ERC-721</h3>
+                                <form id="mintERC721Form" class="form-inline">
+                                    <div class="form-group mx-sm-2">
+                                        <label for="tokenId" class="sr-only">
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="tokenId"
+                                            placeholder="Token Id"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Mint
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="mintERC721Message"
+                                    style="display:none"
+                                ></p>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                Withdraw
-                            </button>
-                            <hr />
-                        </form>
-                        <p id="withdraw721Message" style="display:none"></p>
+                            <div>
+                                <h3>Deposit ERC-721</h3>
+                                <form
+                                    id="depositERC721Form"
+                                    class="form-inline"
+                                >
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="depositERC721TokenId"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="depositERC721TokenId"
+                                            placeholder="tokenId"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Deposit
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="depositERC721Message"
+                                    style="display:none"
+                                ></p>
+                            </div>
+                            <div>
+                                <h3>Withdraw ERC-721</h3>
+                                <form
+                                    id="withdrawERC721Form"
+                                    class="form-inline"
+                                >
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="withdrawERC721TokenId"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="withdrawERC721TokenId"
+                                            placeholder="Token Id"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawERC721Message"
+                                    style="display:none"
+                                ></p>
+                            </div>
+                            <div>
+                                <h3>Withdraw lockbox</h3>
+                                <form
+                                    id="withdrawLockboxERC721Form"
+                                    class="form-inline"
+                                >
+                                    <div class="form-group mx-sm-2">
+                                        <label
+                                            for="withdrawLockboxERC721TokenId"
+                                            class="sr-only"
+                                        >
+                                            Amount
+                                        </label>
+                                        <input
+                                            class="form-control"
+                                            id="withdrawLockboxERC721TokenId"
+                                            placeholder="Token Id"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+                                        Withdraw lockbox
+                                    </button>
+                                    <hr />
+                                </form>
+                                <p
+                                    id="withdrawLockboxERC721Message"
+                                    style="display:none"
+                                ></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

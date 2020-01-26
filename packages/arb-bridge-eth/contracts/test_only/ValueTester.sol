@@ -66,4 +66,20 @@ contract ValueTester {
     {
         return Value.getERCTokenMsgData(data, startOffset);
     }
+
+    function getEthMsgData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        public
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            address, // destination
+            uint256 // value
+        )
+    {
+        return Value.getEthMsgData(data, startOffset);
+    }
 }

@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from ..ast import AVMLabel
 ERC20_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffe"
 ERC721_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffd"
 ARBSYS_ADDRESS_STRING = "0x0000000000000000000000000000000000000064"
+INFO_ADDRESS_STRING = "0x0000000000000000000000000000000000000065"
 ERC20_ADDRESS = eth_utils.to_int(hexstr=ERC20_ADDRESS_STRING)
 ERC721_ADDRESS = eth_utils.to_int(hexstr=ERC721_ADDRESS_STRING)
 
@@ -55,6 +56,12 @@ def get_erc721_contract():
     erc721 = get_templates()["ArbERC721"]
     erc721["address"] = ERC721_ADDRESS_STRING
     return erc721
+
+
+def get_info_contract():
+    info = get_templates()["ArbInfo"]
+    info["address"] = INFO_ADDRESS_STRING
+    return info
 
 
 @modifies_stack([], [value.CodePointType()])

@@ -61,13 +61,6 @@ contract NodeGraph is ChallengeType {
     //  messagesAccHash
     //  logsAccHash
 
-    event AssertionEvent2(
-        address indexed chain,
-        bool valid, 
-        uint256 messageType, 
-        address destination, 
-        string value);
-
     event RollupAsserted(
         bytes32[7] fields,
         uint256 pendingCount,

@@ -24,6 +24,10 @@ contract TestItem is ERC721Full {
 
     }
 
+    function tokensOfOwner(address owner) public view returns (uint256[] memory) {
+        return _tokensOfOwner(owner);
+    }
+
     function mintItem(address player, uint itemId) public {
         _mint(player, itemId);
     }

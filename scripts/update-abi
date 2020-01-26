@@ -3,14 +3,6 @@
 ### update-go-abi
 ### --------------------------------------------------------------------
 
-yarn workspace arb-bridge-eth build
-yarn workspace contract-templates build
-
-cd packages/arb-compiler-evm/contract-templates/build/contracts
-cp ArbERC20.json ArbERC721.json ../../../../arb-provider-ethers/src/lib
-cd ../../../../../
-
-
 cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../installed_contracts/bytes/ ./bytes

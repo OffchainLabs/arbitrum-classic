@@ -215,7 +215,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 		case evm.Return:
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Revert:
-			log.Print("*********** evm.Revert occurred")
+			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
 
 		msg := evmVal.GetEthMsg()

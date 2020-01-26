@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,13 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-import { ArbRollupFactory } from './ArbRollupFactory';
-import { ArbRollup } from './ArbRollup';
+import { ArbRollupFactory } from './abi/ArbRollupFactory';
+import { ArbRollup } from './abi/ArbRollup';
 
-import { GlobalPendingInboxFactory } from './GlobalPendingInboxFactory';
-import { GlobalPendingInbox } from './GlobalPendingInbox';
+import { GlobalPendingInboxFactory } from './abi/GlobalPendingInboxFactory';
+import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
+
+import { ArbInfoFactory } from './abi/ArbInfoFactory';
 
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve: any): void => {
@@ -85,6 +87,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             return arbRollup;
         }
         return this.arbRollupCache;
+    }
+
+    public async chainAddress(): Promise<string> {
+        return this.client.getVmID();
     }
 
     public async globalInboxConn(): Promise<GlobalPendingInbox> {
@@ -222,11 +228,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         // console.log('perform', method, params);
         switch (method) {
             case 'getCode': {
-                const contract = this.contracts.get(params.address.toLowerCase());
-                if (contract) {
-                    return contract.code;
+                if (params.address == '0x0000000000000000000000000000000000000065') {
+                    return '0x100';
                 }
-                break;
+                const arbInfo = ArbInfoFactory.connect('0x0000000000000000000000000000000000000065', this);
+                return arbInfo.getCode(params.address, { blockTag: params.blockTag });
             }
             case 'getBlockNumber': {
                 return this.client.getAssertionCount();
@@ -303,9 +309,13 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     params.filter.topics,
                 );
             }
+            case 'getBalance': {
+                const arbInfo = ArbInfoFactory.connect('0x0000000000000000000000000000000000000065', this);
+                return arbInfo.getBalance(params.address, { blockTag: params.blockTag });
+            }
         }
         const forwardResponse = this.provider.perform(method, params);
-        // console.log('Forwarding query to provider', method, forwardResponse);
+        console.log('Forwarding query to provider', method, forwardResponse);
         return forwardResponse;
     }
 

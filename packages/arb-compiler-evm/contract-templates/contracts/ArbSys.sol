@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 pragma solidity >=0.4.21 <0.6.0;
 
 interface ArbSys {
-    function sendERC20(address dest, uint256 amount) external;
-    function sendERC721(address dest, uint256 id) external;
-    function sendEth(address dest, uint256 amount) external;
+    function withdrawERC20(address dest, uint256 amount) external;
+    function withdrawERC721(address dest, uint256 id) external;
+    function withdrawEth(address dest, uint256 amount) external;
 }
