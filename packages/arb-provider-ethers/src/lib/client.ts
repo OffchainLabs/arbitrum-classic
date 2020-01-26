@@ -104,7 +104,7 @@ export class TxMessage {
         );
         this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum;
         this.amount = (value.get(2) as ArbValue.IntValue).bignum;
-        this.data = ArbValue.sizedByteRangeToBytes(value.get(3) as ArbValue.TupleValue);
+        this.data = ArbValue.bytestackToBytes(value.get(3) as ArbValue.TupleValue);
     }
 
     getDest(): string {
