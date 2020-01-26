@@ -116,9 +116,9 @@ func (m DeliveredERC20) CheckpointValue() value.Value {
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		addressToIntValue(m.TokenAddress),
-		value.NewIntValue(m.Value),
-		value.NewIntValue(m.BlockNum.AsInt()),
-		value.NewIntValue(m.MessageNum),
+		value.NewIntValue(new(big.Int).Set(m.Value)),
+		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
 	return val
 }

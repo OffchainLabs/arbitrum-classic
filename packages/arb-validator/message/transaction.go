@@ -173,10 +173,10 @@ func (m DeliveredTransaction) CheckpointValue() value.Value {
 		addressToIntValue(m.Chain),
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
-		value.NewIntValue(m.SequenceNum),
-		value.NewIntValue(m.Value),
+		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
+		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
-		value.NewIntValue(m.BlockNum.AsInt()),
+		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
 	})
 	return val
 }

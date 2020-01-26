@@ -131,9 +131,9 @@ func (m DeliveredEth) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
-		value.NewIntValue(m.Value),
-		value.NewIntValue(m.BlockNum.AsInt()),
-		value.NewIntValue(m.MessageNum),
+		value.NewIntValue(new(big.Int).Set(m.Value)),
+		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
 	return val
 }
