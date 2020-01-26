@@ -68,12 +68,6 @@ class App {
     this.testTokenAddress =
       testToken.networks[network.chainId.toString()].address;
 
-    // let arbSysContractRaw = new ethers.Contract(
-    //   "100",
-    //   ArbSys.abi,
-    //   this.arbProvider
-    // );
-
     let ethTestTokenContractRaw = new ethers.Contract(
       this.testTokenAddress,
       testToken.abi,

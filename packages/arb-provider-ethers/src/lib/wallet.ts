@@ -215,7 +215,6 @@ export class ArbWallet extends ethers.Signer {
         value: ethers.utils.BigNumberish,
         data: ArbValue.Value,
     ): Promise<ethers.providers.TransactionResponse> {
-        console.log('sendTransactionMessage', to, value, data);
         const from = await this.getAddress();
         this.seq = this.seq.add(2);
         const vmId = await this.provider.getVmID();
