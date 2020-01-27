@@ -374,11 +374,11 @@ export class ArbClient {
         to: string,
         sequenceNum: ethers.utils.BigNumberish,
         value: ethers.utils.BigNumberish,
-        data: ArbValue.Value,
+        data: string,
         sig: string,
         pubkey: string,
     ): Promise<string> {
-        return this.sendRawMessage(to, sequenceNum, value, ethers.utils.hexlify(ArbValue.marshal(data)), sig, pubkey);
+        return this.sendRawMessage(to, sequenceNum, value, data, sig, pubkey);
     }
 
     public sendRawMessage(
@@ -415,14 +415,14 @@ export class ArbClient {
         });
     }
 
-    public call(contractAddress: string, sender: string, data: ArbValue.Value): Promise<Uint8Array> {
+    public call(contractAddress: string, sender: string, data: string): Promise<Uint8Array> {
         return new Promise((resolve, reject): void => {
             this.client.request(
                 'Validator.CallMessage',
                 [
                     {
                         contractAddress,
-                        data: ethers.utils.hexlify(ArbValue.marshal(data)),
+                        data,
                         sender,
                     },
                 ],

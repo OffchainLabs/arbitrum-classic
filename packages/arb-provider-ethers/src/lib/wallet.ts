@@ -213,15 +213,15 @@ export class ArbWallet extends ethers.Signer {
     public async sendTransactionMessage(
         to: string,
         value: ethers.utils.BigNumberish,
-        data: ArbValue.Value,
+        data: string,
     ): Promise<ethers.providers.TransactionResponse> {
         const from = await this.getAddress();
         this.seq = this.seq.add(2);
         const vmId = await this.provider.getVmID();
         const valueNum = ethers.utils.bigNumberify(value);
-        const args = [TxType.Transaction, vmId, to, from, this.seq, value, data.hash()];
+        const args = [TxType.Transaction, vmId, to, from, this.seq, value, data];
         const messageHash = ethers.utils.solidityKeccak256(
-            ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
+            ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
             args,
         );
         const fromAddress = await this.getAddress();
@@ -237,19 +237,13 @@ export class ArbWallet extends ethers.Signer {
             await this.client.sendMessage(to, this.seq, value, data, sig, this.pubkey);
         } else {
             const inboxManager = await this.globalInboxConn();
-            const blockchainTx = await inboxManager.sendTransactionMessage(
-                vmId,
-                to,
-                this.seq,
-                valueNum,
-                ArbValue.marshal(data),
-            );
+            const blockchainTx = await inboxManager.sendTransactionMessage(vmId, to, this.seq, valueNum, data);
 
             await blockchainTx.wait();
         }
 
         const tx = {
-            data: ethers.utils.hexlify(ArbValue.marshal(data)),
+            data: data,
             from: fromAddress,
             gasLimit: ethers.utils.bigNumberify(1),
             gasPrice: ethers.utils.bigNumberify(1),
@@ -269,10 +263,11 @@ export class ArbWallet extends ethers.Signer {
             throw Error("Can't send transaction without destination");
         }
         const to = await transaction.to;
-        let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
+        let encodedData = '0x';
         if (transaction.data) {
-            encodedData = ArbValue.hexToBytestack(await transaction.data);
+            encodedData = ethers.utils.hexlify(await transaction.data);
         }
+
         let value = ethers.utils.bigNumberify(0);
         if (transaction.value) {
             value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
