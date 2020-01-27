@@ -32,6 +32,7 @@ const (
 	EthType
 	ERC20Type
 	ERC721Type
+	CallType
 )
 
 type UnsentMessage interface {

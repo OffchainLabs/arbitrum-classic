@@ -228,6 +228,8 @@ func ParseArbMessage(typecode message.MessageType, messageVal value.Value, chain
 		return message.UnmarshalERC20(messageVal)
 	case message.ERC721Type:
 		return message.UnmarshalERC721(messageVal)
+	case message.CallType:
+		return message.UnmarshalCall(messageVal)
 	default:
 		return nil, errors.New("Invalid message type")
 	}
