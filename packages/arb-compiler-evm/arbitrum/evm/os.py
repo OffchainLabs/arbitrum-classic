@@ -20,7 +20,7 @@ from ..vm import VM
 from .. import value
 from .types import ethbridge_message, message
 from .types import tx_message, tx_call_data, local_exec_state
-from .types import token_transfer_message, eth_transfer_message
+from .types import token_transfer_message, eth_transfer_message, call_message
 from . import call_frame
 from . import tokens
 from . import accounts
@@ -53,7 +53,6 @@ chain_state = Struct(
         ("accounts", account_store.typ),
         ("inbox", std.inboxctx.typ),
         ("call_frame", call_frame.typ),
-        ("sender_seq", std.keyvalue_int_int.typ),
         ("global_exec_state", global_exec_state.typ),
         "scratch",
     ],
@@ -198,11 +197,9 @@ def create_initial_evm_state(contracts):
         std.keyvalue.set_val(vm)
 
     std.inboxctx.new(vm)
-    std.keyvalue_int_int.new(vm)
     vm.push(make_global_exec_state())
     chain_state.new(vm)
     chain_state.set_val("global_exec_state")(vm)
-    chain_state.set_val("sender_seq")(vm)
     chain_state.set_val("inbox")(vm)
     chain_state.set_val("accounts")(vm)
     return vm.stack.items[0]
@@ -617,69 +614,6 @@ def evm_log4(vm):
     add_log(vm)
 
 
-# [sequence_num, sender] -> # [approved]
-@modifies_stack([value.IntType()] * 2, [value.IntType()])
-def check_message_sequence(vm):
-    vm.dup1()
-    get_chain_state(vm)
-    chain_state.get("sender_seq")(vm)
-    std.keyvalue_int_int.get(vm)
-    # [current_seq, seq, sender]
-    vm.swap1()
-    vm.push(2)
-    vm.dup1()
-    vm.mod()
-    # [seq % 2, seq, current_seq, sender]
-    vm.swap1()
-    vm.push(2)
-    vm.swap1()
-    vm.div()
-    # [seq / 2, seq % 2, current_seq, sender]
-    vm.swap2()
-    vm.swap1()
-    # [seq % 2, current_seq, seq / 2, sender]
-    vm.ifelse(
-        lambda vm: [
-            # sequence must be incremented
-            # [current_seq, seq / 2, sender]
-            vm.push(1),
-            vm.add(),
-            vm.dup1(),
-            vm.eq()
-            # [seq / 2 == current_seq + 1, seq / 2, sender]
-        ],
-        lambda vm: [
-            # sequence must be greater
-            # [current_seq, seq / 2, sender]
-            vm.dup1(),
-            vm.gt()
-            # [seq / 2 > current_seq, seq / 2, sender]
-        ],
-    )
-
-    # [seq_should_update, seq / 2, sender]
-    vm.ifelse(
-        lambda vm: [
-            # [seq / 2, sender]
-            get_chain_state(vm),
-            chain_state.get("sender_seq")(vm),
-            std.keyvalue_int_int.set_val(vm),
-            get_chain_state(vm),
-            chain_state.set_val("sender_seq")(vm),
-            set_chain_state(vm),
-            vm.push(1),
-        ],
-        lambda vm: [
-            std.sized_byterange.new(vm),
-            vm.push(4),
-            log_func_result(vm),
-            vm.pop(),
-            vm.pop(),
-            vm.push(0),
-        ],
-    )
-
-
 @modifies_stack(0, [message.typ])
 def get_next_message(vm):
     get_chain_state(vm)
@@ -738,10 +672,20 @@ def process_tx_message(vm):
     vm.cast(tx_message.typ)
     tx_message.get("sequence_num")(vm)
     # sequence_num sender message
-    check_message_sequence(vm)
-    # valid_seq msg
+    vm.swap1()
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    accounts.process_nonce(vm)
+    # valid nonce[if invalid] accounts message
+    vm.swap2()
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+    # nonce[if invalid] valid message
+    vm.swap1()
     vm.ifelse(
         lambda vm: [
+            vm.pop(),
             vm.dup0(),
             message.get("message")(vm),
             vm.cast(tx_message.typ),
@@ -751,7 +695,16 @@ def process_tx_message(vm):
             std.tup.make(2)(vm),
             # sender tx_call_data
         ],
-        lambda vm: [vm.pop(), vm.push(value.Tuple([]))],
+        lambda vm: [
+            vm.swap1(),
+            vm.pop(),
+            vm.push(0),
+            std.sized_byterange.new(vm),
+            std.sized_byterange.set_val(vm),
+            vm.push(4),
+            log_func_result(vm),
+            vm.push(value.Tuple([])),
+        ],
     )
 
 
@@ -775,6 +728,33 @@ def process_valid_tx_message(vm):
     tx_call_data.set_val("data")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("value")(vm)
+
+
+@modifies_stack([message.typ], [value.IntType(), tx_call_data.typ])
+def process_call_message(vm):
+    # message
+    vm.dup0()
+    message.get("sender")(vm)
+    vm.swap1()
+    message.get("message")(vm)
+    vm.cast(call_message.typ)
+    # msg sender
+    vm.dup0()
+    call_message.get("to")(vm)
+    # to message sender
+    vm.swap1()
+    call_message.get("data")(vm)
+    # data dest sender
+    vm.cast(std.bytestack.typ)
+    std.sized_byterange.from_bytestack(vm)
+    vm.push(0)
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("value")(vm)
+    tx_call_data.set_val("data")(vm)
+    tx_call_data.set_val("dest")(vm)
+    vm.swap1()
+    # sender tx_call_data
 
 
 @modifies_stack([message.typ], [])

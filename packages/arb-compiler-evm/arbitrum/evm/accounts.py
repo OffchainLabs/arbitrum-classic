@@ -131,3 +131,52 @@ def clone_contract(vm):
     vm.swap2()
     vm.swap1()
     account_store.set_val(vm)
+
+
+@modifies_stack(
+    [account_store.typ, value.IntType(), value.IntType()],
+    [value.IntType(), value.IntType(), account_store.typ],
+)
+def process_nonce(vm):
+    # accounts address nonce
+    vm.dup1()
+    vm.dup1()
+    account_store.get(vm)
+    # account accounts address nonce
+    vm.swap2()
+    vm.auxpush()
+    vm.auxpush()
+    # account nonce [accounts address]
+    vm.dup0()
+    vm.auxpush()
+    account_state.get("nonce")(vm)
+    # old_nonce nonce [account accounts address]
+    vm.push(1)
+    vm.add()
+    vm.dup1()
+    vm.eq()
+    # valid_nonce nonce [account accounts address]
+    vm.ifelse(
+        lambda vm: [
+            vm.auxpop(),
+            account_state.set_val("nonce")(vm),
+            # updated_account [accounts address]
+            vm.auxpop(),
+            vm.auxpop(),
+            vm.swap1(),
+            account_store.set_val(vm),
+            vm.push(0),
+            vm.push(1),
+        ],
+        lambda vm: [
+            # nonce [account accounts address]
+            vm.auxpop(),
+            vm.pop(),
+            vm.auxpop(),
+            vm.auxpop(),
+            vm.pop(),
+            vm.swap1(),
+            # nonce accounts
+            vm.push(0),
+        ],
+    )
