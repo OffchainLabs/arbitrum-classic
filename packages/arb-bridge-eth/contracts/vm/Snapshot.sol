@@ -67,7 +67,7 @@ contract Snapshot {
 		emit SavedTwoStakersSnapshot(msg.sender, addr1, loc1, addr2, loc2, snap);
 	}
 
-	function calcDeadlineStakersSnapshot(uint256 deadlineBlocks, address[] memory addrs, bytes32[] memory locations) 
+	function calcDeadlineStakersSnapshot(uint256 deadlineTicks, address[] memory addrs, bytes32[] memory locations) 
 		internal 
 		pure 
 		returns(bytes32) 
@@ -85,18 +85,18 @@ contract Snapshot {
 		return keccak256(
 			abi.encodePacked(
 				SnapshotType.DeadlineStakers,
-				deadlineBlocks,
+				deadlineTicks,
 				acc
 			)
 		);
 	}
 
-	function saveDeadlineStakersSnapshot(uint256 deadlineBlocks, address[] memory addrs, bytes32[] memory locations)
+	function saveDeadlineStakersSnapshot(uint256 deadlineTicks, address[] memory addrs, bytes32[] memory locations)
 		internal
 	{
-		bytes32 snap = calcDeadlineStakersSnapshot(deadlineBlocks, addrs, locations);
+		bytes32 snap = calcDeadlineStakersSnapshot(deadlineTicks, addrs, locations);
 		snapshots[msg.sender] = snap;
-		emit SavedDeadlineStakersSnapshot(msg.sender, deadlineBlocks, addrs, locations, snap);
+		emit SavedDeadlineStakersSnapshot(msg.sender, deadlineTicks, addrs, locations, snap);
 	}
 
 	function calcNodeExistsSnapshot(bytes32 location) internal pure returns(bytes32) {

@@ -293,6 +293,38 @@ contract Staking is ChallengeType, Snapshot {
         return activeCount;
     }
 
+    function snapshotDeadlineStakers(
+        uint256 deadlineTicks,
+        address[] memory beforeDeadlineAddrs,
+        address[] memory atOrAfterDeadlineAddrs
+    ) public {
+        uint256 _beforeCount = beforeDeadlineAddrs.length;
+        uint256 _afterCount = atOrAfterDeadlineAddrs.length;
+        require(_beforeCount+_afterCount == stakerCount, CHCK_COUNT);
+
+        bytes32[] memory snapshotLocations = new bytes32[](_beforeCount);
+        bytes20 prevStaker = 0x00;
+        for (uint256 i = 0; i < _beforeCount; i++) {
+            address stakerAddress = beforeDeadlineAddrs[i];
+            require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
+            prevStaker = bytes20(stakerAddress);
+            Staker storage staker = getValidStaker(stakerAddress);
+            require(RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks);
+            snapshotLocations[i] = staker.location;
+        }
+
+        prevStaker = 0x00;
+        for (uint256 i = 0; i < _afterCount; i++) {
+            address stakerAddress = atOrAfterDeadlineAddrs[i];
+            require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
+            prevStaker = bytes20(stakerAddress);
+            Staker storage staker = getValidStaker(stakerAddress);
+            require(RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks);
+        }
+
+        saveDeadlineStakersSnapshot(deadlineTicks, beforeDeadlineAddrs, snapshotLocations);       
+    }
+
     function snapshotStakerNodeExists(address addr) public {
         Staker storage staker = getValidStaker(addr);
         saveNodeExistsSnapshot(staker.location);
