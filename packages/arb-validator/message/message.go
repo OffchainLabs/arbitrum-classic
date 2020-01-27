@@ -34,18 +34,22 @@ const (
 	ERC721Type
 )
 
-type Message interface {
+type UnsentMessage interface {
 	Type() MessageType
 	AsValue() value.Value
 	GetFuncName() string
 }
 
-type DeliveredMessage interface {
-	Message
-	Equals(o DeliveredMessage) bool
-	CommitmentHash() common.Hash
+type Message interface {
+	UnsentMessage
+	Equals(o Message) bool
 	ReceiptHash() common.Hash
 	DeliveredHeight() *common.TimeBlocks
+}
+
+type PendingMessage interface {
+	Message
+	CommitmentHash() common.Hash
 	CheckpointValue() value.Value
 }
 
@@ -64,7 +68,7 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
-func Unmarshal(msgType MessageType, v value.Value) (DeliveredMessage, error) {
+func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (PendingMessage, error) {
 	switch msgType {
 	case TransactionType:
 		return UnmarshalTransactionFromCheckpoint(v)
@@ -79,7 +83,7 @@ func Unmarshal(msgType MessageType, v value.Value) (DeliveredMessage, error) {
 	}
 }
 
-func DeliveredValue(m DeliveredMessage) value.Value {
+func DeliveredValue(m Message) value.Value {
 	receiptHash := m.ReceiptHash()
 	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
 	msg, _ := value.NewTupleFromSlice([]value.Value{

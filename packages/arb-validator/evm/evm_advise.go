@@ -38,7 +38,7 @@ type Result interface {
 
 type Return struct {
 	Msg     EthBridgeMessage
-	ArbCall message.Message
+	ArbCall message.UnsentMessage
 
 	ReturnVal []byte
 	Logs      []Log
@@ -69,7 +69,7 @@ func (e Return) String() string {
 
 type Revert struct {
 	Msg       EthBridgeMessage
-	ArbCall   message.Message
+	ArbCall   message.UnsentMessage
 	ReturnVal []byte
 }
 
@@ -91,7 +91,7 @@ func (e Revert) String() string {
 
 type Stop struct {
 	Msg     EthBridgeMessage
-	ArbCall message.Message
+	ArbCall message.UnsentMessage
 	Logs    []Log
 }
 
@@ -118,7 +118,7 @@ func (e Stop) String() string {
 
 type BadSequenceNum struct {
 	Msg     EthBridgeMessage
-	ArbCall message.Message
+	ArbCall message.UnsentMessage
 }
 
 func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
@@ -137,7 +137,7 @@ func (e BadSequenceNum) String() string {
 
 type Invalid struct {
 	Msg     EthBridgeMessage
-	ArbCall message.Message
+	ArbCall message.UnsentMessage
 }
 
 func (e Invalid) GetEthMsg() EthBridgeMessage {
@@ -218,7 +218,7 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 	}, restValTup, nil
 }
 
-func ParseArbMessage(typecode message.MessageType, messageVal value.Value, chain common.Address) (message.Message, error) {
+func ParseArbMessage(typecode message.MessageType, messageVal value.Value, chain common.Address) (message.UnsentMessage, error) {
 	switch typecode {
 	case message.TransactionType:
 		return message.UnmarshalTransaction(messageVal, chain)
