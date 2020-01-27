@@ -3,9 +3,12 @@ package mockbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"math/big"
 )
 
 type ArbFactory struct {
@@ -25,14 +28,37 @@ func (con *ArbFactory) CreateRollup(
 ) (common.Address, error) {
 	events := make(map[*structures.BlockId][]arbbridge.Event)
 	addr := con.client.MockEthClient.getNextAddress()
-	con.client.MockEthClient.rollups[addr] = &rollupData{Uninitialized,
-		params.GracePeriod,
-		params.MaxExecutionSteps,
-		params.StakeRequirement,
-		owner,
-		events,
-		con.client.MockEthClient.LatestBlock,
+	vmProto := hashing.SoliditySHA3(
+		hashing.Bytes32(vmState),
+		hashing.Bytes32(value.NewEmptyTuple().Hash()),
+		hashing.Uint256(big.NewInt(0)),
+	)
+	innerHash := hashing.SoliditySHA3(
+		hashing.Bytes32(vmProto),
+		hashing.Uint256(big.NewInt(0)),
+		hashing.Uint256(big.NewInt(0)),
+		hashing.Uint256(big.NewInt(0)),
+	)
+	initialNode := hashing.SoliditySHA3(
+		hashing.Uint256(big.NewInt(0)),
+		hashing.Bytes32(innerHash),
+	)
+
+	con.client.MockEthClient.rollups[addr] = &rollupData{state: Uninitialized,
+		vmState:         vmState,
+		gracePeriod:     params.GracePeriod,
+		maxSteps:        params.MaxExecutionSteps,
+		escrowRequired:  params.StakeRequirement,
+		owner:           owner,
+		events:          events,
+		creation:        con.client.MockEthClient.LatestBlock,
+		stakers:         make(map[common.Address]*staker),
+		leaves:          make(map[common.Hash]bool),
+		lastConfirmed:   initialNode,
+		contractAddress: addr,
 	}
+	con.client.MockEthClient.rollups[addr].leaves[initialNode] = true
+
 	//event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
 	//if err != nil {
 	//	return common.Address{}, err

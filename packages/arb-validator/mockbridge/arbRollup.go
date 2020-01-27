@@ -30,10 +30,9 @@ import (
 const VALID_CHILD_TYPE = 3
 
 type arbRollup struct {
-	*nodeGraph
-	contractAddress common.Address
-	params          structures.ChainParams
-	Client          *MockArbAuthClient
+	rollup *rollupData
+	params structures.ChainParams
+	Client *MockArbAuthClient
 }
 
 func newRollup(contractAddress common.Address, client *MockArbAuthClient) (*arbRollup, error) {
@@ -56,21 +55,11 @@ func newRollup(contractAddress common.Address, client *MockArbAuthClient) (*arbR
 
 	ru, ok := client.MockEthClient.rollups[contractAddress]
 	if !ok {
-		events := make(map[*structures.BlockId][]arbbridge.Event)
-		ru = &rollupData{Uninitialized,
-			common.TimeFromSeconds(10),
-			250000,
-			big.NewInt(10),
-			contractAddress,
-			events,
-			client.MockEthClient.LatestBlock,
-		}
-		client.MockEthClient.rollups[contractAddress] = ru
+		return nil, errors.New("Rollup contract not found")
 	}
-	vm := newNodeGraph(client.auth)
-	return &arbRollup{
-		nodeGraph:       vm,
-		contractAddress: contractAddress,
+
+	roll := &arbRollup{
+		rollup: ru,
 		params: structures.ChainParams{
 			StakeRequirement:        ru.escrowRequired,
 			GracePeriod:             ru.gracePeriod,
@@ -78,14 +67,15 @@ func newRollup(contractAddress common.Address, client *MockArbAuthClient) (*arbR
 			ArbGasSpeedLimitPerTick: 200000,
 		},
 		Client: client,
-	}, nil
+	}
+	return roll, nil
 }
 
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
-	location := calculatePath(vm.lastConfirmed, proof1)
+	location := calculatePath(vm.rollup.lastConfirmed, proof1)
 	leaf := calculatePath(location, proof2)
-	if !vm.leaves[leaf] {
-		errors.New("invalid path proof")
+	if !vm.rollup.leaves[leaf] {
+		return errors.New("invalid path proof")
 	}
 	if err := vm.createStake(stakeAmount, location); err != nil {
 		return err
@@ -99,7 +89,7 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 		Staker:   vm.Client.auth.From,
 		NodeHash: location,
 	}
-	vm.Client.MockEthClient.rollups[vm.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
+	vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeCreatedEvent{
 			ChainInfo: arbbridge.ChainInfo{
@@ -114,14 +104,14 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 
 func (vm *arbRollup) createStake(stakeAmount *big.Int, location common.Hash) error {
 	// require(msg.value == stakeRequirement, STK_AMT);
-	if vm.Client.auth.Value != vm.stakeRequirement {
+	if stakeAmount != vm.rollup.escrowRequired {
 		return errors.New("invalid stake amount")
 	}
-	if _, ok := vm.stakers[vm.Client.auth.From]; ok {
+	if _, ok := vm.rollup.stakers[vm.Client.auth.From]; ok {
 		return errors.New("staker already exists")
 	}
 	// require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
-	vm.stakers[vm.Client.auth.From] = &staker{location, vm.Client.MockEthClient.LatestBlock.Height, false, stakeAmount}
+	vm.rollup.stakers[vm.Client.auth.From] = &staker{location, vm.Client.MockEthClient.LatestBlock.Height, false, stakeAmount}
 	//emit RollupStakeCreated(msg.sender, location);
 
 	return nil
@@ -129,7 +119,7 @@ func (vm *arbRollup) createStake(stakeAmount *big.Int, location common.Hash) err
 
 func (vm *arbRollup) refundStaker(staker common.Address) {
 	//refundStaker(stakerAddress);
-	delete(vm.stakers, staker)
+	delete(vm.rollup.stakers, staker)
 	//transfer stake requirement
 	// ???
 	_ = append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events[vm.Client.MockEthClient.LatestBlock], arbbridge.StakeRefundedEvent{
@@ -153,12 +143,12 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	//require(RollupUtils.calculatePath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
 	//refundStaker(stakerAddress);
 
-	staker, ok := vm.stakers[vm.Client.auth.From]
+	staker, ok := vm.rollup.stakers[vm.Client.auth.From]
 	if !ok {
 		return errors.New("staker not found")
 	}
 
-	if calculatePath(staker.location, proof) != vm.lastConfirmed {
+	if calculatePath(staker.location, proof) != vm.rollup.lastConfirmed {
 		return errors.New("invalid path proof")
 	}
 
@@ -185,12 +175,12 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 	}
 	//_recoverStakeConfirmed(stakerAddress, proof);
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
-	st, ok := vm.stakers[staker]
+	st, ok := vm.rollup.stakers[staker]
 	if !ok {
 		return errors.New("staker not found")
 	}
 	//require(RollupUtils.calculatePath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
-	if calculatePath(st.location, proof) != vm.lastConfirmed {
+	if calculatePath(st.location, proof) != vm.rollup.lastConfirmed {
 		return errors.New("invalid path proof")
 	}
 	vm.refundStaker(staker)
@@ -207,8 +197,8 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 	//	RECOV_CONFLICT_PROOF
 	//);
 	if latestConfirmedProof[0] == stakerProof[0] ||
-		calculatePath(nodeHash, latestConfirmedProof) == vm.lastConfirmed ||
-		calculatePath(nodeHash, stakerProof) != vm.stakers[vm.Client.auth.From].location {
+		calculatePath(nodeHash, latestConfirmedProof) == vm.rollup.lastConfirmed ||
+		calculatePath(nodeHash, stakerProof) != vm.rollup.stakers[vm.Client.auth.From].location {
 		return errors.New("Invalid conflict proof")
 	}
 	//refundStaker(stakerAddress);
@@ -252,13 +242,13 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	//bytes32 leaf = RollupUtils.calculatePath(newLocation, proof2);
 	//require(isValidLeaf(leaf), MOVE_LEAF);
 	//updateStakerLocation(msg.sender, newLocation);
-	location := vm.stakers[vm.Client.auth.From].location
+	location := vm.rollup.stakers[vm.Client.auth.From].location
 	newLocation := calculatePath(location, proof1)
 	leaf := calculatePath(newLocation, proof2)
-	if !vm.leaves[leaf] {
+	if !vm.rollup.leaves[leaf] {
 		return errors.New("MoveStake - invalid leaf")
 	}
-	vm.stakers[vm.Client.auth.From].location = newLocation
+	vm.rollup.stakers[vm.Client.auth.From].location = newLocation
 	//emit RollupStakeRefunded(address(_stakerAddress));
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
@@ -276,7 +266,7 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	//bytes32 leaf = RollupUtils.calculatePath(from, leafProof);
 	leaf := calculatePath(from, leafProof)
 	//require(isValidLeaf(leaf), PRUNE_LEAF);
-	if !vm.leaves[leaf] {
+	if !vm.rollup.leaves[leaf] {
 		return errors.New("MoveStake - invalid leaf")
 	}
 	//require(
@@ -285,11 +275,11 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	//	PRUNE_CONFLICT
 	//);
 	if leafProof[0] == ancProof[0] ||
-		calculatePath(from, ancProof) != vm.lastConfirmed {
+		calculatePath(from, ancProof) != vm.rollup.lastConfirmed {
 		return errors.New("prune conflict")
 	}
 	//delete leaves[leaf];
-	delete(vm.leaves, leaf)
+	delete(vm.rollup.leaves, leaf)
 	//
 	//emit RollupPruned(leaf);
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
@@ -372,7 +362,7 @@ func (vm *arbRollup) MakeAssertion(
 		prevChildType,
 	)
 	//require(isValidLeaf(prevLeaf), MAKE_LEAF);
-	if !vm.leaves[prevLeaf] {
+	if !vm.rollup.leaves[prevLeaf] {
 		return errors.New("makeAssertion - invalid leaf")
 	}
 	//require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
@@ -391,11 +381,13 @@ func (vm *arbRollup) MakeAssertion(
 	if assertionParams.ImportedMessageCount.Cmp(big.NewInt(0)) != 0 && !assertionClaim.AssertionStub.DidInboxInsn {
 		return errors.New("makeAssertion - Imported messages without reading them")
 	}
-	//(bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
-	pendingTop := vm.Client.MockEthClient.pending[vm.contractAddress].pending
-	//require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
-	if assertionParams.ImportedMessageCount.Cmp(pendingTop.TopCount().Sub(pendingTop.TopCount(), beforeState.PendingCount)) > 0 {
-		return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")
+	if (vm.Client.MockEthClient.pending[vm.rollup.contractAddress]) != nil {
+		//(bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
+		pendingTop := vm.Client.MockEthClient.pending[vm.rollup.contractAddress].pending
+		//require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
+		if assertionParams.ImportedMessageCount.Cmp(pendingTop.TopCount().Sub(pendingTop.TopCount(), beforeState.PendingCount)) > 0 {
+			return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")
+		}
 	}
 	//
 	//uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
@@ -422,6 +414,12 @@ func (vm *arbRollup) MakeAssertion(
 	//vmProtoHashBefore,
 	//gracePeriodTicks
 	//);
+	invalidPending, _ := structures.NodeHash(prevPrevLeafHash,
+		protoHashBefore,
+		prevDeadline,
+		prevDataHash,
+		structures.InvalidPendingChildType,
+	)
 	//bytes32 invalidMessages = generateInvalidMessagesLeaf(
 	//data,
 	//prevLeaf,
@@ -429,6 +427,12 @@ func (vm *arbRollup) MakeAssertion(
 	//vmProtoHashBefore,
 	//gracePeriodTicks
 	//);
+	invalidMessages, _ := structures.NodeHash(prevPrevLeafHash,
+		protoHashBefore,
+		prevDeadline,
+		prevDataHash,
+		structures.InvalidMessagesChildType,
+	)
 	//bytes32 invalidExec = generateInvalidExecutionLeaf(
 	//data,
 	//prevLeaf,
@@ -437,29 +441,65 @@ func (vm *arbRollup) MakeAssertion(
 	//gracePeriodTicks,
 	//checkTimeTicks
 	//);
+	invalidExecution, _ := structures.NodeHash(prevPrevLeafHash,
+		protoHashBefore,
+		prevDeadline,
+		prevDataHash,
+		structures.InvalidExecutionChildType,
+	)
 	//bytes32 validHash = generateValidLeaf(
 	//data,
 	//prevLeaf,
 	//deadlineTicks
 	//);
+	valid, _ := structures.NodeHash(prevPrevLeafHash,
+		protoHashBefore,
+		prevDeadline,
+		prevDataHash,
+		structures.ValidChildType,
+	)
 	//
 	//leaves[invalidPending] = true;
+	vm.rollup.leaves[invalidPending] = true
 	//leaves[invalidMessages] = true;
+	vm.rollup.leaves[invalidMessages] = true
 	//leaves[invalidExec] = true;
+	vm.rollup.leaves[invalidExecution] = true
 	//leaves[validHash] = true;
+	vm.rollup.leaves[valid] = true
 	//delete leaves[prevLeaf];
+	delete(vm.rollup.leaves, prevLeaf)
 	//
 	//emitAssertedEvent(data, prevLeaf, pendingValue, pendingCount);
+	//ChainInfo
+	//PrevLeafHash    common.Hash
+	//Params          *structures.AssertionParams
+	//Claim           *structures.AssertionClaim
+	//MaxPendingTop   common.Hash
+	//MaxPendingCount *big.Int
+
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.AssertedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.Client.MockEthClient.LatestBlock,
+			},
+			PrevLeafHash: prevLeaf,
+			//Params: vm.params,
+			Claim: assertionClaim,
+			//MaxPendingTop: maxpendingtop,
+			//MaxPendingCount: maxpendingtop,
+		},
+	})
 	//return (prevLeaf, validHash);
 
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
 	//require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
-	if calculatePath(vm.stakers[vm.Client.auth.From].location, stakerProof) != prevLeaf {
+	if calculatePath(vm.rollup.stakers[vm.Client.auth.From].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
 	}
 
 	//updateStakerLocation(msg.sender, newValid);
-	vm.stakers[vm.Client.auth.From].location = prevLeaf
+	vm.rollup.stakers[vm.Client.auth.From].location = prevLeaf
 	//emit RollupStakeRefunded(address(_stakerAddress));
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{

@@ -19,6 +19,8 @@ package mockbridge
 import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 )
 
@@ -32,18 +34,27 @@ type staker struct {
 type nodeGraph struct {
 	stakeRequirement *big.Int
 	stakers          map[common.Address]*staker
-	stakerCount      int64
 	leaves           map[common.Hash]bool
 	lastConfirmed    common.Hash
 }
 
-func newNodeGraph(auth *TransOpts) *nodeGraph {
+func newNodeGraph(auth *TransOpts, ru *rollupData) *nodeGraph {
+	vmProto := hashing.SoliditySHA3(
+		hashing.Bytes32(ru.vmState),
+		hashing.Bytes32(value.NewEmptyTuple().Hash()),
+	)
+	innerHash := hashing.SoliditySHA3(
+		hashing.Bytes32(vmProto),
+		hashing.Uint32(0),
+		hashing.Uint32(0),
+		hashing.Uint32(0),
+	)
+	initialNode := hashing.SoliditySHA3(
+		hashing.Uint32(0),
+		hashing.Bytes32(innerHash),
+	)
 
 	//		register for inbox
-	//		init protocol state
-	//		create initial node
-	//		  latestConfirmedPriv = initialNode;
-	//        leaves[initialNode] = true;
 	//
 	//        // VM parameters
 	//        vmParams.gracePeriodTicks = _gracePeriodTicks;
@@ -52,10 +63,10 @@ func newNodeGraph(auth *TransOpts) *nodeGraph {
 	ng := &nodeGraph{
 		stakeRequirement: auth.GasPrice,
 		stakers:          make(map[common.Address]*staker),
-		stakerCount:      0,
-		leaves:           nil,
-		lastConfirmed:    common.Hash{},
+		leaves:           make(map[common.Hash]bool),
+		lastConfirmed:    initialNode,
 	}
+	ng.leaves[initialNode] = true
 
 	return ng
 }

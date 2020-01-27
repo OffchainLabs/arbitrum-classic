@@ -72,13 +72,18 @@ type channelData struct {
 }
 
 type rollupData struct {
-	state          EthState
-	gracePeriod    common.TimeTicks
-	maxSteps       uint32
-	escrowRequired *big.Int
-	owner          common.Address
-	events         map[*structures.BlockId][]arbbridge.Event
-	creation       *structures.BlockId
+	state           EthState
+	vmState         common.Hash
+	gracePeriod     common.TimeTicks
+	maxSteps        uint32
+	escrowRequired  *big.Int
+	owner           common.Address
+	events          map[*structures.BlockId][]arbbridge.Event
+	creation        *structures.BlockId
+	stakers         map[common.Address]*staker
+	leaves          map[common.Hash]bool
+	lastConfirmed   common.Hash
+	contractAddress common.Address
 }
 
 type void struct{}

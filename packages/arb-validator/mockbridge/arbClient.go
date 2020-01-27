@@ -39,7 +39,9 @@ type MockArbClient struct {
 
 func NewEthClient(ethURL string) (*MockArbClient, error) {
 	// call to mockEth.go - getMockEth(ethURL)
-	return &MockArbClient{getMockEth(ethURL)}, nil
+	client := MockArbClient{getMockEth(ethURL)}
+
+	return &client, nil
 }
 
 func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
