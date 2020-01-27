@@ -51,7 +51,7 @@ func Bool(input bool) []byte {
 }
 
 func TimeTicks(input common.TimeTicks) []byte {
-	return solsha3.Uint256(input.Val)
+	return Uint256(input.Val)
 }
 
 func TimeBlocks(input *common.TimeBlocks) []byte {
