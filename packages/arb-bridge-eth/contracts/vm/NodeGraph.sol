@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./RollupUtils.sol";
 import "./VM.sol";
 import "../IGlobalPendingInbox.sol";
+import "./Snapshot.sol";
 
 import "../challenge/ChallengeUtils.sol";
 import "../challenge/ChallengeType.sol";
@@ -29,7 +30,7 @@ import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
 
 
-contract NodeGraph is ChallengeType {
+contract NodeGraph is ChallengeType, Snapshot {
 
     using SafeMath for uint256;
 
@@ -130,8 +131,17 @@ contract NodeGraph is ChallengeType {
         return latestConfirmedPriv;
     }
 
+    function snapshotLatestConfirmed() public {
+        saveLatestConfirmedSnapshot(latestConfirmedPriv);
+    }
+
     function isValidLeaf(bytes32 leaf) public view returns(bool) {
         return leaves[leaf];
+    }
+
+    function snapshotLeafNodeExists(bytes32 leaf) public {
+        require(isValidLeaf(leaf));
+        saveNodeExistsSnapshot(leaf);
     }
 
     function init(

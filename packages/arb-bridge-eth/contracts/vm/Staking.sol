@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+import "./Snapshot.sol";
 import "./RollupUtils.sol";
 import "../libraries/RollupTime.sol";
 
@@ -26,7 +27,7 @@ import "../challenge/IChallengeFactory.sol";
 import "../arch/Protocol.sol";
 
 
-contract Staking is ChallengeType {
+contract Staking is ChallengeType, Snapshot {
 
     // VM already initialized"
     string constant INIT_TWICE = "INIT_TWICE";
@@ -290,6 +291,17 @@ contract Staking is ChallengeType {
             prevStaker = bytes20(stakerAddress);
         }
         return activeCount;
+    }
+
+    function snapshotStakerNodeExists(address addr) public {
+        Staker storage staker = getValidStaker(addr);
+        saveNodeExistsSnapshot(staker.location);
+    }
+
+    function snapshotTwoStakers(address addr1, address addr2) public {
+        Staker storage staker1 = getValidStaker(addr1);
+        Staker storage staker2 = getValidStaker(addr2);
+        saveTwoStakersSnapshot(addr1, staker1.location, addr2, staker2.location);
     }
 
     function getValidStaker(address _stakerAddress) private view returns (Staker storage) {
