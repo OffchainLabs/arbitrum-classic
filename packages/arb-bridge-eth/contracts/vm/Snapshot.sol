@@ -17,7 +17,7 @@
 pragma solidity ^0.5.3;
 
 contract Snapshot {
-	mapping (address => bytes32) snapshots;
+	mapping (address => mapping (uint256 => bytes32)) snapshots;
 
 	enum SnapshotType { LatestConfirmed, TwoStakers, DeadlineStakers, NodeExists }
 
@@ -26,8 +26,8 @@ contract Snapshot {
 	event SavedDeadlineStakersSnapshot(address, uint256, address[], bytes32[], bytes32);
 	event SavedNodeExistsSnapshot(address, bytes32, bytes32);
 
-	function getMySnapshot() public view returns(bytes32) {
-		return snapshots[msg.sender];
+	function getMySnapshot(uint256 idx) public view returns(bytes32) {
+		return snapshots[msg.sender][idx];
 	}
 
 	function calcLatestConfirmedSnapshot(bytes32 lcHash) internal pure returns(bytes32) {
@@ -39,9 +39,9 @@ contract Snapshot {
 			);
 	}
 
-	function saveLatestConfirmedSnapshot(bytes32 lcHash) internal {
+	function saveLatestConfirmedSnapshot(uint256 idx, bytes32 lcHash) internal {
 		bytes32 snap = calcLatestConfirmedSnapshot(lcHash);
-		snapshots[msg.sender] = snap;
+		snapshots[msg.sender][idx] = snap;
 		emit SavedLatestConfirmedSnapshot(msg.sender, lcHash, snap);
 	}
 
@@ -61,9 +61,11 @@ contract Snapshot {
 		);
 	}
 
-	function saveTwoStakersSnapshot(address addr1, bytes32 loc1, address addr2, bytes32 loc2) internal {
+	function saveTwoStakersSnapshot(uint256 idx, address addr1, bytes32 loc1, address addr2, bytes32 loc2) 
+		internal 
+	{
 		bytes32 snap = calcTwoStakersSnapshot(addr1, loc1, addr2, loc2);
-		snapshots[msg.sender] = snap;
+		snapshots[msg.sender][idx] = snap;
 		emit SavedTwoStakersSnapshot(msg.sender, addr1, loc1, addr2, loc2, snap);
 	}
 
@@ -91,11 +93,16 @@ contract Snapshot {
 		);
 	}
 
-	function saveDeadlineStakersSnapshot(uint256 deadlineTicks, address[] memory addrs, bytes32[] memory locations)
+	function saveDeadlineStakersSnapshot(
+		uint256 idx, 
+		uint256 deadlineTicks, 
+		address[] memory addrs, 
+		bytes32[] memory locations
+	)
 		internal
 	{
 		bytes32 snap = calcDeadlineStakersSnapshot(deadlineTicks, addrs, locations);
-		snapshots[msg.sender] = snap;
+		snapshots[msg.sender][idx] = snap;
 		emit SavedDeadlineStakersSnapshot(msg.sender, deadlineTicks, addrs, locations, snap);
 	}
 
@@ -108,9 +115,9 @@ contract Snapshot {
 		);
 	}
 
-	function saveNodeExistsSnapshot(bytes32 location) public {
+	function saveNodeExistsSnapshot(uint256 idx, bytes32 location) public {
 		bytes32 snap = calcNodeExistsSnapshot(location);
-		snapshots[msg.sender] = snap;
+		snapshots[msg.sender][idx] = snap;
 		emit SavedNodeExistsSnapshot(msg.sender, location, snap);
 	}
 }

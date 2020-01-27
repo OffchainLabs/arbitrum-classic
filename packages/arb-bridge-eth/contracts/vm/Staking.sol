@@ -294,6 +294,7 @@ contract Staking is ChallengeType, Snapshot {
     }
 
     function snapshotDeadlineStakers(
+        uint256 idx, 
         uint256 deadlineTicks,
         address[] memory beforeDeadlineAddrs,
         address[] memory atOrAfterDeadlineAddrs
@@ -322,18 +323,18 @@ contract Staking is ChallengeType, Snapshot {
             require(RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks);
         }
 
-        saveDeadlineStakersSnapshot(deadlineTicks, beforeDeadlineAddrs, snapshotLocations);       
+        saveDeadlineStakersSnapshot(idx, deadlineTicks, beforeDeadlineAddrs, snapshotLocations);       
     }
 
-    function snapshotStakerNodeExists(address addr) public {
+    function snapshotStakerNodeExists(uint256 idx, address addr) public {
         Staker storage staker = getValidStaker(addr);
-        saveNodeExistsSnapshot(staker.location);
+        saveNodeExistsSnapshot(idx, staker.location);
     }
 
-    function snapshotTwoStakers(address addr1, address addr2) public {
+    function snapshotTwoStakers(uint256 idx, address addr1, address addr2) public {
         Staker storage staker1 = getValidStaker(addr1);
         Staker storage staker2 = getValidStaker(addr2);
-        saveTwoStakersSnapshot(addr1, staker1.location, addr2, staker2.location);
+        saveTwoStakersSnapshot(idx, addr1, staker1.location, addr2, staker2.location);
     }
 
     function getValidStaker(address _stakerAddress) private view returns (Staker storage) {

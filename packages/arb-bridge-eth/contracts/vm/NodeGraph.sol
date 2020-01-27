@@ -131,17 +131,17 @@ contract NodeGraph is ChallengeType, Snapshot {
         return latestConfirmedPriv;
     }
 
-    function snapshotLatestConfirmed() public {
-        saveLatestConfirmedSnapshot(latestConfirmedPriv);
+    function snapshotLatestConfirmed(uint256 idx) public {
+        saveLatestConfirmedSnapshot(idx, latestConfirmedPriv);
     }
 
     function isValidLeaf(bytes32 leaf) public view returns(bool) {
         return leaves[leaf];
     }
 
-    function snapshotLeafNodeExists(bytes32 leaf) public {
+    function snapshotLeafNodeExists(uint256 idx, bytes32 leaf) public {
         require(isValidLeaf(leaf));
-        saveNodeExistsSnapshot(leaf);
+        saveNodeExistsSnapshot(idx, leaf);
     }
 
     function init(
