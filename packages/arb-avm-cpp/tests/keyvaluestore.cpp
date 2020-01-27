@@ -35,22 +35,27 @@ std::vector<unsigned char> value4 = {};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 }  // namespace
 
-TEST_CASE("Save") {
-    //    CheckpointStorage storage(pathc, test_contract_path);
-    //    auto store = storage.makeKeyValueStore();
-    //
-    //    auto status = store->saveData(hash_key1, value1);
-    //    REQUIRE(status.ok() == true);
-    //
-    //    auto res = store->getData(hash_key1);
-    //    REQUIRE(res.data == value1);
-    //
-    //    auto res2 = store->getData(hash_key2);
-    //
-    //    store->saveData(hash_key2, value4);
-    //
-    //    auto x = store->getData(hash_key2);
+TEST_CASE("KeyValueStore test") {
+    CheckpointStorage storage(pathc, test_contract_path);
+    auto store = storage.makeKeyValueStore();
 
+    auto status = store->saveData(hash_key1, value1);
+    REQUIRE(status.ok() == true);
+
+    auto res = store->getData(hash_key1);
+    REQUIRE(res.data == value1);
+
+    auto res2 = store->getData(hash_key2);
+    REQUIRE(res2.status.ok() == false);
+
+    store->saveData(hash_key2, value4);
+    res2 = store->getData(hash_key2);
+    REQUIRE(res2.data == value4);
+}
+
+TEST_CASE("CCheckpointStorage test") {
     auto store = createCheckpointStorage(pathc.c_str(), test_contract_path);
-    getData(store, hash_key2.data(), hash_key2.size() + 10);
+    auto res = getData(store, hash_key2.data(), hash_key2.size());
+
+    REQUIRE(res.length == 0);
 }

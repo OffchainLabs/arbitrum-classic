@@ -219,8 +219,6 @@ contract ArbRollup is NodeGraph, Staking {
         updateStakerLocation(msg.sender, newValid);
     }
 
-    address inboxAddress = 0xCAAd408788C192979384768DD5bE04eC1b3787dA;
-
     function confirmValid(
         uint256 deadlineTicks,
         bytes calldata _messages,
