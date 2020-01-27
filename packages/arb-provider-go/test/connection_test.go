@@ -88,7 +88,9 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	checkpointer1 := checkpointing.NewDummyCheckpointer(contract)
+	ckpFac := checkpointing.NewDummyCheckpointerFactory(contract)
+
+	checkpointer1 := ckpFac.New(context.TODO())
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
@@ -132,7 +134,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		log.Fatal(err)
 	}
 
-	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, db1, true, client1, true, false)
+	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, true, client1, ckpFac)
 	if err != nil {
 		return err
 	}
@@ -145,7 +147,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 	manager1.AddListener(validatorListener1)
 
-	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, contract, db2, true, client2, true, false)
+	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, true, client2, ckpFac)
 	if err != nil {
 		return err
 	}

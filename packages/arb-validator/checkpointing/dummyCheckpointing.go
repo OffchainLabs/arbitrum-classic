@@ -30,16 +30,24 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type DummyCheckpointer struct {
+type DummyCheckpointerFactory struct {
 	initialMachine machine.Machine
 }
 
-func NewDummyCheckpointer(arbitrumCodefilePath string) *DummyCheckpointer {
+func NewDummyCheckpointerFactory(arbitrumCodefilePath string) RollupCheckpointerFactory {
 	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "test")
 	if err != nil {
 		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
 	}
-	return &DummyCheckpointer{theMachine}
+	return &DummyCheckpointerFactory{theMachine}
+}
+
+func (fac *DummyCheckpointerFactory) New(ctx context.Context) RollupCheckpointer {
+	return &DummyCheckpointer{fac}
+}
+
+type DummyCheckpointer struct {
+	fac *DummyCheckpointerFactory
 }
 
 func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
@@ -51,7 +59,7 @@ func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arb
 }
 
 func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return dcp.initialMachine.Clone(), nil
+	return dcp.fac.initialMachine.Clone(), nil
 }
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
