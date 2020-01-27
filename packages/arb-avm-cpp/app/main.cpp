@@ -68,14 +68,9 @@ int main(int argc, char* argv[]) {
     auto msg1 =
         nonstd::get<Tuple>(deserialize_value(msg1DataRawPtr, mach.getPool()));
 
-    MessageStack stack1{&mach.getPool()};
-
-    stack1.addMessage(std::move(msg1));
-
     std::cout << "Msg " << msg1 << std::endl;
 
-    Assertion assertion1 =
-        mach.run(stepCount, 0, 0, std::move(stack1.messages));
+    Assertion assertion1 = mach.run(stepCount, 0, 0, std::move(msg1));
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
