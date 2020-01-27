@@ -221,7 +221,8 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointer = checkpointing.NewDummyCheckpointer(contractPath)
+		checkpointFac := checkpointing.NewDummyCheckpointerFactory(contractPath)
+		checkpointer = checkpointFac.New(context.TODO())
 	case "fresh_rocksdb":
 		checkpointFac := checkpointing.NewRollupCheckpointerImplFactory(rollupAddress, contractPath, "", big.NewInt(1000000), true)
 		checkpointer = checkpointFac.New(context.TODO())
