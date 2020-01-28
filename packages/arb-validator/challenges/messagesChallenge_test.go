@@ -24,6 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -31,23 +32,35 @@ func testMessagesChallenge(t *testing.T) {
 	t.Parallel()
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(value.NewInt64Value(i))
+		messageStack.DeliverMessage(message.DeliveredEth{
+			Eth: message.Eth{
+				To:    common.Address{},
+				From:  common.Address{},
+				Value: big.NewInt(6745),
+			},
+			BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+			MessageNum: big.NewInt(i),
+		})
 	}
 	beforePending, err := messageStack.GetHashAtIndex(big.NewInt(2))
 	if err != nil {
 		t.Fatal(err)
 	}
-	afterPending, err := messageStack.GetHashAtIndex(big.NewInt(6))
+
+	messageCount := uint64(4)
+	startIndex := big.NewInt(2)
+	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(messageCount))
+	afterPending, err := messageStack.GetHashAtIndex(startIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	substack, err := messageStack.Substack(beforePending, afterPending)
+	inbox, err := messageStack.GenerateInbox(beforePending, messageCount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	importedMessages := substack.GetTopHash()
+	importedMessages := inbox.Hash()
 	challengeHash := structures.MessageChallengeDataHash(
 		beforePending,
 		afterPending,
@@ -70,8 +83,7 @@ func testMessagesChallenge(t *testing.T) {
 				0,
 				messageStack,
 				beforePending,
-				afterPending,
-				importedMessages,
+				new(big.Int).SetUint64(messageCount),
 				2,
 			)
 		},
@@ -84,7 +96,8 @@ func testMessagesChallenge(t *testing.T) {
 				0,
 				messageStack,
 				beforePending,
-				afterPending,
+				new(big.Int).SetUint64(messageCount),
+				true,
 			)
 		},
 	); err != nil {

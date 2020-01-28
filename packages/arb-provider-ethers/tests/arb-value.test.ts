@@ -334,6 +334,15 @@ describe('Integration', function() {
         const messageReverse = arb.marshal(valReverse);
         expect(ethers.utils.hexlify(messageReverse)).toBe(expectedMessageBytes);
     });
+
+    test('hexToBytestack and bytestackToBytes', function() {
+        // Create test value
+        const messageBytes =
+            '0x0b030b03030303030303005ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b0b0303030303030300781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c10b030303030303030032edc9a1000000000000000000000000000000000000000000000000000000000303030090e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180';
+        const bytestack = arb.hexToBytestack(messageBytes);
+        const messageBytes2 = arb.bytestackToBytes(bytestack);
+        expect(ethers.utils.hexlify(messageBytes2)).toBe(messageBytes);
+    });
 });
 
 describe('test_cases.json', function() {

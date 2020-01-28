@@ -3,7 +3,6 @@
 ### update-go-abi
 ### --------------------------------------------------------------------
 
-yarn workspace arb-bridge-eth build
 cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../installed_contracts/bytes/ ./bytes
@@ -19,6 +18,7 @@ abigen --sol=challenge/ExecutionChallenge.sol --pkg=executionchallenge --out=exe
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
 
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
+abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 
 \cp arbfactory.go ../../arb-validator/ethbridge/arbfactory/
 \cp arbrollup.go ../../arb-validator/ethbridge/rollup/
@@ -28,11 +28,12 @@ abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challenge
 \cp executionchallenge.go ../../arb-validator/ethbridge/executionchallenge/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp challengetester.go ../../arb-validator/ethbridge/challengetester/
+\cp messagetester.go ../../arb-validator/ethbridge/messagetester/
 rm -rf @openzeppelin bytes
 rm -f arbfactory.go arbrollup.go
 rm -f challengefactory.go
 rm -f pendingtopchallenge.go messageschallenge.go executionchallenge.go
 rm -f globalpendinginbox.go
-rm -f challengetester.go
+rm -f challengetester.go messagetester.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

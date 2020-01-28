@@ -34,9 +34,10 @@ import (
 )
 
 type arbRollup struct {
-	Client    *ethclient.Client
-	ArbRollup *rollup.ArbRollup
-	auth      *TransactAuth
+	Client          *ethclient.Client
+	ArbRollup       *rollup.ArbRollup
+	auth            *TransactAuth
+	contractAddress ethcommon.Address
 }
 
 func newRollup(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*arbRollup, error) {
@@ -44,7 +45,7 @@ func newRollup(address ethcommon.Address, client *ethclient.Client, auth *Transa
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
-	vm := &arbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth}
+	vm := &arbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth, contractAddress: address}
 	return vm, err
 }
 
@@ -226,7 +227,19 @@ func (vm *arbRollup) ConfirmValid(
 		stakerProofOffsets,
 	)
 	if err != nil {
-		return err
+		return vm.ArbRollup.ConfirmValidCall(
+			ctx,
+			vm.Client,
+			vm.auth.auth.From,
+			vm.contractAddress,
+			deadline.Val,
+			messages,
+			logsAccHash,
+			protoHash,
+			addressSliceToRaw(stakerAddresses),
+			hashSliceToRaw(stakerProofs),
+			stakerProofOffsets,
+		)
 	}
 	return vm.waitForReceipt(ctx, tx, "ConfirmValid")
 }
@@ -254,7 +267,19 @@ func (vm *arbRollup) ConfirmInvalid(
 		stakerProofOffsets,
 	)
 	if err != nil {
-		return err
+		return vm.ArbRollup.ConfirmInvalidCall(
+			ctx,
+			vm.Client,
+			vm.auth.auth.From,
+			vm.contractAddress,
+			deadline.Val,
+			challengeNodeData,
+			new(big.Int).SetUint64(uint64(branch)),
+			protoHash,
+			addressSliceToRaw(stakerAddresses),
+			hashSliceToRaw(stakerProofs),
+			stakerProofOffsets,
+		)
 	}
 	return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
 }

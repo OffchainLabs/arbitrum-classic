@@ -20,15 +20,56 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 )
 
 func getStack() *MessageStack {
+	msg1 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(2868),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		MessageNum: big.NewInt(1),
+	}
+
+	msg2 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(2868),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		MessageNum: big.NewInt(2),
+	}
+
+	msg3 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(2868),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		MessageNum: big.NewInt(3),
+	}
+
+	msg4 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(2868),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		MessageNum: big.NewInt(4),
+	}
+
 	messageStack := NewMessageStack()
-	messageStack.DeliverMessage(value.NewInt64Value(0))
-	messageStack.DeliverMessage(value.NewInt64Value(1))
-	messageStack.DeliverMessage(value.NewInt64Value(2))
-	messageStack.DeliverMessage(value.NewInt64Value(3))
+	messageStack.DeliverMessage(msg1)
+	messageStack.DeliverMessage(msg2)
+	messageStack.DeliverMessage(msg3)
+	messageStack.DeliverMessage(msg4)
 	return messageStack
 }
 
@@ -39,34 +80,26 @@ func TestBisection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	topHash, err := messageStack.GetHashAtIndex(big.NewInt(4))
+
+	sections, err := messageStack.GenerateBisection(bottomHash, 50, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = messageStack.GenerateBisection(bottomHash, topHash, 50)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSegmentSize(t *testing.T) {
-	messageStack := getStack()
-
-	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
-	if err != nil {
-		t.Fatal(err)
-	}
-	topHash, err := messageStack.GetHashAtIndex(big.NewInt(4))
-	if err != nil {
-		t.Fatal(err)
-	}
-	size, err := messageStack.SegmentSize(bottomHash, topHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != 4 {
-		t.Errorf("Segment starting a beginning has wrong size %v", size)
+	for i, section := range sections {
+		if section != messageStack.GetTopHash() {
+			nextVal, err := messageStack.GetHashAtIndex(big.NewInt(int64(i + 1)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			msg, err := messageStack.GenerateOneStepProof(section)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if hash2(section, msg.CommitmentHash()) != nextVal {
+				t.Error("Hashes not equal")
+			}
+		}
 	}
 }
 
@@ -75,51 +108,78 @@ func TestPendingInboxInsert(t *testing.T) {
 	if pi.newest != nil {
 		t.Error("newest of new PendingInbox should be nil")
 	}
-	pi2 := marshalUnmarshal(pi)
+	pi2, err := marshalUnmarshal(pi)
+	if err != nil {
+		t.Error(err)
+	}
 	if pi.hashOfRest != pi2.hashOfRest {
 		t.Error("marshal/unmarshal changes hash of empty pending inbox")
 	}
 
-	val1 := value.NewEmptyTuple()
-	val2 := value.NewTuple2(val1, value.NewTuple2(val1, val1))
+	msg1 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(2868),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		MessageNum: big.NewInt(38653),
+	}
 
-	pi.DeliverMessage(val1)
-	if !pi.newest.message.Equal(val1) {
+	msg2 := message.DeliveredEth{
+		Eth: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(8741),
+		},
+		BlockNum:   common.NewTimeBlocks(big.NewInt(1735)),
+		MessageNum: big.NewInt(7456),
+	}
+
+	pi.DeliverMessage(msg1)
+	if !pi.newest.message.Equals(msg1) {
 		t.Error("newest of PendingInbox wrong at val1")
 	}
-	pi2 = marshalUnmarshal(pi)
+	pi2, err = marshalUnmarshal(pi)
+	if err != nil {
+		t.Error(err)
+	}
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 
-	pi.DeliverMessage(val2)
-	if !pi.newest.message.Equal(val2) {
+	pi.DeliverMessage(msg2)
+	if !pi.newest.message.Equals(msg2) {
 		t.Error("newest of PendingInbox wrong at val2")
 	}
-	pi2 = marshalUnmarshal(pi)
+	pi2, err = marshalUnmarshal(pi)
+	if err != nil {
+		t.Error(err)
+	}
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of two-item pending inbox")
 	}
 
-	val3 := pi.ValueForSubseq(pi.hashOfRest, pi.newest.hash)
-	if val3.Hash() != pi.newest.hash {
-		t.Error("unexpected hash for extracted inbox")
-	}
-
 	pi.DiscardUpToCount(big.NewInt(0))
-	pi2 = marshalUnmarshal(pi)
+	pi2, err = marshalUnmarshal(pi)
+	if err != nil {
+		t.Error(err)
+	}
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 
 	pi.DiscardUpToCount(big.NewInt(1))
-	pi2 = marshalUnmarshal(pi)
+	pi2, err = marshalUnmarshal(pi)
+	if err != nil {
+		t.Error(err)
+	}
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 }
 
-func marshalUnmarshal(pi *PendingInbox) *MessageStack {
+func marshalUnmarshal(pi *PendingInbox) (*MessageStack, error) {
 	ctx := NewCheckpointContextImpl()
 	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }

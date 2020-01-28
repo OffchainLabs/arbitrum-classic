@@ -28,6 +28,8 @@ import (
 	"os"
 	"time"
 
+	errors2 "github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -87,12 +89,12 @@ func testChallenge(
 
 	challengeFactoryAddress, err := factory.ChallengeFactoryAddress()
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "Error gettign challenge factory address")
 	}
 
 	tester, err := client1.DeployChallengeTest(context.Background())
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "Error deploying challenge")
 	}
 
 	challengeAddress, blockId, err := tester.StartChallenge(
@@ -105,7 +107,7 @@ func testChallenge(
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "Error starting challenge")
 	}
 
 	asserterEndChan := make(chan ChallengeState)
@@ -127,7 +129,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting asserter")
+			log.Println("Restarting asserter", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -151,7 +153,7 @@ func testChallenge(
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting challenger")
+			log.Println("Restarting challenger", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -180,9 +182,9 @@ func testChallenge(
 				return nil
 			}
 		case err := <-asserterErrChan:
-			return err
+			return errors2.Wrap(err, "Asserter error")
 		case err := <-challengerErrChan:
-			return err
+			return errors2.Wrap(err, "Challenger error")
 		case <-time.After(80 * time.Second):
 			return errors.New("Challenge never completed")
 		}

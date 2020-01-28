@@ -21,7 +21,7 @@ type ValidatorProxy interface {
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
 	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*rollupvalidator.LogInfo, error)
-	CallMessage(val value.Value, sender common.Address) (value.Value, error)
+	CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -153,14 +153,11 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 	return response.Logs, nil
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, error) {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		return nil, err
-	}
+func (vp *ValidatorProxyImpl) CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error) {
 	request := &rollupvalidator.CallMessageArgs{
-		Data:   hexutil.Encode(buf.Bytes()),
-		Sender: hexutil.Encode(sender[:]),
+		ContractAddress: hexutil.Encode(contract[:]),
+		Sender:          hexutil.Encode(sender[:]),
+		Data:            hexutil.Encode(data),
 	}
 	var response rollupvalidator.CallMessageReply
 	if err := vp.doCall("CallMessage", request, &response); err != nil {
