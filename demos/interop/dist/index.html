@@ -15,7 +15,7 @@
         <![endif]-->
     </head>
     <body>
-        <div class="container" style="width: 750px;">
+        <div class="container">
             <div class="row">
                 <div class="col-lg-12">
                     <h1 class="text-center">Token Interop Demo</h1>
@@ -67,6 +67,21 @@
                             role="tabpanel"
                             aria-labelledby="eth-tab"
                         >
+                            <div
+                                class="alert alert-primary alert-dismissible collapse"
+                                role="alert"
+                                id="ETH-alert"
+                            >
+                                <span id="ETH-alert-message"></span>
+                                <button
+                                    type="button"
+                                    class="close"
+                                    data-dismiss="alert"
+                                    aria-label="Close"
+                                >
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
                             <h3>ETH Info</h3>
                             <p>
                                 User Ethereum ETH Balance:
@@ -85,7 +100,7 @@
                             </p>
                             <div>
                                 <h3>Deposit ETH</h3>
-                                <form id="depositETHform" class="form-inline">
+                                <form id="depositETHForm" class="form-inline">
                                     <div class="form-group mx-sm-2">
                                         <label
                                             for="ethDepositValue"
@@ -167,6 +182,21 @@
                             role="tabpanel"
                             aria-labelledby="erc20-tab"
                         >
+                            <div
+                                class="alert alert-primary alert-dismissible collapse"
+                                role="alert"
+                                id="ERC20-alert"
+                            >
+                                <span id="ERC20-alert-message"></span>
+                                <button
+                                    type="button"
+                                    class="close"
+                                    data-dismiss="alert"
+                                    aria-label="Close"
+                                >
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
                             <h3>ERC20 Info</h3>
                             <p>
                                 Ethereum ERC-20 Balance:
@@ -301,6 +331,21 @@
                             role="tabpanel"
                             aria-labelledby="erc721-tab"
                         >
+                            <div
+                                class="alert alert-primary alert-dismissible collapse"
+                                role="alert"
+                                id="ERC721-alert"
+                            >
+                                <span id="ERC721-alert-message"></span>
+                                <button
+                                    type="button"
+                                    class="close"
+                                    data-dismiss="alert"
+                                    aria-label="Close"
+                                >
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
                             <h3>ERC721 Info</h3>
                             <p>
                                 Ethereum ERC-721 Balance:
@@ -322,12 +367,15 @@
                                 <h3>Mint ERC-721</h3>
                                 <form id="mintERC721Form" class="form-inline">
                                     <div class="form-group mx-sm-2">
-                                        <label for="tokenId" class="sr-only">
+                                        <label
+                                            for="mintERC721Amount"
+                                            class="sr-only"
+                                        >
                                             Amount
                                         </label>
                                         <input
                                             class="form-control"
-                                            id="tokenId"
+                                            id="mintERC721Amount"
                                             placeholder="Token Id"
                                         />
                                     </div>

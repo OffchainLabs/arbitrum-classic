@@ -810,42 +810,36 @@ def process_deposit_eth_message(vm):
     set_chain_state(vm)
 
     std.sized_byterange.new(vm)
-    vm.push(6)
+    vm.push(3)
     log_func_result(vm)
 
 
-@modifies_stack([value.IntType()] * 2, [value.IntType()])
+@modifies_stack([value.IntType()], [value.IntType()])
 def process_eth_withdraw(vm):
-    # amount address
-    vm.dup1()
-    get_chain_state(vm)
-    chain_state.get("accounts")(vm)
-    account_store.get(vm)
-    # account amount address
+    # amount
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm),
+    # account amount
     vm.swap1()
     vm.dup1()
     account_state.get("balance")(vm)
-    # balance amount account address
+    # balance amount account
     vm.dup1()
     vm.dup1()
     std.comparison.gte(vm)
     vm.ifelse(
         lambda vm: [
             vm.sub(),
-            # new_balance account address
+            # new_balance account
             vm.swap1(),
             account_state.set_val("balance")(vm),
-            # account sender
-            vm.swap1(),
-            get_chain_state(vm),
-            chain_state.get("accounts")(vm),
-            account_store.set_val(vm),
-            get_chain_state(vm),
-            chain_state.set_val("accounts")(vm),
-            set_chain_state(vm),
+            # account
+            get_call_frame(vm),
+            call_frame.call_frame.set_val("account_state")(vm),
+            set_call_frame(vm),
             vm.push(1),
         ],
-        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
+        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
     )
 
 

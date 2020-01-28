@@ -74,6 +74,9 @@ def process_tx_call_message(vm):
 
 def process_deposit_eth(vm):
     vm.pop()
+    vm.dup0()
+    message.get("sender")(vm)
+    execution.setup_initial_call_frame(vm)
     os.process_deposit_eth_message(vm)
 
 

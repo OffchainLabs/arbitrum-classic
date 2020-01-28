@@ -294,6 +294,6 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 		return Invalid{ethMsg, arbMessage}, nil
 	default:
 		// Unknown type
-		return nil, errors.New("unknown return code")
+		return nil, fmt.Errorf("unknown return code %v for message %v", returnCode.BigInt(), val)
 	}
 }

@@ -68,7 +68,7 @@ class EthBridgeMessage {
 
     constructor(value: ArbValue.TupleValue) {
         this.blockNumber = (value.get(0) as ArbValue.IntValue).bignum;
-        this.txHash = (value.get(1) as ArbValue.IntValue).bignum.toHexString();
+        this.txHash = ethers.utils.hexZeroPad((value.get(1) as ArbValue.IntValue).bignum.toHexString(), 32);
         const restVal = value.get(2) as ArbValue.TupleValue;
         this.typecode = (restVal.get(0) as ArbValue.IntValue).bignum.toNumber();
         this.sender = ethers.utils.getAddress((restVal.get(1) as ArbValue.IntValue).bignum.toHexString());

@@ -42,6 +42,10 @@ function sleep(ms: number): Promise<void> {
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated';
 const EB_EVENT_CDA = 'RollupAsserted';
+const TransactionMessageDelivered = 'TransactionMessageDelivered';
+const EthDepositMessageDelivered = 'EthDepositMessageDelivered';
+const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered';
+const ERC721DepositMessageDelivered = 'ERC721DepositMessageDelivered';
 
 interface MessageResult {
     evmVal: EVMResult;
@@ -55,6 +59,27 @@ interface Message {
     data: string;
     signature: string;
     pubkey: string;
+}
+
+export enum TxType {
+    Transaction = 0,
+    DepositEth = 1,
+    DepositERC20 = 2,
+    DepositERC721 = 3,
+}
+
+export function calculateTransactionHash(
+    chain: string,
+    to: string,
+    from: string,
+    sequenceNum: ethers.utils.BigNumber,
+    value: ethers.utils.BigNumber,
+    data: string,
+): string {
+    return ethers.utils.solidityKeccak256(
+        ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
+        [TxType.Transaction, chain, to, from, sequenceNum, value, data],
+    );
 }
 
 export class ArbProvider extends ethers.providers.BaseProvider {
@@ -174,12 +199,48 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             if (!this.vmIdCache) {
                 this.vmIdCache = vmId;
             }
+            return vmId;
         }
         return this.vmIdCache;
     }
 
-    public async getMessageResult(txHash: string): Promise<MessageResult | null> {
-        const result = await this.client.getMessageResult(txHash);
+    private async getArbTxId(ethReceipt: ethers.providers.TransactionReceipt): Promise<string | null> {
+        const inboxManager = await this.globalInboxConn();
+        if (ethReceipt.logs) {
+            const logs = ethReceipt.logs.map(log => inboxManager.interface.parseLog(log));
+            for (const log of logs) {
+                if (!log) {
+                    continue;
+                }
+                if (log.name == TransactionMessageDelivered) {
+                    const vmId = await this.getVmID();
+                    return calculateTransactionHash(
+                        vmId,
+                        log.values.to,
+                        log.values.from,
+                        log.values.seqNumber,
+                        log.values.value,
+                        log.values.data,
+                    );
+                } else if (
+                    log.name == EthDepositMessageDelivered ||
+                    log.name == ERC20DepositMessageDelivered ||
+                    log.name == ERC721DepositMessageDelivered
+                ) {
+                    return ethers.utils.hexZeroPad(log.values.messageNum.toHexString(), 32);
+                }
+            }
+        }
+        return null;
+    }
+
+    public async getMessageResult(ethTxHash: string): Promise<MessageResult | null> {
+        const ethReceipt = await this.provider.waitForTransaction(ethTxHash);
+        const arbTxId = await this.getArbTxId(ethReceipt);
+        if (!arbTxId) {
+            return null;
+        }
+        const result = await this.client.getMessageResult(arbTxId);
         if (!result) {
             return null;
         }
@@ -198,8 +259,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const txHashCheck = evmVal.bridgeData.txHash;
 
         // Check txHashCheck matches txHash
-        if (txHash !== txHashCheck) {
-            throw Error('txHash did not match its queried transaction ' + txHash + ' ' + txHashCheck);
+        if (arbTxId !== txHashCheck) {
+            throw Error('txHash did not match its queried transaction ' + arbTxId + ' ' + txHashCheck);
         }
 
         // Step 1: prove that val is in logPostHash

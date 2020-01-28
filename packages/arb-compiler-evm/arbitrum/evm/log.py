@@ -23,8 +23,6 @@ INVALID_CODE = 1
 RETURN_CODE = 2
 STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
-INSUFFICIENT_BALANCE = 5
-ETH_DEPOSIT = 6
 
 
 class EVMLog:
@@ -33,7 +31,6 @@ class EVMLog:
         self.name = ""
         self.args = []
         self.contract_id = val[0]
-        print("val[1]", val[1])
         self.data = eth_utils.to_bytes(hexstr=bytestack_tohex(val[1]))
         self.event_id = val[2]
         self.topics = []
@@ -110,12 +107,6 @@ class LogMessage:
             return "ERC20_DEPOSIT"
         elif self.message_type == 3:
             return "ERC721_DEPOSIT"
-        elif self.message_type == 4:
-            return "ETH_WITHDRAWAL"
-        elif self.message_type == 5:
-            return "ERC20_WITHDRAWAL"
-        elif self.message_type == 6:
-            return "ERC721_WITHDRAWAL"
         else:
             raise Exception("Unknown function type")
 
@@ -151,7 +142,7 @@ class EVMOutput:
         self.decoded = True
 
 
-class EVMCall(EVMOutput):
+class EVMReturn(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
         self.output_bytes = eth_utils.to_bytes(hexstr=bytestack_tohex(val[2]))
@@ -160,10 +151,10 @@ class EVMCall(EVMOutput):
 
     def __repr__(self):
         if self.decoded:
-            return "EVMCall({}, {}, {})".format(
+            return "EVMReturn({}, {}, {})".format(
                 self.name, self.output_values, self.logs
             )
-        return "EVMCall({}, {}, {})".format(
+        return "EVMReturn({}, {}, {})".format(
             self.orig_message.raw_func_name(), self.output_bytes, self.logs
         )
 
@@ -238,22 +229,6 @@ class EVMInvalidSequence(EVMOutput):
         return "EVMInvalidSequence()"
 
 
-class EVMInsufficientBalance(EVMOutput):
-    def __init__(self, val):
-        super().__init__(val)
-
-    def __repr__(self):
-        return "EVMInsufficientBalance()"
-
-
-class EVMDeposit(EVMOutput):
-    def __init__(self, val):
-        super().__init__(val)
-
-    def __repr__(self):
-        return "EVMDeposit()"
-
-
 class EVMUnknownResponseError(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
@@ -264,13 +239,11 @@ class EVMUnknownResponseError(EVMOutput):
 
 
 EVM_OUTPUT_TYPES = {
-    RETURN_CODE: EVMCall,
+    RETURN_CODE: EVMReturn,
     REVERT_CODE: EVMRevert,
     INVALID_CODE: EVMInvalid,
     INVALID_SEQUENCE_CODE: EVMInvalidSequence,
-    INSUFFICIENT_BALANCE: EVMInsufficientBalance,
     STOP_CODE: EVMStop,
-    ETH_DEPOSIT: EVMDeposit,
 }
 
 

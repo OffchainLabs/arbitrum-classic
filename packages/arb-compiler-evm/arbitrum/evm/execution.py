@@ -162,8 +162,7 @@ def withdraw_eth_interrupt(vm):
     # local_exec_state
     parse_withdraw_call(vm)
     # amount dest sender
-    vm.dup2()
-    vm.dup1()
+    vm.dup0()
     os.process_eth_withdraw(vm)
     vm.ifelse(
         lambda vm: [
@@ -181,7 +180,7 @@ def withdraw_eth_interrupt(vm):
             vm.send(),
             vm.push(3),
         ],
-        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(5)],
+        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
     )
 
 
@@ -223,7 +222,7 @@ def _perform_real_call(vm, call_num):
     vm.dup2()
     local_exec_state.get("value")(vm)
     std.comparison.lte(vm)
-    vm.ifelse(lambda vm: [_execute_call(vm, call_num)], lambda vm: [vm.push(5)])
+    vm.ifelse(lambda vm: [_execute_call(vm, call_num)], lambda vm: [vm.push(0)])
 
 
 @noreturn

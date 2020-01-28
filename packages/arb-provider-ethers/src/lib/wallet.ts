@@ -25,13 +25,6 @@ import { ArbSysFactory } from './abi/ArbSysFactory';
 
 import * as ethers from 'ethers';
 
-export enum TxType {
-    Transaction = 0,
-    DepositEth = 1,
-    DepositERC20 = 2,
-    DepositERC721 = 3,
-}
-
 export class ArbWallet extends ethers.Signer {
     public client: ArbClient;
     public contracts: Map<string, Contract>;
@@ -102,16 +95,12 @@ export class ArbWallet extends ethers.Signer {
 
     public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.withdrawEth();
-
-        return await blockchainTx.wait();
+        return inboxManager.withdrawEth();
     }
 
     public async withdrawERC20(erc20: string): Promise<ethers.providers.TransactionResponse> {
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.withdrawERC20(erc20);
-
-        return await blockchainTx.wait();
+        return inboxManager.withdrawERC20(erc20);
     }
 
     public async withdrawERC721(
@@ -119,9 +108,7 @@ export class ArbWallet extends ethers.Signer {
         tokenId: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.withdrawERC721(erc721, tokenId);
-
-        return await blockchainTx.wait();
+        return inboxManager.withdrawERC721(erc721, tokenId);
     }
 
     public async depositERC20(
@@ -131,12 +118,9 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const sendValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
-        await blockchainTx.wait();
-
-        return this.wrapTransaction(TxType.DepositERC20, chain, erc20, to, sendValue);
+        const tx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
+        return this.provider._wrapTransaction(tx, tx.hash);
     }
 
     public async depositERC721(
@@ -146,114 +130,68 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const tokenValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositERC721Message(chain, to, tokenAddress, value);
-        await blockchainTx.wait();
-
-        return this.wrapTransaction(TxType.DepositERC721, chain, tokenAddress, to, tokenValue);
-    }
-
-    private async wrapTransaction(
-        messageType: TxType,
-        chain: string,
-        tokenAddress: string,
-        to: string,
-        value: ethers.utils.BigNumber,
-    ): Promise<ethers.providers.TransactionResponse> {
-        const fromAddress = await this.getAddress();
-        const args = [messageType, chain, fromAddress, to, tokenAddress, value];
-        const messageHash = ethers.utils.solidityKeccak256(
-            ['uint8', 'address', 'address', 'address', 'address', 'uint256'],
-            args,
-        );
-
-        const tx = {
-            data: '',
-            value: ethers.utils.bigNumberify(0),
-            from: fromAddress,
-            gasLimit: ethers.utils.bigNumberify(1),
-            gasPrice: ethers.utils.bigNumberify(1),
-            hash: messageHash,
-            nonce: 0,
-            to: to,
-            chainId: 1578891852042,
-        };
-        return this.provider._wrapTransaction(tx, messageHash);
+        const tx = await inboxManager.depositERC721Message(chain, to, tokenAddress, value);
+        return this.provider._wrapTransaction(tx, tx.hash);
     }
 
     public async depositETH(
         to: string,
         value: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
-        const chain = await this.provider.getVmID();
         const valueNum = ethers.utils.bigNumberify(value);
-        const fromAddress = await this.getAddress();
-
-        const args = [TxType.DepositEth, chain, to, fromAddress, value];
-        const messageHash = ethers.utils.solidityKeccak256(['uint8', 'address', 'address', 'address', 'uint256'], args);
-
+        const chain = await this.provider.getVmID();
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositEthMessage(chain, to, { value });
-
-        const tx = {
-            data: '',
-            from: fromAddress,
-            gasLimit: ethers.utils.bigNumberify(1),
-            gasPrice: ethers.utils.bigNumberify(1),
-            hash: messageHash,
-            nonce: 0,
-            to: chain,
-            value: valueNum,
-            chainId: 1578891852042,
-        };
-        return this.provider._wrapTransaction(tx, messageHash);
+        const tx = await inboxManager.depositEthMessage(chain, to, { value });
+        return this.provider._wrapTransaction(tx, tx.hash);
     }
+
+    // const vmId = await this.provider.getVmID();
+    // const valueNum = ethers.utils.bigNumberify(value);
+    // const args = [TxType.Transaction, vmId, to, from, this.seq, value, data];
+    // const messageHash = ethers.utils.solidityKeccak256(
+    //     ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
+    //     args,
+    // );
 
     public async sendTransactionMessage(
         to: string,
         value: ethers.utils.BigNumberish,
         data: string,
     ): Promise<ethers.providers.TransactionResponse> {
-        const from = await this.getAddress();
-        this.seq = this.seq.add(2);
         const vmId = await this.provider.getVmID();
+        const from = await this.getAddress();
         const valueNum = ethers.utils.bigNumberify(value);
-        const args = [TxType.Transaction, vmId, to, from, this.seq, value, data];
-        const messageHash = ethers.utils.solidityKeccak256(
-            ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
-            args,
-        );
-        const fromAddress = await this.getAddress();
-        if (this.channelMode && valueNum.eq(0)) {
-            const messageHashBytes = ethers.utils.arrayify(messageHash);
-            const sig = await this.signer.signMessage(messageHashBytes);
-            if (!this.pubkey) {
-                this.pubkey = ethers.utils.recoverPublicKey(
-                    ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
-                    sig,
-                );
-            }
-            await this.client.sendMessage(to, this.seq, value, data, sig, this.pubkey);
-        } else {
-            const inboxManager = await this.globalInboxConn();
-            const blockchainTx = await inboxManager.sendTransactionMessage(vmId, to, this.seq, valueNum, data);
+        const inboxManager = await this.globalInboxConn();
+        const tx = await inboxManager.sendTransactionMessage(vmId, to, this.seq, valueNum, data);
+        return this.provider._wrapTransaction(tx, tx.hash);
+        // this.seq = this.seq.add(2);
+        // if (this.channelMode && valueNum.eq(0)) {
+        //     let hash = calculateTransactionHash(vmId, to, from, this.seq, valueNum, data);
+        //     const messageHashBytes = ethers.utils.arrayify(hash);
+        //     const sig = await this.signer.signMessage(messageHashBytes);
+        //     if (!this.pubkey) {
+        //         this.pubkey = ethers.utils.recoverPublicKey(
+        //             ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
+        //             sig,
+        //         );
+        //     }
+        //     await this.client.sendMessage(to, this.seq, value, data, sig, this.pubkey);
+        //     const tx = {
+        //         data,
+        //         from,
+        //         gasLimit: ethers.utils.bigNumberify(1),
+        //         gasPrice: ethers.utils.bigNumberify(1),
+        //         hash,
+        //         nonce: 0,
+        //         to: vmId,
+        //         value: ethers.utils.bigNumberify(0),
+        //         chainId: 1578891852042,
+        //     };
+        //     return this.provider._wrapTransaction(tx, hash);
+        // } else {
 
-            await blockchainTx.wait();
-        }
-
-        const tx = {
-            data: data,
-            from: fromAddress,
-            gasLimit: ethers.utils.bigNumberify(1),
-            gasPrice: ethers.utils.bigNumberify(1),
-            hash: messageHash,
-            nonce: 0,
-            to: vmId,
-            value: ethers.utils.bigNumberify(0),
-            chainId: 1578891852042,
-        };
-        return this.provider._wrapTransaction(tx, messageHash);
+        // }
     }
 
     public async sendTransaction(

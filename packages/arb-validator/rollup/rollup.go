@@ -211,7 +211,7 @@ func (chain *ChainObserver) ContractAddress() common.Address {
 
 func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 	chain.RLock()
-	mach := chain.knownValidNode.machine.Clone()
+	mach := chain.calculatedValidNode.machine.Clone()
 	chain.RUnlock()
 	return mach
 }
