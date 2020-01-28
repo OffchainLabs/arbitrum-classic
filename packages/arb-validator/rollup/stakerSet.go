@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"log"
+	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -109,7 +110,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 }
 
 func (s *Staker) DebugString(prefix string) string {
-	ret := prefix + "addr:" + s.address.ShortString() + " loc:" + s.location.hash.ShortString()
+	ret := prefix + "depth:" + strconv.FormatUint(s.location.depth, 10) + " addr:" + s.address.ShortString() + " loc:" + s.location.hash.ShortString()
 	if !s.challenge.IsZero() {
 		ret = ret + " chal:" + s.challenge.ShortString()
 	}

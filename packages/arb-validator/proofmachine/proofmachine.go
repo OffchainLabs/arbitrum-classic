@@ -37,10 +37,10 @@ type Machine struct {
 
 type Connection struct {
 	osp         arbbridge.OneStepProof
-	proofbounds [2]uint32
+	proofbounds [2]uint64
 }
 
-func NewEthConnection(osp arbbridge.OneStepProof, proofbounds [2]uint32) *Connection {
+func NewEthConnection(osp arbbridge.OneStepProof, proofbounds [2]uint64) *Connection {
 	return &Connection{
 		osp:         osp,
 		proofbounds: proofbounds,
@@ -74,12 +74,12 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	return m.machine.IsBlocked(currentTime, newMessages)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
 	a := &protocol.ExecutionAssertion{}
-	totalSteps := uint32(0)
-	stepIncrease := uint32(1)
+	totalSteps := uint64(0)
+	stepIncrease := uint64(1)
 	stepsRan := 0
-	for i := uint32(0); i < maxSteps; i += stepIncrease {
+	for i := uint64(0); i < maxSteps; i += stepIncrease {
 		var proof []byte
 		var err error
 		// only marshall if we are going to validate (see below)

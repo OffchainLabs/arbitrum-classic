@@ -13,7 +13,7 @@ interface ArbRollupInterface extends Interface {
         }>;
 
         resolveChallenge: TypedFunctionDescription<{
-            encode([winner, loser]: [string, string]): string;
+            encode([winner, loser]: [string, string, BigNumberish]): string;
         }>;
 
         startChallenge: TypedFunctionDescription<{
@@ -216,10 +216,10 @@ export class ArbRollup extends Contract {
         vmParams(): Promise<{
             gracePeriodTicks: BigNumber;
             arbGasSpeedLimitPerTick: BigNumber;
-            maxExecutionSteps: number;
+            maxExecutionSteps: BigNumber;
             0: BigNumber;
             1: BigNumber;
-            2: number;
+            2: BigNumber;
         }>;
 
         pruneLeaf(
@@ -229,7 +229,12 @@ export class ArbRollup extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        resolveChallenge(winner: string, loser: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+        resolveChallenge(
+            winner: string,
+            loser: string,
+            arg2: BigNumberish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
 
         startChallenge(
             asserterAddress: string,
@@ -376,7 +381,7 @@ export class ArbRollup extends Contract {
     estimate: {
         pruneLeaf(from: Arrayish, leafProof: (Arrayish)[], latestConfirmedProof: (Arrayish)[]): Promise<BigNumber>;
 
-        resolveChallenge(winner: string, loser: string): Promise<BigNumber>;
+        resolveChallenge(winner: string, loser: string, arg2: BigNumberish): Promise<BigNumber>;
 
         startChallenge(
             asserterAddress: string,

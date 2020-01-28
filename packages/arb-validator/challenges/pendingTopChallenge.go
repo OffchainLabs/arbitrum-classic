@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"math/rand"
 
@@ -51,6 +52,7 @@ func DefendPendingTopClaim(
 	if err != nil {
 		return 0, err
 	}
+	log.Println("=======> defending pending top claim")
 
 	return defendPendingTop(
 		reorgCtx,
@@ -84,6 +86,7 @@ func ChallengePendingTopClaim(
 	if err != nil {
 		return 0, err
 	}
+	log.Println("=======> challenging pending top claim")
 	return challengePendingTop(
 		reorgCtx,
 		eventChan,
@@ -239,7 +242,7 @@ func challengePendingTop(
 					return 0, errors.New("can't find pending segment to challenge")
 				}
 			}
-			err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
+			err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), ev.ChainHashes, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}

@@ -51,7 +51,7 @@ func (c *executionChallenge) BisectAssertion(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) error {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
 	didInboxInsns := make([]bool, 0, len(assertions))
@@ -82,7 +82,20 @@ func (c *executionChallenge) BisectAssertion(
 		totalSteps,
 	)
 	if err != nil {
-		return err
+		return c.challenge.BisectAssertionCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			precondition.BeforeInbox.Hash(),
+			precondition.TimeBounds.AsIntArray(),
+			machineHashes,
+			didInboxInsns,
+			messageAccs,
+			logAccs,
+			gasses,
+			totalSteps,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "BisectAssertion")
 }
@@ -110,7 +123,23 @@ func (c *executionChallenge) OneStepProof(
 		proof,
 	)
 	if err != nil {
-		return err
+		return c.challenge.OneStepProofCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			precondition.BeforeHash,
+			precondition.BeforeInbox.Hash(),
+			precondition.TimeBounds.AsIntArray(),
+			assertion.AfterHash,
+			assertion.DidInboxInsn,
+			assertion.FirstMessageHash,
+			assertion.LastMessageHash,
+			assertion.FirstLogHash,
+			assertion.LastLogHash,
+			assertion.NumGas,
+			proof,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
@@ -120,14 +149,14 @@ func (c *executionChallenge) ChooseSegment(
 	assertionToChallenge uint16,
 	preconditions []*valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) error {
 	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
-		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), uint64(totalSteps))
+		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.ExecutionDataHash(uint32(stepCount), preconditions[i].Hash(), assertions[i].Hash()),
+			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
 	return c.bisectionChallenge.chooseSegment(

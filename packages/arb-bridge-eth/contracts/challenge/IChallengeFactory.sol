@@ -32,7 +32,7 @@ interface IChallengeFactory {
     function generateCloneAddress(
         address asserter,
         address challenger,
-        bytes32 codeHash
+        uint256 challengeType
     )
         external
         view
