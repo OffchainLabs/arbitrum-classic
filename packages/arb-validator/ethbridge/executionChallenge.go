@@ -156,7 +156,7 @@ func (c *executionChallenge) ChooseSegment(
 		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.ExecutionDataHash(uint32(stepCount), preconditions[i].Hash(), assertions[i].Hash()),
+			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
 	return c.bisectionChallenge.chooseSegment(

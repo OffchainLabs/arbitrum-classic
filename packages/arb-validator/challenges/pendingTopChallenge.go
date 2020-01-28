@@ -242,7 +242,7 @@ func challengePendingTop(
 					return 0, errors.New("can't find pending segment to challenge")
 				}
 			}
-			err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, ev.TotalLength.Uint64())
+			err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), ev.ChainHashes, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}

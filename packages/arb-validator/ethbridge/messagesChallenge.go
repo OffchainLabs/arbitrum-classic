@@ -190,13 +190,8 @@ func (c *messagesChallenge) ChooseSegment(
 ) error {
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
-<<<<<<< HEAD
 	for i := uint64(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength.Uint64())
-=======
-	for i := uint64(0); i < uint64(bisectionCount); i++ {
-		stepCount := structures.CalculateBisectionStepCount(i, uint64(bisectionCount), chainLength.Uint64())
->>>>>>> master
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.MessageChallengeDataHash(
