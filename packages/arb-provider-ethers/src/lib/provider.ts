@@ -86,22 +86,17 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public chainId: number;
     public provider: ethers.providers.JsonRpcProvider;
     public client: ArbClient;
-    public contracts: Map<string, Contract>;
 
     private arbRollupCache?: ArbRollup;
     private inboxManagerCache?: GlobalPendingInbox;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
 
-    constructor(managerUrl: string, contracts: Contract[], provider: ethers.providers.JsonRpcProvider) {
+    constructor(validatorUrl: string, provider: ethers.providers.JsonRpcProvider) {
         super(123456789);
         this.chainId = 123456789;
         this.provider = provider;
-        this.client = new ArbClient(managerUrl);
-        this.contracts = new Map<string, Contract>();
-        for (const contract of contracts) {
-            this.contracts.set(contract.address.toLowerCase(), contract);
-        }
+        this.client = new ArbClient(validatorUrl);
     }
 
     private async arbRollupConn(): Promise<ArbRollup> {
@@ -130,7 +125,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     public async getSigner(index: number): Promise<ArbWallet> {
-        const wallet = new ArbWallet(this.client, this.contracts, this.provider.getSigner(index), this, false);
+        const wallet = new ArbWallet(this.client, this.provider.getSigner(index), this, false);
         await wallet.initialize();
         return wallet;
     }

@@ -49,11 +49,9 @@ class App {
       );
     }
 
-    const contracts = require("../compiled.json");
     this.ethProvider = new ethers.providers.Web3Provider(standardProvider);
     this.arbProvider = new ArbProvider(
       "http://localhost:1235",
-      contracts,
       new ethers.providers.Web3Provider(standardProvider)
     );
     return this.initContracts();

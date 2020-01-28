@@ -27,7 +27,6 @@ import * as ethers from 'ethers';
 
 export class ArbWallet extends ethers.Signer {
     public client: ArbClient;
-    public contracts: Map<string, Contract>;
     public signer: ethers.Signer;
     public provider: ArbProvider;
     public inboxManagerCache?: GlobalPendingInbox;
@@ -35,15 +34,8 @@ export class ArbWallet extends ethers.Signer {
     public pubkey?: string;
     public channelMode: boolean;
 
-    constructor(
-        client: ArbClient,
-        contracts: Map<string, Contract>,
-        signer: ethers.Signer,
-        provider: ArbProvider,
-        channelMode: boolean,
-    ) {
+    constructor(client: ArbClient, signer: ethers.Signer, provider: ArbProvider, channelMode: boolean) {
         super();
-        this.contracts = contracts;
         this.signer = signer;
         this.provider = provider;
         this.client = client;

@@ -41,10 +41,8 @@ let App = {
       );
     }
 
-    const contracts = require("../compiled.json");
     App.provider = new ArbProvider(
       "http://localhost:1235",
-      contracts,
       new ethers.providers.Web3Provider(web3Provider)
     );
     return App.initContract();
