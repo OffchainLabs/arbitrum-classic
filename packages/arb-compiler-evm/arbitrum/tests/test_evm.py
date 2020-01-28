@@ -21,7 +21,7 @@ from arbitrum import run_vm_once, value
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 from arbitrum import messagestack
-from arbitrum.evm.log import EVMCall, EVMDeposit
+from arbitrum.evm.log import EVMReturn, EVMStop
 
 
 def make_msg_val(message):
@@ -148,7 +148,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -157,7 +157,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(parsed_out.output_values[0], code_size)
 
     def test_codesize_empty(self):
@@ -172,7 +172,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -181,7 +181,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(parsed_out.output_values[0], 0)
 
     def test_codehash_contract(self):
@@ -202,7 +202,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -211,7 +211,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(parsed_out.output_values[0], code_hash)
 
     def test_codehash_empty(self):
@@ -225,7 +225,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -234,7 +234,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(parsed_out.output_values[0], 0)
 
     def test_codecopy_contract(self):
@@ -253,7 +253,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -262,7 +262,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(
             parsed_out.output_values[0].hex(),
             hex_code[2 + offset * 2 : 2 + offset * 2 + length * 2],
@@ -281,7 +281,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -290,7 +290,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertIsInstance(parsed_out, EVMReturn)
         self.assertEqual(parsed_out.output_values[0].hex(), "0" * (length * 2))
 
     def test_balance_succeed(self):
@@ -318,7 +318,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(1, 62244)]  # type  # sender
+                        [0, 2345, contract_a.testMethod(0, 62244)]  # type  # sender
                     )
                 )
             ),
@@ -328,6 +328,6 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.logs), 2)
         parsed_out0 = output_handler(vm.logs[0])
         parsed_out1 = output_handler(vm.logs[1])
-        self.assertIsInstance(parsed_out0, EVMDeposit)
-        self.assertIsInstance(parsed_out1, EVMCall)
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMReturn)
         self.assertEqual(parsed_out1.output_values[0], 62244)
