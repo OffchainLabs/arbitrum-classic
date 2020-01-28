@@ -166,22 +166,10 @@ class App {
 
   // Listen for events emitted from the contract
   async listenForEvents() {
-    const inboxManager = await this.arbProvider.globalInboxConn();
-    inboxManager.on(
-      "ERC20DepositMessageDelivered",
-      (vmid, sender, dest, contract, value) => {
-        console.log(
-          "deposit ERC20 triggered",
-          "vmid address: " + vmid,
-          "arb address: " + dest,
-          "eth address: " + sender,
-          "token address: " + contract,
-          value,
-          event
-        );
-        this.render();
-      }
-    );
+    const arbRollup = await this.arbProvider.arbRollupConn();
+    arbRollup.on("ConfirmedAssertion", () => {
+      this.render();
+    });
 
     var accountInterval = setInterval(async () => {
       let address = await this.arbWallet.getAddress();

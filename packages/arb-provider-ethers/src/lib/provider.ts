@@ -99,7 +99,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         this.client = new ArbClient(validatorUrl);
     }
 
-    private async arbRollupConn(): Promise<ArbRollup> {
+    public async arbRollupConn(): Promise<ArbRollup> {
         if (!this.arbRollupCache) {
             const vmID = await this.client.getVmID();
             const arbRollup = ArbRollupFactory.connect(vmID, this.provider);
