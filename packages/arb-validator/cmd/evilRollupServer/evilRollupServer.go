@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -41,8 +42,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-// WARNING: This program behaves dangerously. It is designed for testing use only.
-//    If you run it in production, you'll regret it.
+const (
+	maxReorgDepth = 100
+)
 
 // Launches the rollup validator with the following command line arguments:
 // 1) Compiled Arbitrum bytecode file
@@ -103,7 +105,7 @@ func createRollupChain() {
 
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
+		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
 		MaxExecutionSteps:       250000,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
@@ -137,14 +139,13 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	stressTest := validateCmd.Bool("stresstest", false, "stresstest")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 5 {
-		return errors.New("usage: evilRollupServer validate [--rpc] [--stresstest] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <database-path>")
+		return errors.New("usage: evilRollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
 
 	// 2) Private key
@@ -172,7 +173,8 @@ func validateRollupChain() error {
 	addressString := validateCmd.Arg(3)
 	address := common.HexToAddress(addressString)
 
-	databasePath := validateCmd.Arg(4)
+	// 5) Database directory path
+	dbPath := validateCmd.Arg(4)
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
@@ -186,14 +188,26 @@ func validateRollupChain() error {
 		return err
 	}
 
-	validatorListener := rollup.NewEvil_WrongAssertionListener(address, rollupActor, rollup.WrongExecutionAssertion)
+	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), databasePath, true, client, false, *stressTest)
+	manager, err := rollupmanager.CreateManager(
+		ctx,
+		address,
+		true,
+		client,
+		rolluptest.NewEvilRollupCheckpointerFactory(
+			address,
+			validateCmd.Arg(0),
+			dbPath,
+			big.NewInt(maxReorgDepth),
+			false,
+		),
+	)
 	if err != nil {
 		return err
 	}

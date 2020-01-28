@@ -97,7 +97,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) error {
 	//machineHashes := make([][32]byte, 0, len(assertions)+1)
 	//didInboxInsns := make([]bool, 0, len(assertions))
@@ -166,7 +166,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertionToChallenge uint16,
 	preconditions []*valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) error {
 	//bisectionHashes := make([][32]byte, 0, len(assertions))
 	//for i := range assertions {

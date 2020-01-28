@@ -60,12 +60,12 @@ func MessageChallengeDataHash(
 }
 
 func ExecutionDataHash(
-	numSteps uint32,
+	numSteps uint64,
 	preconditionHash common.Hash,
 	assertionHash common.Hash,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Uint32(numSteps),
+		hashing.Uint64(numSteps),
 		hashing.Bytes32(preconditionHash),
 		hashing.Bytes32(assertionHash),
 	)

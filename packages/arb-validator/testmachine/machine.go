@@ -99,7 +99,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	return b1
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
 	a := &protocol.ExecutionAssertion{
 		AfterHash:    m.cppmachine.Hash(),
 		DidInboxInsn: false,
@@ -107,9 +107,9 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		OutMsgs:      nil,
 		Logs:         nil,
 	}
-	totalSteps := uint32(0)
-	stepIncrease := uint32(50)
-	for i := uint32(0); i < maxSteps; i += stepIncrease {
+	totalSteps := uint64(0)
+	stepIncrease := uint64(5000)
+	for i := uint64(0); i < maxSteps; i += stepIncrease {
 		steps := stepIncrease
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
@@ -141,7 +141,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		if a1.DidInboxInsn {
 			inbox = value.NewEmptyTuple()
 		}
-		if ranSteps1 < uint32(steps) {
+		if ranSteps1 < steps {
 			break
 		}
 	}

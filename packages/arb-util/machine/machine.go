@@ -22,7 +22,7 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(currentTime *common.TimeBlocks, newMessages bool) BlockReason
 
-	ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32)
+	ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64)
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
