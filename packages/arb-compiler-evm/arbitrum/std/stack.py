@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import eth_utils
+
 from ..annotation import modifies_stack
 from .. import value
 from .struct import Struct
@@ -65,5 +67,33 @@ def make_stack_type(typ):
 
 
 stack = make_stack_type(value.ValueType())
+stack_int = make_stack_type(value.IntType())
 stack_tup = make_stack_type(value.TupleType())
 stack_code = make_stack_type(value.CodePointType())
+
+bytestack = Struct("bytestack", [("size", value.IntType()), ("stack", stack_int.typ)])
+
+
+def bytestack_frombytes(data):
+    data_length = len(data)
+    if len(data) % 32 != 0:
+        data = data + b"\0" * (32 - (len(data) % 32))
+    chunks = [
+        eth_utils.big_endian_to_int(data[i : i + 32]) for i in range(0, len(data), 32)
+    ]
+    st = value.Tuple([])
+    for chunk in chunks:
+        st = value.Tuple([st, chunk])
+    return value.Tuple([data_length, st])
+
+
+def bytestack_tohex(st):
+    data = ""
+    data_length = st[0]
+    st = st[1]
+    while len(st) != 0:
+        segment = eth_utils.to_hex(st[1])[2:]
+        segment = (64 - len(segment)) * "0" + segment
+        data = segment + data
+        st = st[0]
+    return "0x" + data[: data_length * 2]

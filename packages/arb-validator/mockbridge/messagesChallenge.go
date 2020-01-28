@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -114,27 +116,39 @@ func (c *MessagesChallenge) Bisect(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProof(
+func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	topHashA common.Hash,
 	lowerHashB common.Hash,
-	topHashB common.Hash,
-	value common.Hash,
+	msg message.DeliveredTransaction,
 ) error {
-	//c.auth.Context = ctx
-	//tx, err := c.challenge.OneStepProof(
-	//	c.auth,
-	//	lowerHashA,
-	//	topHashA,
-	//	lowerHashB,
-	//	topHashB,
-	//	value,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "OneStepProof")
+	return nil
+}
+
+func (c *MessagesChallenge) OneStepProofEthMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredEth,
+) error {
+	return nil
+}
+
+func (c *MessagesChallenge) OneStepProofERC20Message(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredERC20,
+) error {
+	return nil
+}
+
+func (c *MessagesChallenge) OneStepProofERC721Message(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredERC721,
+) error {
 	return nil
 }
 

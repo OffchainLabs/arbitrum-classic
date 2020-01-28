@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,26 +18,23 @@ from ..std.struct import Struct
 from ..annotation import modifies_stack
 from ..vm import VM
 from .. import value
-from .types import (
-    contract_store,
-    contract_state,
-    message,
-    message_blockchain_data,
-    message_data,
-    local_exec_state,
-)
+from .types import ethbridge_message, message
+from .types import tx_message, tx_call_data, local_exec_state
+from .types import token_transfer_message, eth_transfer_message
 from . import call_frame
+from . import tokens
+from . import accounts
+from .accounts import account_store, account_state
 
 # Blockchain Simulator
 # inbox - global
 # storage - global per contract
 # backup_storage - global per contract
-# wallet - global per contract
+# balance - global per contract
 
 # memory - per call frame
 # message - per call frame
 # return_data - per call frame
-# sent_queue - per call frame
 # logs - per call frame
 
 global_exec_state = Struct(
@@ -46,14 +43,14 @@ global_exec_state = Struct(
         ("origin", value.IntType()),
         ("block_number", value.IntType()),
         ("txhash", value.IntType()),
-        ("current_msg", message.typ),
+        ("current_msg", ethbridge_message.typ),
     ],
 )
 
 chain_state = Struct(
     "chain_state",
     [
-        ("contracts", contract_store.typ),
+        ("accounts", account_store.typ),
         ("inbox", std.inboxctx.typ),
         ("call_frame", call_frame.typ),
         ("sender_seq", std.keyvalue_int_int.typ),
@@ -63,12 +60,16 @@ chain_state = Struct(
 )
 
 
+ERC20_TRANSFER_TYPE = 1
+ERC721_TRANSFER_TYPE = 2
+
+
 def make_global_exec_state():
     vm = VM()
     vm.push(0)
     vm.push(0)
     vm.push(0)
-    message.new(vm)
+    tx_message.new(vm)
 
     global_exec_state.new(vm)
     global_exec_state.set_val("current_msg")(vm)
@@ -78,8 +79,8 @@ def make_global_exec_state():
     return vm.stack.items[0]
 
 
-@modifies_stack([message.typ, global_exec_state.typ], [global_exec_state.typ])
-def update_global_execution_state(vm):
+@modifies_stack([ethbridge_message.typ, global_exec_state.typ], [global_exec_state.typ])
+def update_execution_state(vm):
     # msg exec_state
     vm.dup0()
     vm.auxpush()
@@ -89,10 +90,8 @@ def update_global_execution_state(vm):
     vm.swap1()
     # msg old_block_number
 
-    message.get("data")(vm)
-    vm.cast(message_blockchain_data.typ)
     vm.dup0()
-    message_blockchain_data.get("block_number")(vm)
+    ethbridge_message.get("block_number")(vm)
     # block_number msg old_block_number
 
     vm.swap1()
@@ -102,9 +101,10 @@ def update_global_execution_state(vm):
     # msg block_number
 
     # msg block_number
-    message_blockchain_data.get("txhash")(vm)
+    ethbridge_message.get("txhash")(vm)
     vm.auxpop()
     vm.dup0()
+    ethbridge_message.get("message")(vm)
     message.get("sender")(vm)
 
     # origin msg txhash block_number
@@ -153,27 +153,18 @@ def get_call_frame(vm):
     chain_state.get("call_frame")(vm)
 
 
+@modifies_stack([call_frame.typ], [])
+def set_call_frame(vm):
+    get_chain_state(vm)
+    chain_state.set_val("call_frame")(vm)
+    set_chain_state(vm)
+
+
 @modifies_stack([], [value.IntType()])
 def get_block_number(vm):
     get_chain_state(vm)
     chain_state.get("global_exec_state")(vm)
     global_exec_state.get("block_number")(vm)
-
-
-@modifies_stack(0, 0)
-def add_message_to_wallet(vm):
-    get_call_frame(vm)
-    call_frame.call_frame.get("local_exec_state")(vm)
-    vm.dup0()
-    local_exec_state.get("amount")(vm)
-    vm.swap1()
-    local_exec_state.get("type")(vm)
-    # amount type
-    get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
-    std.currency_store.add(vm)
-    set_current_wallet(vm)
 
 
 def create_initial_evm_state(contracts):
@@ -182,7 +173,6 @@ def create_initial_evm_state(contracts):
     std.keyvalue.new(vm)
     for contract in contracts:
         vm.push(contract["contractID"])
-        std.currency_store.new(vm)
 
         for storage_item in contract["storage"]:
             vm.push(contract["storage"][storage_item])
@@ -192,9 +182,18 @@ def create_initial_evm_state(contracts):
         for storage_item in contract["storage"]:
             std.keyvalue.set_val(vm)
 
-        contract_state.new(vm)
-        contract_state.set_val("storage")(vm)
-        contract_state.set_val("wallet")(vm)
+        vm.push(contract["code_hash"])
+        vm.push(contract["code_size"])
+        vm.push(contract["code_point"])
+        vm.push(contract["code"])
+        vm.push(1)
+        vm.push(accounts.make_empty_account())
+        account_state.set_val("nextSeqNum")(vm)
+        account_state.set_val("code")(vm)
+        account_state.set_val("code_point")(vm)
+        account_state.set_val("code_size")(vm)
+        account_state.set_val("code_hash")(vm)
+        account_state.set_val("storage")(vm)
         vm.swap2()
         std.keyvalue.set_val(vm)
 
@@ -205,7 +204,7 @@ def create_initial_evm_state(contracts):
     chain_state.set_val("global_exec_state")(vm)
     chain_state.set_val("sender_seq")(vm)
     chain_state.set_val("inbox")(vm)
-    chain_state.set_val("contracts")(vm)
+    chain_state.set_val("accounts")(vm)
     return vm.stack.items[0]
 
 
@@ -224,15 +223,15 @@ def _set_call_frame_member_impl(vm, field):
     set_chain_state(vm)
 
 
-def _set_contract_state_member_impl(vm, field):
+def _set_account_state_member_impl(vm, field):
     # val
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.set_val(field)(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.set_val(field)(vm)
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
-    call_frame.call_frame.set_val("contract_state")(vm)
+    call_frame.call_frame.set_val("account_state")(vm)
     get_chain_state(vm)
     chain_state.set_val("call_frame")(vm)
     set_chain_state(vm)
@@ -241,11 +240,6 @@ def _set_contract_state_member_impl(vm, field):
 @modifies_stack([std.sized_byterange.sized_byterange.typ], 0)
 def set_current_memory(vm):
     _set_call_frame_member_impl(vm, "memory")
-
-
-@modifies_stack([call_frame.sent_queue.typ], 0)
-def set_current_sent_queue(vm):
-    _set_call_frame_member_impl(vm, "sent_queue")
 
 
 @modifies_stack(std.stack.typ, 0)
@@ -260,12 +254,12 @@ def set_current_logs(vm):
 
 @modifies_stack([std.keyvalue_int_int.typ], 0)
 def set_current_storage(vm):
-    _set_contract_state_member_impl(vm, "storage")
+    _set_account_state_member_impl(vm, "storage")
 
 
-@modifies_stack([std.currency_store.typ], 0)
-def set_current_wallet(vm):
-    _set_contract_state_member_impl(vm, "wallet")
+@modifies_stack([value.IntType()], 0)
+def set_current_balance(vm):
+    _set_account_state_member_impl(vm, "balance")
 
 
 @modifies_stack(0, [std.byterange.typ])
@@ -275,52 +269,86 @@ def get_current_return_data_raw(vm):
     std.sized_byterange.sized_byterange.get("data")(vm)
 
 
-# [[data, dest, value, kind]] -> success
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def add_send_to_queue(vm):
-    vm.dup0()
-    local_exec_state.get("amount")(vm)
-    vm.dup1()
-    local_exec_state.get("type")(vm)
+@modifies_stack(0, [value.IntType()])
+def balance_get(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
-    std.currency_store.deduct(vm)
-    vm.swap1()
-    set_current_wallet(vm)
-    # [success, tup]
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("balance")(vm)
+
+
+@modifies_stack(0, [value.IntType()])
+def codesize_get(vm):
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("code_size")(vm)
+
+
+@modifies_stack(0, [std.byterange.typ])
+def code_get(vm):
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("code")(vm)
+
+
+@modifies_stack([value.IntType()], [account_state.typ])
+def get_ext_account(vm):
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    vm.dup1()
+    vm.eq()
     vm.ifelse(
         lambda vm: [
+            vm.pop(),
             get_call_frame(vm),
-            call_frame.call_frame.get("sent_queue")(vm),
-            call_frame.sent_queue.put(vm),
-            set_current_sent_queue(vm),
-            vm.push(1),
+            call_frame.call_frame.get("account_state")(vm),
         ],
-        lambda vm: [vm.pop(), vm.push(0)],
+        lambda vm: [
+            get_call_frame(vm),
+            call_frame.call_frame.get("accounts")(vm),
+            account_store.get(vm),
+        ],
     )
 
 
-@modifies_stack(1, 1)
-def balance_get(vm):
-    get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
-    std.currency_store.get_fung(vm)
-
-
-@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+@modifies_stack([value.IntType()], [value.IntType()])
 def ext_balance(vm):
-    # address token_type
-    get_call_frame(vm)
-    call_frame.call_frame.get("contracts")(vm)
-    contract_store.get(vm)
+    # address
+    get_ext_account(vm)
+    account_state.get("balance")(vm)
+
+
+@modifies_stack([], [std.byterange.typ])
+def get_code_scratch(vm):
+    get_scratch(vm)
+    vm.cast(std.byterange.typ)
+
+
+@modifies_stack([value.IntType()] * 4, [])
+def ext_codecopy(vm):
+    # address
+    get_ext_account(vm)
+    account_state.get("code")(vm)
+    set_scratch(vm)
+    evm_copy_to_memory(vm, get_code_scratch)
+
+
+@modifies_stack([value.IntType()], [value.IntType()])
+def ext_codesize(vm):
+    # address
+    get_ext_account(vm)
+    account_state.get("code_size")(vm)
+
+
+@modifies_stack([value.IntType()], [value.IntType()])
+def ext_codehash(vm):
+    # address
+    get_ext_account(vm)
     vm.dup0()
-    vm.tnewn(0)
-    vm.eq()
-    vm.ifelse(lambda vm: [vm.error()])
-    contract_state.get("wallet")(vm)
-    std.currency_store.get_fung(vm)
+    accounts.is_empty(vm)
+    vm.ifelse(
+        lambda vm: [vm.pop(), vm.push(0)],
+        lambda vm: [account_state.get("code_hash")(vm)],
+    )
 
 
 @modifies_stack([], [std.sized_byterange.sized_byterange.typ])
@@ -358,14 +386,14 @@ def message_data_copy(vm):
 def message_value(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
-    local_exec_state.get("amount")(vm)
+    local_exec_state.get("value")(vm)
 
 
 @modifies_stack(0, 1)
 def message_caller(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
-    local_exec_state.get("sender")(vm)
+    local_exec_state.get("caller")(vm)
 
 
 # [index]
@@ -414,8 +442,8 @@ def memory_store8(vm):
 @modifies_stack([value.IntType()], [value.IntType()])
 def storage_load(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("storage")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("storage")(vm)
     std.keyvalue_int_int.get(vm)
 
 
@@ -423,8 +451,8 @@ def storage_load(vm):
 @modifies_stack([value.IntType(), value.IntType()], [])
 def storage_store(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("storage")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("storage")(vm)
     std.keyvalue_int_int.set_val(vm)
     set_current_storage(vm)
 
@@ -564,6 +592,8 @@ def evm_log1(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(3)(vm)
@@ -577,6 +607,8 @@ def evm_log2(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(4)(vm)
@@ -590,6 +622,8 @@ def evm_log3(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(5)(vm)
@@ -603,23 +637,23 @@ def evm_log4(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(6)(vm)
     add_log(vm)
 
 
-# [sender, sequence_num] -> # [approved]
-@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+# [sequence_num, sender] -> # [approved]
+@modifies_stack([value.IntType()] * 2, [value.IntType()])
 def check_message_sequence(vm):
     vm.dup1()
     get_chain_state(vm)
     chain_state.get("sender_seq")(vm)
     std.keyvalue_int_int.get(vm)
-    # [current_seq, sender, seq]
+    # [current_seq, seq, sender]
     vm.swap1()
-    vm.swap2()
-    # [seq, current_seq, sender]
     vm.push(2)
     vm.dup1()
     vm.mod()
@@ -674,90 +708,280 @@ def check_message_sequence(vm):
     )
 
 
-@modifies_stack(0, [value.IntType(), local_exec_state.typ])
+@modifies_stack(0, [message.typ])
 def get_next_message(vm):
-    vm.push(value.Tuple([1, value.Tuple([])]))
-    vm.while_loop(
-        lambda vm: [vm.dup0(), vm.tgetn(0)],
-        lambda vm: [
-            vm.pop(),
-            get_chain_state(vm),
-            chain_state.get("inbox")(vm),
-            std.inboxctx.getmsg(vm),
-            vm.cast(message.typ),
-            # msg updatedctx
-            vm.swap1(),
-            get_chain_state(vm),
-            chain_state.set_val("inbox")(vm),
-            set_chain_state(vm),
-            # msg
-            get_chain_state(vm),
-            chain_state.get("global_exec_state")(vm),
-            vm.dup1(),
-            update_global_execution_state(vm),
-            get_chain_state(vm),
-            chain_state.set_val("global_exec_state")(vm),
-            set_chain_state(vm),
-            # msg
-            vm.dup0(),
-            message.get("data")(vm),
-            vm.cast(message_blockchain_data.typ),
-            message_blockchain_data.get("data")(vm),
-            vm.cast(message_data.typ),
-            message_data.get("sequence_num")(vm),
-            vm.dup1(),
-            message.get("sender")(vm),
-            check_message_sequence(vm),
-            vm.iszero(),
-            # valid_seq msg
-            std.tup.make(2)(vm),
-        ],
-    )
-    vm.tgetn(1)
-
-    # msg
-    vm.dup0()
-    message.get("data")(vm)
-    vm.cast(message_blockchain_data.typ)
-    message_blockchain_data.get("data")(vm)
-    vm.cast(message_data.typ)
-    vm.dup0()
-    # data data message
-    message_data.get("contract_id")(vm)
-    # contractID data message
+    get_chain_state(vm)
+    chain_state.get("inbox")(vm)
+    std.inboxctx.getmsg(vm)
+    # msg updatedctx
     vm.swap1()
-    message_data.get("data")(vm)
-    # calldata contractID message
-    vm.swap1()
-    vm.swap2()
-    # message calldata contractID
+    get_chain_state(vm)
+    chain_state.set_val("inbox")(vm)
+    set_chain_state(vm)
+    vm.cast(ethbridge_message.typ)
 
-    vm.dup0()
-    message.get("sender")(vm)
-    # sender message calldata contractID
+    # ethbridge_message
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
     vm.dup1()
-    message.get("amount")(vm)
-    # amount sender message calldata contractID
-    vm.swap2()
-    message.get("type")(vm)
-    # type sender amount calldata contractID
+    update_execution_state(vm)
+    get_chain_state(vm)
+    chain_state.set_val("global_exec_state")(vm)
+    set_chain_state(vm)
+    ethbridge_message.get("message")(vm)
 
+
+@modifies_stack(
+    [value.IntType(), tx_call_data.typ], [value.IntType(), local_exec_state.typ]
+)
+def tx_call_to_local_exec_state(vm):
+    # caller tx_call
+    vm.swap1()
+    vm.dup0()
+    tx_call_data.get("dest")(vm)
+    # dest tx_call caller
+    vm.swap2()
+    vm.swap1()
+    vm.dup0()
+    tx_call_data.get("value")(vm)
+    vm.swap1()
+    tx_call_data.get("data")(vm)
+    # data value caller dest
     vm.push(local_exec_state.make())
     vm.cast(local_exec_state.typ)
-    local_exec_state.set_val("type")(vm)
-    local_exec_state.set_val("sender")(vm)
-    local_exec_state.set_val("amount")(vm)
     local_exec_state.set_val("data")(vm)
+    local_exec_state.set_val("value")(vm)
+    local_exec_state.set_val("caller")(vm)
+    vm.swap1()
+    # dest local_exec_state
+
+
+@modifies_stack([message.typ], [value.TupleType()])
+def process_tx_message(vm):
+    # msg
+    vm.dup0()
+    message.get("sender")(vm)
+    vm.dup1()
+    message.get("message")(vm)
+    vm.cast(tx_message.typ)
+    tx_message.get("sequence_num")(vm)
+    # sequence_num sender message
+    check_message_sequence(vm)
+    # valid_seq msg
+    vm.ifelse(
+        lambda vm: [
+            vm.dup0(),
+            message.get("message")(vm),
+            vm.cast(tx_message.typ),
+            process_valid_tx_message(vm),
+            vm.swap1(),
+            message.get("sender")(vm),
+            std.tup.make(2)(vm),
+            # sender tx_call_data
+        ],
+        lambda vm: [vm.pop(), vm.push(value.Tuple([]))],
+    )
+
+
+@modifies_stack([tx_message.typ], [tx_call_data.typ])
+def process_valid_tx_message(vm):
+    # msg
+    vm.dup0()
+    tx_message.get("to")(vm)
+    # dest message
+    vm.dup1()
+    tx_message.get("value")(vm)
+    # value dest message
+    vm.swap2()
+    tx_message.get("data")(vm)
+    # data dest value
+    vm.cast(std.bytestack.typ)
+    std.sized_byterange.from_bytestack(vm)
+
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("data")(vm)
+    tx_call_data.set_val("dest")(vm)
+    tx_call_data.set_val("value")(vm)
+
+
+@modifies_stack([message.typ], [])
+def process_deposit_eth_message(vm):
+    message.get("message")(vm)
+    vm.cast(eth_transfer_message.typ)
+
+    vm.dup0()
+    eth_transfer_message.get("amount")(vm)
+    vm.dup1()
+    eth_transfer_message.get("dest")(vm)
+
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.get(vm)
+    # account amount eth_transfer_message
+    vm.swap1()
+    vm.dup1()
+    account_state.get("balance")(vm)
+    vm.add()
+    # new_balance account eth_transfer_message
+    vm.swap1()
+    account_state.set_val("balance")(vm)
+    # account eth_transfer_message
 
     vm.swap1()
-    # contractID message
+    eth_transfer_message.get("dest")(vm)
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.set_val(vm)
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+
+    std.sized_byterange.new(vm)
+    vm.push(3)
+    log_func_result(vm)
+
+
+@modifies_stack([value.IntType()], [value.IntType()])
+def process_eth_withdraw(vm):
+    # amount
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm),
+    # account amount
+    vm.swap1()
+    vm.dup1()
+    account_state.get("balance")(vm)
+    # balance amount account
+    vm.dup1()
+    vm.dup1()
+    std.comparison.gte(vm)
+    vm.ifelse(
+        lambda vm: [
+            vm.sub(),
+            # new_balance account
+            vm.swap1(),
+            account_state.set_val("balance")(vm),
+            # account
+            get_call_frame(vm),
+            call_frame.call_frame.set_val("account_state")(vm),
+            set_call_frame(vm),
+            vm.push(1),
+        ],
+        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
+    )
+
+
+@modifies_stack([message.typ], [tx_call_data.typ, value.IntType()])
+def process_deposit_erc20_message(vm):
+    process_deposit_token_message(vm, accounts.create_erc20)
+
+
+@modifies_stack([message.typ], [tx_call_data.typ, value.IntType()])
+def process_deposit_erc721_message(vm):
+    process_deposit_token_message(vm, accounts.create_erc721)
+
+
+def process_deposit_token_message(vm, account_create_func):
+    # message
+    vm.dup0()
+    message.get("message")(vm)
+    vm.cast(token_transfer_message.typ)
+    token_transfer_message.get("token_address")(vm)
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_create_func(vm)
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+
+    # message
+    message.get("message")(vm)
+    vm.cast(token_transfer_message.typ)
+    # token_transfer_message
+    vm.dup0()
+    token_transfer_message.get("amount")(vm)
+    # amount token_transfer_message
+    vm.dup1()
+    token_transfer_message.get("dest")(vm)
+    # address amount token_transfer_message
+    tokens.make_token_mint_message(vm)
+    # data token_transfer_message
+    vm.swap1()
+    token_transfer_message.get("token_address")(vm)
+    # token_address data
+    vm.push(0)
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("value")(vm)
+    tx_call_data.set_val("dest")(vm)
+    tx_call_data.set_val("data")(vm)
+
+    # sender is 1 for admin call
+    vm.push(1)
+    vm.swap1()
+    # tx_call_data sender
+
+
+@modifies_stack([message.typ], [tx_call_data.typ, value.IntType()])
+def process_withdraw_erc20_message(vm):
+    process_withdraw_token_message(vm, accounts.create_erc20)
+
+
+@modifies_stack([message.typ], [tx_call_data.typ, value.IntType()])
+def process_withdraw_erc721_message(vm):
+    process_withdraw_token_message(vm, accounts.create_erc721)
+
+
+def process_withdraw_token_message(vm, account_create_func):
+    # message
+    vm.dup0()
+    message.get("message")(vm)
+    vm.cast(token_transfer_message.typ)
+    token_transfer_message.get("token_address")(vm)
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_create_func(vm)
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+
+    # message
+    vm.dup0()
+    message.get("sender")(vm)
+    vm.swap1()
+    message.get("message")(vm)
+    vm.cast(token_transfer_message.typ)
+    # token_transfer_message sender
+    vm.dup0()
+    token_transfer_message.get("amount")(vm)
+    # amount token_transfer_message sender
+    vm.swap1()
+    vm.swap2()
+    tokens.make_token_burn_message(vm)
+    # data token_transfer_message
+
+    vm.swap1()
+    token_transfer_message.get("token_address")(vm)
+
+    # token_address data
+    vm.push(0)
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("value")(vm)
+    tx_call_data.set_val("dest")(vm)
+    tx_call_data.set_val("data")(vm)
+    # tx_call_data
+    vm.push(1)
+    vm.swap1()
+    # tx_call_data sender
 
 
 # [code, data]
-@modifies_stack(2, 0)
+@modifies_stack([value.IntType(), std.sized_byterange.typ], 0)
 def log_func_result(vm):
     vm.swap1()
     # [data, code]
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("logs")(vm)
     std.stack_tup.new(vm)
@@ -770,52 +994,6 @@ def log_func_result(vm):
     # [msg, logs, data, code]
     std.tup.make(4)(vm)
     vm.log()
-
-
-# []
-@modifies_stack([std.queue_tup.typ], 0)
-def send_all_in_sent_queue(vm):
-    vm.while_loop(
-        lambda vm: [
-            vm.dup0(),
-            std.queue_tup.isempty(vm),
-            vm.iszero()
-            # (queue is empty) queue
-        ],
-        lambda vm: [
-            # queue
-            std.queue_tup.get(vm),
-            vm.send(),
-        ],
-    )
-    vm.pop()
-
-
-# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
-@modifies_stack([value.TupleType([value.IntType()] * 7)], [value.IntType()])
-def is_simple_send(vm):
-    # call_info
-    vm.dup0()
-    vm.tgetn(0)
-    vm.push(2300)
-    vm.lt()
-    vm.iszero()
-    # gas<2300 call_info
-
-    vm.swap1()
-    vm.dup0()
-    vm.tgetn(4)
-    vm.push(0)
-    vm.eq()
-    # arg_size==0 call_info gas<2300
-    vm.swap1()
-
-    vm.tgetn(6)
-    vm.push(0)
-    vm.eq()
-    # return_size==0 arg_size==0 gas<2300
-    vm.bitwise_and()
-    vm.bitwise_and()
 
 
 @modifies_stack([value.TupleType([value.IntType()] * 7)], 0)
@@ -833,10 +1011,8 @@ def copy_return_data(vm):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 # send tuple is [data, dest, value, kind]
-@modifies_stack([value.TupleType([value.IntType()] * 7)], [local_exec_state.typ])
-def evm_call_to_send(vm):
-    vm.push(0)  # kind of currency
-    vm.swap1()
+@modifies_stack([value.TupleType([value.IntType()] * 7)], [tx_call_data.typ])
+def evm_call_to_tx_call_data(vm):
     vm.dup0()
     vm.tgetn(2)
     vm.swap1()
@@ -866,9 +1042,8 @@ def evm_call_to_send(vm):
     vm.swap1()
     std.tup.make(2)(vm)
     # [sized byte array, tup]
-    vm.push(local_exec_state.make())
-    vm.cast(local_exec_state.typ)
-    local_exec_state.set_val("data")(vm)
-    local_exec_state.set_val("sender")(vm)
-    local_exec_state.set_val("amount")(vm)
-    local_exec_state.set_val("type")(vm)
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("data")(vm)
+    tx_call_data.set_val("dest")(vm)
+    tx_call_data.set_val("value")(vm)

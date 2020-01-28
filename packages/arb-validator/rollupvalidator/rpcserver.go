@@ -36,7 +36,7 @@ type RPCServer struct {
 }
 
 func LaunchRPC(man *rollupmanager.Manager, port string) error {
-	server, err := NewRPCServer(man, 200000)
+	server, err := NewRPCServer(man, 20000000)
 	if err != nil {
 		return err
 	}

@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
-func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {
+func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint64) uint64 {
 	if chunkIndex == 0 {
 		return totalSteps/segmentCount + totalSteps%segmentCount
 	} else {

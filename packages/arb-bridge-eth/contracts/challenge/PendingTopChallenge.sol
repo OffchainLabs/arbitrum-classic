@@ -76,23 +76,14 @@ contract PendingTopChallenge is BisectionChallenge {
         );
     }
 
-    function oneStepProof(
-        bytes32 _lowerHash,
-        bytes32 _topHash,
-        bytes32 _value
-    )
-        public
-        asserterAction
-    {
+    function oneStepProof(bytes32 _lowerHash, bytes32 _value) public asserterAction {
         requireMatchesPrevState(
             ChallengeUtils.pendingTopHash(
                 _lowerHash,
-                _topHash,
+                Protocol.addMessageToPending(_lowerHash, _value),
                 1
             )
         );
-
-        require(Protocol.addMessageToPending(_lowerHash, _value) == _topHash, HC_OSP_PROOF);
 
         emit OneStepProofCompleted();
         _asserterWin();

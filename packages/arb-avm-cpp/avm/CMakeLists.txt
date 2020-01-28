@@ -25,7 +25,6 @@ set(LIB_HEADERS
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
-  include/avm/machinestate/messagestack.hpp
   include/avm/machinestate/blockreason.hpp
 )
 

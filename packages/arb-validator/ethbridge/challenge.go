@@ -50,8 +50,9 @@ func init() {
 type challenge struct {
 	Challenge *executionchallenge.Challenge
 
-	client *ethclient.Client
-	auth   *TransactAuth
+	client          *ethclient.Client
+	auth            *TransactAuth
+	contractAddress ethcommon.Address
 }
 
 func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challenge, error) {
@@ -60,7 +61,7 @@ func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *Tra
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 
-	return &challenge{Challenge: challengeContract, client: client, auth: auth}, nil
+	return &challenge{Challenge: challengeContract, client: client, auth: auth, contractAddress: address}, nil
 }
 
 func (c *challenge) TimeoutChallenge(ctx context.Context) error {

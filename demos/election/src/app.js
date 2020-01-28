@@ -3,7 +3,7 @@
 
 var $ = require("jquery");
 const ethers = require("ethers");
-const ArbProvider = require("arb-provider-ethers");
+const ArbProvider = require("arb-provider-ethers").ArbProvider;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
@@ -41,10 +41,8 @@ let App = {
       );
     }
 
-    const contracts = require("../compiled.json");
     App.provider = new ArbProvider(
       "http://localhost:1235",
-      contracts,
       new ethers.providers.Web3Provider(web3Provider)
     );
     return App.initContract();

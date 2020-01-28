@@ -180,20 +180,6 @@ library Value {
         );
     }
 
-    function deserializeHashOnly(
-        bytes memory data,
-        uint256 startOffset
-    )
-        internal
-        pure
-        returns(uint256 retCode, uint, HashOnly memory)
-    {
-        uint256 offset = startOffset;
-        bytes32 valHash = data.toBytes32(offset);
-        offset += 32;
-        return (0, offset, HashOnly(valHash));
-    }
-
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
         require(val.typeCode != 2, "Value must have a valid type code");
         if (val.typeCode == 0) {
@@ -286,33 +272,101 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE);
     }
 
-    function deserializeInt(bytes memory data, uint256 startOffset) internal pure returns (uint, uint256) {
-        uint256 offset = startOffset;
-        uint256 intVal = data.toUint(offset);
-        offset += 32;
-        return (offset, intVal);
+    function deserializeHashOnly(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            HashOnly memory
+        )
+    {
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, HashOnly(0));
+        }
+        return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
     }
 
-    function deserializeCodePoint(bytes memory data, uint256 startOffset) internal pure returns (uint, CodePoint memory) {
+    function deserializeInt(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256 // val
+        )
+    {
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, 0);
+        }
+        return (true, startOffset + 32, data.toUint(startOffset));
+    }
+
+    function deserializeCheckedInt(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256 // val
+        )
+    {
+        uint256 totalLength = data.length;
+        if (
+            totalLength < startOffset ||
+            totalLength - startOffset < 33 ||
+            uint8(data[startOffset]) != INT_TYPECODE
+        ) {
+            return (false, startOffset, 0);
+        }
+        return (true, startOffset + 33, data.toUint(startOffset + 1));
+    }
+
+
+
+    function deserializeCodePoint(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            CodePoint memory // val
+        ) {
         uint256 offset = startOffset;
         uint8 immediateType = uint8(data[offset]);
-        offset ++;
+        offset++;
         uint8 opCode = uint8(data[offset]);
         offset++;
         bytes32 immediateVal;
         if (immediateType == 1) {
-            uint256 valid;
+            bool valid;
             Data memory value;
             (valid, offset, value) = deserialize(data, offset);
-            require(valid == 0, "Marshalled value must be valid");
+            if (!valid) {
+                return (false, startOffset, CodePoint(0, 0, false, 0));
+            }
             immediateVal = value.hash().hash;
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
-            return (offset, CodePoint(opCode, nextHash, true, immediateVal));
+            return (true, offset, CodePoint(opCode, nextHash, true, immediateVal));
         }
-        return (offset, CodePoint(opCode, nextHash, false, 0));
+        return (true, offset, CodePoint(opCode, nextHash, false, 0));
     }
 
     function deserializeTuple(
@@ -322,18 +376,22 @@ library Value {
     )
         internal
         pure
-        returns (uint, uint, Data[] memory)
+        returns (
+            bool, // valid
+            uint, // offset
+            Data[] memory // val
+        )
     {
         uint256 offset = startOffset;
-        uint256 retVal;
+        bool valid;
         Data[] memory members = new Data[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (retVal, offset, members[i]) = deserialize(data, offset);
-            if (retVal != 0) {
-                return (retVal, offset, members);
+            (valid, offset, members[i]) = deserialize(data, offset);
+            if (!valid) {
+                return (false, startOffset, members);
             }
         }
-        return (0, offset, members);
+        return (true, offset, members);
     }
 
     function deserialize(
@@ -342,121 +400,286 @@ library Value {
     )
         internal
         pure
-        returns(uint256 retCode, uint, Data memory)
+        returns(
+            bool, // valid
+            uint, // offset
+            Data memory // val
+        )
     {
-        require(startOffset < data.length, "Data offset out of bounds");
+        if(startOffset >= data.length) {
+            return (false, startOffset, newInt(0));
+        }
+        bool valid;
         uint256 offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
         CodePoint memory cpVal;
         if (valType == INT_TYPECODE) {
-            (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newInt(intVal));
+            (valid, offset, intVal) = deserializeInt(data, offset);
+            return (valid, offset, newInt(intVal));
         } else if (valType == CODE_POINT_TYPECODE) {
-            (offset, cpVal) = deserializeCodePoint(data, offset);
-            return (0, offset, newCodePoint(cpVal));
+            (valid, offset, cpVal) = deserializeCodePoint(data, offset);
+            return (valid, offset, newCodePoint(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
-            (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newHashOnly(bytes32(intVal)));
+            (valid, offset, intVal) = deserializeInt(data, offset);
+            return (valid, offset, newHashOnly(bytes32(intVal)));
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;
-            uint256 valid;
             (valid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
             return (valid, offset, newTuple(tupleVal));
         }
-        return (10000 + uint(valType), 0, newInt(0));
+        return (false, 0, newInt(0));
     }
 
-    function deserializeValidHashed(bytes memory data, uint256 offset) internal pure returns(uint, bytes32) {
-        uint256 valid;
-        uint256 newOffset;
-        Data memory value;
-        (valid, newOffset, value) = deserialize(data, offset);
-        require(valid == 0, "Marshalled value must be valid");
-        return (newOffset, value.hash().hash);
-    }
-
-    function getNextValid(bytes memory data, uint256 offset) internal pure returns(uint, bytes memory) {
-        uint256 valid;
-        uint256 nextOffset;
-        Data memory value;
-        (valid, nextOffset, value) = deserialize(data, offset);
-        require(valid == 0, "Marshalled value must be valid");
-        return (nextOffset, data.slice(offset, nextOffset - offset));
-    }
-
-    function deserializeHashed(bytes memory data) internal pure returns (bytes32) {
-        uint256 valid;
-        uint256 offset = 0;
-        Data memory value;
-        (valid, offset, value) = deserialize(data, 0);
-        require(valid == 0, "Marshalled value must be valid");
-        return value.hash().hash;
-    }
-
-    function deserializeMessage(
+    function deserializeHashed(
         bytes memory data,
         uint256 startOffset
     )
         internal
         pure
         returns(
+            bool, // valid
+            uint256, // offset
+            bytes32 // valHash
+        )
+    {
+        (bool valid, uint256 offset, Data memory value) = deserialize(data, startOffset);
+        if (!valid) {
+            return (false, startOffset, 0);
+        }
+        return (true, offset, value.hash().hash);
+    }
+
+    function getNextValid(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset,
+            bytes memory // dataSlice
+        )
+    {
+        (bool valid, uint256 offset,) = deserialize(data, startOffset);
+        if (!valid) {
+            return (false, startOffset, new bytes(0));
+        }
+        return (true, offset, data.slice(startOffset, offset - startOffset));
+    }
+
+    function deserializeMessageData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            uint256, // msgType
+            address // sender
+        )
+    {
+        bool valid;
+        uint256 msgType;
+        uint256 senderRaw;
+        uint256 offset = startOffset;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+
+        if(valType != TUPLE_TYPECODE + 3) {
+            return (false, startOffset, 0, address(0));
+        }
+
+        (valid, offset, msgType) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, 0, address(0));
+        }
+
+        (valid, offset, senderRaw) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, 0, address(0));
+        }
+
+        return (
+            true,
+            offset,
+            msgType,
+            address(uint160((senderRaw)))
+        );
+    }
+
+    function getTransactionMsgData(
+        bytes memory data
+    )
+        internal
+        pure
+        returns(
             bool valid,
-            uint256 offset,
-            bytes32 messageHash,
+            uint256 vmAddress,
             uint256 destination,
+            uint256 seqNumber,
             uint256 value,
-            uint256 tokenType,
             bytes memory messageData
         )
     {
-        bytes32 messageDataHash;
-        offset = startOffset;
+        uint offset = 0;
         uint8 valType = uint8(data[offset]);
         offset++;
-        if (valType != TUPLE_TYPECODE + 4) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+
+        if(valType == TUPLE_TYPECODE + 4){
+
+            (valid, offset, destination) = deserializeCheckedInt(data, offset);
+
+            (valid, offset, seqNumber) = deserializeCheckedInt(data, offset);
+
+            (valid, offset, value) = deserializeCheckedInt(data, offset);
+
+            // fix incorrect
+            bytes32 messageDataHash;
+            (valid, offset, messageDataHash) = deserializeHashed(data, offset);
+            messageData = data.slice(1, offset - 1);// fix incorrect
+
+            valid = true;
         }
 
-        (offset, messageDataHash) = deserializeValidHashed(data, offset);
-        messageData = data.slice(startOffset + 1, offset - startOffset - 1);
+        return (valid,vmAddress,destination, seqNumber, value, messageData);
+    }
 
-        valType = uint8(data[offset]);
+    function getEthMsgData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            address, // destination
+            uint256 // value
+        )
+    {
+        bool valid;
+        uint256 destRaw;
+        uint256 value;
+        uint offset = startOffset;
+        uint8 valType = uint8(data[offset]);
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (destination, offset) = deserializeInt(data, offset);
 
-        valType = uint8(data[offset]);
+        if(valType != TUPLE_TYPECODE + 2) {
+            return (false, startOffset, address(0), 0);
+        }
+
+        (valid, offset, destRaw) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), 0);
+        }
+
+        (valid, offset, value) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), 0);
+        }
+
+        return (
+            true,
+            offset,
+            address(uint160((destRaw))),
+            value
+        );
+    }
+
+    function getERCTokenMsgData(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            address, // tokenAddress
+            address, // destination
+            uint256 // value
+        )
+    {
+        bool valid;
+        uint256 tokenAddressRaw;
+        uint256 destRaw;
+        uint256 value;
+        uint offset = startOffset;
+        uint8 valType = uint8(data[offset]);
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+
+        if(valType != TUPLE_TYPECODE + 3) {
+            return (false, startOffset, address(0), address(0), 0);
         }
-        (value, offset) = deserializeInt(data, offset);
 
-        valType = uint8(data[offset]);
-        offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        (valid, offset, tokenAddressRaw) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
         }
-        (tokenType, offset) = deserializeInt(data, offset);
 
-        valid = true;
+        (valid, offset, destRaw) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
+        }
 
-        bytes32[] memory hashes = new bytes32[](4);
-        hashes[0] = messageDataHash;
-        hashes[1] = hashInt(destination);
-        hashes[2] = hashInt(value);
-        hashes[3] = hashInt(tokenType);
-        messageHash = hashTuple(hashes);
+        (valid, offset, value) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, address(0), address(0), 0);
+        }
 
-        return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        return (
+            true,
+            offset,
+            address(uint160((tokenAddressRaw))),
+            address(uint160((destRaw))),
+            value
+        );
+    }
+
+    function bytesToBytestackHash(bytes memory data) internal pure returns (bytes32) {
+        uint dataLength = data.length;
+        uint wholeChunkCount = dataLength / 32;
+        uint chunkCount = (dataLength + 31) / 32;
+
+        // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
+        bytes32 stackHash = hashEmptyTuple();
+        for (uint i = 0; i < wholeChunkCount; i++) {
+            stackHash = hashTuple([
+                newHashOnly(stackHash),
+                newInt(data.toUint(i * 32))
+            ]);
+        }
+        if (wholeChunkCount < chunkCount) {
+            uint lastVal = data.toUint(dataLength - 32);
+            lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
+            stackHash = hashTuple([
+                newHashOnly(stackHash),
+                newInt(lastVal)
+            ]);
+        }
+
+        return hashTuple([
+            newInt(dataLength),
+            newHashOnly(stackHash)
+        ]);
+    }
+
+    function bytestackToBytes(bytes memory data) internal pure returns (bytes memory) {
+        uint byteCount = data.toUint(2);
+        uint chunkCount = (byteCount + 31) / 32;
+
+        bytes32[] memory chunks = new bytes32[](chunkCount);
+        uint offset = 35;
+        for (uint i = 0; i < chunkCount; i++) {
+            chunks[i] = data.toBytes32(offset + 2);
+            offset += 34;
+        }
+        return abi.encodePacked(chunks).slice(0, byteCount);
     }
 }

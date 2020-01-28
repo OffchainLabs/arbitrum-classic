@@ -57,11 +57,11 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valp
 	m := ad.initState.Clone()
 
 	pre := ad.precondition
-	for i := uint32(0); i < slices; i++ {
-		steps := structures.CalculateBisectionStepCount(uint32(i), slices, nsteps)
+	for i := uint64(0); i < uint64(slices); i++ {
+		steps := structures.CalculateBisectionStepCount(i, uint64(slices), uint64(nsteps))
 		initState := m.Clone()
 
-		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+		assertion, numSteps := m.ExecuteAssertion(uint32(steps), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
@@ -84,17 +84,17 @@ func ChooseAssertionToChallenge(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) (uint16, machine.Machine, error) {
-	assertionCount := uint32(len(assertions))
+	assertionCount := uint64(len(assertions))
 	for i := range assertions {
-		steps := structures.CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
+		steps := structures.CalculateBisectionStepCount(uint64(i), assertionCount, uint64(totalSteps))
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
-			steps,
+			uint32(steps),
 			pre.TimeBounds,
 			pre.BeforeInbox.(value.TupleValue),
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
-		if numSteps != steps || !stub.Equals(assertions[i]) {
+		if uint64(numSteps) != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
 		pre = pre.GeneratePostcondition(stub)
