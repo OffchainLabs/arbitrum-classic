@@ -56,7 +56,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
-	proofbounds := [2]uint32{0, 10000}
+	proofbounds := [2]uint64{0, 10000}
 	return NewEthConnection(connectionInfo.OneStepProofAddress(), ethURL, proofbounds)
 }
 
@@ -73,7 +73,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	}
 
 	timeBounds := &protocol.TimeBoundsBlocks{common.NewTimeBlocks(big.NewInt(0)), common.NewTimeBlocks(big.NewInt(10000))}
-	steps := uint32(100000)
+	steps := uint64(100000)
 	cont := true
 
 	for cont {
