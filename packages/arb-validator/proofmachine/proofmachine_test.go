@@ -18,12 +18,9 @@ package proofmachine
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -37,26 +34,13 @@ import (
 )
 
 func setupTestValidateProof(t *testing.T) (*Connection, error) {
-	var connectionInfo ethbridge.ArbAddresses
-
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
 	ethURL := test.GetEthUrl()
 
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
 	fmt.Println("seed", seed)
 	rand.Seed(seed)
-	jsonFile, err := os.Open(bridge_eth_addresses)
-	if err != nil {
-		t.Fatal(err)
-	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
-		t.Fatal(err)
-	}
+
 	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
 	if err != nil {
 		t.Fatal(err)
