@@ -64,7 +64,7 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
-func Unmarshal(msgType MessageType, v value.Value) (DeliveredMessage, error) {
+func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (DeliveredMessage, error) {
 	switch msgType {
 	case TransactionType:
 		return UnmarshalTransactionFromCheckpoint(v)

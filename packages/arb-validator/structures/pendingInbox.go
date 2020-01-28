@@ -174,7 +174,7 @@ func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) (*Messag
 	ret.hashOfRest = buf.HashOfRest.Unmarshal()
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
 		val := ctx.GetValue(buf.Items[i].ValHash.Unmarshal())
-		msg, err := message.Unmarshal(message.MessageType(buf.Items[i].ValType), val)
+		msg, err := message.UnmarshalFromCheckpoint(message.MessageType(buf.Items[i].ValType), val)
 		if err != nil {
 			return nil, err
 		}
