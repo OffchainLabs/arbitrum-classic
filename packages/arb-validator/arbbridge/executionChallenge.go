@@ -29,7 +29,7 @@ type ExecutionChallenge interface {
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
 		assertions []*valprotocol.ExecutionAssertionStub,
-		totalSteps uint32,
+		totalSteps uint64,
 	) error
 
 	OneStepProof(
@@ -44,7 +44,7 @@ type ExecutionChallenge interface {
 		assertionToChallenge uint16,
 		preconditions []*valprotocol.Precondition,
 		assertions []*valprotocol.ExecutionAssertionStub,
-		totalSteps uint32,
+		totalSteps uint64,
 	) error
 }
 

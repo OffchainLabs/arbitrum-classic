@@ -114,7 +114,6 @@ func (c *PendingTopChallenge) Bisect(
 func (c *PendingTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	topHashA common.Hash,
 	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
@@ -135,7 +134,7 @@ func (c *PendingTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
-	chainLength uint32,
+	chainLength uint64,
 ) error {
 	return nil
 }

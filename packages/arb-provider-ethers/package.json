@@ -20,11 +20,11 @@
         "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
         "preversion": "npm run lint",
         "shrinkABI": "node shrinkABI.js && yarn run prettier src/lib/ArbChain.json src/lib/ArbChannel.json src/lib/GlobalPendingInbox.json --write",
-        "build": "tsc && cp src/lib/index.d.ts src/lib/ArbRollup.d.ts src/lib/GlobalPendingInbox.d.ts dist/lib/",
+        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
         "lint": "eslint . src/**/*.ts tests/**/*.ts",
-        "update-abi": "typechain --target=ethers --outDir src/lib '../arb-bridge-eth/build/contracts/{ArbRollup,GlobalPendingInbox}.json'"
+        "update-abi": "./scripts/update-abi"
     },
     "dependencies": {
         "@types/node-fetch": "^2.5.0",

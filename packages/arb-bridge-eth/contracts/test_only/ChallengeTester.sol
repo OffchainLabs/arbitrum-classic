@@ -20,10 +20,26 @@ import "../challenge/IChallengeFactory.sol";
 
 contract ChallengeTester {
 
-    function resolveChallenge(address payable winner, address loser) external {}
+    event ChallengeInfo(
+        address challengeTemplate,
+        uint256 nonce,
+        bytes32 codeHash,
+        address cloneAddress
+    );
+
+    IChallengeFactory challengeFactory;
+
+    constructor(address challengeFactory_) public {
+        challengeFactory = IChallengeFactory(challengeFactory_);
+    }
+
+    function resolveChallenge(address payable winner, address loser, uint256 challengeType) external view {
+        // address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, challengeType);
+        // address challengeContract2 = challengeFactory.generateCloneAddress(address(loser), winner, challengeType);
+        // require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, "Challenge not completed by proper sender");
+    }
 
     function startChallenge(
-        address challengeFactory,
         address payable asserterAddress,
         address payable challengerAddress,
         uint128 challengerPeriodTicks,
@@ -32,7 +48,7 @@ contract ChallengeTester {
     )
         public
     {
-        IChallengeFactory(challengeFactory).createChallenge(
+        challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
             challengerPeriodTicks,

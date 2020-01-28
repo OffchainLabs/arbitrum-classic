@@ -224,7 +224,14 @@ func (lis *ValidatorChainListener) StakeCreated(ctx context.Context, chain *Chai
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityAny(staker)
 		if opp != nil {
-			go lis.initiateChallenge(ctx, opp)
+			go func() {
+				err := lis.initiateChallenge(ctx, opp)
+				if err != nil {
+					log.Println("Failed to initiate challenge", err)
+				} else {
+					log.Println("Successfully initiated challenge")
+				}
+			}()
 		}
 	} else {
 		lis.challengeStakerIfPossible(ctx, chain, ev.Staker)
@@ -248,27 +255,41 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 
 	// Search for an already staked staking key
-	for myAddr, _ := range lis.stakingKeys {
+	for myAddr := range lis.stakingKeys {
 		meAsStaker := chain.nodeGraph.stakers.Get(myAddr)
 		if meAsStaker == nil {
 			continue
 		}
 		opp := chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
 		if opp != nil {
-			go lis.initiateChallenge(ctx, opp)
+			go func() {
+				err := lis.initiateChallenge(ctx, opp)
+				if err != nil {
+					log.Println("Failed to initiate challenge", err)
+				} else {
+					log.Println("Successfully initiated challenge")
+				}
+			}()
 			return
 		}
 	}
 	opp := chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 	if opp != nil {
-		go lis.initiateChallenge(ctx, opp)
+		go func() {
+			err := lis.initiateChallenge(ctx, opp)
+			if err != nil {
+				log.Println("Failed to initiate challenge", err)
+			} else {
+				log.Println("Successfully initiated challenge")
+			}
+		}()
 		return
 	}
 }
 
 // All functions below are either only called if you have a stake down, or don't require a stake
 
-func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, asserterAncestor *Node) {
 	// Must already be staked to be challenged
 	startBlockId := ev.BlockId
 	startLogIndex := ev.LogIndex - 1
@@ -276,42 +297,67 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go challenges.DefendPendingTopClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.MaxPendingTop,
-				100,
-			)
+			go func() {
+				res, err := challenges.DefendPendingTopClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					new(big.Int).Sub(
+						conflictNode.disputable.MaxPendingCount,
+						new(big.Int).Add(conflictNode.prev.vmProtoData.PendingCount, conflictNode.disputable.AssertionParams.ImportedMessageCount),
+					),
+					100,
+				)
+				if err != nil {
+					log.Println("Failed defending pending top claim", err)
+				} else {
+					log.Println("Completed defending pending top claim", res)
+				}
+			}()
 		case structures.InvalidMessagesChildType:
-			go challenges.DefendMessagesClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-				conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-				100,
-			)
+			go func() {
+				res, err := challenges.DefendMessagesClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.vmProtoData.PendingTop,
+					conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					100,
+				)
+				if err != nil {
+					log.Println("Failed defending messages claim", err)
+				} else {
+					log.Println("Completed defending messages claim", res)
+				}
+			}()
 		case structures.InvalidExecutionChildType:
-			go challenges.DefendExecutionClaim(
-				ctx,
-				asserterKey.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.executionPrecondition(conflictNode),
-				conflictNode.machine,
-				conflictNode.disputable.AssertionParams.NumSteps,
-				50,
-			)
+			go func() {
+				res, err := challenges.DefendExecutionClaim(
+					ctx,
+					asserterKey.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.executionPrecondition(conflictNode),
+					conflictNode.prev.machine,
+					conflictNode.disputable.AssertionParams.NumSteps,
+					50,
+				)
+				if err != nil {
+					log.Println("Failed defending execution claim", err)
+				} else {
+					log.Println("Completed defending execution claim", res)
+				}
+			}()
+		default:
+			log.Fatal("unexpected challenge type")
 		}
 	}
 
@@ -319,36 +365,61 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go challenges.ChallengePendingTopClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-			)
+			go func() {
+				res, err := challenges.ChallengePendingTopClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					false,
+				)
+				if err != nil {
+					log.Println("Failed challenging pending top claim", err)
+				} else {
+					log.Println("Completed challenging pending top claim", res)
+				}
+			}()
 		case structures.InvalidMessagesChildType:
-			go challenges.ChallengeMessagesClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.pendingInbox.MessageStack,
-				conflictNode.vmProtoData.PendingTop,
-				conflictNode.disputable.AssertionClaim.AfterPendingTop,
-			)
+			go func() {
+				res, err := challenges.ChallengeMessagesClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.pendingInbox.MessageStack,
+					conflictNode.vmProtoData.PendingTop,
+					conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					false,
+				)
+				if err != nil {
+					log.Println("Failed challenging messages claim", err)
+				} else {
+					log.Println("Completed challenging messages claim", res)
+				}
+			}()
 		case structures.InvalidExecutionChildType:
-			go challenges.ChallengeExecutionClaim(
-				ctx,
-				challenger.client,
-				ev.ChallengeContract,
-				startBlockId,
-				startLogIndex,
-				chain.executionPrecondition(conflictNode),
-				conflictNode.machine,
-				false,
-			)
+			go func() {
+				res, err := challenges.ChallengeExecutionClaim(
+					ctx,
+					challenger.client,
+					ev.ChallengeContract,
+					startBlockId,
+					startLogIndex,
+					chain.executionPrecondition(conflictNode),
+					conflictNode.prev.machine,
+					false,
+				)
+				if err != nil {
+					log.Println("Failed challenging execution claim", err)
+				} else {
+					log.Println("Completed challenging execution claim", res)
+				}
+			}()
+		default:
+			log.Fatal("unexpected challenge type")
 		}
 	}
 }
@@ -370,13 +441,16 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmValidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
+	lis.Lock()
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
 	if alreadySent {
+		lis.Unlock()
 		return
 	}
 	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.Unlock()
 	go func() {
-		lis.actor.ConfirmValid(
+		err := lis.actor.ConfirmValid(
 			ctx,
 			conf.deadlineTicks,
 			conf.messages,
@@ -386,19 +460,28 @@ func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, obs
 			conf.stakerProofs,
 			conf.stakerProofOffsets,
 		)
+		if err != nil {
+			log.Println("Failed to confirm valid node", err)
+			lis.Lock()
+			delete(lis.broadcastConfirmations, conf.nodeHash)
+			lis.Unlock()
+		}
 	}()
 }
 
 func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmInvalidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
+	lis.Lock()
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
 	if alreadySent {
+		lis.Unlock()
 		return
 	}
 	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.Unlock()
 	go func() {
-		lis.actor.ConfirmInvalid(
+		err := lis.actor.ConfirmInvalid(
 			ctx,
 			conf.deadlineTicks,
 			conf.challengeNodeData,
@@ -408,6 +491,12 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, o
 			conf.stakerProofs,
 			conf.stakerProofOffsets,
 		)
+		if err != nil {
+			log.Println("Failed to confirm invalid node", err)
+			lis.Lock()
+			delete(lis.broadcastConfirmations, conf.nodeHash)
+			lis.Unlock()
+		}
 	}()
 }
 
@@ -462,6 +551,9 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *Chai
 func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
 	for stakingAddress, _ := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
+		if staker == nil {
+			continue
+		}
 		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
 		if newValidNode.depth > staker.location.depth {
 			proof1 := GeneratePathProof(staker.location, newValidNode)

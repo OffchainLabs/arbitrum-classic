@@ -38,6 +38,22 @@ var replayTimeout = time.Second
 
 var challengeNoEvents = errors.New("challenge event channel terminated unexpectedly")
 
+func getSegmentCount(count, segments, index uint64) uint64 {
+	if index == 0 {
+		return count/segments + count%segments
+	} else {
+		return count / segments
+	}
+}
+
+func getSegmentStart(count, segments, index uint64) uint64 {
+	start := uint64(0)
+	for i := uint64(0); i < index; i++ {
+		start += getSegmentCount(count, segments, 0)
+	}
+	return start
+}
+
 func getAfterState(event arbbridge.Event) ChallengeState {
 	switch event.(type) {
 	case arbbridge.AsserterTimeoutEvent:

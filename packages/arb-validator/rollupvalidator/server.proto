@@ -70,8 +70,9 @@ message GetVMInfoReply {
 }
 
 message CallMessageArgs {
-    string data = 1;
+    string contractAddress = 1;
     string sender = 2;
+    string data = 3;
 }
 
 message CallMessageReply {

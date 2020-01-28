@@ -38,10 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-const (
-	maxReorgDepth = 100
-)
-
 type Manager struct {
 	sync.Mutex
 	RollupAddress common.Address
@@ -50,32 +46,28 @@ type Manager struct {
 
 	listenerAddChan chan rollup.ChainListener
 	actionChan      chan func(*rollup.ChainObserver)
+	ckpFac          checkpointing.RollupCheckpointerFactory
 }
 
 func CreateManager(
 	ctx context.Context,
 	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
-	databasePath string,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
-	forceFreshStart bool,
-	stressTest bool,
+	ckpFac checkpointing.RollupCheckpointerFactory,
 ) (*Manager, error) {
-	if stressTest {
-		clnt = NewStressTestClient(clnt, 10*time.Second)
-	}
 	man := &Manager{
 		RollupAddress:   rollupAddr,
 		client:          clnt,
 		listenerAddChan: make(chan rollup.ChainListener, 10),
 		actionChan:      make(chan func(*rollup.ChainObserver), 10),
+		ckpFac:          ckpFac,
 	}
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := checkpointing.NewRollupCheckpointerImpl(runCtx, rollupAddr, arbitrumCodeFilePath, databasePath, forceFreshStart, big.NewInt(maxReorgDepth))
+			checkpointer := man.ckpFac.New(runCtx)
 
 			var chain *rollup.ChainObserver
 
@@ -93,7 +85,10 @@ func CreateManager(
 				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 					log.Fatal(err)
 				}
-				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+				chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+				if err != nil {
+					log.Fatal(err)
+				}
 			} else {
 				params, err := watcher.GetParams(ctx)
 				if err != nil {
@@ -201,10 +196,10 @@ func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.Unlock()
 }
 
-func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*protocol.ExecutionAssertion, uint32) {
+func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint64) (*protocol.ExecutionAssertion, uint64) {
 	retChan := make(chan struct {
 		*protocol.ExecutionAssertion
-		uint32
+		uint64
 	}, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		mach := chain.LatestKnownValidMachine()
@@ -214,12 +209,12 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*pr
 			assertion, numSteps := mach.ExecuteAssertion(maxSteps, timeBounds, messages)
 			retChan <- struct {
 				*protocol.ExecutionAssertion
-				uint32
+				uint64
 			}{assertion, numSteps}
 		}()
 	}
 	ret := <-retChan
-	return ret.ExecutionAssertion, ret.uint32
+	return ret.ExecutionAssertion, ret.uint64
 }
 
 func (man *Manager) CurrentBlockId() *structures.BlockId {

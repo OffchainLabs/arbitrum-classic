@@ -1,0 +1,37 @@
+{
+  "name": "interop",
+  "version": "0.1.0",
+  "description": "Demonstration of Arbitrum Interoperability",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "build": "webpack",
+    "start": "webpack-dev-server --open",
+    "dev": "webpack-dev-server --open",
+    "watch": "webpack --watch"
+  },
+  "devDependencies": {
+    "css-loader": "^3.2.0",
+    "file-loader": "^4.2.0",
+    "style-loader": "^1.0.0",
+    "svg-inline-loader": "^0.8.0",
+    "truffle": "^5.0.31",
+    "webpack": "~4.35.2",
+    "webpack-cli": "~3.3.5",
+    "webpack-dev-server": "~3.7.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.4.0",
+    "arb-provider-truffle": "^0.2.0",
+    "arb-provider-ethers": "^0.2.0",
+    "bootstrap": "^4.4.1",
+    "ethers": "4.0.33",
+    "jquery": "^3.4.1"
+  },
+  "workspaces": {
+    "nohoist": [
+      "@openzeppelin/contracts"
+    ]
+  }
+}

@@ -54,13 +54,7 @@ let App = {
       web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
     }
 
-    const contracts = require("../compiled.json");
-
-    let provider = await ArbProvider(
-      "http://localhost:1235",
-      contracts,
-      web3Provider
-    );
+    let provider = await ArbProvider("http://localhost:1235", web3Provider);
     App.web3 = new Web3(provider); // eslint-disable-line require-atomic-updates
 
     return App.initContract();

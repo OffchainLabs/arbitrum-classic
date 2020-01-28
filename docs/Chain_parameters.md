@@ -24,7 +24,7 @@ but making it too big risks overwhelming validators who can't keep up.
 For executing in a production-like setting, we suggest the following parameters:
 * stake requirement:  2% of total value at stake in your ArbChain
 * grace period: 180 minutes
-* max execution steps: 100,000,000
+* max execution steps: 1,000,000,000
 * speed limit: 100,000,000 ArbGas per second
 
 (We say "production-like setting" because we do not recommend use of the Arbitrum Rollup beta release for true
@@ -35,5 +35,5 @@ production setting on the main chain.)
 If you're debugging your dapp, you care more about fast turnaround than security, so we suggest the following parameters:
 * stake requirement: 0.1 Eth
 * grace period: 10 minutes
-* max execution steps: 10,000,000
+* max execution steps: 1,000,000,000
 * speed limit: 20,000,000 ArbGas per second

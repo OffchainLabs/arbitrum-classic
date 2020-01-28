@@ -128,13 +128,17 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
 	restoreCtx structures.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
-) *ChainObserver {
+) (*ChainObserver, error) {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	pendingInbox, err := m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)
+	if err != nil {
+		return nil, err
+	}
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
-		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
+		pendingInbox:        &structures.PendingInbox{pendingInbox},
 		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
 		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
 		latestBlockId:       m.LatestBlockId.Unmarshal(),
@@ -142,7 +146,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		checkpointer:        checkpointer,
 		isOpinionated:       m.IsOpinionated,
 		atHead:              false,
-	}
+	}, nil
 }
 
 func (chain *ChainObserver) DebugString(prefix string) string {
@@ -207,13 +211,13 @@ func (chain *ChainObserver) ContractAddress() common.Address {
 
 func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 	chain.RLock()
-	mach := chain.knownValidNode.machine.Clone()
+	mach := chain.calculatedValidNode.machine.Clone()
 	chain.RUnlock()
 	return mach
 }
 
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.pendingInbox.DeliverMessage(ev.Msg.AsValue())
+	chain.pendingInbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, chain, ev)
 	}
@@ -267,7 +271,7 @@ func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.Chall
 		ev.ChallengeType,
 	)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, asserterAncestor, challengerAncestor)
+		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
 	}
 }
 
@@ -340,11 +344,11 @@ func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 
 func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	messages := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, node.disputable.AssertionClaim.AfterPendingTop)
+	inbox, _ := chain.pendingInbox.GenerateInbox(node.prev.vmProtoData.PendingTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: messages,
+		BeforeInbox: inbox.AsValue(),
 	}
 }
 

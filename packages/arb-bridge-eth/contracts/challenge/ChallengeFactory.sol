@@ -45,20 +45,22 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
     function generateCloneAddress(
         address asserter,
         address challenger,
-        bytes32 codeHash
+        uint256 challengeType
     )
-        external
+        public
         view
         returns(address)
     {
         return address(
-            bytes20(
-                keccak256(
-                    abi.encodePacked(
-                        byte(0xff),
-                        address(this),
-                        generateNonce(asserter, challenger),
-                        codeHash
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff),
+                            address(this),
+                            generateNonce(asserter, challenger),
+                            cloneCodeHash(getChallengeTemplate(challengeType))
+                        )
                     )
                 )
             )
@@ -76,10 +78,7 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         returns(address)
     {
         address challengeTemplate = getChallengeTemplate(challengeType);
-        address clone = create2Clone(
-            challengeTemplate,
-            generateNonce(address(_asserter), address(_challenger))
-        );
+        address clone = createClone(challengeTemplate);
         IBisectionChallenge(clone).initializeBisection(
             msg.sender,
             _asserter,

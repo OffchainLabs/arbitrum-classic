@@ -19,6 +19,8 @@ package arbbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -135,13 +137,13 @@ type MessagesBisectionEvent struct {
 type ExecutionBisectionEvent struct {
 	ChainInfo
 	Assertions []*valprotocol.ExecutionAssertionStub
-	TotalSteps uint32
+	TotalSteps uint64
 	Deadline   common.TimeTicks
 }
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	Msg valprotocol.Message
+	Message message.DeliveredMessage
 }
 
 type NewTimeEvent struct {

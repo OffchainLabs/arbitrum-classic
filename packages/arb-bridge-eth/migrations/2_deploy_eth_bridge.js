@@ -28,11 +28,16 @@ var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 var ArbRollup = artifacts.require("./vm/ArbRollup.sol");
 var ArbFactory = artifacts.require("./vm/ArbFactory.sol");
 
+var Value = artifacts.require("./arch/Value.sol");
+
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, [ExecutionChallenge]);
+
+  deployer.deploy(Value);
+  deployer.link(Value, [GlobalPendingInbox]);
 
   await deployer.deploy(GlobalPendingInbox);
 
@@ -56,9 +61,7 @@ module.exports = async function(deployer, network, accounts) {
 
   const fs = require("fs");
   let addresses = {
-    ArbFactory: ArbFactory.address,
-    GlobalPendingInbox: GlobalPendingInbox.address,
-    OneStepProof: OneStepProof.address
+    ArbFactory: ArbFactory.address
   };
   fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
 };

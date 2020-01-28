@@ -60,7 +60,7 @@ library ChallengeUtils {
     }
 
     function executionHash(
-        uint32 _numSteps,
+        uint64 _numSteps,
         bytes32 _preconditionHash,
         bytes32 _assertionHash
     )

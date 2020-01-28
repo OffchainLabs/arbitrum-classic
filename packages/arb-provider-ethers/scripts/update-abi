@@ -1,0 +1,17 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### update-go-abi
+### --------------------------------------------------------------------
+
+yarn workspace arb-bridge-eth build
+yarn workspace contract-templates build
+
+typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-bridge-eth/build/contracts/{ArbRollup,GlobalPendingInbox}.json'
+
+typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-compiler-evm/contract-templates/build/contracts/{ArbERC20,ArbERC721,ArbSys,ArbInfo}.json'

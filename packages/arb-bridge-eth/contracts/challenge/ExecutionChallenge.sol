@@ -33,7 +33,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] messageAccs,
         bytes32[] logAccs,
         uint64[] gases,
-        uint32 totalSteps,
+        uint64 totalSteps,
         uint256 deadlineTicks
     );
 
@@ -52,7 +52,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] messageAccs;
         bytes32[] logAccs;
         uint64[] gases;
-        uint32 totalSteps;
+        uint64 totalSteps;
     }
 
     function bisectAssertion(
@@ -63,7 +63,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
         uint64[] memory _gases,
-        uint32 _totalSteps
+        uint64 _totalSteps
     )
         public
         asserterAction
@@ -227,5 +227,13 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.totalSteps,
             deadlineTicks
         );
+    }
+
+    function resolveChallengeAsserterWon() internal {
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_EXECUTION_TYPE);
+    }
+
+    function resolveChallengeChallengerWon() internal {
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_EXECUTION_TYPE);
     }
 }
