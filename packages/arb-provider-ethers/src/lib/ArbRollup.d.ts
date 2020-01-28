@@ -16,6 +16,31 @@ interface ArbRollupInterface extends Interface {
             encode([winner, loser]: [string, string]): string;
         }>;
 
+        snapshotDeadlineStakers: TypedFunctionDescription<{
+            encode([idx, deadlineTicks, beforeDeadlineAddrs, atOrAfterDeadlineAddrs]: [
+                BigNumberish,
+                BigNumberish,
+                (string)[],
+                (string)[],
+            ]): string;
+        }>;
+
+        snapshotLatestConfirmed: TypedFunctionDescription<{
+            encode([idx]: [BigNumberish]): string;
+        }>;
+
+        snapshotLeafNodeExists: TypedFunctionDescription<{
+            encode([idx, leaf]: [BigNumberish, Arrayish]): string;
+        }>;
+
+        snapshotStakerNodeExists: TypedFunctionDescription<{
+            encode([idx, addr]: [BigNumberish, string]): string;
+        }>;
+
+        snapshotTwoStakers: TypedFunctionDescription<{
+            encode([idx, addr1, addr2]: [BigNumberish, string, string]): string;
+        }>;
+
         startChallenge: TypedFunctionDescription<{
             encode([
                 asserterAddress,
@@ -131,6 +156,28 @@ interface ArbRollupInterface extends Interface {
             ]: [BigNumberish, Arrayish, Arrayish, Arrayish, (string)[], (Arrayish)[], (BigNumberish)[]]): string;
         }>;
 
+        confirmValidFromSnapshot: TypedFunctionDescription<{
+            encode([
+                deadlineTicks,
+                _messages,
+                logsAcc,
+                vmProtoStateHash,
+                snapshotIdx,
+                stakerLocations,
+                stakerProofs,
+                stakerProofOffsets,
+            ]: [
+                BigNumberish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                BigNumberish,
+                (Arrayish)[],
+                (Arrayish)[],
+                (BigNumberish)[],
+            ]): string;
+        }>;
+
         confirmInvalid: TypedFunctionDescription<{
             encode([
                 deadlineTicks,
@@ -141,6 +188,28 @@ interface ArbRollupInterface extends Interface {
                 stakerProofs,
                 stakerProofOffsets,
             ]: [BigNumberish, Arrayish, BigNumberish, Arrayish, (string)[], (Arrayish)[], (BigNumberish)[]]): string;
+        }>;
+
+        confirmInvalidFromSnapshot: TypedFunctionDescription<{
+            encode([
+                deadlineTicks,
+                challengeNodeData,
+                branch,
+                vmProtoStateHash,
+                snapshotIdx,
+                stakerLocations,
+                stakerProofs,
+                stakerProofOffsets,
+            ]: [
+                BigNumberish,
+                Arrayish,
+                BigNumberish,
+                Arrayish,
+                BigNumberish,
+                (Arrayish)[],
+                (Arrayish)[],
+                (BigNumberish)[],
+            ]): string;
         }>;
     };
 
@@ -192,6 +261,29 @@ interface ArbRollupInterface extends Interface {
         RollupStakeRefunded: TypedEventDescription<{
             encodeTopics([staker]: [null]): string[];
         }>;
+
+        SavedDeadlineStakersSnapshot: TypedEventDescription<{
+            encodeTopics([client, deadlineTicks, stakerLocations, snapshot]: [null, null, null, null]): string[];
+        }>;
+
+        SavedLatestConfirmedSnapshot: TypedEventDescription<{
+            encodeTopics([client, latestConfirmed, snapshot]: [null, null, null]): string[];
+        }>;
+
+        SavedNodeExistsSnapshot: TypedEventDescription<{
+            encodeTopics([client, nodeHash, snapshot]: [null, null, null]): string[];
+        }>;
+
+        SavedTwoStakersSnapshot: TypedEventDescription<{
+            encodeTopics([client, addr1, location1, addr2, location2, snapshot]: [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
     };
 }
 
@@ -209,6 +301,8 @@ export class ArbRollup extends Contract {
     interface: ArbRollupInterface;
 
     functions: {
+        getMySnapshot(idx: BigNumberish): Promise<string>;
+
         isStaked(_stakerAddress: string): Promise<boolean>;
 
         isValidLeaf(leaf: Arrayish): Promise<boolean>;
@@ -230,6 +324,35 @@ export class ArbRollup extends Contract {
         ): Promise<ContractTransaction>;
 
         resolveChallenge(winner: string, loser: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        snapshotDeadlineStakers(
+            idx: BigNumberish,
+            deadlineTicks: BigNumberish,
+            beforeDeadlineAddrs: (string)[],
+            atOrAfterDeadlineAddrs: (string)[],
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        snapshotLatestConfirmed(idx: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        snapshotLeafNodeExists(
+            idx: BigNumberish,
+            leaf: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        snapshotStakerNodeExists(
+            idx: BigNumberish,
+            addr: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        snapshotTwoStakers(
+            idx: BigNumberish,
+            addr1: string,
+            addr2: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
 
         startChallenge(
             asserterAddress: string,
@@ -321,12 +444,36 @@ export class ArbRollup extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        confirmValidFromSnapshot(
+            deadlineTicks: BigNumberish,
+            _messages: Arrayish,
+            logsAcc: Arrayish,
+            vmProtoStateHash: Arrayish,
+            snapshotIdx: BigNumberish,
+            stakerLocations: (Arrayish)[],
+            stakerProofs: (Arrayish)[],
+            stakerProofOffsets: (BigNumberish)[],
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         confirmInvalid(
             deadlineTicks: BigNumberish,
             challengeNodeData: Arrayish,
             branch: BigNumberish,
             vmProtoStateHash: Arrayish,
             stakerAddresses: (string)[],
+            stakerProofs: (Arrayish)[],
+            stakerProofOffsets: (BigNumberish)[],
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        confirmInvalidFromSnapshot(
+            deadlineTicks: BigNumberish,
+            challengeNodeData: Arrayish,
+            branch: BigNumberish,
+            vmProtoStateHash: Arrayish,
+            snapshotIdx: BigNumberish,
+            stakerLocations: (Arrayish)[],
             stakerProofs: (Arrayish)[],
             stakerProofOffsets: (BigNumberish)[],
             overrides?: TransactionOverrides,
@@ -371,12 +518,47 @@ export class ArbRollup extends Contract {
         RollupStakeMoved(staker: null, toNodeHash: null): EventFilter;
 
         RollupStakeRefunded(staker: null): EventFilter;
+
+        SavedDeadlineStakersSnapshot(
+            client: null,
+            deadlineTicks: null,
+            stakerLocations: null,
+            snapshot: null,
+        ): EventFilter;
+
+        SavedLatestConfirmedSnapshot(client: null, latestConfirmed: null, snapshot: null): EventFilter;
+
+        SavedNodeExistsSnapshot(client: null, nodeHash: null, snapshot: null): EventFilter;
+
+        SavedTwoStakersSnapshot(
+            client: null,
+            addr1: null,
+            location1: null,
+            addr2: null,
+            location2: null,
+            snapshot: null,
+        ): EventFilter;
     };
 
     estimate: {
         pruneLeaf(from: Arrayish, leafProof: (Arrayish)[], latestConfirmedProof: (Arrayish)[]): Promise<BigNumber>;
 
         resolveChallenge(winner: string, loser: string): Promise<BigNumber>;
+
+        snapshotDeadlineStakers(
+            idx: BigNumberish,
+            deadlineTicks: BigNumberish,
+            beforeDeadlineAddrs: (string)[],
+            atOrAfterDeadlineAddrs: (string)[],
+        ): Promise<BigNumber>;
+
+        snapshotLatestConfirmed(idx: BigNumberish): Promise<BigNumber>;
+
+        snapshotLeafNodeExists(idx: BigNumberish, leaf: Arrayish): Promise<BigNumber>;
+
+        snapshotStakerNodeExists(idx: BigNumberish, addr: string): Promise<BigNumber>;
+
+        snapshotTwoStakers(idx: BigNumberish, addr1: string, addr2: string): Promise<BigNumber>;
 
         startChallenge(
             asserterAddress: string,
@@ -450,12 +632,34 @@ export class ArbRollup extends Contract {
             stakerProofOffsets: (BigNumberish)[],
         ): Promise<BigNumber>;
 
+        confirmValidFromSnapshot(
+            deadlineTicks: BigNumberish,
+            _messages: Arrayish,
+            logsAcc: Arrayish,
+            vmProtoStateHash: Arrayish,
+            snapshotIdx: BigNumberish,
+            stakerLocations: (Arrayish)[],
+            stakerProofs: (Arrayish)[],
+            stakerProofOffsets: (BigNumberish)[],
+        ): Promise<BigNumber>;
+
         confirmInvalid(
             deadlineTicks: BigNumberish,
             challengeNodeData: Arrayish,
             branch: BigNumberish,
             vmProtoStateHash: Arrayish,
             stakerAddresses: (string)[],
+            stakerProofs: (Arrayish)[],
+            stakerProofOffsets: (BigNumberish)[],
+        ): Promise<BigNumber>;
+
+        confirmInvalidFromSnapshot(
+            deadlineTicks: BigNumberish,
+            challengeNodeData: Arrayish,
+            branch: BigNumberish,
+            vmProtoStateHash: Arrayish,
+            snapshotIdx: BigNumberish,
+            stakerLocations: (Arrayish)[],
             stakerProofs: (Arrayish)[],
             stakerProofOffsets: (BigNumberish)[],
         ): Promise<BigNumber>;

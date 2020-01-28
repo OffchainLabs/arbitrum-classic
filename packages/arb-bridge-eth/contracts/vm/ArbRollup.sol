@@ -48,6 +48,8 @@ contract ArbRollup is NodeGraph, Staking {
     string constant CONF_TIME = "CONF_TIME";
     // There must be at least one staker
     string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
+    // Confirmation with snapshot must use a valid snapshot
+    string constant CONF_SNAPSHOT = "CONF_SNAPSHOT";
 
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
@@ -250,6 +252,65 @@ contract ArbRollup is NodeGraph, Staking {
         );
     }
 
+   struct ConfirmValidFromSnapshotData {
+        uint256 deadlineTicks;
+        bytes _messages;
+        bytes32 logsAcc;
+        bytes32 vmProtoStateHash;
+        uint256 snapshotIdx;
+        bytes32[] stakerLocations;
+        bytes32[] stakerProofs;
+        uint256[] stakerProofOffsets;
+    }
+
+    function confirmValidFromSnapshot(
+        uint256 deadlineTicks,
+        bytes memory _messages,
+        bytes32 logsAcc,
+        bytes32 vmProtoStateHash,
+        uint256 snapshotIdx,
+        bytes32[] memory stakerLocations,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    )
+        public
+    {
+        _confirmValidFromSnapshot(
+            ConfirmValidFromSnapshotData(
+                deadlineTicks,
+                _messages,
+                logsAcc,
+                vmProtoStateHash,
+                snapshotIdx,
+                stakerLocations,
+                stakerProofs,
+                stakerProofOffsets
+            )
+        );
+    }
+
+    function _confirmValidFromSnapshot(ConfirmValidFromSnapshotData memory data) internal {
+        _confirmNodeFromSnapshot(
+            data.deadlineTicks,
+            RollupUtils.validDataHash(
+                Protocol.generateLastMessageHash(data._messages),
+                data.logsAcc
+            ),
+            VALID_CHILD_TYPE,
+            data.vmProtoStateHash,
+            data.snapshotIdx,
+            data.stakerLocations,
+            data.stakerProofs,
+            data.stakerProofOffsets
+        );
+
+        globalInbox.sendMessages(data._messages);
+
+        emit ConfirmedAssertion(
+            data.logsAcc
+        );
+    }
+
     function confirmInvalid(
         uint256 deadlineTicks,
         bytes32 challengeNodeData,
@@ -268,6 +329,31 @@ contract ArbRollup is NodeGraph, Staking {
             branch,
             vmProtoStateHash,
             stakerAddresses,
+            stakerProofs,
+            stakerProofOffsets
+        );
+    }
+
+    function confirmInvalidFromSnapshot(
+        uint256 deadlineTicks,
+        bytes32 challengeNodeData,
+        uint256 branch,
+        bytes32 vmProtoStateHash,
+        uint256 snapshotIdx,
+        bytes32[] memory stakerLocations,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    )
+        public
+    {
+        require(branch < VALID_CHILD_TYPE, CONF_INV_TYPE);
+        _confirmNodeFromSnapshot(
+            deadlineTicks,
+            challengeNodeData,
+            branch,
+            vmProtoStateHash,
+            snapshotIdx,
+            stakerLocations,
             stakerProofs,
             stakerProofOffsets
         );
@@ -326,4 +412,43 @@ contract ArbRollup is NodeGraph, Staking {
         confirmNode(to);
     }
 
+    function _confirmNodeFromSnapshot(
+        uint256 deadlineTicks,
+        bytes32 nodeDataHash,
+        uint256 branch,
+        bytes32 vmProtoStateHash,
+        uint256 snapshotIdx,
+        bytes32[] memory stakerLocations,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    )
+        private
+    {
+        require(stakerLocations.length > 0, CONF_HAS_STAKER);
+        bytes32 to = RollupUtils.childNodeHash(
+            latestConfirmed(),
+            deadlineTicks,
+            nodeDataHash,
+            branch,
+            vmProtoStateHash
+        );
+        require(RollupTime.blocksToTicks(block.number) >= deadlineTicks, CONF_TIME);
+        require(calcDeadlineStakersSnapshot(
+            deadlineTicks, 
+            stakerLocations
+        ) == snapshots[msg.sender][snapshotIdx], CONF_SNAPSHOT);
+        for (uint i = 0; i < stakerLocations.length; i++) {
+            require(
+                RollupUtils.calculatePathOffset(
+                    to,
+                    stakerProofs,
+                    stakerProofOffsets[i],
+                    stakerProofOffsets[i+1]
+                ) == stakerLocations[i],
+                CHCK_STAKER_PROOF
+            );
+        }
+
+        confirmNode(to);
+    }
 }

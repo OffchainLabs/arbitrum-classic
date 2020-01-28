@@ -21,10 +21,30 @@ contract Snapshot {
 
 	enum SnapshotType { LatestConfirmed, TwoStakers, DeadlineStakers, NodeExists }
 
-	event SavedLatestConfirmedSnapshot(address, bytes32, bytes32);
-	event SavedTwoStakersSnapshot(address, address, bytes32, address, bytes32, bytes32);
-	event SavedDeadlineStakersSnapshot(address, uint256, address[], bytes32[], bytes32);
-	event SavedNodeExistsSnapshot(address, bytes32, bytes32);
+	event SavedLatestConfirmedSnapshot(
+		address client, 
+		bytes32 latestConfirmed, 
+		bytes32 snapshot
+	);
+	event SavedTwoStakersSnapshot(
+		address client, 
+		address addr1, 
+		bytes32 location1, 
+		address addr2, 
+		bytes32 location2, 
+		bytes32 snapshot
+	);
+	event SavedDeadlineStakersSnapshot(
+		address client, 
+		uint256 deadlineTicks, 
+		bytes32[] stakerLocations, 
+		bytes32 snapshot
+	);
+	event SavedNodeExistsSnapshot(
+		address client, 
+		bytes32 nodeHash, 
+		bytes32 snapshot
+	);
 
 	function getMySnapshot(uint256 idx) public view returns(bytes32) {
 		return snapshots[msg.sender][idx];
@@ -69,16 +89,15 @@ contract Snapshot {
 		emit SavedTwoStakersSnapshot(msg.sender, addr1, loc1, addr2, loc2, snap);
 	}
 
-	function calcDeadlineStakersSnapshot(uint256 deadlineTicks, address[] memory addrs, bytes32[] memory locations) 
+	function calcDeadlineStakersSnapshot(uint256 deadlineTicks, bytes32[] memory locations) 
 		internal 
 		pure 
 		returns(bytes32) 
 	{
 		bytes32 acc = bytes32(0);
-		for(uint i=0; i<addrs.length; i++) {
+		for(uint i=0; i<locations.length; i++) {
 			acc = keccak256(
 				abi.encodePacked(
-					addrs[i],
 					locations[i],
 					acc
 				)
@@ -96,14 +115,13 @@ contract Snapshot {
 	function saveDeadlineStakersSnapshot(
 		uint256 idx, 
 		uint256 deadlineTicks, 
-		address[] memory addrs, 
 		bytes32[] memory locations
 	)
 		internal
 	{
-		bytes32 snap = calcDeadlineStakersSnapshot(deadlineTicks, addrs, locations);
+		bytes32 snap = calcDeadlineStakersSnapshot(deadlineTicks, locations);
 		snapshots[msg.sender][idx] = snap;
-		emit SavedDeadlineStakersSnapshot(msg.sender, deadlineTicks, addrs, locations, snap);
+		emit SavedDeadlineStakersSnapshot(msg.sender, deadlineTicks, locations, snap);
 	}
 
 	function calcNodeExistsSnapshot(bytes32 location) internal pure returns(bytes32) {
@@ -115,7 +133,7 @@ contract Snapshot {
 		);
 	}
 
-	function saveNodeExistsSnapshot(uint256 idx, bytes32 location) public {
+	function saveNodeExistsSnapshot(uint256 idx, bytes32 location) internal {
 		bytes32 snap = calcNodeExistsSnapshot(location);
 		snapshots[msg.sender][idx] = snap;
 		emit SavedNodeExistsSnapshot(msg.sender, location, snap);

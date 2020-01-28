@@ -26,6 +26,8 @@ import (
 )
 
 type ArbRollup interface {
+	NewArbSnapshotClient() (ArbSnapshotClient, error)
+
 	PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error
 	RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error
 	RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error

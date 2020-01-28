@@ -10,6 +10,7 @@ cp -r ../installed_contracts/bytes/ ./bytes
 
 abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
 abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
+abigen --sol=vm/Snapshot.sol --pkg=snapshot --out=snapshot.go
 
 abigen --sol=challenge/ChallengeFactory.sol --pkg=challengefactory --out=challengefactory.go
 abigen --sol=challenge/PendingTopChallenge.sol --pkg=pendingtopchallenge --out=pendingtopchallenge.go
@@ -22,6 +23,7 @@ abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challenge
 
 \cp arbfactory.go ../../arb-validator/ethbridge/arbfactory/
 \cp arbrollup.go ../../arb-validator/ethbridge/rollup/
+\cp snapshot.go ../../arb-validator/ethbridge/snapshot/
 \cp challengefactory.go ../../arb-validator/ethbridge/challengefactory/
 \cp pendingtopchallenge.go ../../arb-validator/ethbridge/pendingtopchallenge/
 \cp messageschallenge.go ../../arb-validator/ethbridge/messageschallenge/

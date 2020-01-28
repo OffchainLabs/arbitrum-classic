@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -46,6 +47,10 @@ func newRollup(address ethcommon.Address, client *ethclient.Client, auth *Transa
 	}
 	vm := &arbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return vm, err
+}
+
+func (vm *arbRollup) NewArbSnapshotClient() (arbbridge.ArbSnapshotClient, error) {
+	return newSnapshotClient(vm)
 }
 
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {

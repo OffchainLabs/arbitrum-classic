@@ -323,7 +323,7 @@ contract Staking is ChallengeType, Snapshot {
             require(RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks);
         }
 
-        saveDeadlineStakersSnapshot(idx, deadlineTicks, beforeDeadlineAddrs, snapshotLocations);       
+        saveDeadlineStakersSnapshot(idx, deadlineTicks, snapshotLocations);       
     }
 
     function snapshotStakerNodeExists(uint256 idx, address addr) public {
