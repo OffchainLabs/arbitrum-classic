@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from .. import std
-from . import os, accounts
+from . import os, accounts, call_frame
 from .types import (
     local_exec_state,
     eth_transfer_message,
@@ -144,9 +144,7 @@ def withdraw_erc721_interrupt(vm):
 
 
 def transaction_count_interrupt(vm):
-    vm.dup0()
     local_exec_state.get("data")(vm)
-    vm.dup0()
     vm.push(4)
     vm.swap1()
     std.sized_byterange.get(vm)
@@ -154,10 +152,17 @@ def transaction_count_interrupt(vm):
     os.get_call_frame(vm)
     os.call_frame.call_frame.get("accounts")(vm)
     accounts.account_store.get(vm)
-    accounts.account_state.get("nonce")
+    accounts.account_state.get("nonce")(vm)
     vm.push(0)
-    std.sized_byterange.new(vm)
-    std.sized_byterange.set_val(vm)
+    std.byterange.new(vm)
+    std.byterange.set_val(vm)
+    vm.push(32)
+    vm.swap1()
+    std.tup.make(2)(vm)
     os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
     os.call_frame.call_frame.set_val("return_data")(vm)
+    os.get_call_frame(vm)
+    call_frame.call_frame.set_val("parent_frame")(vm)
+    os.set_call_frame(vm)
     vm.push(2)

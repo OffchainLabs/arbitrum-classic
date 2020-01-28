@@ -151,13 +151,13 @@ def process_nonce(vm):
     vm.auxpush()
     account_state.get("nonce")(vm)
     # old_nonce nonce [account accounts address]
-    vm.push(1)
-    vm.add()
     vm.dup1()
     vm.eq()
     # valid_nonce nonce [account accounts address]
     vm.ifelse(
         lambda vm: [
+            vm.push(1),
+            vm.add(),
             vm.auxpop(),
             account_state.set_val("nonce")(vm),
             # updated_account [accounts address]

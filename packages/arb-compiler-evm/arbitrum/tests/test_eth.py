@@ -21,7 +21,7 @@ from arbitrum import run_vm_once, value
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 from arbitrum import messagestack
-from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn
+from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn, EVMInvalidSequence
 from arbitrum.evm import contract_templates
 
 
@@ -149,7 +149,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -173,7 +173,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -203,7 +203,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -226,7 +226,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -254,7 +254,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -282,7 +282,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
+                        [0, 2345, contract_a.testMethod(0, 0)]
                     )  # type  # sender
                 )
             ),
@@ -319,7 +319,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 62244)]  # type  # sender
+                        [0, 2345, contract_a.testMethod(0, 62244)]  # type  # sender
                     )
                 )
             ),
@@ -359,7 +359,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, arbinfo_abi.getBalance(6, 0, address_string)]
+                        [0, address, arbinfo_abi.call_getBalance(address_string)]
                     )  # type  # sender
                 )
             ),
@@ -372,7 +372,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            arbsys_abi.withdrawEth(8, 0, dest_address_string, 150000),
+                            arbsys_abi.withdrawEth(0, 0, dest_address_string, 150000),
                         ]
                     )  # type  # sender
                 )
@@ -386,7 +386,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            arbsys_abi.withdrawEth(10, 0, dest_address_string, 50000),
+                            arbsys_abi.withdrawEth(1, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -397,7 +397,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, arbinfo_abi.getBalance(12, 0, address_string)]
+                        [0, address, arbinfo_abi.call_getBalance(address_string)]
                     )  # type  # sender
                 )
             ),
@@ -454,7 +454,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc20_abi.withdraw(6, 0, dest_address_string, 150000),
+                            erc20_abi.withdraw(0, 0, dest_address_string, 150000),
                         ]
                     )  # type  # sender
                 )
@@ -468,7 +468,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc20_abi.withdraw(8, 0, dest_address_string, 50000),
+                            erc20_abi.withdraw(1, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -526,7 +526,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, erc721_abi.tokensOfOwner(6, 0, address_string)]
+                        [0, address, erc721_abi.call_tokensOfOwner(address_string)]
                     )  # type  # sender
                 )
             ),
@@ -539,7 +539,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc721_abi.withdraw(8, 0, dest_address_string, 50000),
+                            erc721_abi.withdraw(0, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -553,7 +553,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc721_abi.withdraw(10, 0, dest_address_string, 100000),
+                            erc721_abi.withdraw(1, 0, dest_address_string, 100000),
                         ]
                     )  # type  # sender
                 )
@@ -583,4 +583,122 @@ class TestEVM(TestCase):
             value.Tuple(
                 [3, address, value.Tuple([erc721_abi.address, dest_address, 100000])]
             ),
+        )
+
+    def test_seq(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        output_handler = create_output_handler([contract_a])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([address, 100000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            4,
+                            address,
+                            arbsys_abi.call_getTransactionCount(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(0, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            4,
+                            address,
+                            arbsys_abi.call_getTransactionCount(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(5, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(1, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 6)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        parsed_out3 = output_handler(vm.logs[3])
+        parsed_out4 = output_handler(vm.logs[4])
+        parsed_out5 = output_handler(vm.logs[5])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+        self.assertIsInstance(parsed_out2, EVMStop)
+        self.assertIsInstance(parsed_out3, EVMReturn)
+        self.assertIsInstance(parsed_out4, EVMInvalidSequence)
+        self.assertIsInstance(parsed_out5, EVMStop)
+
+        self.assertEqual(parsed_out1.output_values[0], 0)
+        self.assertEqual(parsed_out3.output_values[0], 1)
+
+        self.assertEqual(len(vm.sent_messages), 2)
+        self.assertEqual(
+            vm.sent_messages[0],
+            value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
+        )
+        self.assertEqual(
+            vm.sent_messages[1],
+            value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
         )

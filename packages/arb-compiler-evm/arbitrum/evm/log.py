@@ -111,6 +111,8 @@ class LogMessage:
             return "ERC20_DEPOSIT"
         elif self.message_type == 3:
             return "ERC721_DEPOSIT"
+        elif self.message_type == 4:
+            return self.func_id()
         else:
             raise Exception("Unknown function type")
 

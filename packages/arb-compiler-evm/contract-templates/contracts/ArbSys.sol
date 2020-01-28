@@ -20,4 +20,6 @@ interface ArbSys {
     function withdrawERC20(address dest, uint256 amount) external;
     function withdrawERC721(address dest, uint256 id) external;
     function withdrawEth(address dest, uint256 amount) external;
+
+    function getTransactionCount(address account) external pure returns(uint256);
 }
