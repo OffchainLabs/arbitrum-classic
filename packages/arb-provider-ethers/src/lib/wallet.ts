@@ -193,15 +193,15 @@ export class ArbWallet extends ethers.Signer {
             throw Error("Can't send transaction without destination");
         }
         const to = await transaction.to;
-        let encodedData = '0x';
+        let data = '0x';
         if (transaction.data) {
-            encodedData = ethers.utils.hexlify(await transaction.data);
+            data = ethers.utils.hexlify(await transaction.data);
         }
 
         let value = ethers.utils.bigNumberify(0);
         if (transaction.value) {
             value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
         }
-        return this.sendTransactionMessage(to, value, encodedData);
+        return this.sendTransactionMessage(to, value, data);
     }
 }
