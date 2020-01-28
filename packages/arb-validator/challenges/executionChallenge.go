@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -37,7 +38,7 @@ func DefendExecutionClaim(
 	startLogIndex uint,
 	precondition *valprotocol.Precondition,
 	startMachine machine.Machine,
-	numSteps uint32,
+	numSteps uint64,
 	bisectionCount uint32,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewExecutionChallengeWatcher(address)
@@ -52,6 +53,9 @@ func DefendExecutionClaim(
 		return ChallengeContinuing, err
 	}
 
+	if startMachine == nil {
+		log.Fatal("nil startMachine in DefendExecutionClaim")
+	}
 	return defendExecution(
 		reorgCtx,
 		eventChan,
@@ -153,7 +157,7 @@ func defendExecution(
 		var defenders []AssertionDefender = nil
 		if timedOut {
 			var assertions []*valprotocol.ExecutionAssertionStub
-			defenders, assertions = defender.NBisect(bisectionCount)
+			defenders, assertions = defender.NBisect(uint64(bisectionCount))
 			err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 			if err != nil {
 				return 0, err
@@ -190,18 +194,18 @@ func defendExecution(
 		} else {
 			// Replayed from existing event
 			totalSteps := uint64(0)
-			for i := uint64(0); i < uint64(contEv.SegmentIndex.Uint64()); i++ {
-				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), uint64(ev.TotalSteps))
+			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
+				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
 			}
 
 			mach := defender.initState
 			pre := defender.precondition
 			// Update mach, precondition, deadline
-			assertion, _ := mach.ExecuteAssertion(uint32(totalSteps), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(totalSteps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 			pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 
-			steps := structures.CalculateBisectionStepCount(contEv.SegmentIndex.Uint64(), uint64(len(ev.Assertions)), uint64(ev.TotalSteps))
-			defender = NewAssertionDefender(pre, uint32(steps), mach)
+			steps := structures.CalculateBisectionStepCount(contEv.SegmentIndex.Uint64(), uint64(len(ev.Assertions)), ev.TotalSteps)
+			defender = NewAssertionDefender(pre, steps, mach)
 		}
 	}
 }
@@ -257,10 +261,10 @@ func challengeExecution(
 				pre := precondition
 				cMach := mach.Clone()
 				challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
-				for i := uint64(0); i < uint64(len(ev.Assertions)); i++ {
-					stepCount := structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), uint64(ev.TotalSteps))
+				for i := 0; i < len(ev.Assertions); i++ {
+					stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(ev.Assertions)), ev.TotalSteps)
 					m = cMach.Clone()
-					assertion, _ := cMach.ExecuteAssertion(uint32(stepCount), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+					assertion, _ := cMach.ExecuteAssertion(stepCount, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 					pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 				}
 				err = nil
@@ -296,9 +300,9 @@ func challengeExecution(
 			// Replayed from existing event
 			totalSteps := uint64(0)
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
-				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), uint64(ev.TotalSteps))
+				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
 			}
-			assertion, _ := mach.ExecuteAssertion(uint32(totalSteps), startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(totalSteps, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
 			precondition = precondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 		}
 		deadline = contEv.Deadline

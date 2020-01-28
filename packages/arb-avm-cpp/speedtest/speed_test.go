@@ -29,7 +29,7 @@ import (
 	"testing"
 )
 
-func getInsnMultiplier(filePath string) uint32 {
+func getInsnMultiplier(filePath string) uint64 {
 	ll := len(filePath)
 	numPopsStr := filePath[ll-4 : ll-3]
 	numPops, err := strconv.Atoi(numPopsStr)
@@ -42,7 +42,7 @@ func getInsnMultiplier(filePath string) uint32 {
 		log.Fatal(err)
 	}
 	numExtraUnderscores := strings.Count(filePath, "_") - 2
-	return uint32(1 + numExtraUnderscores + numPops + numPushes)
+	return uint64(1 + numExtraUnderscores + numPops + numPushes)
 }
 
 func runAoFile(b *testing.B, filePath string) {
@@ -65,7 +65,7 @@ func runAoFile(b *testing.B, filePath string) {
 		common.NewTimeBlocks(big.NewInt(0)),
 	}
 	b.ResetTimer()
-	_, _ = mach.ExecuteAssertion(uint32(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple())
+	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple())
 }
 
 func nameFromFn(fn string) string {

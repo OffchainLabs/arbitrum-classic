@@ -71,7 +71,7 @@ type MachineAssertionContext struct {
 	timeBounds   *protocol.TimeBoundsBlocks
 	inbox        value.TupleValue
 	didInboxInsn bool
-	numSteps     uint32
+	numSteps     uint64
 	numGas       uint64
 	outMsgs      []value.Value
 	logs         []value.Value
@@ -109,7 +109,7 @@ func (ac *MachineAssertionContext) Send(message value.Value) {
 	ac.outMsgs = append(ac.outMsgs, message)
 }
 
-func (ac *MachineAssertionContext) StepCount() uint32 {
+func (ac *MachineAssertionContext) StepCount() uint64 {
 	return ac.numSteps
 }
 
@@ -134,7 +134,7 @@ func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 	ac.numGas = ac.numGas + numGas
 }
 
-func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint32) {
+func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint64) {
 	ac.machine.SetContext(&NoContext{})
 	return protocol.NewExecutionAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
 }

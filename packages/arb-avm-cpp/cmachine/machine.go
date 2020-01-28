@@ -130,10 +130,10 @@ func (m *Machine) PrintState() {
 }
 
 func (m *Machine) ExecuteAssertion(
-	maxSteps uint32,
+	maxSteps uint64,
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
-) (*protocol.ExecutionAssertion, uint32) {
+) (*protocol.ExecutionAssertion, uint64) {
 	startTime := timeBounds.Start.AsInt()
 	endTime := timeBounds.End.AsInt()
 
@@ -183,7 +183,7 @@ func (m *Machine) ExecuteAssertion(
 		uint64(assertion.numGas),
 		outMessageVals,
 		logVals,
-	), uint32(assertion.numSteps)
+	), uint64(assertion.numSteps)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

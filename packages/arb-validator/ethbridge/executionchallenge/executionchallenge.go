@@ -37,23 +37,6 @@ var BisectionChallengeFuncSigs = map[string]string{
 	"ced5c1bf": "timeoutChallenge()",
 }
 
-// BisectionChallengeBin is the compiled bytecode used for deploying new contracts.
-var BisectionChallengeBin = "0x608060405234801561001057600080fd5b50610882806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c806302ad1e4e1461004657806379a9ad851461008a578063ced5c1bf1461013c575b600080fd5b610088600480360360a081101561005c57600080fd5b506001600160a01b03813581169160208101358216916040820135169060608101359060800135610144565b005b610088600480360360808110156100a057600080fd5b813591908101906040810160208201356401000000008111156100c257600080fd5b8201836020820111156100d457600080fd5b803590602001918460018302840111640100000000831117156100f657600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505082359350505060200135610159565b610088610457565b61015085858585610537565b60065550505050565b60055460ff16600281111561016a57fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b815250906102185760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156101dd5781810151838201526020016101c5565b50505050905090810190601f16801561020a5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5060035461022543610652565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906102985760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b031633146103145760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906103875760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5061039783838387600101610659565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906104055760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b50600681905561041361075a565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b60035461046343610652565b116104b5576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff1660028111156104c857fe5b1415610504576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a16104ff61076f565b610535565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a16105356107e3565b565b600060055460ff16600281111561054a57fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b815250906105bf5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff1916909117905561061761083b565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6132c80290565b600080838160205b8851811161074c578089015193506020818a51036020018161067f57fe5b0491505b6000821180156106965750600286066001145b80156106a457508160020a86115b156106b757600286046001019550610683565b600286066107025783836040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816106fa57fe5b049550610744565b828460405160200180838152602001828152602001925050506040516020818303038152906040528051906020012092506002868161073d57fe5b0460010195505b602001610661565b505090941495945050505050565b6005805460ff1916600117905561053561083b565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156107c757600080fd5b505af11580156107db573d6000803e3d6000fd5b503392505050ff5b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156107c757600080fd5b60045461084743610652565b0160035556fea265627a7a723158207269288b0cc56d01f0dac829ec21a26777d1c422762a48f43ef072748290842564736f6c634300050d0032"
-
-// DeployBisectionChallenge deploys a new Ethereum contract, binding an instance of BisectionChallenge to it.
-func DeployBisectionChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BisectionChallenge, error) {
-	parsed, err := abi.JSON(strings.NewReader(BisectionChallengeABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(BisectionChallengeBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &BisectionChallenge{BisectionChallengeCaller: BisectionChallengeCaller{contract: contract}, BisectionChallengeTransactor: BisectionChallengeTransactor{contract: contract}, BisectionChallengeFilterer: BisectionChallengeFilterer{contract: contract}}, nil
-}
-
 // BisectionChallenge is an auto generated Go binding around an Ethereum contract.
 type BisectionChallenge struct {
 	BisectionChallengeCaller     // Read-only binding to the contract
@@ -960,23 +943,6 @@ var ChallengeFuncSigs = map[string]string{
 	"ced5c1bf": "timeoutChallenge()",
 }
 
-// ChallengeBin is the compiled bytecode used for deploying new contracts.
-var ChallengeBin = "0x608060405234801561001057600080fd5b50610222806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063ced5c1bf14610030575b600080fd5b61003861003a565b005b6003546100464361011a565b11610098576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff1660028111156100ab57fe5b14156100e7576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a16100e2610121565b610118565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610118610195565b565b6132c80290565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b15801561017957600080fd5b505af115801561018d573d6000803e3d6000fd5b503392505050ff5b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b15801561017957600080fdfea265627a7a72315820e61774e8962724ef303d7b339224acebb0a6535352f986a0d40e1f0029258c1664736f6c634300050d0032"
-
-// DeployChallenge deploys a new Ethereum contract, binding an instance of Challenge to it.
-func DeployChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Challenge, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &Challenge{ChallengeCaller: ChallengeCaller{contract: contract}, ChallengeTransactor: ChallengeTransactor{contract: contract}, ChallengeFilterer: ChallengeFilterer{contract: contract}}, nil
-}
-
 // Challenge is an auto generated Go binding around an Ethereum contract.
 type Challenge struct {
 	ChallengeCaller     // Read-only binding to the contract
@@ -1537,11 +1503,173 @@ func (_Challenge *ChallengeFilterer) ParseInitiatedChallenge(log types.Log) (*Ch
 	return event, nil
 }
 
+// ChallengeTypeABI is the input ABI used to generate the binding from.
+const ChallengeTypeABI = "[]"
+
+// ChallengeTypeBin is the compiled bytecode used for deploying new contracts.
+var ChallengeTypeBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820766d50c810c1a016f65f4cdb737678cb861546547c2459c88dc18e453db0c0bf64736f6c634300050d0032"
+
+// DeployChallengeType deploys a new Ethereum contract, binding an instance of ChallengeType to it.
+func DeployChallengeType(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeType, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeTypeBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
+}
+
+// ChallengeType is an auto generated Go binding around an Ethereum contract.
+type ChallengeType struct {
+	ChallengeTypeCaller     // Read-only binding to the contract
+	ChallengeTypeTransactor // Write-only binding to the contract
+	ChallengeTypeFilterer   // Log filterer for contract events
+}
+
+// ChallengeTypeCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ChallengeTypeCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeTypeTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ChallengeTypeTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeTypeFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ChallengeTypeFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeTypeSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ChallengeTypeSession struct {
+	Contract     *ChallengeType    // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ChallengeTypeCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ChallengeTypeCallerSession struct {
+	Contract *ChallengeTypeCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
+}
+
+// ChallengeTypeTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ChallengeTypeTransactorSession struct {
+	Contract     *ChallengeTypeTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// ChallengeTypeRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ChallengeTypeRaw struct {
+	Contract *ChallengeType // Generic contract binding to access the raw methods on
+}
+
+// ChallengeTypeCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ChallengeTypeCallerRaw struct {
+	Contract *ChallengeTypeCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ChallengeTypeTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ChallengeTypeTransactorRaw struct {
+	Contract *ChallengeTypeTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewChallengeType creates a new instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeType(address common.Address, backend bind.ContractBackend) (*ChallengeType, error) {
+	contract, err := bindChallengeType(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
+}
+
+// NewChallengeTypeCaller creates a new read-only instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeCaller(address common.Address, caller bind.ContractCaller) (*ChallengeTypeCaller, error) {
+	contract, err := bindChallengeType(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeTypeCaller{contract: contract}, nil
+}
+
+// NewChallengeTypeTransactor creates a new write-only instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeTypeTransactor, error) {
+	contract, err := bindChallengeType(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeTypeTransactor{contract: contract}, nil
+}
+
+// NewChallengeTypeFilterer creates a new log filterer instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeTypeFilterer, error) {
+	contract, err := bindChallengeType(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeTypeFilterer{contract: contract}, nil
+}
+
+// bindChallengeType binds a generic wrapper to an already deployed contract.
+func bindChallengeType(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ChallengeType *ChallengeTypeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeType.Contract.ChallengeTypeCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ChallengeType *ChallengeTypeRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ChallengeType *ChallengeTypeRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ChallengeType *ChallengeTypeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeType.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ChallengeType *ChallengeTypeTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeType.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ChallengeType *ChallengeTypeTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeType.Contract.contract.Transact(opts, method, params...)
+}
+
 // ChallengeUtilsABI is the input ABI used to generate the binding from.
 const ChallengeUtilsABI = "[]"
 
 // ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
-var ChallengeUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820dce6b758d7459c44f7cc56ef25bf50643b421db4f939f8d85d813af26adf50dd64736f6c634300050d0032"
+var ChallengeUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158205bebeb7233812a7d81e56a133dfefcd46e9a7223ef3cb9a1123883fc692f141f64736f6c634300050d0032"
 
 // DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
 func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
@@ -1862,11 +1990,11 @@ func (_DebugPrint *DebugPrintTransactorRaw) Transact(opts *bind.TransactOpts, me
 }
 
 // ExecutionChallengeABI is the input ABI used to generate the binding from.
-const ExecutionChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"machineHashes\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"bool[]\",\"name\":\"didInboxInsns\",\"type\":\"bool[]\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"messageAccs\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"logAccs\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"gases\",\"type\":\"uint64[]\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"totalSteps\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"BisectedAssertion\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"OneStepProofCompleted\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_machineHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"_didInboxInsns\",\"type\":\"bool[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_messageAccs\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_logAccs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64[]\",\"name\":\"_gases\",\"type\":\"uint64[]\"},{\"internalType\":\"uint32\",\"name\":\"_totalSteps\",\"type\":\"uint32\"}],\"name\":\"bisectAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_vmAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsns\",\"type\":\"bool\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessage\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessage\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLog\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLog\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"_gas\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"}],\"name\":\"oneStepProof\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ExecutionChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"machineHashes\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"bool[]\",\"name\":\"didInboxInsns\",\"type\":\"bool[]\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"messageAccs\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"logAccs\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"gases\",\"type\":\"uint64[]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"totalSteps\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"BisectedAssertion\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"OneStepProofCompleted\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_machineHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bool[]\",\"name\":\"_didInboxInsns\",\"type\":\"bool[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_messageAccs\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_logAccs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint64[]\",\"name\":\"_gases\",\"type\":\"uint64[]\"},{\"internalType\":\"uint64\",\"name\":\"_totalSteps\",\"type\":\"uint64\"}],\"name\":\"bisectAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_vmAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsns\",\"type\":\"bool\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessage\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessage\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLog\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLog\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"_gas\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"}],\"name\":\"oneStepProof\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ExecutionChallengeFuncSigs maps the 4-byte function signature to its string representation.
 var ExecutionChallengeFuncSigs = map[string]string{
-	"903ac1a8": "bisectAssertion(bytes32,uint128[2],bytes32[],bool[],bytes32[],bytes32[],uint64[],uint32)",
+	"ba2a2311": "bisectAssertion(bytes32,uint128[2],bytes32[],bool[],bytes32[],bytes32[],uint64[],uint64)",
 	"79a9ad85": "chooseSegment(uint256,bytes,bytes32,bytes32)",
 	"02ad1e4e": "initializeBisection(address,address,address,uint256,bytes32)",
 	"8827cdc6": "oneStepProof(bytes32,bytes32,uint128[2],bytes32,bool,bytes32,bytes32,bytes32,bytes32,uint64,bytes)",
@@ -1874,7 +2002,7 @@ var ExecutionChallengeFuncSigs = map[string]string{
 }
 
 // ExecutionChallengeBin is the compiled bytecode used for deploying new contracts.
-var ExecutionChallengeBin = "0x608060405234801561001057600080fd5b50611d26806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806302ad1e4e1461005c57806379a9ad85146100a05780638827cdc614610150578063903ac1a814610261578063ced5c1bf14610547575b600080fd5b61009e600480360360a081101561007257600080fd5b506001600160a01b0381358116916020810135821691604082013516906060810135906080013561054f565b005b61009e600480360360808110156100b657600080fd5b81359190810190604081016020820135600160201b8111156100d757600080fd5b8201836020820111156100e957600080fd5b803590602001918460018302840111600160201b8311171561010a57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505082359350505060200135610564565b61009e600480360361018081101561016757600080fd5b6040805180820182528335936020810135938101929091608083019180840190600290839083908082843760009201919091525091948335946020850135151594604081013594506060810135935060808101359260a08201359267ffffffffffffffff60c0840135169261010081019060e00135600160201b8111156101ed57600080fd5b8201836020820111156101ff57600080fd5b803590602001918460018302840111600160201b8311171561022057600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610862945050505050565b61009e600480360361012081101561027857600080fd5b60408051808201825283359392830192916060830191906020840190600290839083908082843760009201919091525091949392602081019250359050600160201b8111156102c657600080fd5b8201836020820111156102d857600080fd5b803590602001918460208302840111600160201b831117156102f957600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561034857600080fd5b82018360208201111561035a57600080fd5b803590602001918460208302840111600160201b8311171561037b57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156103ca57600080fd5b8201836020820111156103dc57600080fd5b803590602001918460208302840111600160201b831117156103fd57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561044c57600080fd5b82018360208201111561045e57600080fd5b803590602001918460208302840111600160201b8311171561047f57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156104ce57600080fd5b8201836020820111156104e057600080fd5b803590602001918460208302840111600160201b8311171561050157600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295505050903563ffffffff169150610c2f9050565b61009e610e00565b61055b85858585610ee0565b60065550505050565b60055460ff16600281111561057557fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b815250906106235760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156105e85781810151838201526020016105d0565b50505050905090810190601f1680156106155780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5060035461063043610ffb565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906106a35760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b0316331461071f5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906107925760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b506107a283838387600101611002565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906108105760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b50600681905561081e611103565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b60055460ff16600281111561087357fe5b600114604051806040016040528060098152602001684249535f535441544560b81b815250906108e45760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b506003546108f143610ffb565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b815250906109645760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b031633146109e05760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5060006109ee8c8b8d61111f565b9050610a12610a0d600183610a088d8d898e8e8e8e61117a565b6111dd565b611225565b600073__$efcad257db8183701794ea8506d55e247c$__630b1cb7878e8d8f8e8e8e8e8e8e8e8e6040518c63ffffffff1660e01b8152600401808c81526020018b600260200280838360005b83811015610a76578181015183820152602001610a5e565b505050509050018a8152602001898152602001881515151581526020018781526020018681526020018581526020018481526020018367ffffffffffffffff1667ffffffffffffffff16815260200180602001828103825283818151815260200191508051906020019080838360005b83811015610afe578181015183820152602001610ae6565b50505050905090810190601f168015610b2b5780820380516001836020036101000a031916815260200191505b509c5050505050505050505050505060206040518083038186803b158015610b5257600080fd5b505af4158015610b66573d6000803e3d6000fd5b505050506040513d6020811015610b7c57600080fd5b505160408051808201909152600981526827a9a82fa82927a7a360b91b60208201529091508115610bee5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b506040517f117efdf1fdd8be5a6ff0fb3c32333d7033bbd9523924bd0d9ca28f43540516f590600090a1610c2061129b565b50505050505050505050505050565b60055460ff166002811115610c4057fe5b600114604051806040016040528060098152602001684249535f535441544560b81b81525090610cb15760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b50600354610cbe43610ffb565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b81525090610d315760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b03163314610dad5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b50610df66040518061010001604052808a81526020018981526020018881526020018781526020018681526020018581526020018481526020018363ffffffff1681525061130f565b5050505050505050565b600354610e0c43610ffb565b11610e5e576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff166002811115610e7157fe5b1415610ead576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a1610ea8611a82565b610ede565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610ede61129b565b565b600060055460ff166002811115610ef357fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b81525090610f685760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff19169091179055610fc0611ada565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6132c80290565b600080838160205b885181116110f5578089015193506020818a51036020018161102857fe5b0491505b60008211801561103f5750600286066001145b801561104d57508160020a86115b156110605760028604600101955061102c565b600286066110ab5783836040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816110a357fe5b0495506110ed565b82846040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816110e657fe5b0460010195505b60200161100a565b505090941495945050505050565b600580546001919060ff191682805b0217905550610ede611ada565b815160209283015160408051808601969096526fffffffffffffffffffffffffffffffff19608093841b81168783015291831b9091166050860152606080860193909352805180860390930183529301909252815191012090565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b6040805160e09490941b6001600160e01b0319166020808601919091526024850193909352604480850192909252805180850390920182526064909301909252815191012090565b6006548114604051806040016040528060088152602001672124a9afa82922ab60c11b815250906112975760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5050565b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156112f357600080fd5b505af1158015611307573d6000803e3d6000fd5b503392505050ff5b6000600182604001515103905081606001515181146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906113935760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b5081608001515181600101146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b8152509061140e5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b508160a001515181600101146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906114895760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b508160c001515181146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906115015760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105e85781810151838201526020016105d0565b50600080805b83811015611555578460c00151818151811061151f57fe5b602002602001015183019250818061154b57508460600151818151811061154257fe5b60200260200101515b9150600101611507565b506000611583856040015160008151811061156c57fe5b60200260200101518660200151876000015161111f565b9050600061160b8660400151868151811061159a57fe5b6020026020010151848689608001516000815181106115b557fe5b60200260200101518a608001518a815181106115cd57fe5b60200260200101518b60a001516000815181106115e657fe5b60200260200101518c60a001518c815181106115fe57fe5b602002602001015161117a565b905061161f610a0d8760e0015184846111dd565b60608560405190808252806020026020018201604052801561164b578160200160208202803883390190505b5090506116f8876040015160018151811061166257fe5b6020026020010151886060015160008151811061167b57fe5b60200260200101518960c0015160008151811061169457fe5b60200260200101518a608001516000815181106116ad57fe5b60200260200101518b608001516001815181106116c657fe5b60200260200101518c60a001516000815181106116df57fe5b60200260200101518d60a001516001815181106115fe57fe5b91506117426117118860e0015163ffffffff1688611aec565b61173c896040015160008151811061172557fe5b60200260200101518a602001518b6000015161111f565b846111dd565b8160008151811061174f57fe5b602090810291909101015260015b868110156118a4578760600151600182038151811061177857fe5b6020026020010151156117905761178d611b0a565b88525b61183c886040015182600101815181106117a657fe5b6020026020010151896060015183815181106117be57fe5b60200260200101518a60c0015184815181106117d657fe5b60200260200101518b6080015185815181106117ee57fe5b60200260200101518c60800151866001018151811061180957fe5b60200260200101518d60a00151878151811061182157fe5b60200260200101518e60a0015188600101815181106115fe57fe5b92506118856118558960e0015163ffffffff1689611b7d565b61187f8a60400151848151811061186857fe5b60200260200101518b602001518c6000015161111f565b856111dd565b82828151811061189157fe5b602090810291909101015260010161175d565b506118ae81611b90565b6118b6611b9f565b7f63272d4b87ef3d8b9cf389aa1901e3affa85f44d7dbd164024beef2d6da569bf8760400151886060015189608001518a60a001518b60c001518c60e001516003546040518080602001806020018060200180602001806020018863ffffffff1663ffffffff16815260200187815260200186810386528d818151815260200191508051906020019060200280838360005b83811015611960578181015183820152602001611948565b5050505090500186810385528c818151815260200191508051906020019060200280838360005b8381101561199f578181015183820152602001611987565b5050505090500186810384528b818151815260200191508051906020019060200280838360005b838110156119de5781810151838201526020016119c6565b5050505090500186810383528a818151815260200191508051906020019060200280838360005b83811015611a1d578181015183820152602001611a05565b50505050905001868103825289818151815260200191508051906020019060200280838360005b83811015611a5c578181015183820152602001611a44565b505050509050019c5050505050505050505050505060405180910390a150505050505050565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156112f357600080fd5b600454611ae643610ffb565b01600355565b6000818381611af757fe5b06828481611b0157fe5b04019392505050565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b83811015611b56578181015183820152602001611b3e565b50505050905001925050506040516020818303038152906040528051906020012091505090565b6000818381611b8857fe5b049392505050565b611b9981611bb3565b60065550565b600580546002919060ff1916600183611112565b6000815b600181511115611cd45760606002825160010181611bd157fe5b04604051908082528060200260200182016040528015611bfb578160200160208202803883390190505b50905060005b8151811015611ccc578251816002026001011015611c9457828160020281518110611c2857fe5b6020026020010151838260020260010181518110611c4257fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120828281518110611c8357fe5b602002602001018181525050611cc4565b828160020281518110611ca357fe5b6020026020010151828281518110611cb757fe5b6020026020010181815250505b600101611c01565b509050611bb7565b80600081518110611ce157fe5b602002602001015191505091905056fea265627a7a723158208fb990ccb2431bec37b1998dc2824998461979d6b767df0382b13671292a787764736f6c634300050d0032"
+var ExecutionChallengeBin = "0x608060405234801561001057600080fd5b50611d6c806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806302ad1e4e1461005c57806379a9ad85146100a05780638827cdc614610150578063ba2a231114610261578063ced5c1bf1461054b575b600080fd5b61009e600480360360a081101561007257600080fd5b506001600160a01b03813581169160208101358216916040820135169060608101359060800135610553565b005b61009e600480360360808110156100b657600080fd5b81359190810190604081016020820135600160201b8111156100d757600080fd5b8201836020820111156100e957600080fd5b803590602001918460018302840111600160201b8311171561010a57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505082359350505060200135610568565b61009e600480360361018081101561016757600080fd5b6040805180820182528335936020810135938101929091608083019180840190600290839083908082843760009201919091525091948335946020850135151594604081013594506060810135935060808101359260a08201359267ffffffffffffffff60c0840135169261010081019060e00135600160201b8111156101ed57600080fd5b8201836020820111156101ff57600080fd5b803590602001918460018302840111600160201b8311171561022057600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610866945050505050565b61009e600480360361012081101561027857600080fd5b60408051808201825283359392830192916060830191906020840190600290839083908082843760009201919091525091949392602081019250359050600160201b8111156102c657600080fd5b8201836020820111156102d857600080fd5b803590602001918460208302840111600160201b831117156102f957600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561034857600080fd5b82018360208201111561035a57600080fd5b803590602001918460208302840111600160201b8311171561037b57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156103ca57600080fd5b8201836020820111156103dc57600080fd5b803590602001918460208302840111600160201b831117156103fd57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561044c57600080fd5b82018360208201111561045e57600080fd5b803590602001918460208302840111600160201b8311171561047f57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156104ce57600080fd5b8201836020820111156104e057600080fd5b803590602001918460208302840111600160201b8311171561050157600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295505050903567ffffffffffffffff169150610c339050565b61009e610e08565b61055f85858585610ee8565b60065550505050565b60055460ff16600281111561057957fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b815250906106275760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156105ec5781810151838201526020016105d4565b50505050905090810190601f1680156106195780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5060035461063443611003565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906106a75760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b031633146107235760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906107965760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b506107a68383838760010161100a565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906108145760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b50600681905561082261110b565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b60055460ff16600281111561087757fe5b600114604051806040016040528060098152602001684249535f535441544560b81b815250906108e85760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b506003546108f543611003565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b815250906109685760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b031633146109e45760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5060006109f28c8b8d611127565b9050610a16610a11600183610a0c8d8d898e8e8e8e611182565b6111e5565b61122d565b600073__$efcad257db8183701794ea8506d55e247c$__630b1cb7878e8d8f8e8e8e8e8e8e8e8e6040518c63ffffffff1660e01b8152600401808c81526020018b600260200280838360005b83811015610a7a578181015183820152602001610a62565b505050509050018a8152602001898152602001881515151581526020018781526020018681526020018581526020018481526020018367ffffffffffffffff1667ffffffffffffffff16815260200180602001828103825283818151815260200191508051906020019080838360005b83811015610b02578181015183820152602001610aea565b50505050905090810190601f168015610b2f5780820380516001836020036101000a031916815260200191505b509c5050505050505050505050505060206040518083038186803b158015610b5657600080fd5b505af4158015610b6a573d6000803e3d6000fd5b505050506040513d6020811015610b8057600080fd5b505160408051808201909152600981526827a9a82fa82927a7a360b91b60208201529091508115610bf25760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b506040517f117efdf1fdd8be5a6ff0fb3c32333d7033bbd9523924bd0d9ca28f43540516f590600090a1610c246112a3565b50505050505050505050505050565b60055460ff166002811115610c4457fe5b600114604051806040016040528060098152602001684249535f535441544560b81b81525090610cb55760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b50600354610cc243611003565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b81525090610d355760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b03163314610db15760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b50610dfe6040518061010001604052808a81526020018981526020018881526020018781526020018681526020018581526020018481526020018367ffffffffffffffff168152506112ae565b5050505050505050565b600354610e1443611003565b11610e66576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff166002811115610e7957fe5b1415610eb5576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a1610eb0611a3d565b610ee6565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610ee66112a3565b565b600060055460ff166002811115610efb57fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b81525090610f705760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff19169091179055610fc8611a45565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6132c80290565b600080838160205b885181116110fd578089015193506020818a51036020018161103057fe5b0491505b6000821180156110475750600286066001145b801561105557508160020a86115b1561106857600286046001019550611034565b600286066110b35783836040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816110ab57fe5b0495506110f5565b82846040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816110ee57fe5b0460010195505b602001611012565b505090941495945050505050565b600580546001919060ff191682805b0217905550610ee6611a45565b815160209283015160408051808601969096526fffffffffffffffffffffffffffffffff19608093841b81168783015291831b9091166050860152606080860193909352805180860390930183529301909252815191012090565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b6040805160c09490941b6001600160c01b0319166020808601919091526028850193909352604880850192909252805180850390920182526068909301909252815191012090565b6006548114604051806040016040528060088152602001672124a9afa82922ab60c11b8152509061129f5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5050565b6112ab611a57565b33ff5b6000600182604001515103905081606001515181146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906113325760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b5081608001515181600101146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906113ad5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b508160a001515181600101146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906114285760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b508160c001515181146040518060400160405280600a8152602001692124a9afa4a7282622a760b11b815250906114a05760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156105ec5781810151838201526020016105d4565b50600080805b838110156114f4578460c0015181815181106114be57fe5b60200260200101518301925081806114ea5750846060015181815181106114e157fe5b60200260200101515b91506001016114a6565b506000611522856040015160008151811061150b57fe5b602002602001015186602001518760000151611127565b905060006115aa8660400151868151811061153957fe5b60200260200101518486896080015160008151811061155457fe5b60200260200101518a608001518a8151811061156c57fe5b60200260200101518b60a0015160008151811061158557fe5b60200260200101518c60a001518c8151811061159d57fe5b6020026020010151611182565b90506115be610a118760e0015184846111e5565b6060856040519080825280602002602001820160405280156115ea578160200160208202803883390190505b509050611697876040015160018151811061160157fe5b6020026020010151886060015160008151811061161a57fe5b60200260200101518960c0015160008151811061163357fe5b60200260200101518a6080015160008151811061164c57fe5b60200260200101518b6080015160018151811061166557fe5b60200260200101518c60a0015160008151811061167e57fe5b60200260200101518d60a0015160018151811061159d57fe5b91506116eb6116b48860e0015167ffffffffffffffff1688611ad3565b63ffffffff166116e589604001516000815181106116ce57fe5b60200260200101518a602001518b60000151611127565b846111e5565b816000815181106116f857fe5b602090810291909101015260015b86811015611857578760600151600182038151811061172157fe5b60200260200101511561173957611736611af1565b88525b6117e58860400151826001018151811061174f57fe5b60200260200101518960600151838151811061176757fe5b60200260200101518a60c00151848151811061177f57fe5b60200260200101518b60800151858151811061179757fe5b60200260200101518c6080015186600101815181106117b257fe5b60200260200101518d60a0015187815181106117ca57fe5b60200260200101518e60a00151886001018151811061159d57fe5b92506118386118028960e0015167ffffffffffffffff1689611b64565b63ffffffff166118328a60400151848151811061181b57fe5b60200260200101518b602001518c60000151611127565b856111e5565b82828151811061184457fe5b6020908102919091010152600101611706565b5061186181611b77565b611869611b86565b7f99a5d600237469c778df4f1eb561cbc9eada42285a37b35e762776647ab1ee478760400151886060015189608001518a60a001518b60c001518c60e001516003546040518080602001806020018060200180602001806020018867ffffffffffffffff1667ffffffffffffffff16815260200187815260200186810386528d818151815260200191508051906020019060200280838360005b8381101561191b578181015183820152602001611903565b5050505090500186810385528c818151815260200191508051906020019060200280838360005b8381101561195a578181015183820152602001611942565b5050505090500186810384528b818151815260200191508051906020019060200280838360005b83811015611999578181015183820152602001611981565b5050505090500186810383528a818151815260200191508051906020019060200280838360005b838110156119d85781810151838201526020016119c0565b50505050905001868103825289818151815260200191508051906020019060200280838360005b83811015611a175781810151838201526020016119ff565b505050509050019c5050505050505050505050505060405180910390a150505050505050565b6112ab611b9a565b600454611a5143611003565b01600355565b6000805460015460028054604080516335e1e69160e11b81526001600160a01b0394851660048201529184166024830152604482019290925290519190921692636bc3cd22926064808201939182900301818387803b158015611ab957600080fd5b505af1158015611acd573d6000803e3d6000fd5b50505050565b6000818381611ade57fe5b06828481611ae857fe5b04019392505050565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b83811015611b3d578181015183820152602001611b25565b50505050905001925050506040516020818303038152906040528051906020012091505090565b6000818381611b6f57fe5b049392505050565b611b8081611bf9565b60065550565b600580546002919060ff191660018361111a565b6000805460028054600154604080516335e1e69160e11b81526001600160a01b039384166004820152918316602483015260448201939093529151921692636bc3cd229260648084019382900301818387803b158015611ab957600080fd5b6000815b600181511115611d1a5760606002825160010181611c1757fe5b04604051908082528060200260200182016040528015611c41578160200160208202803883390190505b50905060005b8151811015611d12578251816002026001011015611cda57828160020281518110611c6e57fe5b6020026020010151838260020260010181518110611c8857fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120828281518110611cc957fe5b602002602001018181525050611d0a565b828160020281518110611ce957fe5b6020026020010151828281518110611cfd57fe5b6020026020010181815250505b600101611c47565b509050611bfd565b80600081518110611d2757fe5b602002602001015191505091905056fea265627a7a7231582005d142b518ab14672be02d5ce8f53d8b68ec79bc3c898e787ad24d7594c742d164736f6c634300050d0032"
 
 // DeployExecutionChallenge deploys a new Ethereum contract, binding an instance of ExecutionChallenge to it.
 func DeployExecutionChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ExecutionChallenge, error) {
@@ -2035,24 +2163,24 @@ func (_ExecutionChallenge *ExecutionChallengeTransactorRaw) Transact(opts *bind.
 	return _ExecutionChallenge.Contract.contract.Transact(opts, method, params...)
 }
 
-// BisectAssertion is a paid mutator transaction binding the contract method 0x903ac1a8.
+// BisectAssertion is a paid mutator transaction binding the contract method 0xba2a2311.
 //
-// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint32 _totalSteps) returns()
-func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertion(opts *bind.TransactOpts, _beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint32) (*types.Transaction, error) {
+// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint64 _totalSteps) returns()
+func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertion(opts *bind.TransactOpts, _beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) (*types.Transaction, error) {
 	return _ExecutionChallenge.contract.Transact(opts, "bisectAssertion", _beforeInbox, _timeBoundsBlocks, _machineHashes, _didInboxInsns, _messageAccs, _logAccs, _gases, _totalSteps)
 }
 
-// BisectAssertion is a paid mutator transaction binding the contract method 0x903ac1a8.
+// BisectAssertion is a paid mutator transaction binding the contract method 0xba2a2311.
 //
-// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint32 _totalSteps) returns()
-func (_ExecutionChallenge *ExecutionChallengeSession) BisectAssertion(_beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint32) (*types.Transaction, error) {
+// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint64 _totalSteps) returns()
+func (_ExecutionChallenge *ExecutionChallengeSession) BisectAssertion(_beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) (*types.Transaction, error) {
 	return _ExecutionChallenge.Contract.BisectAssertion(&_ExecutionChallenge.TransactOpts, _beforeInbox, _timeBoundsBlocks, _machineHashes, _didInboxInsns, _messageAccs, _logAccs, _gases, _totalSteps)
 }
 
-// BisectAssertion is a paid mutator transaction binding the contract method 0x903ac1a8.
+// BisectAssertion is a paid mutator transaction binding the contract method 0xba2a2311.
 //
-// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint32 _totalSteps) returns()
-func (_ExecutionChallenge *ExecutionChallengeTransactorSession) BisectAssertion(_beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint32) (*types.Transaction, error) {
+// Solidity: function bisectAssertion(bytes32 _beforeInbox, uint128[2] _timeBoundsBlocks, bytes32[] _machineHashes, bool[] _didInboxInsns, bytes32[] _messageAccs, bytes32[] _logAccs, uint64[] _gases, uint64 _totalSteps) returns()
+func (_ExecutionChallenge *ExecutionChallengeTransactorSession) BisectAssertion(_beforeInbox [32]byte, _timeBoundsBlocks [2]*big.Int, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) (*types.Transaction, error) {
 	return _ExecutionChallenge.Contract.BisectAssertion(&_ExecutionChallenge.TransactOpts, _beforeInbox, _timeBoundsBlocks, _machineHashes, _didInboxInsns, _messageAccs, _logAccs, _gases, _totalSteps)
 }
 
@@ -2346,14 +2474,14 @@ type ExecutionChallengeBisectedAssertion struct {
 	MessageAccs   [][32]byte
 	LogAccs       [][32]byte
 	Gases         []uint64
-	TotalSteps    uint32
+	TotalSteps    uint64
 	DeadlineTicks *big.Int
 	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterBisectedAssertion is a free log retrieval operation binding the contract event 0x63272d4b87ef3d8b9cf389aa1901e3affa85f44d7dbd164024beef2d6da569bf.
+// FilterBisectedAssertion is a free log retrieval operation binding the contract event 0x99a5d600237469c778df4f1eb561cbc9eada42285a37b35e762776647ab1ee47.
 //
-// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint32 totalSteps, uint256 deadlineTicks)
+// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint64 totalSteps, uint256 deadlineTicks)
 func (_ExecutionChallenge *ExecutionChallengeFilterer) FilterBisectedAssertion(opts *bind.FilterOpts) (*ExecutionChallengeBisectedAssertionIterator, error) {
 
 	logs, sub, err := _ExecutionChallenge.contract.FilterLogs(opts, "BisectedAssertion")
@@ -2363,9 +2491,9 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) FilterBisectedAssertion(o
 	return &ExecutionChallengeBisectedAssertionIterator{contract: _ExecutionChallenge.contract, event: "BisectedAssertion", logs: logs, sub: sub}, nil
 }
 
-// WatchBisectedAssertion is a free log subscription operation binding the contract event 0x63272d4b87ef3d8b9cf389aa1901e3affa85f44d7dbd164024beef2d6da569bf.
+// WatchBisectedAssertion is a free log subscription operation binding the contract event 0x99a5d600237469c778df4f1eb561cbc9eada42285a37b35e762776647ab1ee47.
 //
-// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint32 totalSteps, uint256 deadlineTicks)
+// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint64 totalSteps, uint256 deadlineTicks)
 func (_ExecutionChallenge *ExecutionChallengeFilterer) WatchBisectedAssertion(opts *bind.WatchOpts, sink chan<- *ExecutionChallengeBisectedAssertion) (event.Subscription, error) {
 
 	logs, sub, err := _ExecutionChallenge.contract.WatchLogs(opts, "BisectedAssertion")
@@ -2400,9 +2528,9 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) WatchBisectedAssertion(op
 	}), nil
 }
 
-// ParseBisectedAssertion is a log parse operation binding the contract event 0x63272d4b87ef3d8b9cf389aa1901e3affa85f44d7dbd164024beef2d6da569bf.
+// ParseBisectedAssertion is a log parse operation binding the contract event 0x99a5d600237469c778df4f1eb561cbc9eada42285a37b35e762776647ab1ee47.
 //
-// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint32 totalSteps, uint256 deadlineTicks)
+// Solidity: event BisectedAssertion(bytes32[] machineHashes, bool[] didInboxInsns, bytes32[] messageAccs, bytes32[] logAccs, uint64[] gases, uint64 totalSteps, uint256 deadlineTicks)
 func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseBisectedAssertion(log types.Log) (*ExecutionChallengeBisectedAssertion, error) {
 	event := new(ExecutionChallengeBisectedAssertion)
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "BisectedAssertion", log); err != nil {
@@ -3114,11 +3242,11 @@ func (_IBisectionChallenge *IBisectionChallengeTransactorSession) InitializeBise
 }
 
 // IStakingABI is the input ABI used to generate the binding from.
-const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IStakingFuncSigs maps the 4-byte function signature to its string representation.
 var IStakingFuncSigs = map[string]string{
-	"396f51cf": "resolveChallenge(address,address)",
+	"6bc3cd22": "resolveChallenge(address,address,uint256)",
 }
 
 // IStaking is an auto generated Go binding around an Ethereum contract.
@@ -3263,25 +3391,25 @@ func (_IStaking *IStakingTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _IStaking.Contract.contract.Transact(opts, method, params...)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser) returns()
-func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
-	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser)
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser, challengeType)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser) returns()
-func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser) returns()
-func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
 }
 
 // MachineABI is the input ABI used to generate the binding from.

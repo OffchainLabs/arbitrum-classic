@@ -84,6 +84,7 @@ contract Staking is ChallengeType {
     uint128 private stakeRequirement;
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
+    mapping (address => bool) challenges;
 
     event RollupStakeCreated(
         address staker,
@@ -118,13 +119,10 @@ contract Staking is ChallengeType {
         return stakers[_stakerAddress].location != 0x00;
     }
 
-    function resolveChallenge(address payable winner, address loser) external {
-        address sender = msg.sender;
-        bytes32 codehash;
-        assembly { codehash := extcodehash(sender) }
-        address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        address challengeContract2 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, RES_CHAL_SENDER);
+    function resolveChallenge(address payable winner, address loser, uint256) external {
+        require(challenges[msg.sender], RES_CHAL_SENDER);
+        delete challenges[msg.sender];
+
         Staker storage winningStaker = getValidStaker(address(winner));
         winner.transfer(stakeRequirement / 2);
         winningStaker.inChallenge = false;
@@ -196,6 +194,8 @@ contract Staking is ChallengeType {
             challengerDataHash,
             stakerNodeTypes[1]
         );
+
+        challenges[newChallengeAddr] = true;
 
         emit RollupChallengeStarted(
             asserterAddress,

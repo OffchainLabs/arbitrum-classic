@@ -92,14 +92,13 @@ func testChallenge(
 		return errors2.Wrap(err, "Error gettign challenge factory address")
 	}
 
-	tester, err := client1.DeployChallengeTest(context.Background())
+	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
 	}
 
 	challengeAddress, blockId, err := tester.StartChallenge(
 		context.Background(),
-		challengeFactoryAddress,
 		client1.Address(),
 		client2.Address(),
 		common.TimeTicks{big.NewInt(13000 * 5)},

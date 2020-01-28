@@ -80,7 +80,16 @@ func (c *bisectionChallenge) chooseSegment(
 		tree.GetNode(int(segmentToChallenge)),
 	)
 	if err != nil {
-		return err
+		return c.BisectionChallenge.ChooseSegmentCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			big.NewInt(int64(segmentToChallenge)),
+			tree.GetProofFlat(int(segmentToChallenge)),
+			tree.GetRoot(),
+			tree.GetNode(int(segmentToChallenge)),
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "ChooseSegment")
 }
