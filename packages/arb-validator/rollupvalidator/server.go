@@ -45,11 +45,11 @@ type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
 	man           *rollupmanager.Manager
-	maxCallSteps  uint32
+	maxCallSteps  uint64
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallSteps uint32) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallSteps uint64) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
 	man.AddListener(assertionListener)

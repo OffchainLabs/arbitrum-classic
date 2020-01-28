@@ -43,7 +43,7 @@ type PendingTopChallenge interface {
 		ctx context.Context,
 		assertionToChallenge uint16,
 		chainHashes []common.Hash,
-		chainLength uint32,
+		chainLength uint64,
 	) error
 }
 

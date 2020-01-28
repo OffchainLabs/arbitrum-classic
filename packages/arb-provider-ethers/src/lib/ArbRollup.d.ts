@@ -216,10 +216,10 @@ export class ArbRollup extends Contract {
         vmParams(): Promise<{
             gracePeriodTicks: BigNumber;
             arbGasSpeedLimitPerTick: BigNumber;
-            maxExecutionSteps: number;
+            maxExecutionSteps: BigNumber;
             0: BigNumber;
             1: BigNumber;
-            2: number;
+            2: BigNumber;
         }>;
 
         pruneLeaf(

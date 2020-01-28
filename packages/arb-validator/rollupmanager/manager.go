@@ -193,10 +193,10 @@ func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.Unlock()
 }
 
-func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*protocol.ExecutionAssertion, uint32) {
+func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint64) (*protocol.ExecutionAssertion, uint64) {
 	retChan := make(chan struct {
 		*protocol.ExecutionAssertion
-		uint32
+		uint64
 	}, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		mach := chain.LatestKnownValidMachine()
@@ -206,12 +206,12 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*pr
 			assertion, numSteps := mach.ExecuteAssertion(maxSteps, timeBounds, messages)
 			retChan <- struct {
 				*protocol.ExecutionAssertion
-				uint32
+				uint64
 			}{assertion, numSteps}
 		}()
 	}
 	ret := <-retChan
-	return ret.ExecutionAssertion, ret.uint32
+	return ret.ExecutionAssertion, ret.uint64
 }
 
 func (man *Manager) CurrentBlockId() *structures.BlockId {

@@ -60,7 +60,7 @@ func LaunchRPC(man *rollupmanager.Manager, port string) error {
 }
 
 // NewServer returns a new instance of the Server class
-func NewRPCServer(man *rollupmanager.Manager, maxCallSteps uint32) (*RPCServer, error) {
+func NewRPCServer(man *rollupmanager.Manager, maxCallSteps uint64) (*RPCServer, error) {
 	server, err := NewServer(man, maxCallSteps)
 	return &RPCServer{server}, err
 }

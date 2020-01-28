@@ -67,7 +67,7 @@ contract NodeGraph is ChallengeType {
         uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
-        uint32 numSteps,
+        uint64 numSteps,
         bool didInboxInsn
     );
 
@@ -92,7 +92,7 @@ contract NodeGraph is ChallengeType {
         bytes32 prevDataHash;
         uint32  prevChildType;
 
-        uint32 numSteps;
+        uint64 numSteps;
         uint128[2] timeBoundsBlocks;
         uint256 importedMessageCount;
 
@@ -138,7 +138,7 @@ contract NodeGraph is ChallengeType {
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
-        uint32 _maxExecutionSteps,
+        uint64 _maxExecutionSteps,
         address _globalInboxAddress
     )
         internal

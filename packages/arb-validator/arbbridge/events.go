@@ -135,7 +135,7 @@ type MessagesBisectionEvent struct {
 type ExecutionBisectionEvent struct {
 	ChainInfo
 	Assertions []*valprotocol.ExecutionAssertionStub
-	TotalSteps uint32
+	TotalSteps uint64
 	Deadline   common.TimeTicks
 }
 

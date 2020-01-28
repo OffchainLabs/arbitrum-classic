@@ -230,7 +230,7 @@ func challengePendingTop(
 			if err != nil {
 				return 0, err
 			}
-			err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
+			err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}

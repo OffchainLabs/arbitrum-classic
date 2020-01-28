@@ -25,7 +25,7 @@ import (
 type ChainParams struct {
 	StakeRequirement        *big.Int
 	GracePeriod             common.TimeTicks
-	MaxExecutionSteps       uint32
+	MaxExecutionSteps       uint64
 	ArbGasSpeedLimitPerTick uint64
 }
 
