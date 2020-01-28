@@ -94,6 +94,7 @@ func (conn *ArbConnection) getCurrentNonce(
 	if err != nil {
 		return nil, err
 	}
+	conn.sequenceNum = num
 	return num, nil
 }
 
