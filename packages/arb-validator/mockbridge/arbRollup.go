@@ -19,7 +19,11 @@ package mockbridge
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -89,15 +93,16 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 		Staker:   vm.Client.auth.From,
 		NodeHash: location,
 	}
-	vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
-		Event: arbbridge.StakeCreatedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.LatestBlock,
-			},
-			Staker:   vm.Client.auth.From,
-			NodeHash: location,
-		},
+		Event: event,
+		//Event: arbbridge.StakeCreatedEvent{
+		//	ChainInfo: arbbridge.ChainInfo{
+		//		BlockId: vm.Client.MockEthClient.LatestBlock,
+		//	},
+		//	Staker:   vm.Client.auth.From,
+		//	NodeHash: location,
+		//},
 	})
 	return nil
 }
@@ -294,6 +299,179 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	return nil
 }
 
+func generateInvalidPendingTopLeaf(
+	vm *arbRollup,
+	beforeState *structures.VMProtoData,
+	prevLeaf common.Hash,
+	deadlineTicks common.TimeTicks,
+) common.Hash {
+	//data,
+	//prevLeaf,
+	//deadlineTicks,
+	//pendingValue,
+	//pendingCount,
+	//vmProtoHashBefore,
+	//gracePeriodTicks
+	//);
+	//bytes32 challengeHash = ChallengeUtils.pendingTopHash(
+	//	data.afterPendingTop,
+	//	pendingValue,
+	//	pendingCount - (data.beforePendingCount + data.importedMessageCount)
+	//);
+	challengeHash := beforeState.Hash()
+
+	//return RollupUtils.childNodeHash(
+	//	prevLeaf,
+	//	deadlineTicks,
+	//	RollupUtils.challengeDataHash(
+	//		challengeHash,
+	//		gracePeriodTicks + RollupTime.blocksToTicks(1)
+	//),
+	challengeDataHash := hashing.SoliditySHA3(
+		hashing.Bytes32(challengeHash),
+		hashing.TimeTicks(vm.params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))),
+	)
+	invalidPending := hashing.SoliditySHA3(
+		hashing.Bytes32(prevLeaf),
+		hashing.TimeTicks(deadlineTicks),
+		hashing.Bytes32(challengeDataHash),
+		hashing.Uint8(uint8(structures.InvalidPendingChildType)),
+		hashing.Bytes32(beforeState.Hash()))
+
+	return invalidPending
+}
+
+//bytes32 nodeDataHash = RollupUtils.challengeDataHash(
+//	challengeHash,
+//	gracePeriodTicks + RollupTime.blocksToTicks(1)
+//);
+//return RollupUtils.childNodeHash(
+//	prevLeaf,
+//	deadlineTicks,
+//	nodeDataHash,
+//	INVALID_MESSAGES_TYPE,
+//	vmProtoHashBefore
+//);
+func generateInvalidMessagesLeaf(
+	vm *arbRollup,
+	beforeState *structures.VMProtoData,
+	assertionClaim *structures.AssertionClaim,
+	prevLeaf common.Hash,
+	deadlineTicks common.TimeTicks,
+) common.Hash {
+	//bytes32 invalidMessages = generateInvalidMessagesLeaf(
+	//data,
+	//prevLeaf,
+	//deadlineTicks,
+	//vmProtoHashBefore,
+	//gracePeriodTicks
+	//);
+	//bytes32 challengeHash = ChallengeUtils.messagesHash(
+	//	data.beforePendingTop,
+	//	data.afterPendingTop,
+	//	Value.hashEmptyTuple(),
+	//	data.importedMessagesSlice,
+	//	data.importedMessageCount
+	//);
+	challengeHash := hashing.SoliditySHA3(
+		hashing.Bytes32(beforeState.PendingTop),
+		hashing.Bytes32(assertionClaim.AfterPendingTop),
+		hashing.Bytes32(value.NewEmptyTuple().Hash()),
+		hashing.Bytes32(assertionClaim.ImportedMessagesSlice),
+		hashing.Uint256(beforeState.PendingCount),
+	)
+	//return RollupUtils.childNodeHash(
+	//	prevLeaf,
+	//	deadlineTicks,
+	//	RollupUtils.challengeDataHash(
+	//		challengeHash,
+	//		gracePeriodTicks + RollupTime.blocksToTicks(1)
+	//),
+	challengeDataHash := hashing.SoliditySHA3(
+		hashing.Bytes32(challengeHash),
+		hashing.TimeTicks(vm.params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))),
+	)
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(prevLeaf),
+		hashing.TimeTicks(deadlineTicks),
+		hashing.Bytes32(challengeDataHash),
+		hashing.Uint8(uint8(structures.InvalidMessagesChildType)),
+		hashing.Bytes32(beforeState.Hash()))
+}
+
+func ExecutionPreconditionHash(machineHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, msgSlices common.Hash) common.Hash {
+	pre := &valprotocol.Precondition{
+		BeforeHash:  machineHash,
+		TimeBounds:  timeBounds,
+		BeforeInbox: value.NewHashOnlyValue(msgSlices, 0),
+	}
+	return pre.Hash()
+}
+
+func generateInvalidExecution(
+	vm *arbRollup,
+	beforeState *structures.VMProtoData,
+	assertionClaim *structures.AssertionClaim,
+	assertionParam *structures.AssertionParams,
+	prevLeaf common.Hash,
+	deadlineTicks common.TimeTicks,
+) common.Hash {
+	//bytes32 preconditionHash = Protocol.generatePreconditionHash(
+	//data.beforeVMHash,
+	//data.timeBoundsBlocks,
+	//data.importedMessagesSlice
+	//);
+	//bytes32 assertionHash = Protocol.generateAssertionHash(
+	//data.afterVMHash,
+	//data.didInboxInsn,
+	//data.numArbGas,
+	//0x00,
+	//data.messagesAccHash,
+	//0x00,
+	//data.logsAccHash
+	//);
+	//bytes32 executionHash = ChallengeUtils.executionHash(
+	//data.numSteps,
+	//preconditionHash,
+	//assertionHash
+	//);
+	//return RollupUtils.childNodeHash(
+	//prevLeaf,
+	//deadlineTicks,
+	//RollupUtils.challengeDataHash(
+	//executionHash,
+	//gracePeriodTicks + checkTimeTicks
+	//),
+	//INVALID_EXECUTION_TYPE,
+	//vmProtoHashBefore
+	//);
+	//excutionHash := ExecutionPreconditionHash(beforeState.MachineHash, assertionParam.TimeBounds, assertionClaim.ImportedMessagesSlice)
+	challengeHash := hashing.SoliditySHA3(
+		hashing.Bytes32(beforeState.PendingTop),
+		hashing.Bytes32(assertionClaim.AfterPendingTop),
+		hashing.Bytes32(value.NewEmptyTuple().Hash()),
+		hashing.Bytes32(assertionClaim.ImportedMessagesSlice),
+		hashing.Uint256(beforeState.PendingCount),
+	)
+	//return RollupUtils.childNodeHash(
+	//	prevLeaf,
+	//	deadlineTicks,
+	//	RollupUtils.challengeDataHash(
+	//		challengeHash,
+	//		gracePeriodTicks + RollupTime.blocksToTicks(1)
+	//),
+	challengeDataHash := hashing.SoliditySHA3(
+		hashing.Bytes32(challengeHash),
+		hashing.TimeTicks(vm.params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))),
+	)
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(prevLeaf),
+		hashing.TimeTicks(deadlineTicks),
+		hashing.Bytes32(challengeDataHash),
+		hashing.Uint8(uint8(structures.InvalidExecutionChildType)),
+		hashing.Bytes32(beforeState.Hash()))
+}
+
 func (vm *arbRollup) MakeAssertion(
 	ctx context.Context,
 
@@ -362,6 +540,7 @@ func (vm *arbRollup) MakeAssertion(
 		prevChildType,
 	)
 	//require(isValidLeaf(prevLeaf), MAKE_LEAF);
+	fmt.Print("leaves: ", vm.rollup.leaves, " prevleaf: ", prevLeaf)
 	if !vm.rollup.leaves[prevLeaf] {
 		return errors.New("makeAssertion - invalid leaf")
 	}
@@ -405,34 +584,10 @@ func (vm *arbRollup) MakeAssertion(
 	checkTimeTicks := vm.params.StakeRequirement.Div(vm.params.StakeRequirement, big.NewInt(int64(vm.params.ArbGasSpeedLimitPerTick)))
 	deadlineTicks = deadlineTicks.Add(common.TimeFromSeconds(checkTimeTicks.Int64()))
 	//
-	//bytes32 invalidPending = generateInvalidPendingTopLeaf(
-	//data,
-	//prevLeaf,
-	//deadlineTicks,
-	//pendingValue,
-	//pendingCount,
-	//vmProtoHashBefore,
-	//gracePeriodTicks
-	//);
-	invalidPending, _ := structures.NodeHash(prevPrevLeafHash,
-		protoHashBefore,
-		prevDeadline,
-		prevDataHash,
-		structures.InvalidPendingChildType,
-	)
-	//bytes32 invalidMessages = generateInvalidMessagesLeaf(
-	//data,
-	//prevLeaf,
-	//deadlineTicks,
-	//vmProtoHashBefore,
-	//gracePeriodTicks
-	//);
-	invalidMessages, _ := structures.NodeHash(prevPrevLeafHash,
-		protoHashBefore,
-		prevDeadline,
-		prevDataHash,
-		structures.InvalidMessagesChildType,
-	)
+	invalidPending := generateInvalidPendingTopLeaf(vm, beforeState, prevLeaf, deadlineTicks)
+	invalidMessages := generateInvalidMessagesLeaf(vm, beforeState, assertionClaim, prevLeaf, deadlineTicks)
+	//invalidExecution := generateInvalidExecution(vm, beforeState,)
+
 	//bytes32 invalidExec = generateInvalidExecutionLeaf(
 	//data,
 	//prevLeaf,
@@ -477,18 +632,38 @@ func (vm *arbRollup) MakeAssertion(
 	//Claim           *structures.AssertionClaim
 	//MaxPendingTop   common.Hash
 	//MaxPendingCount *big.Int
+	//	emit RollupAsserted(
+	//		[
+	//			prevLeaf,
+	//		pendingValue,
+	//		data.afterPendingTop,
+	//		data.importedMessagesSlice,
+	//		data.afterVMHash,
+	//		data.messagesAccHash,
+	//		data.logsAccHash
+	//],
+	//	pendingCount,
+	//	data.importedMessageCount,
+	//	data.timeBoundsBlocks,
+	//	data.numArbGas,
+	//	data.numSteps,
+	//	data.didInboxInsn
+	//	);
 
-	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
-		Event: arbbridge.AssertedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.LatestBlock,
-			},
-			PrevLeafHash: prevLeaf,
-			//Params: vm.params,
-			Claim: assertionClaim,
-			//MaxPendingTop: maxpendingtop,
-			//MaxPendingCount: maxpendingtop,
+	event := arbbridge.AssertedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: vm.Client.MockEthClient.LatestBlock,
 		},
+		PrevLeafHash:    prevLeaf,
+		Params:          assertionParams,
+		Claim:           assertionClaim,
+		MaxPendingTop:   beforeState.PendingTop,
+		MaxPendingCount: beforeState.PendingCount,
+	}
+
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock], event)
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: event,
 	})
 	//return (prevLeaf, validHash);
 
@@ -501,13 +676,16 @@ func (vm *arbRollup) MakeAssertion(
 	//updateStakerLocation(msg.sender, newValid);
 	vm.rollup.stakers[vm.Client.auth.From].location = prevLeaf
 	//emit RollupStakeRefunded(address(_stakerAddress));
-	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
-		Event: arbbridge.StakeRefundedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.LatestBlock,
-			},
-			Staker: vm.Client.auth.From,
+	stakeMovedEvent := arbbridge.StakeMovedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: vm.Client.MockEthClient.LatestBlock,
 		},
+		Staker:   vm.Client.auth.From,
+		Location: prevLeaf,
+	}
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.LatestBlock], stakeRefundedEvent)
+	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: stakeMovedEvent,
 	})
 
 	return nil
@@ -523,6 +701,7 @@ func (vm *arbRollup) ConfirmValid(
 	stakerProofs []common.Hash,
 	stakerProofOffsets []*big.Int,
 ) error {
+	fmt.Println("   ----  in ConfirmValid")
 	//vm.auth.Context = ctx
 	//messages := hashing.CombineMessages(outMsgs)
 	//tx, err := vm.arbRollup.ConfirmValid(
@@ -630,6 +809,7 @@ func (vm *arbRollup) confirmNode(
 	//confirmNode(to);
 	//latestConfirmedPriv = to;
 	//emit RollupConfirmed(to);
+	fmt.Println("  ---  in ConfirmNode")
 	return nil
 }
 
@@ -643,6 +823,7 @@ func (vm *arbRollup) ConfirmInvalid(
 	stakerProofs []common.Hash,
 	stakerProofOffsets []*big.Int,
 ) error {
+	fmt.Println("   ----  in ConfirmInvalid")
 	//vm.auth.Context = ctx
 	//tx, err := vm.arbRollup.ConfirmInvalid(
 	//	vm.auth,

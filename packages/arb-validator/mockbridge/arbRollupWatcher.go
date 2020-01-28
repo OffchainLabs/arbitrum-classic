@@ -82,7 +82,7 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 		StakeRequirement:        vm.client.MockEthClient.rollups[vm.address].escrowRequired,
 		GracePeriod:             vm.client.MockEthClient.rollups[vm.address].gracePeriod,
 		MaxExecutionSteps:       vm.client.MockEthClient.rollups[vm.address].maxSteps,
-		ArbGasSpeedLimitPerTick: 0,
+		ArbGasSpeedLimitPerTick: 200000,
 	}, nil
 }
 

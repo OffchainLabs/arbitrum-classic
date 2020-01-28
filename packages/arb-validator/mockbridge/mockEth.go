@@ -170,7 +170,7 @@ func getMockEth(ethURL string) *mockEthdata {
 			}
 		}()
 		go func() {
-			for x := range time.Tick(1 * time.Second) {
+			for x := range time.Tick(3 * time.Second) {
 				mine(mEthData, x)
 			}
 		}()
@@ -193,6 +193,9 @@ func (m *mockEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 
 func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
 	//fmt.Println("publishing event", msg)
+	for _, ru := range m.rollups {
+		ru.events[msg.Event.GetChainInfo().BlockId] = append(ru.events[msg.Event.GetChainInfo().BlockId], msg.Event)
+	}
 	m.pubchan <- msg
 }
 
@@ -210,12 +213,14 @@ func mine(m *mockEthdata, t time.Time) {
 	m.parentHashes[nextBlock] = lastBlock.HeaderHash
 	fmt.Println("mined block number", nextBlock)
 	//m.Unlock()
-	m.pubMsg(arbbridge.MaybeEvent{
-		Event: arbbridge.NewTimeEvent{
-			arbbridge.ChainInfo{
-				BlockId: nextBlock,
-			},
+	blockEvent := arbbridge.NewTimeEvent{
+		arbbridge.ChainInfo{
+			BlockId: nextBlock,
 		},
+	}
+
+	m.pubMsg(arbbridge.MaybeEvent{
+		Event: blockEvent,
 	})
 }
 
