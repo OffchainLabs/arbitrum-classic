@@ -110,7 +110,6 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 	totalSteps := uint64(0)
 	stepIncrease := uint64(5000)
 	for i := uint64(0); i < maxSteps; i += stepIncrease {
-		log.Println("Run ", totalSteps)
 		steps := stepIncrease
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
