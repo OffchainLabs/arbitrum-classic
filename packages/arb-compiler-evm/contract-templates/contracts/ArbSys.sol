@@ -17,7 +17,15 @@
 pragma solidity >=0.4.21 <0.6.0;
 
 interface ArbSys {
+    // Send given amount of ERC-20 tokens to dest with token contract sender.
+    // This is safe to freely call since the sender is authenticated and thus
+    // you can only send fake tokens, not steal real ones
     function withdrawERC20(address dest, uint256 amount) external;
+
+    // Send given ERC-721 token to dest with token contract sender.
+    // This is safe by the above arguement
     function withdrawERC721(address dest, uint256 id) external;
+
+    // Send given amount of Eth to dest with from sender.
     function withdrawEth(address dest, uint256 amount) external;
 }
