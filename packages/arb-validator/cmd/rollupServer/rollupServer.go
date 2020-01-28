@@ -106,7 +106,7 @@ func createRollupChain() {
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
-		MaxExecutionSteps:       20000000,
+		MaxExecutionSteps:       500000000,
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
