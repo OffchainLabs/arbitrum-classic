@@ -57,6 +57,7 @@ ignore:
   - "packages/arb-validator/ethbridge/globalpendinginbox/*"
   - "packages/arb-validator/ethbridge/messageschallenge/*"
   - "packages/arb-validator/ethbridge/pendingtopchallenge/*"
+  - "packages/arb-validator/ethbridge/messagetester/*"
   - "packages/arb-validator/ethbridge/rollup/*"
   - "packages/arb-provider-go/test/fibabi.go"
   - "packages/arb-provider-ethers/src/lib/ArbRollup.d.ts"
