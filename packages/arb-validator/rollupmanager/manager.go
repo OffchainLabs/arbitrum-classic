@@ -85,7 +85,10 @@ func CreateManager(
 				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 					log.Fatal(err)
 				}
-				chain = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+				chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+				if err != nil {
+					log.Fatal(err)
+				}
 			} else {
 				params, err := watcher.GetParams(ctx)
 				if err != nil {

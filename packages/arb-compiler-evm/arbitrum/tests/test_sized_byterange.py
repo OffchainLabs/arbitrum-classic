@@ -14,7 +14,7 @@
 
 from unittest import TestCase
 
-from arbitrum.std import sized_byterange
+from arbitrum.std import sized_byterange, stack_int, bytestack
 from arbitrum import VM
 
 
@@ -62,3 +62,30 @@ class TestSizedByteRange(TestCase):
 
         for val in range(200):
             self.assertEqual(sized_byterange.get_static(br, val * 58), val + 100)
+
+    def test_bytestack_conversion(self):
+        size = 50
+        vm = VM()
+        stack_int.new(vm)
+        for val in range(size):
+            vm.push(val)
+            vm.swap1()
+            stack_int.push(vm)
+        vm.push(size * 32)
+        vm.tnewn(2)
+        bytestack.set_val("size")(vm)
+        bytestack.set_val("stack")(vm)
+
+        start_stack = vm.stack[0]
+
+        sized_byterange.from_bytestack(vm)
+
+        br = sized_byterange.make()
+        for val in range(size):
+            br = sized_byterange.set_static(br, val * 32, val)
+
+        self.assertEqual(br, vm.stack[0])
+
+        sized_byterange.to_bytestack(vm)
+
+        self.assertEqual(start_stack, vm.stack[0])

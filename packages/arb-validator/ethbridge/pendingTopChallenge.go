@@ -68,7 +68,6 @@ func (c *pendingTopChallenge) Bisect(
 func (c *pendingTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	topHashA common.Hash,
 	value common.Hash,
 ) error {
 	c.auth.Lock()
@@ -76,7 +75,6 @@ func (c *pendingTopChallenge) OneStepProof(
 	tx, err := c.contract.OneStepProof(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		topHashA,
 		value,
 	)
 	if err != nil {
@@ -93,8 +91,13 @@ func (c *pendingTopChallenge) ChooseSegment(
 ) error {
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
+<<<<<<< HEAD
 	for i := uint64(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
+=======
+	for i := uint64(0); i < uint64(bisectionCount); i++ {
+		stepCount := structures.CalculateBisectionStepCount(i, uint64(bisectionCount), uint64(chainLength))
+>>>>>>> master
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.PendingTopChallengeDataHash(

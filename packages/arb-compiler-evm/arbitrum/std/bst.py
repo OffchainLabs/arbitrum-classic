@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from ..annotation import modifies_stack
+from .. import value
 
 
 # [bst key]
@@ -42,3 +43,85 @@ def bst_find(vm):
     vm.tgetn(1)
     vm.swap1()
     vm.pop()
+
+
+def make_static_lookup(items, default_val=None):
+    if not default_val:
+        default_val = value.Tuple([])
+    return _make_static_lookup([(x, items[x]) for x in sorted(items)], default_val)
+
+
+def _make_static_lookup(items, default_val):
+    if len(items) >= 3:
+        mid = len(items) // 2
+        left = items[:mid]
+        right = items[mid + 1 :]
+        pivot = items[mid][0]
+
+        def impl_n(vm):
+            # index
+            vm.push(pivot)
+            vm.dup1()
+            vm.lt()
+            # index < pivot, index
+            vm.ifelse(
+                lambda vm: [
+                    # index < pivot
+                    _make_static_lookup(left, default_val)(vm)
+                ],
+                lambda vm: [
+                    vm.push(pivot),
+                    vm.dup1(),
+                    vm.gt(),
+                    vm.ifelse(
+                        lambda vm: [
+                            # index > pivot
+                            _make_static_lookup(right, default_val)(vm)
+                        ],
+                        lambda vm: [
+                            # index == pivot
+                            vm.pop(),
+                            vm.push(items[mid][1]),
+                        ],
+                    ),
+                ],
+            )
+
+        return impl_n
+
+    if len(items) == 2:
+
+        def impl_2(vm):
+            # index
+            vm.dup0()
+            vm.push(items[0][0])
+            vm.eq()
+            vm.ifelse(
+                lambda vm: [vm.pop(), vm.push(items[0][1])],
+                lambda vm: [
+                    vm.push(items[1][0]),
+                    vm.eq(),
+                    vm.ifelse(
+                        lambda vm: [vm.push(items[1][1])],
+                        lambda vm: [vm.push(default_val)],
+                    ),
+                ],
+            )
+
+        return impl_2
+
+    if len(items) == 1:
+
+        def impl_1(vm):
+            vm.push(items[0][0])
+            vm.eq()
+            vm.ifelse(
+                lambda vm: [vm.push(items[0][1])], lambda vm: [vm.push(default_val)]
+            )
+
+        return impl_1
+
+    def impl_0(vm):
+        vm.push(default_val)
+
+    return impl_0

@@ -437,13 +437,16 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmValidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
+	lis.Lock()
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
 	if alreadySent {
+		lis.Unlock()
 		return
 	}
 	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.Unlock()
 	go func() {
-		lis.actor.ConfirmValid(
+		err := lis.actor.ConfirmValid(
 			ctx,
 			conf.deadlineTicks,
 			conf.messages,
@@ -453,19 +456,28 @@ func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, obs
 			conf.stakerProofs,
 			conf.stakerProofOffsets,
 		)
+		if err != nil {
+			log.Println("Failed to confirm valid node", err)
+			lis.Lock()
+			delete(lis.broadcastConfirmations, conf.nodeHash)
+			lis.Unlock()
+		}
 	}()
 }
 
 func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmInvalidOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
+	lis.Lock()
 	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
 	if alreadySent {
+		lis.Unlock()
 		return
 	}
 	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.Unlock()
 	go func() {
-		lis.actor.ConfirmInvalid(
+		err := lis.actor.ConfirmInvalid(
 			ctx,
 			conf.deadlineTicks,
 			conf.challengeNodeData,
@@ -475,6 +487,12 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, o
 			conf.stakerProofs,
 			conf.stakerProofOffsets,
 		)
+		if err != nil {
+			log.Println("Failed to confirm invalid node", err)
+			lis.Lock()
+			delete(lis.broadcastConfirmations, conf.nodeHash)
+			lis.Unlock()
+		}
 	}()
 }
 

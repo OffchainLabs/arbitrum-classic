@@ -201,7 +201,7 @@ func defendExecution(
 			mach := defender.initState
 			pre := defender.precondition
 			// Update mach, precondition, deadline
-			assertion, _ := mach.ExecuteAssertion(totalSteps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(uint32(totalSteps), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 			pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 
 			steps := structures.CalculateBisectionStepCount(contEv.SegmentIndex.Uint64(), uint64(len(ev.Assertions)), ev.TotalSteps)
@@ -264,7 +264,7 @@ func challengeExecution(
 				for i := 0; i < len(ev.Assertions); i++ {
 					stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(ev.Assertions)), ev.TotalSteps)
 					m = cMach.Clone()
-					assertion, _ := cMach.ExecuteAssertion(stepCount, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+					assertion, _ := cMach.ExecuteAssertion(uint32(stepCount), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 					pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 				}
 				err = nil
@@ -302,7 +302,7 @@ func challengeExecution(
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
 				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
 			}
-			assertion, _ := mach.ExecuteAssertion(totalSteps, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(uint32(totalSteps), startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
 			precondition = precondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 		}
 		deadline = contEv.Deadline

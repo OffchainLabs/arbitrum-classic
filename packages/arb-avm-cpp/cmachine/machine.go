@@ -96,8 +96,9 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	if newMessages {
 		newMessagesInt = 1
 	}
-	currentTimeData := currentTimeBuf.Bytes()
-	cBlockReason := C.machineIsBlocked(m.c, unsafe.Pointer(&currentTimeData[0]), C.int(newMessagesInt))
+	currentTimeDataC := C.CBytes(currentTimeBuf.Bytes())
+	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
+	C.free(currentTimeDataC)
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -157,13 +158,19 @@ func (m *Machine) ExecuteAssertion(
 	startTimeData := startTimeBuf.Bytes()
 	endTimeData := endTimeBuf.Bytes()
 	msgData := buf.Bytes()
+	startTimeDataC := C.CBytes(startTimeData)
+	endTimeDataC := C.CBytes(endTimeData)
+	msgDataC := C.CBytes(msgData)
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		unsafe.Pointer(&startTimeData[0]),
-		unsafe.Pointer(&endTimeData[0]),
-		unsafe.Pointer(&msgData[0]),
+		startTimeDataC,
+		endTimeDataC,
+		msgDataC,
 	)
+	C.free(startTimeDataC)
+	C.free(endTimeDataC)
+	C.free(msgDataC)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
@@ -195,7 +202,9 @@ func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHa
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, unsafe.Pointer(&machineHash[0]))
+		machineHashC := C.CBytes(machineHash.Bytes())
+		success := C.restoreMachine(m.c, cCheckpointStorage.c, machineHashC)
+		C.free(machineHashC)
 
 		return success == 1
 	} else {

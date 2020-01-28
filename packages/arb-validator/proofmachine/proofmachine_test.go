@@ -17,12 +17,10 @@
 package proofmachine
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -36,28 +34,27 @@ import (
 )
 
 func setupTestValidateProof(t *testing.T) (*Connection, error) {
-	var connectionInfo ethbridge.ArbAddresses
-
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
 	ethURL := test.GetEthUrl()
 
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
 	fmt.Println("seed", seed)
 	rand.Seed(seed)
-	jsonFile, err := os.Open(bridge_eth_addresses)
+
+	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
 	if err != nil {
 		t.Fatal(err)
 	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
+	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
+	osp, err := client.DeployOneStepProof(context.Background())
+	if err != nil {
 		t.Fatal(err)
 	}
 	proofbounds := [2]uint64{0, 10000}
-	return NewEthConnection(connectionInfo.OneStepProofAddress(), ethURL, proofbounds)
+	return NewEthConnection(osp, proofbounds), nil
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {

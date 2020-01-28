@@ -53,9 +53,14 @@ message DisputableNodeBuf {
     common.BigIntegerBuf maxPendingCount = 4;
 }
 
+message InboxItemBuf {
+    uint32 valType = 1;
+    common.HashBuf valHash = 2;
+}
+
 message PendingInboxBuf {
     common.BigIntegerBuf topCount = 1;
-    repeated common.HashBuf itemHashes = 2;
+    repeated InboxItemBuf items = 2;
     common.HashBuf hashOfRest = 3;
 }
 

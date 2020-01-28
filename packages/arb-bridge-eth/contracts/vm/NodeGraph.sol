@@ -145,8 +145,6 @@ contract NodeGraph is ChallengeType {
     {
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
 
-        globalInbox.registerForInbox();
-
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,

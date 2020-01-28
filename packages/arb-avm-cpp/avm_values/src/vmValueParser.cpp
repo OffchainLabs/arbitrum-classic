@@ -47,7 +47,7 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
 
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
-    version = __builtin_bswap32(version);
+    version = boost::endian::big_to_native(version);
     bufptr += sizeof(version);
 
     if (version != CURRENT_AO_VERSION) {
@@ -61,10 +61,13 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
         uint32_t extentionId = 1;
         while (extentionId != 0) {
             memcpy(&extentionId, bufptr, sizeof(extentionId));
-            extentionId = __builtin_bswap32(extentionId);
+            extentionId = boost::endian::big_to_native(extentionId);
             bufptr += sizeof(extentionId);
             if (extentionId > 0) {
-                //            std::cout << "found extention" << std::endl;
+                uint32_t extensionLength;
+                memcpy(&extensionLength, bufptr, sizeof(extensionLength));
+                extensionLength = boost::endian::big_to_native(extensionLength);
+                bufptr += sizeof(extensionLength) + extensionLength;
             }
         }
         uint64_t codeCount;

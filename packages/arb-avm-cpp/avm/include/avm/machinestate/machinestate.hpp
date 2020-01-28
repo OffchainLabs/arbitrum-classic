@@ -19,8 +19,8 @@
 
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
-#include <avm/machinestate/messagestack.hpp>
 #include <avm_values/value.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <memory>
 #include <vector>

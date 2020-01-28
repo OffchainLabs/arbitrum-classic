@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -67,28 +69,116 @@ func (c *messagesChallenge) Bisect(
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
-func (c *messagesChallenge) OneStepProof(
+func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	topHashA common.Hash,
 	lowerHashB common.Hash,
-	topHashB common.Hash,
-	value common.Hash,
+	msg message.DeliveredTransaction,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.contract.OneStepProof(
+	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		topHashA,
 		lowerHashB,
-		topHashB,
-		value,
+		msg.Chain.ToEthAddress(),
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.SequenceNum,
+		msg.Value,
+		msg.Data,
+		msg.BlockNum.AsInt(),
 	)
 	if err != nil {
 		return err
 	}
-	return c.waitForReceipt(ctx, tx, "OneStepProof")
+	return c.waitForReceipt(ctx, tx, "OneStepProofTransactionMessage")
+}
+
+func (c *messagesChallenge) OneStepProofEthMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredEth,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.contract.OneStepProofEthMessage(
+		c.auth.getAuth(ctx),
+		lowerHashA,
+		lowerHashB,
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.Value,
+		msg.BlockNum.AsInt(),
+		msg.MessageNum,
+	)
+	if err != nil {
+		return c.contract.OneStepProofEthMessageCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			lowerHashA,
+			lowerHashB,
+			msg.To.ToEthAddress(),
+			msg.From.ToEthAddress(),
+			msg.Value,
+			msg.BlockNum.AsInt(),
+			msg.MessageNum,
+		)
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProofEthMessage")
+}
+
+func (c *messagesChallenge) OneStepProofERC20Message(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredERC20,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.contract.OneStepProofERC20Message(
+		c.auth.getAuth(ctx),
+		lowerHashA,
+		lowerHashB,
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.TokenAddress.ToEthAddress(),
+		msg.Value,
+		msg.BlockNum.AsInt(),
+		msg.MessageNum,
+	)
+	if err != nil {
+		return err
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProofERC20Message")
+}
+
+func (c *messagesChallenge) OneStepProofERC721Message(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredERC721,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.contract.OneStepProofERC721Message(
+		c.auth.getAuth(ctx),
+		lowerHashA,
+		lowerHashB,
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.TokenAddress.ToEthAddress(),
+		msg.Id,
+		msg.BlockNum.AsInt(),
+		msg.MessageNum,
+	)
+	if err != nil {
+		return err
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProofERC721Message")
 }
 
 func (c *messagesChallenge) ChooseSegment(
@@ -100,8 +190,13 @@ func (c *messagesChallenge) ChooseSegment(
 ) error {
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
+<<<<<<< HEAD
 	for i := uint64(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength.Uint64())
+=======
+	for i := uint64(0); i < uint64(bisectionCount); i++ {
+		stepCount := structures.CalculateBisectionStepCount(i, uint64(bisectionCount), chainLength.Uint64())
+>>>>>>> master
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.MessageChallengeDataHash(
@@ -109,7 +204,7 @@ func (c *messagesChallenge) ChooseSegment(
 				chainHashes[i+1],
 				segmentHashes[i],
 				segmentHashes[i+1],
-				new(big.Int).SetUint64(uint64(stepCount)),
+				new(big.Int).SetUint64(stepCount),
 			),
 		)
 	}
