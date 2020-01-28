@@ -188,7 +188,7 @@ def create_initial_evm_state(contracts):
         vm.push(contract["code"])
         vm.push(1)
         vm.push(accounts.make_empty_account())
-        account_state.set_val("nonce")(vm)
+        account_state.set_val("nextSeqNum")(vm)
         account_state.set_val("code")(vm)
         account_state.set_val("code_point")(vm)
         account_state.set_val("code_size")(vm)
