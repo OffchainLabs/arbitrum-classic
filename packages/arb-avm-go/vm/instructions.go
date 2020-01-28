@@ -61,9 +61,9 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.BYTE, insnByte, 4},
 	{code.SIGNEXTEND, insnSignextend, 7},
 
-	{code.SHA3, insnHash, 40},
+	{code.SHA3, insnHash, 7},
 	{code.TYPE, insnType, 3},
-	{code.ETHHASH2, insnEthhash2, 40},
+	{code.ETHHASH2, insnEthhash2, 8},
 
 	{code.POP, insnPop, 1},
 	{code.SPUSH, insnSpush, 1},
@@ -87,7 +87,7 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.SWAP2, insnSwap2, 1},
 
 	{code.TGET, insnTget, 2},
-	{code.TSET, insnTset, 15},
+	{code.TSET, insnTset, 40},
 	{code.TLEN, insnTlen, 2},
 
 	{code.BREAKPOINT, insnBreakpoint, 100},

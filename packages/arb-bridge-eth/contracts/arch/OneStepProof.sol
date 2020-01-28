@@ -1200,11 +1200,11 @@ library OneStepProof {
         } else if (opCode == OP_SIGNEXTEND) {
             return 7;
         } else if (opCode == OP_SHA3) {
-            return 40;
+            return 7;
         } else if (opCode == OP_TYPE) {
             return 3;
        } else if (opCode == OP_ETHHASH2) {
-            return 40;
+            return 8;
         } else if (opCode == OP_POP) {
             return 1;
         } else if (opCode == OP_SPUSH) {
@@ -1246,7 +1246,7 @@ library OneStepProof {
         } else if (opCode == OP_TGET) {
             return 2;
         } else if (opCode == OP_TSET) {
-            return 15;
+            return 40;
         } else if (opCode == OP_TLEN) {
             return 2;
         } else if (opCode == OP_BREAKPOINT) {
