@@ -22,6 +22,7 @@ from .accounts import account_state, account_store
 from .types import (
     local_exec_state,
     eth_transfer_message,
+    ethbridge_message,
     token_transfer_message,
     message,
 )
@@ -132,7 +133,26 @@ def _perform_precompile_call(vm):
                     vm.eq(),
                     vm.ifelse(
                         lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],
-                        lambda vm: [vm.pop(), vm.push(0)],
+                        lambda vm: [
+                            vm.dup0(),
+                            vm.push(0xBDE19776),
+                            vm.eq(),
+                            vm.ifelse(
+                                lambda vm: [vm.pop(), arbsys_time_upper_bound(vm)],
+                                lambda vm: [
+                                    vm.dup0(),
+                                    vm.push(0x44F50653),
+                                    vm.eq(),
+                                    vm.ifelse(
+                                        lambda vm: [
+                                            vm.pop(),
+                                            arbsys_current_message_time(vm),
+                                        ],
+                                        lambda vm: [vm.pop(), vm.push(0)],
+                                    ),
+                                ],
+                            ),
+                        ],
                     ),
                 ],
             ),
@@ -212,6 +232,37 @@ def withdraw_erc20_interrupt(vm):
 def withdraw_erc721_interrupt(vm):
     # local_exec_state
     withdraw_token_interrupt(vm, WITHDRAW_ERC721_TYPECODE)
+
+
+def return_one_uint_to_solidity_caller(vm):
+    vm.push(0)
+    std.byterange.new(vm)
+    std.byterange.set_val(vm)
+    vm.push(32)
+    vm.swap1()
+    std.tup.make(2)(vm)
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
+    os.call_frame.call_frame.set_val("return_data")(vm)
+    os.get_call_frame(vm)
+    call_frame.call_frame.set_val("parent_frame")(vm)
+    os.set_call_frame(vm)
+    vm.push(2)
+
+
+def arbsys_time_upper_bound(vm):
+    vm.gettime()
+    vm.tgetn(1)
+    return_one_uint_to_solidity_caller(vm)
+
+
+def arbsys_current_message_time(vm):
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("block_number")(vm)
+
+    return_one_uint_to_solidity_caller(vm)
 
 
 def _perform_real_call(vm, call_num):
