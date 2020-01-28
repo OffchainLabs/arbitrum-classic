@@ -120,14 +120,11 @@ func (conn *ArbConnection) CodeAt(
 	}, contract)
 }
 
-// CallContract executes an Ethereum contract call with the specified data as the
-// input.
-func (conn *ArbConnection) CallContract(
+func (conn *ArbConnection) call(
 	ctx context.Context,
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-
 	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
 	if err != nil {
 		return nil, err
@@ -149,6 +146,16 @@ func (conn *ArbConnection) CallContract(
 	}
 }
 
+// CallContract executes an Ethereum contract call with the specified data as the
+// input.
+func (conn *ArbConnection) CallContract(
+	ctx context.Context,
+	call ethereum.CallMsg,
+	blockNumber *big.Int,
+) ([]byte, error) {
+	return conn.call(ctx, call, blockNumber)
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Methods of ContractTransactor
 
@@ -164,6 +171,11 @@ func (conn *ArbConnection) PendingCodeAt(
 	return infoCon.GetCode(&bind.CallOpts{
 		Pending: true,
 	}, account)
+}
+
+// PendingCallContract executes an Ethereum contract call against the pending state.
+func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+	return conn.call(ctx, call, nil)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
