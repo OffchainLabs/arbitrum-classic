@@ -50,10 +50,10 @@ func _tweakHash(h common.Hash) common.Hash {
 }
 
 func (e EvilMachine) ExecuteAssertion(
-	maxSteps uint32,
+	maxSteps uint64,
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
-) (*protocol.ExecutionAssertion, uint32) {
+) (*protocol.ExecutionAssertion, uint64) {
 	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, timeBounds, inbox)
 	assn.AfterHash = _tweakHash(assn.AfterHash)
 	return assn, numSteps
