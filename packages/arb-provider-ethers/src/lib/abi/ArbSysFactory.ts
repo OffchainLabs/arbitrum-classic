@@ -67,4 +67,23 @@ const _abi = [
         stateMutability: 'nonpayable',
         type: 'function',
     },
+    {
+        constant: true,
+        inputs: [
+            {
+                name: 'account',
+                type: 'address',
+            },
+        ],
+        name: 'getTransactionCount',
+        outputs: [
+            {
+                name: '',
+                type: 'uint256',
+            },
+        ],
+        payable: false,
+        stateMutability: 'pure',
+        type: 'function',
+    },
 ];

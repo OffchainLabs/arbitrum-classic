@@ -81,7 +81,7 @@ type DeliveredERC20 struct {
 	MessageNum *big.Int
 }
 
-func (m DeliveredERC20) Equals(other DeliveredMessage) bool {
+func (m DeliveredERC20) Equals(other Message) bool {
 	o, ok := other.(DeliveredERC20)
 	if !ok {
 		return false

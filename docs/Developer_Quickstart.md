@@ -135,8 +135,7 @@ this dApp, you do not need to change any Solidity files.
 
 1. Compile Solidity to Arbitrum:
 
-    Truffle will output the compiled contract as `contract.ao` as well as a
-    `compiled.json` file needed for the front-end:
+    Truffle will output the compiled contract as `contract.ao` :
 
     ```bash
     truffle migrate --network arbitrum
@@ -361,38 +360,30 @@ Move your project folder into `arbitrum/workspace/projectname` in order to pick 
     Then set the provider to use Arbitrum instead. For example for web3.js replace the last line with:
 
     ```js
-    let contracts = require("../compiled.json");
     this.web3 = new Web3(
-        await ArbProvider("http://localhost:1235", contracts, standardProvider)
+        ArbProvider("http://localhost:1235", standardProvider)
     );
     ```
 
     Or for for ethers.js use
 
     ```js
-    const contracts = require("../compiled.json");
     let provider = new ArbProvider(
         "http://localhost:1235",
-        contracts,
         new ethers.providers.Web3Provider(standardProvider)
     );
     ```
-
-    > Note: make the path to `compiled.json` correspond to the root directory of the project
 
 ### Compile to Arbitrum bytecode
 
 Now that the Arbitrum provider is setup correctly, the next step is to compile
 the Truffle project into Arbitrum bytecode:
 
-Run the following command to generate `compiled.json` and `contract.ao`:
+Run the following command to generate `contract.ao`:
 
 ```bash
 truffle migrate --reset --compile-all --network arbitrum
 ```
-
-We do not need to copy the `compiled.json` file into the front-end folder because
-it has already been setup to correctly to retrieve the json in the previous part.
 
 ### Run the Validators
 

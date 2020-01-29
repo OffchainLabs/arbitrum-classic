@@ -96,6 +96,13 @@ def process_deposit_erc721(vm):
     vm.pop()
 
 
+def process_call_message(vm):
+    vm.pop()
+    os.process_call_message(vm)
+    execution.initial_static_call(vm, "static_call_initial")
+    vm.pop()
+
+
 def run_loop_start(vm):
     vm.set_label(AVMLabel("run_loop_start"))
     os.get_next_message(vm)
@@ -125,7 +132,17 @@ def run_loop_start(vm):
                             vm.dup0(),
                             vm.push(3),
                             vm.eq(),
-                            vm.ifelse(process_deposit_erc721),
+                            vm.ifelse(
+                                process_deposit_erc721,
+                                lambda vm: [
+                                    vm.dup0(),
+                                    vm.push(4),
+                                    vm.eq(),
+                                    vm.ifelse(
+                                        process_call_message, lambda vm: [vm.pop()]
+                                    ),
+                                ],
+                            ),
                         ],
                     ),
                 ],

@@ -31,6 +31,9 @@ import { ArbRollup } from './abi/ArbRollup';
 import { GlobalPendingInboxFactory } from './abi/GlobalPendingInboxFactory';
 import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
 
+import { ArbSysFactory } from './abi/ArbSysFactory';
+import { ArbSys } from './abi/ArbSys';
+
 import { ArbInfoFactory } from './abi/ArbInfoFactory';
 
 function sleep(ms: number): Promise<void> {
@@ -46,6 +49,9 @@ const TransactionMessageDelivered = 'TransactionMessageDelivered';
 const EthDepositMessageDelivered = 'EthDepositMessageDelivered';
 const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered';
 const ERC721DepositMessageDelivered = 'ERC721DepositMessageDelivered';
+
+const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064';
+const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065';
 
 interface MessageResult {
     evmVal: EVMResult;
@@ -124,10 +130,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.inboxManagerCache;
     }
 
-    public async getSigner(index: number): Promise<ArbWallet> {
-        const wallet = new ArbWallet(this.client, this.provider.getSigner(index), this, false);
-        await wallet.initialize();
-        return wallet;
+    public getArbSys(): ArbSys {
+        return ArbSysFactory.connect(ARB_SYS_ADDRESS, this);
+    }
+
+    public getSigner(index: number): ArbWallet {
+        return new ArbWallet(this.client, this.provider.getSigner(index), this, false);
     }
 
     // public async getValidatorAddresses(): Promise<string[]> {
@@ -174,7 +182,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public async sendMessages(messages: Message[]): Promise<string> {
         let txHash: Promise<string> = new Promise<string>((): string => '');
         for (const message of messages) {
-            txHash = this.client.sendRawMessage(
+            txHash = this.client.sendMessage(
                 message.to,
                 message.sequenceNum,
                 message.value,
@@ -284,14 +292,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         // console.log('perform', method, params);
         switch (method) {
             case 'getCode': {
-                if (params.address == '0x0000000000000000000000000000000000000065') {
+                if (params.address == ARB_SYS_ADDRESS || params.address == ARB_INFO_ADDRESS) {
                     return '0x100';
                 }
-                const arbInfo = ArbInfoFactory.connect('0x0000000000000000000000000000000000000065', this);
+                const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
                 return arbInfo.getCode(params.address, { blockTag: params.blockTag });
             }
-            case 'getBlockNumber': {
-                return this.client.getAssertionCount();
+            case 'getTransactionCount': {
+                const arbsys = this.getArbSys();
+                const count = await arbsys.getTransactionCount(params.address, { blockTag: params.blockTag });
+                return count.toNumber();
             }
             case 'getTransactionReceipt': {
                 const result = await this.getMessageResult(params.transactionHash);
@@ -366,12 +376,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 );
             }
             case 'getBalance': {
-                const arbInfo = ArbInfoFactory.connect('0x0000000000000000000000000000000000000065', this);
+                const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
                 return arbInfo.getBalance(params.address, { blockTag: params.blockTag });
             }
         }
         const forwardResponse = this.provider.perform(method, params);
-        console.log('Forwarding query to provider', method, forwardResponse);
+        // console.log('Forwarding query to provider', method, forwardResponse);
         return forwardResponse;
     }
 

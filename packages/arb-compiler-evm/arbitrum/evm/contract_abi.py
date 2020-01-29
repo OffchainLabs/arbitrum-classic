@@ -49,6 +49,23 @@ def generate_func2(func_id, func_abi):
     return impl
 
 
+def generate_func3(func_id, func_abi, address):
+    def impl(self, *args):
+        if len(args) != len(func_abi["inputs"]):
+            raise Exception(
+                "Function with abi {} passed not matching {} args".format(
+                    func_abi, list(args)
+                )
+            )
+        encoded_input = func_id + eth_abi.encode_abi(
+            [inp["type"] for inp in func_abi["inputs"]], list(args)
+        )
+        msg_data = bytestack_frombytes(encoded_input)
+        return value.Tuple([address, msg_data])
+
+    return impl
+
+
 class ContractABI(Contract):
     def __init__(self, contractInfo):
         super().__init__(contractInfo)
@@ -71,6 +88,11 @@ class ContractABI(Contract):
             )
             setattr(
                 ContractABI, "_" + func_abi["name"], generate_func2(func_id, func_abi)
+            )
+            setattr(
+                ContractABI,
+                "call_" + func_abi["name"],
+                generate_func3(func_id, func_abi, self.address),
             )
 
         self.events = {}

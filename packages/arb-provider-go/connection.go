@@ -3,6 +3,7 @@ package goarbitrum
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"math/big"
@@ -28,10 +29,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
+var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
+var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
+
 type ArbConnection struct {
 	proxy        ValidatorProxy
 	vmId         common.Address
 	pendingInbox arbbridge.PendingInbox
+	sequenceNum  *big.Int
 }
 
 func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
@@ -62,7 +67,35 @@ func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, er
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{proxy, vmId, pendingInbox}, nil
+	return &ArbConnection{proxy: proxy, vmId: vmId, pendingInbox: pendingInbox}, nil
+}
+
+func (conn *ArbConnection) getInfoCon() (*ArbInfo, error) {
+	return NewArbInfo(ARB_INFO_ADDRESS, conn)
+}
+
+func (conn *ArbConnection) getSysCon() (*ArbSys, error) {
+	return NewArbSys(ARB_SYS_ADDRESS, conn)
+}
+
+// PendingNonceAt retrieves the current pending nonce associated with an account.
+func (conn *ArbConnection) getCurrentNonce(
+	ctx context.Context,
+	account ethcommon.Address,
+) (*big.Int, error) {
+	if conn.sequenceNum != nil {
+		return conn.sequenceNum, nil
+	}
+	sysConn, err := conn.getSysCon()
+	if err != nil {
+		return nil, err
+	}
+	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	if err != nil {
+		return nil, err
+	}
+	conn.sequenceNum = num
+	return num, nil
 }
 
 func _nyiError(funcname string) error {
@@ -79,17 +112,20 @@ func (conn *ArbConnection) CodeAt(
 	contract ethcommon.Address,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	return nil, _nyiError("CodeAt")
+	infoCon, err := conn.getInfoCon()
+	if err != nil {
+		return nil, err
+	}
+	return infoCon.GetCode(&bind.CallOpts{
+		BlockNumber: blockNumber,
+	}, contract)
 }
 
-// CallContract executes an Ethereum contract call with the specified data as the
-// input.
-func (conn *ArbConnection) CallContract(
+func (conn *ArbConnection) call(
 	ctx context.Context,
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-
 	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
 	if err != nil {
 		return nil, err
@@ -104,9 +140,21 @@ func (conn *ArbConnection) CallContract(
 		return logVal.ReturnVal, nil
 	case evm.Stop:
 		return []byte{}, nil
+	case evm.Revert:
+		return nil, fmt.Errorf("call reverted with result %v", string(logVal.ReturnVal))
 	default:
-		return nil, errors.New("call reverted")
+		return nil, fmt.Errorf("call reverted")
 	}
+}
+
+// CallContract executes an Ethereum contract call with the specified data as the
+// input.
+func (conn *ArbConnection) CallContract(
+	ctx context.Context,
+	call ethereum.CallMsg,
+	blockNumber *big.Int,
+) ([]byte, error) {
+	return conn.call(ctx, call, blockNumber)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -117,7 +165,18 @@ func (conn *ArbConnection) PendingCodeAt(
 	ctx context.Context,
 	account ethcommon.Address,
 ) ([]byte, error) {
-	return nil, _nyiError("PendingCodeAt")
+	infoCon, err := conn.getInfoCon()
+	if err != nil {
+		return nil, err
+	}
+	return infoCon.GetCode(&bind.CallOpts{
+		Pending: true,
+	}, account)
+}
+
+// PendingCallContract executes an Ethereum contract call against the pending state.
+func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+	return conn.call(ctx, call, nil)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -125,7 +184,15 @@ func (conn *ArbConnection) PendingNonceAt(
 	ctx context.Context,
 	account ethcommon.Address,
 ) (uint64, error) {
-	return 0, nil
+	sysConn, err := conn.getSysCon()
+	if err != nil {
+		return 0, err
+	}
+	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	if err != nil {
+		return 0, err
+	}
+	return num.Uint64(), nil
 }
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
@@ -154,9 +221,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
-	//seq number bug
-	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seqNumValue)
+	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -409,13 +474,11 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
-	seqNum := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
-	//seq number bug
 	return message.Transaction{
 		Chain:       conn.vmId,
 		To:          common.NewAddressFromEth(*tx.To()),
 		From:        from,
-		SequenceNum: seqNum,
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
 		Value:       tx.Value(),
 		Data:        tx.Data(),
 	}
