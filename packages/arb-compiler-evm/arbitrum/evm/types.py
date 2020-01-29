@@ -48,6 +48,10 @@ tx_message = std.Struct(
     ],
 )
 
+call_message = std.Struct(
+    "call_message", [("to", value.IntType()), ("data", value.ValueType())]
+)
+
 tx_call_data = std.Struct(
     "tx_call_data",
     [

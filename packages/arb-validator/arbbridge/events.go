@@ -143,7 +143,7 @@ type ExecutionBisectionEvent struct {
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	Message message.DeliveredMessage
+	Message message.PendingMessage
 }
 
 type NewTimeEvent struct {

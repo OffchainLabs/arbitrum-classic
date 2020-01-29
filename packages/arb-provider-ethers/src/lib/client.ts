@@ -86,9 +86,27 @@ class EthBridgeMessage {
                 return new TokenTransferMessage(this.message);
             case 3:
                 return new TokenTransferMessage(this.message);
+            case 4:
+                return new TxCall(this.message);
             default:
                 throw 'Invalid arb message type';
         }
+    }
+}
+
+export class TxCall {
+    public to: string;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.data = ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
     }
 }
 
@@ -141,7 +159,7 @@ class TokenTransferMessage {
     }
 }
 
-export type ArbMessage = TxMessage | EthTransferMessage | TokenTransferMessage;
+export type ArbMessage = TxMessage | EthTransferMessage | TokenTransferMessage | TxCall;
 
 export type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | EVMInvalid;
 
@@ -371,17 +389,6 @@ export class ArbClient {
     }
 
     public sendMessage(
-        to: string,
-        sequenceNum: ethers.utils.BigNumberish,
-        value: ethers.utils.BigNumberish,
-        data: string,
-        sig: string,
-        pubkey: string,
-    ): Promise<string> {
-        return this.sendRawMessage(to, sequenceNum, value, data, sig, pubkey);
-    }
-
-    public sendRawMessage(
         to: string,
         sequenceNum: ethers.utils.BigNumberish,
         value: ethers.utils.BigNumberish,

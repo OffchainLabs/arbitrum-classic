@@ -36,4 +36,11 @@ rm -f pendingtopchallenge.go messageschallenge.go executionchallenge.go
 rm -f globalpendinginbox.go
 rm -f challengetester.go messagetester.go
 cd ../../..
+
 yarn workspace arb-provider-ethers update-abi
+cd packages/arb-compiler-evm/contract-templates/contracts
+abigen --sol=ArbSys.sol --pkg=goarbitrum --out=arbsys.go
+abigen --sol=ArbInfo.sol --pkg=goarbitrum --out=arbinfo.go
+
+\cp arbsys.go arbinfo.go ../../../../packages/arb-provider-go/
+rm -f arbsys.go arbinfo.go

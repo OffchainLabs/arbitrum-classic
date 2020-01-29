@@ -90,8 +90,8 @@ class App {
       this.arbProvider
     );
 
-    this.ethWallet = await this.ethProvider.getSigner(0);
-    this.arbWallet = await this.arbProvider.getSigner(0);
+    this.ethWallet = this.ethProvider.getSigner(0);
+    this.arbWallet = this.arbProvider.getSigner(0);
 
     this.ethwalletAddress = await this.ethWallet.getAddress();
     this.arbwalletAddress = await this.arbWallet.getAddress();
