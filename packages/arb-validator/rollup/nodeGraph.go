@@ -236,24 +236,6 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	return n1.prev
 }
 
-func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
-	prunesToDo := []pruneParams{}
-	chain.leaves.forall(func(leaf *Node) {
-		if leaf != chain.latestConfirmed {
-			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
-			if err == nil {
-				prunesToDo = append(prunesToDo, pruneParams{
-					leafHash:     leaf.hash,
-					ancestorHash: leafAncestor.prev.hash,
-					leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
-					ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
-				})
-			}
-		}
-	})
-	return prunesToDo
-}
-
 func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
