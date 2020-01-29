@@ -21,7 +21,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -194,14 +193,7 @@ func validateRollupChain() error {
 		return err
 	}
 
-	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
-		address,
-		validateCmd.Arg(0),
-		dbPath,
-		big.NewInt(maxReorgDepth),
-		false,
-	))
+	manager, err := rollupmanager.CreateManager(address, client, validateCmd.Arg(0), dbPath)
 	if err != nil {
 		return err
 	}
