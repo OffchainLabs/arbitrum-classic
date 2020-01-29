@@ -68,6 +68,34 @@ const _abi = [
         type: 'function',
     },
     {
+        constant: false,
+        inputs: [],
+        name: 'currentMessageTime',
+        outputs: [
+            {
+                name: '',
+                type: 'uint256',
+            },
+        ],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [],
+        name: 'timeUpperBound',
+        outputs: [
+            {
+                name: '',
+                type: 'uint256',
+            },
+        ],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         constant: true,
         inputs: [
             {
@@ -84,6 +112,25 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'pure',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: 'account',
+                type: 'address',
+            },
+        ],
+        name: 'cloneContract',
+        outputs: [
+            {
+                name: '',
+                type: 'address',
+            },
+        ],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
 ];
