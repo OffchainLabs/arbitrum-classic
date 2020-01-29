@@ -226,18 +226,26 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	return n1.prev
 }
 
-func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
+func (chain *NodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneParams {
 	prunesToDo := []pruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
 		if leaf != chain.latestConfirmed {
 			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
 			if err == nil {
-				prunesToDo = append(prunesToDo, pruneParams{
-					leafHash:     leaf.hash,
-					ancestorHash: leafAncestor.prev.hash,
-					leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
-					ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+				noStakersOnLeaf := true
+				stakers.forall(func(s *Staker) {
+					if s.location.Equals(leaf) {
+						noStakersOnLeaf = false
+					}
 				})
+				if noStakersOnLeaf {
+					prunesToDo = append(prunesToDo, pruneParams{
+						leafHash:     leaf.hash,
+						ancestorHash: leafAncestor.prev.hash,
+						leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
+						ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+					})
+				}
 			}
 		}
 	})
