@@ -187,12 +187,11 @@ The instructions are as follows:
 | 0x19                                       | not        | Pop one value (A) off the Data Stack. If A is an Integer, then push the bitwise negation of A on the Data Stack. Otherwise, raise an Error.                                                                                                                                                                    | 1           |
 | 0x1a                                       | byte       | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<32 (interpreting B as unsigned), then push the B’th byte of A onto the Data Stack, otherwise push Integer 0 onto the Data Stack). Otherwise, raise an Error.                                                                     | 4           |
 | 0x1b                                       | signextend | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<31 (interpreting B as unsigned), sign extend A from (B + 1) \* 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.                                     | 7           |
-
 | &nbsp; | | &nbsp; |
 | 20s: Hashing | | &nbsp; |
-| 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack. | 40 |
+| 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack. | 7 |
 | 0x21 | type | Pop a Value (A) off of the Data Stack. If A is an Integer, Push Integer 0 onto the Data Stack. Otherwise, if A is a Codepoint, Push Integer 1 onto the Data Stack. Otherwise (A is a Tuple), push Integer 3 onto the Data Stack. | 3 |
-| 0x22 | ethhash2 | Pop two Values (A,B) off of the Data Stack. If A and B are both Integers, convert (big-endian) each of A and B into length-32 byte arrays, concatenate the two into a 64-byte array, compute the Ethereum hash of that byte-array, convert the result into an Integer (big-endian), and Push the resulting Integer onto the Data Stack. Otherwise, raise an Error. | 40 |
+| 0x22 | ethhash2 | Pop two Values (A,B) off of the Data Stack. If A and B are both Integers, convert (big-endian) each of A and B into length-32 byte arrays, concatenate the two into a 64-byte array, compute the Ethereum hash of that byte-array, convert the result into an Integer (big-endian), and Push the resulting Integer onto the Data Stack. Otherwise, raise an Error. | 8 |
 | &nbsp; | | &nbsp; |
 | 30s: Stack, Memory, Storage and Flow Operations | | &nbsp; |
 | 0x30 | pop | Pop one value off of the Data Stack, and discard that value. | 1 |
@@ -219,7 +218,7 @@ The instructions are as follows:
 | &nbsp; | | &nbsp; |
 | 50s: Tuple Operations | | &nbsp; |
 | 0x50 | tget | Pop two values (A,B) off the Data Stack. If B is a Tuple, and A is an integer, and A>=0 and A is less than length(B), then Push the value in the A_th slot of B onto the Data Stack. Otherwise raise an Error. | 2 |
-| 0x51 | tset | Pop three values (A,B,C) off of the Data Stack. If B is a Tuple, and A is an Integer, and A>=0, and A is less than length(B), then create a new Tuple that is identical to B, except that slot A has been set to C, then Push the new Tuple onto the Data Stack. Otherwise, raise an Error. | 15 |
+| 0x51 | tset | Pop three values (A,B,C) off of the Data Stack. If B is a Tuple, and A is an Integer, and A>=0, and A is less than length(B), then create a new Tuple that is identical to B, except that slot A has been set to C, then Push the new Tuple onto the Data Stack. Otherwise, raise an Error. | 40 |
 | 0x52 | tlen | Pop a value (A) off the Data Stack. If A is a Tuple, push the length of A (i.e. the number of slots in A) onto the Data Stack. Otherwise, raise an Error. | 2 |
 | &nbsp; | | &nbsp; |
 | 60s: Logging Operations | | &nbsp; |
