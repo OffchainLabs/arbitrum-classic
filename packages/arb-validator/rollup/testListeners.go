@@ -44,7 +44,7 @@ func NewEvil_WrongAssertionListener(
 	actor arbbridge.ArbRollup,
 	kind WrongAssertionType,
 ) *evil_WrongAssertionListener {
-	return &evil_WrongAssertionListener{NewValidatorChainListener(rollupAddress, actor), kind}
+	return &evil_WrongAssertionListener{NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
 }
 
 func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *preparedAssertion) {
