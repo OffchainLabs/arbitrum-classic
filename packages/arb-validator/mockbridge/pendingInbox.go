@@ -111,7 +111,7 @@ func (con *PendingInbox) SendMessage(
 	con.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.MessageDeliveredEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.client.MockEthClient.LatestBlock,
+				BlockId: con.client.MockEthClient.NextBlock,
 			},
 			Msg: msg,
 		},

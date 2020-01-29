@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -133,8 +132,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else {
 					correctNode.machine = currentOpinion.machine.Clone()
 				}
-				log.Println("*************************Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
-				fmt.Println("*************************Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
+				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
 				chain.calculatedValidNode = correctNode
 				if correctNode.depth > chain.knownValidNode.depth {
 					chain.knownValidNode = correctNode

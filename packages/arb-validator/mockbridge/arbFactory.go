@@ -51,7 +51,7 @@ func (con *ArbFactory) CreateRollup(
 		escrowRequired:  params.StakeRequirement,
 		owner:           owner,
 		events:          events,
-		creation:        con.client.MockEthClient.LatestBlock,
+		creation:        con.client.MockEthClient.NextBlock,
 		stakers:         make(map[common.Address]*staker),
 		leaves:          make(map[common.Hash]bool),
 		lastConfirmed:   initialNode,

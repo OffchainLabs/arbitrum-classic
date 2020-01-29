@@ -22,15 +22,11 @@ import (
 )
 
 func calculatePath(from common.Hash, proof []common.Hash) common.Hash {
-	return calculatePathOffset(from, proof, 0, len(proof))
-}
-
-func calculatePathOffset(from common.Hash, proof []common.Hash, start int, end int) common.Hash {
 	node := from
 	if len(proof) > 0 {
-		for i := start; i <= end; i++ {
+		for _, val := range proof {
 			//node = keccak256(abi.encodePacked(node, proof[i]));
-			node = hashing.SoliditySHA3(node, hashing.Bytes32(proof[i]))
+			node = hashing.SoliditySHA3(hashing.Bytes32(node), hashing.Bytes32(val))
 		}
 	}
 	return node

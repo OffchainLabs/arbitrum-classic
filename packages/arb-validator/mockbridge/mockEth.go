@@ -84,6 +84,7 @@ type rollupData struct {
 	leaves          map[common.Hash]bool
 	lastConfirmed   common.Hash
 	contractAddress common.Address
+	nextConfirmed   common.Hash
 }
 
 type void struct{}
@@ -93,14 +94,15 @@ var Void void
 // mockEthData one per 'URL'
 type mockEthdata struct {
 	//sync.Mutex
-	Vm          map[common.Address]*VmData
-	channels    map[common.Address]*channelData
-	rollups     map[common.Address]*rollupData // contract address to rollup
-	arbFactory  common.Address                 // eth address to factory address
-	nextAddress common.Address                 // unique 'address'
-	BlockNumber uint64
-	pending     map[common.Address]*PendingInbox
-	LatestBlock *structures.BlockId
+	Vm             map[common.Address]*VmData
+	channels       map[common.Address]*channelData
+	rollups        map[common.Address]*rollupData // contract address to rollup
+	arbFactory     common.Address                 // eth address to factory address
+	nextAddress    common.Address                 // unique 'address'
+	BlockNumber    uint64
+	pending        map[common.Address]*PendingInbox
+	NextBlock      *structures.BlockId
+	LastMinedBlock *structures.BlockId
 	//LatestHeight *big.Int
 	blockNumbers map[uint64]*structures.BlockId      // block height to blockId
 	blockHashes  map[common.Hash]*structures.BlockId // block hash to blockId
@@ -145,12 +147,14 @@ func getMockEth(ethURL string) *mockEthdata {
 		mEthData.blockNumbers = make(map[uint64]*structures.BlockId)
 		mEthData.parentHashes = make(map[*structures.BlockId]common.Hash)
 		//init header number to 0 at startup
-		mEthData.LatestBlock = new(structures.BlockId)
-		mEthData.LatestBlock.Height = common.NewTimeBlocks(big.NewInt(0))
-		mEthData.LatestBlock.HeaderHash = blockHash
-		mEthData.blockHashes[blockHash] = mEthData.LatestBlock
-		mEthData.blockNumbers[mEthData.LatestBlock.Height.AsInt().Uint64()] = mEthData.LatestBlock
-		mEthData.parentHashes[mEthData.LatestBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
+		mEthData.LastMinedBlock = new(structures.BlockId)
+		mEthData.LastMinedBlock.Height = common.NewTimeBlocks(big.NewInt(0))
+		mEthData.LastMinedBlock.HeaderHash = blockHash
+		mEthData.NextBlock = new(structures.BlockId)
+		mEthData.NextBlock.Height = common.NewTimeBlocks(big.NewInt(1))
+		mEthData.blockHashes[blockHash] = mEthData.LastMinedBlock
+		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
+		mEthData.parentHashes[mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
 		mEthData.nextAddress = common.NewAddressFromEth(ethcommon.BigToAddress(big.NewInt(1)))
 		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
 		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
@@ -202,20 +206,21 @@ func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
 func mine(m *mockEthdata, t time.Time) {
 	//fmt.Println("mining - time = ", t)
 	//m.Lock()
-	nextBlock := new(structures.BlockId)
-	nextBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LatestBlock.Height.AsInt(), big.NewInt(1)))
 	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
-	nextBlock.HeaderHash = blockHash
-	lastBlock := m.LatestBlock
-	m.LatestBlock = nextBlock
-	m.blockNumbers[nextBlock.Height.AsInt().Uint64()] = nextBlock
-	m.blockHashes[nextBlock.HeaderHash] = nextBlock
-	m.parentHashes[nextBlock] = lastBlock.HeaderHash
-	fmt.Println("mined block number", nextBlock)
+	m.NextBlock.HeaderHash = blockHash
+	lastBlock := m.LastMinedBlock
+	m.blockNumbers[m.NextBlock.Height.AsInt().Uint64()] = m.NextBlock
+	m.blockHashes[m.NextBlock.HeaderHash] = m.NextBlock
+	m.parentHashes[m.NextBlock] = lastBlock.HeaderHash
+	m.LastMinedBlock = m.NextBlock
+	fmt.Println("mined block number", m.NextBlock)
 	//m.Unlock()
+	newBlock := new(structures.BlockId)
+	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))
+	m.NextBlock = newBlock
 	blockEvent := arbbridge.NewTimeEvent{
 		arbbridge.ChainInfo{
-			BlockId: nextBlock,
+			BlockId: m.NextBlock,
 		},
 	}
 

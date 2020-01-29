@@ -279,7 +279,11 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 }
 
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
-	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	newNode, ok := chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	if !ok {
+		panic("confirmNode - unknown node")
+		return
+	}
 	if newNode.depth > chain.knownValidNode.depth {
 		chain.knownValidNode = newNode
 	}

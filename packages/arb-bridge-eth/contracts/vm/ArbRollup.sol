@@ -190,8 +190,8 @@ contract ArbRollup is NodeGraph, Staking {
     {
         (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(
             MakeAssertionData(
-                _fields[0],
-                _fields[1],
+                _fields[0], //beforeState.MachineHash
+                _fields[1],//beforeState.PendingTop
                 _beforePendingCount,
 
                 _fields[2],

@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -122,14 +121,12 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *pr
 func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *preparedAssertion) {
 	// Anyone confirm a node
 	// No need to have your own stake
-	fmt.Println("****************AssertionPrepared top")
 	lis.Lock()
 	prevParams, alreadySent := lis.broadcastAssertions[prepared.leafHash]
 	lis.Unlock()
 	if alreadySent && prevParams.Equals(prepared.params) {
 		return
 	}
-	fmt.Println("****************AssertionPrepared not already sent")
 
 	leaf, ok := chain.nodeGraph.nodeFromHash[prepared.leafHash]
 	if !ok {
@@ -138,7 +135,6 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 	}
 
 	for stakingAddress, stakingKey := range lis.stakingKeys {
-		fmt.Println("****************AssertionPrepared staking keys loop")
 		stakerPos := chain.nodeGraph.stakers.Get(stakingAddress)
 		if stakerPos == nil {
 			// stakingKey is not staked
@@ -152,7 +148,6 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 		lis.Lock()
 		lis.broadcastAssertions[prepared.leafHash] = prepared.params
 		lis.Unlock()
-		log.Printf("*******************%v is making an assertion\n", stakingAddress)
 		go func() {
 			err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {

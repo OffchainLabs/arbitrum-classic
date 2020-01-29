@@ -125,7 +125,7 @@ func NewNodeFromPrev(
 	} else {
 		deadlineTicks = prev.deadline.Add(checkTime)
 	}
-
+	fmt.Println("NewNodeFromPrev - deadline", deadlineTicks, " prev = ", prev)
 	ret := &Node{
 		prev:            prev,
 		deadline:        deadlineTicks,

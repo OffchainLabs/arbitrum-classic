@@ -127,7 +127,7 @@ func (c *MockArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSt
 }
 
 func (c *MockArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
-	return c.MockEthClient.LatestBlock, nil
+	return c.MockEthClient.LastMinedBlock, nil
 }
 
 func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
