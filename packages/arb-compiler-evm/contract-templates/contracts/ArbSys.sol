@@ -38,4 +38,9 @@ interface ArbSys {
     // Return the number of transactions issued by the given external account
     // or the account sequence number of the given contract
     function getTransactionCount(address account) external pure returns(uint256);
+
+    // Generate a new contract with the same code as the given contract
+    // This function returns the address of the new contract
+    // This is currently the only way to create new contracts in a compiled rollup instance
+    function cloneContract(address account) external returns(address);
 }

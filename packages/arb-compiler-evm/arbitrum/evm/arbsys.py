@@ -78,7 +78,23 @@ def perform_precompile_call(vm):
                                                     vm.pop(),
                                                     transaction_count_interrupt(vm),
                                                 ],
-                                                lambda vm: [vm.pop(), vm.push(0)],
+                                                lambda vm: [
+                                                    vm.dup0(),
+                                                    vm.push(0x474ED9C0),
+                                                    vm.eq(),
+                                                    vm.ifelse(
+                                                        lambda vm: [
+                                                            vm.pop(),
+                                                            clone_contract_interrupt(
+                                                                vm
+                                                            ),
+                                                        ],
+                                                        lambda vm: [
+                                                            vm.pop(),
+                                                            vm.push(0),
+                                                        ],
+                                                    ),
+                                                ],
                                             ),
                                         ],
                                     ),
@@ -207,4 +223,17 @@ def transaction_count_interrupt(vm):
     os.call_frame.call_frame.get("accounts")(vm)
     accounts.account_store.get(vm)
     accounts.account_state.get("nextSeqNum")(vm)
+    return_one_uint_to_solidity_caller(vm)
+
+
+def clone_contract_interrupt(vm):
+    # local_exec_state
+    vm.dup0()
+    local_exec_state.get("data")(vm)
+    vm.dup0()
+    vm.push(4)
+    vm.swap1()
+    std.sized_byterange.get(vm)
+    # address
+    os.create_clone_contract(vm)
     return_one_uint_to_solidity_caller(vm)
