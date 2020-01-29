@@ -166,6 +166,16 @@ func (chain *NodeGraph) pruneNode(node *Node) {
 	delete(chain.nodeFromHash, node.hash)
 }
 
+func (chain *NodeGraph) pruneOldestNode(oldest *Node) {
+	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
+		succHash := oldest.successorHashes[i]
+		if !succHash.Equals(common.Hash{}) {
+			chain.nodeFromHash[succHash].prev = nil
+		}
+	}
+	delete(chain.nodeFromHash, oldest.hash)
+}
+
 func (chain *NodeGraph) HasReference(node *Node) bool {
 	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
 		return true
