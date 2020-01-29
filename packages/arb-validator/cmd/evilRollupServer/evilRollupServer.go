@@ -106,7 +106,7 @@ func createRollupChain() {
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
-		MaxExecutionSteps:       500000000,
+		MaxExecutionSteps:       100000000,
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
@@ -188,7 +188,7 @@ func validateRollupChain() error {
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
+	validatorListener := rollup.NewValidatorChainListener(context.Background(), address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
