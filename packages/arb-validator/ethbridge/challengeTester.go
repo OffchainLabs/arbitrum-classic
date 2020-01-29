@@ -47,7 +47,6 @@ func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, aut
 
 func (con *ChallengeTester) StartChallenge(
 	ctx context.Context,
-	factory common.Address,
 	asserter common.Address,
 	challenger common.Address,
 	challengePeriod common.TimeTicks,
@@ -58,7 +57,6 @@ func (con *ChallengeTester) StartChallenge(
 	defer con.auth.Unlock()
 	tx, err := con.contract.StartChallenge(
 		con.auth.getAuth(ctx),
-		factory.ToEthAddress(),
 		asserter.ToEthAddress(),
 		challenger.ToEthAddress(),
 		challengePeriod.Val,

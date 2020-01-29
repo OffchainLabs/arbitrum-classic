@@ -74,7 +74,6 @@ func (c *pendingTopChallenge) Bisect(
 func (c *pendingTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	topHashA common.Hash,
 	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
@@ -95,7 +94,7 @@ func (c *pendingTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
-	chainLength uint32,
+	chainLength uint64,
 ) error {
 	bisectionCount := uint32(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)

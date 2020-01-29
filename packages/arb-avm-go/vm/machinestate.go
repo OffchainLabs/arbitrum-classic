@@ -261,7 +261,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,

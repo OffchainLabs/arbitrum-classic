@@ -35,7 +35,6 @@ type PendingTopChallenge interface {
 	OneStepProof(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		topHashA common.Hash,
 		value common.Hash,
 	) error
 
@@ -43,7 +42,7 @@ type PendingTopChallenge interface {
 		ctx context.Context,
 		assertionToChallenge uint16,
 		chainHashes []common.Hash,
-		chainLength uint32,
+		chainLength uint64,
 	) error
 }
 

@@ -86,7 +86,7 @@ func (d *VMProtoData) Hash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(d.MachineHash),
 		hashing.Bytes32(d.PendingTop),
-		hashing.Uint256(d.PendingCount),
+		hashing.Uint256(new(big.Int).Set(d.PendingCount)),
 	)
 }
 
@@ -107,7 +107,7 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 }
 
 type AssertionParams struct {
-	NumSteps             uint32
+	NumSteps             uint64
 	TimeBounds           *protocol.TimeBoundsBlocks
 	ImportedMessageCount *big.Int
 }

@@ -17,12 +17,13 @@ import eth_utils
 
 from .contract import Contract
 from . import log
-from ..std import sized_byterange
+from . import contract_templates
+from ..std import bytestack_frombytes
 from .. import value
 
 
 def generate_func(func_id, func_abi, address):
-    def impl(self, seq, *args):
+    def impl(self, seq, val, *args):
         if len(args) != len(func_abi["inputs"]):
             raise Exception(
                 "Function with abi {} passed not matching {} args".format(
@@ -32,8 +33,8 @@ def generate_func(func_id, func_abi, address):
         encoded_input = func_id + eth_abi.encode_abi(
             [inp["type"] for inp in func_abi["inputs"]], list(args)
         )
-        msg_data = sized_byterange.frombytes(encoded_input)
-        return value.Tuple([msg_data, address, seq])
+        msg_data = bytestack_frombytes(encoded_input)
+        return value.Tuple([address, seq, val, msg_data])
 
     return impl
 
@@ -85,11 +86,23 @@ class ContractABI(Contract):
 def create_output_handler(contracts):
     events = {}
     functions = {}
-    for contract in contracts:
+    arbsys_template = contract_templates.get_arbsys()
+    erc20_template = contract_templates.get_erc20_contract()
+    erc721_template = contract_templates.get_erc721_contract()
+    extra_contracts = [
+        ContractABI(arbsys_template),
+        ContractABI(erc20_template),
+        ContractABI(erc721_template),
+    ]
+    for contract in contracts + extra_contracts:
         for event_id, abi in contract.events.items():
-            events[(contract.address, event_id)] = abi
+            if contract.address not in events:
+                events[contract.address] = {}
+            events[contract.address][event_id] = abi
         for func_id, abi in contract.funcs.items():
-            functions[(contract.address, func_id.hex())] = abi
+            if contract.address not in functions:
+                functions[contract.address] = {}
+            functions[contract.address][func_id.hex()] = abi
 
     def output_handler(output):
         output = log.parse(output)

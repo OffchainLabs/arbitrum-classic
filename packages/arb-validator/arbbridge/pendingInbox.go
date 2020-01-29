@@ -21,27 +21,30 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type PendingInbox interface {
-	SendMessage(
+	SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error
+	DepositEthMessage(
 		ctx context.Context,
-		msg valprotocol.Message,
-	) error
-	ForwardMessage(
-		ctx context.Context,
-		msg valprotocol.Message,
-		sig []byte,
-	) error
-	SendEthMessage(
-		ctx context.Context,
-		data value.Value,
+		vmAddress common.Address,
 		destination common.Address,
-		amount *big.Int,
+		value *big.Int,
 	) error
-	DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error
+	DepositERC20Message(
+		ctx context.Context,
+		vmAddress common.Address,
+		tokenAddress common.Address,
+		destination common.Address,
+		value *big.Int,
+	) error
+	DepositERC721Message(
+		ctx context.Context,
+		vmAddress common.Address,
+		tokenAddress common.Address,
+		destination common.Address,
+		value *big.Int,
+	) error
 	GetTokenBalance(
 		ctx context.Context,
 		user common.Address,

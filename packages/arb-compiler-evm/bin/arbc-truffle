@@ -37,7 +37,7 @@ def main():
     with open(args.input_file) as json_file:
         raw_contracts = json.load(json_file)
 
-    contracts = [Contract(contract) for contract in raw_contracts]
+    contracts = [Contract(contract) for contract in raw_contracts if "code" in contract]
     vm = create_evm_vm(contracts, not args.optimize_off)
 
     with open(args.output_file, "wb") as f:

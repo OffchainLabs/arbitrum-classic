@@ -245,7 +245,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
         } else {
             param = &stack[0];
         }
-        auto paramNum = nonstd::get_if<uint256_t>(immediate.get());
+        auto paramNum = nonstd::get_if<uint256_t>(param);
         if (!paramNum) {
             return NotBlocked();
         }
@@ -340,9 +340,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HASH:
             machineoperation::hashOp(*this);
             break;
-
         case OpCode::TYPE:
             machineoperation::typeOp(*this);
+            break;
+        case OpCode::ETHHASH2:
+            machineoperation::ethhash2Op(*this);
             break;
 
             /***********************************************/

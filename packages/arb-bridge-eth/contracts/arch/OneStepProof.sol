@@ -598,6 +598,26 @@ library OneStepProof {
         return true;
     }
 
+    function executeEthhash2Insn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
+    ) 
+        internal 
+        pure
+        returns (bool)
+    {
+        if (!val1.isInt() || !val2.isInt()) {
+            return false;
+        }
+        uint a = val1.intVal;
+        uint b = val2.intVal;
+        bytes32 res = keccak256(abi.encodePacked(a, b));
+        machine.addDataStackInt(uint256(res));
+        return true;
+    }
+
+
     // Stack ops
 
     function executePopInsn(
@@ -972,6 +992,7 @@ library OneStepProof {
     // SHA3
     uint8 constant internal OP_SHA3 = 0x20;
     uint8 constant internal OP_TYPE = 0x21;
+    uint8 constant internal OP_ETHHASH2 = 0x22;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 constant internal OP_POP = 0x30;
@@ -1061,6 +1082,8 @@ library OneStepProof {
             return (1, 1);
         } else if (opCode == OP_TYPE) {
             return (1, 1);
+        } else if (opCode == OP_ETHHASH2) {
+            return (2, 1);
         } else if (opCode == OP_POP) {
             return (1, 0);
         } else if (opCode == OP_SPUSH) {
@@ -1131,8 +1154,118 @@ library OneStepProof {
         return popCount;
     }
 
-    function opGasCost(uint8) internal pure returns(uint64) {
-        return 1;
+    function opGasCost(uint8 opCode) internal pure returns(uint64) {
+       if (opCode == OP_ADD) {
+            return 3;
+        } else if (opCode == OP_MUL) {
+            return 3;
+        } else if (opCode == OP_SUB) {
+            return 3;
+        } else if (opCode == OP_DIV) {
+            return 4;
+        } else if (opCode == OP_SDIV) {
+            return 7;
+        } else if (opCode == OP_MOD) {
+            return 4;
+        } else if (opCode == OP_SMOD) {
+            return 7;
+        } else if (opCode == OP_ADDMOD) {
+            return 4;
+        } else if (opCode == OP_MULMOD) {
+            return 4;
+        } else if (opCode == OP_EXP) {
+            return 25;
+        } else if (opCode == OP_LT) {
+            return 2;
+        } else if (opCode == OP_GT) {
+            return 2;
+        } else if (opCode == OP_SLT) {
+            return 2;
+        } else if (opCode == OP_SGT) {
+            return 2;
+        } else if (opCode == OP_EQ) {
+            return 2;
+        } else if (opCode == OP_ISZERO) {
+            return 1;
+        } else if (opCode == OP_AND) {
+            return 2;
+        } else if (opCode == OP_OR) {
+            return 2;
+        } else if (opCode == OP_XOR) {
+            return 2;
+        } else if (opCode == OP_NOT) {
+            return 1;
+        } else if (opCode == OP_BYTE) {
+            return 4;
+        } else if (opCode == OP_SIGNEXTEND) {
+            return 7;
+        } else if (opCode == OP_SHA3) {
+            return 7;
+        } else if (opCode == OP_TYPE) {
+            return 3;
+       } else if (opCode == OP_ETHHASH2) {
+            return 8;
+        } else if (opCode == OP_POP) {
+            return 1;
+        } else if (opCode == OP_SPUSH) {
+            return 1;
+        } else if (opCode == OP_RPUSH) {
+            return 1;
+        } else if (opCode == OP_RSET) {
+            return 2;
+        } else if (opCode == OP_JUMP) {
+            return 4;
+        } else if (opCode == OP_CJUMP) {
+            return 4;
+        } else if (opCode == OP_STACKEMPTY) {
+            return 2;
+        } else if (opCode == OP_PCPUSH) {
+            return 1;
+        } else if (opCode == OP_AUXPUSH) {
+            return 1;
+        } else if (opCode == OP_AUXPOP) {
+            return 1;
+        } else if (opCode == OP_AUXSTACKEMPTY) {
+            return 2;
+        } else if (opCode == OP_NOP) {
+            return 1;
+        } else if (opCode == OP_ERRPUSH) {
+            return 1;
+        } else if (opCode == OP_ERRSET) {
+            return 1;
+        } else if (opCode == OP_DUP0) {
+            return 1;
+        } else if (opCode == OP_DUP1) {
+            return 1;
+        } else if (opCode == OP_DUP2) {
+            return 1;
+        } else if (opCode == OP_SWAP1) {
+            return 1;
+        } else if (opCode == OP_SWAP2) {
+            return 1;
+        } else if (opCode == OP_TGET) {
+            return 2;
+        } else if (opCode == OP_TSET) {
+            return 40;
+        } else if (opCode == OP_TLEN) {
+            return 2;
+        } else if (opCode == OP_BREAKPOINT) {
+            return 100;
+        } else if (opCode == OP_LOG) {
+            return 100;
+        } else if (opCode == OP_SEND) {
+            return 100;
+        } else if (opCode == OP_GETTIME) {
+            return 40;
+        } else if (opCode == OP_INBOX) {
+            return 40;
+        } else if (opCode == OP_ERROR) {
+            return 5;
+        } else if (opCode == OP_STOP) {
+            return 10;
+        } else {
+            require(false, "Invalid opcode");
+        }
     }
 
     function loadMachine(
@@ -1149,7 +1282,7 @@ library OneStepProof {
         )
     {
         uint offset = 0;
-        uint valid = 0;
+        bool valid;
         Machine.Data memory startMachine;
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
@@ -1170,7 +1303,7 @@ library OneStepProof {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
             // string(abi.encodePacked("Proof had bad immediate value ", uint2str(valid)))
-            require(valid == 0, "Proof had bad immediate value");
+            require(valid, "Proof had bad immediate value");
             if (popCount > 0) {
                 stackVals[0] = immediateVal;
             } else {
@@ -1187,7 +1320,7 @@ library OneStepProof {
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
-            require(valid == 0, "Proof had bad stack value");
+            require(valid, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
             for (i = 0; i < stackVals.length - immediate; i++) {
@@ -1208,7 +1341,7 @@ library OneStepProof {
 
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
-        uint valid = 0;
+        bool valid;
         uint offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
@@ -1277,6 +1410,8 @@ library OneStepProof {
             correct = executeSha3Insn(endMachine, stackVals[0]);
         } else if (opCode == OP_TYPE) {
             correct = executeTypeInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_ETHHASH2) {
+            correct = executeEthhash2Insn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_POP) {
             correct = executePopInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_SPUSH) {
@@ -1298,7 +1433,7 @@ library OneStepProof {
         } else if (opCode == OP_AUXPOP) {
             Value.Data memory auxVal;
             (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid == 0, "Proof of auxpop had bad aux value");
+            require(valid, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
         } else if (opCode == OP_AUXSTACKEMPTY) {

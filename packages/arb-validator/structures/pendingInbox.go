@@ -18,14 +18,18 @@ package structures
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type messageStackItem struct {
-	message value.Value
+	message message.DeliveredMessage
 	prev    *messageStackItem
 	next    *messageStackItem
 	hash    common.Hash
@@ -40,18 +44,10 @@ func (pii *messageStackItem) skipNext(n uint64) *messageStackItem {
 	return ret
 }
 
-func (pii *messageStackItem) skipBack(n uint64) *messageStackItem {
-	ret := pii
-	for i := uint64(0); i < n && ret != nil; i++ {
-		ret = ret.prev
-	}
-	return ret
-}
-
 func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
 	return msi.hash == msi2.hash &&
 		msi.count.Cmp(msi2.count) == 0 &&
-		value.Eq(msi.message, msi2.message) &&
+		msi.message.Equals(msi2.message) &&
 		(msi.prev == nil) == (msi2.prev == nil) &&
 		(msi.next == nil) == (msi2.next == nil)
 }
@@ -72,6 +68,15 @@ func NewMessageStack() *MessageStack {
 	}
 }
 
+func (ms *MessageStack) String() string {
+	hashes := make([]common.Hash, 0)
+	hashes = append(hashes, ms.hashOfRest)
+	for item := ms.oldest; item != nil; item = item.next {
+		hashes = append(hashes, item.hash)
+	}
+	return fmt.Sprintf("%v", hashes)
+}
+
 func (ms *MessageStack) GetTopHash() common.Hash {
 	if ms.newest == nil {
 		return value.NewEmptyTuple().Hash()
@@ -88,7 +93,7 @@ func (ms *MessageStack) TopCount() *big.Int {
 	}
 }
 
-func (ms *MessageStack) BottomIndex() *big.Int {
+func (ms *MessageStack) bottomIndex() *big.Int {
 	if ms.oldest == nil {
 		return big.NewInt(0)
 	} else {
@@ -96,117 +101,86 @@ func (ms *MessageStack) BottomIndex() *big.Int {
 	}
 }
 
-func (pi *MessageStack) DeliverMessage(msg value.Value) {
-	newTopCount := new(big.Int).Add(pi.TopCount(), big.NewInt(1))
-	if pi.newest == nil {
+func (ms *MessageStack) DeliverMessage(msg message.DeliveredMessage) {
+	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
+	if ms.newest == nil {
 		item := &messageStackItem{
 			message: msg,
 			prev:    nil,
 			next:    nil,
-			hash:    hash2(pi.hashOfRest, msg.Hash()),
+			hash:    hash2(ms.hashOfRest, msg.CommitmentHash()),
 			count:   newTopCount,
 		}
-		pi.newest = item
-		pi.oldest = item
-		pi.index[item.hash] = item
+		ms.newest = item
+		ms.oldest = item
+		ms.index[item.hash] = item
 	} else {
 		item := &messageStackItem{
 			message: msg,
-			prev:    pi.newest,
+			prev:    ms.newest,
 			next:    nil,
-			hash:    hash2(pi.newest.hash, msg.Hash()),
+			hash:    hash2(ms.newest.hash, msg.CommitmentHash()),
 			count:   newTopCount,
 		}
-		pi.newest = item
+		ms.newest = item
 		item.prev.next = item
-		pi.index[item.hash] = item
+		ms.index[item.hash] = item
 	}
 }
 
-func (pi *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
+func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 	if height.Cmp(big.NewInt(0)) == 0 {
 		return value.NewEmptyTuple().Hash(), nil
 	}
-	if height.Cmp(pi.BottomIndex()) < 0 {
+	if height.Cmp(ms.bottomIndex()) < 0 {
 		return common.Hash{}, errors.New("Height is below bottom of message stack")
 	}
-	if height.Cmp(pi.TopCount()) > 0 {
+	if height.Cmp(ms.TopCount()) > 0 {
 		return common.Hash{}, errors.New("Height is above top of message stack")
 	}
-	offset := new(big.Int).Sub(height, pi.BottomIndex())
-	return pi.oldest.skipNext(offset.Uint64()).hash, nil
-}
-
-func (pi *MessageStack) GetHeight(acc common.Hash) (*big.Int, bool) {
-	if pi.hashOfRest == acc {
-		if pi.BottomIndex().Cmp(big.NewInt(0)) == 0 {
-			return big.NewInt(0), true
-		} else {
-			return new(big.Int).Sub(pi.BottomIndex(), big.NewInt(1)), true
-		}
-	}
-
-	item, ok := pi.index[acc]
-	if !ok {
-		return nil, false
-	}
-	return item.count, true
-}
-
-func (pi *MessageStack) SegmentSize(olderAcc common.Hash, newerAcc common.Hash) (uint64, error) {
-	if olderAcc == newerAcc {
-		return 0, nil
-	}
-	oldItemNext, ok := pi.itemAfterHash(olderAcc)
-	newItem, ok := pi.index[newerAcc]
-	if !ok {
-		return 0, errors.New("newerAcc not found")
-	}
-	return new(big.Int).Sub(newItem.count, oldItemNext.count).Uint64() + 1, nil
+	offset := new(big.Int).Sub(height, ms.bottomIndex())
+	return ms.oldest.skipNext(offset.Uint64()).hash, nil
 }
 
 func hash2(h1, h2 common.Hash) common.Hash {
-	return value.NewTuple2(
-		value.NewHashOnlyValue(h1, 1),
-		value.NewHashOnlyValue(h2, 1),
-	).Hash()
+	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
 }
 
-func MakeInitialPendingInboxBuf() *PendingInboxBuf {
-	return &PendingInboxBuf{
-		TopCount:   common.MarshalBigInt(big.NewInt(0)),
-		ItemHashes: []*common.HashBuf{},
-		HashOfRest: value.NewEmptyTuple().Hash().MarshalToBuf(),
-	}
-}
-
-func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {
-	var msgHashes []*common.HashBuf
-	for item := pi.newest; item != nil; item = item.prev {
-		ctx.AddValue(item.message)
-		msgHashes = append(msgHashes, item.message.Hash().MarshalToBuf())
+func (ms *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {
+	var items []*InboxItemBuf
+	for item := ms.newest; item != nil; item = item.prev {
+		checkpointVal := item.message.CheckpointValue()
+		ctx.AddValue(checkpointVal)
+		items = append(items, &InboxItemBuf{
+			ValType: uint32(item.message.Type()),
+			ValHash: checkpointVal.Hash().MarshalToBuf(),
+		})
 	}
 	var topCount *big.Int
-	if pi.newest == nil {
+	if ms.newest == nil {
 		topCount = big.NewInt(0)
 	} else {
-		topCount = pi.newest.count
+		topCount = ms.newest.count
 	}
 	return &PendingInboxBuf{
 		TopCount:   common.MarshalBigInt(topCount),
-		ItemHashes: msgHashes,
-		HashOfRest: pi.hashOfRest.MarshalToBuf(),
+		Items:      items,
+		HashOfRest: ms.hashOfRest.MarshalToBuf(),
 	}
 }
 
-func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) *MessageStack {
+func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) (*MessageStack, error) {
 	ret := NewMessageStack()
 	ret.hashOfRest = buf.HashOfRest.Unmarshal()
-	for i := len(buf.ItemHashes) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(buf.ItemHashes[i].Unmarshal())
-		ret.DeliverMessage(val)
+	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
+		val := ctx.GetValue(buf.Items[i].ValHash.Unmarshal())
+		msg, err := message.UnmarshalFromCheckpoint(message.MessageType(buf.Items[i].ValType), val)
+		if err != nil {
+			return nil, err
+		}
+		ret.DeliverMessage(msg)
 	}
-	return ret
+	return ret, nil
 }
 
 func (ms *MessageStack) Equals(ms2 *MessageStack) bool {
@@ -222,29 +196,23 @@ func (ms *MessageStack) Equals(ms2 *MessageStack) bool {
 	return true
 }
 
-func (pi *MessageStack) itemAfterHash(acc common.Hash) (*messageStackItem, bool) {
-	if acc == pi.hashOfRest {
-		return pi.oldest, true
+func (ms *MessageStack) itemAfterHash(acc common.Hash) (*messageStackItem, bool) {
+	if acc == ms.hashOfRest {
+		return ms.oldest, true
 	}
-	item, found := pi.index[acc]
+	item, found := ms.index[acc]
 	if !found {
 		return nil, false
 	}
 	return item.next, true
 }
 
-func (pi *MessageStack) GenerateBisection(startItemHash common.Hash, endItemHash common.Hash, segments uint64) ([]common.Hash, error) {
-	startItem, ok := pi.itemAfterHash(startItemHash)
+func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, count uint64) ([]common.Hash, error) {
+	startItem, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
 		return nil, errors.New("bisection startItemHash not found")
 	}
 
-	endItem, ok := pi.index[endItemHash]
-	if !ok {
-		return nil, errors.New("endItemHash not found")
-	}
-
-	count := new(big.Int).Sub(endItem.count, new(big.Int).Sub(startItem.count, big.NewInt(1))).Uint64()
 	if count < segments {
 		segments = count
 	}
@@ -268,83 +236,33 @@ func (pi *MessageStack) GenerateBisection(startItemHash common.Hash, endItemHash
 	return cuts, nil
 }
 
-func (pi *MessageStack) CheckBisection(segments []common.Hash) (uint64, error) {
-	segmentCount := uint64(len(segments))
-	totalLength, err := pi.SegmentSize(segments[0], segments[segmentCount-1])
-	if err != nil {
-		return 0, errors.New("first and last segment must exist")
-	}
-	for i := uint64(1); i < segmentCount; i++ {
-		targetLength := uint64(0)
-		if i == segmentCount-1 {
-			targetLength = totalLength/segmentCount + totalLength%segmentCount
-		} else {
-			targetLength = totalLength / segmentCount
-		}
-		length, err := pi.SegmentSize(segments[segmentCount-i-1], segments[segmentCount-i])
-		if err != nil || length != targetLength {
-			return uint64(segmentCount - i - 1), nil
-		}
-	}
-	return 0, errors.New("all segments were correct")
-}
-
-func (pi *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (common.Hash, common.Hash, error) {
-	item, ok := pi.itemAfterHash(startItemHash)
+func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.DeliveredMessage, error) {
+	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return common.Hash{}, common.Hash{}, errors.New("one step proof startItemHash not found")
+		return nil, errors.New("one step proof startItemHash not found")
 	}
-	return item.hash, item.message.Hash(), nil
+	return item.message, nil
 }
 
-func (pi *MessageStack) Substack(olderAcc, newerAcc common.Hash) (*MessageStack, error) {
-	if olderAcc == newerAcc {
-		return NewMessageStack(), nil
+func (ms *MessageStack) GenerateInbox(olderAcc common.Hash, count uint64) (*Inbox, error) {
+	if count == 0 {
+		return NewInbox(), nil
 	}
-	oldItem, ok := pi.itemAfterHash(olderAcc)
+	oldItem, ok := ms.itemAfterHash(olderAcc)
 	if !ok {
 		return nil, errors.New("olderAcc not found")
 	}
 
-	newItem, ok := pi.index[newerAcc]
-	if !ok {
-		return nil, errors.New("newerAcc not found")
-	}
-
-	if oldItem.count.Cmp(newItem.count) > 0 {
-		return nil, errors.New("olderAcc is not before newerAcc")
-	}
 	item := oldItem
-	stack := NewMessageStack()
-	for item != newItem {
-		stack.DeliverMessage(item.message)
+	inbox := NewInbox()
+	for i := uint64(0); i < count; i++ {
+		if item == nil {
+			return nil, errors.New("Not enough messages in pending inbox")
+		}
+		inbox.DeliverMessage(item.message)
 		item = item.next
 	}
-	stack.DeliverMessage(item.message)
-	return stack, nil
-}
-
-func (pi *MessageStack) ValueForSubseq(olderAcc, newerAcc common.Hash) value.TupleValue {
-	oldItem, ok := pi.index[olderAcc]
-	if !ok {
-		oldItem = nil
-	}
-	newItem, ok := pi.index[newerAcc]
-	if !ok {
-		newItem = nil
-	}
-	return valueForSubseq2(oldItem, newItem)
-}
-
-func valueForSubseq2(oldItem, newItem *messageStackItem) value.TupleValue {
-	if newItem == oldItem {
-		return value.NewEmptyTuple()
-	} else {
-		return value.NewTuple2(
-			valueForSubseq2(oldItem, newItem.prev),
-			newItem.message,
-		)
-	}
+	return inbox, nil
 }
 
 type PendingInbox struct {

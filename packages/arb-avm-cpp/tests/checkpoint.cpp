@@ -577,39 +577,6 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
         err_pc_results.storage_key,       status_str};
 }
 
-MessageStack getMsgStack1() {
-    TuplePool pool;
-
-    auto inbox_stack = MessageStack(&pool);
-    uint256_t val_data = 111;
-    uint256_t destination = 2;
-    uint256_t currency = 3;
-    uint256_t msg_token_type = 1;
-    auto pending_msg =
-        Tuple{val_data, destination, currency, msg_token_type, &pool};
-    auto msgs = Tuple{uint256_t{0}, Tuple(), pending_msg, &pool};
-    inbox_stack.addMessages(std::move(msgs));
-
-    return inbox_stack;
-}
-
-MessageStack getMsgStack2() {
-    TuplePool pool;
-
-    uint256_t val_data = 111;
-    uint256_t destination = 2;
-    uint256_t currency = 3;
-    uint256_t msg_token_type = 2;
-    auto pending_msg =
-        Tuple{val_data, destination, currency, msg_token_type, &pool};
-
-    auto pending_stack = MessageStack(&pool);
-    auto msgs = Tuple{uint256_t{0}, Tuple(), pending_msg, &pool};
-    pending_stack.addMessages(std::move(msgs));
-
-    return pending_stack;
-}
-
 MachineStateKeys getStateValues(MachineStateSaver& saver) {
     TuplePool pool;
     uint256_t register_val = 100;
@@ -625,13 +592,11 @@ MachineStateKeys getStateValues(MachineStateSaver& saver) {
     aux_stack.push(register_val);
     aux_stack.push(code_point);
 
-    auto inbox_stack = getMsgStack1();
-
     CodePoint pc_codepoint(0, Operation(), 0);
     CodePoint err_pc_codepoint(0, Operation(), 0);
     Status state = Status::Extensive;
 
-    auto inbox_blocked = InboxBlocked(::hash(inbox_stack.messages));
+    auto inbox_blocked = InboxBlocked(0);
 
     auto saved_data =
         makeStorageData(saver, register_val, data_stack, aux_stack, state,
@@ -645,8 +610,6 @@ MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
-    auto inbox_mssage = MessageStack(&pool);
-    auto pending_mssage = MessageStack(&pool);
 
     Status state = Status::Extensive;
     CodePoint code_point(0, Operation(), 0);

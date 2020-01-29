@@ -42,6 +42,7 @@ OP_CODES = [
     # SHA3
     ("hash", 0x20, [ValueType()], [IntType()]),
     ("type", 0x21, [ValueType()], [IntType()]),
+    ("ethhash2", 0x22, [IntType(), IntType()], [IntType()]),
     # Stack, Memory, Storage and Flow Operations
     ("pop", 0x30, [ValueType()], []),
     ("spush", 0x31, [], [ValueType()]),

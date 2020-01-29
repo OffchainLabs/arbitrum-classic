@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
-func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {
+func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint64) uint64 {
 	if chunkIndex == 0 {
 		return totalSteps/segmentCount + totalSteps%segmentCount
 	} else {
@@ -60,12 +60,12 @@ func MessageChallengeDataHash(
 }
 
 func ExecutionDataHash(
-	numSteps uint32,
+	numSteps uint64,
 	preconditionHash common.Hash,
 	assertionHash common.Hash,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Uint32(numSteps),
+		hashing.Uint64(numSteps),
 		hashing.Bytes32(preconditionHash),
 		hashing.Bytes32(assertionHash),
 	)

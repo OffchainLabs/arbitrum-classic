@@ -29,7 +29,7 @@ library VM {
     struct Params {  // these are defined just once for each vM
         uint256 gracePeriodTicks;
         uint256 arbGasSpeedLimitPerTick;
-        uint32  maxExecutionSteps;
+        uint64  maxExecutionSteps;
     }
 
     function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
