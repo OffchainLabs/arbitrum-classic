@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -39,6 +40,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+)
+
+const (
+	maxReorgDepth = 100
 )
 
 // Launches the rollup validator with the following command line arguments:
@@ -100,9 +105,9 @@ func createRollupChain() {
 
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
-		MaxExecutionSteps:       250000,
-		ArbGasSpeedLimitPerTick: 200000,
+		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
+		MaxExecutionSteps:       500000000,
+		ArbGasSpeedLimitPerTick: 100000,
 	}
 
 	// Rollup creation
@@ -134,14 +139,13 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	stressTest := validateCmd.Bool("stresstest", false, "stresstest")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
-	if validateCmd.NArg() != 4 {
-		return errors.New("usage: rollupServer validate [--rpc] [--stresstest] <contract.ao> <private_key.txt> <ethURL> <rollup_address>")
+	if validateCmd.NArg() != 5 {
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
 
 	// 2) Private key
@@ -169,6 +173,9 @@ func validateRollupChain() error {
 	addressString := validateCmd.Arg(3)
 	address := common.HexToAddress(addressString)
 
+	// 5) Database directory path
+	dbPath := validateCmd.Arg(4)
+
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
@@ -188,7 +195,13 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), "", true, client, false, *stressTest)
+	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
+		address,
+		validateCmd.Arg(0),
+		dbPath,
+		big.NewInt(maxReorgDepth),
+		false,
+	))
 	if err != nil {
 		return err
 	}

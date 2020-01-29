@@ -22,7 +22,7 @@ from ..vm import VM
 account_state = std.Struct(
     "account_state",
     [
-        ("nonce", value.IntType()),
+        ("nextSeqNum", value.IntType()),
         ("code", std.byterange.typ),
         ("code_point", value.ValueType()),
         ("code_size", value.IntType()),
@@ -43,7 +43,7 @@ def make_empty_account():
     std.keyvalue_int_int.new(vm)
     vm.push(0)
     account_state.new(vm)
-    account_state.set_val("nonce")(vm)
+    account_state.set_val("nextSeqNum")(vm)
     account_state.set_val("storage")(vm)
     account_state.set_val("balance")(vm)
     account_state.set_val("code_hash")(vm)
@@ -55,7 +55,7 @@ def make_empty_account():
 @modifies_stack([account_state.typ], [value.IntType()])
 def is_empty(vm):
     vm.dup0()
-    account_state.get("nonce")(vm)
+    account_state.get("nextSeqNum")(vm)
     vm.push(0)
     vm.eq()
     vm.swap1()
@@ -126,7 +126,7 @@ def clone_contract(vm):
     account_state.set_val("storage")(vm)
     vm.push(1)
     vm.swap1()
-    account_state.set_val("nonce")(vm)
+    account_state.set_val("nextSeqNum")(vm)
     # new_account accounts to_id
     vm.swap2()
     vm.swap1()
@@ -149,7 +149,7 @@ def process_nonce(vm):
     # account nonce [accounts address]
     vm.dup0()
     vm.auxpush()
-    account_state.get("nonce")(vm)
+    account_state.get("nextSeqNum")(vm)
     # old_nonce nonce [account accounts address]
     vm.dup1()
     vm.eq()
@@ -159,7 +159,7 @@ def process_nonce(vm):
             vm.push(1),
             vm.add(),
             vm.auxpop(),
-            account_state.set_val("nonce")(vm),
+            account_state.set_val("nextSeqNum")(vm),
             # updated_account [accounts address]
             vm.auxpop(),
             vm.auxpop(),

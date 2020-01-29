@@ -23,11 +23,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func TestMarshalTransaction(t *testing.T) {
+func generateTestChain() common.Address {
 	chain := common.Address{}
 	chain[0] = 97
 	chain[19] = 35
+	return chain
+}
 
+func generateTestTransaction() Transaction {
 	addr1 := common.Address{}
 	addr1[0] = 76
 	addr1[19] = 93
@@ -36,16 +39,40 @@ func TestMarshalTransaction(t *testing.T) {
 	addr2[0] = 43
 	addr2[19] = 12
 
-	msg := Transaction{
-		Chain:       chain,
+	return Transaction{
+		Chain:       generateTestChain(),
 		To:          addr1,
 		From:        addr2,
 		SequenceNum: big.NewInt(6435),
 		Value:       big.NewInt(89735406),
 		Data:        []byte{43, 65, 68, 98, 43, 46},
 	}
+}
 
-	msg2, err := UnmarshalTransaction(msg.AsValue(), chain)
+func generateTestDeliveredTransaction() DeliveredTransaction {
+	return DeliveredTransaction{
+		Transaction: generateTestTransaction(),
+		BlockNum:    common.NewTimeBlocks(big.NewInt(64654)),
+	}
+}
+
+func TestMarshalTransaction(t *testing.T) {
+	msg := generateTestTransaction()
+
+	msg2, err := UnmarshalTransaction(msg.AsValue(), generateTestChain())
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !msg.Equals(msg2) {
+		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
+	}
+}
+
+func TestCheckpointTransaction(t *testing.T) {
+	msg := generateTestDeliveredTransaction()
+
+	msg2, err := UnmarshalFromCheckpoint(TransactionType, msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

@@ -25,6 +25,7 @@ contract ArbERC721 is ERC721Enumerable {
     }
 
     function adminMint(address account, uint256 tokenId) public {
+        // This function is only callable through admin logic since address 1 cannot make calls
         require(msg.sender == address(1));
         _mint(account, tokenId);
     }

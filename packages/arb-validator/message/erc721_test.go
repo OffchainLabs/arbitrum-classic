@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func TestMarshalERC721(t *testing.T) {
+func generateTestERC721() ERC721 {
 	addr1 := common.Address{}
 	addr1[0] = 76
 	addr1[19] = 93
@@ -36,14 +36,39 @@ func TestMarshalERC721(t *testing.T) {
 	addr3[0] = 87
 	addr3[19] = 32
 
-	msg := ERC721{
+	return ERC721{
 		To:           addr1,
 		From:         addr2,
 		TokenAddress: addr3,
 		Id:           big.NewInt(89735406),
 	}
+}
+
+func generateTestDeliveredERC721() DeliveredERC721 {
+	return DeliveredERC721{
+		ERC721:     generateTestERC721(),
+		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+		MessageNum: big.NewInt(9675),
+	}
+}
+
+func TestMarshalERC721(t *testing.T) {
+	msg := generateTestERC721()
 
 	msg2, err := UnmarshalERC721(msg.AsValue())
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !msg.Equals(msg2) {
+		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
+	}
+}
+
+func TestCheckpointERC721(t *testing.T) {
+	msg := generateTestDeliveredERC721()
+
+	msg2, err := UnmarshalFromCheckpoint(ERC721Type, msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

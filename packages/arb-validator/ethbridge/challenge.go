@@ -69,7 +69,12 @@ func (c *challenge) TimeoutChallenge(ctx context.Context) error {
 	defer c.auth.Unlock()
 	tx, err := c.Challenge.TimeoutChallenge(c.auth.getAuth(ctx))
 	if err != nil {
-		return err
+		return c.Challenge.TimeoutChallengeCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
 }

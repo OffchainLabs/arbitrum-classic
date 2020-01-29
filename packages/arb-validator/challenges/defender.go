@@ -27,15 +27,15 @@ import (
 
 type AssertionDefender struct {
 	precondition *valprotocol.Precondition
-	numSteps     uint32
+	numSteps     uint64
 	initState    machine.Machine
 }
 
-func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint32, initState machine.Machine) AssertionDefender {
+func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint64, initState machine.Machine) AssertionDefender {
 	return AssertionDefender{precondition, numSteps, initState.Clone()}
 }
 
-func (ad AssertionDefender) NumSteps() uint32 {
+func (ad AssertionDefender) NumSteps() uint64 {
 	return ad.numSteps
 }
 
@@ -47,7 +47,7 @@ func (ad AssertionDefender) GetMachineState() machine.Machine {
 	return ad.initState
 }
 
-func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valprotocol.ExecutionAssertionStub) {
+func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valprotocol.ExecutionAssertionStub) {
 	nsteps := ad.NumSteps()
 	if nsteps < slices {
 		slices = nsteps
@@ -57,11 +57,11 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valp
 	m := ad.initState.Clone()
 
 	pre := ad.precondition
-	for i := uint64(0); i < uint64(slices); i++ {
-		steps := structures.CalculateBisectionStepCount(i, uint64(slices), uint64(nsteps))
+	for i := uint64(0); i < slices; i++ {
+		steps := structures.CalculateBisectionStepCount(i, slices, nsteps)
 		initState := m.Clone()
 
-		assertion, numSteps := m.ExecuteAssertion(uint32(steps), pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
@@ -82,14 +82,14 @@ func ChooseAssertionToChallenge(
 	m machine.Machine,
 	pre *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) (uint16, machine.Machine, error) {
 	assertionCount := uint64(len(assertions))
 	for i := range assertions {
-		steps := structures.CalculateBisectionStepCount(uint64(i), assertionCount, uint64(totalSteps))
+		steps := structures.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
-			uint32(steps),
+			steps,
 			pre.TimeBounds,
 			pre.BeforeInbox.(value.TupleValue),
 		)

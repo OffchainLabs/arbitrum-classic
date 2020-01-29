@@ -88,4 +88,12 @@ contract PendingTopChallenge is BisectionChallenge {
         emit OneStepProofCompleted();
         _asserterWin();
     }
+
+    function resolveChallengeAsserterWon() internal {
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_PENDING_TOP_TYPE);
+    }
+
+    function resolveChallengeChallengerWon() internal {
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_PENDING_TOP_TYPE);
+    }
 }

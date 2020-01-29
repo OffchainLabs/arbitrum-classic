@@ -152,7 +152,7 @@ def transaction_count_interrupt(vm):
     os.get_call_frame(vm)
     os.call_frame.call_frame.get("accounts")(vm)
     accounts.account_store.get(vm)
-    accounts.account_state.get("nonce")(vm)
+    accounts.account_state.get("nextSeqNum")(vm)
     vm.push(0)
     std.byterange.new(vm)
     std.byterange.set_val(vm)

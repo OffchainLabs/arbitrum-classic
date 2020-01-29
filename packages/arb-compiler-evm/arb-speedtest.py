@@ -196,6 +196,36 @@ aos = (
         ),
     ),
     (
+        "dup2_dup2_dup2_tset_hash_0_1",
+        lambda vm: speedtestUnaryOp_lis(
+            vm,
+            [2, arb.value.Tuple([1, 2, 3, 4]), 5],
+            lambda v: [v.dup2(), v.dup2(), v.dup2(), v.tset(), v.hash(), v.pop()],
+        ),
+    ),
+    (
+        "tset_push_tset_hash_4_1",
+        lambda vm: speedtestUnaryOp(
+            vm,
+            0,
+            lambda v: [
+                v.push(6),
+                v.push(5),
+                v.push(arb.value.Tuple([1, 2, 3, 4])),
+                v.push(1),
+                v.tset(),
+                v.push(2),
+                v.tset(),
+                v.hash(),
+                v.pop(),
+            ],
+        ),
+    ),
+    (
+        "dup0_ethhash2_0_0",
+        lambda vm: speedtestUnaryOp(vm, 2, lambda v: [v.dup0(), v.ethhash2()]),
+    ),
+    (
         "gettime_0_1",
         lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.gettime(), v.pop()]),
     ),
