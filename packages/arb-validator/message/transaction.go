@@ -142,7 +142,7 @@ type DeliveredTransaction struct {
 	BlockNum *common.TimeBlocks
 }
 
-func (m DeliveredTransaction) Equals(other DeliveredMessage) bool {
+func (m DeliveredTransaction) Equals(other Message) bool {
 	o, ok := other.(DeliveredTransaction)
 	if !ok {
 		return false

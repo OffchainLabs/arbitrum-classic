@@ -15,17 +15,11 @@
 from ..annotation import noreturn, modifies_stack
 from .. import std
 from . import call_frame
-from . import os
+from . import os, arbsys
 from .. import ast
 from .. import value
 from .accounts import account_state, account_store
-from .types import (
-    local_exec_state,
-    eth_transfer_message,
-    ethbridge_message,
-    token_transfer_message,
-    message,
-)
+from .types import local_exec_state
 
 WITHDRAW_ETH_TYPECODE = 1
 WITHDRAW_ERC20_TYPECODE = 2
@@ -101,168 +95,9 @@ def _perform_call(vm, call_num):
     vm.push(100)
     vm.eq()
     vm.ifelse(
-        lambda vm: [vm.pop(), _perform_precompile_call(vm)],
+        lambda vm: [vm.pop(), arbsys.perform_precompile_call(vm)],
         lambda vm: [_perform_real_call(vm, call_num)],
     )
-
-
-def _perform_precompile_call(vm):
-    # local_exec_state
-    vm.dup0()
-    local_exec_state.get("data")(vm)
-    vm.push(0)
-    vm.swap1()
-    std.sized_byterange.get(vm)
-    vm.push(224)
-    vm.swap1()
-    std.bitwise.shift_right(vm)
-    vm.dup0()
-    vm.push(0x1B9A91A4)
-    vm.eq()
-    vm.ifelse(
-        lambda vm: [vm.pop(), withdraw_eth_interrupt(vm)],
-        lambda vm: [
-            vm.dup0(),
-            vm.push(0xA1DB9782),
-            vm.eq(),
-            vm.ifelse(
-                lambda vm: [vm.pop(), withdraw_erc20_interrupt(vm)],
-                lambda vm: [
-                    vm.dup0(),
-                    vm.push(0xF3E414F8),
-                    vm.eq(),
-                    vm.ifelse(
-                        lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],
-                        lambda vm: [
-                            vm.dup0(),
-                            vm.push(0xBDE19776),
-                            vm.eq(),
-                            vm.ifelse(
-                                lambda vm: [vm.pop(), arbsys_time_upper_bound(vm)],
-                                lambda vm: [
-                                    vm.dup0(),
-                                    vm.push(0x44F50653),
-                                    vm.eq(),
-                                    vm.ifelse(
-                                        lambda vm: [
-                                            vm.pop(),
-                                            arbsys_current_message_time(vm),
-                                        ],
-                                        lambda vm: [vm.pop(), vm.push(0)],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
-
-
-def parse_withdraw_call(vm):
-    # local_exec_state
-    vm.dup0()
-    local_exec_state.get("caller")(vm)
-    vm.swap1()
-    local_exec_state.get("data")(vm)
-    vm.dup0()
-    vm.push(4)
-    vm.swap1()
-    std.sized_byterange.get(vm)
-    # dest data sender
-    vm.swap1()
-    vm.push(36)
-    vm.swap1()
-    std.sized_byterange.get(vm)
-    # amount dest sender
-
-
-def withdraw_eth_interrupt(vm):
-    # local_exec_state
-    parse_withdraw_call(vm)
-    # amount dest sender
-    vm.dup0()
-    os.process_eth_withdraw(vm)
-    vm.ifelse(
-        lambda vm: [
-            vm.push(eth_transfer_message.make()),
-            vm.cast(eth_transfer_message.typ),
-            eth_transfer_message.set_val("amount")(vm),
-            eth_transfer_message.set_val("dest")(vm),
-            # token_transfer_message sender
-            vm.push(WITHDRAW_ETH_TYPECODE),
-            vm.push(message.make()),
-            vm.cast(message.typ),
-            message.set_val("type")(vm),
-            message.set_val("message")(vm),
-            message.set_val("sender")(vm),
-            vm.send(),
-            vm.push(3),
-        ],
-        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
-    )
-
-
-def withdraw_token_interrupt(vm, token_type):
-    # local_exec_state
-    parse_withdraw_call(vm)
-    # amount dest token_address
-    vm.push(token_transfer_message.make())
-    vm.cast(token_transfer_message.typ)
-    token_transfer_message.set_val("amount")(vm)
-    token_transfer_message.set_val("dest")(vm)
-    token_transfer_message.set_val("token_address")(vm)
-    os.message_caller(vm)
-    vm.push(token_type)
-    vm.push(message.make())
-    vm.cast(message.typ)
-    message.set_val("type")(vm)
-    message.set_val("sender")(vm)
-    message.set_val("message")(vm)
-    vm.send()
-    vm.push(3)
-
-
-def withdraw_erc20_interrupt(vm):
-    # local_exec_state
-    withdraw_token_interrupt(vm, WITHDRAW_ERC20_TYPECODE)
-
-
-def withdraw_erc721_interrupt(vm):
-    # local_exec_state
-    withdraw_token_interrupt(vm, WITHDRAW_ERC721_TYPECODE)
-
-
-def return_one_uint_to_solidity_caller(vm):
-    vm.push(0)
-    std.byterange.new(vm)
-    std.byterange.set_val(vm)
-    vm.push(32)
-    vm.swap1()
-    std.tup.make(2)(vm)
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("parent_frame")(vm)
-    os.call_frame.call_frame.set_val("return_data")(vm)
-    os.get_call_frame(vm)
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    os.set_call_frame(vm)
-    vm.push(2)
-
-
-def arbsys_time_upper_bound(vm):
-    vm.gettime()
-    vm.tgetn(1)
-    return_one_uint_to_solidity_caller(vm)
-
-
-def arbsys_current_message_time(vm):
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("current_msg")(vm)
-    ethbridge_message.get("block_number")(vm)
-
-    return_one_uint_to_solidity_caller(vm)
 
 
 def _perform_real_call(vm, call_num):
@@ -430,6 +265,29 @@ def initial_call(vm, label):
     call_frame.save_state(vm)
     commit_call_frame(vm)
     vm.auxpop()
+    # ret_code data
+    vm.swap1()
+    vm.dup1()
+    os.log_func_result(vm)
+    # ret_code
+
+
+@noreturn
+def initial_static_call(vm, label):
+    # sender tx_call_data
+    vm.set_exception_handler(invalid_tx)
+    vm.dup0()
+    setup_initial_call_frame(vm)
+    os.tx_call_to_local_exec_state(vm)
+    _perform_call(vm, label)
+    # ret_code
+    vm.clear_exception_handler()
+
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
+    call_frame.call_frame.get("return_data")(vm)
+    vm.swap1()
+
     # ret_code data
     vm.swap1()
     vm.dup1()

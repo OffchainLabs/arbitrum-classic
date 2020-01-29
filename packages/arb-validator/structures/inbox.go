@@ -38,7 +38,7 @@ func NewInbox() *Inbox {
 	}
 }
 
-func (b *Inbox) DeliverMessage(msg message.DeliveredMessage) {
+func (b *Inbox) DeliverMessage(msg message.Message) {
 	b.value = value.NewTuple2(b.value, message.DeliveredValue(msg))
 	b.hashes = append(b.hashes, b.value.Hash())
 }

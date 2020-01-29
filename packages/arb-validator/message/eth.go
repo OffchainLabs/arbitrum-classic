@@ -98,7 +98,7 @@ type DeliveredEth struct {
 	MessageNum *big.Int
 }
 
-func (m DeliveredEth) Equals(other DeliveredMessage) bool {
+func (m DeliveredEth) Equals(other Message) bool {
 	o, ok := other.(DeliveredEth)
 	if !ok {
 		return false

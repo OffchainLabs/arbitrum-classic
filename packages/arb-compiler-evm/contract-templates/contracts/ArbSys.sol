@@ -34,4 +34,8 @@ interface ArbSys {
 
     // Return upper bound on the on-chain block number
     function timeUpperBound() external returns(uint);
+
+    // Return the number of transactions issued by the given external account
+    // or the account sequence number of the given contract
+    function getTransactionCount(address account) external pure returns(uint256);
 }

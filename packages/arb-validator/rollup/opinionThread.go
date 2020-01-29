@@ -234,6 +234,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
+	currentHeight := chain.latestBlockId.Height.Clone()
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
@@ -242,7 +243,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 
 	afterHash := mach.Hash()
 
-	blockReason := mach.IsBlocked(chain.latestBlockId.Height, false)
+	blockReason := mach.IsBlocked(currentHeight, false)
 
 	log.Printf(
 		"Prepared assertion of %v steps, from %v to %v with block reason %v and timebounds [%v, %v] on top of leaf %v\n",

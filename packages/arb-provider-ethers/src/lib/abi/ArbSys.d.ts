@@ -38,6 +38,8 @@ export class ArbSys extends Contract {
     interface: ArbSysInterface;
 
     functions: {
+        getTransactionCount(account: string): Promise<BigNumber>;
+
         withdrawERC20(
             dest: string,
             amount: BigNumberish,
