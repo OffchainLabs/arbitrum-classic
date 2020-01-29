@@ -61,3 +61,7 @@ func (rtb *TimeTicksBuf) Unmarshal() TimeTicks {
 func (rt TimeTicks) Equals(rt2 TimeTicks) bool {
 	return rt.Val.Cmp(rt2.Val) == 0
 }
+
+func (rt TimeTicks) String() string {
+	return rt.Val.String()
+}
