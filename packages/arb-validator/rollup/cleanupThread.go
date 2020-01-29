@@ -65,7 +65,7 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
+				prunesToDo := chain.nodeGraph.generateNodePruneInfo(chain.nodeGraph.stakers)
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()
 
