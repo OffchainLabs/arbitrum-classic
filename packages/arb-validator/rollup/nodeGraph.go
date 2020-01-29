@@ -240,7 +240,7 @@ func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structu
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1
-	prevN2 := n1
+	prevN2 := n2
 	for n1.depth > n2.depth {
 		prevN1 = n1
 		n1 = n1.prev
