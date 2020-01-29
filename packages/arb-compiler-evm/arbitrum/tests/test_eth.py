@@ -25,8 +25,8 @@ from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn
 from arbitrum.evm import contract_templates
 
 
-def make_msg_val(message):
-    return [0, 0, message]
+def make_msg_val(message, blocknum=0):
+    return [blocknum, 0, message]
 
 
 def run_until_block(vm, test):
@@ -402,22 +402,56 @@ class TestEVM(TestCase):
                 )
             ),
         )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.timeUpperBound(14, 0)]), 0
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.currentMessageTime(16, 0)]), 37
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.timeUpperBound(18, 0)]), 34
+                )
+            ),
+        )
         vm.env.messages = inbox
         run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 5)
+        self.assertEqual(len(vm.logs), 8)
         parsed_out0 = output_handler(vm.logs[0])
         parsed_out1 = output_handler(vm.logs[1])
         parsed_out2 = output_handler(vm.logs[2])
         parsed_out3 = output_handler(vm.logs[3])
         parsed_out4 = output_handler(vm.logs[4])
+        parsed_out5 = output_handler(vm.logs[5])
+        parsed_out6 = output_handler(vm.logs[6])
+        parsed_out7 = output_handler(vm.logs[7])
+
         self.assertIsInstance(parsed_out0, EVMStop)
         self.assertIsInstance(parsed_out1, EVMReturn)
         self.assertIsInstance(parsed_out2, EVMRevert)
         self.assertIsInstance(parsed_out3, EVMStop)
         self.assertIsInstance(parsed_out4, EVMReturn)
+        self.assertIsInstance(parsed_out5, EVMReturn)
+        self.assertIsInstance(parsed_out6, EVMReturn)
+        self.assertIsInstance(parsed_out7, EVMReturn)
 
         self.assertEqual(parsed_out1.output_values[0], 100000)
         self.assertEqual(parsed_out4.output_values[0], 50000)
+        self.assertEqual(parsed_out5.output_values[0], 100000000)
+        self.assertEqual(parsed_out6.output_values[0], 37)
+        self.assertEqual(parsed_out7.output_values[0], 100000000)
 
         self.assertEqual(len(vm.sent_messages), 1)
         self.assertEqual(
