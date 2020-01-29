@@ -227,6 +227,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
 		if staker.creationTime.Cmp(deadline) >= 0 {
+			offsets = append(offsets, new(big.Int).SetUint64(uint64(len(proof))))
 			continue
 		}
 		subProof := GeneratePathProof(confirmingNode, staker.location)
