@@ -221,23 +221,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	signer := types.NewEIP155Signer(tx.ChainId())
-	from, err := signer.Sender(tx)
-	if err != nil {
-		return err
-	}
-	seq, err := conn.getCurrentNonce(ctx, from)
-	if err != nil {
-		return err
-	}
-
-	//seq number bug
-	err = conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), seq)
-	if err != nil {
-		return err
-	}
-	conn.sequenceNum = conn.sequenceNum.Add(conn.sequenceNum, big.NewInt(1))
-	return nil
+	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -490,13 +474,11 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
-	seqNum := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
-	//seq number bug
 	return message.Transaction{
 		Chain:       conn.vmId,
 		To:          common.NewAddressFromEth(*tx.To()),
 		From:        from,
-		SequenceNum: seqNum,
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
 		Value:       tx.Value(),
 		Data:        tx.Data(),
 	}
