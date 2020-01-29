@@ -150,7 +150,7 @@ def process_nonce(vm):
     vm.dup0()
     vm.auxpush()
     account_state.get("nextSeqNum")(vm)
-    # old_nonce nonce [account accounts address]
+    # expected_nonce nonce [account accounts address]
     vm.dup1()
     vm.eq()
     # valid_nonce nonce [account accounts address]
