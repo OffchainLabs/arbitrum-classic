@@ -49,30 +49,7 @@ type Manager struct {
 	ckpFac          checkpointing.RollupCheckpointerFactory
 }
 
-const defaultMaxReorgDepth = 100
-
 func CreateManager(
-	rollupAddr common.Address,
-	clnt arbbridge.ArbClient,
-	aoFilePath string,
-	dbPath string,
-) (*Manager, error) {
-	return CreateManagerAdvanced(
-		context.Background(),
-		rollupAddr,
-		true,
-		clnt,
-		checkpointing.NewRollupCheckpointerImplFactory(
-			rollupAddr,
-			aoFilePath,
-			dbPath,
-			big.NewInt(defaultMaxReorgDepth),
-			false,
-		),
-	)
-}
-
-func CreateManagerAdvanced(
 	ctx context.Context,
 	rollupAddr common.Address,
 	updateOpinion bool,

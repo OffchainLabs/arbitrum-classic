@@ -195,7 +195,7 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManagerAdvanced(
+	manager, err := rollupmanager.CreateManager(
 		ctx,
 		address,
 		true,
