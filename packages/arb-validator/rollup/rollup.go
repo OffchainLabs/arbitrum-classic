@@ -312,7 +312,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 				successor = chain.nodeGraph.nodeFromHash[successorHash]
 			}
 		}
-		chain.nodeGraph.pruneNode(chain.nodeGraph.oldestNode)
+		chain.nodeGraph.pruneOldestNode(chain.nodeGraph.oldestNode)
 		chain.nodeGraph.oldestNode = successor
 	}
 }
