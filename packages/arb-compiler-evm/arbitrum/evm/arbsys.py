@@ -19,6 +19,7 @@ from .types import (
     eth_transfer_message,
     token_transfer_message,
     message,
+    ethbridge_message,
 )
 
 WITHDRAW_ETH_TYPECODE = 1
@@ -55,11 +56,33 @@ def perform_precompile_call(vm):
                         lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],
                         lambda vm: [
                             vm.dup0(),
-                            vm.push(0x23CA0CD2),
+                            vm.push(0xBDE19776),
                             vm.eq(),
                             vm.ifelse(
-                                lambda vm: [vm.pop(), transaction_count_interrupt(vm)],
-                                lambda vm: [vm.pop(), vm.push(0)],
+                                lambda vm: [vm.pop(), arbsys_time_upper_bound(vm)],
+                                lambda vm: [
+                                    vm.dup0(),
+                                    vm.push(0x44F50653),
+                                    vm.eq(),
+                                    vm.ifelse(
+                                        lambda vm: [
+                                            vm.pop(),
+                                            arbsys_current_message_time(vm),
+                                        ],
+                                        lambda vm: [
+                                            vm.dup0(),
+                                            vm.push(0x23CA0CD2),
+                                            vm.eq(),
+                                            vm.ifelse(
+                                                lambda vm: [
+                                                    vm.pop(),
+                                                    transaction_count_interrupt(vm),
+                                                ],
+                                                lambda vm: [vm.pop(), vm.push(0)],
+                                            ),
+                                        ],
+                                    ),
+                                ],
                             ),
                         ],
                     ),
@@ -143,16 +166,7 @@ def withdraw_erc721_interrupt(vm):
     withdraw_token_interrupt(vm, WITHDRAW_ERC721_TYPECODE)
 
 
-def transaction_count_interrupt(vm):
-    local_exec_state.get("data")(vm)
-    vm.push(4)
-    vm.swap1()
-    std.sized_byterange.get(vm)
-    # address
-    os.get_call_frame(vm)
-    os.call_frame.call_frame.get("accounts")(vm)
-    accounts.account_store.get(vm)
-    accounts.account_state.get("nextSeqNum")(vm)
+def return_one_uint_to_solidity_caller(vm):
     vm.push(0)
     std.byterange.new(vm)
     std.byterange.set_val(vm)
@@ -166,3 +180,31 @@ def transaction_count_interrupt(vm):
     call_frame.call_frame.set_val("parent_frame")(vm)
     os.set_call_frame(vm)
     vm.push(2)
+
+
+def arbsys_time_upper_bound(vm):
+    vm.gettime()
+    vm.tgetn(1)
+    return_one_uint_to_solidity_caller(vm)
+
+
+def arbsys_current_message_time(vm):
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("block_number")(vm)
+
+    return_one_uint_to_solidity_caller(vm)
+
+
+def transaction_count_interrupt(vm):
+    local_exec_state.get("data")(vm)
+    vm.push(4)
+    vm.swap1()
+    std.sized_byterange.get(vm)
+    # address
+    os.get_call_frame(vm)
+    os.call_frame.call_frame.get("accounts")(vm)
+    accounts.account_store.get(vm)
+    accounts.account_state.get("nextSeqNum")(vm)
+    return_one_uint_to_solidity_caller(vm)
