@@ -137,6 +137,32 @@ func (sa SortableAddressList) Swap(i, j int) {
 	sa[i], sa[j] = sa[j], sa[i]
 }
 
+func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneParams {
+	prunesToDo := []pruneParams{}
+	chain.leaves.forall(func(leaf *Node) {
+		if leaf != chain.latestConfirmed {
+			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
+			if err == nil {
+				noStakersOnLeaf := true
+				chain.stakers.forall(func(s *Staker) {
+					if s.location.Equals(leaf) {
+						noStakersOnLeaf = false
+					}
+				})
+				if noStakersOnLeaf {
+					prunesToDo = append(prunesToDo, pruneParams{
+						leafHash:     leaf.hash,
+						ancestorHash: leafAncestor.prev.hash,
+						leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
+						ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+					})
+				}
+			}
+		}
+	})
+	return prunesToDo
+}
+
 type confirmValidOpportunity struct {
 	nodeHash           common.Hash
 	deadlineTicks      common.TimeTicks
