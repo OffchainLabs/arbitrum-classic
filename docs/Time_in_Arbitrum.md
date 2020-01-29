@@ -39,7 +39,7 @@ An exception is a use case like an auction, where the contract emits an event, a
 To do that, you'll want to "start the clock ticking" by using code like this:
 
     deadline = ArbSys(address(100)).timeUpperBound() + N;
-    emit StartAuction(..., deadline+N);
+    emit StartAuction(..., deadline);
 
 You'll presumably have an ``endAuction`` call, which can only be called by a transaction submitted to the pending inbox after the deadline.
 To ensure that, you can use code like this:
