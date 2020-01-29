@@ -195,13 +195,19 @@ func validateRollupChain() error {
 	}
 
 	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
+	manager, err := rollupmanager.CreateManager(
+		ctx,
 		address,
-		validateCmd.Arg(0),
-		dbPath,
-		big.NewInt(maxReorgDepth),
-		false,
-	))
+		true,
+		client,
+		checkpointing.NewRollupCheckpointerImplFactory(
+			address,
+			validateCmd.Arg(0),
+			dbPath,
+			big.NewInt(maxReorgDepth),
+			false,
+		),
+	)
 	if err != nil {
 		return err
 	}
