@@ -39,7 +39,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 const (
