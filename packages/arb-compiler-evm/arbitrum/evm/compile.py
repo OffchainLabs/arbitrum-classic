@@ -436,7 +436,6 @@ def generate_contract_code(label, code, contract_id):
             "CALLCODE": lambda vm: execution.call(vm, call_id),
             "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id),
             "STATICCALL": lambda vm: execution.staticcall(vm, call_id),
-            "INVALID": evm_invalid_op,
         }
 
         instr_name = get_opcode_name(instr)
@@ -450,11 +449,22 @@ def generate_contract_code(label, code, contract_id):
         if instr_name in evm_instr_ops:
             return evm_instr_ops[instr_name]
 
+        if instr_name == "INVALID":
+            if instr.opcode == 0xFE:
+                return execution.revert
+            else:
+                return None
+
         raise Exception("Unhandled instruction {}".format(instr))
 
     contract_code = [label]
-    for insn in code:
-        block = compile_block(run_op(insn))
+    for index, insn in enumerate(code):
+        impl = run_op(insn)
+        if not impl:
+            # if we hit an invalid opcode, terminate compilation. This means
+            # we have reached the data segment of the code
+            break
+        block = compile_block(impl)
         block.add_node("EthOp({}, {})".format(insn, insn.pc))
         contract_code.append(block)
 
