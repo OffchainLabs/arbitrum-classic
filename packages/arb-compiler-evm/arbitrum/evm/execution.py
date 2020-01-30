@@ -15,61 +15,41 @@
 from ..annotation import noreturn, modifies_stack
 from .. import std
 from . import call_frame
-from . import os, arbsys
+from . import os, arbsys, call_finish
 from .. import ast
 from .. import value
 from .accounts import account_state, account_store
 from .types import local_exec_state
-
-WITHDRAW_ETH_TYPECODE = 1
-WITHDRAW_ERC20_TYPECODE = 2
-WITHDRAW_ERC721_TYPECODE = 3
 
 
 @modifies_stack(0, 0)
 def save_up_call_frame(vm):
     os.get_call_frame(vm)
     vm.dup0()
-    call_frame.call_frame.get("parent_frame")
+    call_frame.call_frame.get("parent_frame")(vm)
     call_frame.merge(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
+    os.set_call_frame(vm)
 
 
 @modifies_stack(0, 0)
 def clear_up_call_frame(vm):
     os.get_call_frame(vm)
     call_frame.call_frame.get("parent_frame")(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
+    os.set_call_frame(vm)
 
 
-@modifies_stack([value.IntType()], 0)
-def setup_initial_call_frame(vm):
+def setup_initial_call_frame(vm, label):
     # caller
+    vm.push(ast.AVMLabel("evm_call_{}".format(label)))
     os.get_chain_state(vm)
     os.chain_state.get("accounts")(vm)
     call_frame.new_fresh(vm)
+    call_frame.call_frame.set_val("return_location")(vm)
     call_frame.call_frame.set_val("contractID")(vm)
     call_frame.setup_state(vm)
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
-
-
-@modifies_stack([call_frame.call_frame.typ], [std.sized_byterange.sized_byterange.typ])
-def commit_call_frame(vm):
-    # frame
-    vm.dup0()
-    call_frame.call_frame.get("accounts")(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("accounts")(vm)
-    os.set_chain_state(vm)
-    # frame
-    call_frame.call_frame.get("parent_frame")(vm)
-    call_frame.call_frame.get("return_data")(vm)
 
 
 @noreturn
@@ -223,19 +203,12 @@ def _complete_call(vm, call_num):
     std.stack_manip.uncompress_aux(vm)
 
 
-@modifies_stack(
-    [value.IntType(), value.TupleType([value.IntType()] * 7)], [value.IntType()]
-)
-def _mutable_call_ret(vm):
+@modifies_stack([value.IntType()], [])
+def _handle_mutable_call_return(vm):
     # ret_type calltup
     translate_ret_type(vm)
     # return_val calltup
-    vm.ifelse(
-        lambda vm: [save_up_call_frame(vm), vm.push(1)],
-        lambda vm: [clear_up_call_frame(vm), vm.push(0)],
-    )
-    vm.swap1()
-    os.copy_return_data(vm)
+    vm.ifelse(lambda vm: [save_up_call_frame(vm)], lambda vm: [clear_up_call_frame(vm)])
 
 
 @modifies_stack([], [])
@@ -250,34 +223,40 @@ def _save_call_frame(vm):
 @noreturn
 def initial_call(vm, label):
     # sender tx_call_data
-    vm.set_exception_handler(invalid_tx)
+    vm.set_exception_handler(call_finish.invalid_tx)
     vm.dup0()
-    setup_initial_call_frame(vm)
+    setup_initial_call_frame(vm, label)
     os.tx_call_to_local_exec_state(vm)
     _perform_call(vm, label)
     # ret_code
-    vm.clear_exception_handler()
-    vm.auxpush()
-
-    save_up_call_frame(vm)
-
+    vm.dup0()
     os.get_call_frame(vm)
     call_frame.save_state(vm)
-    commit_call_frame(vm)
+    os.set_call_frame(vm)
+    _handle_mutable_call_return(vm)
+    vm.auxpush()
+    vm.clear_exception_handler()
+    os.get_call_frame(vm)
+    # frame
+    vm.dup0()
+    call_frame.call_frame.get("accounts")(vm)
+    os.get_chain_state(vm)
+    os.chain_state.set_val("accounts")(vm)
+    os.set_chain_state(vm)
+    # frame
+    call_frame.call_frame.get("return_data")(vm)
+
     vm.auxpop()
     # ret_code data
-    vm.swap1()
-    vm.dup1()
     os.log_func_result(vm)
-    # ret_code
 
 
 @noreturn
 def initial_static_call(vm, label):
     # sender tx_call_data
-    vm.set_exception_handler(invalid_tx)
+    vm.set_exception_handler(call_finish.invalid_tx)
     vm.dup0()
-    setup_initial_call_frame(vm)
+    setup_initial_call_frame(vm, label)
     os.tx_call_to_local_exec_state(vm)
     _perform_call(vm, label)
     # ret_code
@@ -310,7 +289,12 @@ def call(vm, call_num):
     _save_call_frame(vm)
     _perform_call(vm, call_num)
     # ret calltup
-    _mutable_call_ret(vm)
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
@@ -328,7 +312,12 @@ def callcode(vm, call_num):
 
     _save_call_frame(vm)
     _perform_callcode(vm, call_num)
-    _mutable_call_ret(vm)
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
 # [gas, dest, arg offset, arg length, ret offset, ret length]
@@ -350,7 +339,12 @@ def delegatecall(vm, call_num):
     # dest destId message calltup
     _save_call_frame(vm)
     _perform_delegatecall(vm, call_num)
-    _mutable_call_ret(vm)
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
 # [[gas, dest, arg offset, arg length, ret offset, ret length]]
@@ -388,117 +382,6 @@ def staticcall(vm, call_num):
 def selfdestruct(vm):
     vm.pop()  # address to transfer all funds to
     vm.halt()
-
-
-# [offset, length]
-@noreturn
-def ret(vm):
-    vm.dup1()
-    vm.swap1()
-    os.get_mem_segment(vm)
-    std.tup.make(2)(vm)
-    # return_data
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame return_data
-    vm.swap1()
-    vm.swap2()
-    # return_data parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    # parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(2)
-    vm.swap1()
-    vm.jump()
-
-
-@noreturn
-def stop(vm):
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    # call_frame
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    # return_location call_frame
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(3)
-    vm.swap1()
-    vm.jump()
-
-
-# [memory offset, memory length]
-@noreturn
-def revert(vm):
-    vm.dup1()
-    vm.swap1()
-    os.get_mem_segment(vm)
-    std.tup.make(2)(vm)
-    # return_data
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame return_data
-    vm.swap1()
-    vm.swap2()
-    # return_data parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    # parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(0)
-    vm.swap1()
-    vm.jump()
-
-
-# []
-@noreturn
-def invalid_tx(vm):
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    # call_frame
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    # return_location call_frame
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(1)
-    vm.swap1()
-    vm.jump()
 
 
 @modifies_stack([value.IntType()], [value.IntType()])
