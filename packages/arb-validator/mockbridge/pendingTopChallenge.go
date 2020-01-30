@@ -96,9 +96,9 @@ func (c *pendingTopChallenge) ChooseSegment(
 	chainHashes []common.Hash,
 	chainLength uint64,
 ) error {
-	bisectionCount := uint32(len(chainHashes) - 1)
+	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
-	for i := uint32(0); i < bisectionCount; i++ {
+	for i := uint64(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
 		bisectionHashes = append(
 			bisectionHashes,

@@ -28,7 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Node struct {
@@ -125,7 +124,6 @@ func NewNodeFromPrev(
 	} else {
 		deadlineTicks = prev.deadline.Add(checkTime)
 	}
-	fmt.Println("NewNodeFromPrev - deadline", deadlineTicks, " prev = ", prev)
 	ret := &Node{
 		prev:            prev,
 		deadline:        deadlineTicks,
@@ -158,12 +156,12 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 
 func (node *Node) ExecutionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
-	pre := &valprotocol.Precondition{
-		BeforeHash:  vmProtoData.MachineHash,
-		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice, 0),
-	}
-	return pre.Hash()
+	preHash := structures.ExecutionPreconditionHash(
+		vmProtoData.MachineHash,
+		node.disputable.AssertionParams.TimeBounds,
+		node.disputable.AssertionClaim.ImportedMessagesSlice,
+	)
+	return preHash
 }
 
 func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {

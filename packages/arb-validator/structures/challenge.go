@@ -17,6 +17,9 @@
 package structures
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -57,6 +60,15 @@ func MessageChallengeDataHash(
 		hashing.Bytes32(upperMessages),
 		hashing.Uint256(messageCount),
 	)
+}
+
+func ExecutionPreconditionHash(machineHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, msgSlices common.Hash) common.Hash {
+	pre := &valprotocol.Precondition{
+		BeforeHash:  machineHash,
+		TimeBounds:  timeBounds,
+		BeforeInbox: value.NewHashOnlyValue(msgSlices, 0),
+	}
+	return pre.Hash()
 }
 
 func ExecutionDataHash(

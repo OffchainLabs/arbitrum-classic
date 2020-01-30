@@ -76,7 +76,7 @@ func (c *messagesChallenge) Bisect(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProofTransactionMessage(
+func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB common.Hash,
@@ -85,7 +85,7 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProofEthMessage(
+func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB common.Hash,
@@ -94,7 +94,7 @@ func (c *MessagesChallenge) OneStepProofEthMessage(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProofERC20Message(
+func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB common.Hash,
@@ -103,7 +103,7 @@ func (c *MessagesChallenge) OneStepProofERC20Message(
 	return nil
 }
 
-func (c *MessagesChallenge) OneStepProofERC721Message(
+func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB common.Hash,

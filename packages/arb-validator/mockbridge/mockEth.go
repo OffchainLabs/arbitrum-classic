@@ -75,7 +75,7 @@ type rollupData struct {
 	state           EthState
 	vmState         common.Hash
 	gracePeriod     common.TimeTicks
-	maxSteps        uint32
+	maxSteps        uint64
 	escrowRequired  *big.Int
 	owner           common.Address
 	events          map[*structures.BlockId][]arbbridge.Event
