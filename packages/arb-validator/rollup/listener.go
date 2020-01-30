@@ -21,6 +21,7 @@ import (
 	"log"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 
@@ -68,8 +69,8 @@ type ValidatorChainListener struct {
 	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
 }
 
-func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
-	return &ValidatorChainListener{
+func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
+	ret := &ValidatorChainListener{
 		actor:                  actor,
 		rollupAddress:          rollupAddress,
 		stakingKeys:            make(map[common.Address]*StakingKey),
@@ -78,6 +79,24 @@ func NewValidatorChainListener(rollupAddress common.Address, actor arbbridge.Arb
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
 		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
 	}
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				ret.Lock()
+				ret.broadcastAssertions = make(map[common.Hash]*structures.AssertionParams)
+				ret.broadcastConfirmations = make(map[common.Hash]bool)
+				ret.broadcastLeafPrunes = make(map[common.Hash]bool)
+				ret.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+				ret.Unlock()
+			}
+		}
+	}()
+	return ret
 }
 
 func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *StakingKey) error {
