@@ -382,14 +382,14 @@ def message_data_copy(vm):
     evm_copy_to_memory(vm, message_data_raw)
 
 
-@modifies_stack(0, 1)
+@modifies_stack(0, [value.IntType()])
 def message_value(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
     local_exec_state.get("value")(vm)
 
 
-@modifies_stack(0, 1)
+@modifies_stack(0, [value.IntType()])
 def message_caller(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
@@ -1024,6 +1024,7 @@ def evm_call_to_tx_call_data(vm):
     # [length, ba]
     vm.swap1()
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
     # [sized byte array, tup]
     vm.push(tx_call_data.make())
     vm.cast(tx_call_data.typ)
