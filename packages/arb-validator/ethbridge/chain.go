@@ -37,16 +37,11 @@ import (
 )
 
 type ArbAddresses struct {
-	ArbFactory   string `json:"ArbFactory"`
-	OneStepProof string `json:"OneStepProof"`
+	ArbFactory string `json:"ArbFactory"`
 }
 
 func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
-}
-
-func (a ArbAddresses) OneStepProofAddress() common.Address {
-	return common.NewAddressFromEth(ethcommon.HexToAddress(a.OneStepProof))
 }
 
 func getBlockID(header *types.Header) *structures.BlockId {
@@ -106,7 +101,7 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 					Value:    tx.Value(),
 					Data:     tx.Data(),
 				}
-				_, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+				data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
 				if err != nil {
 					return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
 				}

@@ -245,7 +245,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
         } else {
             param = &stack[0];
         }
-        auto paramNum = nonstd::get_if<uint256_t>(immediate.get());
+        auto paramNum = nonstd::get_if<uint256_t>(param);
         if (!paramNum) {
             return NotBlocked();
         }

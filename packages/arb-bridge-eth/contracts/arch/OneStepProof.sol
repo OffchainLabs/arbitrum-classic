@@ -1200,11 +1200,11 @@ library OneStepProof {
         } else if (opCode == OP_SIGNEXTEND) {
             return 7;
         } else if (opCode == OP_SHA3) {
-            return 40;
+            return 7;
         } else if (opCode == OP_TYPE) {
             return 3;
        } else if (opCode == OP_ETHHASH2) {
-            return 40;
+            return 8;
         } else if (opCode == OP_POP) {
             return 1;
         } else if (opCode == OP_SPUSH) {
@@ -1246,7 +1246,7 @@ library OneStepProof {
         } else if (opCode == OP_TGET) {
             return 2;
         } else if (opCode == OP_TSET) {
-            return 15;
+            return 40;
         } else if (opCode == OP_TLEN) {
             return 2;
         } else if (opCode == OP_BREAKPOINT) {
@@ -1282,7 +1282,7 @@ library OneStepProof {
         )
     {
         uint offset = 0;
-        uint valid = 0;
+        bool valid;
         Machine.Data memory startMachine;
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
@@ -1303,7 +1303,7 @@ library OneStepProof {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
             // string(abi.encodePacked("Proof had bad immediate value ", uint2str(valid)))
-            require(valid == 0, "Proof had bad immediate value");
+            require(valid, "Proof had bad immediate value");
             if (popCount > 0) {
                 stackVals[0] = immediateVal;
             } else {
@@ -1320,7 +1320,7 @@ library OneStepProof {
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
-            require(valid == 0, "Proof had bad stack value");
+            require(valid, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
             for (i = 0; i < stackVals.length - immediate; i++) {
@@ -1341,7 +1341,7 @@ library OneStepProof {
 
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
-        uint valid = 0;
+        bool valid;
         uint offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
@@ -1433,7 +1433,7 @@ library OneStepProof {
         } else if (opCode == OP_AUXPOP) {
             Value.Data memory auxVal;
             (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid == 0, "Proof of auxpop had bad aux value");
+            require(valid, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
         } else if (opCode == OP_AUXSTACKEMPTY) {

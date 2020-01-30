@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ import eth_utils
 
 from .compile import generate_evm_code
 from .. import compile_program
+from . import contract_templates
 
 
 class Contract:
@@ -34,11 +35,29 @@ class Contract:
         return "ArbContract({})".format(self.address_string)
 
 
-def create_evm_vm(contracts, should_optimize=True):
+def strip_cbor(code):
+    cbor_length = int.from_bytes(code[-2:], byteorder="big")
+    return code[: -(cbor_length + 2)]
+
+
+def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
+    erc20 = Contract(contract_templates.get_erc20_contract())
+    erc721 = Contract(contract_templates.get_erc721_contract())
+    info = Contract(contract_templates.get_info_contract())
+
     code = {}
     storage = {}
+
+    for contract in [erc20, erc721, info]:
+        code[contract.address] = strip_cbor(contract.code)
+        storage[contract.address] = contract.storage
+
     for contract in contracts:
-        code[contract.address] = contract.code
+        if includes_metadata:
+            contract_code = strip_cbor(contract.code)
+        else:
+            contract_code = contract.code
+        code[contract.address] = contract_code
         storage[contract.address] = contract.storage
 
     initial_block, code = generate_evm_code(code, storage)

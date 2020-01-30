@@ -25,17 +25,17 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
@@ -45,11 +45,11 @@ type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
 	man           *rollupmanager.Manager
-	maxCallSteps  uint32
+	maxCallSteps  uint64
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallSteps uint32) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallSteps uint64) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
 	man.AddListener(assertionListener)
@@ -151,15 +151,18 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
+	log.Println("CallMessage", args.Data)
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
 	}
-	rd := bytes.NewReader(dataBytes)
-	dataVal, err := value.UnmarshalValue(rd)
+
+	contractAddressBytes, err := hexutil.Decode(args.ContractAddress)
 	if err != nil {
 		return nil, err
 	}
+	var contractAddress common.Address
+	copy(contractAddress[:], contractAddressBytes)
 
 	senderBytes, err := hexutil.Decode(args.Sender)
 	if err != nil {
@@ -168,27 +171,17 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	messageHash := hashing.SoliditySHA3(
-		hashing.Address(msg.Destination),
-		hashing.Bytes32(msg.Data.Hash()),
-		hashing.Uint256(msg.Currency),
-		msg.TokenType[:],
-	)
-	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-	val, _ := value.NewTupleFromSlice([]value.Value{
-		msg.Data,
-		value.NewIntValue(m.man.CurrentBlockId().Height.AsInt()),
-		value.NewIntValue(msgHashInt),
-	})
-	callingMessage := valprotocol.Message{
-		Data:        val.Clone(),
-		TokenType:   msg.TokenType,
-		Currency:    msg.Currency,
-		Destination: msg.Destination,
+	msg := message.Call{
+		To:       contractAddress,
+		From:     sender,
+		Data:     dataBytes,
+		BlockNum: m.man.CurrentBlockId().Height,
 	}
+
+	callingMessage := message.DeliveredValue(msg)
+
 	messageStack := protocol.NewMessageStack()
-	messageStack.AddMessage(callingMessage.AsValue())
+	messageStack.AddMessage(callingMessage)
 
 	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
 
@@ -199,12 +192,12 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal)
+	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().Data.TxHash
-	if logHash != messageHash {
+	logHash := lastLog.GetEthMsg().TxHash
+	if logHash != msg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

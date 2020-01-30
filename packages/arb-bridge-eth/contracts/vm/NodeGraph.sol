@@ -68,7 +68,7 @@ contract NodeGraph is ChallengeType, Snapshot {
         uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
-        uint32 numSteps,
+        uint64 numSteps,
         bool didInboxInsn
     );
 
@@ -93,7 +93,7 @@ contract NodeGraph is ChallengeType, Snapshot {
         bytes32 prevDataHash;
         uint32  prevChildType;
 
-        uint32 numSteps;
+        uint64 numSteps;
         uint128[2] timeBoundsBlocks;
         uint256 importedMessageCount;
 
@@ -148,14 +148,12 @@ contract NodeGraph is ChallengeType, Snapshot {
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
-        uint32 _maxExecutionSteps,
+        uint64 _maxExecutionSteps,
         address _globalInboxAddress
     )
         internal
     {
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-
-        globalInbox.registerForInbox();
 
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(

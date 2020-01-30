@@ -139,9 +139,16 @@ class StaticTracker:
             items.append((counter.push_counts[item], item, item))
         items = sorted(items, key=lambda x: (x[0], x[1]), reverse=True)
 
+        def transform_imm_val(val):
+            if isinstance(val, value.Tuple):
+                for v in val.val:
+                    transform_imm_val(v)
+            else:
+                self.immediate_pushes[val] = val
+
         self.immediate_pushes = {}
         for item in counter.immediate_push_counts:
-            self.immediate_pushes[item] = item
+            transform_imm_val(item)
         self.big_struct = BigStruct(items)
 
     def __getitem__(self, field_name):
@@ -185,33 +192,28 @@ class StaticTracker:
 
 
 class ASTTransformer:
+    def __init__(self):
+        self.ast_funcs = {
+            ast.IF_ELSE_STATEMENT: self.transform_ifelse,
+            ast.IF_STATEMENT: self.transform_if,
+            ast.WHILE_STATEMENT: self.transform_while,
+            ast.BLOCK_STATEMENT: self.transform_block,
+            ast.CALL_STATEMENT: self.transform_call,
+            ast.IMMEDIATE_OP: self.transform_immediate,
+            ast.INDIRECT_PUSH_STATEMENT: self.transform_indirect_push,
+            ast.BASIC_OP: self.transform_basic,
+            ast.AVM_LABEL: self.transform_label,
+            ast.AVM_UNIQUE_LABEL: self.transform_unique_label,
+            ast.FUNC_DEFINITION: self.transform_func_definition,
+            ast.CAST_STATEMENT: self.transform_cast,
+            ast.SET_ERROR_HANDLER_STATEMENT: self.transform_set_error_handler,
+        }
+
     def __call__(self, op):
-        if isinstance(op, ast.IfElseStatement):
-            return self.transform_ifelse(op)
-        if isinstance(op, ast.IfStatement):
-            return self.transform_if(op)
-        if isinstance(op, ast.WhileStatement):
-            return self.transform_while(op)
-        if isinstance(op, ast.BlockStatement):
-            return self.transform_block(op)
-        if isinstance(op, ast.CallStatement):
-            return self.transform_call(op)
-        if isinstance(op, ast.ImmediateOp):
-            return self.transform_immediate(op)
-        if isinstance(op, ast.IndirectPushStatement):
-            return self.transform_indirect_push(op)
-        if isinstance(op, ast.BasicOp):
-            return self.transform_basic(op)
-        if isinstance(op, ast.AVMLabel):
-            return self.transform_label(op)
-        if isinstance(op, ast.AVMUniqueLabel):
-            return self.transform_unique_label(op)
-        if isinstance(op, ast.FuncDefinition):
-            return self.transform_func_definition(op)
-        if isinstance(op, ast.CastStatement):
-            return self.transform_cast(op)
-        if isinstance(op, ast.SetErrorHandlerFunctionStatement):
-            return self.transform_set_error_handler(op)
+        asttype = op.asttype
+        funcs = self.ast_funcs
+        if asttype in funcs:
+            return funcs[asttype](op)
 
         raise Exception("Unhandled AST Type {}".format(type(op)))
 
@@ -252,6 +254,22 @@ class ASTTransformer:
         return op
 
     def transform_set_error_handler(self, op):
+        return op
+
+
+class BlockFlattener(ASTTransformer):
+    def __init__(self):
+        super(BlockFlattener, self).__init__()
+
+    def transform_block(self, op):
+        def flatten(op):
+            if op.asttype == ast.BLOCK_STATEMENT:
+                for op in op.code:
+                    yield op
+            else:
+                yield op
+
+        op.code = [x for nested_op in op.code for x in flatten(nested_op)]
         return op
 
 
@@ -619,7 +637,14 @@ def flatten_block(op):
     return ret
 
 
+def flatten_blocks(compiled_funcs):
+    for func in compiled_funcs:
+        compiled_funcs[func] = compiled_funcs[func].modify_ast(BlockFlattener())
+
+
 def optimize_program(compiled_funcs):
+    flatten_blocks(compiled_funcs)
+
     # use cycle checking to figure out which functions are safe to inline
     non_recursive = get_non_recursive(compiled_funcs)
     non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
@@ -644,6 +669,8 @@ def optimize_program(compiled_funcs):
             )
         non_recursive.remove(single_func)
         del compiled_funcs[single_func]
+
+    flatten_blocks(compiled_funcs)
 
     # inline short non-recursive functions
     while True:

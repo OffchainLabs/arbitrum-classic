@@ -24,7 +24,7 @@ option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/str
 message ChainParamsBuf {
     common.BigIntegerBuf stakeRequirement = 1;
     common.TimeTicksBuf gracePeriod = 2;
-    uint32 maxExecutionSteps = 3;
+    uint64 maxExecutionSteps = 3;
     uint64 ArbGasSpeedLimitPerTick = 4;
 }
 
@@ -35,7 +35,7 @@ message VMProtoDataBuf {
 }
 
 message AssertionParamsBuf {
-    uint32 numSteps = 1;
+    uint64 numSteps = 1;
     protocol.TimeBoundsBlocksBuf timeBounds = 2;
     common.BigIntegerBuf importedMessageCount = 3;
 }
@@ -53,9 +53,14 @@ message DisputableNodeBuf {
     common.BigIntegerBuf maxPendingCount = 4;
 }
 
+message InboxItemBuf {
+    uint32 valType = 1;
+    common.HashBuf valHash = 2;
+}
+
 message PendingInboxBuf {
     common.BigIntegerBuf topCount = 1;
-    repeated common.HashBuf itemHashes = 2;
+    repeated InboxItemBuf items = 2;
     common.HashBuf hashOfRest = 3;
 }
 

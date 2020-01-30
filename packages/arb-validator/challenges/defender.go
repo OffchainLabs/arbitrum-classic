@@ -27,15 +27,15 @@ import (
 
 type AssertionDefender struct {
 	precondition *valprotocol.Precondition
-	numSteps     uint32
+	numSteps     uint64
 	initState    machine.Machine
 }
 
-func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint32, initState machine.Machine) AssertionDefender {
+func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint64, initState machine.Machine) AssertionDefender {
 	return AssertionDefender{precondition, numSteps, initState.Clone()}
 }
 
-func (ad AssertionDefender) NumSteps() uint32 {
+func (ad AssertionDefender) NumSteps() uint64 {
 	return ad.numSteps
 }
 
@@ -47,7 +47,7 @@ func (ad AssertionDefender) GetMachineState() machine.Machine {
 	return ad.initState
 }
 
-func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valprotocol.ExecutionAssertionStub) {
+func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valprotocol.ExecutionAssertionStub) {
 	nsteps := ad.NumSteps()
 	if nsteps < slices {
 		slices = nsteps
@@ -57,8 +57,8 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valp
 	m := ad.initState.Clone()
 
 	pre := ad.precondition
-	for i := uint32(0); i < slices; i++ {
-		steps := structures.CalculateBisectionStepCount(uint32(i), slices, nsteps)
+	for i := uint64(0); i < slices; i++ {
+		steps := structures.CalculateBisectionStepCount(i, slices, nsteps)
 		initState := m.Clone()
 
 		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
@@ -82,11 +82,11 @@ func ChooseAssertionToChallenge(
 	m machine.Machine,
 	pre *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint32,
+	totalSteps uint64,
 ) (uint16, machine.Machine, error) {
-	assertionCount := uint32(len(assertions))
+	assertionCount := uint64(len(assertions))
 	for i := range assertions {
-		steps := structures.CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
+		steps := structures.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
@@ -94,7 +94,7 @@ func ChooseAssertionToChallenge(
 			pre.BeforeInbox.(value.TupleValue),
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
-		if numSteps != steps || !stub.Equals(assertions[i]) {
+		if uint64(numSteps) != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
 		pre = pre.GeneratePostcondition(stub)

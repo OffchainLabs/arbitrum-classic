@@ -46,7 +46,7 @@ contract ArbFactory is CloneFactory {
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
-        uint32 _maxExecutionSteps,
+        uint64 _maxExecutionSteps,
         uint128 _stakeRequirement,
         address payable _owner
     )
