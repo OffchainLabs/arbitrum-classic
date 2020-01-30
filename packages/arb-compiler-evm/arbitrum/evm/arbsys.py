@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import std
-from . import os, accounts, call_frame
+from .. import std, value
+from ..annotation import modifies_stack
+from . import os, accounts, call_frame, call_finish
 from .types import (
     local_exec_state,
     eth_transfer_message,
@@ -27,7 +28,15 @@ WITHDRAW_ERC20_TYPECODE = 2
 WITHDRAW_ERC721_TYPECODE = 3
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def perform_precompile_call(vm):
+    os.get_call_frame(vm)
+    vm.dup0()
+    call_frame.call_frame.set_val("parent_frame")(vm)
+    std.sized_byterange.new(vm)
+    vm.swap1()
+    call_frame.call_frame.set_val("memory")(vm)
+    os.set_call_frame(vm)
     # local_exec_state
     vm.dup0()
     local_exec_state.get("data")(vm)
@@ -91,6 +100,7 @@ def perform_precompile_call(vm):
                                                         ],
                                                         lambda vm: [
                                                             vm.pop(),
+                                                            vm.pop(),
                                                             vm.push(0),
                                                         ],
                                                     ),
@@ -108,6 +118,7 @@ def perform_precompile_call(vm):
     )
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()] * 3)
 def parse_withdraw_call(vm):
     # local_exec_state
     vm.dup0()
@@ -126,6 +137,7 @@ def parse_withdraw_call(vm):
     # amount dest sender
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def withdraw_eth_interrupt(vm):
     # local_exec_state
     parse_withdraw_call(vm)
@@ -145,10 +157,18 @@ def withdraw_eth_interrupt(vm):
             message.set_val("type")(vm),
             message.set_val("message")(vm),
             message.set_val("sender")(vm),
+            vm.cast(value.TupleType()),
             vm.send(),
-            vm.push(3),
+            call_finish.stop_impl(vm),
         ],
-        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
+        lambda vm: [
+            vm.pop(),
+            vm.pop(),
+            vm.pop(),
+            vm.push(0),
+            vm.push(0),
+            call_finish.revert_impl(vm),
+        ],
     )
 
 
@@ -168,51 +188,56 @@ def withdraw_token_interrupt(vm, token_type):
     message.set_val("type")(vm)
     message.set_val("sender")(vm)
     message.set_val("message")(vm)
+    vm.cast(value.TupleType())
     vm.send()
-    vm.push(3)
+    call_finish.stop_impl(vm)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def withdraw_erc20_interrupt(vm):
     # local_exec_state
     withdraw_token_interrupt(vm, WITHDRAW_ERC20_TYPECODE)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def withdraw_erc721_interrupt(vm):
     # local_exec_state
     withdraw_token_interrupt(vm, WITHDRAW_ERC721_TYPECODE)
 
 
+@modifies_stack([value.IntType()], [value.IntType()])
 def return_one_uint_to_solidity_caller(vm):
     vm.push(0)
-    std.byterange.new(vm)
-    std.byterange.set_val(vm)
-    vm.push(32)
-    vm.swap1()
-    std.tup.make(2)(vm)
     os.get_call_frame(vm)
-    call_frame.call_frame.get("parent_frame")(vm)
-    os.call_frame.call_frame.set_val("return_data")(vm)
+    call_frame.call_frame.get("memory")(vm)
+    std.sized_byterange.set_val(vm)
     os.get_call_frame(vm)
-    call_frame.call_frame.set_val("parent_frame")(vm)
+    call_frame.call_frame.set_val("memory")(vm)
     os.set_call_frame(vm)
-    vm.push(2)
+    vm.push(32)
+    vm.push(0)
+    call_finish.ret_impl(vm)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def arbsys_time_upper_bound(vm):
+    vm.pop()
     vm.gettime()
     vm.tgetn(1)
     return_one_uint_to_solidity_caller(vm)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def arbsys_current_message_time(vm):
+    vm.pop()
     os.get_chain_state(vm)
     os.chain_state.get("global_exec_state")(vm)
     os.global_exec_state.get("current_msg")(vm)
     ethbridge_message.get("block_number")(vm)
-
     return_one_uint_to_solidity_caller(vm)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def transaction_count_interrupt(vm):
     local_exec_state.get("data")(vm)
     vm.push(4)
@@ -226,11 +251,10 @@ def transaction_count_interrupt(vm):
     return_one_uint_to_solidity_caller(vm)
 
 
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def clone_contract_interrupt(vm):
     # local_exec_state
-    vm.dup0()
     local_exec_state.get("data")(vm)
-    vm.dup0()
     vm.push(4)
     vm.swap1()
     std.sized_byterange.get(vm)

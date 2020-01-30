@@ -57,14 +57,14 @@ tx_call_data = std.Struct(
     [
         ("dest", value.IntType()),
         ("value", value.IntType()),
-        ("data", value.ValueType()),
+        ("data", std.sized_byterange.typ),
     ],
 )
 
 local_exec_state = std.Struct(
     "local_exec_state",
     [
-        ("data", value.ValueType()),
+        ("data", std.sized_byterange.typ),
         ("caller", value.IntType()),
         ("value", value.IntType()),
     ],
