@@ -25,6 +25,7 @@ class App {
     this.arbWallet = null;
     this.contracts = {};
     this.ethAddress = "0x0000000000000000000000000000000000000000";
+    this.gld_units = null;
     return this.initWeb3();
   }
 
@@ -102,6 +103,8 @@ class App {
     this.contracts.EthTestToken = ethTestTokenContractRaw.connect(
       this.ethWallet
     );
+
+    this.gld_units = await this.contracts.EthTestToken.decimals();
 
     // this.contracts.ArbSys = arbSysContractRaw.connect(this.arbWallet);
     this.contracts.ArbTestItem = arbTestItemContractRaw.connect(this.arbWallet);
@@ -234,32 +237,44 @@ class App {
     const vmId = await this.arbProvider.getVmID();
     const inboxManager = await this.arbProvider.globalInboxConn();
 
+    $("#erc20Address").html(this.contracts.EthTestToken.address);
+
     const ethBalance = await this.contracts.EthTestToken.balanceOf(
       this.ethwalletAddress
     );
-    $("#ethERC20Balance").html(ethBalance.toString());
+    $("#ethERC20Balance").html(
+      ethers.utils.formatUnits(ethBalance, this.gld_units)
+    );
 
     const vmBalance = await inboxManager.getERC20Balance(
       this.contracts.EthTestToken.address,
       vmId
     );
-    $("#vmERC20Balance").html(vmBalance.toString());
+    $("#vmERC20Balance").html(
+      ethers.utils.formatUnits(vmBalance, this.gld_units)
+    );
 
     const withdrawnBalance = await inboxManager.getERC20Balance(
       this.contracts.EthTestToken.address,
       this.ethwalletAddress
     );
-    $("#withdrawnERC20Balance").html(withdrawnBalance.toString());
+    $("#withdrawnERC20Balance").html(
+      ethers.utils.formatUnits(withdrawnBalance, this.gld_units)
+    );
 
     const arbBalance = await this.contracts.ArbTestToken.balanceOf(
       this.arbwalletAddress
     );
-    $("#arbERC20Balance").html(arbBalance.toString());
+    $("#arbERC20Balance").html(
+      ethers.utils.formatUnits(arbBalance, this.gld_units)
+    );
   }
 
   async renderERC721Info() {
     const vmId = await this.arbProvider.getVmID();
     const inboxManager = await this.arbProvider.globalInboxConn();
+
+    $("#erc721Address").html(this.contracts.EthTestItem.address);
 
     const ethBalance = await this.contracts.EthTestItem.tokensOfOwner(
       this.ethwalletAddress
@@ -429,7 +444,10 @@ class App {
 
   async mintERC20() {
     this.clearAlerts();
-    let val = parseInt($("#mintERC20Amount").val());
+    let val = ethers.utils.parseUnits(
+      $("#mintERC20Amount").val(),
+      this.gld_units
+    );
     $("#mintERC20Amount").val("");
     $("#mintERC20Form").hide();
     $("#mintERC20Message").html("Tokens are minting...");
@@ -444,14 +462,21 @@ class App {
     await tx.wait();
     $("#mintERC20Message").hide();
     $("#mintERC20Form").show();
-    this.alertERC20Success("Successfully minted " + val + " tokens");
+    this.alertERC20Success(
+      "Successfully minted " +
+        ethers.utils.formatUnits(val, this.gld_units) +
+        " tokens"
+    );
     this.render();
   }
 
   async depositERC20() {
     this.clearAlerts();
     const inboxManager = await this.arbProvider.globalInboxConn();
-    let val = parseInt($("#depositERC20Amount").val());
+    let val = ethers.utils.parseUnits(
+      $("#depositERC20Amount").val(),
+      this.gld_units
+    );
     $("#depositERC20Amount").val("");
     $("#depositERC20Form").hide();
     $("#depositERC20Message").html("Creating approve transfer transaction");
@@ -486,13 +511,20 @@ class App {
 
     $("#depositERC20Message").hide();
     $("#depositERC20Form").show();
-    this.alertERC20Success("Successfully deposited " + val + " tokens");
+    this.alertERC20Success(
+      "Successfully deposited " +
+        ethers.utils.formatUnits(val, this.gld_units) +
+        " tokens"
+    );
     this.render();
   }
 
   async withdrawERC20() {
     this.clearAlerts();
-    let val = parseInt($("#withdrawERC20Amount").val());
+    let val = ethers.utils.parseUnits(
+      $("#withdrawERC20Amount").val(),
+      this.gld_units
+    );
     $("#withdrawERC20Amount").val("");
     $("#withdrawERC20Form").hide();
     $("#withdrawERC20Message").html("Creating withdraw transaction");
@@ -515,7 +547,11 @@ class App {
 
     $("#withdrawERC20Message").hide();
     $("#withdrawERC20Form").show();
-    this.alertERC20Success("Successfully withdrew " + val + " tokens");
+    this.alertERC20Success(
+      "Successfully withdrew " +
+        ethers.utils.formatUnits(val, this.gld_units) +
+        " tokens"
+    );
     this.render();
   }
 
