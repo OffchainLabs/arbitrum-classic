@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import eth_utils
-from pyevmasm import assemble_hex
+from pyevmasm import instruction_tables, assemble_hex, assemble_one
 from unittest import TestCase
 
 from arbitrum import run_vm_once, value
@@ -41,10 +41,26 @@ def run_until_block(vm, test):
             test.fail("VM unintentionally halted")
 
 
-def make_contract(evm_code, return_type):
+def make_simple_code():
+    instruction_table = instruction_tables["byzantium"]
+    return [
+        assemble_one("PUSH20 0x10"),
+        assemble_one("PUSH1 0x00"),
+        instruction_table["MSTORE"],
+        assemble_one("PUSH1 0x20"),
+        assemble_one("PUSH1 0x00"),
+        instruction_table["RETURN"],
+    ]
+
+
+def make_contract(evm_code, return_type, address=None):
+    if not address:
+        contract_address = "0x895521964D724c8362A36608AAf09A3D7d0A0445"
+    else:
+        contract_address = address
     return ContractABI(
         {
-            "address": "0x895521964D724c8362A36608AAf09A3D7d0A0445",
+            "address": contract_address,
             "abi": [
                 {
                     "constant": False,
@@ -476,3 +492,84 @@ class TestEVM(TestCase):
             vm.sent_messages[1],
             value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
         )
+
+    def test_clone(self):
+        evm_code = make_simple_code()
+        contract_a = make_contract(evm_code, "uint256")
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler([contract_a, arbsys_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, contract_a.testMethod(0, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.cloneContract(1, 0, contract_a.address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 2)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        self.assertIsInstance(parsed_out0, EVMReturn)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+
+        correct_value = parsed_out0.output_values[0]
+        created_contract_address = parsed_out1.output_values[0]
+        created_contract = make_contract(evm_code, "uint256", created_contract_address)
+        fake_contract = make_contract(
+            evm_code, "uint256", "0x3c1b4360234d8e65a9e162ef82d70bee71324512"
+        )
+        output_handler = create_output_handler(
+            [contract_a, arbsys_abi, created_contract, fake_contract]
+        )
+
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, fake_contract.testMethod(2, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, created_contract.testMethod(3, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 4)
+        parsed_out2 = output_handler(vm.logs[2])
+        parsed_out3 = output_handler(vm.logs[3])
+        self.assertIsInstance(parsed_out2, EVMStop)
+        self.assertIsInstance(parsed_out3, EVMReturn)
+        self.assertEqual(parsed_out3.output_values[0], correct_value)

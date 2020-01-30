@@ -24,7 +24,7 @@ from .types import token_transfer_message, eth_transfer_message, call_message
 from . import call_frame
 from . import tokens
 from . import accounts
-from .accounts import account_store, account_state
+from .accounts import account_store, account_state, fetch_and_increment_seq
 
 # Blockchain Simulator
 # inbox - global
@@ -1030,3 +1030,56 @@ def evm_call_to_tx_call_data(vm):
     tx_call_data.set_val("data")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("value")(vm)
+
+
+@modifies_stack([value.IntType()], [value.IntType()])
+def create_clone_contract(vm):
+    vm.auxpush()
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    # account
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("message")(vm)
+    message.get("sender")(vm)
+    vm.eq()
+    # is_external account
+    vm.ifelse(
+        lambda vm: [
+            # This is called externally so no need to increment sequence num
+            vm.dup0(),
+            account_state.get("nextSeqNum")(vm),
+        ],
+        lambda vm: [
+            # This is called by a contract so increment num
+            fetch_and_increment_seq(vm)
+        ],
+    )
+    # seq updated_account_state
+    vm.swap1()
+    get_call_frame(vm)
+    call_frame.call_frame.set_val("account_state")(vm)
+    # call_frame seq
+    vm.swap1()
+    vm.dup1()
+    call_frame.call_frame.get("contractID")(vm)
+    # address seq call_frame
+    accounts.generate_contract_address(vm)
+    # new_address call_frame
+    vm.dup0()
+    vm.auxpop()
+    vm.swap1()
+    vm.auxpush()
+    # current_address new_address call_frame
+    vm.dup2()
+    call_frame.call_frame.get("accounts")(vm)
+    accounts.clone_contract(vm)
+    # accounts call_frame
+    vm.swap1()
+    call_frame.call_frame.set_val("accounts")(vm)
+    set_call_frame(vm)
+    vm.auxpop()
+    # new_address

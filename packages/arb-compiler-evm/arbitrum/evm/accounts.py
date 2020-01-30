@@ -180,3 +180,27 @@ def process_nonce(vm):
             vm.push(0),
         ],
     )
+
+
+@modifies_stack([account_state.typ], [value.IntType(), account_state.typ])
+def fetch_and_increment_seq(vm):
+    # account
+    vm.dup0()
+    account_state.get("nextSeqNum")(vm)
+    vm.dup0()
+    vm.auxpush()
+    vm.push(1)
+    vm.add()
+    vm.swap1()
+    account_state.set_val("nextSeqNum")(vm)
+    vm.auxpop()
+    # seq account
+
+
+@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+def generate_contract_address(vm):
+    std.tup.make(2)(vm)
+    vm.hash()
+    vm.push(96)
+    vm.swap1()
+    std.bitwise.shift_right(vm)

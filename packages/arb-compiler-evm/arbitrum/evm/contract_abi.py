@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from types import MethodType
+
 import eth_abi
 import eth_utils
 
@@ -82,17 +84,19 @@ class ContractABI(Contract):
 
         for func_id, func_abi in self.funcs.items():
             setattr(
-                ContractABI,
+                self,
                 func_abi["name"],
-                generate_func(func_id, func_abi, self.address),
+                MethodType(generate_func(func_id, func_abi, self.address), self),
             )
             setattr(
-                ContractABI, "_" + func_abi["name"], generate_func2(func_id, func_abi)
+                self,
+                "_" + func_abi["name"],
+                MethodType(generate_func2(func_id, func_abi), self),
             )
             setattr(
-                ContractABI,
+                self,
                 "call_" + func_abi["name"],
-                generate_func3(func_id, func_abi, self.address),
+                MethodType(generate_func3(func_id, func_abi, self.address), self),
             )
 
         self.events = {}

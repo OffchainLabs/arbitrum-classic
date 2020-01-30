@@ -101,21 +101,40 @@
       "payable": false,
       "stateMutability": "pure",
       "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "cloneContract",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ],
-  "metadata": "{\"compiler\":{\"version\":\"0.5.10+commit.5a6ea5b1\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"currentMessageTime\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeUpperBound\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol\":\"ArbSys\"},\"evmVersion\":\"petersburg\",\"libraries\":{},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol\":{\"keccak256\":\"0xe1da3a9b85dd7065758fe9be70cd4f793ff5863bb87f96a53b44c85646a82001\",\"urls\":[\"bzzr://3f1471fe6a197b3d8121d0cd563cbb6c613e498c6d9995272cbe223bad036345\",\"dweb:/ipfs/QmVkDjniaScdXq7MLe6Gdurpg5HK9wfzDdgCDmCFcgMokW\"]}},\"version\":1}",
+  "metadata": "{\"compiler\":{\"version\":\"0.5.10+commit.5a6ea5b1\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"currentMessageTime\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeUpperBound\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"dest\",\"type\":\"address\"},{\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol\":\"ArbSys\"},\"evmVersion\":\"petersburg\",\"libraries\":{},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol\":{\"keccak256\":\"0xdd28661361068516e90af57efa9a3f59c3694ca7edb248582d74a6b55a50a531\",\"urls\":[\"bzzr://7af91608cf4b523f927ed76846cc474a2a9df2d98727c649d5ed35d3970214f0\",\"dweb:/ipfs/QmVn6bQXSpEMi7m9fJdGMzANbupBsbga5iyoYCiB4CqWmn\"]}},\"version\":1}",
   "bytecode": "0x",
   "deployedBytecode": "0x",
   "sourceMap": "",
   "deployedSourceMap": "",
-  "source": "/*\n * Copyright 2019-2020, Offchain Labs, Inc.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *    http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npragma solidity >=0.4.21 <0.6.0;\n\ninterface ArbSys {\n    // Send given amount of ERC-20 tokens to dest with token contract sender.\n    // This is safe to freely call since the sender is authenticated and thus\n    // you can only send fake tokens, not steal real ones\n    function withdrawERC20(address dest, uint256 amount) external;\n\n    // Send given ERC-721 token to dest with token contract sender.\n    // This is safe by the above arguement\n    function withdrawERC721(address dest, uint256 id) external;\n\n    // Send given amount of Eth to dest with from sender.\n    function withdrawEth(address dest, uint256 amount) external;\n\n    // Return time when current message was posted on-chain\n    function currentMessageTime() external returns(uint);\n\n    // Return upper bound on the on-chain block number\n    function timeUpperBound() external returns(uint);\n\n    // Return the number of transactions issued by the given external account\n    // or the account sequence number of the given contract\n    function getTransactionCount(address account) external pure returns(uint256);\n}\n",
+  "source": "/*\n * Copyright 2019-2020, Offchain Labs, Inc.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *    http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npragma solidity >=0.4.21 <0.6.0;\n\ninterface ArbSys {\n    // Send given amount of ERC-20 tokens to dest with token contract sender.\n    // This is safe to freely call since the sender is authenticated and thus\n    // you can only send fake tokens, not steal real ones\n    function withdrawERC20(address dest, uint256 amount) external;\n\n    // Send given ERC-721 token to dest with token contract sender.\n    // This is safe by the above arguement\n    function withdrawERC721(address dest, uint256 id) external;\n\n    // Send given amount of Eth to dest with from sender.\n    function withdrawEth(address dest, uint256 amount) external;\n\n    // Return time when current message was posted on-chain\n    function currentMessageTime() external returns(uint);\n\n    // Return upper bound on the on-chain block number\n    function timeUpperBound() external returns(uint);\n\n    // Return the number of transactions issued by the given external account\n    // or the account sequence number of the given contract\n    function getTransactionCount(address account) external pure returns(uint256);\n\n    // Generate a new contract with the same code as the given contract\n    // This function returns the address of the new contract\n    // This is currently the only way to create new contracts in a compiled rollup instance\n    function cloneContract(address account) external returns(address);\n}\n",
   "sourcePath": "/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol",
   "ast": {
     "absolutePath": "/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol",
     "exportedSymbols": {
-      "ArbSys": [178]
+      "ArbSys": [185]
     },
-    "id": 179,
+    "id": 186,
     "nodeType": "SourceUnit",
     "nodes": [
       {
@@ -130,8 +149,8 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 178,
-        "linearizedBaseContracts": [178],
+        "id": 185,
+        "linearizedBaseContracts": [185],
         "name": "ArbSys",
         "nodeType": "ContractDefinition",
         "nodes": [
@@ -210,7 +229,7 @@
               "parameters": [],
               "src": "941:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "880:62:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -291,7 +310,7 @@
               "parameters": [],
               "src": "1117:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1059:59:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -372,7 +391,7 @@
               "parameters": [],
               "src": "1241:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1182:60:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -426,7 +445,7 @@
               ],
               "src": "1354:6:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1308:53:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -480,7 +499,7 @@
               ],
               "src": "1464:6:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1422:49:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -562,25 +581,108 @@
               ],
               "src": "1682:9:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1615:77:3",
             "stateMutability": "pure",
             "superFunction": null,
             "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": null,
+            "id": 184,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "cloneContract",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 180,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 179,
+                  "name": "account",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 184,
+                  "src": "1946:15:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 178,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1946:7:3",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1945:17:3"
+            },
+            "returnParameters": {
+              "id": 183,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 182,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 184,
+                  "src": "1980:7:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 181,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1980:7:3",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1979:9:3"
+            },
+            "scope": 185,
+            "src": "1923:66:3",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
           }
         ],
-        "scope": 179,
-        "src": "643:1051:3"
+        "scope": 186,
+        "src": "643:1348:3"
       }
     ],
-    "src": "609:1086:3"
+    "src": "609:1383:3"
   },
   "legacyAST": {
     "absolutePath": "/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum/packages/arb-compiler-evm/contract-templates/contracts/ArbSys.sol",
     "exportedSymbols": {
-      "ArbSys": [178]
+      "ArbSys": [185]
     },
-    "id": 179,
+    "id": 186,
     "nodeType": "SourceUnit",
     "nodes": [
       {
@@ -595,8 +697,8 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 178,
-        "linearizedBaseContracts": [178],
+        "id": 185,
+        "linearizedBaseContracts": [185],
         "name": "ArbSys",
         "nodeType": "ContractDefinition",
         "nodes": [
@@ -675,7 +777,7 @@
               "parameters": [],
               "src": "941:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "880:62:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -756,7 +858,7 @@
               "parameters": [],
               "src": "1117:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1059:59:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -837,7 +939,7 @@
               "parameters": [],
               "src": "1241:0:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1182:60:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -891,7 +993,7 @@
               ],
               "src": "1354:6:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1308:53:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -945,7 +1047,7 @@
               ],
               "src": "1464:6:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1422:49:3",
             "stateMutability": "nonpayable",
             "superFunction": null,
@@ -1027,18 +1129,101 @@
               ],
               "src": "1682:9:3"
             },
-            "scope": 178,
+            "scope": 185,
             "src": "1615:77:3",
             "stateMutability": "pure",
             "superFunction": null,
             "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": null,
+            "id": 184,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "cloneContract",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 180,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 179,
+                  "name": "account",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 184,
+                  "src": "1946:15:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 178,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1946:7:3",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1945:17:3"
+            },
+            "returnParameters": {
+              "id": 183,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 182,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 184,
+                  "src": "1980:7:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 181,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1980:7:3",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1979:9:3"
+            },
+            "scope": 185,
+            "src": "1923:66:3",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
           }
         ],
-        "scope": 179,
-        "src": "643:1051:3"
+        "scope": 186,
+        "src": "643:1348:3"
       }
     ],
-    "src": "609:1086:3"
+    "src": "609:1383:3"
   },
   "compiler": {
     "name": "solc",
@@ -1046,7 +1231,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.13",
-  "updatedAt": "2020-01-29T18:52:15.584Z",
+  "updatedAt": "2020-01-29T19:20:18.195Z",
   "devdoc": {
     "methods": {}
   },
