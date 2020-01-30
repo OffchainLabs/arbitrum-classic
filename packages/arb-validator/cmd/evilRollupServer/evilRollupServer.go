@@ -103,13 +103,6 @@ func createRollupChain() {
 	addressString := flag.Arg(4)
 	factoryAddress := common.HexToAddress(addressString)
 
-	config := structures.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
-		MaxExecutionSteps:       100000000,
-		ArbGasSpeedLimitPerTick: 100000,
-	}
-
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
@@ -125,7 +118,7 @@ func createRollupChain() {
 	address, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		config,
+		rollup.DefaultChainParams(),
 		common.Address{},
 	)
 	if err != nil {
