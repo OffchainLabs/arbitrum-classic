@@ -76,7 +76,7 @@ export class ArbERC721 extends Contract {
 
         isApprovedForAll(owner: string, operator: string): Promise<boolean>;
 
-        tokensOfOwner(owner: string): Promise<(BigNumber)[]>;
+        tokensOfOwner(owner: string): Promise<BigNumber[]>;
 
         approve(to: string, tokenId: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 

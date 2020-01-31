@@ -9,8 +9,8 @@
 # Exit on error
 set -e
 
-pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt
+pip3 install -r requirements.txt --user
+pip3 install -r requirements-dev.txt --user
 
 # Setup pre-commit
 pre-commit install
@@ -27,6 +27,6 @@ deactivate
 
 # Install arb-compiler-evm
 cd packages/arb-compiler-evm
-pip3 install -r requirements.txt
-python3 setup.py develop # TODO: may need sudo or --user here!
+pip3 install -r requirements.txt --user
+sudo python3 setup.py develop # TODO: may need sudo or --user here!
 cd ../..

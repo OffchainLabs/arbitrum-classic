@@ -110,8 +110,4 @@ let App = {
   }
 };
 
-$(function() {
-  $(window).on("load", function() {
-    App.init();
-  });
-});
+window.addEventListener("DOMContentLoaded", App.init);
