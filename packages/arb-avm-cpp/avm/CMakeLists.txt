@@ -20,7 +20,6 @@ set (CMAKE_CXX_STANDARD 14)
 project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
-
   include/avm/machine.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/datastack.hpp
@@ -57,7 +56,7 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
+target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 libff PRIVATE avm_utils)
 
 target_code_coverage(avm AUTO ALL)
 

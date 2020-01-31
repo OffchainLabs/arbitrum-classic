@@ -13,6 +13,8 @@ validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
 packages/arb-avm-cpp/rocksdb
+packages/arb-avm-cpp/external/libff
+packages/arb-avm-cpp/external/secp256k1
 packages/arb-compiler-evm/tests/sol-syscall/code.txt
 bridge_eth_addresses.json
 keys.json

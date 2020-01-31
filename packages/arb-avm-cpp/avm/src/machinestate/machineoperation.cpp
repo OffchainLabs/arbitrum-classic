@@ -19,6 +19,9 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+#include <secp256k1_recovery.h>
+#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {

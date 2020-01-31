@@ -57,6 +57,7 @@ file(GLOB KECCAK_SOURCES
   external/keccak/*.c
 )
 
+add_subdirectory(external)
 add_subdirectory(utils)
 add_subdirectory(avm_values)
 add_subdirectory(data_storage)
