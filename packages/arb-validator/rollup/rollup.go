@@ -295,13 +295,13 @@ func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.Confir
 	}
 	chain.nodeGraph.latestConfirmed = newNode
 	chain.nodeGraph.considerPruningNode(newNode.prev)
-	chain.updateOldest(newNode)
+	chain.updateOldest()
 	for _, listener := range chain.listeners {
 		listener.ConfirmedNode(ctx, chain, ev)
 	}
 }
 
-func (chain *ChainObserver) updateOldest(node *Node) {
+func (chain *ChainObserver) updateOldest() {
 	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
 		if chain.nodeGraph.oldestNode.numStakers > 0 {
 			return
@@ -318,7 +318,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 				successor = chain.nodeGraph.nodeFromHash[successorHash]
 			}
 		}
-		chain.nodeGraph.pruneNode(chain.nodeGraph.oldestNode)
+		chain.nodeGraph.pruneOldestNode(chain.nodeGraph.oldestNode)
 		chain.nodeGraph.oldestNode = successor
 	}
 }

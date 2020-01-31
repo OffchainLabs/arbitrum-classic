@@ -39,9 +39,6 @@ func NewEvilRollupCheckpointerFactory(
 	maxReorgDepth *big.Int,
 	forceFreshStart bool,
 ) checkpointing.RollupCheckpointerFactory {
-	if databasePath == "" {
-		databasePath = checkpointing.MakeCheckpointDatabasePath(rollupAddr)
-	}
 	return &EvilRollupCheckpointerFactory{
 		checkpointing.NewRollupCheckpointerImplFactory(
 			rollupAddr,

@@ -134,26 +134,26 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		log.Fatal(err)
 	}
 
-	manager1, err := rollupmanager.CreateManager(ctx, rollupAddress, true, client1, ckpFac)
+	manager1, err := rollupmanager.CreateManagerAdvanced(ctx, rollupAddress, true, client1, ckpFac)
 	if err != nil {
 		return err
 	}
 	manager1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
 
-	validatorListener1 := rollup.NewValidatorChainListener(rollupAddress, rollupActor1)
+	validatorListener1 := rollup.NewValidatorChainListener(context.Background(), rollupAddress, rollupActor1)
 	err = validatorListener1.AddStaker(client1)
 	if err != nil {
 		return err
 	}
 	manager1.AddListener(validatorListener1)
 
-	manager2, err := rollupmanager.CreateManager(ctx, rollupAddress, true, client2, ckpFac)
+	manager2, err := rollupmanager.CreateManagerAdvanced(ctx, rollupAddress, true, client2, ckpFac)
 	if err != nil {
 		return err
 	}
 	manager2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
 
-	validatorListener2 := rollup.NewValidatorChainListener(rollupAddress, rollupActor2)
+	validatorListener2 := rollup.NewValidatorChainListener(context.Background(), rollupAddress, rollupActor2)
 	err = validatorListener2.AddStaker(client2)
 	if err != nil {
 		return err

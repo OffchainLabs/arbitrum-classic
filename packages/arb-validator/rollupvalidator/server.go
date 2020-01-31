@@ -151,6 +151,7 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
+	log.Println("CallMessage", args.Data)
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
@@ -170,17 +171,10 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	seqNumValue := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2))
-
-	msg := message.DeliveredTransaction{
-		Transaction: message.Transaction{
-			Chain:       m.rollupAddress,
-			To:          contractAddress,
-			From:        sender,
-			SequenceNum: seqNumValue,
-			Value:       big.NewInt(0),
-			Data:        dataBytes,
-		},
+	msg := message.Call{
+		To:       contractAddress,
+		From:     sender,
+		Data:     dataBytes,
 		BlockNum: m.man.CurrentBlockId().Height,
 	}
 

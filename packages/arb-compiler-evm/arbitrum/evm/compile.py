@@ -25,7 +25,7 @@ from ..compiler import compile_block
 from .. import value
 from .types import message
 
-from . import os, call_frame
+from . import os, call_frame, call_finish
 from . import execution
 
 import eth_utils
@@ -64,11 +64,7 @@ def process_tx_call_message(vm):
     vm.eq()
     vm.ifelse(
         lambda vm: [],
-        lambda vm: [
-            tup.tbreak(2)(vm),
-            execution.initial_call(vm, "tx_call_initial"),
-            vm.pop(),
-        ],
+        lambda vm: [tup.tbreak(2)(vm), execution.initial_call(vm, "tx_call_initial")],
     )
 
 
@@ -76,8 +72,9 @@ def process_deposit_eth(vm):
     vm.pop()
     vm.dup0()
     message.get("sender")(vm)
-    execution.setup_initial_call_frame(vm)
+    execution.setup_initial_call_frame(vm, "deposit_eth")
     os.process_deposit_eth_message(vm)
+    vm.set_label(AVMLabel("evm_call_deposit_eth"))
 
 
 def process_deposit_erc20(vm):
@@ -85,7 +82,6 @@ def process_deposit_erc20(vm):
     os.process_deposit_erc20_message(vm)
     vm.swap1()
     execution.initial_call(vm, "deposit_erc20_initial")
-    vm.pop()
 
 
 def process_deposit_erc721(vm):
@@ -93,7 +89,12 @@ def process_deposit_erc721(vm):
     os.process_deposit_erc721_message(vm)
     vm.swap1()
     execution.initial_call(vm, "deposit_erc712_initial")
+
+
+def process_call_message(vm):
     vm.pop()
+    os.process_call_message(vm)
+    execution.initial_static_call(vm, "static_call_initial")
 
 
 def run_loop_start(vm):
@@ -125,7 +126,17 @@ def run_loop_start(vm):
                             vm.dup0(),
                             vm.push(3),
                             vm.eq(),
-                            vm.ifelse(process_deposit_erc721),
+                            vm.ifelse(
+                                process_deposit_erc721,
+                                lambda vm: [
+                                    vm.dup0(),
+                                    vm.push(4),
+                                    vm.eq(),
+                                    vm.ifelse(
+                                        process_call_message, lambda vm: [vm.pop()]
+                                    ),
+                                ],
+                            ),
                         ],
                     ),
                 ],
@@ -231,7 +242,7 @@ def not_supported_op(name):
 EVM_STATIC_OPS = {
     "SELF_BALANCE": lambda vm: [os.balance_get(vm)],
     # 0s: Stop and Arithmetic Operations
-    "STOP": execution.stop,
+    "STOP": call_finish.stop,
     "ADD": lambda vm: vm.add(),
     "MUL": lambda vm: vm.mul(),
     "SUB": lambda vm: vm.sub(),
@@ -333,8 +344,8 @@ EVM_STATIC_OPS = {
     # f0s: System operations
     "CREATE": lambda vm: not_supported_op("CREATE"),
     "CREATE2": lambda vm: not_supported_op("CREATE2"),
-    "RETURN": execution.ret,
-    "REVERT": execution.revert,
+    "RETURN": call_finish.ret,
+    "REVERT": call_finish.revert,
     "SELFDESTRUCT": execution.selfdestruct,
     "BALANCE": lambda vm: [os.ext_balance(vm)],
     "CODESIZE": os.codesize_get,
@@ -407,7 +418,7 @@ def generate_contract_code(label, code, contract_id):
                         hex(instr.opcode)
                     )
                 )
-            execution.revert(vm)
+            call_finish.revert(vm)
 
         call_id = "{}_{}".format(contract_id, instr.pc)
         evm_instr_ops = {
@@ -419,7 +430,6 @@ def generate_contract_code(label, code, contract_id):
             "CALLCODE": lambda vm: execution.call(vm, call_id),
             "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id),
             "STATICCALL": lambda vm: execution.staticcall(vm, call_id),
-            "INVALID": evm_invalid_op,
         }
 
         instr_name = get_opcode_name(instr)
@@ -433,11 +443,22 @@ def generate_contract_code(label, code, contract_id):
         if instr_name in evm_instr_ops:
             return evm_instr_ops[instr_name]
 
+        if instr_name == "INVALID":
+            if instr.opcode == 0xFE:
+                return call_finish.revert
+            else:
+                return None
+
         raise Exception("Unhandled instruction {}".format(instr))
 
     contract_code = [label]
-    for insn in code:
-        block = compile_block(run_op(insn))
+    for index, insn in enumerate(code):
+        impl = run_op(insn)
+        if not impl:
+            # if we hit an invalid opcode, terminate compilation. This means
+            # we have reached the data segment of the code
+            break
+        block = compile_block(impl)
         block.add_node("EthOp({}, {})".format(insn, insn.pc))
         contract_code.append(block)
 

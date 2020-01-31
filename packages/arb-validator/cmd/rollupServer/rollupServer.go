@@ -21,10 +21,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"io/ioutil"
 	"log"
-	"math/big"
 	"os"
 	"strings"
 
@@ -39,7 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 const (
@@ -103,13 +100,6 @@ func createRollupChain() {
 	addressString := flag.Arg(4)
 	factoryAddress := common.HexToAddress(addressString)
 
-	config := structures.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
-		MaxExecutionSteps:       500000000,
-		ArbGasSpeedLimitPerTick: 100000,
-	}
-
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
@@ -125,7 +115,7 @@ func createRollupChain() {
 	address, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		config,
+		rollup.DefaultChainParams(),
 		common.Address{},
 	)
 	if err != nil {
@@ -188,20 +178,14 @@ func validateRollupChain() error {
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(address, rollupActor)
+	validatorListener := rollup.NewValidatorChainListener(context.Background(), address, rollupActor)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	manager, err := rollupmanager.CreateManager(ctx, address, true, client, checkpointing.NewRollupCheckpointerImplFactory(
-		address,
-		validateCmd.Arg(0),
-		dbPath,
-		big.NewInt(maxReorgDepth),
-		false,
-	))
+	manager, err := rollupmanager.CreateManager(address, client, validateCmd.Arg(0), dbPath)
+
 	if err != nil {
 		return err
 	}

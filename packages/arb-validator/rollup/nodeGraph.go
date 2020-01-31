@@ -166,6 +166,16 @@ func (chain *NodeGraph) pruneNode(node *Node) {
 	delete(chain.nodeFromHash, node.hash)
 }
 
+func (chain *NodeGraph) pruneOldestNode(oldest *Node) {
+	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
+		succHash := oldest.successorHashes[i]
+		if !succHash.Equals(common.Hash{}) {
+			chain.nodeFromHash[succHash].prev = nil
+		}
+	}
+	delete(chain.nodeFromHash, oldest.hash)
+}
+
 func (chain *NodeGraph) HasReference(node *Node) bool {
 	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
 		return true
@@ -226,29 +236,11 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	return n1.prev
 }
 
-func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
-	prunesToDo := []pruneParams{}
-	chain.leaves.forall(func(leaf *Node) {
-		if leaf != chain.latestConfirmed {
-			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
-			if err == nil {
-				prunesToDo = append(prunesToDo, pruneParams{
-					leafHash:     leaf.hash,
-					ancestorHash: leafAncestor.prev.hash,
-					leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
-					ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
-				})
-			}
-		}
-	})
-	return prunesToDo
-}
-
 func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1
-	prevN2 := n1
+	prevN2 := n2
 	for n1.depth > n2.depth {
 		prevN1 = n1
 		n1 = n1.prev

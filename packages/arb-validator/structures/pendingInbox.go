@@ -29,7 +29,7 @@ import (
 )
 
 type messageStackItem struct {
-	message message.DeliveredMessage
+	message message.PendingMessage
 	prev    *messageStackItem
 	next    *messageStackItem
 	hash    common.Hash
@@ -101,7 +101,7 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 	}
 }
 
-func (ms *MessageStack) DeliverMessage(msg message.DeliveredMessage) {
+func (ms *MessageStack) DeliverMessage(msg message.PendingMessage) {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
 	if ms.newest == nil {
 		item := &messageStackItem{
@@ -236,7 +236,7 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	return cuts, nil
 }
 
-func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.DeliveredMessage, error) {
+func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.PendingMessage, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
 		return nil, errors.New("one step proof startItemHash not found")
