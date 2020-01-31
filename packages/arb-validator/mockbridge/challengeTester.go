@@ -23,21 +23,19 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 )
 
 type ChallengeTester struct {
-	contract *challengetester.ChallengeTester
-	client   arbbridge.ArbClient
-	auth     *TransOpts
+	contract common.Address
+	client   *MockArbAuthClient
 }
 
-func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth *TransOpts) (*ChallengeTester, error) {
-	//vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
+func newChallengeTester(address common.Address, client *MockArbAuthClient) (*ChallengeTester, error) {
+	//vmCreatorContract, err := challengetester.DeployChallengeTester(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
 	//}
-	return &ChallengeTester{nil, client, auth}, nil
+	return &ChallengeTester{client.MockEthClient.getNextAddress(), client}, nil
 }
 
 func (con *ChallengeTester) StartChallenge(
@@ -48,6 +46,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, *structures.BlockId, error) {
+	eth := con.client.MockEthClient
 	//con.auth.Context = ctx
 	//tx, err := con.contract.StartChallenge(
 	//	con.auth,
@@ -71,5 +70,22 @@ func (con *ChallengeTester) StartChallenge(
 	//	return common.Address{}, errors2.New("Wrong receipt count")
 	//}
 
-	return common.Address{}, &structures.BlockId{}, nil
+	// create clone
+	newAddr := eth.getNextAddress()
+	eth.challenges[newAddr] = &challengeData{challengePeriod}
+
+	//initializeBisection
+	eth.challenges[newAddr].deadline = common.TimeFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
+	// emit InitiatedChallenge
+	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: eth.NextBlock,
+		},
+		Deadline: eth.challenges[newAddr].deadline,
+	}
+	eth.pubMsg(arbbridge.MaybeEvent{
+		Event: InitiateChallengeEvent,
+	})
+	//return clone address
+	return newAddr, eth.NextBlock, nil
 }

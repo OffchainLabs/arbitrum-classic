@@ -52,4 +52,5 @@ type ArbAuthClient interface {
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewPendingTopChallenge(address common.Address) (PendingTopChallenge, error)
+	DeployChallengeTester(address common.Address) (ChallengeTester, error)
 }

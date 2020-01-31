@@ -6,7 +6,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 )
@@ -67,24 +66,22 @@ func (con *ArbFactory) CreateRollup(
 }
 
 type arbFactoryWatcher struct {
-	contract *arbfactory.ArbFactory
-	client   arbbridge.ArbClient
+	contract common.Address
+	client   *MockArbClient
 }
 
-func newArbFactoryWatcher(address common.Address, client arbbridge.ArbClient) (*arbFactoryWatcher, error) {
+func newArbFactoryWatcher(address common.Address, client *MockArbClient) (*arbFactoryWatcher, error) {
 	//vmCreatorContract, err := arbfactory.newArbFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	//}
-	return &arbFactoryWatcher{nil, client}, nil
+	return &arbFactoryWatcher{address, client}, nil
 }
 
 func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
-	addr, err := con.contract.GlobalInboxAddress(nil)
-	return common.NewAddressFromEth(addr), err
+	return con.contract, nil
 }
 
 func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
-	addr, err := con.contract.ChallengeFactoryAddress(nil)
-	return common.NewAddressFromEth(addr), err
+	return con.contract, nil
 }

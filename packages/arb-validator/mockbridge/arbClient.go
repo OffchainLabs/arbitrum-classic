@@ -195,23 +195,27 @@ func (c *MockArbAuthClient) NewPendingTopChallenge(address common.Address) (arbb
 	return NewPendingTopChallenge(address, c)
 }
 
-func (c *MockArbAuthClient) DeployChallengeTest(ctx context.Context) (*ChallengeTester, error) {
-	//testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err := waitForReceipt(
-	//	context.Background(),
-	//	c.client,
-	//	c.auth.From,
-	//	tx,
-	//	"DeployChallengeTester",
-	//); err != nil {
-	//	return nil, err
-	//}
-	tester, err := NewChallengeTester(common.Address{}, c, c.auth)
-	if err != nil {
-		return nil, err
-	}
-	return tester, nil
+func (c *MockArbAuthClient) DeployChallengeTester(address common.Address) (arbbridge.ChallengeTester, error) {
+	return newChallengeTester(address, c)
 }
+
+//func (c *MockArbAuthClient) DeployChallengeTest(ctx context.Context) (*ChallengeTester, error) {
+//	//testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c)
+//	//if err != nil {
+//	//	return nil, err
+//	//}
+//	//if err := waitForReceipt(
+//	//	context.Background(),
+//	//	c.client,
+//	//	c.auth.From,
+//	//	tx,
+//	//	"DeployChallengeTester",
+//	//); err != nil {
+//	//	return nil, err
+//	//}
+//	tester, err := DeployChallengeTester(common.Address{}, c, c.auth)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return tester, nil
+//}

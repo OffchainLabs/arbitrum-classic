@@ -34,4 +34,5 @@ type ChallengeTester interface {
 		challengeHash common.Hash,
 		challengeType *big.Int,
 	) (common.Address, *structures.BlockId, error)
+	//DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (ChallengeTester, error)
 }

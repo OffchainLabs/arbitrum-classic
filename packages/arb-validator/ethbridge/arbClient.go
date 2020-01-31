@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
-
 	"github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -37,7 +35,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 )
 
 type EthArbClient struct {
@@ -211,48 +208,6 @@ func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbr
 	return newPendingTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (*ChallengeTester, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client, challengeFactory.ToEthAddress())
-	if err != nil {
-		return nil, err
-	}
-	if err := waitForReceipt(
-		ctx,
-		c.client,
-		c.auth.auth.From,
-		tx,
-		"DeployChallengeTester",
-	); err != nil {
-		return nil, err
-	}
-	tester, err := NewChallengeTester(testerAddress, c.client, c.auth)
-	if err != nil {
-		return nil, err
-	}
-	return tester, nil
-}
-
-func (c *EthArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-	ospAddress, tx, _, err := executionchallenge.DeployOneStepProof(c.auth.auth, c.client)
-	if err != nil {
-		return nil, err
-	}
-	if err := waitForReceipt(
-		ctx,
-		c.client,
-		c.auth.auth.From,
-		tx,
-		"DeployOneStepProof",
-	); err != nil {
-		return nil, err
-	}
-	osp, err := c.NewOneStepProof(common.NewAddressFromEth(ospAddress))
-	if err != nil {
-		return nil, err
-	}
-	return osp, nil
+func (c *EthArbAuthClient) DeployChallengeTester(address common.Address) (arbbridge.ChallengeTester, error) {
+	return deployChallengeTester(address.ToEthAddress(), c.client, c.auth)
 }

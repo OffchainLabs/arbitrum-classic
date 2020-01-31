@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -75,33 +76,32 @@ func testChallenge(
 	}
 
 	//gobridge := false
-	////gobridge := true
-	//var client1 arbbridge.ArbAuthClient
-	//var client2 arbbridge.ArbAuthClient
-	//if gobridge {
-	c, err := ethbridge.NewEthAuthClient(ethURL, auth1)
-	if err != nil {
-		return err
+	gobridge := true
+	var client1 arbbridge.ArbAuthClient
+	var client2 arbbridge.ArbAuthClient
+	if gobridge {
+		c, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
+		if err != nil {
+			return err
+		}
+		client1 = c
+		c2, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth2.From)})
+		if err != nil {
+			return err
+		}
+		client2 = c2
+	} else {
+		c, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+		if err != nil {
+			return err
+		}
+		client1 = c
+		c2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+		if err != nil {
+			return err
+		}
+		client2 = c2
 	}
-	client1 := c
-	c2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
-	if err != nil {
-		return err
-	}
-	client2 := c2
-	//} else {
-	//	c, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
-	//	if err != nil {
-	//		return err
-	//	}
-	//	client1 = c
-	//	c2, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth2.From)})
-	//	if err != nil {
-	//		return err
-	//	}
-	//	client2 = c2
-	//}
-
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func testChallenge(
 		return errors2.Wrap(err, "Error gettign challenge factory address")
 	}
 
-	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
+	tester, err := client1.DeployChallengeTester(challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
 	}

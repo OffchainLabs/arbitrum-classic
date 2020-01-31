@@ -112,7 +112,7 @@ type ChallengeTesterTransactorRaw struct {
 	Contract *ChallengeTesterTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewChallengeTester creates a new instance of ChallengeTester, bound to a specific deployed contract.
+// DeployChallengeTester creates a new instance of ChallengeTester, bound to a specific deployed contract.
 func NewChallengeTester(address common.Address, backend bind.ContractBackend) (*ChallengeTester, error) {
 	contract, err := bindChallengeTester(address, backend, backend, backend)
 	if err != nil {

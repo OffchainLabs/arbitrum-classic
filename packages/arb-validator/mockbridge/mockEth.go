@@ -158,6 +158,7 @@ func getMockEth(ethURL string) *mockEthdata {
 		mEthData.Vm = make(map[common.Address]*VmData)
 		mEthData.channels = make(map[common.Address]*channelData)
 		mEthData.rollups = make(map[common.Address]*rollupData)
+		mEthData.challenges = make(map[common.Address]*challengeData)
 		mEthData.arbFactory = mEthData.getNextAddress()
 		mEthData.pending = make(map[common.Address]*PendingInbox)
 		mEthData.blockHashes = make(map[common.Hash]*structures.BlockId)
