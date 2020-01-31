@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -71,6 +72,13 @@ func ExecutionPreconditionHash(machineHash common.Hash, timeBounds *protocol.Tim
 	return pre.Hash()
 }
 
+func ChallengeDataHash(challenge common.Hash, challengePeriod *big.Int) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(challenge),
+		hashing.Uint256(challengePeriod),
+	)
+}
+
 func ExecutionDataHash(
 	numSteps uint64,
 	preconditionHash common.Hash,
@@ -88,6 +96,11 @@ func NodeHash(prevHash common.Hash,
 	deadline common.TimeTicks,
 	nodeDataHash common.Hash,
 	linkType ChildType) (common.Hash, common.Hash) {
+	fmt.Println("NodeHash params:")
+	fmt.Println("protoHash", protoHash)
+	fmt.Println("deadline", deadline)
+	fmt.Println("nodeDataHash", nodeDataHash)
+	fmt.Println("linkType", linkType)
 	innerHash := hashing.SoliditySHA3(
 		hashing.Bytes32(protoHash),
 		hashing.TimeTicks(deadline),

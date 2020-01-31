@@ -42,7 +42,6 @@ func NewChallengeTester(address common.Address, client arbbridge.ArbClient, auth
 
 func (con *ChallengeTester) StartChallenge(
 	ctx context.Context,
-	factory common.Address,
 	asserter common.Address,
 	challenger common.Address,
 	challengePeriod common.TimeTicks,

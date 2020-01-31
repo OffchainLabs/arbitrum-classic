@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -283,6 +284,7 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 }
 
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
+	fmt.Println("in confirmNode, ev.NodeHash = ", ev.NodeHash)
 	newNode, ok := chain.nodeGraph.nodeFromHash[ev.NodeHash]
 	if !ok {
 		panic("confirmNode - unknown node")

@@ -22,11 +22,10 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengefactory"
 )
 
 type challengeFactory struct {
-	contract *challengefactory.ChallengeFactory
+	contract common.Address
 	client   arbbridge.ArbClient
 	auth     *TransOpts
 }
@@ -36,7 +35,7 @@ func newChallengeFactory(address common.Address, client arbbridge.ArbClient, aut
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	//}
-	return &challengeFactory{nil, client, auth}, nil
+	return &challengeFactory{address, client, auth}, nil
 }
 
 func (con *challengeFactory) CreateChallenge(

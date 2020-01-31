@@ -87,6 +87,22 @@ type rollupData struct {
 	nextConfirmed   common.Hash
 }
 
+type challengeData struct {
+	deadline common.TimeTicks
+}
+
+type pendingTopChallengeData struct {
+	challengeData
+}
+
+type messagesChallengeData struct {
+	challengeData
+}
+
+type execChallengeData struct {
+	challengeData
+}
+
 type void struct{}
 
 var Void void
@@ -96,9 +112,10 @@ type mockEthdata struct {
 	//sync.Mutex
 	Vm             map[common.Address]*VmData
 	channels       map[common.Address]*channelData
-	rollups        map[common.Address]*rollupData // contract address to rollup
-	arbFactory     common.Address                 // eth address to factory address
-	nextAddress    common.Address                 // unique 'address'
+	rollups        map[common.Address]*rollupData    // contract address to rollup
+	challenges     map[common.Address]*challengeData // contract address to rollup
+	arbFactory     common.Address                    // eth address to factory address
+	nextAddress    common.Address                    // unique 'address'
 	BlockNumber    uint64
 	pending        map[common.Address]*PendingInbox
 	NextBlock      *structures.BlockId

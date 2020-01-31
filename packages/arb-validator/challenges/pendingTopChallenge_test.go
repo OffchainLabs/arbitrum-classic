@@ -18,13 +18,13 @@ package challenges
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

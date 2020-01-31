@@ -74,14 +74,33 @@ func testChallenge(
 		return err
 	}
 
-	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	//gobridge := false
+	////gobridge := true
+	//var client1 arbbridge.ArbAuthClient
+	//var client2 arbbridge.ArbAuthClient
+	//if gobridge {
+	c, err := ethbridge.NewEthAuthClient(ethURL, auth1)
 	if err != nil {
 		return err
 	}
-	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+	client1 := c
+	c2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
 	if err != nil {
 		return err
 	}
+	client2 := c2
+	//} else {
+	//	c, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
+	//	if err != nil {
+	//		return err
+	//	}
+	//	client1 = c
+	//	c2, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth2.From)})
+	//	if err != nil {
+	//		return err
+	//	}
+	//	client2 = c2
+	//}
 
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {

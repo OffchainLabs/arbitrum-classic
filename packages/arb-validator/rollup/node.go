@@ -169,6 +169,8 @@ func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {
 		return common.Hash{}
 	}
 	if node.linkType == structures.ValidChildType {
+		fmt.Println("lastMsgHash = ", node.disputable.AssertionClaim.AssertionStub.LastMessageHash)
+		fmt.Println("logsAccHash", node.disputable.AssertionClaim.AssertionStub.LastLogHash)
 		return hashing.SoliditySHA3(
 			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),
 			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash),
