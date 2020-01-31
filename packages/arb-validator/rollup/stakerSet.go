@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"log"
+	"sort"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -58,6 +59,41 @@ func (sl *StakerSet) Get(addr common.Address) *Staker {
 func (sl *StakerSet) forall(f func(*Staker)) {
 	for _, v := range sl.idx {
 		f(v)
+	}
+}
+
+func (stakers *StakerSet) AsList() []*Staker {
+	ret := []*Staker{}
+	for _, s := range stakers.idx {
+		ret = append(ret, s)
+	}
+	return ret
+}
+
+func (stakers *StakerSet) AnyDisagreement() bool {
+	// make list of stakers, sorted by increasing depth
+	stakerList := stakers.AsList()
+	if len(stakerList) < 2 {
+		return false
+	}
+	sort.Slice(stakerList, func(i, j int) bool {
+		return stakerList[i].location.depth > stakerList[j].location.depth
+	})
+
+	// return true iff all stakers are on a single branch
+	node := stakerList[len(stakerList)-1].location
+	nextToMatch := len(stakerList) - 2
+	for {
+		for stakerList[nextToMatch].location.Equals(node) {
+			nextToMatch--
+			if nextToMatch < 0 {
+				return false
+			}
+		}
+		node = node.prev
+		if node == nil || stakerList[nextToMatch].location.depth > node.depth {
+			return true
+		}
 	}
 }
 
