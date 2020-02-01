@@ -41,7 +41,7 @@ func testExecutionChallenge(t *testing.T) {
 
 	timeBounds := &protocol.TimeBoundsBlocks{
 		common.NewTimeBlocks(big.NewInt(100)),
-		common.NewTimeBlocks(big.NewInt(200)),
+		common.NewTimeBlocks(big.NewInt(120)),
 	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
