@@ -61,7 +61,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(4).Duration())
 		assertionPreparedChan := make(chan *preparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*preparedAssertion)

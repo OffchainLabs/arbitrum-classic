@@ -79,7 +79,7 @@ func getNextEventWithTimeout(
 	contract arbbridge.Challenge,
 	client arbbridge.ArbClient,
 ) (arbbridge.Event, ChallengeState, error) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 	for {
 		select {
 		case <-ctx.Done():

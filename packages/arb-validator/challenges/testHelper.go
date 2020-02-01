@@ -101,7 +101,7 @@ func testChallenge(
 		context.Background(),
 		client1.Address(),
 		client2.Address(),
-		common.TimeTicks{big.NewInt(13000 * 5)},
+		common.TimeFromSeconds(5),
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)

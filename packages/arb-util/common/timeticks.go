@@ -21,6 +21,10 @@ import (
 	"time"
 )
 
+const (
+	AverageSecondsPerBlock = 2
+)
+
 type TimeTicks struct {
 	Val *big.Int
 }
@@ -50,7 +54,7 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 }
 
 func (rt TimeTicks) Duration() time.Duration {
-	return time.Millisecond * time.Duration(rt.Val.Int64())
+	return time.Millisecond * time.Duration(AverageSecondsPerBlock*rt.Val.Int64()/13)
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
