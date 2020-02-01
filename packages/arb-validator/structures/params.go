@@ -26,6 +26,7 @@ type ChainParams struct {
 	StakeRequirement        *big.Int
 	GracePeriod             common.TimeTicks
 	MaxExecutionSteps       uint64
+	MaxTimeBoundsWidth      uint64
 	ArbGasSpeedLimitPerTick uint64
 }
 
@@ -48,6 +49,12 @@ func (cp ChainParams) WithGracePeriodBlocks(period common.TimeBlocks) ChainParam
 func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 	ret := cp
 	ret.MaxExecutionSteps = steps
+	return ret
+}
+
+func (cp ChainParams) WithMaxTimeBoundsWidth(width uint64) ChainParams {
+	ret := cp
+	ret.MaxTimeBoundsWidth = width
 	return ret
 }
 

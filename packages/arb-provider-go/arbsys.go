@@ -28,7 +28,7 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"currentMessageTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeUpperBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentMessageTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"timeUpperBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
@@ -183,6 +183,32 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _ArbSys.Contract.contract.Transact(opts, method, params...)
 }
 
+// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+//
+// Solidity: function currentMessageTime() constant returns(uint256)
+func (_ArbSys *ArbSysCaller) CurrentMessageTime(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ArbSys.contract.Call(opts, out, "currentMessageTime")
+	return *ret0, err
+}
+
+// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+//
+// Solidity: function currentMessageTime() constant returns(uint256)
+func (_ArbSys *ArbSysSession) CurrentMessageTime() (*big.Int, error) {
+	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.CallOpts)
+}
+
+// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+//
+// Solidity: function currentMessageTime() constant returns(uint256)
+func (_ArbSys *ArbSysCallerSession) CurrentMessageTime() (*big.Int, error) {
+	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.CallOpts)
+}
+
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
 // Solidity: function getTransactionCount(address account) constant returns(uint256)
@@ -209,6 +235,32 @@ func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) 
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
+// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+//
+// Solidity: function timeUpperBound() constant returns(uint256)
+func (_ArbSys *ArbSysCaller) TimeUpperBound(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ArbSys.contract.Call(opts, out, "timeUpperBound")
+	return *ret0, err
+}
+
+// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+//
+// Solidity: function timeUpperBound() constant returns(uint256)
+func (_ArbSys *ArbSysSession) TimeUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.CallOpts)
+}
+
+// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+//
+// Solidity: function timeUpperBound() constant returns(uint256)
+func (_ArbSys *ArbSysCallerSession) TimeUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.CallOpts)
+}
+
 // CloneContract is a paid mutator transaction binding the contract method 0x474ed9c0.
 //
 // Solidity: function cloneContract(address account) returns(address)
@@ -228,48 +280,6 @@ func (_ArbSys *ArbSysSession) CloneContract(account common.Address) (*types.Tran
 // Solidity: function cloneContract(address account) returns(address)
 func (_ArbSys *ArbSysTransactorSession) CloneContract(account common.Address) (*types.Transaction, error) {
 	return _ArbSys.Contract.CloneContract(&_ArbSys.TransactOpts, account)
-}
-
-// CurrentMessageTime is a paid mutator transaction binding the contract method 0x44f50653.
-//
-// Solidity: function currentMessageTime() returns(uint256)
-func (_ArbSys *ArbSysTransactor) CurrentMessageTime(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "currentMessageTime")
-}
-
-// CurrentMessageTime is a paid mutator transaction binding the contract method 0x44f50653.
-//
-// Solidity: function currentMessageTime() returns(uint256)
-func (_ArbSys *ArbSysSession) CurrentMessageTime() (*types.Transaction, error) {
-	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.TransactOpts)
-}
-
-// CurrentMessageTime is a paid mutator transaction binding the contract method 0x44f50653.
-//
-// Solidity: function currentMessageTime() returns(uint256)
-func (_ArbSys *ArbSysTransactorSession) CurrentMessageTime() (*types.Transaction, error) {
-	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.TransactOpts)
-}
-
-// TimeUpperBound is a paid mutator transaction binding the contract method 0xbde19776.
-//
-// Solidity: function timeUpperBound() returns(uint256)
-func (_ArbSys *ArbSysTransactor) TimeUpperBound(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "timeUpperBound")
-}
-
-// TimeUpperBound is a paid mutator transaction binding the contract method 0xbde19776.
-//
-// Solidity: function timeUpperBound() returns(uint256)
-func (_ArbSys *ArbSysSession) TimeUpperBound() (*types.Transaction, error) {
-	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.TransactOpts)
-}
-
-// TimeUpperBound is a paid mutator transaction binding the contract method 0xbde19776.
-//
-// Solidity: function timeUpperBound() returns(uint256)
-func (_ArbSys *ArbSysTransactorSession) TimeUpperBound() (*types.Transaction, error) {
-	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.TransactOpts)
 }
 
 // WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.

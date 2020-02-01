@@ -68,7 +68,7 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
+        constant: true,
         inputs: [],
         name: 'currentMessageTime',
         outputs: [
@@ -78,11 +78,11 @@ const _abi = [
             },
         ],
         payable: false,
-        stateMutability: 'nonpayable',
+        stateMutability: 'view',
         type: 'function',
     },
     {
-        constant: false,
+        constant: true,
         inputs: [],
         name: 'timeUpperBound',
         outputs: [
@@ -92,7 +92,7 @@ const _abi = [
             },
         ],
         payable: false,
-        stateMutability: 'nonpayable',
+        stateMutability: 'view',
         type: 'function',
     },
     {
@@ -111,7 +111,7 @@ const _abi = [
             },
         ],
         payable: false,
-        stateMutability: 'pure',
+        stateMutability: 'view',
         type: 'function',
     },
     {
