@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -66,10 +67,15 @@ func TestCheckpointMachine(t *testing.T) {
 
 	t.Log("Initial machine hash", mach.Hash())
 
-	_, numSteps := mach.ExecuteAssertion(1000, &protocol.TimeBoundsBlocks{
-		Start: common.NewTimeBlocks(big.NewInt(100)),
-		End:   common.NewTimeBlocks(big.NewInt(120)),
-	}, value.NewEmptyTuple())
+	_, numSteps := mach.ExecuteAssertion(
+		1000,
+		&protocol.TimeBoundsBlocks{
+			Start: common.NewTimeBlocks(big.NewInt(100)),
+			End:   common.NewTimeBlocks(big.NewInt(120)),
+		},
+		value.NewEmptyTuple(),
+		time.Hour,
+	)
 
 	t.Log("Ran machine for", numSteps, "steps")
 

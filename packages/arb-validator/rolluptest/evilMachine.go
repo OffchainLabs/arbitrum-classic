@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"time"
 )
 
 // evil machine is like a regular machine, except it returns a wrong hash w/ probability 1/8, repeatably
@@ -58,8 +59,9 @@ func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
+	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, timeBounds, inbox)
+	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, timeBounds, inbox, maxWallTime)
 	assn.AfterHash = _tweakHash(assn.AfterHash)
 	return assn, numSteps
 }

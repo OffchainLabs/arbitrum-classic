@@ -44,7 +44,8 @@ class Machine {
     Assertion run(uint64_t stepCount,
                   uint256_t timeBoundStart,
                   uint256_t timeBoundEnd,
-                  Tuple messages);
+                  Tuple messages,
+                  std::chrono::seconds wallLimit);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

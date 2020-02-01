@@ -18,6 +18,7 @@ package common
 
 import (
 	"math/big"
+	"time"
 )
 
 type TimeTicks struct {
@@ -46,6 +47,10 @@ func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
 
 func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 	return rt.Val.Cmp(rt2.Val)
+}
+
+func (rt TimeTicks) Duration() time.Duration {
+	return time.Millisecond * time.Duration(rt.Val.Int64())
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {

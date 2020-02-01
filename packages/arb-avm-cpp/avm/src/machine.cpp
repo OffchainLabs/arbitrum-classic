@@ -52,13 +52,23 @@ void Machine::initializeMachine(const MachineState& initial_state) {
 Assertion Machine::run(uint64_t stepCount,
                        uint256_t timeBoundStart,
                        uint256_t timeBoundEnd,
-                       Tuple messages) {
+                       Tuple messages,
+                       std::chrono::seconds wallLimit) {
+    bool has_time_limit = wallLimit.count() == 0;
+    auto start_time = std::chrono::system_clock::now();
     machine_state.context = AssertionContext{
         TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
         auto blockReason = runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
+        }
+        if (has_time_limit && machine_state.context.numSteps % 1000 == 0) {
+            auto end_time = std::chrono::system_clock::now();
+            auto run_time = end_time - start_time;
+            if (run_time >= wallLimit) {
+                break;
+            }
         }
     }
     return {machine_state.context.numSteps, machine_state.context.numGas,

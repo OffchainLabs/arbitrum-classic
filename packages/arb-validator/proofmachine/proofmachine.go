@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -74,11 +75,21 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	return m.machine.IsBlocked(currentTime, newMessages)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint64,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	startTime := time.Now()
+	endTime := startTime
+	hasTimeLimit := maxWallTime.Milliseconds() == 0
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint64(0)
 	stepIncrease := uint64(1)
 	stepsRan := 0
+	timeLeft := maxWallTime
+
 	for i := uint64(0); i < maxSteps; i += stepIncrease {
 		var proof []byte
 		var err error
@@ -90,7 +101,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 			}
 		}
 		beforeHash := m.Hash()
-		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds, inbox)
+		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds, inbox, timeLeft)
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
 		a.NumGas += a1.NumGas
@@ -129,6 +140,13 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 
 		if a1.DidInboxInsn {
 			inbox = value.NewEmptyTuple()
+		}
+		endTime = time.Now()
+		if hasTimeLimit {
+			if endTime.Sub(startTime) > maxWallTime {
+				break
+			}
+			timeLeft = maxWallTime - endTime.Sub(startTime)
 		}
 	}
 	fmt.Println("Proof mode ran ", stepsRan, " steps")

@@ -20,6 +20,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
@@ -165,7 +166,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		Start: common.NewTimeBlocks(big.NewInt(0)),
 		End:   common.NewTimeBlocks(big.NewInt(1000)),
 	}
-	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple())
+	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &structures.AssertionParams{

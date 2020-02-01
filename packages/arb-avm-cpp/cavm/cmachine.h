@@ -71,7 +71,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStart,
                                      void* timeboundEnd,
-                                     void* inbox);
+                                     void* inbox,
+                                     uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 

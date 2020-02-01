@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
@@ -99,7 +100,16 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	return b1
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint64,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	hasTimeLimit := maxWallTime.Milliseconds() == 0
+	startTime := time.Now()
+	endTime := startTime
+	timeLeft := maxWallTime
 	a := &protocol.ExecutionAssertion{
 		AfterHash:    m.cppmachine.Hash(),
 		DidInboxInsn: false,
@@ -116,8 +126,8 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 		}
 
 		pcStart := m.gomachine.GetPC()
-		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox)
-		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox)
+		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
 		if ranSteps1 != ranSteps2 {
 			pcEnd := m.gomachine.GetPC()
@@ -144,6 +154,14 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 		if ranSteps1 < steps {
 			break
 		}
+		endTime = time.Now()
+		if hasTimeLimit {
+			if endTime.Sub(startTime) > maxWallTime {
+				break
+			}
+			timeLeft = maxWallTime - endTime.Sub(startTime)
+		}
+
 	}
 	fmt.Println("Ran", totalSteps, "steps")
 	return a, totalSteps
