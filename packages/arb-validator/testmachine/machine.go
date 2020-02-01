@@ -106,7 +106,7 @@ func (m *Machine) ExecuteAssertion(
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	hasTimeLimit := maxWallTime.Milliseconds() == 0
+	hasTimeLimit := maxWallTime.Nanoseconds() == 0
 	startTime := time.Now()
 	endTime := startTime
 	timeLeft := maxWallTime
