@@ -63,7 +63,7 @@ Assertion Machine::run(uint64_t stepCount,
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
         }
-        if (has_time_limit && machine_state.context.numSteps % 1000 == 0) {
+        if (has_time_limit && machine_state.context.numSteps % 10000 == 0) {
             auto end_time = std::chrono::system_clock::now();
             auto run_time = end_time - start_time;
             if (run_time >= wallLimit) {
