@@ -20,6 +20,7 @@
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
+#include <chrono>
 #include <memory>
 #include <vector>
 
