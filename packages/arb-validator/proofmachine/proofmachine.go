@@ -83,7 +83,7 @@ func (m *Machine) ExecuteAssertion(
 ) (*protocol.ExecutionAssertion, uint64) {
 	startTime := time.Now()
 	endTime := startTime
-	hasTimeLimit := maxWallTime.Nanoseconds() == 0
+	hasTimeLimit := maxWallTime.Nanoseconds() != 0
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint64(0)
 	stepIncrease := uint64(1)
