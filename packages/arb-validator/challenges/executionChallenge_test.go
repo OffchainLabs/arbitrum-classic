@@ -45,7 +45,7 @@ func testExecutionChallenge(t *testing.T) {
 	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple())
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
 
 	challengeHash := structures.ExecutionDataHash(
 		numSteps,
