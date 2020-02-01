@@ -280,7 +280,7 @@ func (m *Machine) ExecuteAssertion(
 		if blocked != nil {
 			break
 		}
-		if hasTimeLimit && assCtx.StepCount()%1000 == 0 {
+		if hasTimeLimit && assCtx.StepCount()%10000 == 0 {
 			endTime := time.Now()
 			runTime := endTime.Sub(startTime)
 			if runTime > maxWallTime {
