@@ -54,7 +54,7 @@ Assertion Machine::run(uint64_t stepCount,
                        uint256_t timeBoundEnd,
                        Tuple messages,
                        std::chrono::seconds wallLimit) {
-    bool has_time_limit = wallLimit.count() == 0;
+    bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
     machine_state.context = AssertionContext{
         TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
