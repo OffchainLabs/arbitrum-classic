@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -196,60 +195,7 @@ func (vm *ArbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *ArbRollup) ConfirmValid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	outMsgs []value.Value,
-	logsAccHash common.Hash,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	//vm.auth.Context = ctx
-	//messages := hashing.CombineMessages(outMsgs)
-	//tx, err := vm.ArbRollup.ConfirmValid(
-	//	vm.auth,
-	//	deadline.Val,
-	//	messages,
-	//	logsAccHash,
-	//	protoHash,
-	//	stakerAddresses,
-	//	stakerProofs,
-	//	stakerProofOffsets,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return vm.waitForReceipt(ctx, tx, "ConfirmValid")
-	return nil
-}
-
-func (vm *ArbRollup) ConfirmInvalid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	challengeNodeData common.Hash,
-	branch structures.ChildType,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	//vm.auth.Context = ctx
-	//tx, err := vm.ArbRollup.ConfirmInvalid(
-	//	vm.auth,
-	//	deadline.Val,
-	//	challengeNodeData,
-	//	new(big.Int).SetUint64(uint64(branch)),
-	//	protoHash,
-	//	stakerAddresses,
-	//	stakerProofs,
-	//	stakerProofOffsets,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
+func (vm *ArbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportunity) error {
 	return nil
 }
 
