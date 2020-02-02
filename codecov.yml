@@ -64,4 +64,5 @@ ignore:
   - "packages/arb-provider-ethers/src/lib/ArbRollupFactory.ts"
   - "packages/arb-provider-ethers/src/lib/GlobalPendingInbox.d.ts"
   - "packages/arb-provider-ethers/src/lib/GlobalPendingInboxFactory.ts"
+  - "packages/arb-avm-cpp/external/keccak/**/*"
   - "**/*.pb.go"

@@ -33,7 +33,6 @@ from . import byterange
 from . import sized_byterange
 from . import sized_bigtuple
 from . import inboxctx
-from . import currency_store
 from . import tup
 from . import sha3
 from . import arith
@@ -68,7 +67,6 @@ __all__ = [
     "sized_byterange",
     "sized_bigtuple",
     "inboxctx",
-    "currency_store",
     "tup",
     "sha3",
     "arith",
