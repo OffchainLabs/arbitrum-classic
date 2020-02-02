@@ -48,7 +48,7 @@ func TestMachineAdd(t *testing.T) {
 		common.NewTimeBlocks(big.NewInt(0)),
 		common.NewTimeBlocks(big.NewInt(100000)),
 	}
-	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue())
+	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue(), 0)
 }
 
 func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
@@ -1491,6 +1491,7 @@ func TestLog(t *testing.T) {
 			common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
+		0,
 	)
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1527,6 +1528,7 @@ func TestSend(t *testing.T) {
 			common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
+		0,
 	)
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1558,6 +1560,7 @@ func TestGettime(t *testing.T) {
 			common.NewTimeBlocks(big.NewInt(10)),
 		},
 		value.NewEmptyTuple(),
+		0,
 	)
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))

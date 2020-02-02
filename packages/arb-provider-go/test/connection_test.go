@@ -95,6 +95,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       250000,
+		MaxTimeBoundsWidth:      20,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 

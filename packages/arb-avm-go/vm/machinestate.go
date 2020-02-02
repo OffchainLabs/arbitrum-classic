@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
@@ -261,7 +262,14 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint64) {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint64,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	hasTimeLimit := maxWallTime.Nanoseconds() != 0
+	startTime := time.Now()
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
@@ -271,6 +279,13 @@ func (m *Machine) ExecuteAssertion(maxSteps uint64, timeBounds *protocol.TimeBou
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
 			break
+		}
+		if hasTimeLimit && assCtx.StepCount()%10000 == 0 {
+			endTime := time.Now()
+			runTime := endTime.Sub(startTime)
+			if runTime > maxWallTime {
+				break
+			}
 		}
 	}
 	return assCtx.Finalize(m)

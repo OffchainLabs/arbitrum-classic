@@ -219,7 +219,7 @@ func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.Unlock()
 }
 
-func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint64) (*protocol.ExecutionAssertion, uint64) {
+func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration) (*protocol.ExecutionAssertion, uint64) {
 	retChan := make(chan struct {
 		*protocol.ExecutionAssertion
 		uint64
@@ -229,7 +229,13 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxSteps uint64) (*pr
 		latestTime := chain.CurrentBlockId().Height
 		timeBounds := &protocol.TimeBoundsBlocks{latestTime, latestTime}
 		go func() {
-			assertion, numSteps := mach.ExecuteAssertion(maxSteps, timeBounds, messages)
+			assertion, numSteps := mach.ExecuteAssertion(
+				// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
+				10000000000000000,
+				timeBounds,
+				messages,
+				maxTime,
+			)
 			retChan <- struct {
 				*protocol.ExecutionAssertion
 				uint64

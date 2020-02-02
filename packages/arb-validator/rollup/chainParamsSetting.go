@@ -27,7 +27,8 @@ func DefaultChainParams() structures.ChainParams {
 	return structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(gracePeriodInBlocks))),
-		MaxExecutionSteps:       10000000,
-		ArbGasSpeedLimitPerTick: 100000,
+		MaxExecutionSteps:       1000000000,
+		MaxTimeBoundsWidth:      20,
+		ArbGasSpeedLimitPerTick: 20000000,
 	}
 }

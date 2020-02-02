@@ -356,6 +356,6 @@ func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
 	latestTime := chain.latestBlockId.Height
 	return &protocol.TimeBoundsBlocks{
 		latestTime,
-		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(10))),
+		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxTimeBoundsWidth)))),
 	}
 }

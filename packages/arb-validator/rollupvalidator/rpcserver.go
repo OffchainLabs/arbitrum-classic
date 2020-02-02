@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -36,7 +37,7 @@ type RPCServer struct {
 }
 
 func LaunchRPC(man *rollupmanager.Manager, port string) error {
-	server, err := NewRPCServer(man, 20000000)
+	server, err := NewRPCServer(man, time.Second*60)
 	if err != nil {
 		return err
 	}
@@ -60,8 +61,8 @@ func LaunchRPC(man *rollupmanager.Manager, port string) error {
 }
 
 // NewServer returns a new instance of the Server class
-func NewRPCServer(man *rollupmanager.Manager, maxCallSteps uint64) (*RPCServer, error) {
-	server, err := NewServer(man, maxCallSteps)
+func NewRPCServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*RPCServer, error) {
+	server, err := NewServer(man, maxCallTime)
 	return &RPCServer{server}, err
 }
 

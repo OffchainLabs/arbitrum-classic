@@ -24,6 +24,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
@@ -45,11 +46,11 @@ type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
 	man           *rollupmanager.Manager
-	maxCallSteps  uint64
+	maxCallTime   time.Duration
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallSteps uint64) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
 	man.AddListener(assertionListener)
@@ -59,7 +60,7 @@ func NewServer(man *rollupmanager.Manager, maxCallSteps uint64) (*Server, error)
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{man.RollupAddress, tracker, man, maxCallSteps}, nil
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -183,7 +184,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	messageStack := protocol.NewMessageStack()
 	messageStack.AddMessage(callingMessage)
 
-	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
+	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallTime)
 
 	log.Println("Executed call for", steps, "steps")
 

@@ -398,6 +398,7 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 		StakeRequirement:        stakeRequired,
 		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
+		MaxTimeBoundsWidth:      rawParams.MaxTimeBoundsWidth,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }

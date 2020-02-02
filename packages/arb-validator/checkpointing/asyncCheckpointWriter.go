@@ -18,6 +18,7 @@ package checkpointing
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"sync"
 	"time"
 )
@@ -33,7 +34,7 @@ type asyncCheckpointWriter struct {
 func NewAsyncCheckpointWriter(ctx context.Context, cp *RollupCheckpointerImpl) *asyncCheckpointWriter {
 	ret := &asyncCheckpointWriter{sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
 	go func() {
-		deleteTicker := time.NewTicker(time.Minute)
+		deleteTicker := time.NewTicker(common.NewTimeBlocksInt(25).Duration())
 		defer deleteTicker.Stop()
 		for {
 			select {

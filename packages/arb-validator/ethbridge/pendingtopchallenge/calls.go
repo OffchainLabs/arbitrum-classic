@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package rollup
+package pendingtopchallenge
 
 import (
 	"bytes"
@@ -23,19 +23,17 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethutils"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, initalProtoStateHash [32]byte, branches []*big.Int, deadlineTicks []*big.Int, challengeNodeData [][32]byte, logsAcc [][32]byte, vmProtoStateHashes [][32]byte, messagesLengths []*big.Int, messages []byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return callCheck(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
+func (_PendingTopChallenge *PendingTopChallengeTransactor) BisectCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _chainLength *big.Int) error {
+	return callCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _chainLength)
 }
 
 func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
-	contractABI, err := abi.JSON(bytes.NewReader([]byte(ArbRollupABI)))
+	contractABI, err := abi.JSON(bytes.NewReader([]byte(PendingTopChallengeABI)))
 	if err != nil {
 		return err
 	}

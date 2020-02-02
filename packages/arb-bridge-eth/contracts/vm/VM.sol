@@ -30,6 +30,7 @@ library VM {
         uint256 gracePeriodTicks;
         uint256 arbGasSpeedLimitPerTick;
         uint64  maxExecutionSteps;
+        uint64  maxTimeBoundsWidth;
     }
 
     function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
