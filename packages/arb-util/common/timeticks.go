@@ -45,6 +45,10 @@ func TimeFromSeconds(seconds int64) TimeTicks {
 	return TimeTicks{new(big.Int).Mul(_timeTicksPerSecond, big.NewInt(seconds))}
 }
 
+func (rt TimeTicks) Clone() TimeTicks {
+	return TimeTicks{Val: new(big.Int).Set(rt.Val)}
+}
+
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
 	return TimeTicks{new(big.Int).Add(rt.Val, rt2.Val)}
 }

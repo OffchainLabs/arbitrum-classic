@@ -28,6 +28,16 @@ type ConfirmValidOpportunity struct {
 	VMProtoStateHash common.Hash
 }
 
+func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {
+	messages := append([]value.Value{}, opp.Messages...)
+	return ConfirmValidOpportunity{
+		DeadlineTicks:    opp.DeadlineTicks.Clone(),
+		Messages:         messages,
+		LogsAcc:          opp.LogsAcc,
+		VMProtoStateHash: opp.VMProtoStateHash,
+	}
+}
+
 func (opp ConfirmValidOpportunity) BranchType() ChildType {
 	return ValidChildType
 }
@@ -56,6 +66,15 @@ type ConfirmInvalidOpportunity struct {
 	VMProtoStateHash  common.Hash
 }
 
+func (opp ConfirmInvalidOpportunity) Clone() ConfirmNodeOpportunity {
+	return ConfirmInvalidOpportunity{
+		opp.DeadlineTicks.Clone(),
+		opp.ChallengeNodeData,
+		opp.Branch,
+		opp.VMProtoStateHash,
+	}
+}
+
 func (opp ConfirmInvalidOpportunity) BranchType() ChildType {
 	return opp.Branch
 }
@@ -73,6 +92,7 @@ func (opp ConfirmInvalidOpportunity) ProofSize() int {
 }
 
 type ConfirmNodeOpportunity interface {
+	Clone() ConfirmNodeOpportunity
 	BranchType() ChildType
 	Deadline() common.TimeTicks
 	StateHash() common.Hash
@@ -84,4 +104,23 @@ type ConfirmOpportunity struct {
 	CurrentLatestConfirmed common.Hash
 	StakerAddresses        []common.Address
 	StakerProofs           [][]common.Hash
+}
+
+func (c *ConfirmOpportunity) Clone() *ConfirmOpportunity {
+	nodes := make([]ConfirmNodeOpportunity, 0, len(c.Nodes))
+	for _, node := range c.Nodes {
+		nodes = append(nodes, node.Clone())
+	}
+	stakerAddresses := append([]common.Address{}, c.StakerAddresses...)
+	stakerProofs := make([][]common.Hash, 0, len(c.StakerProofs))
+	for _, proof := range c.StakerProofs {
+		stakerProofs = append(stakerProofs, append([]common.Hash{}, proof...))
+	}
+
+	return &ConfirmOpportunity{
+		Nodes:                  nodes,
+		CurrentLatestConfirmed: c.CurrentLatestConfirmed,
+		StakerAddresses:        stakerAddresses,
+		StakerProofs:           stakerProofs,
+	}
 }

@@ -472,12 +472,13 @@ func (lis *ValidatorChainListener) NodesConfirmable(ctx context.Context, observe
 	}
 	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
+	confClone := conf.Clone()
 	go func() {
-		err := lis.actor.Confirm(ctx, conf)
+		err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
 			log.Println("Failed to confirm valid node", err)
 			lis.Lock()
-			delete(lis.broadcastConfirmations, conf.CurrentLatestConfirmed)
+			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
 		}
 	}()
