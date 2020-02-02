@@ -21,9 +21,7 @@ import (
 	"time"
 )
 
-const (
-	AverageSecondsPerBlock = 2
-)
+var AverageSecondsPerBlock = int64(2)
 
 type TimeTicks struct {
 	Val *big.Int
