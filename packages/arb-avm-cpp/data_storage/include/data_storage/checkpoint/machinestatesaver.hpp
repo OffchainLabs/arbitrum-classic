@@ -35,13 +35,13 @@ class MachineStateSaver {
 
    public:
     MachineStateSaver(std::unique_ptr<Transaction> transaction_);
-    SaveResults saveTuple(const Tuple& val);
-    SaveResults saveValue(const value& val);
-    SaveResults saveMachineState(
-        const MachineStateKeys& state_data,
-        const std::vector<unsigned char>& checkpoint_name);
-    rocksdb::Status commitTransaction();
-    rocksdb::Status rollBackTransaction();
+    auto saveTuple(const Tuple& val) -> SaveResults;
+    auto saveValue(const value& val) -> SaveResults;
+    auto saveMachineState(const MachineStateKeys& state_data,
+                          const std::vector<unsigned char>& checkpoint_name)
+        -> SaveResults;
+    auto commitTransaction() -> rocksdb::Status;
+    auto rollBackTransaction() -> rocksdb::Status;
 };
 
 #endif /* machinestatesaver_hpp */

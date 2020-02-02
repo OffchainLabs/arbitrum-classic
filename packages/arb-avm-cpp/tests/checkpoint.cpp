@@ -80,8 +80,8 @@ void getTuple(MachineStateFetcher& fetcher,
 }
 
 void getTupleValues(MachineStateFetcher& fetcher,
-                    std::vector<unsigned char>& hash_key,
-                    std::vector<uint256_t> value_hashes) {
+                    const std::vector<unsigned char>& hash_key,
+                    const std::vector<uint256_t>& value_hashes) {
     auto results = fetcher.getTuple(hash_key);
     REQUIRE(results.data.tuple_size() == value_hashes.size());
 
@@ -460,8 +460,8 @@ TEST_CASE("Save And Get Tuple") {
 }
 
 void saveState(MachineStateSaver& saver,
-               MachineStateKeys storage_data,
-               std::vector<unsigned char> checkpoint_name) {
+               const MachineStateKeys& storage_data,
+               const std::vector<unsigned char>& checkpoint_name) {
     auto results = saver.saveMachineState(storage_data, checkpoint_name);
     auto status = saver.commitTransaction();
 
@@ -470,10 +470,10 @@ void saveState(MachineStateSaver& saver,
 }
 
 void getSavedState(MachineStateFetcher& fetcher,
-                   std::vector<unsigned char> checkpoint_name,
-                   MachineStateKeys expected_data,
+                   const std::vector<unsigned char>& checkpoint_name,
+                   const MachineStateKeys& expected_data,
                    int expected_ref_count,
-                   std::vector<std::vector<unsigned char>> keys) {
+                   const std::vector<std::vector<unsigned char>>& keys) {
     auto results = fetcher.getMachineState(checkpoint_name);
 
     REQUIRE(results.status.ok());
@@ -493,10 +493,11 @@ void getSavedState(MachineStateFetcher& fetcher,
     }
 }
 
-void deleteCheckpoint(CheckpointStorage& storage,
-                      MachineStateFetcher& fetcher,
-                      std::vector<unsigned char> checkpoint_name,
-                      std::vector<std::vector<unsigned char>> deleted_values) {
+void deleteCheckpoint(
+    CheckpointStorage& storage,
+    const MachineStateFetcher& fetcher,
+    const std::vector<unsigned char>& checkpoint_name,
+    const std::vector<std::vector<unsigned char>>& deleted_values) {
     auto res = deleteCheckpoint(storage, checkpoint_name);
     auto results = fetcher.getMachineState(checkpoint_name);
     REQUIRE(results.status.ok() == false);
@@ -509,9 +510,9 @@ void deleteCheckpoint(CheckpointStorage& storage,
 
 void deleteCheckpointSavedTwice(
     CheckpointStorage& storage,
-    MachineStateFetcher& fetcher,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
+    const MachineStateFetcher& fetcher,
+    const std::vector<unsigned char>& checkpoint_name,
+    const std::vector<std::vector<unsigned char>>& deleted_values) {
     auto res = deleteCheckpoint(storage, checkpoint_name);
     auto res2 = deleteCheckpoint(storage, checkpoint_name);
     auto results = fetcher.getMachineState(checkpoint_name);
@@ -526,9 +527,9 @@ void deleteCheckpointSavedTwice(
 
 void deleteCheckpointSavedTwiceReordered(
     CheckpointStorage& storage,
-    MachineStateFetcher& fetcher,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
+    const MachineStateFetcher& fetcher,
+    const std::vector<unsigned char>& checkpoint_name,
+    const std::vector<std::vector<unsigned char>>& deleted_values) {
     auto resultsx = fetcher.getMachineState(checkpoint_name);
     for (auto& hash_key : deleted_values) {
         auto res = fetcher.getValue(hash_key);
@@ -552,14 +553,14 @@ void deleteCheckpointSavedTwiceReordered(
     }
 }
 
-MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
-                                 value registerVal,
-                                 Datastack stack,
-                                 Datastack auxstack,
-                                 Status state,
-                                 CodePoint pc,
-                                 CodePoint err_pc,
-                                 BlockReason blockReason) {
+auto makeStorageData(MachineStateSaver& stateSaver,
+                     const value& registerVal,
+                     const Datastack& stack,
+                     const Datastack& auxstack,
+                     Status state,
+                     const CodePoint& pc,
+                     const CodePoint& err_pc,
+                     const BlockReason& blockReason) -> MachineStateKeys {
     TuplePool pool;
 
     auto datastack_results = stack.checkpointState(stateSaver, &pool);
@@ -577,7 +578,7 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
         err_pc_results.storage_key,       status_str};
 }
 
-MachineStateKeys getStateValues(MachineStateSaver& saver) {
+auto getStateValues(MachineStateSaver& saver) -> MachineStateKeys {
     TuplePool pool;
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), &pool);
@@ -605,7 +606,7 @@ MachineStateKeys getStateValues(MachineStateSaver& saver) {
     return saved_data;
 }
 
-MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
+auto getDefaultValues(MachineStateSaver& saver) -> MachineStateKeys {
     TuplePool pool;
     auto register_val = Tuple();
     auto data_stack = Tuple();
@@ -620,7 +621,8 @@ MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     return data;
 }
 
-std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
+auto getHashKeys(const MachineStateKeys& data)
+    -> std::vector<std::vector<unsigned char>> {
     std::vector<std::vector<unsigned char>> hash_keys;
 
     hash_keys.push_back(data.auxstack_key);

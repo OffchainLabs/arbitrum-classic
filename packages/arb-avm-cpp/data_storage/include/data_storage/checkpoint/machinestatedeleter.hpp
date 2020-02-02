@@ -31,22 +31,24 @@ namespace rocksdb {
 class Status;
 }
 
-DeleteResults deleteCheckpoint(
-    CheckpointStorage& checkpoint_storage,
-    const std::vector<unsigned char>& checkpoint_name);
+auto deleteCheckpoint(CheckpointStorage& checkpoint_storage,
+                      const std::vector<unsigned char>& checkpoint_name)
+    -> DeleteResults;
 
 class MachineStateDeleter {
    private:
     std::unique_ptr<Transaction> transaction;
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
-                              GetResults results);
+    auto deleteTuple(const std::vector<unsigned char>& hash_key,
+                     const GetResults& results) -> DeleteResults;
 
    public:
     MachineStateDeleter(std::unique_ptr<Transaction> transaction_);
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
-    rocksdb::Status commitTransaction();
-    rocksdb::Status rollBackTransaction();
+    auto deleteTuple(const std::vector<unsigned char>& hash_key)
+        -> DeleteResults;
+    auto deleteValue(const std::vector<unsigned char>& hash_key)
+        -> DeleteResults;
+    auto commitTransaction() -> rocksdb::Status;
+    auto rollBackTransaction() -> rocksdb::Status;
 };
 
 #endif /* checkpointdeleter_h */

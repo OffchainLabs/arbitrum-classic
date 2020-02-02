@@ -32,7 +32,7 @@ class Datastack {
     void addHash() const;
     void calculateAllHashes() const;
     void initializeDataStack(const Tuple& tuple);
-    Tuple getTupleRepresentation(TuplePool* pool);
+    auto getTupleRepresentation(TuplePool* pool) const -> Tuple;
 
    public:
     std::vector<value> values;
@@ -50,15 +50,15 @@ class Datastack {
         }
     };
 
-    const value& operator[](size_t index) const {
+    auto operator[](size_t index) const -> const value& {
         return values[values.size() - 1 - index];
     }
 
-    value& operator[](size_t index) {
+    auto operator[](size_t index) -> value& {
         return values[values.size() - 1 - index];
     }
 
-    value pop() {
+    auto pop() -> value {
         auto stackEmpty = values.empty();
         if (stackEmpty) {
             throw std::runtime_error("Stack is empty");
@@ -82,10 +82,10 @@ class Datastack {
         }
     }
 
-    std::pair<uint256_t, std::vector<unsigned char>> marshalForProof(
-        const std::vector<bool>& stackInfo);
+    auto marshalForProof(const std::vector<bool>& stackInfo)
+        -> std::pair<uint256_t, std::vector<unsigned char>>;
 
-    value& peek() {
+    auto peek() -> value& {
         if (values.size() == 0) {
             throw std::runtime_error("Stack is empty");
         }
@@ -93,16 +93,18 @@ class Datastack {
         return values.back();
     }
 
-    uint64_t stacksize() { return values.size(); }
+    auto stacksize() -> uint64_t { return values.size(); }
 
-    uint256_t hash() const;
+    auto hash() const -> uint256_t;
 
-    SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
+    auto checkpointState(MachineStateSaver& saver, TuplePool* pool) const
+        -> SaveResults;
 
-    bool initializeDataStack(const MachineStateFetcher& fetcher,
-                             const std::vector<unsigned char>& hash_key);
+    auto initializeDataStack(const MachineStateFetcher& fetcher,
+                             const std::vector<unsigned char>& hash_key)
+        -> bool;
 };
 
-std::ostream& operator<<(std::ostream& os, const Datastack& val);
+auto operator<<(std::ostream& os, const Datastack& val) -> std::ostream&;
 
 #endif /* datastack_hpp */

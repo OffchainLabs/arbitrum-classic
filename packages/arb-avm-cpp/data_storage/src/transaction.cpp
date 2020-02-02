@@ -23,8 +23,8 @@
 
 #include <iostream>
 
-std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
-    const std::string& string_value) {
+auto parseCountAndValue(const std::string& string_value)
+    -> std::tuple<uint32_t, std::vector<unsigned char>> {
     if (string_value.empty()) {
         return std::make_tuple(0, std::vector<unsigned char>());
     } else {
@@ -38,9 +38,9 @@ std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
     }
 }
 
-std::vector<unsigned char> serializeCountAndValue(
-    int32_t count,
-    const std::vector<unsigned char>& value) {
+auto serializeCountAndValue(int32_t count,
+                            const std::vector<unsigned char>& value)
+    -> std::vector<unsigned char> {
     std::vector<unsigned char> output_vector(sizeof(count));
     memcpy(&output_vector[0], &count, sizeof(count));
     output_vector.insert(output_vector.end(), value.begin(), value.end());
@@ -57,16 +57,16 @@ Transaction::~Transaction() {
            transaction->GetState() == rocksdb::Transaction::ROLLEDBACK);
 }
 
-rocksdb::Status Transaction::commit() {
+auto Transaction::commit() -> rocksdb::Status {
     return transaction->Commit();
 }
 
-rocksdb::Status Transaction::rollBack() {
+auto Transaction::rollBack() -> rocksdb::Status {
     return transaction->Rollback();
 }
 
-SaveResults Transaction::incrementReference(
-    const std::vector<unsigned char>& hash_key) {
+auto Transaction::incrementReference(const std::vector<unsigned char>& hash_key)
+    -> SaveResults {
     auto results = getData(hash_key);
 
     if (results.status.ok()) {
@@ -78,8 +78,9 @@ SaveResults Transaction::incrementReference(
     }
 }
 
-SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
-                                  const std::vector<unsigned char>& value) {
+auto Transaction::saveData(const std::vector<unsigned char>& hash_key,
+                           const std::vector<unsigned char>& value)
+    -> SaveResults {
     auto results = getData(hash_key);
     int ref_count;
 
@@ -105,8 +106,8 @@ SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
     return saveValueWithRefCount(ref_count, hash_key, value);
 }
 
-DeleteResults Transaction::deleteData(
-    const std::vector<unsigned char>& hash_key) {
+auto Transaction::deleteData(const std::vector<unsigned char>& hash_key)
+    -> DeleteResults {
     auto results = getData(hash_key);
 
     if (results.status.ok()) {
@@ -125,8 +126,8 @@ DeleteResults Transaction::deleteData(
     }
 }
 
-GetResults Transaction::getData(
-    const std::vector<unsigned char>& hash_key) const {
+auto Transaction::getData(const std::vector<unsigned char>& hash_key) const
+    -> GetResults {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
     std::string key_str(hash_key.begin(), hash_key.end());
@@ -145,10 +146,10 @@ GetResults Transaction::getData(
 }
 
 // private ------------------------------------------------------------------
-SaveResults Transaction::saveValueWithRefCount(
+auto Transaction::saveValueWithRefCount(
     uint32_t updated_ref_count,
     const std::vector<unsigned char>& hash_key,
-    const std::vector<unsigned char>& value) {
+    const std::vector<unsigned char>& value) -> SaveResults {
     auto updated_entry = serializeCountAndValue(updated_ref_count, value);
 
     auto status = saveKeyValuePair(hash_key, updated_entry);
@@ -160,16 +161,16 @@ SaveResults Transaction::saveValueWithRefCount(
     }
 }
 
-rocksdb::Status Transaction::saveKeyValuePair(
-    const std::vector<unsigned char>& key,
-    const std::vector<unsigned char>& value) {
+auto Transaction::saveKeyValuePair(const std::vector<unsigned char>& key,
+                                   const std::vector<unsigned char>& value)
+    -> rocksdb::Status {
     std::string value_str(value.begin(), value.end());
     std::string key_str(key.begin(), key.end());
     return transaction->Put(key_str, value_str);
 }
 
-rocksdb::Status Transaction::deleteKeyValuePair(
-    const std::vector<unsigned char>& key) {
+auto Transaction::deleteKeyValuePair(const std::vector<unsigned char>& key)
+    -> rocksdb::Status {
     std::string key_str(key.begin(), key.end());
     return transaction->Delete(key_str);
 }

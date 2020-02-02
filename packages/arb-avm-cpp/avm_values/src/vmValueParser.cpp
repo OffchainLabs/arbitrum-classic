@@ -21,29 +21,32 @@
 #include <sys/stat.h>
 #include <fstream>
 
-const char* getContractData(const std::string& contract_filename) {
+auto getContractData(const std::string& contract_filename)
+    -> std::vector<char> {
     std::ifstream myfile;
 
     struct stat filestatus;
     stat(contract_filename.c_str(), &filestatus);
 
-    char* buf = (char*)malloc(filestatus.st_size);
+    std::vector<char> data;
+    data.resize(filestatus.st_size);
 
     myfile.open(contract_filename, std::ios::in);
 
     if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
+        myfile.read(data.data(), filestatus.st_size);
         myfile.close();
     }
 
-    return buf;
+    return data;
 }
 
-InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     TuplePool& pool) {
+auto parseInitialVmValues(const std::string& contract_filename, TuplePool& pool)
+    -> InitialVmValues {
     InitialVmValues initial_state;
 
-    auto bufptr = getContractData(contract_filename);
+    auto data = getContractData(contract_filename);
+    auto bufptr = const_cast<const char*>(data.data());
 
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
@@ -54,7 +57,6 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
         std::cerr << "incorrect version of .ao file" << std::endl;
         std::cerr << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
-
         initial_state.valid_state = false;
         return initial_state;
     } else {
@@ -81,7 +83,7 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
         for (uint64_t i = 0; i < codeCount; i++) {
             ops.emplace_back(deserializeOperation(bufptr, pool));
         }
-        initial_state.code = opsToCodePoints(ops);
+        initial_state.code = opsToCodePoints(std::move(ops));
         initial_state.staticVal = deserialize_value(bufptr, pool);
         initial_state.valid_state = true;
 

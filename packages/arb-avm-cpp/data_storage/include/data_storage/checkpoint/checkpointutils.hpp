@@ -33,16 +33,16 @@ extern std::unordered_map<int, int> blockreason_type_length;
 
 namespace checkpoint {
 namespace utils {
-std::vector<unsigned char> serializeValue(const value& val);
-CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
-                               const std::vector<CodePoint>& code);
-uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
-std::vector<std::vector<unsigned char>> parseTuple(
-    const std::vector<unsigned char>& data);
-MachineStateKeys extractStateKeys(
-    const std::vector<unsigned char>& stored_state);
-std::vector<unsigned char> serializeStateKeys(
-    const MachineStateKeys& state_data);
+auto serializeValue(const value& val) -> std::vector<unsigned char>;
+auto deserializeCodepoint(const std::vector<unsigned char>& val,
+                          const std::vector<CodePoint>& code) -> CodePoint;
+auto deserializeUint256_t(const std::vector<unsigned char>& val) -> uint256_t;
+auto parseTuple(const std::vector<unsigned char>& data)
+    -> std::vector<std::vector<unsigned char>>;
+auto extractStateKeys(const std::vector<unsigned char>& stored_state)
+    -> MachineStateKeys;
+auto serializeStateKeys(const MachineStateKeys& state_data)
+    -> std::vector<unsigned char>;
 }  // namespace utils
 }  // namespace checkpoint
 

@@ -19,19 +19,20 @@
 
 #include <avm_values/opcodes.hpp>
 #include <avm_values/value.hpp>
+#include <utility>
 
 struct Operation {
     OpCode opcode;
     std::unique_ptr<value> immediate;
 
-    Operation() { opcode = OpCode::DEFAULT; };
-    Operation(OpCode opcode_) : opcode(opcode_) {}
-    Operation(OpCode opcode_, value val);
+    Operation() noexcept { opcode = OpCode::DEFAULT; };
+    explicit Operation(OpCode opcode_) noexcept : opcode(opcode_) {}
+    Operation(OpCode opcode_, const value& val) noexcept;
 
     Operation(const Operation&);
-    Operation(Operation&&);
-    Operation& operator=(const Operation&);
-    Operation& operator=(Operation&&);
+    Operation(Operation&&) noexcept;
+    auto operator=(const Operation&) -> Operation&;
+    auto operator=(Operation&&) noexcept -> Operation&;
     ~Operation();
     void marshal(std::vector<unsigned char>& buf) const;
     void marshalShallow(std::vector<unsigned char>& buf) const;
@@ -39,8 +40,8 @@ struct Operation {
                          bool includeVal) const;
 };
 
-bool operator==(const Operation& val1, const Operation& val2);
-bool operator!=(const Operation& val1, const Operation& val2);
+auto operator==(const Operation& val1, const Operation& val2) -> bool;
+auto operator!=(const Operation& val1, const Operation& val2) -> bool;
 
 extern uint64_t pc_default;
 
@@ -54,21 +55,21 @@ struct CodePoint {
         nextHash = 0;
     }
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
-        : pc(pc_), op(op_), nextHash(nextHash_) {}
+        : pc(pc_), op(std::move(op_)), nextHash(std::move(nextHash_)) {}
     void marshal(std::vector<unsigned char>& buf) const;
-    bool isSet() {
+    auto isSet() -> bool {
         return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
                 (nextHash != 0));
     }
 };
 
-CodePoint getErrCodePoint();
+auto getErrCodePoint() -> CodePoint;
 
-uint256_t hash(const CodePoint& cp);
+auto hash(const CodePoint& cp) -> uint256_t;
 
-bool operator==(const CodePoint& val1, const CodePoint& val2);
-std::ostream& operator<<(std::ostream& os, const Operation& val);
+auto operator==(const CodePoint& val1, const CodePoint& val2) -> bool;
+auto operator<<(std::ostream& os, const Operation& val) -> std::ostream&;
 
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops);
+auto opsToCodePoints(std::vector<Operation>&& ops) -> std::vector<CodePoint>;
 
 #endif /* codepoint_hpp */

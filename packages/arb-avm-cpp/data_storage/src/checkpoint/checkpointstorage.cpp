@@ -31,29 +31,29 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path,
     initial_state = parseInitialVmValues(contract_path, *pool.get());
 }
 
-bool CheckpointStorage::closeCheckpointStorage() {
+auto CheckpointStorage::closeCheckpointStorage() -> bool {
     auto status = datastorage->closeDb();
     return status.ok();
 }
 
-InitialVmValues CheckpointStorage::getInitialVmValues() const {
+auto CheckpointStorage::getInitialVmValues() const -> InitialVmValues {
     return initial_state;
 }
 
-GetResults CheckpointStorage::getValue(
-    const std::vector<unsigned char>& hash_key) const {
+auto CheckpointStorage::getValue(
+    const std::vector<unsigned char>& hash_key) const -> GetResults {
     return datastorage->getValue(hash_key);
 }
 
-std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
+auto CheckpointStorage::makeTransaction() -> std::unique_ptr<Transaction> {
     return datastorage->makeTransaction();
 }
 
-std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
-    const {
+auto CheckpointStorage::makeConstTransaction() const
+    -> std::unique_ptr<const Transaction> {
     return datastorage->makeTransaction();
 }
 
-std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {
+auto CheckpointStorage::makeKeyValueStore() -> std::unique_ptr<KeyValueStore> {
     return datastorage->makeKeyValueStore();
 }

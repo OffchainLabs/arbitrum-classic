@@ -123,7 +123,8 @@ Tuple::Tuple(value val1,
 
 Tuple::Tuple(std::vector<value> values, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(values.size())) {
-    if (values.size() < 9) {
+    if (!values.empty()) {
+        assert(tpl.get() != nullptr);
         for (auto& val : values) {
             tpl->data.push_back(std::move(val));
         }
@@ -141,7 +142,7 @@ void Tuple::marshal(std::vector<unsigned char>& buf) const {
 
 // marshalForProof does not use this
 // see similar functionality in value.marshalShallow
-value Tuple::clone_shallow() {
+auto Tuple::clone_shallow() -> value {
     Tuple tup(tuplePool, tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {
         auto val = get_element(i);
@@ -155,7 +156,7 @@ value Tuple::clone_shallow() {
     return tup;
 }
 
-uint256_t Tuple::calculateHash() const {
+auto Tuple::calculateHash() const -> uint256_t {
     std::array<unsigned char, 1 + 8 * 32> tupData;
     auto oit = tupData.begin();
     tupData[0] = TUPLE + tuple_size();
@@ -175,7 +176,7 @@ uint256_t Tuple::calculateHash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-uint256_t zeroHash() {
+auto zeroHash() -> uint256_t {
     std::array<unsigned char, 1> tupData;
     tupData[0] = TUPLE;
     std::array<unsigned char, 32> hashData;
@@ -183,7 +184,7 @@ uint256_t zeroHash() {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-std::ostream& operator<<(std::ostream& os, const Tuple& val) {
+auto operator<<(std::ostream& os, const Tuple& val) -> std::ostream& {
     os << "Tuple(";
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         os << val.get_element(i);

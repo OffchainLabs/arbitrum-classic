@@ -25,7 +25,7 @@
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 
-std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+auto operator<<(std::ostream& os, const MachineState& val) -> std::ostream& {
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
@@ -36,12 +36,12 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Machine& val) {
+auto operator<<(std::ostream& os, const Machine& val) -> std::ostream& {
     os << val.machine_state;
     return os;
 }
 
-bool Machine::initializeMachine(const std::string& filename) {
+auto Machine::initializeMachine(const std::string& filename) -> bool {
     return machine_state.initialize_machinestate(filename);
 }
 
@@ -49,15 +49,13 @@ void Machine::initializeMachine(const MachineState& initial_state) {
     machine_state = initial_state;
 }
 
-Assertion Machine::run(uint64_t stepCount,
-                       uint256_t timeBoundStart,
-                       uint256_t timeBoundEnd,
-                       Tuple messages,
-                       std::chrono::seconds wallLimit) {
+auto Machine::run(uint64_t stepCount,
+                  const TimeBounds& timeBounds,
+                  Tuple messages,
+                  std::chrono::seconds wallLimit) -> Assertion {
     bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
-    machine_state.context = AssertionContext{
-        TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
+    machine_state.context = AssertionContext{timeBounds, std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
         auto blockReason = runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
@@ -77,11 +75,11 @@ Assertion Machine::run(uint64_t stepCount,
             machine_state.context.didInboxInsn};
 }
 
-bool isErrorCodePoint(const CodePoint& cp) {
+auto isErrorCodePoint(const CodePoint& cp) -> bool {
     return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
 }
 
-BlockReason Machine::runOne() {
+auto Machine::runOne() -> BlockReason {
     if (machine_state.state == Status::Error) {
         return ErrorBlocked();
     }
@@ -147,17 +145,17 @@ BlockReason Machine::runOne() {
     }
 }
 
-SaveResults Machine::checkpoint(CheckpointStorage& storage) {
+auto Machine::checkpoint(CheckpointStorage& storage) -> SaveResults {
     return machine_state.checkpointState(storage);
 }
 
-bool Machine::restoreCheckpoint(
+auto Machine::restoreCheckpoint(
     const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
+    const std::vector<unsigned char>& checkpoint_key) -> bool {
     return machine_state.restoreCheckpoint(storage, checkpoint_key);
 }
 
-DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
+auto Machine::deleteCheckpoint(CheckpointStorage& storage) -> DeleteResults {
     std::vector<unsigned char> checkpoint_key;
     marshal_uint256_t(hash(), checkpoint_key);
 

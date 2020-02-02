@@ -27,8 +27,8 @@
 
 #include <string>
 
-CCheckpointStorage* createCheckpointStorage(const char* db_path,
-                                            const char* contract_path) {
+auto createCheckpointStorage(const char* db_path, const char* contract_path)
+    -> CCheckpointStorage* {
     auto string_filename = std::string(db_path);
     auto string_contract_path = std::string(contract_path);
 
@@ -46,18 +46,18 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     }
 }
 
-int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
+auto closeCheckpointStorage(CCheckpointStorage* storage_ptr) -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     return storage->closeCheckpointStorage();
 }
 
 void destroyCheckpointStorage(CCheckpointStorage* storage) {
-    if (storage == NULL)
+    if (storage == nullptr)
         return;
     delete static_cast<CheckpointStorage*>(storage);
 }
 
-CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
+auto getInitialMachine(const CCheckpointStorage* storage_ptr) -> CMachine* {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto state = storage->getInitialVmValues();
 
@@ -72,8 +72,8 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     }
 }
 
-int deleteCheckpoint(CCheckpointStorage* storage_ptr,
-                     const void* machine_hash) {
+auto deleteCheckpoint(CCheckpointStorage* storage_ptr, const void* machine_hash)
+    -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
 
     auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
@@ -87,7 +87,7 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     return result.status.ok();
 }
 
-int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
+auto saveValue(CCheckpointStorage* storage_ptr, const void* value_data) -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto valueSaver = MachineStateSaver(storage->makeTransaction());
 
@@ -105,8 +105,8 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
     return status.ok();
 }
 
-ByteSlice getValue(const CCheckpointStorage* storage_ptr,
-                   const void* hash_key) {
+auto getValue(const CCheckpointStorage* storage_ptr, const void* hash_key)
+    -> ByteSlice {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto fetcher = MachineStateFetcher(*storage);
 
@@ -132,7 +132,7 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
     return {void_data, static_cast<int>(value.size())};
 }
 
-int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
+auto deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto deleter = MachineStateDeleter(storage->makeTransaction());
 
@@ -152,11 +152,11 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     return status.ok();
 }
 
-int saveData(CCheckpointStorage* storage_ptr,
-             const void* key,
-             int key_length,
-             const void* data,
-             int data_length) {
+auto saveData(CCheckpointStorage* storage_ptr,
+              const void* key,
+              int key_length,
+              const void* data,
+              int data_length) -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 
@@ -171,9 +171,8 @@ int saveData(CCheckpointStorage* storage_ptr,
     return status.ok();
 }
 
-ByteSlice getData(CCheckpointStorage* storage_ptr,
-                  const void* key,
-                  int key_length) {
+auto getData(CCheckpointStorage* storage_ptr, const void* key, int key_length)
+    -> ByteSlice {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 
@@ -193,9 +192,9 @@ ByteSlice getData(CCheckpointStorage* storage_ptr,
     return {void_data, static_cast<int>(results.data.size())};
 }
 
-int deleteData(CCheckpointStorage* storage_ptr,
-               const void* key,
-               int key_length) {
+auto deleteData(CCheckpointStorage* storage_ptr,
+                const void* key,
+                int key_length) -> int {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 

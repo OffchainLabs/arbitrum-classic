@@ -26,13 +26,13 @@
 
 #define UINT256_SIZE 32
 
-uint256_t deserializeUint256t(const char*& bufptr) {
+auto deserializeUint256t(const char*& bufptr) -> uint256_t {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
     return ret;
 }
 
-Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
+auto deserializeOperation(const char*& bufptr, TuplePool& pool) -> Operation {
     uint8_t immediateCount;
     memcpy(&immediateCount, bufptr, sizeof(immediateCount));
     bufptr += sizeof(immediateCount);
@@ -43,11 +43,11 @@ Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     if (immediateCount == 1) {
         return {opcode, deserialize_value(bufptr, pool)};
     } else {
-        return {opcode};
+        return Operation{opcode};
     }
 }
 
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
+auto deserializeCodePoint(const char*& bufptr, TuplePool& pool) -> CodePoint {
     CodePoint ret;
     memcpy(&ret.pc, bufptr, sizeof(ret.pc));
     bufptr += sizeof(ret.pc);
@@ -59,7 +59,7 @@ CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
     return ret;
 }
 
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
+auto deserializeTuple(const char*& bufptr, int size, TuplePool& pool) -> Tuple {
     Tuple tup(&pool, size);
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
@@ -126,7 +126,7 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
     marshal_uint256_t(val, buf);
 }
 
-value deserialize_value(const char*& bufptr, TuplePool& pool) {
+auto deserialize_value(const char*& bufptr, TuplePool& pool) -> value {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
     bufptr += sizeof(valType);
@@ -146,31 +146,31 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
     }
 }
 
-int get_tuple_size(char*& bufptr) {
+auto get_tuple_size(const char*& bufptr) -> int {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
 
     return valType - TUPLE;
 }
 
-uint256_t hash(const value& value) {
+auto hash(const value& value) -> uint256_t {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }
 
 struct ValuePrinter {
     std::ostream& os;
 
-    std::ostream* operator()(const Tuple& val) const {
+    auto operator()(const Tuple& val) const -> std::ostream* {
         os << val;
         return &os;
     }
 
-    std::ostream* operator()(const uint256_t& val) const {
+    auto operator()(const uint256_t& val) const -> std::ostream* {
         os << val;
         return &os;
     }
 
-    std::ostream* operator()(const CodePoint& val) const {
+    auto operator()(const CodePoint& val) const -> std::ostream* {
         //        std::printf("in CodePoint ostream operator\n");
         os << "CodePoint(" << val.pc << ", " << val.op << ", "
            << to_hex_str(val.nextHash) << ")";
@@ -178,11 +178,11 @@ struct ValuePrinter {
     }
 };
 
-std::ostream& operator<<(std::ostream& os, const value& val) {
+auto operator<<(std::ostream& os, const value& val) -> std::ostream& {
     return *nonstd::visit(ValuePrinter{os}, val);
 }
 
-std::vector<unsigned char> GetHashKey(const value& val) {
+auto GetHashKey(const value& val) -> std::vector<unsigned char> {
     auto hash_key = hash(val);
     std::vector<unsigned char> hash_key_vector;
     marshal_value(hash_key, hash_key_vector);

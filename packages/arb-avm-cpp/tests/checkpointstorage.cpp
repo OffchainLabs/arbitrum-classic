@@ -36,8 +36,8 @@ std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 auto dbPath = boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void saveVal(CheckpointStorage& storage,
-             std::vector<unsigned char> val,
-             std::vector<unsigned char> hash_key,
+             const std::vector<unsigned char>& val,
+             const std::vector<unsigned char>& hash_key,
              int expected_ref_count,
              bool expected_status) {
     auto trans = storage.makeTransaction();
@@ -50,10 +50,10 @@ void saveVal(CheckpointStorage& storage,
 }
 
 void getVal(CheckpointStorage& storage,
-            std::vector<unsigned char> hash_key,
+            const std::vector<unsigned char>& hash_key,
             int expected_ref_count,
             bool expected_status,
-            std::vector<unsigned char> expected_val) {
+            const std::vector<unsigned char>& expected_val) {
     auto trans = storage.makeTransaction();
     auto results = trans->getData(hash_key);
     auto status = trans->commit();
@@ -65,7 +65,7 @@ void getVal(CheckpointStorage& storage,
 }
 
 void incrementRef(CheckpointStorage& storage,
-                  std::vector<unsigned char> hash_key,
+                  const std::vector<unsigned char>& hash_key,
                   int expected_ref_count,
                   bool expected_status) {
     auto trans = storage.makeTransaction();
@@ -78,7 +78,7 @@ void incrementRef(CheckpointStorage& storage,
 }
 
 void deleteVal(CheckpointStorage& storage,
-               std::vector<unsigned char> hash_key,
+               const std::vector<unsigned char>& hash_key,
                int expected_ref_count,
                bool expected_status) {
     auto trans = storage.makeTransaction();

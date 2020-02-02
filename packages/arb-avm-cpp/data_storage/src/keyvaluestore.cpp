@@ -23,9 +23,9 @@ KeyValueStore::KeyValueStore(rocksdb::Transaction* transaction_) {
     transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
 }
 
-rocksdb::Status KeyValueStore::saveData(
-    const std::vector<unsigned char>& key,
-    const std::vector<unsigned char>& value) {
+auto KeyValueStore::saveData(const std::vector<unsigned char>& key,
+                             const std::vector<unsigned char>& value)
+    -> rocksdb::Status {
     std::string value_str(value.begin(), value.end());
     std::string key_str(key.begin(), key.end());
 
@@ -38,8 +38,8 @@ rocksdb::Status KeyValueStore::saveData(
     }
 }
 
-rocksdb::Status KeyValueStore::deleteData(
-    const std::vector<unsigned char>& key) {
+auto KeyValueStore::deleteData(const std::vector<unsigned char>& key)
+    -> rocksdb::Status {
     std::string key_str(key.begin(), key.end());
 
     auto delete_status = transaction->Delete(key_str);
@@ -51,8 +51,8 @@ rocksdb::Status KeyValueStore::deleteData(
     }
 }
 
-DataResults KeyValueStore::getData(
-    const std::vector<unsigned char>& key) const {
+auto KeyValueStore::getData(const std::vector<unsigned char>& key) const
+    -> DataResults {
     auto read_options = rocksdb::ReadOptions();
     std::string stored_value;
     std::string key_str(key.begin(), key.end());

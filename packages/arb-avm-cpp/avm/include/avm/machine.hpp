@@ -35,37 +35,38 @@ struct Assertion {
 class Machine {
     MachineState machine_state;
 
-    friend std::ostream& operator<<(std::ostream&, const Machine&);
-    BlockReason runOne();
+    friend auto operator<<(std::ostream&, const Machine&) -> std::ostream&;
+    auto runOne() -> BlockReason;
 
    public:
-    bool initializeMachine(const std::string& filename);
+    auto initializeMachine(const std::string& filename) -> bool;
     void initializeMachine(const MachineState& initial_state);
 
-    Assertion run(uint64_t stepCount,
-                  uint256_t timeBoundStart,
-                  uint256_t timeBoundEnd,
-                  Tuple messages,
-                  std::chrono::seconds wallLimit);
+    auto run(uint64_t stepCount,
+             const TimeBounds& timeBounds,
+             Tuple messages,
+             std::chrono::seconds wallLimit) -> Assertion;
 
-    Status currentStatus() { return machine_state.state; }
-    uint256_t hash() const { return machine_state.hash(); }
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const {
+    auto currentStatus() -> Status { return machine_state.state; }
+    auto hash() const -> uint256_t { return machine_state.hash(); }
+    auto isBlocked(const uint256_t& currentTime, bool newMessages) const
+        -> BlockReason {
         return machine_state.isBlocked(currentTime, newMessages);
     }
-    std::vector<unsigned char> marshalForProof() {
+    auto marshalForProof() -> std::vector<unsigned char> {
         return machine_state.marshalForProof();
     }
 
-    TuplePool& getPool() { return *machine_state.pool; }
+    auto getPool() -> TuplePool& { return *machine_state.pool; }
 
-    SaveResults checkpoint(CheckpointStorage& storage);
-    bool restoreCheckpoint(const CheckpointStorage& storage,
-                           const std::vector<unsigned char>& checkpoint_key);
-    DeleteResults deleteCheckpoint(CheckpointStorage& storage);
+    auto checkpoint(CheckpointStorage& storage) -> SaveResults;
+    auto restoreCheckpoint(const CheckpointStorage& storage,
+                           const std::vector<unsigned char>& checkpoint_key)
+        -> bool;
+    auto deleteCheckpoint(CheckpointStorage& storage) -> DeleteResults;
 };
 
-std::ostream& operator<<(std::ostream& os, const MachineState& val);
-std::ostream& operator<<(std::ostream& os, const Machine& val);
+auto operator<<(std::ostream& os, const MachineState& val) -> std::ostream&;
+auto operator<<(std::ostream& os, const Machine& val) -> std::ostream&;
 
 #endif /* machine_hpp */

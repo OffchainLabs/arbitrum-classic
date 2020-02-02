@@ -68,12 +68,12 @@ void swap2(MachineState& m);
 void tget(MachineState& m);
 void tset(MachineState& m);
 void tlen(MachineState& m);
-BlockReason breakpoint(MachineState&);
+auto breakpoint(MachineState&) -> BlockReason;
 void log(MachineState& m);
 void debug(MachineState& m);
-BlockReason send(MachineState& m);
+auto send(MachineState& m) -> BlockReason;
 void getTime(MachineState& m);
-BlockReason inboxOp(MachineState& m);
+auto inboxOp(MachineState& m) -> BlockReason;
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

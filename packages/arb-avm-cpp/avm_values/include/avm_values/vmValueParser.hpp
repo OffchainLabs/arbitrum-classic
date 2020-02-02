@@ -26,7 +26,7 @@ struct InitialVmValues {
     value staticVal;
 };
 
-InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     TuplePool& pool);
+auto parseInitialVmValues(const std::string& contract_filename, TuplePool& pool)
+    -> InitialVmValues;
 
 #endif /* vmValueParser_hpp */

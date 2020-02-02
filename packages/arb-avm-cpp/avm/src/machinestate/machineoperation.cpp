@@ -21,7 +21,7 @@
 
 namespace machineoperation {
 
-uint256_t& assumeInt(value& val) {
+auto assumeInt(value& val) -> uint256_t& {
     auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
@@ -29,7 +29,7 @@ uint256_t& assumeInt(value& val) {
     return *aNum;
 }
 
-const uint256_t& assumeInt(const value& val) {
+auto assumeInt(const value& val) -> const uint256_t& {
     auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
@@ -37,14 +37,14 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
-uint64_t assumeInt64(uint256_t& val) {
+auto assumeInt64(uint256_t& val) -> uint64_t {
     if (val > std::numeric_limits<uint64_t>::max())
         throw int_out_of_bounds{};
 
     return static_cast<uint64_t>(val);
 }
 
-Tuple& assumeTuple(value& val) {
+auto assumeTuple(value& val) -> Tuple& {
     auto tup = nonstd::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
@@ -547,7 +547,7 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason breakpoint(MachineState& m) {
+auto breakpoint(MachineState& m) -> BlockReason {
     ++m.pc;
     return BreakpointBlocked{};
 }
@@ -576,7 +576,7 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason send(MachineState& m) {
+auto send(MachineState& m) -> BlockReason {
     m.stack.prepForMod(1);
     m.context.outMessage.push_back(std::move(m.stack[0]));
     m.stack.popClear();
@@ -592,7 +592,7 @@ void getTime(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason inboxOp(MachineState& m) {
+auto inboxOp(MachineState& m) -> BlockReason {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
     if (aNum > m.context.timeBounds[0] && m.context.inbox.tuple_size() == 0) {

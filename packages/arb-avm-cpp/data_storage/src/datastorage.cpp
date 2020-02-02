@@ -25,7 +25,7 @@
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-DataStorage::DataStorage(const std::string& db_path) {
+DataStorage::DataStorage(std::string db_path) {
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options;
     options.create_if_missing = true;
@@ -45,16 +45,12 @@ DataStorage::DataStorage(const std::string& db_path) {
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 
-DataStorage::~DataStorage() {
-    txn_db->Close();
-}
-
-rocksdb::Status DataStorage::closeDb() {
+auto DataStorage::closeDb() -> rocksdb::Status {
     return txn_db->Close();
 }
 
-GetResults DataStorage::getValue(
-    const std::vector<unsigned char>& hash_key) const {
+auto DataStorage::getValue(const std::vector<unsigned char>& hash_key) const
+    -> GetResults {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
     std::string key_str(hash_key.begin(), hash_key.end());
@@ -72,13 +68,13 @@ GetResults DataStorage::getValue(
     }
 }
 
-std::unique_ptr<Transaction> DataStorage::makeTransaction() {
+auto DataStorage::makeTransaction() -> std::unique_ptr<Transaction> {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_unique<Transaction>(transaction);
 }
 
-std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
+auto DataStorage::makeKeyValueStore() -> std::unique_ptr<KeyValueStore> {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_unique<KeyValueStore>(transaction);

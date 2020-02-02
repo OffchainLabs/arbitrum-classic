@@ -20,7 +20,6 @@
 #include <avm/machine.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 
-#include <sys/stat.h>
 #include <fstream>
 #include <iostream>
 
@@ -28,30 +27,25 @@ typedef struct {
     uint64_t stepCount;
 } cassertion;
 
-Machine* read_files(std::string filename) {
+// cmachine_t *machine_create(char *data)
+auto machineCreate(const char* filename) -> CMachine* {
     auto machine = new Machine();
     auto sucess = machine->initializeMachine(filename);
 
     if (sucess) {
-        return machine;
+        return static_cast<void*>(machine);
     } else {
         return nullptr;
     }
 }
 
-// cmachine_t *machine_create(char *data)
-CMachine* machineCreate(const char* filename) {
-    Machine* mach = read_files(filename);
-    return static_cast<void*>(mach);
-}
-
 void machineDestroy(CMachine* m) {
-    if (m == NULL)
+    if (m == nullptr)
         return;
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
+auto checkpointMachine(CMachine* m, CCheckpointStorage* storage) -> int {
     auto machine = static_cast<Machine*>(m);
     auto result =
         machine->checkpoint(*(static_cast<CheckpointStorage*>(storage)));
@@ -59,9 +53,9 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
     return result.status.ok();
 }
 
-int restoreMachine(CMachine* m,
-                   CCheckpointStorage* storage,
-                   const void* machine_hash) {
+auto restoreMachine(CMachine* m,
+                    CCheckpointStorage* storage,
+                    const void* machine_hash) -> int {
     auto machine = static_cast<Machine*>(m);
 
     auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
@@ -82,21 +76,21 @@ void machineHash(CMachine* m, void* ret) {
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
-void* machineClone(CMachine* m) {
+auto machineClone(CMachine* m) -> void* {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    Machine* cloneMach = new Machine(*mach);
+    auto* mach = static_cast<Machine*>(m);
+    auto* cloneMach = new Machine(*mach);
     return static_cast<void*>(cloneMach);
 }
 
 void machinePrint(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto* mach = static_cast<Machine*>(m);
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
-CStatus machineCurrentStatus(CMachine* m) {
-    Machine* mach = static_cast<Machine*>(m);
+auto machineCurrentStatus(CMachine* m) -> CStatus {
+    auto* mach = static_cast<Machine*>(m);
     switch (mach->currentStatus()) {
         case Status::Extensive:
             return STATUS_EXTENSIVE;
@@ -110,26 +104,26 @@ CStatus machineCurrentStatus(CMachine* m) {
 }
 
 struct ReasonConverter {
-    CBlockReason operator()(const NotBlocked&) const {
+    auto operator()(const NotBlocked&) const -> CBlockReason {
         return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const HaltBlocked&) const {
+    auto operator()(const HaltBlocked&) const -> CBlockReason {
         return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const ErrorBlocked&) const {
+    auto operator()(const ErrorBlocked&) const -> CBlockReason {
         return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const BreakpointBlocked&) const {
+    auto operator()(const BreakpointBlocked&) const -> CBlockReason {
         return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const InboxBlocked& val) const {
+    auto operator()(const InboxBlocked& val) const -> CBlockReason {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(val.timout, inboxDataVec);
-        unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
+        marshal_value(val.timeout, inboxDataVec);
+        auto* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
         std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
         return CBlockReason{
             BLOCK_TYPE_INBOX,
@@ -137,20 +131,19 @@ struct ReasonConverter {
     }
 };
 
-CBlockReason machineIsBlocked(CMachine* m,
-                              void* currentTimeData,
-                              int newMessages) {
+auto machineIsBlocked(CMachine* m, void* currentTimeData, int newMessages)
+    -> CBlockReason {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto* mach = static_cast<Machine*>(m);
     auto currentTimePtr = reinterpret_cast<const char*>(currentTimeData);
     auto currentTime = deserializeUint256t(currentTimePtr);
     auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
-ByteSlice machineMarshallForProof(CMachine* m) {
+auto machineMarshallForProof(CMachine* m) -> ByteSlice {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto* mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     auto proof = mach->marshalForProof();
     auto proofData = (unsigned char*)malloc(proof.size());
@@ -159,14 +152,14 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return {voidData, static_cast<int>(proof.size())};
 }
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* timeboundStartData,
-                                     void* timeboundEndData,
-                                     void* inbox,
-                                     uint64_t wallLimit) {
+auto machineExecuteAssertion(CMachine* m,
+                             uint64_t maxSteps,
+                             void* timeboundStartData,
+                             void* timeboundEndData,
+                             void* inbox,
+                             uint64_t wallLimit) -> RawAssertion {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto* mach = static_cast<Machine*>(m);
     auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
     auto timeboundStart = deserializeUint256t(timeboundStartPtr);
     auto timeboundEndPtr = reinterpret_cast<const char*>(timeboundEndData);
@@ -175,7 +168,7 @@ RawAssertion machineExecuteAssertion(CMachine* m,
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
 
-    Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd,
+    Assertion assertion = mach->run(maxSteps, {timeboundStart, timeboundEnd},
                                     nonstd::get<Tuple>(std::move(messages)),
                                     std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
@@ -187,10 +180,10 @@ RawAssertion machineExecuteAssertion(CMachine* m,
         marshal_value(log, logData);
     }
 
-    unsigned char* cMessageData = (unsigned char*)malloc(outMsgData.size());
+    auto* cMessageData = (unsigned char*)malloc(outMsgData.size());
     std::copy(outMsgData.begin(), outMsgData.end(), cMessageData);
 
-    unsigned char* cLogData = (unsigned char*)malloc(logData.size());
+    auto* cLogData = (unsigned char*)malloc(logData.size());
     std::copy(logData.begin(), logData.end(), cLogData);
 
     return {cMessageData,

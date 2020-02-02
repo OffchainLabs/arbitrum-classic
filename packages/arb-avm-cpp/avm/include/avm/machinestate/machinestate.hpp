@@ -23,11 +23,13 @@
 #include <data_storage/storageresult.hpp>
 
 #include <memory>
+#include <utility>
+
 #include <vector>
 
 enum class Status { Extensive, Halted, Error };
 
-typedef std::array<uint256_t, 2> TimeBounds;
+using TimeBounds = std::array<uint256_t, 2>;
 
 class CheckpointStorage;
 
@@ -40,8 +42,8 @@ struct AssertionContext {
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
-        : timeBounds(tb),
+    explicit AssertionContext(TimeBounds tb, Tuple inbox)
+        : timeBounds(std::move(tb)),
           inbox(std::move(inbox)),
           numSteps{0},
           didInboxInsn(false),
@@ -69,15 +71,17 @@ struct MachineState {
     MachineState(const std::vector<CodePoint>& code_,
                  const value& static_val_,
                  std::shared_ptr<TuplePool> pool_);
-    bool initialize_machinestate(const std::string& contract_filename);
+    auto initialize_machinestate(const std::string& contract_filename) -> bool;
 
-    std::vector<unsigned char> marshalForProof();
-    BlockReason runOp(OpCode opcode);
-    uint256_t hash() const;
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
-    SaveResults checkpointState(CheckpointStorage& storage);
-    bool restoreCheckpoint(const CheckpointStorage& storage,
-                           const std::vector<unsigned char>& checkpoint_key);
+    auto marshalForProof() -> std::vector<unsigned char>;
+    auto runOp(OpCode opcode) -> BlockReason;
+    auto hash() const -> uint256_t;
+    auto isBlocked(const uint256_t& currentTime, bool newMessages) const
+        -> BlockReason;
+    auto checkpointState(CheckpointStorage& storage) const -> SaveResults;
+    auto restoreCheckpoint(const CheckpointStorage& storage,
+                           const std::vector<unsigned char>& checkpoint_key)
+        -> bool;
 };
 
 #endif /* machinestate_hpp */

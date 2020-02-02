@@ -45,8 +45,8 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
     pc = 0;
 }
 
-bool MachineState::initialize_machinestate(
-    const std::string& contract_filename) {
+auto MachineState::initialize_machinestate(const std::string& contract_filename)
+    -> bool {
     auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
 
     if (initial_state.valid_state) {
@@ -62,7 +62,7 @@ bool MachineState::initialize_machinestate(
     }
 }
 
-uint256_t MachineState::hash() const {
+auto MachineState::hash() const -> uint256_t {
     if (state == Status::Halted)
         return 0;
     if (state == Status::Error)
@@ -124,7 +124,7 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-std::vector<unsigned char> MachineState::marshalForProof() {
+auto MachineState::marshalForProof() -> std::vector<unsigned char> {
     std::vector<unsigned char> buf;
     auto opcode = code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
@@ -133,7 +133,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         includeImmediateVal = stackPops[0] == true;
         stackPops.erase(stackPops.begin());
     }
-    std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
+    const std::vector<bool>& auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
     uint256_t_to_buf(code[pc].nextHash, buf);
@@ -150,7 +150,8 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     return buf;
 }
 
-SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
+auto MachineState::checkpointState(CheckpointStorage& storage) const
+    -> SaveResults {
     auto stateSaver = MachineStateSaver(storage.makeTransaction());
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
@@ -182,9 +183,9 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     }
 }
 
-bool MachineState::restoreCheckpoint(
+auto MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
+    const std::vector<unsigned char>& checkpoint_key) -> bool {
     auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
@@ -225,8 +226,8 @@ bool MachineState::restoreCheckpoint(
     return results.status.ok();
 }
 
-BlockReason MachineState::isBlocked(uint256_t currentTime,
-                                    bool newMessages) const {
+auto MachineState::isBlocked(const uint256_t& currentTime,
+                             bool newMessages) const -> BlockReason {
     if (state == Status::Error) {
         return ErrorBlocked();
     } else if (state == Status::Halted) {
@@ -259,7 +260,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
     }
 }
 
-BlockReason MachineState::runOp(OpCode opcode) {
+auto MachineState::runOp(OpCode opcode) -> BlockReason {
     switch (opcode) {
             /**************************/
             /*  Arithmetic Operations */

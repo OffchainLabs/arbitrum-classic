@@ -44,7 +44,7 @@ class TuplePool {
      *
      * @return Resource instance.
      */
-    std::shared_ptr<RawTuple> getResource(int s);
+    auto getResource(int s) -> std::shared_ptr<RawTuple>;
 
     /**
      * Return resource back to the pool.

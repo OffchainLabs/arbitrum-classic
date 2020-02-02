@@ -24,22 +24,22 @@
 
 #include <memory>
 
-uint256_t zeroHash();
+auto zeroHash() -> uint256_t;
 
 class Tuple {
    private:
-    TuplePool* tuplePool;
+    TuplePool* tuplePool{nullptr};
     std::shared_ptr<RawTuple> tpl;
 
-    friend uint256_t hash(const Tuple&);
+    friend auto hash(const Tuple&) -> uint256_t;
 
    public:
     Tuple() = default;
-    uint256_t calculateHash() const;
+    auto calculateHash() const -> uint256_t;
 
     Tuple(TuplePool* pool, size_t size) {
+        tuplePool = pool;
         if (size > 0) {
-            tuplePool = pool;
             tpl = pool->getResource(size);
             for (size_t i = 0; i < size; i++) {
                 tpl->data.push_back(Tuple{});
@@ -98,7 +98,7 @@ class Tuple {
     //        }
     //    }
 
-    uint64_t tuple_size() const {
+    auto tuple_size() const -> uint64_t {
         if (tpl) {
             return tpl->data.size();
         } else {
@@ -123,7 +123,7 @@ class Tuple {
         tpl->deferredHashing = true;
     }
 
-    value get_element(uint64_t pos) const {
+    auto get_element(uint64_t pos) const -> value {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
@@ -131,10 +131,10 @@ class Tuple {
     }
 
     void marshal(std::vector<unsigned char>& buf) const;
-    value clone_shallow();
+    auto clone_shallow() -> value;
 };
 
-inline uint256_t hash(const Tuple& tup) {
+inline auto hash(const Tuple& tup) -> uint256_t {
     if (tup.tpl) {
         if (tup.tpl->deferredHashing) {
             tup.tpl->cachedHash = tup.calculateHash();
@@ -147,18 +147,20 @@ inline uint256_t hash(const Tuple& tup) {
     }
 }
 
-inline bool operator==(const Tuple& val1, const Tuple& val2) {
-    if (val1.tuple_size() != val2.tuple_size())
+inline auto operator==(const Tuple& val1, const Tuple& val2) -> bool {
+    if (val1.tuple_size() != val2.tuple_size()) {
         return false;
+    }
     return hash(val1) == hash(val2);
 }
 
-inline bool operator!=(const Tuple& val1, const Tuple& val2) {
-    if (val1.tuple_size() == val2.tuple_size())
+inline auto operator!=(const Tuple& val1, const Tuple& val2) -> bool {
+    if (val1.tuple_size() == val2.tuple_size()) {
         return false;
+    }
     return hash(val1) != hash(val2);
 }
 
-std::ostream& operator<<(std::ostream& os, const Tuple& val);
+auto operator<<(std::ostream& os, const Tuple& val) -> std::ostream&;
 
 #endif /* tuple_hpp */

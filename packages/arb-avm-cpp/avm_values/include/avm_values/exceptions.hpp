@@ -21,21 +21,21 @@
 
 class bad_tuple_index : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
+    auto what() const noexcept -> const char* override {
         return "bad_tuple_index";
     }
 };
 
 class bad_pop_type : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
+    auto what() const noexcept -> const char* override {
         return "bad_variant_access";
     }
 };
 
 class int_out_of_bounds : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
+    auto what() const noexcept -> const char* override {
         return "int_out_of_bounds";
     }
 };

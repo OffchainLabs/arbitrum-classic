@@ -19,14 +19,14 @@
 
 #include <catch2/catch.hpp>
 
-MachineState runUnaryOp(uint256_t arg1, OpCode op) {
+auto runUnaryOp(const uint256_t& arg1, OpCode op) -> MachineState {
     MachineState m;
     m.stack.push(arg1);
     m.runOp(op);
     return m;
 }
 
-void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
+void testUnaryOp(const uint256_t& arg1, const uint256_t& result, OpCode op) {
     MachineState m = runUnaryOp(arg1, op);
     value res = m.stack.pop();
     auto num = nonstd::get_if<uint256_t>(&res);
@@ -35,7 +35,8 @@ void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
     REQUIRE(m.stack.stacksize() == 0);
 }
 
-MachineState runBinaryOp(uint256_t arg1, uint256_t arg2, OpCode op) {
+auto runBinaryOp(const uint256_t& arg1, const uint256_t& arg2, OpCode op)
+    -> MachineState {
     MachineState m;
     m.stack.push(arg2);
     m.stack.push(arg1);
@@ -43,9 +44,9 @@ MachineState runBinaryOp(uint256_t arg1, uint256_t arg2, OpCode op) {
     return m;
 }
 
-void testBinaryOp(uint256_t arg1,
-                  uint256_t arg2,
-                  uint256_t expected,
+void testBinaryOp(const uint256_t& arg1,
+                  const uint256_t& arg2,
+                  const uint256_t& expected,
                   OpCode op) {
     MachineState m = runBinaryOp(arg1, arg2, op);
     value res = m.stack.pop();
@@ -55,10 +56,10 @@ void testBinaryOp(uint256_t arg1,
     REQUIRE(m.stack.stacksize() == 0);
 }
 
-MachineState runTertiaryOp(uint256_t arg1,
-                           uint256_t arg2,
-                           uint256_t arg3,
-                           OpCode op) {
+auto runTertiaryOp(const uint256_t& arg1,
+                   const uint256_t& arg2,
+                   const uint256_t& arg3,
+                   OpCode op) -> MachineState {
     MachineState m;
     m.stack.push(arg3);
     m.stack.push(arg2);
@@ -67,10 +68,10 @@ MachineState runTertiaryOp(uint256_t arg1,
     return m;
 }
 
-void testTertiaryOp(uint256_t arg1,
-                    uint256_t arg2,
-                    uint256_t arg3,
-                    uint256_t result,
+void testTertiaryOp(const uint256_t& arg1,
+                    const uint256_t& arg2,
+                    const uint256_t& arg3,
+                    const uint256_t& result,
                     OpCode op) {
     MachineState m = runTertiaryOp(arg1, arg2, arg3, op);
     value res = m.stack.pop();
@@ -404,7 +405,7 @@ TEST_CASE("RSET opcode is correct") {
 TEST_CASE("JUMP opcode is correct") {
     SECTION("jump") {
         MachineState m;
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePoint(2, Operation{OpCode::ADD}, 0)});
         m.runOp(OpCode::JUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -416,7 +417,7 @@ TEST_CASE("CJUMP opcode is correct") {
         MachineState m;
         m.pc = 3;
         m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePoint(2, Operation{OpCode::ADD}, 0)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 4);
@@ -425,7 +426,7 @@ TEST_CASE("CJUMP opcode is correct") {
         MachineState m;
         m.pc = 3;
         m.stack.push(uint256_t{1});
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePoint(2, Operation{OpCode::ADD}, 0)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -455,12 +456,12 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         MachineState m;
-        m.code.push_back(CodePoint(0, OpCode::ADD, 0));
+        m.code.emplace_back(0, Operation{OpCode::ADD}, 0);
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(res == value{CodePoint(0, Operation{OpCode::ADD}, 0)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -522,12 +523,12 @@ TEST_CASE("NOP opcode is correct") {
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         MachineState m;
-        m.errpc = CodePoint(0, OpCode::ADD, 0);
+        m.errpc = CodePoint(0, Operation{OpCode::ADD}, 0);
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(res == value{CodePoint(0, Operation{OpCode::ADD}, 0)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -535,11 +536,11 @@ TEST_CASE("ERRPUSH opcode is correct") {
 TEST_CASE("ERRSET opcode is correct") {
     SECTION("errset") {
         MachineState m;
-        m.stack.push(value{CodePoint(0, OpCode::ADD, 0)});
+        m.stack.push(value{CodePoint(0, Operation{OpCode::ADD}, 0)});
         m.runOp(OpCode::ERRSET);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 1);
-        REQUIRE(m.errpc == CodePoint(0, OpCode::ADD, 0));
+        REQUIRE(m.errpc == CodePoint(0, Operation{OpCode::ADD}, 0));
     }
 }
 

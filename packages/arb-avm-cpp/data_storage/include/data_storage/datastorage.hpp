@@ -35,12 +35,12 @@ class DataStorage {
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
 
    public:
-    DataStorage(const std::string& db_path);
-    ~DataStorage();
-    rocksdb::Status closeDb();
-    GetResults getValue(const std::vector<unsigned char>& hash_key) const;
-    std::unique_ptr<Transaction> makeTransaction();
-    std::unique_ptr<KeyValueStore> makeKeyValueStore();
+    DataStorage(std::string db_path);
+    auto closeDb() -> rocksdb::Status;
+    auto getValue(const std::vector<unsigned char>& hash_key) const
+        -> GetResults;
+    auto makeTransaction() -> std::unique_ptr<Transaction>;
+    auto makeKeyValueStore() -> std::unique_ptr<KeyValueStore>;
 };
 
 #endif /* datastorage_hpp */

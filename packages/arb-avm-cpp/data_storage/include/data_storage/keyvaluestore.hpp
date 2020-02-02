@@ -33,10 +33,10 @@ class KeyValueStore {
 
    public:
     KeyValueStore(rocksdb::Transaction* transaction_);
-    rocksdb::Status saveData(const std::vector<unsigned char>& key,
-                             const std::vector<unsigned char>& value);
-    rocksdb::Status deleteData(const std::vector<unsigned char>& key);
-    DataResults getData(const std::vector<unsigned char>& key) const;
+    auto saveData(const std::vector<unsigned char>& key,
+                  const std::vector<unsigned char>& value) -> rocksdb::Status;
+    auto deleteData(const std::vector<unsigned char>& key) -> rocksdb::Status;
+    auto getData(const std::vector<unsigned char>& key) const -> DataResults;
 };
 
 #endif /* keyvaluestore_hpp */

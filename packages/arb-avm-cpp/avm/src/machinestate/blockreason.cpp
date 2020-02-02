@@ -22,27 +22,27 @@
 
 constexpr BlockType InboxBlocked::type;
 
-std::ostream& operator<<(std::ostream& os, const NotBlocked&) {
+auto operator<<(std::ostream& os, const NotBlocked&) -> std::ostream& {
     return os << "NotBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const HaltBlocked&) {
+auto operator<<(std::ostream& os, const HaltBlocked&) -> std::ostream& {
     return os << "HaltBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const ErrorBlocked&) {
+auto operator<<(std::ostream& os, const ErrorBlocked&) -> std::ostream& {
     return os << "ErrorBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const BreakpointBlocked&) {
+auto operator<<(std::ostream& os, const BreakpointBlocked&) -> std::ostream& {
     return os << "BreakpointBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const InboxBlocked& val) {
-    return os << "InboxBlocked(" << val.timout << ")";
+auto operator<<(std::ostream& os, const InboxBlocked& val) -> std::ostream& {
+    return os << "InboxBlocked(" << val.timeout << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const BlockReason& val) {
+auto operator<<(std::ostream& os, const BlockReason& val) -> std::ostream& {
     nonstd::visit([&](const auto& reason) { os << reason; }, val);
     return os;
 }

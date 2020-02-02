@@ -90,7 +90,7 @@ enum class OpCode : uint8_t {
     DEFAULT
 };
 
-inline bool isValidOpcode(OpCode op) {
+inline auto isValidOpcode(OpCode op) -> bool {
     return (op >= OpCode::ADD && op <= OpCode::EXP) ||
            (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
            (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||

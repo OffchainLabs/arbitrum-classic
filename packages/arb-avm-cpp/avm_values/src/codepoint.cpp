@@ -19,7 +19,7 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-Operation::Operation(OpCode opcode_, value immediate_)
+Operation::Operation(OpCode opcode_, const value& immediate_) noexcept
     : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}
 
 Operation::Operation(const Operation& op) {
@@ -28,8 +28,8 @@ Operation::Operation(const Operation& op) {
         immediate = std::make_unique<value>(*op.immediate);
     }
 }
-Operation::Operation(Operation&&) = default;
-Operation& Operation::operator=(const Operation& cp) {
+Operation::Operation(Operation&&) noexcept = default;
+auto Operation::operator=(const Operation& cp) -> Operation& {
     opcode = cp.opcode;
     if (cp.immediate) {
         immediate = std::make_unique<value>(*cp.immediate);
@@ -39,10 +39,10 @@ Operation& Operation::operator=(const Operation& cp) {
     return *this;
 }
 
-Operation& Operation::operator=(Operation&&) = default;
+auto Operation::operator=(Operation&&) noexcept -> Operation& = default;
 Operation::~Operation() = default;
 
-bool operator==(const Operation& val1, const Operation& val2) {
+auto operator==(const Operation& val1, const Operation& val2) -> bool {
     if (val1.opcode != val2.opcode) {
         return false;
     }
@@ -55,7 +55,7 @@ bool operator==(const Operation& val1, const Operation& val2) {
     return false;
 }
 
-bool operator!=(const Operation& val1, const Operation& val2) {
+auto operator!=(const Operation& val1, const Operation& val2) -> bool {
     if (val1.opcode != val2.opcode) {
         return true;
     }
@@ -112,7 +112,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
 
 uint64_t pc_default = -1;
 
-bool operator==(const CodePoint& val1, const CodePoint& val2) {
+auto operator==(const CodePoint& val1, const CodePoint& val2) -> bool {
     if (val1.pc != val2.pc)
         return false;
     else
@@ -132,7 +132,7 @@ void CodePoint::marshal(std::vector<unsigned char>& buf) const {
     buf.insert(buf.end(), val.begin(), val.end());
 }
 
-uint256_t hash(const CodePoint& cp) {
+auto hash(const CodePoint& cp) -> uint256_t {
     std::array<uint64_t, 4> nextHashInts;
     to_big_endian(cp.nextHash, nextHashInts.begin());
     if (cp.op.immediate) {
@@ -164,7 +164,7 @@ uint256_t hash(const CodePoint& cp) {
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Operation& val) {
+auto operator<<(std::ostream& os, const Operation& val) -> std::ostream& {
     if (val.immediate) {
         os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
            << *val.immediate << ")";
@@ -174,11 +174,11 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
     return os;
 }
 
-CodePoint getErrCodePoint() {
+auto getErrCodePoint() -> CodePoint {
     return CodePoint(pc_default, Operation(static_cast<OpCode>(0)), 0);
 }
 
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
+auto opsToCodePoints(std::vector<Operation>&& ops) -> std::vector<CodePoint> {
     std::vector<CodePoint> cps;
     cps.reserve(ops.size());
     uint64_t pc = 0;

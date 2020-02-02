@@ -24,7 +24,7 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-uint256_t Datastack::hash() const {
+auto Datastack::hash() const -> uint256_t {
     if (values.empty()) {
         return ::hash(Tuple());
     }
@@ -32,8 +32,8 @@ uint256_t Datastack::hash() const {
     return hashes.back();
 }
 
-std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
-    const std::vector<bool>& stackInfo) {
+auto Datastack::marshalForProof(const std::vector<bool>& stackInfo)
+    -> std::pair<uint256_t, std::vector<unsigned char>> {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
@@ -51,7 +51,7 @@ std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
     return std::make_pair(c.hash(), std::move(buf));
 }
 
-std::ostream& operator<<(std::ostream& os, const Datastack& val) {
+auto operator<<(std::ostream& os, const Datastack& val) -> std::ostream& {
     os << "[";
     for (uint64_t i = 0; i < val.values.size(); i++) {
         os << val.values[val.values.size() - 1 - i];
@@ -64,21 +64,21 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 }
 
 // can speed up by not creating tuple/save directly
-SaveResults Datastack::checkpointState(MachineStateSaver& saver,
-                                       TuplePool* pool) {
+auto Datastack::checkpointState(MachineStateSaver& saver, TuplePool* pool) const
+    -> SaveResults {
     auto tuple = getTupleRepresentation(pool);
     return saver.saveTuple(tuple);
 }
 
-bool Datastack::initializeDataStack(
-    const MachineStateFetcher& fetcher,
-    const std::vector<unsigned char>& hash_key) {
+auto Datastack::initializeDataStack(const MachineStateFetcher& fetcher,
+                                    const std::vector<unsigned char>& hash_key)
+    -> bool {
     auto results = fetcher.getTuple(hash_key);
     initializeDataStack(results.data);
     return results.status.ok();
 }
 
-Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
+auto Datastack::getTupleRepresentation(TuplePool* pool) const -> Tuple {
     if (values.empty()) {
         return Tuple();
     } else {

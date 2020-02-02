@@ -34,9 +34,9 @@ std::string dbpath =
     boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
-                         MachineStateFetcher& fetcher,
-                         std::vector<unsigned char> hash_key,
-                         uint256_t expected_hash,
+                         const MachineStateFetcher& fetcher,
+                         const std::vector<unsigned char>& hash_key,
+                         const uint256_t& expected_hash,
                          int expected_size) {
     Datastack data_stack;
     data_stack.initializeDataStack(fetcher, hash_key);
@@ -45,8 +45,8 @@ void initializeDatastack(MachineStateSaver& msSaver,
     REQUIRE(data_stack.stacksize() == expected_size);
 }
 
-void saveDataStack(Datastack data_stack,
-                   std::vector<unsigned char> expected_hash_key) {
+void saveDataStack(const Datastack& data_stack,
+                   const std::vector<unsigned char>& expected_hash_key) {
     TuplePool pool;
     CheckpointStorage storage(dbpath, test_contract_path);
     std::vector<CodePoint> code;
@@ -60,8 +60,8 @@ void saveDataStack(Datastack data_stack,
     REQUIRE(results.storage_key == expected_hash_key);
 }
 
-void saveDataStackTwice(Datastack data_stack,
-                        std::vector<unsigned char> expected_hash_key) {
+void saveDataStackTwice(const Datastack& data_stack,
+                        const std::vector<unsigned char>& expected_hash_key) {
     TuplePool pool;
     CheckpointStorage storage(dbpath, test_contract_path);
     std::vector<CodePoint> code;
@@ -78,10 +78,10 @@ void saveDataStackTwice(Datastack data_stack,
 }
 
 void saveAndGetDataStack(MachineStateSaver& saver,
-                         MachineStateFetcher& fetcher,
-                         Datastack data_stack,
-                         std::vector<unsigned char> hash_key,
-                         uint256_t expected_hash) {
+                         const MachineStateFetcher& fetcher,
+                         const Datastack& data_stack,
+                         const std::vector<unsigned char>& hash_key,
+                         const uint256_t& expected_hash) {
     TuplePool pool;
     data_stack.checkpointState(saver, &pool);
     saver.commitTransaction();
@@ -94,10 +94,10 @@ void saveAndGetDataStack(MachineStateSaver& saver,
 }
 
 void saveTwiceAndGetDataStack(MachineStateSaver& saver,
-                              MachineStateFetcher& fetcher,
-                              Datastack data_stack,
-                              std::vector<unsigned char> hash_key,
-                              uint256_t expected_hash) {
+                              const MachineStateFetcher& fetcher,
+                              const Datastack& data_stack,
+                              const std::vector<unsigned char>& hash_key,
+                              const uint256_t& expected_hash) {
     TuplePool pool;
 
     data_stack.checkpointState(saver, &pool);

@@ -29,31 +29,41 @@ class Transaction;
 class Status;
 }  // namespace rocksdb
 
-std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
-    const std::string& string_value);
+auto parseCountAndValue(const std::string& string_value)
+    -> std::tuple<uint32_t, std::vector<unsigned char>>;
 
 class Transaction {
    private:
     std::unique_ptr<rocksdb::Transaction> transaction;
 
-    rocksdb::Status saveKeyValuePair(const std::vector<unsigned char>& key,
-                                     const std::vector<unsigned char>& value);
-    rocksdb::Status deleteKeyValuePair(const std::vector<unsigned char>& key);
-    SaveResults saveValueWithRefCount(
-        uint32_t updated_ref_count,
-        const std::vector<unsigned char>& hash_key,
-        const std::vector<unsigned char>& value);
+    auto saveKeyValuePair(const std::vector<unsigned char>& key,
+                          const std::vector<unsigned char>& value)
+        -> rocksdb::Status;
+    auto deleteKeyValuePair(const std::vector<unsigned char>& key)
+        -> rocksdb::Status;
+    auto saveValueWithRefCount(uint32_t updated_ref_count,
+                               const std::vector<unsigned char>& hash_key,
+                               const std::vector<unsigned char>& value)
+        -> SaveResults;
 
    public:
     Transaction(rocksdb::Transaction* transaction_);
+    Transaction(const Transaction&) = delete;
+    Transaction(Transaction&&) = default;
+    Transaction& operator=(const Transaction&) = delete;
+    Transaction& operator=(Transaction&&) = default;
     ~Transaction();
-    SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
-    SaveResults saveData(const std::vector<unsigned char>& hash_key,
-                         const std::vector<unsigned char>& value);
-    GetResults getData(const std::vector<unsigned char>& hash_key) const;
-    DeleteResults deleteData(const std::vector<unsigned char>& hash_key);
-    rocksdb::Status commit();
-    rocksdb::Status rollBack();
+
+    auto incrementReference(const std::vector<unsigned char>& hash_key)
+        -> SaveResults;
+    auto saveData(const std::vector<unsigned char>& hash_key,
+                  const std::vector<unsigned char>& value) -> SaveResults;
+    auto getData(const std::vector<unsigned char>& hash_key) const
+        -> GetResults;
+    auto deleteData(const std::vector<unsigned char>& hash_key)
+        -> DeleteResults;
+    auto commit() -> rocksdb::Status;
+    auto rollBack() -> rocksdb::Status;
 };
 
 #endif /* transaction_hpp */

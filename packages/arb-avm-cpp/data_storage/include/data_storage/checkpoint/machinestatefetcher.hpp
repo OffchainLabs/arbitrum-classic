@@ -31,14 +31,16 @@ class MachineStateFetcher {
 
    public:
     MachineStateFetcher(const CheckpointStorage& checkpoint_storage);
-    DbResult<CodePoint> getCodePoint(
-        const std::vector<unsigned char>& hash_key) const;
-    DbResult<uint256_t> getUint256_t(
-        const std::vector<unsigned char>& hash_key) const;
-    DbResult<value> getValue(const std::vector<unsigned char>& hash_key) const;
-    DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key) const;
-    DbResult<MachineStateKeys> getMachineState(
-        const std::vector<unsigned char>& checkpoint_name) const;
+    auto getCodePoint(const std::vector<unsigned char>& hash_key) const
+        -> DbResult<CodePoint>;
+    auto getUint256_t(const std::vector<unsigned char>& hash_key) const
+        -> DbResult<uint256_t>;
+    auto getValue(const std::vector<unsigned char>& hash_key) const
+        -> DbResult<value>;
+    auto getTuple(const std::vector<unsigned char>& hash_key) const
+        -> DbResult<Tuple>;
+    auto getMachineState(const std::vector<unsigned char>& checkpoint_name)
+        const -> DbResult<MachineStateKeys>;
 };
 
 #endif /* machinestatefetcher_hpp */

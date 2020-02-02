@@ -25,8 +25,9 @@
 MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage)
     : checkpoint_storage(storage) {}
 
-DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
-    const std::vector<unsigned char>& checkpoint_name) const {
+auto MachineStateFetcher::getMachineState(
+    const std::vector<unsigned char>& checkpoint_name) const
+    -> DbResult<MachineStateKeys> {
     auto results = checkpoint_storage.getValue(checkpoint_name);
 
     if (results.status.ok()) {
@@ -41,8 +42,8 @@ DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
     }
 }
 
-DbResult<CodePoint> MachineStateFetcher::getCodePoint(
-    const std::vector<unsigned char>& hash_key) const {
+auto MachineStateFetcher::getCodePoint(
+    const std::vector<unsigned char>& hash_key) const -> DbResult<CodePoint> {
     auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
@@ -56,8 +57,8 @@ DbResult<CodePoint> MachineStateFetcher::getCodePoint(
     }
 }
 
-DbResult<uint256_t> MachineStateFetcher::getUint256_t(
-    const std::vector<unsigned char>& hash_key) const {
+auto MachineStateFetcher::getUint256_t(
+    const std::vector<unsigned char>& hash_key) const -> DbResult<uint256_t> {
     auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
@@ -70,8 +71,8 @@ DbResult<uint256_t> MachineStateFetcher::getUint256_t(
     }
 }
 
-DbResult<Tuple> MachineStateFetcher::getTuple(
-    const std::vector<unsigned char>& hash_key) const {
+auto MachineStateFetcher::getTuple(
+    const std::vector<unsigned char>& hash_key) const -> DbResult<Tuple> {
     std::vector<value> values;
     auto results = checkpoint_storage.getValue(hash_key);
 
@@ -90,13 +91,13 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                     case TUPLE: {
                         current_vector.erase(current_vector.begin());
                         auto tuple = getTuple(current_vector).data;
-                        values.push_back(tuple);
+                        values.emplace_back(tuple);
                         break;
                     }
                     case NUM: {
                         auto num = checkpoint::utils::deserializeUint256_t(
                             current_vector);
-                        values.push_back(num);
+                        values.emplace_back(num);
                         break;
                     }
                     case CODEPT: {
@@ -104,7 +105,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                             checkpoint::utils::deserializeCodepoint(
                                 current_vector,
                                 checkpoint_storage.getInitialVmValues().code);
-                        values.push_back(code_point);
+                        values.emplace_back(code_point);
                         break;
                     }
                     case HASH_ONLY: {
@@ -122,8 +123,8 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
     }
 }
 
-DbResult<value> MachineStateFetcher::getValue(
-    const std::vector<unsigned char>& hash_key) const {
+auto MachineStateFetcher::getValue(
+    const std::vector<unsigned char>& hash_key) const -> DbResult<value> {
     auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {

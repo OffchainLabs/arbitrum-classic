@@ -29,7 +29,7 @@
 #include <fstream>
 #include <iostream>
 
-std::vector<char> hexStringToBytes(const std::string& hexstr) {
+auto hexStringToBytes(const std::string& hexstr) -> std::vector<char> {
     std::vector<char> bytes;
     bytes.reserve(hexstr.size() / 2);
     boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());

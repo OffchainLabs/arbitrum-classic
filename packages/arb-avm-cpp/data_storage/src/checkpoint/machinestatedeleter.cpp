@@ -25,9 +25,9 @@ MachineStateDeleter::MachineStateDeleter(
     transaction = std::move(transaction_);
 }
 
-DeleteResults MachineStateDeleter::deleteTuple(
+auto MachineStateDeleter::deleteTuple(
     const std::vector<unsigned char>& hash_key,
-    GetResults results) {
+    const GetResults& results) -> DeleteResults {
     if (results.status.ok()) {
         if (results.reference_count == 1) {
             auto value_vectors =
@@ -46,14 +46,14 @@ DeleteResults MachineStateDeleter::deleteTuple(
     }
 }
 
-DeleteResults MachineStateDeleter::deleteTuple(
-    const std::vector<unsigned char>& hash_key) {
+auto MachineStateDeleter::deleteTuple(
+    const std::vector<unsigned char>& hash_key) -> DeleteResults {
     auto results = transaction->getData(hash_key);
     return deleteTuple(hash_key, results);
 }
 
-DeleteResults MachineStateDeleter::deleteValue(
-    const std::vector<unsigned char>& hash_key) {
+auto MachineStateDeleter::deleteValue(
+    const std::vector<unsigned char>& hash_key) -> DeleteResults {
     auto results = transaction->getData(hash_key);
 
     if (results.status.ok()) {
@@ -69,17 +69,17 @@ DeleteResults MachineStateDeleter::deleteValue(
     }
 }
 
-rocksdb::Status MachineStateDeleter::commitTransaction() {
+auto MachineStateDeleter::commitTransaction() -> rocksdb::Status {
     return transaction->commit();
 }
 
-rocksdb::Status MachineStateDeleter::rollBackTransaction() {
+auto MachineStateDeleter::rollBackTransaction() -> rocksdb::Status {
     return transaction->rollBack();
 }
 
-DeleteResults deleteCheckpoint(
-    CheckpointStorage& checkpoint_storage,
-    const std::vector<unsigned char>& checkpoint_name) {
+auto deleteCheckpoint(CheckpointStorage& checkpoint_storage,
+                      const std::vector<unsigned char>& checkpoint_name)
+    -> DeleteResults {
     auto results = checkpoint_storage.getValue(checkpoint_name);
     auto deleter = MachineStateDeleter(checkpoint_storage.makeTransaction());
 

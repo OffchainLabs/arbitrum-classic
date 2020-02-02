@@ -37,17 +37,17 @@ using int128_t = boost::multiprecision::int128_t;
 using int256_t = boost::multiprecision::int256_t;
 using int512_t = boost::multiprecision::int512_t;
 
-inline int get_sign(uint256_t v) {
+inline auto get_sign(const uint256_t& v) -> int {
     return (v >> 255) ? -1 : 1;
 }
 
-inline auto power(uint256_t b, uint64_t e) {
+inline auto power(const uint256_t& b, uint64_t e) {
     return boost::multiprecision::pow(b, static_cast<unsigned int>(e));
 }
 
-uint256_t hash(const uint256_t& val);
+auto hash(const uint256_t& val) -> uint256_t;
 
-inline bool bit(uint256_t x, int i) {
+inline auto bit(const uint256_t& x, int i) -> bool {
     return boost::multiprecision::bit_test(x, i);
 }
 

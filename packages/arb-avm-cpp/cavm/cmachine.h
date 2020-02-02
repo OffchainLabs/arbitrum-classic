@@ -17,8 +17,9 @@
 #ifndef Machine_h
 #define Machine_h
 
-#include <stdint.h>
 #include "ccheckpointstorage.h"
+
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,32 +57,33 @@ typedef struct {
     int didInboxInsn;
 } RawAssertion;
 
-CMachine* machineCreate(const char* filename);
+auto machineCreate(const char* filename) -> CMachine*;
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineHash(CMachine* m, void* ret);
-CMachine* machineClone(CMachine* m);
+auto machineClone(CMachine* m) -> CMachine*;
 
 // Ret must have 32 bytes of storage allocated for returned hash
-CStatus machineCurrentStatus(CMachine* m);
-CBlockReason machineIsBlocked(CMachine* m, void* currentTime, int newMessages);
+auto machineCurrentStatus(CMachine* m) -> CStatus;
+auto machineIsBlocked(CMachine* m, void* currentTime, int newMessages)
+    -> CBlockReason;
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* timeboundStart,
-                                     void* timeboundEnd,
-                                     void* inbox,
-                                     uint64_t wallLimit);
+auto machineExecuteAssertion(CMachine* m,
+                             uint64_t maxSteps,
+                             void* timeboundStart,
+                             void* timeboundEnd,
+                             void* inbox,
+                             uint64_t wallLimit) -> RawAssertion;
 
-ByteSlice machineMarshallForProof(CMachine* m);
+auto machineMarshallForProof(CMachine* m) -> ByteSlice;
 
 void machinePrint(CMachine* m);
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
-int restoreMachine(CMachine* m,
-                   CCheckpointStorage* storage,
-                   const void* machine_hash);
+auto checkpointMachine(CMachine* m, CCheckpointStorage* storage) -> int;
+auto restoreMachine(CMachine* m,
+                    CCheckpointStorage* storage,
+                    const void* machine_hash) -> int;
 
 #ifdef __cplusplus
 }

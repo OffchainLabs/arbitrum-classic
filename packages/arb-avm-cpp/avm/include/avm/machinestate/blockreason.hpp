@@ -43,9 +43,9 @@ struct BreakpointBlocked {
 
 struct InboxBlocked {
     static constexpr BlockType type = Inbox;
-    uint256_t timout;
+    uint256_t timeout;
 
-    InboxBlocked(uint256_t timeout_) { timout = timeout_; }
+    InboxBlocked(uint256_t timeout_) : timeout(std::move(timeout_)) {}
 };
 
 using BlockReason = nonstd::variant<NotBlocked,
@@ -54,11 +54,12 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     BreakpointBlocked,
                                     InboxBlocked>;
 
-std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
-std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);
-std::ostream& operator<<(std::ostream& os, const ErrorBlocked& val);
-std::ostream& operator<<(std::ostream& os, const BreakpointBlocked& val);
-std::ostream& operator<<(std::ostream& os, const InboxBlocked& val);
-std::ostream& operator<<(std::ostream& os, const BlockReason& val);
+auto operator<<(std::ostream& os, const NotBlocked& val) -> std::ostream&;
+auto operator<<(std::ostream& os, const HaltBlocked& val) -> std::ostream&;
+auto operator<<(std::ostream& os, const ErrorBlocked& val) -> std::ostream&;
+auto operator<<(std::ostream& os, const BreakpointBlocked& val)
+    -> std::ostream&;
+auto operator<<(std::ostream& os, const InboxBlocked& val) -> std::ostream&;
+auto operator<<(std::ostream& os, const BlockReason& val) -> std::ostream&;
 
 #endif /* blockreason_hpp */

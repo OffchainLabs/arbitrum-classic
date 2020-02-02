@@ -29,20 +29,19 @@ MachineStateSaver::MachineStateSaver(
     transaction = std::move(transaction_);
 }
 
-SaveResults MachineStateSaver::saveValue(const value& val) {
+auto MachineStateSaver::saveValue(const value& val) -> SaveResults {
     auto serialized_value = checkpoint::utils::serializeValue(val);
     auto type = static_cast<ValueTypes>(serialized_value[0]);
 
     if (type == TUPLE) {
-        auto tuple = nonstd::get<Tuple>(val);
-        return saveTuple(tuple);
+        return saveTuple(nonstd::get<Tuple>(val));
     } else {
         auto hash_key = GetHashKey(val);
         return transaction->saveData(hash_key, serialized_value);
     }
 }
 
-SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
+auto MachineStateSaver::saveTuple(const Tuple& val) -> SaveResults {
     auto hash_key = GetHashKey(val);
     auto results = transaction->getData(hash_key);
 
@@ -72,18 +71,18 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     }
 }
 
-SaveResults MachineStateSaver::saveMachineState(
+auto MachineStateSaver::saveMachineState(
     const MachineStateKeys& state_data,
-    const std::vector<unsigned char>& checkpoint_name) {
+    const std::vector<unsigned char>& checkpoint_name) -> SaveResults {
     auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
 
     return transaction->saveData(checkpoint_name, serialized_state);
 }
 
-rocksdb::Status MachineStateSaver::commitTransaction() {
+auto MachineStateSaver::commitTransaction() -> rocksdb::Status {
     return transaction->commit();
 }
 
-rocksdb::Status MachineStateSaver::rollBackTransaction() {
+auto MachineStateSaver::rollBackTransaction() -> rocksdb::Status {
     return transaction->rollBack();
 }

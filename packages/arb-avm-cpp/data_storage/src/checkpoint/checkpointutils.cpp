@@ -38,7 +38,7 @@ std::unordered_map<int, int> blockreason_type_length = {{0, 1},
 
 namespace checkpoint {
 
-uint64_t deserialize_uint64(const char*& bufptr) {
+auto deserialize_uint64(const char*& bufptr) -> uint64_t {
     uint64_t ret_value;
     memcpy(&ret_value, bufptr, UINT64_SIZE);
     auto val = boost::endian::big_to_native(ret_value);
@@ -55,7 +55,7 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 }
 
 struct ValueSerializer {
-    std::vector<unsigned char> operator()(const Tuple& val) const {
+    auto operator()(const Tuple& val) const -> std::vector<unsigned char> {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(TUPLE);
         value_vector.push_back(type_code);
@@ -67,7 +67,7 @@ struct ValueSerializer {
         return value_vector;
     }
 
-    std::vector<unsigned char> operator()(const uint256_t& val) const {
+    auto operator()(const uint256_t& val) const -> std::vector<unsigned char> {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(NUM);
         value_vector.push_back(type_code);
@@ -78,7 +78,7 @@ struct ValueSerializer {
         return value_vector;
     }
 
-    std::vector<unsigned char> operator()(const CodePoint& val) const {
+    auto operator()(const CodePoint& val) const -> std::vector<unsigned char> {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(CODEPT);
         value_vector.push_back(type_code);
@@ -89,14 +89,14 @@ struct ValueSerializer {
 
 using iterator = std::vector<unsigned char>::const_iterator;
 
-unsigned char extractStatus(iterator& iter) {
+auto extractStatus(iterator& iter) -> unsigned char {
     auto status = (unsigned char)(*iter);
     ++iter;
 
     return status;
 }
 
-std::vector<unsigned char> extractHashKey(iterator& iter) {
+auto extractHashKey(iterator& iter) -> std::vector<unsigned char> {
     auto end_iter = iter + HASH_KEY_LENGTH;
     std::vector<unsigned char> hash_key(iter, end_iter);
     iter = end_iter;
@@ -106,8 +106,8 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 
 namespace utils {
 
-std::vector<std::vector<unsigned char>> parseTuple(
-    const std::vector<unsigned char>& data) {
+auto parseTuple(const std::vector<unsigned char>& data)
+    -> std::vector<std::vector<unsigned char>> {
     std::vector<std::vector<unsigned char>> return_vector;
 
     auto iter = data.begin() + 1;
@@ -144,8 +144,8 @@ std::vector<std::vector<unsigned char>> parseTuple(
     return return_vector;
 }
 
-CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
-                               const std::vector<CodePoint>& code) {
+auto deserializeCodepoint(const std::vector<unsigned char>& val,
+                          const std::vector<CodePoint>& code) -> CodePoint {
     auto buff = reinterpret_cast<const char*>(&val[1]);
     auto pc_val = deserialize_uint64(buff);
     if (pc_val == pc_default) {
@@ -155,17 +155,17 @@ CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
     }
 }
 
-uint256_t deserializeUint256_t(const std::vector<unsigned char>& val) {
+auto deserializeUint256_t(const std::vector<unsigned char>& val) -> uint256_t {
     auto buff = reinterpret_cast<const char*>(&val[2]);
     return deserializeUint256t(buff);
 }
 
-std::vector<unsigned char> serializeValue(const value& val) {
+auto serializeValue(const value& val) -> std::vector<unsigned char> {
     return nonstd::visit(ValueSerializer{}, val);
 }
 
-MachineStateKeys extractStateKeys(
-    const std::vector<unsigned char>& stored_state) {
+auto extractStateKeys(const std::vector<unsigned char>& stored_state)
+    -> MachineStateKeys {
     auto current_iter = stored_state.begin();
 
     auto status = extractStatus(current_iter);
@@ -180,8 +180,8 @@ MachineStateKeys extractStateKeys(
                             pc,           err_pc,    status};
 }
 
-std::vector<unsigned char> serializeStateKeys(
-    const MachineStateKeys& state_data) {
+auto serializeStateKeys(const MachineStateKeys& state_data)
+    -> std::vector<unsigned char> {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
 

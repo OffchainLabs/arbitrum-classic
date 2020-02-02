@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-uint256_t hash(const uint256_t& val) {
+auto hash(const uint256_t& val) -> uint256_t {
     std::array<unsigned char, 32> intData;
     to_big_endian(val, intData.begin());
 

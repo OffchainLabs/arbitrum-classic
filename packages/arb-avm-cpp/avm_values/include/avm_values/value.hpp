@@ -31,15 +31,15 @@ struct CodePoint;
 // Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
-std::ostream& operator<<(std::ostream& os, const value& val);
-uint256_t hash(const value& value);
-int get_tuple_size(char*& bufptr);
+auto operator<<(std::ostream& os, const value& val) -> std::ostream&;
+auto hash(const value& value) -> uint256_t;
+auto get_tuple_size(const char*& bufptr) -> int;
 
-uint256_t deserializeUint256t(const char*& srccode);
-Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool);
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool);
-value deserialize_value(const char*& srccode, TuplePool& pool);
+auto deserializeUint256t(const char*& srccode) -> uint256_t;
+auto deserializeOperation(const char*& bufptr, TuplePool& pool) -> Operation;
+auto deserializeCodePoint(const char*& bufptr, TuplePool& pool) -> CodePoint;
+auto deserializeTuple(const char*& bufptr, int size, TuplePool& pool) -> Tuple;
+auto deserialize_value(const char*& srccode, TuplePool& pool) -> value;
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
@@ -51,10 +51,10 @@ void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
 
 template <typename T>
-static T shrink(uint256_t i) {
+static auto shrink(const uint256_t& i) -> T {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
 
-std::vector<unsigned char> GetHashKey(const value& val);
+auto GetHashKey(const value& val) -> std::vector<unsigned char>;
 
 #endif /* value_hpp */
