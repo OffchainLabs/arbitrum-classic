@@ -57,33 +57,32 @@ typedef struct {
     int didInboxInsn;
 } RawAssertion;
 
-auto machineCreate(const char* filename) -> CMachine*;
+CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineHash(CMachine* m, void* ret);
-auto machineClone(CMachine* m) -> CMachine*;
+CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-auto machineCurrentStatus(CMachine* m) -> CStatus;
-auto machineIsBlocked(CMachine* m, void* currentTime, int newMessages)
-    -> CBlockReason;
+CStatus machineCurrentStatus(CMachine* m);
+CBlockReason machineIsBlocked(CMachine* m, void* currentTime, int newMessages);
 
-auto machineExecuteAssertion(CMachine* m,
-                             uint64_t maxSteps,
-                             void* timeboundStart,
-                             void* timeboundEnd,
-                             void* inbox,
-                             uint64_t wallLimit) -> RawAssertion;
+RawAssertion machineExecuteAssertion(CMachine* m,
+                                     uint64_t maxSteps,
+                                     void* timeboundStart,
+                                     void* timeboundEnd,
+                                     void* inbox,
+                                     uint64_t wallLimit);
 
-auto machineMarshallForProof(CMachine* m) -> ByteSlice;
+ByteSlice machineMarshallForProof(CMachine* m);
 
 void machinePrint(CMachine* m);
 
-auto checkpointMachine(CMachine* m, CCheckpointStorage* storage) -> int;
-auto restoreMachine(CMachine* m,
-                    CCheckpointStorage* storage,
-                    const void* machine_hash) -> int;
+int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
+int restoreMachine(CMachine* m,
+                   CCheckpointStorage* storage,
+                   const void* machine_hash);
 
 #ifdef __cplusplus
 }

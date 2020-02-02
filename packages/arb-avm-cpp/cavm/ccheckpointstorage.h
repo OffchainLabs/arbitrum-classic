@@ -27,30 +27,29 @@ typedef struct {
     int length;
 } ByteSlice;
 
-using CMachine = void;
-using CCheckpointStorage = void;
+typedef void CMachine;
+typedef void CCheckpointStorage;
 
-auto createCheckpointStorage(const char* filename, const char* contract_path)
-    -> CCheckpointStorage*;
+CCheckpointStorage* createCheckpointStorage(const char* filename,
+                                            const char* contract_path);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
-auto getInitialMachine(const CCheckpointStorage* storage_ptr) -> CMachine*;
-auto closeCheckpointStorage(CCheckpointStorage* storage_ptr) -> int;
-auto deleteCheckpoint(CCheckpointStorage* storage_ptr, const void* machine_hash)
-    -> int;
-auto saveValue(CCheckpointStorage* storage_ptr, const void* value_data) -> int;
-auto getValue(const CCheckpointStorage* storage_ptr, const void* hash_key)
-    -> ByteSlice;
-auto deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) -> int;
-auto saveData(CCheckpointStorage* storage_ptr,
-              const void* key,
-              int key_length,
-              const void* data,
-              int data_length) -> int;
-auto getData(CCheckpointStorage* storage_ptr, const void* key, int key_length)
-    -> ByteSlice;
-auto deleteData(CCheckpointStorage* storage_ptr,
-                const void* key,
-                int key_length) -> int;
+CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
+int closeCheckpointStorage(CCheckpointStorage* storage_ptr);
+int deleteCheckpoint(CCheckpointStorage* storage_ptr, const void* machine_hash);
+int saveValue(CCheckpointStorage* storage_ptr, const void* value_data);
+ByteSlice getValue(const CCheckpointStorage* storage_ptr, const void* hash_key);
+int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key);
+int saveData(CCheckpointStorage* storage_ptr,
+             const void* key,
+             int key_length,
+             const void* data,
+             int data_length);
+ByteSlice getData(CCheckpointStorage* storage_ptr,
+                  const void* key,
+                  int key_length);
+int deleteData(CCheckpointStorage* storage_ptr,
+               const void* key,
+               int key_length);
 
 #ifdef __cplusplus
 }
