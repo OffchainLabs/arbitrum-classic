@@ -311,6 +311,21 @@ func GeneratePathProof(from, to *Node) []common.Hash {
 	return append(sub, to.innerHash)
 }
 
+func IsDownstream(from, to *Node) []common.Hash {
+	// returns nil if no proof exists
+	if to == nil {
+		return nil
+	}
+	if from == to {
+		return []common.Hash{}
+	}
+	sub := GeneratePathProof(from, to.prev)
+	if sub == nil {
+		return nil
+	}
+	return append(sub, to.innerHash)
+}
+
 func GenerateConflictProof(from, to1, to2 *Node) ([]common.Hash, []common.Hash) {
 	// returns nil, nil if no proof exists
 	proof1 := GeneratePathProof(from, to1)

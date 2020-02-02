@@ -43,8 +43,7 @@ type ChainListener interface {
 	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
 
 	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
-	ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity)
-	InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity)
+	NodesConfirmable(context.Context, *ChainObserver, *structures.ConfirmOpportunity)
 	PrunableLeafs(context.Context, *ChainObserver, []pruneParams)
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
@@ -457,63 +456,23 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmValidOpportunity) {
+func (lis *ValidatorChainListener) NodesConfirmable(ctx context.Context, observer *ChainObserver, conf *structures.ConfirmOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
-	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
+	_, alreadySent := lis.broadcastConfirmations[conf.CurrentLatestConfirmed]
 	if alreadySent {
 		lis.Unlock()
 		return
 	}
-	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
 	go func() {
-		err := lis.actor.ConfirmValid(
-			ctx,
-			conf.deadlineTicks,
-			conf.messages,
-			conf.logsAcc,
-			conf.vmProtoStateHash,
-			conf.stakerAddresses,
-			conf.stakerProofs,
-			conf.stakerProofOffsets,
-		)
+		err := lis.actor.Confirm(ctx, conf)
 		if err != nil {
 			log.Println("Failed to confirm valid node", err)
 			lis.Lock()
-			delete(lis.broadcastConfirmations, conf.nodeHash)
-			lis.Unlock()
-		}
-	}()
-}
-
-func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmInvalidOpportunity) {
-	// Anyone confirm a node
-	// No need to have your own stake
-	lis.Lock()
-	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
-	if alreadySent {
-		lis.Unlock()
-		return
-	}
-	lis.broadcastConfirmations[conf.nodeHash] = true
-	lis.Unlock()
-	go func() {
-		err := lis.actor.ConfirmInvalid(
-			ctx,
-			conf.deadlineTicks,
-			conf.challengeNodeData,
-			conf.branch,
-			conf.vmProtoStateHash,
-			conf.stakerAddresses,
-			conf.stakerProofs,
-			conf.stakerProofOffsets,
-		)
-		if err != nil {
-			log.Println("Failed to confirm invalid node", err)
-			lis.Lock()
-			delete(lis.broadcastConfirmations, conf.nodeHash)
+			delete(lis.broadcastConfirmations, conf.CurrentLatestConfirmed)
 			lis.Unlock()
 		}
 	}()

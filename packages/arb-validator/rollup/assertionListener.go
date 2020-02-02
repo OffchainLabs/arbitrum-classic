@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type FinalizedAssertion struct {
@@ -51,9 +52,7 @@ func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, a
 }
 
 func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
-func (al *AssertionListener) ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity) {
-}
-func (al *AssertionListener) InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity) {
+func (al *AssertionListener) NodesConfirmable(context.Context, *ChainObserver, *structures.ConfirmOpportunity) {
 }
 func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {}
 func (al *AssertionListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {

@@ -19,12 +19,10 @@ package rollup
 import (
 	"bytes"
 	"log"
-	"math/big"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -163,110 +161,119 @@ func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneP
 	return prunesToDo
 }
 
-type confirmValidOpportunity struct {
-	nodeHash           common.Hash
-	deadlineTicks      common.TimeTicks
-	messages           []value.Value
-	logsAcc            common.Hash
-	vmProtoStateHash   common.Hash
-	stakerAddresses    []common.Address
-	stakerProofs       []common.Hash
-	stakerProofOffsets []*big.Int
-}
-
-type confirmInvalidOpportunity struct {
-	nodeHash           common.Hash
-	deadlineTicks      common.TimeTicks
-	challengeNodeData  common.Hash
-	branch             structures.ChildType
-	vmProtoStateHash   common.Hash
-	stakerAddresses    []common.Address
-	stakerProofs       []common.Hash
-	stakerProofOffsets []*big.Int
-}
-
 func (sng *StakedNodeGraph) generateNextConfProof(
 	currentTime common.TimeTicks,
-) (*confirmValidOpportunity, *confirmInvalidOpportunity) {
+) *structures.ConfirmOpportunity {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
 	})
 	sort.Sort(SortableAddressList(stakerAddrs))
 
-	for _, successor := range sng.latestConfirmed.successorHashes {
-		if successor == zeroBytes32 {
-			continue
-		}
-		node := sng.nodeFromHash[successor]
-		proof, offsets := sng.generateAlignedStakersProof(
-			node,
-			currentTime,
-			stakerAddrs,
-		)
+	nodeOps := make([]structures.ConfirmNodeOpportunity, 0)
+	conf := sng.latestConfirmed
+	keepChecking := true
+	for ; keepChecking; keepChecking = false {
+		for _, successor := range conf.successorHashes {
+			if successor == zeroBytes32 {
+				continue
+			}
+			node := sng.nodeFromHash[successor]
 
-		if proof != nil {
-			if node.linkType == structures.ValidChildType {
-				if node.assertion == nil {
-					return nil, nil
+			confirmable := sng.isConfirmableNode(
+				node,
+				currentTime,
+				stakerAddrs,
+			)
+			if confirmable {
+				if node.linkType == structures.ValidChildType {
+					nodeOps = append(nodeOps, structures.ConfirmValidOpportunity{
+						DeadlineTicks:    node.deadline,
+						Messages:         node.assertion.OutMsgs,
+						LogsAcc:          node.disputable.AssertionClaim.AssertionStub.LastLogHash,
+						VMProtoStateHash: node.vmProtoData.Hash(),
+					})
+				} else {
+					nodeOps = append(nodeOps, structures.ConfirmInvalidOpportunity{
+						DeadlineTicks:     node.deadline,
+						ChallengeNodeData: node.nodeDataHash,
+						Branch:            node.linkType,
+						VMProtoStateHash:  node.vmProtoData.Hash(),
+					})
 				}
-				return &confirmValidOpportunity{
-					nodeHash:           node.hash,
-					deadlineTicks:      common.TimeTicks{new(big.Int).Set(node.deadline.Val)},
-					messages:           node.assertion.OutMsgs,
-					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHash,
-					vmProtoStateHash:   node.vmProtoData.Hash(),
-					stakerAddresses:    stakerAddrs,
-					stakerProofs:       proof,
-					stakerProofOffsets: offsets,
-				}, nil
-			} else {
-				return nil, &confirmInvalidOpportunity{
-					nodeHash:           node.hash,
-					deadlineTicks:      common.TimeTicks{new(big.Int).Set(node.deadline.Val)},
-					challengeNodeData:  node.nodeDataHash,
-					branch:             node.linkType,
-					vmProtoStateHash:   node.vmProtoData.Hash(),
-					stakerAddresses:    stakerAddrs,
-					stakerProofs:       proof,
-					stakerProofOffsets: offsets,
-				}
+				conf = node
+				keepChecking = true
+				break
 			}
 		}
 	}
 
-	return nil, nil
+	if len(nodeOps) == 0 {
+		return nil
+	}
+
+	proofs := sng.generateAlignedStakersProofs(
+		conf,
+		currentTime,
+		stakerAddrs,
+	)
+	return &structures.ConfirmOpportunity{
+		Nodes:                  nodeOps,
+		CurrentLatestConfirmed: sng.latestConfirmed.hash,
+		StakerAddresses:        stakerAddrs,
+		StakerProofs:           proofs,
+	}
 }
 
-func (sng *StakedNodeGraph) generateAlignedStakersProof(
+func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 	confirmingNode *Node,
 	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
-) ([]common.Hash, []*big.Int) {
-	proof := make([]common.Hash, 0)
-	offsets := make([]*big.Int, 0)
+) [][]common.Hash {
+	proofs := make([][]common.Hash, 0)
 	deadline := confirmingNode.deadline
 	if currentTime.Cmp(deadline) < 0 {
-		return nil, nil
+		return nil
 	}
-	offsets = append(offsets, big.NewInt(0))
 	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
 		if staker.creationTime.Cmp(deadline) >= 0 {
-			offsets = append(offsets, new(big.Int).SetUint64(uint64(len(proof))))
 			continue
 		}
 		subProof := GeneratePathProof(confirmingNode, staker.location)
 		if subProof == nil {
-			return nil, nil
+			return nil
 		}
-		proof = append(proof, subProof...)
-		offsets = append(offsets, new(big.Int).SetUint64(uint64(len(proof))))
+		proofs = append(proofs, subProof)
 	}
-	if len(offsets) == 1 {
-		return nil, nil
+	return proofs
+}
+
+func (sng *StakedNodeGraph) isConfirmableNode(
+	confirmingNode *Node,
+	currentTime common.TimeTicks,
+	stakerAddrs []common.Address,
+) bool {
+	deadline := confirmingNode.deadline
+	stakeCount := 0
+	if currentTime.Cmp(deadline) < 0 {
+		return false
 	}
-	return proof, offsets
+	for _, sa := range stakerAddrs {
+		staker := sng.stakers.Get(sa)
+		if staker.creationTime.Cmp(deadline) >= 0 {
+			continue
+		}
+		subProof := GeneratePathProof(confirmingNode, staker.location)
+		if subProof == nil {
+			return false
+		}
+		stakeCount++
+	}
+	if stakeCount == 0 {
+		return false
+	}
+	return true
 }
 
 func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {

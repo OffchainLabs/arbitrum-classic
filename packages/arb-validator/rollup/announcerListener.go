@@ -20,6 +20,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -70,11 +72,8 @@ func (al *AnnouncerListener) MessageDelivered(context.Context, *ChainObserver, a
 func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {
 	log.Println(al.Prefix, "AssertionPrepared")
 }
-func (al *AnnouncerListener) ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity) {
-	log.Println(al.Prefix, "ValidNodeConfirmable")
-}
-func (al *AnnouncerListener) InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity) {
-	log.Println(al.Prefix, "InvalidNodeConfirmable")
+func (al *AnnouncerListener) NodesConfirmable(context.Context, *ChainObserver, *structures.ConfirmOpportunity) {
+	log.Println(al.Prefix, "NodesConfirmable")
 }
 func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {
 	log.Println(al.Prefix, "PrunableLeafs")

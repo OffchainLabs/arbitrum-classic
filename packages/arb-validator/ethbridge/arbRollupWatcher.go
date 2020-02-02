@@ -379,7 +379,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			return nil, err
 		}
 		return arbbridge.ConfirmedAssertionEvent{
-			LogsAccHash: eventVal.LogsAccHash,
+			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
 	}
 	return vm.ProcessMessageDeliveredEvents(chainInfo, ethLog)

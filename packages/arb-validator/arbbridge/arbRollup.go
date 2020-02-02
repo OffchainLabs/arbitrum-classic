@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -34,26 +33,7 @@ type ArbRollup interface {
 	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
 	PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error
 	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof []common.Hash) error
-	ConfirmValid(
-		ctx context.Context,
-		deadline common.TimeTicks,
-		outMsgs []value.Value,
-		logsAccHash common.Hash,
-		protoHash common.Hash,
-		stakerAddresses []common.Address,
-		stakerProofs []common.Hash,
-		stakerProofOffsets []*big.Int,
-	) error
-	ConfirmInvalid(
-		ctx context.Context,
-		deadline common.TimeTicks,
-		challengeNodeData common.Hash,
-		branch structures.ChildType,
-		protoHash common.Hash,
-		stakerAddresses []common.Address,
-		stakerProofs []common.Hash,
-		stakerProofOffsets []*big.Int,
-	) error
+	Confirm(ctx context.Context, opp *structures.ConfirmOpportunity) error
 	StartChallenge(
 		ctx context.Context,
 		asserterAddress common.Address,

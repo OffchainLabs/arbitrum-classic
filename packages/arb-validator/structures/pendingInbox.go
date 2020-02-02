@@ -257,7 +257,7 @@ func (ms *MessageStack) GenerateInbox(olderAcc common.Hash, count uint64) (*Inbo
 	inbox := NewInbox()
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
-			return nil, errors.New("Not enough messages in pending inbox")
+			return nil, errors.New("Not enough Messages in pending inbox")
 		}
 		inbox.DeliverMessage(item.message)
 		item = item.next

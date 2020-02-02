@@ -93,7 +93,7 @@ type ConfirmedEvent struct {
 
 type ConfirmedAssertionEvent struct {
 	ChainInfo
-	LogsAccHash common.Hash
+	LogsAccHash []common.Hash
 }
 
 type InitiateChallengeEvent struct {
