@@ -34,6 +34,10 @@ import (
 
 var zeroBytes32 common.Hash // deliberately zeroed
 
+const (
+	MaxAssertionSize = 120
+)
+
 type StakedNodeGraph struct {
 	*NodeGraph
 	stakers *StakerSet
@@ -176,6 +180,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	nodeOps := make([]valprotocol.ConfirmNodeOpportunity, 0)
 	conf := sng.latestConfirmed
 	keepChecking := true
+	confNodes := make([]*Node, 0)
 	for ; keepChecking; keepChecking = false {
 		for _, successor := range conf.successorHashes {
 			if successor == zeroBytes32 {
@@ -189,24 +194,28 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				stakerAddrs,
 			)
 			if confirmable {
+				var confOpp valprotocol.ConfirmNodeOpportunity
 				if node.linkType == valprotocol.ValidChildType {
 					if node.assertion == nil {
 						break
 					}
-					nodeOps = append(nodeOps, valprotocol.ConfirmValidOpportunity{
+					confOpp = valprotocol.ConfirmValidOpportunity{
 						DeadlineTicks:    node.deadline,
 						Messages:         node.assertion.OutMsgs,
 						LogsAcc:          node.disputable.AssertionClaim.AssertionStub.LastLogHash,
 						VMProtoStateHash: node.vmProtoData.Hash(),
-					})
+					}
+
 				} else {
-					nodeOps = append(nodeOps, valprotocol.ConfirmInvalidOpportunity{
+					confOpp = valprotocol.ConfirmInvalidOpportunity{
 						DeadlineTicks:     node.deadline,
 						ChallengeNodeData: node.nodeDataHash,
 						Branch:            node.linkType,
 						VMProtoStateHash:  node.vmProtoData.Hash(),
-					})
+					}
 				}
+				confNodes = append(confNodes, node)
+				nodeOps = append(nodeOps, confOpp)
 				conf = node
 				keepChecking = true
 				break
@@ -218,17 +227,30 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 		return nil
 	}
 
-	proofs := sng.generateAlignedStakersProofs(
-		conf,
-		currentTime,
-		stakerAddrs,
-	)
-	return &valprotocol.ConfirmOpportunity{
-		Nodes:                  nodeOps,
-		CurrentLatestConfirmed: sng.latestConfirmed.hash,
-		StakerAddresses:        stakerAddrs,
-		StakerProofs:           proofs,
+	nodeLimit := len(nodeOps)
+	for nodeLimit > 0 {
+		totalSize := 0
+		for _, opp := range nodeOps[:nodeLimit] {
+			totalSize += opp.ProofSize()
+		}
+		proofs := sng.generateAlignedStakersProofs(
+			confNodes[nodeLimit-1],
+			currentTime,
+			stakerAddrs,
+		)
+		for _, proof := range proofs {
+			totalSize += len(proof)
+		}
+		if totalSize < MaxAssertionSize || nodeLimit == 1 {
+			return &valprotocol.ConfirmOpportunity{
+				Nodes:                  nodeOps[:nodeLimit],
+				CurrentLatestConfirmed: sng.latestConfirmed.hash,
+				StakerAddresses:        stakerAddrs,
+				StakerProofs:           proofs,
+			}
+		}
 	}
+	panic("Unreachable code")
 }
 
 func (sng *StakedNodeGraph) generateAlignedStakersProofs(

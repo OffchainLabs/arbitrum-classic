@@ -32,6 +32,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
+const (
+	PruneSizeLimit = 120
+)
+
 type ChainListener interface {
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
@@ -483,6 +487,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 	// Anyone can prune a leaf
 	leavesToPrune := make([]valprotocol.PruneParams, 0, len(params))
 	lis.Lock()
+	totalSize := 0
 	for _, prune := range params {
 		_, alreadySent := lis.broadcastLeafPrunes[prune.LeafHash]
 		if alreadySent {
@@ -490,6 +495,10 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 		}
 		leavesToPrune = append(leavesToPrune, prune)
 		lis.broadcastLeafPrunes[prune.LeafHash] = true
+		totalSize += len(prune.LeafProof) + len(prune.AncProof) + 1
+		if totalSize > PruneSizeLimit {
+			break
+		}
 	}
 	lis.Unlock()
 	go func() {

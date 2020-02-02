@@ -40,6 +40,15 @@ func (opp ConfirmValidOpportunity) StateHash() common.Hash {
 	return opp.VMProtoStateHash
 }
 
+func (opp ConfirmValidOpportunity) ProofSize() int {
+	totalSize := 3
+	for _, val := range opp.Messages {
+		buf := value.MarshalValueToBytes(val)
+		totalSize += len(buf)
+	}
+	return totalSize
+}
+
 type ConfirmInvalidOpportunity struct {
 	DeadlineTicks     common.TimeTicks
 	ChallengeNodeData common.Hash
@@ -59,10 +68,15 @@ func (opp ConfirmInvalidOpportunity) StateHash() common.Hash {
 	return opp.VMProtoStateHash
 }
 
+func (opp ConfirmInvalidOpportunity) ProofSize() int {
+	return 3
+}
+
 type ConfirmNodeOpportunity interface {
 	BranchType() ChildType
 	Deadline() common.TimeTicks
 	StateHash() common.Hash
+	ProofSize() int
 }
 
 type ConfirmOpportunity struct {
