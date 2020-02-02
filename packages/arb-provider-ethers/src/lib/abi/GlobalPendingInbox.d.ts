@@ -120,15 +120,15 @@ export class GlobalPendingInbox extends Contract {
     functions: {
         getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
 
-        getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>;
+        getERC721Tokens(_erc721: string, _owner: string): Promise<(BigNumber)[]>;
 
         getEthBalance(_owner: string): Promise<BigNumber>;
 
         hasERC721(_erc721: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
 
-        ownedERC20s(_owner: string): Promise<string[]>;
+        ownedERC20s(_owner: string): Promise<(string)[]>;
 
-        ownedERC721s(_owner: string): Promise<string[]>;
+        ownedERC721s(_owner: string): Promise<(string)[]>;
 
         withdrawERC20(_tokenContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 

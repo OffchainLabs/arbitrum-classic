@@ -80,7 +80,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
 	}
 	go func() {
-		ticker := time.NewTicker(time.Minute)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
 		defer ticker.Stop()
 		for {
 			select {

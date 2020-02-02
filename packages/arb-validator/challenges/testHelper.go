@@ -89,7 +89,7 @@ func testChallenge(
 
 	challengeFactoryAddress, err := factory.ChallengeFactoryAddress()
 	if err != nil {
-		return errors2.Wrap(err, "Error gettign challenge factory address")
+		return errors2.Wrap(err, "Error getting challenge factory address")
 	}
 
 	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
@@ -101,7 +101,7 @@ func testChallenge(
 		context.Background(),
 		client1.Address(),
 		client2.Address(),
-		common.TimeTicks{big.NewInt(13000 * 5)},
+		common.TimeFromBlockNum(common.NewTimeBlocksInt(5)),
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)

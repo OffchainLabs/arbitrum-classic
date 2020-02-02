@@ -25,7 +25,7 @@ import (
 
 func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
 		for {
 			select {

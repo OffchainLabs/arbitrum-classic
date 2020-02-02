@@ -18,6 +18,7 @@ package common
 
 import (
 	"math/big"
+	"time"
 )
 
 type TimeBlocks big.Int
@@ -26,12 +27,20 @@ func NewTimeBlocks(val *big.Int) *TimeBlocks {
 	return (*TimeBlocks)(val)
 }
 
+func NewTimeBlocksInt(val int64) *TimeBlocks {
+	return NewTimeBlocks(big.NewInt(val))
+}
+
 func (tb *TimeBlocks) Clone() *TimeBlocks {
 	return NewTimeBlocks(new(big.Int).Set(tb.AsInt()))
 }
 
 func (tb *TimeBlocks) AsInt() *big.Int {
 	return (*big.Int)(tb)
+}
+
+func (tb *TimeBlocks) Duration() time.Duration {
+	return TimeFromBlockNum(tb).Duration()
 }
 
 func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {

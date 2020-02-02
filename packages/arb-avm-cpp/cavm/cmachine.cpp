@@ -163,7 +163,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStartData,
                                      void* timeboundEndData,
-                                     void* inbox) {
+                                     void* inbox,
+                                     uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
@@ -175,7 +176,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
     auto messages = deserialize_value(inboxData, mach->getPool());
 
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd,
-                                    nonstd::get<Tuple>(std::move(messages)));
+                                    nonstd::get<Tuple>(std::move(messages)),
+                                    std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
         marshal_value(outMsg, outMsgData);
