@@ -211,7 +211,7 @@ jobs:
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
             cd ..
-            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
+            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
 
       - run:
           name: start geth
