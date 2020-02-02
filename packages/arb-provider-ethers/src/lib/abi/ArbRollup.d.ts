@@ -8,8 +8,14 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbRollupInterface extends Interface {
     functions: {
-        pruneLeaf: TypedFunctionDescription<{
-            encode([from, leafProof, latestConfirmedProof]: [Arrayish, (Arrayish)[], (Arrayish)[]]): string;
+        pruneLeaves: TypedFunctionDescription<{
+            encode([fromNodes, leafProofs, leafProofLengths, latestConfProofs, latestConfirmedProofLengths]: [
+                (Arrayish)[],
+                (Arrayish)[],
+                (BigNumberish)[],
+                (Arrayish)[],
+                (BigNumberish)[],
+            ]): string;
         }>;
 
         resolveChallenge: TypedFunctionDescription<{
@@ -239,10 +245,12 @@ export class ArbRollup extends Contract {
             3: BigNumber;
         }>;
 
-        pruneLeaf(
-            from: Arrayish,
-            leafProof: (Arrayish)[],
-            latestConfirmedProof: (Arrayish)[],
+        pruneLeaves(
+            fromNodes: (Arrayish)[],
+            leafProofs: (Arrayish)[],
+            leafProofLengths: (BigNumberish)[],
+            latestConfProofs: (Arrayish)[],
+            latestConfirmedProofLengths: (BigNumberish)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -390,7 +398,13 @@ export class ArbRollup extends Contract {
     };
 
     estimate: {
-        pruneLeaf(from: Arrayish, leafProof: (Arrayish)[], latestConfirmedProof: (Arrayish)[]): Promise<BigNumber>;
+        pruneLeaves(
+            fromNodes: (Arrayish)[],
+            leafProofs: (Arrayish)[],
+            leafProofLengths: (BigNumberish)[],
+            latestConfProofs: (Arrayish)[],
+            latestConfirmedProofLengths: (BigNumberish)[],
+        ): Promise<BigNumber>;
 
         resolveChallenge(winner: string, loser: string, arg2: BigNumberish): Promise<BigNumber>;
 

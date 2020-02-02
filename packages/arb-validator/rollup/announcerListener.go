@@ -75,7 +75,7 @@ func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, 
 func (al *AnnouncerListener) NodesConfirmable(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
 	log.Println(al.Prefix, "NodesConfirmable")
 }
-func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {
+func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
 	log.Println(al.Prefix, "PrunableLeafs")
 }
 func (al *AnnouncerListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {

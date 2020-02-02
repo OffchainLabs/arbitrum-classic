@@ -137,7 +137,7 @@ func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return nil
 }
 
-func (vm *ArbRollup) PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *ArbRollup) PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) error {
 	//vm.auth.Context = ctx
 	//tx, err := vm.ArbRollup.PruneLeaf(
 	//	vm.auth,

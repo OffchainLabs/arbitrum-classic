@@ -147,14 +147,30 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return vm.waitForReceipt(ctx, tx, "MoveStake")
 }
 
-func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PruneParams) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.PruneLeaf(
+
+	fromNodes := make([]common.Hash, 0, len(opps))
+	leafProofs := make([]common.Hash, 0, len(opps))
+	leafProofLengths := make([]*big.Int, 0, len(opps))
+	confProofs := make([]common.Hash, 0, len(opps))
+	confProofLengths := make([]*big.Int, 0, len(opps))
+	for _, opp := range opps {
+		fromNodes = append(fromNodes, opp.AncestorHash)
+		leafProofs = append(leafProofs, opp.LeafProof...)
+		leafProofLengths = append(leafProofLengths, big.NewInt(int64(len(opp.LeafProof))))
+		confProofs = append(confProofs, opp.AncProof...)
+		confProofLengths = append(confProofLengths, big.NewInt(int64(len(opp.AncProof))))
+	}
+
+	tx, err := vm.ArbRollup.PruneLeaves(
 		vm.auth.getAuth(ctx),
-		from,
-		hashSliceToRaw(proof1),
-		hashSliceToRaw(proof2),
+		hashSliceToRaw(fromNodes),
+		hashSliceToRaw(leafProofs),
+		leafProofLengths,
+		hashSliceToRaw(confProofs),
+		confProofLengths,
 	)
 	if err != nil {
 		return err

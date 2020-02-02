@@ -138,8 +138,8 @@ func (sa SortableAddressList) Swap(i, j int) {
 	sa[i], sa[j] = sa[j], sa[i]
 }
 
-func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneParams {
-	prunesToDo := []pruneParams{}
+func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valprotocol.PruneParams {
+	prunesToDo := []valprotocol.PruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
 		if leaf != chain.latestConfirmed {
 			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
@@ -151,11 +151,11 @@ func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneP
 					}
 				})
 				if noStakersOnLeaf {
-					prunesToDo = append(prunesToDo, pruneParams{
-						leafHash:     leaf.hash,
-						ancestorHash: leafAncestor.prev.hash,
-						leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
-						ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+					prunesToDo = append(prunesToDo, valprotocol.PruneParams{
+						LeafHash:     leaf.hash,
+						AncestorHash: leafAncestor.prev.hash,
+						LeafProof:    GeneratePathProof(leafAncestor.prev, leaf),
+						AncProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
 					})
 				}
 			}

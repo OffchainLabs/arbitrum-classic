@@ -107,23 +107,42 @@ contract NodeGraph is ChallengeType {
         bytes32 logsAccHash;
     }
 
-    function pruneLeaf(
-        bytes32 from,
-        bytes32[] calldata leafProof,
-        bytes32[] calldata latestConfirmedProof
+    function pruneLeaves(
+        bytes32[] memory fromNodes,
+        bytes32[] memory leafProofs,
+        uint256[] memory leafProofLengths,
+        bytes32[] memory latestConfProofs,
+        uint256[] memory latestConfirmedProofLengths
     )
-        external
+        public
     {
-        bytes32 leaf = RollupUtils.calculatePath(from, leafProof);
-        require(isValidLeaf(leaf), PRUNE_LEAF);
-        require(
-            leafProof[0] != latestConfirmedProof[0] &&
-            RollupUtils.calculatePath(from, latestConfirmedProof) == latestConfirmed(),
-            PRUNE_CONFLICT
-        );
-        delete leaves[leaf];
+        uint pruneCount = fromNodes.length;
 
-        emit RollupPruned(leaf);
+        require(
+            leafProofLengths.length == pruneCount &&
+            latestConfirmedProofLengths.length == pruneCount,
+            "input length mistmatch"
+        );
+        uint256 prevLeafOffset = 0;
+        uint256 prevConfOffset = 0;
+        for (uint256 i = 0; i < pruneCount; i++) {
+            bytes32 from = fromNodes[i];
+            uint256 nextLeafOffset = prevLeafOffset + leafProofLengths[i];
+            uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLengths[i];
+
+            // If the function call was produced valid at any point, either all these checks will pass or all will fail
+            require(
+                leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset] &&
+                RollupUtils.calculatePathOffset(from, latestConfProofs, prevConfOffset, nextConfOffset) == latestConfirmed(),
+                PRUNE_CONFLICT
+            );
+
+            bytes32 leaf = RollupUtils.calculatePathOffset(from, leafProofs, prevLeafOffset, nextLeafOffset);
+            if (isValidLeaf(leaf)) {
+                delete leaves[leaf];
+                emit RollupPruned(leaf);
+            }
+        }
     }
 
     function latestConfirmed() public view returns (bytes32) {

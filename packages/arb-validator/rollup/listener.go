@@ -45,7 +45,7 @@ type ChainListener interface {
 
 	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
 	NodesConfirmable(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
-	PrunableLeafs(context.Context, *ChainObserver, []pruneParams)
+	PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams)
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
@@ -479,24 +479,29 @@ func (lis *ValidatorChainListener) NodesConfirmable(ctx context.Context, observe
 	}()
 }
 
-func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []pruneParams) {
+func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []valprotocol.PruneParams) {
 	// Anyone can prune a leaf
+	leavesToPrune := make([]valprotocol.PruneParams, 0, len(params))
+	lis.Lock()
 	for _, prune := range params {
-		_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
+		_, alreadySent := lis.broadcastLeafPrunes[prune.LeafHash]
 		if alreadySent {
 			continue
 		}
-		lis.broadcastLeafPrunes[prune.leafHash] = true
-		pruneCopy := prune.Clone()
-		go func() {
-			lis.actor.PruneLeaf(
-				ctx,
-				pruneCopy.ancestorHash,
-				pruneCopy.leafProof,
-				pruneCopy.ancProof,
-			)
-		}()
+		leavesToPrune = append(leavesToPrune, prune)
+		lis.broadcastLeafPrunes[prune.LeafHash] = true
 	}
+	lis.Unlock()
+	go func() {
+		err := lis.actor.PruneLeaves(ctx, leavesToPrune)
+		if err != nil {
+			log.Println("Failed pruning leaves", err)
+			lis.Lock()
+			for _, prune := range leavesToPrune {
+				delete(lis.broadcastLeafPrunes, prune.LeafHash)
+			}
+			lis.Unlock()
+	}()
 }
 
 func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {
