@@ -108,7 +108,6 @@ func (m *Machine) ExecuteAssertion(
 ) (*protocol.ExecutionAssertion, uint64) {
 	hasTimeLimit := maxWallTime.Nanoseconds() != 0
 	startTime := time.Now()
-	endTime := startTime
 	timeLeft := maxWallTime
 	a := &protocol.ExecutionAssertion{
 		AfterHash:    m.cppmachine.Hash(),
@@ -124,7 +123,6 @@ func (m *Machine) ExecuteAssertion(
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
 		}
-
 		pcStart := m.gomachine.GetPC()
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
@@ -154,12 +152,12 @@ func (m *Machine) ExecuteAssertion(
 		if ranSteps1 < steps {
 			break
 		}
-		endTime = time.Now()
 		if hasTimeLimit {
-			if endTime.Sub(startTime) > maxWallTime {
+			elapsedTime := time.Now().Sub(startTime)
+			if elapsedTime > maxWallTime {
 				break
 			}
-			timeLeft = maxWallTime - endTime.Sub(startTime)
+			timeLeft = maxWallTime - elapsedTime
 		}
 
 	}

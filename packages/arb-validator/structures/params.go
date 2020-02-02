@@ -78,6 +78,7 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 		StakeRequirement:        m.StakeRequirement.Unmarshal(),
 		GracePeriod:             m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps:       m.MaxExecutionSteps,
+		MaxTimeBoundsWidth:      m.MaxTimeBoundsWidth,
 		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }
