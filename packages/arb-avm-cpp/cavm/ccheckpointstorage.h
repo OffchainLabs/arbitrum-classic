@@ -16,7 +16,7 @@
 #ifndef ccheckpointstorage_h
 #define ccheckpointstorage_h
 
-#include <cstdint>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
