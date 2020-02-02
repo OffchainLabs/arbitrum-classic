@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -25,11 +27,17 @@ func (_ArbRollup *ArbRollupTransactor) ConfirmInvalidCall(ctx context.Context, c
 	return CallCheck(ctx, client, from, contractAddress, "confirmInvalid", deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
+func (_ArbRollup *ArbRollupTransactor) Confirm(initalProtoStateHash [32]byte, branches []*big.Int, deadlineTicks []*big.Int, challengeNodeData [][32]byte, logsAcc [][32]byte, vmProtoStateHashes [][32]byte, messagesLengths []*big.Int, messages []byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return CallCheck(&_ArbRollup.TransactOpts, initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
+}
+
 func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ArbRollupABI)))
 	if err != nil {
 		return err
 	}
+
+	ethu
 
 	// Pack the input, call and unpack the results
 	input, err := contractABI.Pack(method, params...)

@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"bytes"
 	"context"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -240,7 +241,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportu
 	messages := messageData.Bytes()
 
 	combinedProofs := make([]common.Hash, 0)
-	stakerProofOffsets := make([]*big.Int, len(opp.StakerAddresses))
+	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
 	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
 	for _, proof := range opp.StakerProofs {
 		combinedProofs = append(combinedProofs, proof...)
@@ -248,6 +249,21 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportu
 	}
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
+
+	log.Println("Confirm",
+		vm.auth.getAuth(ctx),
+		initalProtoStateHash,
+		branchesNums,
+		deadlineTicks,
+		hashSliceToRaw(challengeNodeData),
+		hashSliceToRaw(logsAcc),
+		hashSliceToRaw(vmProtoStateHashes),
+		messagesLengths,
+		messages,
+		addressSliceToRaw(opp.StakerAddresses),
+		hashSliceToRaw(combinedProofs),
+		stakerProofOffsets,
+	)
 
 	tx, err := vm.ArbRollup.Confirm(
 		vm.auth.getAuth(ctx),
