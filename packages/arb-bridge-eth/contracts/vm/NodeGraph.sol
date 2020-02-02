@@ -142,6 +142,9 @@ contract NodeGraph is ChallengeType {
                 delete leaves[leaf];
                 emit RollupPruned(leaf);
             }
+
+            prevLeafOffset = nextLeafOffset;
+            prevConfOffset = nextConfOffset;
         }
     }
 
