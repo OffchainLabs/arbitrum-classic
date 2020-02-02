@@ -501,6 +501,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 				delete(lis.broadcastLeafPrunes, prune.LeafHash)
 			}
 			lis.Unlock()
+		}
 	}()
 }
 
