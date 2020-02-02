@@ -29,8 +29,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
+const codeFile = "contract.ao"
+
 func TestCheckpoint(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath"
 
 	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
@@ -51,7 +52,6 @@ func TestCheckpoint(t *testing.T) {
 }
 
 func TestCheckpointMachine(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath2"
 
 	checkpointStorage, err := NewCheckpoint(dePath, codeFile)

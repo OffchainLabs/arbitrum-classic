@@ -18,6 +18,8 @@ package rolluptest
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -25,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
 )
 
 type EvilRollupCheckpointerFactory struct {
@@ -91,6 +92,6 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
-	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx, closeWhenDone)
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockID *structures.BlockID, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+	e.cp.AsyncSaveCheckpoint(blockID, contents, cpCtx, closeWhenDone)
 }

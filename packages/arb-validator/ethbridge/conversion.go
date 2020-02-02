@@ -41,14 +41,6 @@ func addressSliceToRaw(slice []common.Address) []ethcommon.Address {
 	return ret
 }
 
-func addressSliceToAddresses(slice []ethcommon.Address) []common.Address {
-	ret := make([]common.Address, 0, len(slice))
-	for _, a := range slice {
-		ret = append(ret, common.NewAddressFromEth(a))
-	}
-	return ret
-}
-
 func hashSliceToHashes(slice [][32]byte) []common.Hash {
 	ret := make([]common.Hash, 0, len(slice))
 	for _, a := range slice {

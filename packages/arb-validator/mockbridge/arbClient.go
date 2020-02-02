@@ -51,6 +51,10 @@ func (c *ArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollu
 	return NewRollupWatcher(address, c.client)
 }
 
+func (c *ArbClient) NewPendingInboxWatcher(address common.Address, rollupAddress common.Address) (arbbridge.PendingInboxWatcher, error) {
+	return &PendingInboxWatcher{}, nil
+}
+
 func (c *ArbClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
 	return NewExecutionChallenge(address, c.client)
 }
@@ -71,6 +75,6 @@ func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.Pe
 	return NewPendingTopChallenge(address, c.client)
 }
 
-func (c *ArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
-	return c.client.CurrentBlockId(ctx)
+func (c *ArbClient) CurrentBlockID(ctx context.Context) (*structures.BlockID, error) {
+	return c.client.CurrentBlockID(ctx)
 }

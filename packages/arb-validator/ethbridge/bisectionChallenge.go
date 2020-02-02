@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -48,7 +50,11 @@ type bisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*bisectionChallenge, error) {
+func newBisectionChallenge(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -99,7 +105,10 @@ type bisectionChallengeWatcher struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*bisectionChallengeWatcher, error) {
+func newBisectionChallengeWatcher(
+	address ethcommon.Address,
+	client bind.ContractBackend,
+) (*bisectionChallengeWatcher, error) {
 	challenge, err := newChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -122,7 +131,10 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.challengeWatcher.topics()...)
 }
 
-func (c *bisectionChallengeWatcher) parseBisectionEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+func (c *bisectionChallengeWatcher) parseBisectionEvent(
+	chainInfo arbbridge.ChainInfo,
+	log types.Log,
+) (arbbridge.Event, error) {
 	if log.Topics[0] == continuedChallengeID {
 		contChal, err := c.BisectionChallenge.ParseContinued(log)
 		if err != nil {

@@ -24,22 +24,23 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type MaybeBlockId struct {
-	BlockId *structures.BlockId
+type MaybeBlockID struct {
+	BlockID *structures.BlockID
 	Err     error
 }
 
 type ArbClient interface {
-	SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan MaybeBlockId, error)
+	SubscribeBlockHeaders(ctx context.Context, startBlockID *structures.BlockID) (<-chan MaybeBlockID, error)
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewPendingInboxWatcher(address common.Address, rollupAddress common.Address) (PendingInboxWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
-	CurrentBlockId(ctx context.Context) (*structures.BlockId, error)
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error)
+	CurrentBlockID(ctx context.Context) (*structures.BlockID, error)
+	BlockIDForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockID, error)
 }
 
 type ArbAuthClient interface {

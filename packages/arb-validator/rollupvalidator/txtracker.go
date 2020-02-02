@@ -268,7 +268,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 					Address:          hexutil.Encode(addressBytes[12:]),
 					BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
 					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
-					Data:             hexutil.Encode(evmLog.Log.Data[:]),
+					Data:             hexutil.Encode(evmLog.Log.Data),
 					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 					Topics:           topicStrings,
 					TransactionIndex: "0x0",

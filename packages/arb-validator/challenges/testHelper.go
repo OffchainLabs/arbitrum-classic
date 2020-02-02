@@ -36,7 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures.BlockId) (ChallengeState, error)
+type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures.BlockID) (ChallengeState, error)
 
 func testChallenge(
 	challengeType structures.ChildType,
@@ -44,13 +44,13 @@ func testChallenge(
 	asserterKey, challengerKey string,
 	asserterFunc, challengerFunc ChallengeFunc,
 ) error {
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
-	ethURL := test.GetEthUrl()
+	bridgeEthAddresses := "../bridge_eth_addresses.json"
+	ethURL := test.GetEthURL()
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	rand.Seed(seed)
-	jsonFile, err := os.Open(bridge_eth_addresses)
+	jsonFile, err := os.Open(bridgeEthAddresses)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func testChallenge(
 		return errors2.Wrap(err, "Error deploying challenge")
 	}
 
-	challengeAddress, blockId, err := tester.StartChallenge(
+	challengeAddress, blockID, err := tester.StartChallenge(
 		context.Background(),
 		client1.Address(),
 		client2.Address(),
@@ -115,10 +115,10 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		cBlockID := blockID.MarshalToBuf().Unmarshal()
 		tryCount := 0
 		for {
-			endState, err := asserterFunc(challengeAddress, client1, cBlockId)
+			endState, err := asserterFunc(challengeAddress, client1, cBlockID)
 			if err == nil {
 				asserterEndChan <- endState
 				return
@@ -127,22 +127,21 @@ func testChallenge(
 				asserterErrChan <- err
 				return
 			}
-			tryCount += 1
+			tryCount++
 			log.Println("Restarting asserter", err)
-			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
+			cBlockID, err = client1.BlockIDForHeight(context.Background(), cBlockID.Height)
 			if err != nil {
 				asserterErrChan <- err
 				return
 			}
 		}
-
 	}()
 
 	go func() {
-		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		cBlockID := blockID.MarshalToBuf().Unmarshal()
 		tryCount := 0
 		for {
-			endState, err := challengerFunc(challengeAddress, client2, cBlockId)
+			endState, err := challengerFunc(challengeAddress, client2, cBlockID)
 			if err == nil {
 				asserterEndChan <- endState
 				return
@@ -151,9 +150,9 @@ func testChallenge(
 				asserterErrChan <- err
 				return
 			}
-			tryCount += 1
+			tryCount++
 			log.Println("Restarting challenger", err)
-			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
+			cBlockID, err = client1.BlockIDForHeight(context.Background(), cBlockID.Height)
 			if err != nil {
 				asserterErrChan <- err
 				return
@@ -166,7 +165,7 @@ func testChallenge(
 		select {
 		case challengeState := <-asserterEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
@@ -174,18 +173,18 @@ func testChallenge(
 			}
 		case challengeState := <-challengerEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
 				return nil
 			}
 		case err := <-asserterErrChan:
-			return errors2.Wrap(err, "Asserter error")
+			return errors2.Wrap(err, "asserter error")
 		case err := <-challengerErrChan:
-			return errors2.Wrap(err, "Challenger error")
+			return errors2.Wrap(err, "challenger error")
 		case <-time.After(80 * time.Second):
-			return errors.New("Challenge never completed")
+			return errors.New("challenge never completed")
 		}
 	}
 }

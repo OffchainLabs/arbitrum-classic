@@ -72,21 +72,21 @@ message CheckpointManifest {
 
 message CheckpointMetadata {
     uint64 formatVersion = 1;
-    BlockIdBuf oldest = 2;
-    BlockIdBuf newest = 3;
+    BlockIDBuf oldest = 2;
+    BlockIDBuf newest = 3;
 }
 
 message CheckpointLinks {
-    BlockIdBuf next = 1;
-    BlockIdBuf prev = 2;
+    BlockIDBuf next = 1;
+    BlockIDBuf prev = 2;
 }
 
-message BlockIdBuf {
+message BlockIDBuf {
     common.TimeBlocksBuf height = 1;
     common.HashBuf headerHash = 2;
 }
 
-message BlockIdBufList {
-    repeated BlockIdBuf bufs = 1;
+message BlockIDBufList {
+    repeated BlockIDBuf bufs = 1;
 }
 

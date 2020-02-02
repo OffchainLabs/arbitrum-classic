@@ -35,7 +35,11 @@ type challengeFactory struct {
 	auth     *TransactAuth
 }
 
-func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challengeFactory, error) {
+func newChallengeFactory(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*challengeFactory, error) {
 	vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")

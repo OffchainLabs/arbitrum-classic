@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -81,4 +83,11 @@ func (con *PendingInbox) GetTokenBalance(
 	//	user,
 	//)
 	return big.NewInt(0), nil
+}
+
+type PendingInboxWatcher struct {
+}
+
+func (vm *PendingInboxWatcher) GetEvents(ctx context.Context, blockID *structures.BlockID) ([]arbbridge.Event, error) {
+	return nil, nil
 }

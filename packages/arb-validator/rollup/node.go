@@ -17,7 +17,6 @@
 package rollup
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -50,14 +49,14 @@ type Node struct {
 	numStakers      uint64
 }
 
-func (n *Node) String() string {
-	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", n.linkType, n.disputable, n.deadline.Val, n.vmProtoData)
+func (node *Node) String() string {
+	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", node.linkType, node.disputable, node.deadline.Val, node.vmProtoData)
 }
 
 func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prev:       nil,
-		deadline:   common.TimeTicks{big.NewInt(0)},
+		deadline:   common.TimeTicks{Val: big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
@@ -311,17 +310,6 @@ func GeneratePathProof(from, to *Node) []common.Hash {
 	return append(sub, to.innerHash)
 }
 
-func GenerateConflictProof(from, to1, to2 *Node) ([]common.Hash, []common.Hash) {
-	// returns nil, nil if no proof exists
-	proof1 := GeneratePathProof(from, to1)
-	proof2 := GeneratePathProof(from, to2)
-	if proof1 == nil || proof2 == nil || len(proof1) == 0 || len(proof2) == 0 || proof1[0] == proof2[0] {
-		return nil, nil
-	} else {
-		return proof1, proof2
-	}
-}
-
 func (node *Node) EqualsFull(n2 *Node) bool {
 	return node.Equals(n2) &&
 		node.depth == n2.depth &&
@@ -329,29 +317,4 @@ func (node *Node) EqualsFull(n2 *Node) bool {
 		node.linkType == n2.linkType &&
 		node.successorHashes == n2.successorHashes &&
 		node.numStakers == n2.numStakers
-}
-
-func CommonAncestor(n1, n2 *Node) *Node {
-	n1, _, _ = GetConflictAncestor(n1, n2)
-	return n1.prev
-}
-
-func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
-	for n1.depth > n2.depth {
-		n1 = n1.prev
-	}
-	for n2.depth > n1.depth {
-		n2 = n2.prev
-	}
-
-	// Now n1 and n2 are at the same height so we can start looking for a challenge
-	for n1.prev != n2.prev {
-		n1 = n1.prev
-		n2 = n2.prev
-	}
-
-	if n1.linkType == n2.linkType {
-		return n1, n2, errors.New("no conflict")
-	}
-	return n1, n2, nil
 }

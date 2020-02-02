@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -40,7 +39,7 @@ var dummyRollupAddress2 = common.Address{2}
 var dummyRollupAddress3 = common.Address{3}
 var dummyRollupAddress4 = common.Address{4}
 
-var contractPath string = "../contract.ao"
+var contractPath = "../contract.ao"
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain(dummyRollupAddress1, "dummy", contractPath, t)
@@ -70,47 +69,20 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	}
 }
 
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
-	blockId := &structures.BlockId{
-		common.NewTimeBlocks(big.NewInt(7337)),
-		common.Hash{},
-	}
-	ctx := structures.NewCheckpointContextImpl()
-	buf, err := chain.marshalToBytes(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	doneChan := make(chan struct{})
-	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
-	<-doneChan
-	cob := &ChainObserverBuf{}
-	if err := proto.Unmarshal(buf, cob); err != nil {
-		t.Fatal(err)
-	}
-	chain2, err := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !chain.equals(chain2) {
-		t.Fail()
-	}
-}
-
 func TestDoAssertion(t *testing.T) {
 	testDoAssertion(dummyRollupAddress2, "dummy", contractPath, t)
 	testDoAssertion(dummyRollupAddress2, "fresh_rocksdb", contractPath, t)
 }
 
 func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
-
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
+	doAnAssertion(chain, chain.nodeGraph.latestConfirmed, t)
 	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
-	doAnAssertion(chain, validTip)
+	doAnAssertion(chain, validTip, t)
 	if chain.nodeGraph.leaves.NumLeaves() != 7 {
 		t.Fatal("unexpected leaf count")
 	}
@@ -124,19 +96,18 @@ func TestChallenge(t *testing.T) {
 }
 
 func testChallenge(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
-
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
+	doAnAssertion(chain, chain.nodeGraph.latestConfirmed, t)
 	staker1addr := common.Address{1}
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
 	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
 	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.InvalidMessagesChildType)
-	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
+	n1, _, childType, err := GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +131,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	tryMarshalUnmarshal(chain, t)
 }
 
-func doAnAssertion(chain *ChainObserver, baseNode *Node) {
+func doAnAssertion(chain *ChainObserver, baseNode *Node, t *testing.T) {
 	theMachine := baseNode.machine
 	timeBounds := &protocol.TimeBoundsBlocks{
 		Start: common.NewTimeBlocks(big.NewInt(0)),
@@ -177,7 +148,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	assertionStub := &valprotocol.ExecutionAssertionStub{
 		AfterHash:        theMachine.Hash(),
 		DidInboxInsn:     false,
-		NumGas:           uint64(numGas),
+		NumGas:           numGas,
 		FirstMessageHash: common.Hash{},
 		LastMessageHash:  common.Hash{},
 		FirstLogHash:     common.Hash{},
@@ -195,12 +166,15 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		big.NewInt(0),
 	)
 
-	chain.nodeGraph.CreateNodesOnAssert(
+	err := chain.nodeGraph.createNodesOnAssert(
 		baseNode,
 		disputableNode,
 		common.NewTimeBlocks(big.NewInt(10)),
 		common.Hash{},
 	)
+	if err != nil {
+		t.Error(err)
+	}
 	chain.nodeGraph.nodeFromHash[baseNode.successorHashes[3]].machine = theMachine
 }
 
@@ -242,7 +216,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		&structures.BlockId{
+		&structures.BlockID{
 			Height:     common.NewTimeBlocks(big.NewInt(10)),
 			HeaderHash: common.Hash{},
 		},
@@ -263,7 +237,7 @@ func createSomeStakers(chain *ChainObserver) {
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
 	chain.createStake(context.Background(), arbbridge.StakeCreatedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: &structures.BlockId{
+			BlockID: &structures.BlockID{
 				Height:     common.NewTimeBlocks(big.NewInt(73)),
 				HeaderHash: common.Hash{},
 			},

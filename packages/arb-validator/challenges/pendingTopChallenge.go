@@ -34,7 +34,7 @@ func DefendPendingTopClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
@@ -46,7 +46,7 @@ func DefendPendingTopClaim(
 		return 0, err
 	}
 
-	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockID, startLogIndex, contractWatcher)
 
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
@@ -70,7 +70,7 @@ func ChallengePendingTopClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	challengeEverything bool,
@@ -80,7 +80,7 @@ func ChallengePendingTopClaim(
 		return 0, err
 	}
 
-	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockID, startLogIndex, contractWatcher)
 
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
@@ -109,7 +109,7 @@ func defendPendingTop(
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
-		return 0, challengeNoEvents
+		return 0, errNoEvents
 	}
 	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
@@ -121,6 +121,9 @@ func defendPendingTop(
 	for {
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+			if err != nil {
+				return 0, err
+			}
 			if timedOut {
 				msg, err := pendingInbox.GenerateOneStepProof(startState)
 				if err != nil {
@@ -131,9 +134,12 @@ func defendPendingTop(
 					return 0, errors2.Wrap(err, "Error making one step proof")
 				}
 				event, state, err = getNextEvent(eventChan)
+				if err != nil {
+					return 0, err
+				}
 			}
 
-			if err != nil || state != ChallengeContinuing {
+			if state != ChallengeContinuing {
 				return state, err
 			}
 			_, ok = event.(arbbridge.OneStepProofEvent)
@@ -144,6 +150,9 @@ func defendPendingTop(
 		}
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+		if err != nil {
+			return 0, err
+		}
 		if timedOut {
 			chainHashes, err := pendingInbox.GenerateBisection(startState, bisectionCount, messageCount)
 			if err != nil {
@@ -154,9 +163,12 @@ func defendPendingTop(
 				return 0, errors2.Wrap(err, "Error bisecting")
 			}
 			event, state, err = getNextEvent(eventChan)
+			if err != nil {
+				return 0, err
+			}
 		}
 
-		if err != nil || state != ChallengeContinuing {
+		if state != ChallengeContinuing {
 			return state, err
 		}
 		ev, ok := event.(arbbridge.PendingTopBisectionEvent)
@@ -193,7 +205,7 @@ func challengePendingTop(
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
-		return 0, challengeNoEvents
+		return 0, errNoEvents
 	}
 	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
@@ -224,9 +236,15 @@ func challengePendingTop(
 
 		// Wait to check if we've already chosen a segment
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+		if err != nil {
+			return 0, err
+		}
 		if timedOut {
 			err = nil
 			segments, err := pendingInbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
+			if err != nil {
+				return 0, err
+			}
 			segmentToChallenge, found := func() (uint64, bool) {
 				for i := uint64(1); i < uint64(len(segments)); i++ {
 					if segments[i] != ev.ChainHashes[i] {
@@ -247,14 +265,17 @@ func challengePendingTop(
 				return 0, err
 			}
 			event, state, err = getNextEvent(eventChan)
+			if err != nil {
+				return 0, err
+			}
 		}
 
-		if err != nil || state != ChallengeContinuing {
+		if state != ChallengeContinuing {
 			return state, err
 		}
 		contEv, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("PendingTopChallenge challenger expected ContinueChallengeEvent but got %T", event)
+			return 0, fmt.Errorf("pendingTopChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 		deadline = contEv.Deadline
 	}

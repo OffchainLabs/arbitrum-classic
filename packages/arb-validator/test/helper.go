@@ -37,7 +37,7 @@ func checkPort(port string) bool {
 	return false
 }
 
-func GetEthUrl() string {
+func GetEthURL() string {
 	if checkPort("7546") {
 		return "ws://127.0.0.1:7546"
 	} else {

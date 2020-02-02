@@ -85,12 +85,13 @@ func (iv IntValue) CloneShallow() Value {
 }
 
 func (iv IntValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
-		return iv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeInt {
+	switch val := val.(type) {
+	case HashOnlyValue:
+		return iv.Hash() == val.hash
+	case IntValue:
+		return iv.val.Cmp(val.val) == 0
+	default:
 		return false
-	} else {
-		return iv.val.Cmp(val.(IntValue).val) == 0
 	}
 }
 
@@ -119,11 +120,12 @@ func (iv IntValue) ToBytes() [32]byte {
 }
 
 func (iv IntValue) Hash() common.Hash {
-	if iv.val.Cmp(big.NewInt(0)) == 0 {
+	switch {
+	case iv.val.Cmp(big.NewInt(0)) == 0:
 		return hashOfZero
-	} else if iv.val.Cmp(big.NewInt(1)) == 0 {
+	case iv.val.Cmp(big.NewInt(1)) == 0:
 		return hashOfOne
-	} else {
+	default:
 		return iv.hashImpl()
 	}
 }
@@ -134,6 +136,6 @@ func (iv IntValue) Marshal(w io.Writer) error {
 	return err
 }
 
-func (tv IntValue) MarshalForProof(wr io.Writer) error {
-	return tv.Marshal(wr)
+func (iv IntValue) MarshalForProof(wr io.Writer) error {
+	return iv.Marshal(wr)
 }

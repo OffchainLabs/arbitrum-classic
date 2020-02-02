@@ -39,7 +39,7 @@ func DefendMessagesClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
@@ -51,7 +51,7 @@ func DefendMessagesClaim(
 		return 0, err
 	}
 
-	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockID, startLogIndex, contractWatcher)
 
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
@@ -74,7 +74,7 @@ func ChallengeMessagesClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
@@ -86,7 +86,7 @@ func ChallengeMessagesClaim(
 		return ChallengeContinuing, err
 	}
 
-	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockId, startLogIndex, contractWatcher)
+	reorgCtx, eventChan := arbbridge.HandleBlockchainEvents(ctx, client, startBlockID, startLogIndex, contractWatcher)
 
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
@@ -117,7 +117,7 @@ func defendMessages(
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
-		return 0, challengeNoEvents
+		return 0, errNoEvents
 	}
 	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
@@ -140,6 +140,9 @@ func defendMessages(
 		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+			if err != nil {
+				return 0, err
+			}
 			if timedOut {
 				msg, err := pendingInbox.GenerateOneStepProof(startPending)
 				if err != nil {
@@ -165,9 +168,12 @@ func defendMessages(
 					return 0, errors2.Wrap(err, "failing making one step proof")
 				}
 				event, state, err = getNextEvent(eventChan)
+				if err != nil {
+					return 0, err
+				}
 			}
 
-			if err != nil || state != ChallengeContinuing {
+			if state != ChallengeContinuing {
 				return state, err
 			}
 			_, ok = event.(arbbridge.OneStepProofEvent)
@@ -178,8 +184,14 @@ func defendMessages(
 		}
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+		if err != nil {
+			return 0, err
+		}
 		if timedOut {
 			chainHashes, err := pendingInbox.GenerateBisection(startPending, bisectionCount, messageCount)
+			if err != nil {
+				return 0, err
+			}
 			inboxHashes, err := inbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
@@ -194,6 +206,9 @@ func defendMessages(
 			}
 
 			event, state, err = getNextEvent(eventChan)
+			if err != nil {
+				return 0, err
+			}
 		}
 
 		if err != nil || state != ChallengeContinuing {
@@ -238,7 +253,7 @@ func challengeMessages(
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
-		return 0, challengeNoEvents
+		return 0, errNoEvents
 	}
 	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
@@ -271,10 +286,13 @@ func challengeMessages(
 
 		ev, ok := event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("MessagesChallenge challenger expected MessagesBisectionEvent but got %T", event)
+			return 0, fmt.Errorf("messagesChallenge challenger expected MessagesBisectionEvent but got %T", event)
 		}
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+		if err != nil {
+			return 0, err
+		}
 		if timedOut {
 			pendingSegments, err := pendingInbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
 			if err != nil {
@@ -306,7 +324,7 @@ func challengeMessages(
 				if challengeEverything {
 					segmentToChallenge = uint64(rand.Int31n(int32(len(ev.ChainHashes) - 1)))
 				} else {
-					return 0, errors.New("Nothing to challenge")
+					return 0, errors.New("nothing to challenge")
 				}
 			}
 			log.Println("ChooseSegment", uint16(segmentToChallenge), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
@@ -315,6 +333,9 @@ func challengeMessages(
 				return 0, err
 			}
 			event, state, err = getNextEvent(eventChan)
+			if err != nil {
+				return 0, err
+			}
 		}
 		if err != nil || state != ChallengeContinuing {
 			return state, err

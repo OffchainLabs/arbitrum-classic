@@ -99,6 +99,16 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
+			pendingInboxAddress, err := watcher.InboxAddress(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			pendingInboxWatcher, err := clnt.NewPendingInboxWatcher(pendingInboxAddress, rollupAddr)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			if checkpointer.HasCheckpointedState() {
 				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
 				if err != nil {
@@ -117,17 +127,17 @@ func CreateManagerAdvanced(
 				if err != nil {
 					log.Fatal(err)
 				}
-				blockId, err := watcher.GetCreationHeight(ctx)
+				blockID, err := watcher.GetCreationHeight(ctx)
 				if err != nil {
 					log.Fatal(err)
 				}
-				chain, err = rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId)
+				chain, err = rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockID)
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
 
-			log.Println("Starting validator from", chain.CurrentBlockId())
+			log.Println("Starting validator from", chain.CurrentBlockID())
 
 			man.Lock()
 			// Clear pending listeners
@@ -142,18 +152,18 @@ func CreateManagerAdvanced(
 
 			chain.Start(runCtx)
 
-			current, err := clnt.CurrentBlockId(runCtx)
+			current, err := clnt.CurrentBlockID(runCtx)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, chain.CurrentBlockId())
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, chain.CurrentBlockID())
 			if err != nil {
-				blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
+				blockID, err := clnt.BlockIDForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
 				if err != nil {
 					panic(err)
 				}
-				log.Println("Error subscribing to block headers", chain.CurrentBlockId().HeaderHash, chain.CurrentBlockId().Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
+				log.Println("Error subscribing to block headers", chain.CurrentBlockID().HeaderHash, chain.CurrentBlockID().Height.AsInt(), blockID.HeaderHash, blockID.Height.AsInt(), err)
 
 				cancelFunc()
 				time.Sleep(2 * time.Second)
@@ -163,29 +173,38 @@ func CreateManagerAdvanced(
 		runLoop:
 			for {
 				select {
-				case maybeBlockId, ok := <-headersChan:
+				case maybeBlockID, ok := <-headersChan:
 					if !ok {
 						log.Println("Manager stopped receiving headers")
 						break runLoop
 					}
-					if maybeBlockId.Err != nil {
-						log.Println("Error getting new header", maybeBlockId.Err)
+					if maybeBlockID.Err != nil {
+						log.Println("Error getting new header", maybeBlockID.Err)
 						break runLoop
 					}
 
-					blockId := maybeBlockId.BlockId
+					blockID := maybeBlockID.BlockID
 
-					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
+					if !reachedHead && blockID.Height.Cmp(current.Height) >= 0 {
 						log.Println("Reached head")
 						reachedHead = true
 						chain.NowAtHead()
 						log.Println("Now at head")
 					}
 
-					chain.NotifyNewBlock(blockId.Clone())
+					chain.NotifyNewBlock(blockID.Clone())
 					log.Print(chain.DebugString("== "))
 
-					events, err := watcher.GetEvents(runCtx, blockId)
+					inboxEvents, err := pendingInboxWatcher.GetEvents(runCtx, blockID)
+					if err != nil {
+						log.Println("Manager hit error getting events", err)
+						break runLoop
+					}
+					for _, event := range inboxEvents {
+						chain.HandleNotification(runCtx, event)
+					}
+
+					events, err := watcher.GetEvents(runCtx, blockID)
 					if err != nil {
 						log.Println("Manager hit error getting events", err)
 						break runLoop
@@ -226,8 +245,8 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	}, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		mach := chain.LatestKnownValidMachine()
-		latestTime := chain.CurrentBlockId().Height
-		timeBounds := &protocol.TimeBoundsBlocks{latestTime, latestTime}
+		latestTime := chain.CurrentBlockID().Height
+		timeBounds := &protocol.TimeBoundsBlocks{Start: latestTime, End: latestTime}
 		go func() {
 			assertion, numSteps := mach.ExecuteAssertion(
 				// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
@@ -246,10 +265,10 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	return ret.ExecutionAssertion, ret.uint64
 }
 
-func (man *Manager) CurrentBlockId() *structures.BlockId {
-	retChan := make(chan *structures.BlockId, 1)
+func (man *Manager) CurrentBlockID() *structures.BlockID {
+	retChan := make(chan *structures.BlockID, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
-		retChan <- chain.CurrentBlockId()
+		retChan <- chain.CurrentBlockID()
 	}
 	return <-retChan
 }

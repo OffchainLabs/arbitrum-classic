@@ -39,7 +39,7 @@ func TestMessageHashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := ethclient.Dial(test.GetEthUrl())
+	client, err := ethclient.Dial(test.GetEthURL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestMessageHashing(t *testing.T) {
 				To:           addr1,
 				From:         addr2,
 				TokenAddress: addr3,
-				Id:           big.NewInt(89735406),
+				ID:           big.NewInt(89735406),
 			},
 			BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
 			MessageNum: big.NewInt(98742),
@@ -215,7 +215,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.TokenAddress.ToEthAddress(),
-			msg.Id,
+			msg.ID,
 			msg.BlockNum.AsInt(),
 			msg.MessageNum,
 		)
@@ -231,7 +231,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.TokenAddress.ToEthAddress(),
-			msg.Id,
+			msg.ID,
 			msg.BlockNum.AsInt(),
 			msg.MessageNum,
 		)
@@ -243,5 +243,4 @@ func TestMessageHashing(t *testing.T) {
 			t.Error("Ethbridge calculated wrong message hash")
 		}
 	})
-
 }

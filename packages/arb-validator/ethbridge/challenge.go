@@ -21,6 +21,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -87,7 +89,7 @@ type challengeWatcher struct {
 	Challenge *executionchallenge.Challenge
 }
 
-func newChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*challengeWatcher, error) {
+func newChallengeWatcher(address ethcommon.Address, client bind.ContractBackend) (*challengeWatcher, error) {
 	challengeContract, err := executionchallenge.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
@@ -105,7 +107,8 @@ func (c *challengeWatcher) topics() []ethcommon.Hash {
 }
 
 func (c *challengeWatcher) parseChallengeEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
-	if log.Topics[0] == initiatedChallengeID {
+	switch log.Topics[0] {
+	case initiatedChallengeID:
 		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
 		if err != nil {
 			return nil, err
@@ -114,7 +117,7 @@ func (c *challengeWatcher) parseChallengeEvent(chainInfo arbbridge.ChainInfo, lo
 			ChainInfo: chainInfo,
 			Deadline:  common.TimeTicks{Val: eventVal.DeadlineTicks},
 		}, nil
-	} else if log.Topics[0] == timedOutAsserterID {
+	case timedOutAsserterID:
 		_, err := c.Challenge.ParseAsserterTimedOut(log)
 		if err != nil {
 			return nil, err
@@ -122,7 +125,7 @@ func (c *challengeWatcher) parseChallengeEvent(chainInfo arbbridge.ChainInfo, lo
 		return arbbridge.AsserterTimeoutEvent{
 			ChainInfo: chainInfo,
 		}, nil
-	} else if log.Topics[0] == timedOutChallengerID {
+	case timedOutChallengerID:
 		_, err := c.Challenge.ParseChallengerTimedOut(log)
 		if err != nil {
 			return nil, err
@@ -130,6 +133,7 @@ func (c *challengeWatcher) parseChallengeEvent(chainInfo arbbridge.ChainInfo, lo
 		return arbbridge.ChallengerTimeoutEvent{
 			ChainInfo: chainInfo,
 		}, nil
+	default:
+		return nil, errors.New("unknown arbitrum event type")
 	}
-	return nil, errors.New("unknown arbitrum event type")
 }

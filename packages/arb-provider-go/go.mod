@@ -10,6 +10,7 @@ require (
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-validator v0.2.0
+	github.com/pkg/errors v0.8.1
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator => ../arb-validator

@@ -35,15 +35,15 @@ func NewStressTestClient(client arbbridge.ArbClient, reorgInterval time.Duration
 	return &ArbClientStressTest{client, reorgInterval}
 }
 
-var reorgError = errors.New("reorg occured")
+var errReorg = errors.New("reorg occurred")
 
-func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
-	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockID *structures.BlockID) (<-chan arbbridge.MaybeBlockID, error) {
+	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockID)
 	if err != nil {
 		return nil, err
 	}
 	ticker := time.NewTicker(st.reorgInterval)
-	headerChan := make(chan arbbridge.MaybeBlockId, 10)
+	headerChan := make(chan arbbridge.MaybeBlockID, 10)
 	go func() {
 		defer close(headerChan)
 		for {
@@ -59,7 +59,7 @@ func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startB
 
 			case <-ticker.C:
 				log.Println("Manually triggering reorg")
-				headerChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				headerChan <- arbbridge.MaybeBlockID{Err: errReorg}
 				return
 			}
 		}

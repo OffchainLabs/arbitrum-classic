@@ -24,21 +24,26 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, contractABI abi.ABI, method string, params ...interface{}) error {
+func CallCheck(
+	ctx context.Context,
+	client ethereum.PendingContractCaller,
+	from common.Address,
+	contractAddress common.Address,
+	contractABI abi.ABI,
+	method string,
+	params ...interface{},
+) error {
 	// Pack the input, call and unpack the results
 	input, err := contractABI.Pack(method, params...)
 	if err != nil {
 		return err
 	}
-	var (
-		msg    = ethereum.CallMsg{From: from, To: &contractAddress, Data: input}
-		output []byte
-	)
 
-	output, err = client.PendingCallContract(ctx, msg)
+	msg := ethereum.CallMsg{From: from, To: &contractAddress, Data: input}
+	output, err := client.PendingCallContract(ctx, msg)
+
 	if err != nil {
 		return err
 	}
@@ -46,9 +51,12 @@ func CallCheck(ctx context.Context, client *ethclient.Client, from common.Addres
 	if len(output) < 69 {
 		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
 	}
+
 	length := new(big.Int).SetBytes(output[36:68])
+
 	if uint64(len(output)) < 68+length.Uint64()+1 {
 		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
 	}
+
 	return fmt.Errorf("%v returned val: %v", method, string(output[68:68+length.Uint64()]))
 }

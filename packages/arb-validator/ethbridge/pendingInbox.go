@@ -68,7 +68,6 @@ func (con *pendingInbox) DepositEthMessage(
 	destination common.Address,
 	value *big.Int,
 ) error {
-
 	tx, err := con.GlobalPendingInbox.DepositEthMessage(
 		&bind.TransactOpts{
 			From:     con.auth.auth.From,
@@ -80,7 +79,6 @@ func (con *pendingInbox) DepositEthMessage(
 		vmAddress.ToEthAddress(),
 		destination.ToEthAddress(),
 	)
-
 	if err != nil {
 		return err
 	}
@@ -104,7 +102,6 @@ func (con *pendingInbox) DepositERC20Message(
 		destination.ToEthAddress(),
 		value,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -128,7 +125,6 @@ func (con *pendingInbox) DepositERC721Message(
 		destination.ToEthAddress(),
 		value,
 	)
-
 	if err != nil {
 		return err
 	}

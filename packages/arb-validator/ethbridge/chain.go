@@ -44,22 +44,22 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
 }
 
-func getBlockID(header *types.Header) *structures.BlockId {
-	return &structures.BlockId{
+func getBlockID(header *types.Header) *structures.BlockID {
+	return &structures.BlockID{
 		Height:     common.NewTimeBlocks(header.Number),
 		HeaderHash: common.NewHashFromEth(header.Hash()),
 	}
 }
 
-func getLogBlockID(ethLog types.Log) *structures.BlockId {
-	return &structures.BlockId{
+func getLogBlockID(ethLog types.Log) *structures.BlockID {
+	return &structures.BlockID{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 	}
 }
 
-func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
-	return &structures.BlockId{
+func getTxBlockID(receipt *types.Receipt) *structures.BlockID {
+	return &structures.BlockID{
 		Height:     common.NewTimeBlocks(receipt.BlockNumber),
 		HeaderHash: common.NewHashFromEth(receipt.BlockHash),
 	}
@@ -67,20 +67,32 @@ func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
 
 func getLogChainInfo(log types.Log) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
-		BlockId:  getLogBlockID(log),
+		BlockID:  getLogBlockID(log),
 		LogIndex: log.Index,
 		TxHash:   log.TxHash,
 	}
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) error {
+func waitForReceipt(
+	ctx context.Context,
+	client *ethclient.Client,
+	from ethcommon.Address,
+	tx *types.Transaction,
+	methodName string,
+) error {
 	_, err := WaitForReceiptWithResults(ctx, client, from, tx, methodName)
 	return err
 }
-func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func WaitForReceiptWithResults(
+	ctx context.Context,
+	client *ethclient.Client,
+	from ethcommon.Address,
+	tx *types.Transaction,
+	methodName string,
+) (*types.Receipt, error) {
 	for {
 		select {
-		case _ = <-time.After(time.Second):
+		case <-time.After(time.Second):
 			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 			if err != nil {
 				if err.Error() == ethereum.NotFound.Error() {
@@ -89,10 +101,6 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 				return nil, err
 			}
 			if receipt.Status != 1 {
-				data, err := receipt.MarshalJSON()
-				if err != nil {
-					return nil, errors.New("Failed unmarshalling receipt")
-				}
 				callMsg := ethereum.CallMsg{
 					From:     from,
 					To:       tx.To(),
@@ -101,15 +109,15 @@ func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, fr
 					Value:    tx.Value(),
 					Data:     tx.Data(),
 				}
-				data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+				data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 				if err != nil {
-					return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
+					return nil, fmt.Errorf("transaction %v failed with error %v", methodName, err)
 				}
-				return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
+				return nil, fmt.Errorf("transaction %v failed with tx %v", methodName, string(data))
 			}
 			return receipt, nil
-		case _ = <-ctx.Done():
-			return nil, errors.New("Receipt not found")
+		case <-ctx.Done():
+			return nil, errors.New("receipt not found")
 		}
 	}
 }

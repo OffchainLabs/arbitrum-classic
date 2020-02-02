@@ -100,7 +100,7 @@ func ChooseAssertionToChallenge(
 			0,
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
-		if uint64(numSteps) != steps || !stub.Equals(assertions[i]) {
+		if numSteps != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
 		pre = pre.GeneratePostcondition(stub)

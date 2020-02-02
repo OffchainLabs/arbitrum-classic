@@ -50,7 +50,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockID *structures.BlockID) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

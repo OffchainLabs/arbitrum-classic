@@ -20,11 +20,9 @@ import (
 	"context"
 	"errors"
 	"log"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -62,76 +60,8 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.fac.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockID *structures.BlockID, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
 	if closeWhenDone != nil {
 		closeWhenDone <- struct{}{}
 	}
-}
-
-type dummyCheckpointer struct {
-	metadata       []byte
-	cp             map[*structures.BlockId]*dummyCheckpoint
-	initialMachine machine.Machine
-}
-
-func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile(contractPath, true, "test")
-	if err != nil {
-		log.Fatal("newDummyCheckpointer: error loading ", contractPath)
-	}
-	return &dummyCheckpointer{
-		nil,
-		make(map[*structures.BlockId]*dummyCheckpoint),
-		theMachine,
-	}
-}
-
-type dummyCheckpoint struct {
-	contents []byte
-	manifest *structures.CheckpointManifest
-	values   map[common.Hash]value.Value
-	machines map[common.Hash]machine.Machine
-}
-
-func (dcp *dummyCheckpoint) GetValue(h common.Hash) value.Value {
-	return dcp.values[h]
-}
-
-func (dcp *dummyCheckpoint) GetMachine(h common.Hash) machine.Machine {
-	return dcp.machines[h]
-}
-
-func (cp *dummyCheckpointer) SaveMetadata(data []byte) {
-	cp.metadata = append([]byte{}, data...)
-}
-
-func (cp *dummyCheckpointer) RestoreMetadata() []byte {
-	return append([]byte{}, cp.metadata...)
-}
-
-func (cp *dummyCheckpointer) SaveCheckpoint(
-	id *structures.BlockId,
-	contents []byte,
-	manifest *structures.CheckpointManifest,
-	values map[common.Hash]value.Value,
-	machines map[common.Hash]machine.Machine,
-) {
-	cp.cp[id] = &dummyCheckpoint{contents, manifest, values, machines}
-}
-
-func (cp *dummyCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) {
-	dcp := cp.cp[blockId]
-	if dcp == nil {
-		return nil, nil
-	} else {
-		return dcp.contents, dcp
-	}
-}
-
-func (cp *dummyCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *big.Int) {
-	// ignore cleanup requests; we're being simple and inefficient for debugging
-}
-
-func (cp *dummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return cp.initialMachine.Clone(), nil
 }

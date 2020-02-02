@@ -88,12 +88,12 @@ func testPendingTopChallenge(t *testing.T) {
 		challengeHash,
 		"ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39",
 		"979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockID *structures.BlockID) (ChallengeState, error) {
 			return DefendPendingTopClaim(
 				context.Background(),
 				client,
 				challengeAddress,
-				blockId,
+				blockID,
 				0,
 				messageStack,
 				bottomHash,
@@ -101,12 +101,12 @@ func testPendingTopChallenge(t *testing.T) {
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockID *structures.BlockID) (ChallengeState, error) {
 			return ChallengePendingTopClaim(
 				context.Background(),
 				client,
 				challengeAddress,
-				blockId,
+				blockID,
 				0,
 				messageStack,
 				true,

@@ -49,7 +49,12 @@ func newRollup(address ethcommon.Address, client *ethclient.Client, auth *Transa
 	return vm, err
 }
 
-func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) PlaceStake(
+	ctx context.Context,
+	stakeAmount *big.Int,
+	proof1 []common.Hash,
+	proof2 []common.Hash,
+) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
 	call := &bind.TransactOpts{
@@ -96,7 +101,13 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 	return vm.waitForReceipt(ctx, tx, "RecoverStakeOld")
 }
 
-func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error {
+func (vm *arbRollup) RecoverStakeMooted(
+	ctx context.Context,
+	nodeHash common.Hash,
+	staker common.Address,
+	latestConfirmedProof []common.Hash,
+	stakerProof []common.Hash,
+) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
 	tx, err := vm.ArbRollup.RecoverStakeMooted(
@@ -112,7 +123,15 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 	return vm.waitForReceipt(ctx, tx, "RecoverStakeMooted")
 }
 
-func (vm *arbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error {
+func (vm *arbRollup) RecoverStakePassedDeadline(
+	ctx context.Context,
+	stakerAddress common.Address,
+	deadlineTicks *big.Int,
+	disputableNodeHashVal common.Hash,
+	childType uint64,
+	vmProtoStateHash common.Hash,
+	proof []common.Hash,
+) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
 	tx, err := vm.ArbRollup.RecoverStakePassedDeadline(
@@ -144,7 +163,12 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return vm.waitForReceipt(ctx, tx, "MoveStake")
 }
 
-func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) PruneLeaf(
+	ctx context.Context,
+	from common.Hash,
+	proof1 []common.Hash,
+	proof2 []common.Hash,
+) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
 	tx, err := vm.ArbRollup.PruneLeaf(

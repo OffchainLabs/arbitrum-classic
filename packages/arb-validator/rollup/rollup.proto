@@ -53,7 +53,7 @@ message ChainObserverBuf {
     structures.PendingInboxBuf pendingInbox = 3;
     common.HashBuf knownValidNode = 4;
     common.HashBuf calculatedValidNode = 5;
-    structures.BlockIdBuf latestBlockId = 6;
+    structures.BlockIDBuf latestBlockID = 6;
     bool isOpinionated = 7;
 }
 

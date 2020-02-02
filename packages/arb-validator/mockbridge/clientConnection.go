@@ -28,6 +28,6 @@ type ClientConnection struct {
 	Client arbbridge.ArbClient
 }
 
-func (c *ClientConnection) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
-	return c.Client.CurrentBlockId(ctx)
+func (c *ClientConnection) CurrentBlockID(ctx context.Context) (*structures.BlockID, error) {
+	return c.Client.CurrentBlockID(ctx)
 }

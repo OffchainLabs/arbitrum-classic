@@ -62,7 +62,7 @@ func (m Transaction) Equals(o Transaction) bool {
 		bytes.Equal(m.Data, o.Data)
 }
 
-func (m Transaction) Type() MessageType {
+func (m Transaction) Type() Type {
 	return TransactionType
 }
 
@@ -88,7 +88,7 @@ func UnmarshalTransaction(val value.Value, chain common.Address) (Transaction, e
 	}
 
 	if tup.Len() != 4 {
-		return Transaction{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+		return Transaction{}, fmt.Errorf("expected tuple of length 2, but received %v", tup)
 	}
 	destVal, _ := tup.GetByInt64(0)
 	seqVal, _ := tup.GetByInt64(1)

@@ -43,9 +43,9 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 	var err error
 	if gmerr != nil {
 		if cmerr != nil {
-			err = fmt.Errorf("Go machine error: %v, cpp machine error: %v ", gmerr, cmerr)
+			err = fmt.Errorf("go machine error: %v, cpp machine error: %v ", gmerr, cmerr)
 		} else {
-			err = fmt.Errorf("Go machine error: %v", gmerr)
+			err = fmt.Errorf("go machine error: %v", gmerr)
 		}
 	} else if cmerr != nil {
 		err = fmt.Errorf("cpp machine error: %v ", cmerr)
@@ -153,13 +153,12 @@ func (m *Machine) ExecuteAssertion(
 			break
 		}
 		if hasTimeLimit {
-			elapsedTime := time.Now().Sub(startTime)
+			elapsedTime := time.Since(startTime)
 			if elapsedTime > maxWallTime {
 				break
 			}
 			timeLeft = maxWallTime - elapsedTime
 		}
-
 	}
 	fmt.Println("Ran", totalSteps, "steps")
 	return a, totalSteps

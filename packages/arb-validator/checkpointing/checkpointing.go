@@ -19,10 +19,11 @@ package checkpointing
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -41,7 +42,7 @@ type RollupCheckpointer interface {
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ArbClient, common.Address, bool) (content []byte, resCtx structures.RestoreContext, err error)
 	GetInitialMachine() (machine.Machine, error)
-	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
+	AsyncSaveCheckpoint(blockID *structures.BlockID, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
 }
 
 type RollupCheckpointerImplFactory struct {
@@ -104,17 +105,17 @@ func (fac *RollupCheckpointerImplFactory) New(ctx context.Context) RollupCheckpo
 }
 
 func (rcp *RollupCheckpointerImpl) _saveCheckpoint(
-	id *structures.BlockId,
+	id *structures.BlockID,
 	contents []byte,
 	checkpointCtx structures.CheckpointContext,
 ) error {
 	// read in metadata
 	var metadataBuf *structures.CheckpointMetadata
-	var newestInCp *structures.BlockId
+	var newestInCp *structures.BlockID
 	rawMetadata := rcp.RestoreMetadata()
 
 	// read in metadata, or create it if it doesn't already exist
-	if rawMetadata == nil || len(rawMetadata) == 0 {
+	if len(rawMetadata) == 0 {
 		idBuf := id.MarshalToBuf()
 		metadataBuf = &structures.CheckpointMetadata{
 			FormatVersion: 1,
@@ -156,7 +157,7 @@ func (rcp *RollupCheckpointerImpl) _saveCheckpoint(
 
 func (rcp *RollupCheckpointerImpl) HasCheckpointedState() bool {
 	metadataBytes := rcp.RestoreMetadata()
-	return metadataBytes != nil && len(metadataBytes) > 0
+	return len(metadataBytes) > 0
 }
 
 func (rcp *RollupCheckpointerImpl) RestoreLatestState(
@@ -175,15 +176,15 @@ func (rcp *RollupCheckpointerImpl) RestoreLatestState(
 	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
 		return nil, nil, err
 	}
-	newestId := metadata.Newest.Unmarshal()
-	cobBytes, resCtx, err := rcp.RestoreCheckpoint(newestId)
+	newestID := metadata.Newest.Unmarshal()
+	cobBytes, resCtx, err := rcp.RestoreCheckpoint(newestID)
 	if err != nil {
 		return nil, nil, err
 	}
 	return cobBytes, resCtx, nil
 }
 
-func (rcp *RollupCheckpointerImpl) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext, error) {
+func (rcp *RollupCheckpointerImpl) RestoreCheckpoint(blockID *structures.BlockID) ([]byte, structures.RestoreContext, error) {
 	var metadataBuf *structures.CheckpointMetadata
 	var oldestHeightInCp *common.TimeBlocks
 	var newestHeightInCp *common.TimeBlocks
@@ -199,13 +200,13 @@ func (rcp *RollupCheckpointerImpl) RestoreCheckpoint(blockId *structures.BlockId
 	oldestHeightInCp = metadataBuf.Oldest.Height.Unmarshal()
 	newestHeightInCp = metadataBuf.Newest.Height.Unmarshal()
 
-	blockHeight := blockId.Height
+	blockHeight := blockID.Height
 	if blockHeight.Cmp(oldestHeightInCp) < 0 || blockHeight.Cmp(newestHeightInCp) > 0 {
 		return nil, nil, nil
 	}
 
 	// read contents
-	contentsKey := getContentsKey(blockId)
+	contentsKey := getContentsKey(blockID)
 	contentBytes := rcp.st.GetData(contentsKey)
 
 	return contentBytes, rcp, nil
@@ -215,10 +216,13 @@ func (rcp *RollupCheckpointerImpl) GetInitialMachine() (machine.Machine, error) 
 	return rcp.st.GetInitialMachine()
 }
 
-func (rcp *RollupCheckpointerImpl) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+func (rcp *RollupCheckpointerImpl) AsyncSaveCheckpoint(blockID *structures.BlockID, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
 	rcp.asyncWriter.SubmitJob(
 		func() {
-			rcp._saveCheckpoint(blockId, contents, cpCtx)
+			err := rcp._saveCheckpoint(blockID, contents, cpCtx)
+			if err != nil {
+				log.Println("Error saving checkpoint", err)
+			}
 		},
 		closeWhenDone,
 	)
@@ -228,7 +232,7 @@ func (rcp *RollupCheckpointerImpl) Close() {
 	rcp.st.CloseCheckpointStorage()
 }
 
-func getKeyForId(prefix []byte, id *structures.BlockId) []byte {
+func getKeyForID(prefix []byte, id *structures.BlockID) []byte {
 	idBytes, err := proto.Marshal(id.MarshalToBuf())
 	if err != nil {
 		log.Fatal(err)
@@ -236,16 +240,16 @@ func getKeyForId(prefix []byte, id *structures.BlockId) []byte {
 	return append(prefix, idBytes...)
 }
 
-func getManifestKey(blockId *structures.BlockId) []byte {
-	return getKeyForId([]byte("manifest:"), blockId)
+func getManifestKey(blockID *structures.BlockID) []byte {
+	return getKeyForID([]byte("manifest:"), blockID)
 }
 
-func getContentsKey(blockId *structures.BlockId) []byte {
-	return getKeyForId([]byte("contents:"), blockId)
+func getContentsKey(blockID *structures.BlockID) []byte {
+	return getKeyForID([]byte("contents:"), blockID)
 }
 
-func getLinksKey(blockId *structures.BlockId) []byte {
-	return getKeyForId([]byte("links:"), blockId)
+func getLinksKey(blockID *structures.BlockID) []byte {
+	return getKeyForID([]byte("links:"), blockID)
 }
 
 func (rcp *RollupCheckpointerImpl) SaveMetadata(data []byte) {
@@ -260,8 +264,8 @@ func (rcp *RollupCheckpointerImpl) RestoreMetadata() []byte {
 }
 
 func (rcp *RollupCheckpointerImpl) SaveCheckpoint(
-	blockId *structures.BlockId,
-	prevBlockId *structures.BlockId,
+	blockID *structures.BlockID,
+	prevBlockID *structures.BlockID,
 	contents []byte,
 	manifest *structures.CheckpointManifest,
 	values map[common.Hash]value.Value,
@@ -282,15 +286,15 @@ func (rcp *RollupCheckpointerImpl) SaveCheckpoint(
 	if err != nil {
 		log.Fatal(err)
 	}
-	rcp.st.SaveData(getManifestKey(blockId), manifestBuf)
+	rcp.st.SaveData(getManifestKey(blockID), manifestBuf)
 
-	rcp.st.SaveData(getContentsKey(blockId), contents)
+	rcp.st.SaveData(getContentsKey(blockID), contents)
 
-	rcp._updateNextPointer(prevBlockId, blockId)
-	rcp._setBothPointers(blockId, prevBlockId, blockId)
+	rcp._updateNextPointer(prevBlockID, blockID)
+	rcp._setBothPointers(blockID, prevBlockID, blockID)
 }
 
-func (rcp *RollupCheckpointerImpl) _setBothPointers(id, prev, next *structures.BlockId) {
+func (rcp *RollupCheckpointerImpl) _setBothPointers(id, prev, next *structures.BlockID) {
 	links := &structures.CheckpointLinks{
 		Prev: prev.MarshalToBuf(),
 		Next: next.MarshalToBuf(),
@@ -302,22 +306,7 @@ func (rcp *RollupCheckpointerImpl) _setBothPointers(id, prev, next *structures.B
 	rcp.st.SaveData(getLinksKey(id), linksBuf)
 }
 
-func (rcp *RollupCheckpointerImpl) _updatePrevPointer(id, prev *structures.BlockId) {
-	key := getLinksKey(id)
-	linksBuf := rcp.st.GetData(key)
-	links := &structures.CheckpointLinks{}
-	if err := proto.Unmarshal(linksBuf, links); err != nil {
-		log.Fatal(err)
-	}
-	links.Prev = prev.MarshalToBuf()
-	linksBuf, err := proto.Marshal(links)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rcp.st.SaveData(key, linksBuf)
-}
-
-func (rcp *RollupCheckpointerImpl) _updateNextPointer(id, next *structures.BlockId) {
+func (rcp *RollupCheckpointerImpl) _updateNextPointer(id, next *structures.BlockID) {
 	key := getLinksKey(id)
 	linksBuf := rcp.st.GetData(key)
 	links := &structures.CheckpointLinks{}
@@ -332,17 +321,16 @@ func (rcp *RollupCheckpointerImpl) _updateNextPointer(id, next *structures.Block
 	rcp.st.SaveData(key, linksBuf)
 }
 
-func (rcp *RollupCheckpointerImpl) QueueCheckpointForDeletion(blockId *structures.BlockId) {
+func (rcp *RollupCheckpointerImpl) QueueCheckpointForDeletion(blockID *structures.BlockID) {
 	// make a best effort to delete an old checkpoint, but ignore any errors
 	// errors might cause some harmless extra info to remain in the database
-
 	queueBytes := rcp.st.GetData([]byte("deadqueue"))
-	queue := &structures.BlockIdBufList{}
+	queue := &structures.BlockIDBufList{}
 	if err := proto.Unmarshal(queueBytes, queue); err != nil {
 		return
 	}
 
-	queue.Bufs = append(queue.Bufs, blockId.MarshalToBuf())
+	queue.Bufs = append(queue.Bufs, blockID.MarshalToBuf())
 
 	queueBytes, err := proto.Marshal(queue)
 	if err != nil {
@@ -361,18 +349,18 @@ func (rcp *RollupCheckpointerImpl) QueueReorgedCheckpointsForDeletion(ctx contex
 		return
 	}
 
-	oldestId := metadata.Oldest.Unmarshal()
-	newestId := metadata.Newest.Unmarshal()
-	for oldestId.Height.Cmp(newestId.Height) < 0 {
-		onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
+	oldestID := metadata.Oldest.Unmarshal()
+	newestID := metadata.Newest.Unmarshal()
+	for oldestID.Height.Cmp(newestID.Height) < 0 {
+		onChainID, err := client.BlockIDForHeight(ctx, newestID.Height)
 		if err != nil {
 			return
 		}
-		if onChainId.HeaderHash.Equals(newestId.HeaderHash) {
+		if onChainID.HeaderHash.Equals(newestID.HeaderHash) {
 			// success
 			return
 		}
-		linksBytes := rcp.st.GetData(getLinksKey(newestId))
+		linksBytes := rcp.st.GetData(getLinksKey(newestID))
 		linksBuf := &structures.CheckpointLinks{}
 		if err := proto.Unmarshal(linksBytes, linksBuf); err != nil {
 			return
@@ -383,18 +371,18 @@ func (rcp *RollupCheckpointerImpl) QueueReorgedCheckpointsForDeletion(ctx contex
 			return
 		}
 		rcp.SaveMetadata(metadataBuf)
-		rcp.QueueCheckpointForDeletion(newestId)
-		newestId = metadata.Newest.Unmarshal()
+		rcp.QueueCheckpointForDeletion(newestID)
+		newestID = metadata.Newest.Unmarshal()
 	}
 
 	// now only a single checkpoint remains
-	onChainId, err := client.BlockIdForHeight(ctx, newestId.Height)
+	onChainID, err := client.BlockIDForHeight(ctx, newestID.Height)
 	if err != nil {
 		return
 	}
-	if !onChainId.HeaderHash.Equals(newestId.HeaderHash) {
+	if !onChainID.HeaderHash.Equals(newestID.HeaderHash) {
 		rcp.DeleteMetadata()
-		rcp.QueueCheckpointForDeletion(newestId)
+		rcp.QueueCheckpointForDeletion(newestID)
 	}
 }
 
@@ -405,9 +393,9 @@ func (rcp *RollupCheckpointerImpl) QueueOldCheckpointsForDeletion(earliestRollba
 		if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
 			return
 		}
-		candidateId := metadataBuf.Oldest.Unmarshal()
+		candidateID := metadataBuf.Oldest.Unmarshal()
 
-		linksBuf := rcp.st.GetData(getLinksKey(candidateId))
+		linksBuf := rcp.st.GetData(getLinksKey(candidateID))
 		links := &structures.CheckpointLinks{}
 		if err := proto.Unmarshal(linksBuf, links); err != nil {
 			return
@@ -418,19 +406,13 @@ func (rcp *RollupCheckpointerImpl) QueueOldCheckpointsForDeletion(earliestRollba
 			return
 		}
 
-		metadataBuf.Oldest = links.Next
-		metadataBytes, err := proto.Marshal(metadataBuf)
-		if err != nil {
-			return
-		}
-
-		rcp.QueueCheckpointForDeletion(candidateId)
+		rcp.QueueCheckpointForDeletion(candidateID)
 	}
 }
 
 func (rcp *RollupCheckpointerImpl) deleteSomeOldCheckpoints() {
 	queueBytes := rcp.st.GetData([]byte("deadqueue"))
-	queue := &structures.BlockIdBufList{}
+	queue := &structures.BlockIDBufList{}
 	if err := proto.Unmarshal(queueBytes, queue); err != nil {
 		return
 	}
@@ -441,8 +423,8 @@ func (rcp *RollupCheckpointerImpl) deleteSomeOldCheckpoints() {
 	}
 
 	for i := 0; i < numToDelete; i++ {
-		blockId := queue.Bufs[0].Unmarshal()
-		rcp.DeleteOneOldCheckpoint(blockId)
+		blockID := queue.Bufs[0].Unmarshal()
+		rcp.DeleteOneOldCheckpoint(blockID)
 		queue.Bufs = queue.Bufs[1:]
 	}
 
@@ -453,9 +435,9 @@ func (rcp *RollupCheckpointerImpl) deleteSomeOldCheckpoints() {
 	rcp.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
-func (rcp *RollupCheckpointerImpl) DeleteOneOldCheckpoint(blockId *structures.BlockId) {
+func (rcp *RollupCheckpointerImpl) DeleteOneOldCheckpoint(blockID *structures.BlockID) {
 	// assume metadata has already been updated to reflect deletion
-	manifestBytes := rcp.st.GetData(getManifestKey(blockId))
+	manifestBytes := rcp.st.GetData(getManifestKey(blockID))
 	if manifestBytes == nil {
 		return
 	}
@@ -463,7 +445,7 @@ func (rcp *RollupCheckpointerImpl) DeleteOneOldCheckpoint(blockId *structures.Bl
 	if err := proto.Unmarshal(manifestBytes, manifestBuf); err != nil {
 		return
 	}
-	rcp.st.DeleteData(getManifestKey(blockId))
+	rcp.st.DeleteData(getManifestKey(blockID))
 	for _, vbuf := range manifestBuf.Values {
 		valhash := vbuf.Unmarshal()
 		rcp.st.DeleteValue(valhash)
@@ -472,8 +454,8 @@ func (rcp *RollupCheckpointerImpl) DeleteOneOldCheckpoint(blockId *structures.Bl
 		machhash := mbuf.Unmarshal()
 		rcp.st.DeleteCheckpoint(machhash)
 	}
-	rcp.st.DeleteData(getContentsKey(blockId))
-	rcp.st.DeleteData(getLinksKey(blockId))
+	rcp.st.DeleteData(getContentsKey(blockID))
+	rcp.st.DeleteData(getLinksKey(blockID))
 }
 
 func (rcp *RollupCheckpointerImpl) GetValue(h common.Hash) value.Value {

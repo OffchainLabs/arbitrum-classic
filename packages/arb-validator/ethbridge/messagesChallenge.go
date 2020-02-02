@@ -37,7 +37,11 @@ type messagesChallenge struct {
 	contract *messageschallenge.MessagesChallenge
 }
 
-func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*messagesChallenge, error) {
+func newMessagesChallenge(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*messagesChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -171,7 +175,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
-		msg.Id,
+		msg.ID,
 		msg.BlockNum.AsInt(),
 		msg.MessageNum,
 	)

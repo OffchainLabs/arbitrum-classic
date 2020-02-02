@@ -154,11 +154,6 @@ func (e Invalid) String() string {
 	return sb.String()
 }
 
-type FuncCall struct {
-	funcID [4]byte
-	logs   value.Value
-}
-
 const (
 	RevertCode      = 0
 	InvalidCode     = 1
@@ -168,7 +163,7 @@ const (
 )
 
 type EthBridgeMessage struct {
-	Type        message.MessageType
+	Type        message.Type
 	BlockNumber *big.Int
 	TxHash      common.Hash
 }
@@ -179,7 +174,7 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 		return EthBridgeMessage{}, nil, errors.New("msg must be tuple value")
 	}
 	if tup.Len() != 3 {
-		return EthBridgeMessage{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return EthBridgeMessage{}, nil, fmt.Errorf("expected tuple of length 3, but received %v", tup)
 	}
 	blockNumberVal, _ := tup.GetByInt64(0)
 	txHashVal, _ := tup.GetByInt64(1)
@@ -212,24 +207,24 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 	typecode := uint8(typeInt.BigInt().Uint64())
 
 	return EthBridgeMessage{
-		Type:        message.MessageType(typecode),
+		Type:        message.Type(typecode),
 		BlockNumber: blockNumberInt.BigInt(),
 		TxHash:      txHash,
 	}, restValTup, nil
 }
 
-func ParseArbMessage(typecode message.MessageType, messageVal value.Value, chain common.Address) (message.UnsentMessage, error) {
+func ParseArbMessage(typecode message.Type, val value.Value, chain common.Address) (message.UnsentMessage, error) {
 	switch typecode {
 	case message.TransactionType:
-		return message.UnmarshalTransaction(messageVal, chain)
+		return message.UnmarshalTransaction(val, chain)
 	case message.EthType:
-		return message.UnmarshalEth(messageVal)
+		return message.UnmarshalEth(val)
 	case message.ERC20Type:
-		return message.UnmarshalERC20(messageVal)
+		return message.UnmarshalERC20(val)
 	case message.ERC721Type:
-		return message.UnmarshalERC721(messageVal)
+		return message.UnmarshalERC721(val)
 	case message.CallType:
-		return message.UnmarshalCall(messageVal)
+		return message.UnmarshalCall(val)
 	default:
 		return nil, errors.New("Invalid message type")
 	}
@@ -241,7 +236,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 		return nil, errors.New("advise expected tuple value")
 	}
 	if tup.Len() != 4 {
-		return nil, fmt.Errorf("advise expected tuple of length 4, but recieved %v", tup)
+		return nil, fmt.Errorf("advise expected tuple of length 4, but received %v", tup)
 	}
 	returnCodeVal, _ := tup.GetByInt64(3)
 	returnCode, ok := returnCodeVal.(value.IntValue)
@@ -269,6 +264,9 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 			return nil, err
 		}
 		returnVal, err := tup.GetByInt64(2)
+		if err != nil {
+			return nil, err
+		}
 		returnBytes, err := message.ByteStackToHex(returnVal)
 		if err != nil {
 			return nil, err

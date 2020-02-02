@@ -67,6 +67,7 @@ func NewImmediateOperationFromReader(rd io.Reader) (ImmediateOperation, error) {
 		return ImmediateOperation{}, err
 	}
 	val, err := UnmarshalValue(rd)
+
 	return ImmediateOperation{op, val}, err
 }
 
@@ -82,6 +83,7 @@ func (op ImmediateOperation) Marshal(wr io.Writer) error {
 	if err := op.Op.Marshal(wr); err != nil {
 		return err
 	}
+
 	return MarshalValue(op.Val, wr)
 }
 
@@ -92,6 +94,7 @@ func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
 	if includeVal {
 		return MarshalValueForProof(op.Val.CloneShallow(), wr)
 	}
+
 	return MarshalValueForProof(NewHashOnlyValueFromValue(op.Val), wr)
 }
 
@@ -115,14 +118,6 @@ func (op ImmediateOperation) String() string {
 	return fmt.Sprintf("0x%x Imd(%v)", op.GetOp(), op.Val)
 }
 
-// func (op BasicOperation) String() string {
-//	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
-//}
-//
-// func (op ImmediateOperation) String() string {
-//	return fmt.Sprintf("Immediate(%v, %v)", code.InstructionNames[op.Op], op.Val)
-//}
-
 func (op ImmediateOperation) GetOp() Opcode {
 	return op.Op
 }
@@ -133,11 +128,12 @@ func NewOperationFromReader(rd io.Reader) (Operation, error) {
 	if err != nil {
 		return nil, err
 	}
-	if immediateCount == 0 {
+	switch immediateCount {
+	case 0:
 		return NewBasicOperationFromReader(rd)
-	} else if immediateCount == 1 {
+	case 1:
 		return NewImmediateOperationFromReader(rd)
-	} else {
+	default:
 		return nil, errors.New("immediate count must be 0 or 1")
 	}
 }
@@ -147,6 +143,7 @@ func MarshalOperation(op Operation, wr io.Writer) error {
 	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
 		return err
 	}
+
 	return op.Marshal(wr)
 }
 
@@ -155,6 +152,7 @@ func MarshalOperationProof(op Operation, wr io.Writer, includeVal bool) error {
 	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
 		return err
 	}
+
 	return op.MarshalProof(wr, includeVal)
 }
 
@@ -166,6 +164,7 @@ func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {
 	}
 	var nextHash common.Hash
 	_, err = io.ReadFull(rd, nextHash[:])
+
 	return CodePointValue{0, op, nextHash}, err
 }
 
@@ -187,6 +186,7 @@ func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
 	}
 	var nextHash common.Hash
 	_, err = io.ReadFull(rd, nextHash[:])
+
 	return CodePointValue{insnNum, op, nextHash}, err
 }
 
@@ -207,22 +207,13 @@ func (cv CodePointValue) CloneShallow() Value {
 }
 
 func (cv CodePointValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	switch val := val.(type) {
+	case HashOnlyValue:
 		return cv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeCodePoint {
+	case CodePointValue:
+		return cv.InsnNum == val.InsnNum
+	default:
 		return false
-	} else {
-		if cv.InsnNum != val.(CodePointValue).InsnNum {
-			return false
-		}
-		// for now only check InsnNum
-		// if cv.Op != val.(CodePointValue).Op {
-		//	return false
-		//}
-		// if cv.NextHash != val.(CodePointValue).NextHash {
-		//	return false
-		//}
-		return true
 	}
 }
 

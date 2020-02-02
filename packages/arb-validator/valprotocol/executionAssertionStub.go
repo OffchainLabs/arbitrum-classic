@@ -39,6 +39,7 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 	for _, msg := range a.OutMsgs {
 		lastMsgHash = hashing.SoliditySHA3(hashing.Bytes32(lastMsgHash), hashing.Bytes32(msg.Hash()))
 	}
+
 	var lastLogHash common.Hash
 	for _, logVal := range a.Logs {
 		lastLogHash = hashing.SoliditySHA3(hashing.Bytes32(lastLogHash), hashing.Bytes32(logVal.Hash()))

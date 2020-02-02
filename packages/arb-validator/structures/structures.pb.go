@@ -473,8 +473,8 @@ func (m *CheckpointManifest) GetMachines() []*common.HashBuf {
 
 type CheckpointMetadata struct {
 	FormatVersion        uint64      `protobuf:"varint,1,opt,name=formatVersion,proto3" json:"formatVersion,omitempty"`
-	Oldest               *BlockIdBuf `protobuf:"bytes,2,opt,name=oldest,proto3" json:"oldest,omitempty"`
-	Newest               *BlockIdBuf `protobuf:"bytes,3,opt,name=newest,proto3" json:"newest,omitempty"`
+	Oldest               *BlockIDBuf `protobuf:"bytes,2,opt,name=oldest,proto3" json:"oldest,omitempty"`
+	Newest               *BlockIDBuf `protobuf:"bytes,3,opt,name=newest,proto3" json:"newest,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -512,14 +512,14 @@ func (m *CheckpointMetadata) GetFormatVersion() uint64 {
 	return 0
 }
 
-func (m *CheckpointMetadata) GetOldest() *BlockIdBuf {
+func (m *CheckpointMetadata) GetOldest() *BlockIDBuf {
 	if m != nil {
 		return m.Oldest
 	}
 	return nil
 }
 
-func (m *CheckpointMetadata) GetNewest() *BlockIdBuf {
+func (m *CheckpointMetadata) GetNewest() *BlockIDBuf {
 	if m != nil {
 		return m.Newest
 	}
@@ -527,8 +527,8 @@ func (m *CheckpointMetadata) GetNewest() *BlockIdBuf {
 }
 
 type CheckpointLinks struct {
-	Next                 *BlockIdBuf `protobuf:"bytes,1,opt,name=next,proto3" json:"next,omitempty"`
-	Prev                 *BlockIdBuf `protobuf:"bytes,2,opt,name=prev,proto3" json:"prev,omitempty"`
+	Next                 *BlockIDBuf `protobuf:"bytes,1,opt,name=next,proto3" json:"next,omitempty"`
+	Prev                 *BlockIDBuf `protobuf:"bytes,2,opt,name=prev,proto3" json:"prev,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -559,21 +559,21 @@ func (m *CheckpointLinks) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CheckpointLinks proto.InternalMessageInfo
 
-func (m *CheckpointLinks) GetNext() *BlockIdBuf {
+func (m *CheckpointLinks) GetNext() *BlockIDBuf {
 	if m != nil {
 		return m.Next
 	}
 	return nil
 }
 
-func (m *CheckpointLinks) GetPrev() *BlockIdBuf {
+func (m *CheckpointLinks) GetPrev() *BlockIDBuf {
 	if m != nil {
 		return m.Prev
 	}
 	return nil
 }
 
-type BlockIdBuf struct {
+type BlockIDBuf struct {
 	Height               *common.TimeBlocksBuf `protobuf:"bytes,1,opt,name=height,proto3" json:"height,omitempty"`
 	HeaderHash           *common.HashBuf       `protobuf:"bytes,2,opt,name=headerHash,proto3" json:"headerHash,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
@@ -581,78 +581,78 @@ type BlockIdBuf struct {
 	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *BlockIdBuf) Reset()         { *m = BlockIdBuf{} }
-func (m *BlockIdBuf) String() string { return proto.CompactTextString(m) }
-func (*BlockIdBuf) ProtoMessage()    {}
-func (*BlockIdBuf) Descriptor() ([]byte, []int) {
+func (m *BlockIDBuf) Reset()         { *m = BlockIDBuf{} }
+func (m *BlockIDBuf) String() string { return proto.CompactTextString(m) }
+func (*BlockIDBuf) ProtoMessage()    {}
+func (*BlockIDBuf) Descriptor() ([]byte, []int) {
 	return fileDescriptor_66ea84bc81126bff, []int{10}
 }
 
-func (m *BlockIdBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_BlockIdBuf.Unmarshal(m, b)
+func (m *BlockIDBuf) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BlockIDBuf.Unmarshal(m, b)
 }
-func (m *BlockIdBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_BlockIdBuf.Marshal(b, m, deterministic)
+func (m *BlockIDBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BlockIDBuf.Marshal(b, m, deterministic)
 }
-func (m *BlockIdBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BlockIdBuf.Merge(m, src)
+func (m *BlockIDBuf) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BlockIDBuf.Merge(m, src)
 }
-func (m *BlockIdBuf) XXX_Size() int {
-	return xxx_messageInfo_BlockIdBuf.Size(m)
+func (m *BlockIDBuf) XXX_Size() int {
+	return xxx_messageInfo_BlockIDBuf.Size(m)
 }
-func (m *BlockIdBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_BlockIdBuf.DiscardUnknown(m)
+func (m *BlockIDBuf) XXX_DiscardUnknown() {
+	xxx_messageInfo_BlockIDBuf.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_BlockIdBuf proto.InternalMessageInfo
+var xxx_messageInfo_BlockIDBuf proto.InternalMessageInfo
 
-func (m *BlockIdBuf) GetHeight() *common.TimeBlocksBuf {
+func (m *BlockIDBuf) GetHeight() *common.TimeBlocksBuf {
 	if m != nil {
 		return m.Height
 	}
 	return nil
 }
 
-func (m *BlockIdBuf) GetHeaderHash() *common.HashBuf {
+func (m *BlockIDBuf) GetHeaderHash() *common.HashBuf {
 	if m != nil {
 		return m.HeaderHash
 	}
 	return nil
 }
 
-type BlockIdBufList struct {
-	Bufs                 []*BlockIdBuf `protobuf:"bytes,1,rep,name=bufs,proto3" json:"bufs,omitempty"`
+type BlockIDBufList struct {
+	Bufs                 []*BlockIDBuf `protobuf:"bytes,1,rep,name=bufs,proto3" json:"bufs,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`
 }
 
-func (m *BlockIdBufList) Reset()         { *m = BlockIdBufList{} }
-func (m *BlockIdBufList) String() string { return proto.CompactTextString(m) }
-func (*BlockIdBufList) ProtoMessage()    {}
-func (*BlockIdBufList) Descriptor() ([]byte, []int) {
+func (m *BlockIDBufList) Reset()         { *m = BlockIDBufList{} }
+func (m *BlockIDBufList) String() string { return proto.CompactTextString(m) }
+func (*BlockIDBufList) ProtoMessage()    {}
+func (*BlockIDBufList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_66ea84bc81126bff, []int{11}
 }
 
-func (m *BlockIdBufList) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_BlockIdBufList.Unmarshal(m, b)
+func (m *BlockIDBufList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BlockIDBufList.Unmarshal(m, b)
 }
-func (m *BlockIdBufList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_BlockIdBufList.Marshal(b, m, deterministic)
+func (m *BlockIDBufList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BlockIDBufList.Marshal(b, m, deterministic)
 }
-func (m *BlockIdBufList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BlockIdBufList.Merge(m, src)
+func (m *BlockIDBufList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BlockIDBufList.Merge(m, src)
 }
-func (m *BlockIdBufList) XXX_Size() int {
-	return xxx_messageInfo_BlockIdBufList.Size(m)
+func (m *BlockIDBufList) XXX_Size() int {
+	return xxx_messageInfo_BlockIDBufList.Size(m)
 }
-func (m *BlockIdBufList) XXX_DiscardUnknown() {
-	xxx_messageInfo_BlockIdBufList.DiscardUnknown(m)
+func (m *BlockIDBufList) XXX_DiscardUnknown() {
+	xxx_messageInfo_BlockIDBufList.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_BlockIdBufList proto.InternalMessageInfo
+var xxx_messageInfo_BlockIDBufList proto.InternalMessageInfo
 
-func (m *BlockIdBufList) GetBufs() []*BlockIdBuf {
+func (m *BlockIDBufList) GetBufs() []*BlockIDBuf {
 	if m != nil {
 		return m.Bufs
 	}
@@ -670,8 +670,8 @@ func init() {
 	proto.RegisterType((*CheckpointManifest)(nil), "structures.CheckpointManifest")
 	proto.RegisterType((*CheckpointMetadata)(nil), "structures.CheckpointMetadata")
 	proto.RegisterType((*CheckpointLinks)(nil), "structures.CheckpointLinks")
-	proto.RegisterType((*BlockIdBuf)(nil), "structures.BlockIdBuf")
-	proto.RegisterType((*BlockIdBufList)(nil), "structures.BlockIdBufList")
+	proto.RegisterType((*BlockIDBuf)(nil), "structures.BlockIDBuf")
+	proto.RegisterType((*BlockIDBufList)(nil), "structures.BlockIDBufList")
 }
 
 func init() { proto.RegisterFile("structures.proto", fileDescriptor_66ea84bc81126bff) }
@@ -722,14 +722,14 @@ var fileDescriptor_66ea84bc81126bff = []byte{
 	0x7c, 0x02, 0x47, 0xe5, 0xe2, 0xa9, 0x28, 0x6e, 0x41, 0x6b, 0x80, 0xfb, 0xbb, 0xb3, 0x96, 0x0c,
 	0x35, 0x0d, 0xa9, 0xa6, 0xe4, 0x7d, 0x38, 0x89, 0x84, 0x4c, 0xa9, 0x7e, 0x8d, 0x52, 0x31, 0xc1,
 	0xcb, 0x7d, 0xb1, 0x7e, 0x49, 0x06, 0x70, 0x28, 0x92, 0xd0, 0x54, 0x55, 0x48, 0xff, 0x6e, 0x5b,
-	0x0a, 0xbb, 0x28, 0xc6, 0xa1, 0x65, 0x56, 0xa0, 0x0c, 0x9e, 0xe3, 0xaf, 0x8d, 0x0a, 0x9d, 0xf8,
-	0x02, 0xe5, 0x32, 0xe8, 0x35, 0xdc, 0x6e, 0x19, 0x5f, 0x28, 0xf2, 0x31, 0x1c, 0x70, 0x5c, 0x55,
-	0xbd, 0xea, 0x0a, 0x60, 0x31, 0x06, 0x9b, 0x49, 0x5c, 0xfe, 0x0f, 0x39, 0x8b, 0x71, 0x13, 0x80,
-	0xe6, 0x8e, 0x3c, 0x87, 0xc3, 0x18, 0xd9, 0x3c, 0xde, 0x9a, 0x09, 0xbb, 0x07, 0xeb, 0x0d, 0x58,
-	0x82, 0x6c, 0x87, 0x91, 0x86, 0x28, 0xef, 0x1b, 0xc3, 0x16, 0xc4, 0xfd, 0x1a, 0x4e, 0x9b, 0x6c,
-	0xb7, 0x4c, 0x59, 0xae, 0x7e, 0x1e, 0x55, 0xbd, 0xed, 0xe4, 0x6a, 0x30, 0xa3, 0xeb, 0x9f, 0x46,
-	0x73, 0xa6, 0xe3, 0xdc, 0x37, 0x29, 0x86, 0x22, 0x8a, 0x02, 0xf3, 0x1f, 0x9e, 0x50, 0x5f, 0x0d,
-	0xa9, 0xf4, 0x99, 0x96, 0x79, 0x3a, 0xcc, 0x68, 0xb0, 0x30, 0xbb, 0xcb, 0xdc, 0x3c, 0x5f, 0xd2,
-	0x84, 0x85, 0x54, 0x0b, 0x39, 0x6c, 0xc2, 0xfa, 0x87, 0x76, 0x69, 0x7d, 0xfe, 0x5f, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x99, 0x51, 0xb8, 0xaf, 0x70, 0x08, 0x00, 0x00,
+	0x0a, 0xbb, 0x28, 0xc6, 0xd7, 0x96, 0x59, 0x81, 0x32, 0x78, 0x8e, 0xbf, 0x36, 0x2a, 0x74, 0xe2,
+	0x0b, 0x94, 0xcb, 0xa0, 0xd7, 0x70, 0xbb, 0x65, 0x7c, 0xa1, 0xc8, 0xc7, 0x70, 0xc0, 0x71, 0x55,
+	0xf5, 0xaa, 0x2b, 0x80, 0xc5, 0x18, 0x6c, 0x26, 0x71, 0xf9, 0x3f, 0xe4, 0x2c, 0xc6, 0x4d, 0x00,
+	0x9a, 0x3b, 0xf2, 0x1c, 0x0e, 0x63, 0x64, 0xf3, 0x78, 0x6b, 0x26, 0xec, 0x1e, 0xac, 0x37, 0x60,
+	0x09, 0xb2, 0x1d, 0x46, 0x1a, 0xa2, 0xbc, 0x6f, 0x0c, 0x5b, 0x10, 0xf7, 0x6b, 0x38, 0x6d, 0xb2,
+	0xdd, 0x32, 0x65, 0xb9, 0xfa, 0x79, 0x54, 0xf5, 0xb6, 0x93, 0xab, 0xc1, 0x8c, 0xae, 0x7f, 0x1a,
+	0xcd, 0x99, 0x8e, 0x73, 0xdf, 0xa4, 0x18, 0x8a, 0x28, 0x0a, 0xcc, 0x7f, 0x78, 0x42, 0x7d, 0x35,
+	0xa4, 0xd2, 0x67, 0x5a, 0xe6, 0xe9, 0x30, 0xa3, 0xc1, 0xc2, 0xec, 0x2e, 0x73, 0xf3, 0x7c, 0x49,
+	0x13, 0x16, 0x52, 0x2d, 0xe4, 0xb0, 0x09, 0xeb, 0x1f, 0xda, 0xa5, 0xf5, 0xf9, 0x7f, 0x01, 0x00,
+	0x00, 0xff, 0xff, 0x9e, 0x8c, 0x36, 0x0a, 0x70, 0x08, 0x00, 0x00,
 }

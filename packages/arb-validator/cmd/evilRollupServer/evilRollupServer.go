@@ -21,16 +21,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"strings"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,6 +34,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 const (

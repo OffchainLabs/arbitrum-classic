@@ -18,9 +18,10 @@ package rollup
 
 import (
 	"context"
+	"log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"log"
 )
 
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.
@@ -34,20 +35,20 @@ const (
 	WrongExecutionAssertion     = 2
 )
 
-type evil_WrongAssertionListener struct {
+type evilWrongAssertionListener struct {
 	*ValidatorChainListener
 	kind WrongAssertionType
 }
 
-func NewEvil_WrongAssertionListener(
+func NewEvilWrongAssertionListener(
 	rollupAddress common.Address,
 	actor arbbridge.ArbRollup,
 	kind WrongAssertionType,
-) *evil_WrongAssertionListener {
-	return &evil_WrongAssertionListener{NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
+) *evilWrongAssertionListener {
+	return &evilWrongAssertionListener{NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
 }
 
-func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *preparedAssertion) {
+func (lis *evilWrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *preparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
 	switch lis.kind {

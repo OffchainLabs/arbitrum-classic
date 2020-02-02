@@ -64,12 +64,12 @@ func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
 	return ret
 }
 
-func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
+func (cp ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
-		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
-		GracePeriod:             params.GracePeriod.MarshalToBuf(),
-		MaxExecutionSteps:       params.MaxExecutionSteps,
-		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
+		StakeRequirement:        common.MarshalBigInt(cp.StakeRequirement),
+		GracePeriod:             cp.GracePeriod.MarshalToBuf(),
+		MaxExecutionSteps:       cp.MaxExecutionSteps,
+		ArbGasSpeedLimitPerTick: cp.ArbGasSpeedLimitPerTick,
 	}
 }
 

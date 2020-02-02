@@ -35,7 +35,11 @@ type executionChallenge struct {
 	challenge *executionchallenge.ExecutionChallenge
 }
 
-func newExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*executionChallenge, error) {
+func newExecutionChallenge(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*executionChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err

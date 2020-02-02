@@ -55,7 +55,10 @@ type pendingTopChallengeWatcher struct {
 	topics   [][]ethcommon.Hash
 }
 
-func newPendingTopChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*pendingTopChallengeWatcher, error) {
+func newPendingTopChallengeWatcher(
+	address ethcommon.Address,
+	client *ethclient.Client,
+) (*pendingTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -79,8 +82,11 @@ func newPendingTopChallengeWatcher(address ethcommon.Address, client *ethclient.
 	}, nil
 }
 
-func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	bh := blockId.HeaderHash.ToEthHash()
+func (c *pendingTopChallengeWatcher) GetEvents(
+	ctx context.Context,
+	blockID *structures.BlockID,
+) ([]arbbridge.Event, error) {
+	bh := blockID.HeaderHash.ToEthHash()
 	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{c.address},
@@ -100,7 +106,10 @@ func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *str
 	return events, nil
 }
 
-func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+func (c *pendingTopChallengeWatcher) parsePendingTopEvent(
+	chainInfo arbbridge.ChainInfo,
+	log types.Log,
+) (arbbridge.Event, error) {
 	if log.Topics[0] == pendingTopBisectedID {
 		eventVal, err := c.contract.ParseBisected(log)
 		if err != nil {

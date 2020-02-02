@@ -60,7 +60,7 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockID *structures.BlockID) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
@@ -224,6 +224,6 @@ func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.Address{}, nil
 }
 
-func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockID, error) {
 	return nil, nil
 }

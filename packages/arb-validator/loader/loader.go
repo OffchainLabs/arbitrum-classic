@@ -27,17 +27,14 @@ import (
 )
 
 func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine.Machine, error) {
-	if strings.EqualFold(vmtype, "go") {
+	switch {
+	case strings.EqualFold(vmtype, "go"):
 		return goloader.LoadMachineFromFile(fileName, warnMode)
-	} else if strings.EqualFold(vmtype, "cpp") {
+	case strings.EqualFold(vmtype, "cpp"):
 		return cmachine.New(fileName)
-	} else if strings.EqualFold(vmtype, "test") {
+	case strings.EqualFold(vmtype, "test"):
 		return testmachine.New(fileName, warnMode)
-	} else {
+	default:
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
-}
-
-func CreateCheckpointStorage(dbPath string, contractFile string) (machine.CheckpointStorage, error) {
-	return cmachine.NewCheckpoint(dbPath, contractFile)
 }

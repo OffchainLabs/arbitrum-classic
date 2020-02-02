@@ -56,19 +56,6 @@ func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleV
 	return ret, nil
 }
 
-func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
-	if !IsValidTupleSize(big.NewInt(size)) {
-		return TupleValue{}, errors.New("requested tuple size is too big")
-	}
-
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0, true}
-	for i := int64(0); i < size; i++ {
-		ret.contentsArr[i] = value
-	}
-	ret.size = ret.internalSize()
-	return ret, nil
-}
-
 func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(len(slice))) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
@@ -84,14 +71,6 @@ func NewTuple2(value1 Value, value2 Value) TupleValue {
 	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
-}
-
-func (tv TupleValue) init2(value1 Value, value2 Value) {
-	tv.contentsArr[0] = value1
-	tv.contentsArr[1] = value2
-	tv.itemCount = 2
-	tv.size = tv.internalSize()
-	tv.deferredHashing = true
 }
 
 func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
@@ -196,19 +175,20 @@ func (tv TupleValue) CloneShallow() Value {
 }
 
 func (tv TupleValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	switch val := val.(type) {
+	case HashOnlyValue:
 		return tv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeTuple {
+	case TupleValue:
+		return tv.Hash() == val.Hash()
+	default:
 		return false
-	} else {
-		return tv.Hash() == val.Hash()
 	}
 }
 
 func (tv TupleValue) internalSize() int64 {
 	ret := int64(1)
 	for _, bv := range tv.Contents() {
-		ret = ret + bv.Size()
+		ret += bv.Size()
 	}
 	return ret
 }

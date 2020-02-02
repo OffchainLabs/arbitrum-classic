@@ -49,40 +49,40 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
-	var allNodes []*NodeBuf
-	for _, n := range chain.nodeFromHash {
+func (ng *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
+	allNodes := make([]*NodeBuf, 0, len(ng.nodeFromHash))
+	for _, n := range ng.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))
 	}
 	var leafHashes []common.Hash
-	chain.leaves.forall(func(node *Node) {
+	ng.leaves.forall(func(node *Node) {
 		leafHashes = append(leafHashes, node.hash)
 	})
 	return &NodeGraphBuf{
 		Nodes:               allNodes,
-		OldestNodeHash:      chain.oldestNode.hash.MarshalToBuf(),
-		LatestConfirmedHash: chain.latestConfirmed.hash.MarshalToBuf(),
+		OldestNodeHash:      ng.oldestNode.hash.MarshalToBuf(),
+		LatestConfirmedHash: ng.latestConfirmed.hash.MarshalToBuf(),
 		LeafHashes:          common.MarshalSliceOfHashes(leafHashes),
-		Params:              chain.params.MarshalToBuf(),
+		Params:              ng.params.MarshalToBuf(),
 	}
 }
 
-func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *NodeGraph {
+func (m *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *NodeGraph {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
 		nodeFromHash:    make(map[common.Hash]*Node),
 		oldestNode:      nil,
-		params:          buf.Params.Unmarshal(),
+		params:          m.Params.Unmarshal(),
 	}
 
 	// unmarshal nodes; their prev/successors will not be set up yet
-	for _, nodeBuf := range buf.Nodes {
+	for _, nodeBuf := range m.Nodes {
 		node := nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
 		chain.nodeFromHash[node.hash] = node
 	}
 	// now set up prevs and successors for all nodes
-	for _, nodeBuf := range buf.Nodes {
+	for _, nodeBuf := range m.Nodes {
 		nodeHash := nodeBuf.Hash.Unmarshal()
 		node := chain.nodeFromHash[nodeHash]
 		if nodeBuf.PrevHash != nil {
@@ -96,8 +96,8 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		}
 	}
 
-	chain.oldestNode = chain.nodeFromHash[buf.OldestNodeHash.Unmarshal()]
-	for _, leafHashStr := range buf.LeafHashes {
+	chain.oldestNode = chain.nodeFromHash[m.OldestNodeHash.Unmarshal()]
+	for _, leafHashStr := range m.LeafHashes {
 		leafHash := leafHashStr.Unmarshal()
 		node := chain.nodeFromHash[leafHash]
 		if node == nil {
@@ -106,7 +106,7 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		chain.leaves.Add(node)
 	}
 
-	lcHash := buf.LatestConfirmedHash.Unmarshal()
+	lcHash := m.LatestConfirmedHash.Unmarshal()
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
@@ -119,22 +119,22 @@ func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
 func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet, prefix string) string {
 	ret := prefix + strconv.Itoa(int(node.linkType)) + ":" + node.hash.ShortString()
 	if ng.leaves.IsLeaf(node) {
-		ret = ret + " leaf"
+		ret += " leaf"
 	}
 	if node == ng.latestConfirmed {
-		ret = ret + " latestConfirmed"
+		ret += " latestConfirmed"
 	}
 	stakers.forall(func(s *Staker) {
 		if s.location.Equals(node) {
-			ret = ret + " stake:" + s.address.ShortString()
+			ret += " stake:" + s.address.ShortString()
 		}
 	})
-	ret = ret + "\n"
+	ret += "\n"
 	subPrefix := prefix + "  "
 	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
 		succi := node.successorHashes[i]
 		if !succi.Equals(common.Hash{}) {
-			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
+			ret += ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
 		}
 	}
 	return ret
@@ -156,28 +156,28 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 	return true
 }
 
-func (chain *NodeGraph) pruneNode(node *Node) {
+func (ng *NodeGraph) pruneNode(node *Node) {
 	oldNode := node.prev
 	node.prev = nil // so garbage collector doesn't preserve prev anymore
 	if oldNode != nil {
 		oldNode.successorHashes[node.linkType] = zeroBytes32
-		chain.considerPruningNode(oldNode)
+		ng.considerPruningNode(oldNode)
 	}
-	delete(chain.nodeFromHash, node.hash)
+	delete(ng.nodeFromHash, node.hash)
 }
 
-func (chain *NodeGraph) pruneOldestNode(oldest *Node) {
+func (ng *NodeGraph) pruneOldestNode(oldest *Node) {
 	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
 		succHash := oldest.successorHashes[i]
 		if !succHash.Equals(common.Hash{}) {
-			chain.nodeFromHash[succHash].prev = nil
+			ng.nodeFromHash[succHash].prev = nil
 		}
 	}
-	delete(chain.nodeFromHash, oldest.hash)
+	delete(ng.nodeFromHash, oldest.hash)
 }
 
-func (chain *NodeGraph) HasReference(node *Node) bool {
-	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
+func (ng *NodeGraph) HasReference(node *Node) bool {
+	if node.numStakers > 0 || ng.leaves.IsLeaf(node) {
 		return true
 	}
 	for _, nodeHash := range node.successorHashes {
@@ -188,55 +188,51 @@ func (chain *NodeGraph) HasReference(node *Node) bool {
 	return false
 }
 
-func (chain *NodeGraph) considerPruningNode(node *Node) {
-	if !chain.HasReference(node) {
-		chain.pruneNode(node)
+func (ng *NodeGraph) considerPruningNode(node *Node) {
+	if !ng.HasReference(node) {
+		ng.pruneNode(node)
 	}
 }
 
-func (chain *NodeGraph) getLeaf(node *Node) *Node {
+func (ng *NodeGraph) getLeaf(node *Node) *Node {
 	for _, successor := range node.successorHashes {
 		if successor != zeroBytes32 {
-			return chain.getLeaf(chain.nodeFromHash[successor])
+			return ng.getLeaf(ng.nodeFromHash[successor])
 		}
 	}
 	return node
 }
 
-func (chain *NodeGraph) CreateNodesOnAssert(
+func (ng *NodeGraph) createNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
-) {
-	if !chain.leaves.IsLeaf(prevNode) {
-		log.Fatal("can't assert on non-leaf node")
+) error {
+	if !ng.leaves.IsLeaf(prevNode) {
+		return errors.New("can't assert on non-leaf node")
 	}
-	chain.leaves.Delete(prevNode)
+	ng.leaves.Delete(prevNode)
 
 	// create nodes for invalid branches
 	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
-		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
-		chain.nodeFromHash[newNode.hash] = newNode
-		chain.leaves.Add(newNode)
+		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		ng.nodeFromHash[newNode.hash] = newNode
+		ng.leaves.Add(newNode)
 	}
 
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, chain.params, currentTime, assertionTxHash)
-	chain.nodeFromHash[newNode.hash] = newNode
-	chain.leaves.Add(newNode)
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	ng.nodeFromHash[newNode.hash] = newNode
+	ng.leaves.Add(newNode)
+	return nil
 }
 
-func (chain *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
-	node := chain.nodeFromHash[nodeHash]
-	chain.pruneNode(node)
+func (ng *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
+	node := ng.nodeFromHash[nodeHash]
+	ng.pruneNode(node)
 }
 
-func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
-	n1, _, _, _ = chain.GetConflictAncestor(n1, n2)
-	return n1.prev
-}
-
-func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
+func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1

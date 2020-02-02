@@ -17,10 +17,6 @@
 package speedtest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,6 +24,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func getInsnMultiplier(filePath string) uint64 {
@@ -50,20 +51,20 @@ func runAoFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(filePath)
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	ckp, err := cmachine.NewCheckpoint(ckpDir, filePath)
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	mach, err := ckp.GetInitialMachine()
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 
 	unusedTimeBounds := &protocol.TimeBoundsBlocks{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(0)),
+		Start: common.NewTimeBlocks(big.NewInt(0)),
+		End:   common.NewTimeBlocks(big.NewInt(0)),
 	}
 	b.ResetTimer()
 	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple(), time.Hour)
@@ -87,7 +88,7 @@ func nameFromFn(fn string) string {
 		ret = "push_" + ret
 	}
 	for i := 0; i < numPops; i++ {
-		ret = ret + "_pop"
+		ret += "_pop"
 	}
 	return ret
 }
@@ -95,8 +96,9 @@ func nameFromFn(fn string) string {
 func BenchmarkInsns(b *testing.B) {
 	_aos := getAos()
 	for _, fn := range _aos {
-		b.Run(nameFromFn(fn), func(b *testing.B) {
-			runAoFile(b, fn)
+		op := fn
+		b.Run(nameFromFn(op), func(b *testing.B) {
+			runAoFile(b, op)
 		})
 	}
 }

@@ -104,11 +104,11 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value
 	if cData.data == nil {
 		return nil
 	}
-	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
+	dataBuff := C.GoBytes(cData.data, cData.length)
 
-	C.free(unsafe.Pointer(cData.data))
+	C.free(cData.data)
 
-	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
+	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff))
 	if err != nil {
 		panic(err)
 	}
@@ -153,9 +153,9 @@ func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
 		return nil
 	}
 
-	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
+	dataBuff := C.GoBytes(cData.data, cData.length)
 
-	C.free(unsafe.Pointer(cData.data))
+	C.free(cData.data)
 
 	return dataBuff
 }

@@ -42,7 +42,7 @@ func (m Eth) Equals(o Eth) bool {
 		m.Value.Cmp(o.Value) == 0
 }
 
-func (m Eth) Type() MessageType {
+func (m Eth) Type() Type {
 	return EthType
 }
 
@@ -70,7 +70,7 @@ func UnmarshalEth(val value.Value) (Eth, error) {
 	}
 
 	if tup.Len() != 2 {
-		return Eth{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+		return Eth{}, fmt.Errorf("expected tuple of length 2, but received %v", tup)
 	}
 	destVal, _ := tup.GetByInt64(0)
 	amountVal, _ := tup.GetByInt64(1)

@@ -45,8 +45,8 @@ func TestMachineAdd(t *testing.T) {
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	tb := &protocol.TimeBoundsBlocks{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(100000)),
+		Start: common.NewTimeBlocks(big.NewInt(0)),
+		End:   common.NewTimeBlocks(big.NewInt(10000)),
 	}
 	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue(), 0)
 }
@@ -68,7 +68,7 @@ func runInstNoFault(m *Machine, oper value.Opcode) (bool, string) {
 }
 
 func runInstWithError(m *Machine, oper value.Opcode) (bool, string) {
-	if _, blockReason := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); blockReason != nil {
+	if _, blockReason := RunInstruction(m, value.BasicOperation{Op: oper}); blockReason != nil {
 		return false, fmt.Sprintf("RunInstruction blocked: %#v", blockReason)
 	}
 
@@ -173,9 +173,9 @@ func TestAdd(t *testing.T) {
 	}
 	// test 3 + tuple = error
 	tup := value.NewEmptyTuple()
-	res, err = binaryValueOpTest(value.NewInt64Value(3), tup, big.NewInt(7), code.ADD)
+	res, reason := binaryValueOpTest(value.NewInt64Value(3), tup, big.NewInt(7), code.ADD)
 	if res {
-		t.Error("expected error")
+		t.Errorf("expected error %v", reason)
 	}
 }
 
@@ -217,111 +217,111 @@ func TestSub(t *testing.T) {
 
 func TestDiv(t *testing.T) {
 	// test 6/2=3
-	res, err := binaryIntOpTest(big.NewInt(6), big.NewInt(2), big.NewInt(3), code.DIV)
+	res, reason := binaryIntOpTest(big.NewInt(6), big.NewInt(2), big.NewInt(3), code.DIV)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test -6/2!=-3 (should be unsigned division)
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-6)), big.NewInt(2), math.U256(big.NewInt(-3)), code.DIV)
+	res, reason = binaryIntOpTest(math.U256(big.NewInt(-6)), big.NewInt(2), math.U256(big.NewInt(-3)), code.DIV)
 	if res {
-		t.Error("should not be -3")
+		t.Error("should not be -3", reason)
 	}
 	// test 6/0=0
-	res, err = binaryIntOpTest(big.NewInt(6), big.NewInt(0), big.NewInt(0), code.DIV)
+	res, reason = binaryIntOpTest(big.NewInt(6), big.NewInt(0), big.NewInt(0), code.DIV)
 	if res {
-		t.Error("Divide by 0 expected")
+		t.Error("Divide by 0 expected", reason)
 	}
 }
 
 func TestSDiv(t *testing.T) {
 	// test -6/3=-2
-	res, err := binaryIntOpTest(math.U256(big.NewInt(-6)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SDIV)
+	res, reason := binaryIntOpTest(math.U256(big.NewInt(-6)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SDIV)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 6/-3=-2
-	res, err = binaryIntOpTest(big.NewInt(6), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SDIV)
+	res, reason = binaryIntOpTest(big.NewInt(6), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SDIV)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test -6/-3=2
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-6)), math.U256(big.NewInt(-3)), big.NewInt(2), code.SDIV)
+	res, reason = binaryIntOpTest(math.U256(big.NewInt(-6)), math.U256(big.NewInt(-3)), big.NewInt(2), code.SDIV)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 6/3=2
-	res, err = binaryIntOpTest(big.NewInt(6), big.NewInt(3), big.NewInt(2), code.SDIV)
+	res, reason = binaryIntOpTest(big.NewInt(6), big.NewInt(3), big.NewInt(2), code.SDIV)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 6/0=0
-	res, err = binaryIntOpTest(big.NewInt(6), big.NewInt(0), big.NewInt(0), code.SDIV)
+	res, reason = binaryIntOpTest(big.NewInt(6), big.NewInt(0), big.NewInt(0), code.SDIV)
 	if res {
-		t.Error("Divide by 0 expected")
+		t.Error("Divide by 0 expected", reason)
 	}
 }
 
 func TestMod(t *testing.T) {
 	// test 8%3=2
-	res, err := binaryIntOpTest(big.NewInt(8), big.NewInt(3), big.NewInt(2), code.MOD)
+	res, reason := binaryIntOpTest(big.NewInt(8), big.NewInt(3), big.NewInt(2), code.MOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 0%3=0
-	res, err = binaryIntOpTest(big.NewInt(0), big.NewInt(3), big.NewInt(0), code.MOD)
+	res, reason = binaryIntOpTest(big.NewInt(0), big.NewInt(3), big.NewInt(0), code.MOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 3%8=0 - divide by zero error
-	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(0), big.NewInt(0), code.MOD)
+	res, reason = binaryIntOpTest(big.NewInt(3), big.NewInt(0), big.NewInt(0), code.MOD)
 	if res {
-		t.Error("Divide by 0 expected")
+		t.Error("Divide by 0 expected", reason)
 	}
 }
 
 func TestSMod(t *testing.T) {
 	// test -8%3=-2
-	res, err := binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SMOD)
+	res, reason := binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test -8%-3=-2 (per spec modulo by a negative number takes the sign of the dividend
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-8)), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SMOD)
+	res, reason = binaryIntOpTest(math.U256(big.NewInt(-8)), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 8%3=2
-	res, err = binaryIntOpTest(big.NewInt(8), big.NewInt(3), big.NewInt(2), code.SMOD)
+	res, reason = binaryIntOpTest(big.NewInt(8), big.NewInt(3), big.NewInt(2), code.SMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test -8%0=0
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(0), big.NewInt(0), code.SMOD)
+	res, reason = binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(0), big.NewInt(0), code.SMOD)
 	if res {
-		t.Error("Divide by 0 expected")
+		t.Error("Divide by 0 expected", reason)
 	}
 }
 
 func TestAddMod(t *testing.T) {
 	// test (8+5)%3=1
-	res, err := tertiaryIntOpTest(big.NewInt(8), big.NewInt(5), big.NewInt(3), big.NewInt(1), code.ADDMOD)
+	res, reason := tertiaryIntOpTest(big.NewInt(8), big.NewInt(5), big.NewInt(3), big.NewInt(1), code.ADDMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test ((2**256-1)+1)%7=2 - shows that internal addition does not 256 bit truncate
-	res, err = tertiaryIntOpTest(math.U256(big.NewInt(-1)), big.NewInt(1), big.NewInt(7), big.NewInt(2), code.ADDMOD)
+	res, reason = tertiaryIntOpTest(math.U256(big.NewInt(-1)), big.NewInt(1), big.NewInt(7), big.NewInt(2), code.ADDMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test (0+0)%7=0
-	res, err = tertiaryIntOpTest(big.NewInt(0), big.NewInt(0), big.NewInt(7), big.NewInt(0), code.ADDMOD)
+	res, reason = tertiaryIntOpTest(big.NewInt(0), big.NewInt(0), big.NewInt(7), big.NewInt(0), code.ADDMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test (3+3)%(-4) = 6
-	res, err = tertiaryIntOpTest(big.NewInt(3), big.NewInt(3), math.U256(big.NewInt(-4)), big.NewInt(6), code.ADDMOD)
+	res, reason = tertiaryIntOpTest(big.NewInt(3), big.NewInt(3), math.U256(big.NewInt(-4)), big.NewInt(6), code.ADDMOD)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 }
 
@@ -401,29 +401,29 @@ func TestSignextend(t *testing.T) {
 
 func TestLt(t *testing.T) {
 	// test 3<9 res 1
-	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(1), code.LT)
+	res, reason := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(1), code.LT)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 9<3 res 0
-	res, err = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(0), code.LT)
+	res, reason = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(0), code.LT)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 3<3 res 0
-	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.LT)
+	res, reason = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.LT)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 0xfffffffffffffffffffffffffffffffc((2**256)-4)<9 res 0
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-4)), big.NewInt(9), big.NewInt(0), code.LT)
+	res, reason = binaryIntOpTest(math.U256(big.NewInt(-4)), big.NewInt(9), big.NewInt(0), code.LT)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 9< tuple res 0
-	res, err = binaryValueOpTest(value.NewInt64Value(9), value.NewEmptyTuple(), big.NewInt(0), code.LT)
+	res, reason = binaryValueOpTest(value.NewInt64Value(9), value.NewEmptyTuple(), big.NewInt(0), code.LT)
 	if res {
-		t.Error("expected error")
+		t.Error("expected error", reason)
 	}
 }
 
@@ -518,14 +518,14 @@ func TestSgt(t *testing.T) {
 
 func TestEq(t *testing.T) {
 	// test 3==9 = 0
-	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(0), code.EQ)
+	res, reason := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(0), code.EQ)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test 3==3 = 1
-	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(1), code.EQ)
+	res, reason = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(1), code.EQ)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 
 	var vals [8]value.Value
@@ -547,19 +547,19 @@ func TestEq(t *testing.T) {
 	vals[3] = value.NewInt64Value(4)
 	tup3, _ := value.NewTupleOfSizeWithContents(vals, 4)
 	// test matching tuples
-	res, err = binaryValueOpTest(tup, tup2, big.NewInt(1), code.EQ)
+	res, reason = binaryValueOpTest(tup, tup2, big.NewInt(1), code.EQ)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test different tuples
-	res, err = binaryValueOpTest(tup, tup3, big.NewInt(0), code.EQ)
+	res, reason = binaryValueOpTest(tup, tup3, big.NewInt(0), code.EQ)
 	if !res {
-		t.Error(err)
+		t.Error(reason)
 	}
 	// test different types
-	res, err = binaryValueOpTest(tup, value.NewInt64Value(1), big.NewInt(0), code.EQ)
+	res, reason = binaryValueOpTest(tup, value.NewInt64Value(1), big.NewInt(0), code.EQ)
 	if !res {
-		t.Error("expected fail")
+		t.Error("expected fail", reason)
 	}
 }
 
@@ -760,8 +760,8 @@ func TestInbox(t *testing.T) {
 	NewMachineAssertionContext(
 		m,
 		&protocol.TimeBoundsBlocks{
-			common.NewTimeBlocks(big.NewInt(0)),
-			common.NewTimeBlocks(big.NewInt(100000)),
+			Start: common.NewTimeBlocks(big.NewInt(0)),
+			End:   common.NewTimeBlocks(big.NewInt(100000)),
 		},
 		messageStack.GetValue(),
 	)
@@ -1487,8 +1487,8 @@ func TestLog(t *testing.T) {
 	ad, _ := m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			common.NewTimeBlocks(big.NewInt(0)),
-			common.NewTimeBlocks(big.NewInt(10000)),
+			Start: common.NewTimeBlocks(big.NewInt(0)),
+			End:   common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1524,8 +1524,8 @@ func TestSend(t *testing.T) {
 	ad, _ := m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			common.NewTimeBlocks(big.NewInt(0)),
-			common.NewTimeBlocks(big.NewInt(10000)),
+			Start: common.NewTimeBlocks(big.NewInt(0)),
+			End:   common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1556,8 +1556,8 @@ func TestGettime(t *testing.T) {
 	m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			common.NewTimeBlocks(big.NewInt(5)),
-			common.NewTimeBlocks(big.NewInt(10)),
+			Start: common.NewTimeBlocks(big.NewInt(5)),
+			End:   common.NewTimeBlocks(big.NewInt(10)),
 		},
 		value.NewEmptyTuple(),
 		0,

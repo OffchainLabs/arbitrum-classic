@@ -56,7 +56,10 @@ type executionChallengeWatcher struct {
 	topics    [][]ethcommon.Hash
 }
 
-func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*executionChallengeWatcher, error) {
+func newExecutionChallengeWatcher(
+	address ethcommon.Address,
+	client *ethclient.Client,
+) (*executionChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -79,8 +82,11 @@ func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.C
 	}, nil
 }
 
-func (c *executionChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	bh := blockId.HeaderHash.ToEthHash()
+func (c *executionChallengeWatcher) GetEvents(
+	ctx context.Context,
+	blockID *structures.BlockID,
+) ([]arbbridge.Event, error) {
+	bh := blockID.HeaderHash.ToEthHash()
 	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{c.address},
@@ -100,7 +106,10 @@ func (c *executionChallengeWatcher) GetEvents(ctx context.Context, blockId *stru
 	return events, nil
 }
 
-func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+func (c *executionChallengeWatcher) parseExecutionEvent(
+	chainInfo arbbridge.ChainInfo,
+	log types.Log,
+) (arbbridge.Event, error) {
 	if log.Topics[0] == bisectedAssertionID {
 		bisectChal, err := c.challenge.ParseBisectedAssertion(log)
 		if err != nil {

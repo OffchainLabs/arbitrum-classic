@@ -61,11 +61,11 @@ func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
 
 func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
 	vals := []*common.HashBuf{}
-	for h, _ := range ctx.values {
+	for h := range ctx.values {
 		vals = append(vals, h.MarshalToBuf())
 	}
 	machines := []*common.HashBuf{}
-	for h, _ := range ctx.machines {
+	for h := range ctx.machines {
 		machines = append(machines, h.MarshalToBuf())
 	}
 	return &CheckpointManifest{Values: vals, Machines: machines}
@@ -115,32 +115,32 @@ func (src *SimpleRestoreContext) AddMachine(mach machine.Machine) {
 	src.machines[mach.Hash()] = mach
 }
 
-type BlockId struct {
+type BlockID struct {
 	Height     *common.TimeBlocks
 	HeaderHash common.Hash
 }
 
-func (id *BlockId) Clone() *BlockId {
-	return &BlockId{
+func (id *BlockID) Clone() *BlockID {
+	return &BlockID{
 		Height:     id.Height.Clone(),
 		HeaderHash: id.HeaderHash,
 	}
 }
 
-func (id *BlockId) MarshalToBuf() *BlockIdBuf {
-	return &BlockIdBuf{
+func (id *BlockID) MarshalToBuf() *BlockIDBuf {
+	return &BlockIDBuf{
 		Height:     id.Height.Marshal(),
 		HeaderHash: id.HeaderHash.MarshalToBuf(),
 	}
 }
 
-func (idb *BlockIdBuf) Unmarshal() *BlockId {
-	return &BlockId{
-		Height:     idb.Height.Unmarshal(),
-		HeaderHash: idb.HeaderHash.Unmarshal(),
+func (m *BlockIDBuf) Unmarshal() *BlockID {
+	return &BlockID{
+		Height:     m.Height.Unmarshal(),
+		HeaderHash: m.HeaderHash.Unmarshal(),
 	}
 }
 
-func (id *BlockId) String() string {
+func (id *BlockID) String() string {
 	return fmt.Sprintf("Block(%v, %v)", id.Height.AsInt(), id.HeaderHash)
 }

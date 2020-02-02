@@ -39,62 +39,62 @@ func NewStakerSet() *StakerSet {
 	return &StakerSet{make(map[common.Address]*Staker)}
 }
 
-func (sl *StakerSet) Add(newStaker *Staker) {
+func (ss *StakerSet) Add(newStaker *Staker) {
 	newStaker.location.numStakers++
-	if _, ok := sl.idx[newStaker.address]; ok {
+	if _, ok := ss.idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
-	sl.idx[newStaker.address] = newStaker
+	ss.idx[newStaker.address] = newStaker
 }
 
-func (sl *StakerSet) Delete(staker *Staker) {
-	delete(sl.idx, staker.address)
+func (ss *StakerSet) Delete(staker *Staker) {
+	delete(ss.idx, staker.address)
 }
 
-func (sl *StakerSet) Get(addr common.Address) *Staker {
-	return sl.idx[addr]
+func (ss *StakerSet) Get(addr common.Address) *Staker {
+	return ss.idx[addr]
 }
 
-func (sl *StakerSet) forall(f func(*Staker)) {
-	for _, v := range sl.idx {
+func (ss *StakerSet) forall(f func(*Staker)) {
+	for _, v := range ss.idx {
 		f(v)
 	}
 }
 
-func (staker *Staker) MarshalToBuf() *StakerBuf {
+func (s *Staker) MarshalToBuf() *StakerBuf {
 	emptyAddress := common.Address{}
-	if staker.challenge == emptyAddress {
+	if s.challenge == emptyAddress {
 		return &StakerBuf{
-			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.hash.MarshalToBuf(),
-			CreationTime:  staker.creationTime.MarshalToBuf(),
+			Address:       s.address.MarshallToBuf(),
+			Location:      s.location.hash.MarshalToBuf(),
+			CreationTime:  s.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
-			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.hash.MarshalToBuf(),
-			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: staker.challenge.MarshallToBuf(),
+			Address:       s.address.MarshallToBuf(),
+			Location:      s.location.hash.MarshalToBuf(),
+			CreationTime:  s.creationTime.MarshalToBuf(),
+			ChallengeAddr: s.challenge.MarshallToBuf(),
 		}
 	}
 }
 
-func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
+func (m *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := buf.Location.Unmarshal()
-	if buf.ChallengeAddr != nil {
+	locArr := m.Location.Unmarshal()
+	if m.ChallengeAddr != nil {
 		return &Staker{
-			address:      buf.Address.Unmarshal(),
+			address:      m.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    buf.ChallengeAddr.Unmarshal(),
+			creationTime: m.CreationTime.Unmarshal(),
+			challenge:    m.ChallengeAddr.Unmarshal(),
 		}
 	} else {
 		return &Staker{
-			address:      buf.Address.Unmarshal(),
+			address:      m.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
+			creationTime: m.CreationTime.Unmarshal(),
 			challenge:    common.Address{},
 		}
 	}
@@ -104,7 +104,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 	ret := prefix + "stakers:\n"
 	subPrefix := prefix + "  "
 	ss.forall(func(s *Staker) {
-		ret = ret + s.DebugString(subPrefix)
+		ret += s.DebugString(subPrefix)
 	})
 	return ret
 }
@@ -112,7 +112,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 func (s *Staker) DebugString(prefix string) string {
 	ret := prefix + "depth:" + strconv.FormatUint(s.location.depth, 10) + " addr:" + s.address.ShortString() + " created:" + s.creationTime.String() + " loc:" + s.location.hash.ShortString()
 	if !s.challenge.IsZero() {
-		ret = ret + " chal:" + s.challenge.ShortString()
+		ret += " chal:" + s.challenge.ShortString()
 	}
 	return ret + "\n"
 }
@@ -134,7 +134,7 @@ func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
 }
 
 func (s *Staker) Equals(s2 *Staker) bool {
-	if bytes.Compare(s.address[:], s2.address[:]) != 0 {
+	if !bytes.Equal(s.address[:], s2.address[:]) {
 		return false
 	}
 	if s.location.hash != s2.location.hash {

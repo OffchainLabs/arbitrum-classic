@@ -26,14 +26,66 @@ import (
 )
 
 type ArbRollup interface {
-	PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error
-	RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error
-	RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error
-	RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error
-	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error
-	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
-	PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error
-	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof []common.Hash) error
+	PlaceStake(
+		ctx context.Context,
+		stakeAmount *big.Int,
+		proof1 []common.Hash,
+		proof2 []common.Hash,
+	) error
+
+	RecoverStakeConfirmed(
+		ctx context.Context,
+		proof []common.Hash,
+	) error
+
+	RecoverStakeOld(
+		ctx context.Context,
+		staker common.Address,
+		proof []common.Hash,
+	) error
+
+	RecoverStakeMooted(
+		ctx context.Context,
+		nodeHash common.Hash,
+		staker common.Address,
+		latestConfirmedProof []common.Hash,
+		stakerProof []common.Hash,
+	) error
+	RecoverStakePassedDeadline(
+		ctx context.Context,
+		stakerAddress common.Address,
+		deadlineTicks *big.Int,
+		disputableNodeHashVal common.Hash,
+		childType uint64,
+		vmProtoStateHash common.Hash,
+		proof []common.Hash,
+	) error
+
+	MoveStake(
+		ctx context.Context,
+		proof1 []common.Hash,
+		proof2 []common.Hash,
+	) error
+
+	PruneLeaf(
+		ctx context.Context,
+		from common.Hash,
+		proof1 []common.Hash,
+		proof2 []common.Hash,
+	) error
+
+	MakeAssertion(
+		ctx context.Context,
+		prevPrevLeafHash common.Hash,
+		prevDataHash common.Hash,
+		prevDeadline common.TimeTicks,
+		prevChildType structures.ChildType,
+		beforeState *structures.VMProtoData,
+		assertionParams *structures.AssertionParams,
+		assertionClaim *structures.AssertionClaim,
+		stakerProof []common.Hash,
+	) error
+
 	ConfirmValid(
 		ctx context.Context,
 		deadline common.TimeTicks,
@@ -44,6 +96,7 @@ type ArbRollup interface {
 		stakerProofs []common.Hash,
 		stakerProofOffsets []*big.Int,
 	) error
+
 	ConfirmInvalid(
 		ctx context.Context,
 		deadline common.TimeTicks,
@@ -54,6 +107,7 @@ type ArbRollup interface {
 		stakerProofs []common.Hash,
 		stakerProofOffsets []*big.Int,
 	) error
+
 	StartChallenge(
 		ctx context.Context,
 		asserterAddress common.Address,
@@ -70,5 +124,6 @@ type ArbRollup interface {
 		challengerDataHash common.Hash,
 		challengerPeriodTicks common.TimeTicks,
 	) error
+
 	IsStaked(address common.Address) (bool, error)
 }

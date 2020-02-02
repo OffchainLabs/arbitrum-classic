@@ -58,11 +58,13 @@ func MarshalSliceOfHashes(hs []Hash) []*HashBuf {
 	for _, h := range hs {
 		ret = append(ret, h.MarshalToBuf())
 	}
+
 	return ret
 }
 
 func (hb *HashBuf) Unmarshal() Hash {
 	var ret Hash
 	copy(ret[:], hb.Value)
+
 	return ret
 }

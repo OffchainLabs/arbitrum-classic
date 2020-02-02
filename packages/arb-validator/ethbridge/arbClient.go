@@ -49,24 +49,28 @@ func NewEthClient(ethURL string) (*EthArbClient, error) {
 	return &EthArbClient{client}, err
 }
 
-var reorgError = errors.New("reorg occured")
+var errReorg = errors.New("reorg occurred")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
-	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
+func (c *EthArbClient) SubscribeBlockHeaders(
+	ctx context.Context,
+	startBlockID *structures.BlockID,
+) (<-chan arbbridge.MaybeBlockID, error) {
+	blockIDChan := make(chan arbbridge.MaybeBlockID, 100)
 
-	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId}
-	prevBlockId := startBlockId
+	blockIDChan <- arbbridge.MaybeBlockID{BlockID: startBlockID}
+	prevBlockID := startBlockID
 	go func() {
-		defer close(blockIdChan)
+		defer close(blockIDChan)
 
 		for {
 			var nextHeader *types.Header
 			fetchErrorCount := 0
 			for {
 				var err error
-				nextHeader, err = c.client.HeaderByNumber(ctx, new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
+				nextHeight := new(big.Int).Add(prevBlockID.Height.AsInt(), big.NewInt(1))
+				nextHeader, err = c.client.HeaderByNumber(ctx, nextHeight)
 				if err == nil {
 					// Got next header
 					break
@@ -85,7 +89,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 				}
 
 				if fetchErrorCount >= maxFetchAttempts {
-					blockIdChan <- arbbridge.MaybeBlockId{Err: err}
+					blockIDChan <- arbbridge.MaybeBlockID{Err: err}
 					return
 				}
 
@@ -93,17 +97,17 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 				time.Sleep(headerRetryDelay)
 			}
 
-			if nextHeader.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
-				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
+			if nextHeader.ParentHash != prevBlockID.HeaderHash.ToEthHash() {
+				blockIDChan <- arbbridge.MaybeBlockID{Err: errReorg}
 				return
 			}
 
-			prevBlockId = getBlockID(nextHeader)
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+			prevBlockID = getBlockID(nextHeader)
+			blockIDChan <- arbbridge.MaybeBlockID{BlockID: prevBlockID}
 		}
 	}()
 
-	return blockIdChan, nil
+	return blockIDChan, nil
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
@@ -114,15 +118,28 @@ func (c *EthArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRo
 	return newRollupWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
+func (c *EthArbClient) NewPendingInboxWatcher(
+	address common.Address,
+	rollupAddress common.Address,
+) (arbbridge.PendingInboxWatcher, error) {
+	return newPendingInboxWatcher(address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client)
+}
+
+func (c *EthArbClient) NewExecutionChallengeWatcher(
+	address common.Address,
+) (arbbridge.ExecutionChallengeWatcher, error) {
 	return newExecutionChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
+func (c *EthArbClient) NewMessagesChallengeWatcher(
+	address common.Address,
+) (arbbridge.MessagesChallengeWatcher, error) {
 	return newMessagesChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
+func (c *EthArbClient) NewPendingTopChallengeWatcher(
+	address common.Address,
+) (arbbridge.PendingTopChallengeWatcher, error) {
 	return newPendingTopChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
@@ -130,7 +147,7 @@ func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSte
 	return newOneStepProof(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+func (c *EthArbClient) CurrentBlockID(ctx context.Context) (*structures.BlockID, error) {
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -138,7 +155,7 @@ func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId,
 	return getBlockID(header), nil
 }
 
-func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+func (c *EthArbClient) BlockIDForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockID, error) {
 	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
 	if err != nil {
 		return nil, err
@@ -211,10 +228,10 @@ func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbr
 	return newPendingTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (*ChallengeTester, error) {
+func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context, factory common.Address) (*ChallengeTester, error) {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client, challengeFactory.ToEthAddress())
+	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client, factory.ToEthAddress())
 	if err != nil {
 		return nil, err
 	}

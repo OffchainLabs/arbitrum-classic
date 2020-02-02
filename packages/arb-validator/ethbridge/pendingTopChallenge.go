@@ -35,7 +35,11 @@ type pendingTopChallenge struct {
 	contract *pendingtopchallenge.PendingTopChallenge
 }
 
-func newPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingTopChallenge, error) {
+func newPendingTopChallenge(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*pendingTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -105,7 +109,7 @@ func (c *pendingTopChallenge) ChooseSegment(
 			structures.PendingTopChallengeDataHash(
 				chainHashes[i],
 				chainHashes[i+1],
-				new(big.Int).SetUint64(uint64(stepCount)),
+				new(big.Int).SetUint64(stepCount),
 			),
 		)
 	}

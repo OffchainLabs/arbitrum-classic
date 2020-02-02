@@ -19,9 +19,10 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -102,8 +103,6 @@ var allInsns = []Instruction{ // code, not necessarily in order
 }
 
 var (
-	bigZero = new(big.Int)
-	tt255   = math.BigPow(2, 255)
 	tt256   = math.BigPow(2, 256)
 	tt256m1 = new(big.Int).Sub(tt256, big.NewInt(1))
 )

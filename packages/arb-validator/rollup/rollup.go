@@ -46,7 +46,7 @@ type ChainObserver struct {
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockId       *structures.BlockId
+	latestBlockID       *structures.BlockID
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
@@ -58,7 +58,7 @@ func NewChain(
 	checkpointer checkpointing.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -72,7 +72,7 @@ func NewChain(
 		pendingInbox:        structures.NewPendingInbox(),
 		knownValidNode:      nodeGraph.latestConfirmed,
 		calculatedValidNode: nodeGraph.latestConfirmed,
-		latestBlockId:       startBlockId,
+		latestBlockID:       startBlockID,
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       false,
@@ -86,41 +86,41 @@ func NewChain(
 	return ret, nil
 }
 
-func (chain *ChainObserver) Start(ctx context.Context) {
-	chain.startCleanupThread(ctx)
-	chain.startConfirmThread(ctx)
+func (co *ChainObserver) Start(ctx context.Context) {
+	co.startCleanupThread(ctx)
+	co.startConfirmThread(ctx)
 
-	if chain.isOpinionated {
-		chain.startOpinionUpdateThread(ctx)
+	if co.isOpinionated {
+		co.startOpinionUpdateThread(ctx)
 	}
 }
 
-func (chain *ChainObserver) AddListener(listener ChainListener) {
-	chain.Lock()
-	chain.listeners = append(chain.listeners, listener)
-	chain.Unlock()
+func (co *ChainObserver) AddListener(listener ChainListener) {
+	co.Lock()
+	co.listeners = append(co.listeners, listener)
+	co.Unlock()
 }
 
-func (chain *ChainObserver) NowAtHead() {
-	chain.Lock()
-	chain.atHead = true
-	chain.Unlock()
+func (co *ChainObserver) NowAtHead() {
+	co.Lock()
+	co.atHead = true
+	co.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
+func (co *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
-		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
-		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
-		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
-		KnownValidNode:      chain.knownValidNode.hash.MarshalToBuf(),
-		CalculatedValidNode: chain.calculatedValidNode.hash.MarshalToBuf(),
-		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
-		IsOpinionated:       chain.isOpinionated,
+		StakedNodeGraph:     co.nodeGraph.MarshalForCheckpoint(ctx),
+		ContractAddress:     co.rollupAddr.MarshallToBuf(),
+		PendingInbox:        co.pendingInbox.MarshalForCheckpoint(ctx),
+		KnownValidNode:      co.knownValidNode.hash.MarshalToBuf(),
+		CalculatedValidNode: co.calculatedValidNode.hash.MarshalToBuf(),
+		LatestBlockID:       co.latestBlockID.MarshalToBuf(),
+		IsOpinionated:       co.isOpinionated,
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
-	cob := chain.marshalForCheckpoint(ctx)
+func (co *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
+	cob := co.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
 
@@ -138,10 +138,10 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
-		pendingInbox:        &structures.PendingInbox{pendingInbox},
+		pendingInbox:        &structures.PendingInbox{MessageStack: pendingInbox},
 		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
 		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
-		latestBlockId:       m.LatestBlockId.Unmarshal(),
+		latestBlockID:       m.LatestBlockID.Unmarshal(),
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       m.IsOpinionated,
@@ -149,202 +149,204 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	}, nil
 }
 
-func (chain *ChainObserver) DebugString(prefix string) string {
-	chain.Lock()
-	defer chain.Unlock()
-	return chain.nodeGraph.DebugString(prefix)
+func (co *ChainObserver) DebugString(prefix string) string {
+	co.Lock()
+	defer co.Unlock()
+	return co.nodeGraph.DebugString(prefix)
 }
 
-func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) {
-	chain.Lock()
-	defer chain.Unlock()
+func (co *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) {
+	co.Lock()
+	defer co.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		chain.messageDelivered(ctx, ev)
+		co.messageDelivered(ctx, ev)
 	case arbbridge.StakeCreatedEvent:
-		chain.createStake(ctx, ev)
+		co.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
-		chain.newChallenge(ctx, ev)
+		co.newChallenge(ctx, ev)
 	case arbbridge.ChallengeCompletedEvent:
-		chain.challengeResolved(ctx, ev)
+		co.challengeResolved(ctx, ev)
 	case arbbridge.StakeRefundedEvent:
-		chain.removeStake(ctx, ev)
+		co.removeStake(ctx, ev)
 	case arbbridge.PrunedEvent:
-		chain.pruneLeaf(ctx, ev)
+		co.pruneLeaf(ctx, ev)
 	case arbbridge.StakeMovedEvent:
-		chain.moveStake(ctx, ev)
+		co.moveStake(ctx, ev)
 	case arbbridge.AssertedEvent:
-		err := chain.notifyAssert(ctx, ev)
+		err := co.notifyAssert(ctx, ev)
 		if err != nil {
 			panic(err)
 		}
 	case arbbridge.ConfirmedEvent:
-		chain.confirmNode(ctx, ev)
+		co.confirmNode(ctx, ev)
 	}
 }
 
-func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
-	chain.Lock()
-	defer chain.Unlock()
-	chain.latestBlockId = blockId
+func (co *ChainObserver) NotifyNewBlock(blockID *structures.BlockID) {
+	co.Lock()
+	defer co.Unlock()
+	co.latestBlockID = blockID
 	ckptCtx := structures.NewCheckpointContextImpl()
-	buf, err := chain.marshalToBytes(ckptCtx)
+	buf, err := co.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
+	co.checkpointer.AsyncSaveCheckpoint(blockID.Clone(), buf, ckptCtx, nil)
 }
 
-func (chain *ChainObserver) CurrentBlockId() *structures.BlockId {
-	chain.RLock()
-	blockId := chain.latestBlockId
-	chain.RUnlock()
-	return blockId
+func (co *ChainObserver) CurrentBlockID() *structures.BlockID {
+	co.RLock()
+	blockID := co.latestBlockID
+	co.RUnlock()
+	return blockID
 }
 
-func (chain *ChainObserver) ContractAddress() common.Address {
-	chain.RLock()
-	address := chain.rollupAddr
-	chain.RUnlock()
+func (co *ChainObserver) ContractAddress() common.Address {
+	co.RLock()
+	address := co.rollupAddr
+	co.RUnlock()
 	return address
 }
 
-func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
-	chain.RLock()
-	mach := chain.calculatedValidNode.machine.Clone()
-	chain.RUnlock()
+func (co *ChainObserver) LatestKnownValidMachine() machine.Machine {
+	co.RLock()
+	mach := co.calculatedValidNode.machine.Clone()
+	co.RUnlock()
 	return mach
 }
 
-func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.pendingInbox.DeliverMessage(ev.Message)
-	for _, lis := range chain.listeners {
-		lis.MessageDelivered(ctx, chain, ev)
+func (co *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
+	co.pendingInbox.DeliverMessage(ev.Message)
+	for _, lis := range co.listeners {
+		lis.MessageDelivered(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {
-	leaf, found := chain.nodeGraph.nodeFromHash[ev.Leaf]
+func (co *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {
+	leaf, found := co.nodeGraph.nodeFromHash[ev.Leaf]
 	if !found {
 		panic("Tried to prune nonexistant leaf")
 	}
-	chain.nodeGraph.leaves.Delete(leaf)
-	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
-	for _, lis := range chain.listeners {
-		lis.PrunedLeaf(ctx, chain, ev)
+	co.nodeGraph.leaves.Delete(leaf)
+	co.nodeGraph.PruneNodeByHash(ev.Leaf)
+	for _, lis := range co.listeners {
+		lis.PrunedLeaf(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
-	chain.nodeGraph.CreateStake(ev)
-	for _, lis := range chain.listeners {
-		lis.StakeCreated(ctx, chain, ev)
+func (co *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
+	co.nodeGraph.CreateStake(ev)
+	for _, lis := range co.listeners {
+		lis.StakeCreated(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) removeStake(ctx context.Context, ev arbbridge.StakeRefundedEvent) {
-	chain.nodeGraph.RemoveStake(ev.Staker)
-	for _, lis := range chain.listeners {
-		lis.StakeRemoved(ctx, chain, ev)
+func (co *ChainObserver) removeStake(ctx context.Context, ev arbbridge.StakeRefundedEvent) {
+	co.nodeGraph.RemoveStake(ev.Staker)
+	for _, lis := range co.listeners {
+		lis.StakeRemoved(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMovedEvent) {
-	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
-	for _, lis := range chain.listeners {
-		lis.StakeMoved(ctx, chain, ev)
+func (co *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMovedEvent) {
+	co.nodeGraph.MoveStake(ev.Staker, ev.Location)
+	for _, lis := range co.listeners {
+		lis.StakeMoved(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
-	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
-	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
+func (co *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
+	asserter := co.nodeGraph.stakers.Get(ev.Asserter)
+	challenger := co.nodeGraph.stakers.Get(ev.Challenger)
+	asserterAncestor, challengerAncestor, _, err := GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
 
-	chain.nodeGraph.NewChallenge(
+	co.nodeGraph.NewChallenge(
 		ev.ChallengeContract,
 		ev.Asserter,
 		ev.Challenger,
 		ev.ChallengeType,
 	)
-	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
+	for _, lis := range co.listeners {
+		lis.StartedChallenge(ctx, co, ev, challengerAncestor, asserterAncestor)
 	}
 }
 
-func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.ChallengeCompletedEvent) {
-	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
-	for _, lis := range chain.listeners {
-		lis.CompletedChallenge(ctx, chain, ev)
+func (co *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.ChallengeCompletedEvent) {
+	co.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
+	for _, lis := range co.listeners {
+		lis.CompletedChallenge(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
-	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
-	if newNode.depth > chain.knownValidNode.depth {
-		chain.knownValidNode = newNode
+func (co *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
+	newNode := co.nodeGraph.nodeFromHash[ev.NodeHash]
+	if newNode.depth > co.knownValidNode.depth {
+		co.knownValidNode = newNode
 	}
-	chain.nodeGraph.latestConfirmed = newNode
-	chain.nodeGraph.considerPruningNode(newNode.prev)
-	chain.updateOldest()
-	for _, listener := range chain.listeners {
-		listener.ConfirmedNode(ctx, chain, ev)
+	co.nodeGraph.latestConfirmed = newNode
+	co.nodeGraph.considerPruningNode(newNode.prev)
+	co.updateOldest()
+	for _, listener := range co.listeners {
+		listener.ConfirmedNode(ctx, co, ev)
 	}
 }
 
-func (chain *ChainObserver) updateOldest() {
-	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
-		if chain.nodeGraph.oldestNode.numStakers > 0 {
+func (co *ChainObserver) updateOldest() {
+	for co.nodeGraph.oldestNode != co.nodeGraph.latestConfirmed {
+		if co.nodeGraph.oldestNode.numStakers > 0 {
 			return
 		}
-		if chain.calculatedValidNode == chain.nodeGraph.oldestNode {
+		if co.calculatedValidNode == co.nodeGraph.oldestNode {
 			return
 		}
 		var successor *Node
-		for _, successorHash := range chain.nodeGraph.oldestNode.successorHashes {
+		for _, successorHash := range co.nodeGraph.oldestNode.successorHashes {
 			if successorHash != zeroBytes32 {
 				if successor != nil {
 					return
 				}
-				successor = chain.nodeGraph.nodeFromHash[successorHash]
+				successor = co.nodeGraph.nodeFromHash[successorHash]
 			}
 		}
-		chain.nodeGraph.pruneOldestNode(chain.nodeGraph.oldestNode)
-		chain.nodeGraph.oldestNode = successor
+		co.nodeGraph.pruneOldestNode(co.nodeGraph.oldestNode)
+		co.nodeGraph.oldestNode = successor
 	}
 }
 
-func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
+func (co *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
 	disputableNode := structures.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
 		ev.MaxPendingTop,
 		ev.MaxPendingCount,
 	)
-	chain.nodeGraph.CreateNodesOnAssert(
-		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
+	if err := co.nodeGraph.createNodesOnAssert(
+		co.nodeGraph.nodeFromHash[ev.PrevLeafHash],
 		disputableNode,
-		ev.BlockId.Height,
+		ev.BlockID.Height,
 		ev.TxHash,
-	)
-	for _, listener := range chain.listeners {
-		listener.SawAssertion(ctx, chain, ev)
+	); err != nil {
+		return err
+	}
+	for _, listener := range co.listeners {
+		listener.SawAssertion(ctx, co, ev)
 	}
 	return nil
 }
 
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 	return co.nodeGraph.Equals(co2.nodeGraph) &&
-		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
+		bytes.Equal(co.rollupAddr[:], co2.rollupAddr[:]) &&
 		co.pendingInbox.Equals(co2.pendingInbox)
 }
 
-func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
+func (co *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	inbox, _ := chain.pendingInbox.GenerateInbox(node.prev.vmProtoData.PendingTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
+	inbox, _ := co.pendingInbox.GenerateInbox(node.prev.vmProtoData.PendingTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
@@ -352,10 +354,10 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 	}
 }
 
-func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
-	latestTime := chain.latestBlockId.Height
+func (co *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
+	latestTime := co.latestBlockID.Height
 	return &protocol.TimeBoundsBlocks{
-		latestTime,
-		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxTimeBoundsWidth)))),
+		Start: latestTime,
+		End:   common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(int64(co.nodeGraph.params.MaxTimeBoundsWidth)))),
 	}
 }

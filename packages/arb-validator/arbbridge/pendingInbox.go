@@ -51,3 +51,7 @@ type PendingInbox interface {
 		tokenContract common.Address,
 	) (*big.Int, error)
 }
+
+type PendingInboxWatcher interface {
+	ContractWatcher
+}

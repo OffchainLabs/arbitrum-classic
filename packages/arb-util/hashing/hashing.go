@@ -75,7 +75,7 @@ func Uint8(input uint8) []byte {
 }
 
 func Bytes32ArrayEncoded(input []common.Hash) []byte {
-	var values []byte
+	values := make([]byte, 0, len(input)*32)
 	for _, val := range input {
 		values = append(values, ethcommon.RightPadBytes(val[:], 32)...)
 	}

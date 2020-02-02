@@ -60,7 +60,7 @@ func (m Call) Equals(other Message) bool {
 		m.BlockNum.Cmp(o.BlockNum) == 0
 }
 
-func (m Call) Type() MessageType {
+func (m Call) Type() Type {
 	return CallType
 }
 
@@ -84,16 +84,19 @@ func UnmarshalCall(val value.Value) (Call, error) {
 	}
 
 	if tup.Len() != 2 {
-		return Call{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+		return Call{}, fmt.Errorf("expected tuple of length 2, but received %v", tup)
 	}
+
 	destVal, _ := tup.GetByInt64(0)
 	dataVal, _ := tup.GetByInt64(1)
-
 	destInt, ok := destVal.(value.IntValue)
+
 	if !ok {
 		return Call{}, errors.New("dest must be an int")
 	}
+
 	data, err := ByteStackToHex(dataVal)
+
 	if err != nil {
 		return Call{}, err
 	}

@@ -25,10 +25,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type MessageType uint8
+type Type uint8
 
 const (
-	TransactionType MessageType = iota
+	TransactionType Type = iota
 	EthType
 	ERC20Type
 	ERC721Type
@@ -36,7 +36,7 @@ const (
 )
 
 type UnsentMessage interface {
-	Type() MessageType
+	Type() Type
 	AsValue() value.Value
 	GetFuncName() string
 }
@@ -69,7 +69,7 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
-func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (PendingMessage, error) {
+func UnmarshalFromCheckpoint(msgType Type, v value.Value) (PendingMessage, error) {
 	switch msgType {
 	case TransactionType:
 		return UnmarshalTransactionFromCheckpoint(v)
@@ -95,13 +95,13 @@ func DeliveredValue(m Message) value.Value {
 	return msg
 }
 
-func unmarshalTxWrapped(val value.Value, msgType MessageType) (common.Address, value.TupleValue, error) {
+func unmarshalTxWrapped(val value.Value, msgType Type) (common.Address, value.TupleValue, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
 		return common.Address{}, value.TupleValue{}, errors.New("msg must be tuple value")
 	}
 	if tup.Len() != 3 {
-		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple of length 3, but received %v", tup)
 	}
 	msgTypeVal, _ := tup.GetByInt64(0)
 	msgTypeInt, ok := msgTypeVal.(value.IntValue)
@@ -109,7 +109,7 @@ func unmarshalTxWrapped(val value.Value, msgType MessageType) (common.Address, v
 		return common.Address{}, value.TupleValue{}, errors.New("msg type must be an int")
 	}
 
-	if MessageType(msgTypeInt.BigInt().Uint64()) != msgType {
+	if Type(msgTypeInt.BigInt().Uint64()) != msgType {
 		return common.Address{}, value.TupleValue{}, errors.New("wrong msg type")
 	}
 
@@ -122,19 +122,19 @@ func unmarshalTxWrapped(val value.Value, msgType MessageType) (common.Address, v
 
 	tup2, ok := val2.(value.TupleValue)
 	if !ok {
-		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple, but recieved %v", tup2)
+		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple, but received %v", tup2)
 	}
 	return intValueToAddress(fromInt), tup2, nil
 }
 
-func unmarshalToken(val value.Value, msgType MessageType) (common.Address, common.Address, common.Address, *big.Int, error) {
+func unmarshalToken(val value.Value, msgType Type) (common.Address, common.Address, common.Address, *big.Int, error) {
 	from, tup, err := unmarshalTxWrapped(val, msgType)
 	if err != nil {
 		return common.Address{}, common.Address{}, common.Address{}, nil, err
 	}
 
 	if tup.Len() != 3 {
-		return common.Address{}, common.Address{}, common.Address{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return common.Address{}, common.Address{}, common.Address{}, nil, fmt.Errorf("expected tuple of length 3, but received %v", tup)
 	}
 	tokenVal, _ := tup.GetByInt64(0)
 	destVal, _ := tup.GetByInt64(1)

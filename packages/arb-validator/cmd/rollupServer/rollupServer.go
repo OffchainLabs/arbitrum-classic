@@ -39,10 +39,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
-const (
-	maxReorgDepth = 100
-)
-
 // Launches the rollup validator with the following command line arguments:
 // 1) Compiled Arbitrum bytecode file
 // 2) private key file

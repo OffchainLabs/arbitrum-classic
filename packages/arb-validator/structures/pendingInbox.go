@@ -36,8 +36,8 @@ type messageStackItem struct {
 	count   *big.Int
 }
 
-func (pii *messageStackItem) skipNext(n uint64) *messageStackItem {
-	ret := pii
+func (msi *messageStackItem) skipNext(n uint64) *messageStackItem {
+	ret := msi
 	for i := uint64(0); i < n && ret != nil; i++ {
 		ret = ret.next
 	}
@@ -133,10 +133,10 @@ func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 		return value.NewEmptyTuple().Hash(), nil
 	}
 	if height.Cmp(ms.bottomIndex()) < 0 {
-		return common.Hash{}, errors.New("Height is below bottom of message stack")
+		return common.Hash{}, errors.New("height is below bottom of message stack")
 	}
 	if height.Cmp(ms.TopCount()) > 0 {
-		return common.Hash{}, errors.New("Height is above top of message stack")
+		return common.Hash{}, errors.New("height is above top of message stack")
 	}
 	offset := new(big.Int).Sub(height, ms.bottomIndex())
 	return ms.oldest.skipNext(offset.Uint64()).hash, nil
@@ -169,12 +169,12 @@ func (ms *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInbo
 	}
 }
 
-func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) (*MessageStack, error) {
+func (m *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) (*MessageStack, error) {
 	ret := NewMessageStack()
-	ret.hashOfRest = buf.HashOfRest.Unmarshal()
-	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(buf.Items[i].ValHash.Unmarshal())
-		msg, err := message.UnmarshalFromCheckpoint(message.MessageType(buf.Items[i].ValType), val)
+	ret.hashOfRest = m.HashOfRest.Unmarshal()
+	for i := len(m.Items) - 1; i >= 0; i-- {
+		val := ctx.GetValue(m.Items[i].ValHash.Unmarshal())
+		msg, err := message.UnmarshalFromCheckpoint(message.Type(m.Items[i].ValType), val)
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +257,7 @@ func (ms *MessageStack) GenerateInbox(olderAcc common.Hash, count uint64) (*Inbo
 	inbox := NewInbox()
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
-			return nil, errors.New("Not enough messages in pending inbox")
+			return nil, errors.New("not enough messages in pending inbox")
 		}
 		inbox.DeliverMessage(item.message)
 		item = item.next

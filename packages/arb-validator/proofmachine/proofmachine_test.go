@@ -33,8 +33,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-func setupTestValidateProof(t *testing.T) (*Connection, error) {
-	ethURL := test.GetEthUrl()
+func setupTestValidateProof() (*Connection, error) {
+	ethURL := test.GetEthURL()
 
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
@@ -43,15 +43,15 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 
 	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	osp, err := client.DeployOneStepProof(context.Background())
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	proofbounds := [2]uint64{0, 10000}
 	return NewEthConnection(osp, proofbounds), nil
@@ -59,7 +59,6 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +68,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := &protocol.TimeBoundsBlocks{common.NewTimeBlocks(big.NewInt(0)), common.NewTimeBlocks(big.NewInt(10000))}
+	timeBounds := &protocol.TimeBoundsBlocks{Start: common.NewTimeBlocks(big.NewInt(0)), End: common.NewTimeBlocks(big.NewInt(10000))}
 	steps := uint64(100000)
 	cont := true
 
@@ -84,7 +83,6 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 				cont = false
 			}
 			fmt.Println(" machine halted ")
-			//break
 		}
 		if stepsExecuted != 1 {
 			t.Log("Num steps = ", stepsExecuted)
@@ -105,7 +103,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodetestdup.ao",
 		"opcodetesttuple.ao",
 	}
-	ethCon, err := setupTestValidateProof(t)
+	ethCon, err := setupTestValidateProof()
 	if err != nil {
 		t.Fatal(err)
 	}

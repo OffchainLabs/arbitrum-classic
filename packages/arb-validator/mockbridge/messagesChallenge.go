@@ -52,7 +52,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockID *structures.BlockID) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

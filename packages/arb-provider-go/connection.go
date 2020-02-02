@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"sync"
 	"time"
+
+	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
@@ -29,33 +30,27 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
-var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
-var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
+var ArbSysAddress = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
+var ArbInfoAddress = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
 
 type ArbConnection struct {
 	proxy        ValidatorProxy
-	vmId         common.Address
+	chainAddress common.Address
 	pendingInbox arbbridge.PendingInbox
-	sequenceNum  *big.Int
 }
 
-func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
+func Dial(chainAddress common.Address, url string, privateKeyBytes []byte, ethURL string) (*ArbConnection, error) {
 	privateKey, err := crypto.ToECDSA(privateKeyBytes)
 	if err != nil {
 		return nil, err
 	}
 	auth := bind.NewKeyedTransactor(privateKey)
-	client, err := ethbridge.NewEthAuthClient(ethUrl, auth)
+	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return nil, err
 	}
 	proxy := NewValidatorProxyImpl(url)
-	vmIdStr, err := proxy.GetVMInfo()
-	if err != nil {
-		return nil, err
-	}
-	vmId := common.HexToAddress(vmIdStr)
-	rollup, err := client.NewRollupWatcher(vmId)
+	rollup, err := client.NewRollupWatcher(chainAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -67,35 +62,15 @@ func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, er
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{proxy: proxy, vmId: vmId, pendingInbox: pendingInbox}, nil
+	return &ArbConnection{proxy: proxy, chainAddress: chainAddress, pendingInbox: pendingInbox}, nil
 }
 
 func (conn *ArbConnection) getInfoCon() (*ArbInfo, error) {
-	return NewArbInfo(ARB_INFO_ADDRESS, conn)
+	return NewArbInfo(ArbInfoAddress, conn)
 }
 
 func (conn *ArbConnection) getSysCon() (*ArbSys, error) {
-	return NewArbSys(ARB_SYS_ADDRESS, conn)
-}
-
-// PendingNonceAt retrieves the current pending nonce associated with an account.
-func (conn *ArbConnection) getCurrentNonce(
-	ctx context.Context,
-	account ethcommon.Address,
-) (*big.Int, error) {
-	if conn.sequenceNum != nil {
-		return conn.sequenceNum, nil
-	}
-	sysConn, err := conn.getSysCon()
-	if err != nil {
-		return nil, err
-	}
-	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
-	if err != nil {
-		return nil, err
-	}
-	conn.sequenceNum = num
-	return num, nil
+	return NewArbSys(ArbSysAddress, conn)
 }
 
 func _nyiError(funcname string) error {
@@ -126,12 +101,12 @@ func (conn *ArbConnection) call(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
+	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
 	if err != nil {
 		return nil, err
 	}
 
-	logVal, err := evm.ProcessLog(retValue, conn.vmId)
+	logVal, err := evm.ProcessLog(retValue, conn.chainAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +196,12 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
+	return conn.pendingInbox.SendTransactionMessage(
+		ctx,
+		tx.Data(),
+		conn.chainAddress,
+		common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()),
+	)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -242,7 +222,7 @@ func (conn *ArbConnection) SubscribeFilterLogs(
 	query ethereum.FilterQuery,
 	ch chan<- types.Log,
 ) (ethereum.Subscription, error) {
-	return newSubscription(conn, query, ch), nil
+	return newSubscription(ctx, conn, query, ch), nil
 }
 
 const subscriptionPollingInterval = 5 * time.Second
@@ -278,59 +258,55 @@ func _decodeLogInfo(ins *rollupvalidator.LogInfo) (*types.Log, error) {
 	outs := &types.Log{}
 	addr, err := hexutil.Decode(ins.Address)
 	if err != nil {
-		log.Println("_decodeLogInfo error 1:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 1:")
 	}
 	copy(outs.Address[:], addr)
 	outs.Topics = make([]ethcommon.Hash, len(ins.Topics))
 	for i, top := range ins.Topics {
 		decodedTopic, err := hexutil.Decode(top)
 		if err != nil {
-			log.Println("_decodeLogInfo error 2:", err)
-			return nil, err
+			return nil, errors2.Wrap(err, "_decodeLogInfo error 2:")
 		}
 		copy(outs.Topics[i][:], decodedTopic)
 	}
 	outs.Data, err = hexutil.Decode(ins.Data)
 	if err != nil {
-		log.Println("_decodeLogInfo error 3:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 3:")
 	}
 	outs.BlockNumber, err = hexutil.DecodeUint64(ins.BlockNumber)
 	if err != nil {
-		log.Println("_decodeLogInfo error 4:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 4:")
 	}
 	hh, err := hexutil.Decode(ins.Address)
 	if err != nil {
-		log.Println("_decodeLogInfo error 5:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 5:")
 	}
 	copy(outs.TxHash[:], hh)
 	txi64, err := hexutil.DecodeUint64(ins.TransactionIndex)
 	if err != nil {
-		log.Println("_decodeLogInfo error 6:", err)
-		log.Println("value was", ins.TransactionIndex)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 6:")
 	}
 	outs.TxIndex = uint(txi64)
 	hh, err = hexutil.Decode(ins.BlockHash)
 	if err != nil {
-		log.Println("_decodeLogInfo error 7:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 7:")
 	}
 	copy(outs.BlockHash[:], hh)
 	iui, err := hexutil.DecodeUint64(ins.LogIndex)
 	if err != nil {
-		log.Println("_decodeLogInfo error 8:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "_decodeLogInfo error 8:")
 	}
 	outs.Index = uint(iui)
 	outs.Removed = false
 	return outs, nil
 }
 
-func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
+func newSubscription(
+	ctx context.Context,
+	conn *ArbConnection,
+	query ethereum.FilterQuery,
+	ch chan<- types.Log,
+) *subscription {
 	address, topics := _extractAddrTopics(query)
 	sub := &subscription{
 		conn.proxy,
@@ -349,31 +325,35 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 			if !sub.active {
 				return
 			}
-			logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
+			logInfos, err := sub.proxy.FindLogs(
+				ctx,
+				int64(sub.firstBlockUnseen),
+				math.MaxInt32,
+				sub.address[:],
+				sub.topics,
+			)
 			if err != nil {
 				sub.errChan <- err
 				return
 			}
+		logLoop:
 			for _, logInfo := range logInfos {
 				outs, err := _decodeLogInfo(logInfo)
 				if err != nil {
 					sub.errChan <- err
 					return
 				}
-				ok := true
 				for i, targetTopic := range topics {
 					if targetTopic != outs.Topics[i] {
-						ok = false
+						continue logLoop
 					}
 				}
 				if outs.BlockNumber < sub.firstBlockUnseen {
-					ok = false
+					continue logLoop
 				}
-				if ok {
-					sub.logChan <- *outs
-					if sub.firstBlockUnseen <= outs.BlockNumber {
-						sub.firstBlockUnseen = outs.BlockNumber + 1
-					}
+				sub.logChan <- *outs
+				if sub.firstBlockUnseen <= outs.BlockNumber {
+					sub.firstBlockUnseen = outs.BlockNumber + 1
 				}
 			}
 		}
@@ -405,18 +385,16 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	result, ok, err := conn.proxy.GetMessageResult(ctx, txHash.Bytes())
 	if err != nil {
-		log.Println("TransactionReceipt error:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "TransactionReceipt error")
 	} else if !ok {
 		return nil, ethereum.NotFound
 	}
 
-	processed, err := evm.ProcessLog(result, conn.vmId)
+	processed, err := evm.ProcessLog(result, conn.chainAddress)
 	if err != nil {
-		log.Println("TransactionReceipt ProcessLog error:", err)
-		return nil, err
+		return nil, errors2.Wrap(err, "TransactionReceipt ProcessLog error:")
 	}
 
 	status := uint64(0)
@@ -433,29 +411,25 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 
 	ethMsg := processed.GetEthMsg()
-
-	var evmLogs []*types.Log
-	if logs != nil {
-		for i, l := range logs {
-			addressBytes := l.ContractID.ToBytes()
-
-			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-			for j, t := range l.Topics {
-				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-			}
-
-			evmLogs = append(evmLogs, &types.Log{
-				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
-				Topics:      evmParsedTopics,
-				Data:        l.Data,
-				BlockNumber: ethMsg.BlockNumber.Uint64(),
-				TxHash:      txHash,
-				TxIndex:     0,
-				BlockHash:   txHash,
-				Index:       uint(i),
-				Removed:     false,
-			})
+	evmLogs := make([]*types.Log, 0, len(logs))
+	for i, l := range logs {
+		addressBytes := l.ContractID.ToBytes()
+		evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
+		for j, t := range l.Topics {
+			evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
 		}
+
+		evmLogs = append(evmLogs, &types.Log{
+			Address:     ethcommon.BytesToAddress(addressBytes[12:]),
+			Topics:      evmParsedTopics,
+			Data:        l.Data,
+			BlockNumber: ethMsg.BlockNumber.Uint64(),
+			TxHash:      txHash,
+			TxIndex:     0,
+			BlockHash:   txHash,
+			Index:       uint(i),
+			Removed:     false,
+		})
 	}
 
 	return &types.Receipt{
@@ -475,7 +449,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
 	return message.Transaction{
-		Chain:       conn.vmId,
+		Chain:       conn.chainAddress,
 		To:          common.NewAddressFromEth(*tx.To()),
 		From:        from,
 		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),

@@ -39,7 +39,7 @@ func (m ERC20) Equals(o ERC20) bool {
 		m.Value.Cmp(o.Value) == 0
 }
 
-func (m ERC20) Type() MessageType {
+func (m ERC20) Type() Type {
 	return ERC20Type
 }
 

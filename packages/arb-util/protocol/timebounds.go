@@ -29,17 +29,17 @@ type TimeBoundsBlocks struct {
 	End   *common.TimeBlocks
 }
 
-func (a *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
+func (tb *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
-		Start: a.Start.Marshal(),
-		End:   a.End.Marshal(),
+		Start: tb.Start.Marshal(),
+		End:   tb.End.Marshal(),
 	}
 }
 
-func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBoundsBlocks {
+func (m *TimeBoundsBlocksBuf) Unmarshal() *TimeBoundsBlocks {
 	return &TimeBoundsBlocks{
-		Start: a.Start.Unmarshal(),
-		End:   a.End.Unmarshal(),
+		Start: m.Start.Unmarshal(),
+		End:   m.End.Unmarshal(),
 	}
 }
 

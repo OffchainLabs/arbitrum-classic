@@ -52,7 +52,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
-	assertionListener := &rollup.AssertionListener{completedAssertionChan}
+	assertionListener := &rollup.AssertionListener{CompletedAssertionChan: completedAssertionChan}
 	man.AddListener(assertionListener)
 
 	tracker := newTxTracker(man.RollupAddress)
@@ -70,7 +70,7 @@ func (m *Server) FindLogs(ctx context.Context, args *FindLogsArgs) (*FindLogsRep
 		fmt.Println("FindLogs error1", err)
 		return nil, err
 	}
-	addressInt := new(big.Int).SetBytes(addressBytes[:])
+	addressInt := new(big.Int).SetBytes(addressBytes)
 
 	topics := make([]common.Hash, 0, len(args.Topics))
 	for _, topic := range args.Topics {
@@ -176,7 +176,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		To:       contractAddress,
 		From:     sender,
 		Data:     dataBytes,
-		BlockNum: m.man.CurrentBlockId().Height,
+		BlockNum: m.man.CurrentBlockID().Height,
 	}
 
 	callingMessage := message.DeliveredValue(msg)

@@ -26,7 +26,7 @@ import (
 func HandleBlockchainEvents(
 	ctx context.Context,
 	client ArbAuthClient,
-	startBlockId *structures.BlockId,
+	startBlockID *structures.BlockID,
 	startLogIndex uint,
 	contract ContractWatcher,
 ) (context.Context, <-chan Event) {
@@ -35,26 +35,26 @@ func HandleBlockchainEvents(
 	go func() {
 		defer cancelFunc()
 		defer close(eventChan)
-		headersChan, err := client.SubscribeBlockHeaders(ctx, startBlockId)
+		headersChan, err := client.SubscribeBlockHeaders(ctx, startBlockID)
 		if err != nil {
 			log.Println("error in challenge", err)
 			return
 		}
-		for maybeBlockId := range headersChan {
-			if maybeBlockId.Err != nil {
+		for maybeBlockID := range headersChan {
+			if maybeBlockID.Err != nil {
 				log.Println("error in challenge", err)
 				return
 			}
 
-			blockId := maybeBlockId.BlockId
+			blockID := maybeBlockID.BlockID
 
-			events, err := contract.GetEvents(ctx, blockId)
+			events, err := contract.GetEvents(ctx, blockID)
 			if err != nil {
 				log.Println("error in challenge", err)
 				return
 			}
 
-			if blockId.Height.Cmp(startBlockId.Height) == 0 {
+			if blockID.Height.Cmp(startBlockID.Height) == 0 {
 				for _, event := range events {
 					if event.GetChainInfo().LogIndex >= startLogIndex {
 						eventChan <- event

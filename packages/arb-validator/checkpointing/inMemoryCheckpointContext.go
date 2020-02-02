@@ -45,11 +45,11 @@ func (c *InMemoryCheckpointContext) AddMachine(m machine.Machine) {
 
 func (c *InMemoryCheckpointContext) Manifest() *structures.CheckpointManifest {
 	valHashes := []*common.HashBuf{}
-	for h, _ := range c.vals {
+	for h := range c.vals {
 		valHashes = append(valHashes, h.MarshalToBuf())
 	}
 	machHashes := []*common.HashBuf{}
-	for h, _ := range c.machs {
+	for h := range c.machs {
 		machHashes = append(machHashes, h.MarshalToBuf())
 	}
 	return &structures.CheckpointManifest{

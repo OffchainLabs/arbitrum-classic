@@ -29,17 +29,17 @@ type ERC721 struct {
 	To           common.Address
 	From         common.Address
 	TokenAddress common.Address
-	Id           *big.Int
+	ID           *big.Int
 }
 
 func (m ERC721) Equals(o ERC721) bool {
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.TokenAddress == o.TokenAddress &&
-		m.Id.Cmp(o.Id) == 0
+		m.ID.Cmp(o.ID) == 0
 }
 
-func (m ERC721) Type() MessageType {
+func (m ERC721) Type() Type {
 	return ERC721Type
 }
 
@@ -51,7 +51,7 @@ func (m ERC721) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
-		value.NewIntValue(new(big.Int).Set(m.Id)),
+		value.NewIntValue(new(big.Int).Set(m.ID)),
 	})
 	val2, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(big.NewInt(int64(m.Type()))),
@@ -71,7 +71,7 @@ func UnmarshalERC721(val value.Value) (ERC721, error) {
 		To:           to,
 		From:         from,
 		TokenAddress: token,
-		Id:           amount,
+		ID:           amount,
 	}, nil
 }
 
@@ -101,7 +101,7 @@ func (m DeliveredERC721) CommitmentHash() common.Hash {
 		hashing.Address(m.To),
 		hashing.Address(m.From),
 		hashing.Address(m.TokenAddress),
-		hashing.Uint256(m.Id),
+		hashing.Uint256(m.ID),
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.MessageNum),
 	)
@@ -116,7 +116,7 @@ func (m DeliveredERC721) CheckpointValue() value.Value {
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		addressToIntValue(m.TokenAddress),
-		value.NewIntValue(new(big.Int).Set(m.Id)),
+		value.NewIntValue(new(big.Int).Set(m.ID)),
 		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
 		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
@@ -164,7 +164,7 @@ func UnmarshalERC721FromCheckpoint(v value.Value) (DeliveredERC721, error) {
 			To:           intValueToAddress(toInt),
 			From:         intValueToAddress(fromInt),
 			TokenAddress: intValueToAddress(tokenAddressInt),
-			Id:           valInt.BigInt(),
+			ID:           valInt.BigInt(),
 		},
 		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
 		MessageNum: messageNumInt.BigInt(),

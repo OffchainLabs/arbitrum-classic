@@ -90,19 +90,19 @@ func (d *VMProtoData) Hash() common.Hash {
 	)
 }
 
-func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
+func (d *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash:  node.MachineHash.MarshalToBuf(),
-		PendingTop:   node.PendingTop.MarshalToBuf(),
-		PendingCount: common.MarshalBigInt(node.PendingCount),
+		MachineHash:  d.MachineHash.MarshalToBuf(),
+		PendingTop:   d.PendingTop.MarshalToBuf(),
+		PendingCount: common.MarshalBigInt(d.PendingCount),
 	}
 }
 
-func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
+func (m *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  buf.MachineHash.Unmarshal(),
-		PendingTop:   buf.PendingTop.Unmarshal(),
-		PendingCount: buf.PendingCount.Unmarshal(),
+		MachineHash:  m.MachineHash.Unmarshal(),
+		PendingTop:   m.PendingTop.Unmarshal(),
+		PendingCount: m.PendingCount.Unmarshal(),
 	}
 }
 
@@ -227,12 +227,12 @@ func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	}
 }
 
-func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
+func (m *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
-		buf.AssertionParams.Unmarshal(),
-		buf.AssertionClaim.Unmarshal(),
-		buf.MaxPendingTop.Unmarshal(),
-		buf.MaxPendingCount.Unmarshal(),
+		m.AssertionParams.Unmarshal(),
+		m.AssertionClaim.Unmarshal(),
+		m.MaxPendingTop.Unmarshal(),
+		m.MaxPendingCount.Unmarshal(),
 	)
 }
 

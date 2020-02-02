@@ -31,8 +31,8 @@ type Precondition struct {
 	BeforeInbox value.Value
 }
 
-func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, beforeInbox value.Value) *Precondition {
-	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
+func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, inbox value.Value) *Precondition {
+	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: inbox}
 }
 
 func (pre *Precondition) String() string {

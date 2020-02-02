@@ -1,10 +1,11 @@
 package machine
 
 import (
+	"time"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"time"
 )
 
 type Status int

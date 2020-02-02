@@ -31,7 +31,7 @@ type Event interface {
 }
 
 type ChainInfo struct {
-	BlockId  *structures.BlockId
+	BlockID  *structures.BlockID
 	LogIndex uint
 	TxHash   [32]byte
 }

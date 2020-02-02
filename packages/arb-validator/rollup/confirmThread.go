@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
+func (co *ChainObserver) startConfirmThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
@@ -32,23 +32,23 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				chain.RLock()
-				if !chain.atHead {
-					chain.RUnlock()
+				co.RLock()
+				if !co.atHead {
+					co.RUnlock()
 					break
 				}
-				confValid, confInvalid := chain.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(chain.latestBlockId.Height))
+				confValid, confInvalid := co.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(co.latestBlockID.Height))
 				if confValid != nil {
-					for _, listener := range chain.listeners {
-						listener.ValidNodeConfirmable(ctx, chain, confValid)
+					for _, listener := range co.listeners {
+						listener.ValidNodeConfirmable(ctx, co, confValid)
 					}
 				}
 				if confInvalid != nil {
-					for _, listener := range chain.listeners {
-						listener.InvalidNodeConfirmable(ctx, chain, confInvalid)
+					for _, listener := range co.listeners {
+						listener.InvalidNodeConfirmable(ctx, co, confInvalid)
 					}
 				}
-				chain.RUnlock()
+				co.RUnlock()
 			}
 		}
 	}()

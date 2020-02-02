@@ -49,7 +49,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 		leafHash:         pa.leafHash,
 		prevPrevLeafHash: pa.prevPrevLeafHash,
 		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     common.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevDeadline:     common.TimeTicks{Val: new(big.Int).Set(pa.prevDeadline.Val)},
 		prevChildType:    pa.prevChildType,
 		beforeState:      pa.beforeState.Clone(),
 		params:           pa.params.Clone(),
@@ -59,7 +59,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 	}
 }
 
-func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
+func (co *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(4).Duration())
 		assertionPreparedChan := make(chan *preparedAssertion, 20)
@@ -67,7 +67,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 		preparedAssertions := make(map[common.Hash]*preparedAssertion)
 
 		updateCurrent := func() {
-			currentOpinion := chain.calculatedValidNode
+			currentOpinion := co.calculatedValidNode
 			currentHash := currentOpinion.hash
 			log.Println("Building opinion on top of", currentHash)
 			successorHashes := [4]common.Hash{}
@@ -75,7 +75,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			successor := func() *Node {
 				for _, successor := range currentOpinion.successorHashes {
 					if successor != zeroBytes32 {
-						return chain.nodeGraph.nodeFromHash[successor]
+						return co.nodeGraph.nodeFromHash[successor]
 					}
 				}
 				return nil
@@ -100,22 +100,22 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion = structures.ValidChildType
 				nextMachine = prepped.machine
 				validExecution = prepped.assertion
-				chain.RUnlock()
+				co.RUnlock()
 			} else {
 				params := successor.disputable.AssertionParams.Clone()
 				claim := successor.disputable.AssertionClaim.Clone()
 				prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
 				afterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
-				afterPendingTopVal, err := chain.pendingInbox.GetHashAtIndex(afterPendingTopHeight)
+				afterPendingTopVal, err := co.pendingInbox.GetHashAtIndex(afterPendingTopHeight)
 				var afterPendingTop *common.Hash
 				if err == nil {
 					afterPendingTop = &afterPendingTopVal
 				}
-				inbox, _ := chain.pendingInbox.GenerateInbox(currentOpinion.vmProtoData.PendingTop, params.ImportedMessageCount.Uint64())
+				inbox, _ := co.pendingInbox.GenerateInbox(currentOpinion.vmProtoData.PendingTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.machine.Clone()
 
-				chain.RUnlock()
+				co.RUnlock()
 
 				newOpinion, validExecution = getNodeOpinion(params, claim, afterPendingTop, inbox.Hash(), messagesVal, nextMachine)
 			}
@@ -123,11 +123,11 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertions = make(map[common.Hash]*preparedAssertion)
 
-			chain.RLock()
-			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
+			co.RLock()
+			correctNode, ok := co.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
 			if ok {
-				chain.RUnlock()
-				chain.Lock()
+				co.RUnlock()
+				co.Lock()
 				if newOpinion == structures.ValidChildType {
 					correctNode.machine = nextMachine
 					correctNode.assertion = validExecution
@@ -135,19 +135,19 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					correctNode.machine = currentOpinion.machine.Clone()
 				}
 				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
-				chain.calculatedValidNode = correctNode
-				if correctNode.depth > chain.knownValidNode.depth {
-					chain.knownValidNode = correctNode
+				co.calculatedValidNode = correctNode
+				if correctNode.depth > co.knownValidNode.depth {
+					co.knownValidNode = correctNode
 				}
-				chain.Unlock()
-				chain.RLock()
+				co.Unlock()
+				co.RLock()
 				if newOpinion == structures.ValidChildType {
-					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
+					for _, lis := range co.listeners {
+						lis.AdvancedKnownAssertion(ctx, co, validExecution, correctNode.assertionTxHash)
 					}
 				}
-				for _, listener := range chain.listeners {
-					listener.AdvancedCalculatedValidNode(ctx, chain, correctNode.hash)
+				for _, listener := range co.listeners {
+					listener.AdvancedCalculatedValidNode(ctx, co, correctNode.hash)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
@@ -161,85 +161,85 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case prepped := <-assertionPreparedChan:
 				preparedAssertions[prepped.leafHash] = prepped
 			case <-ticker.C:
-				chain.RLock()
+				co.RLock()
 				// Catch up to current head
-				for !chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
+				for !co.nodeGraph.leaves.IsLeaf(co.calculatedValidNode) {
 					updateCurrent()
-					chain.RUnlock()
+					co.RUnlock()
 					select {
 					case <-ctx.Done():
 						return
 					default:
 					}
-					chain.RLock()
+					co.RLock()
 				}
-				if !chain.atHead {
-					chain.RUnlock()
+				if !co.atHead {
+					co.RUnlock()
 					break
 				}
 				// Prepare next assertion
-				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
+				_, isPreparing := preparingAssertions[co.calculatedValidNode.hash]
 				if !isPreparing {
-					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
-					if chain.calculatedValidNode.machine != nil &&
-						chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
-						preparingAssertions[chain.calculatedValidNode.hash] = true
+					newMessages := co.calculatedValidNode.vmProtoData.PendingTop != co.pendingInbox.GetTopHash()
+					if co.calculatedValidNode.machine != nil &&
+						co.calculatedValidNode.machine.IsBlocked(co.latestBlockID.Height, newMessages) == nil {
+						preparingAssertions[co.calculatedValidNode.hash] = true
 						go func() {
-							assertionPreparedChan <- chain.prepareAssertion()
+							assertionPreparedChan <- co.prepareAssertion()
 						}()
 					}
 				} else {
-					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
-					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
+					prepared, isPrepared := preparedAssertions[co.calculatedValidNode.hash]
+					if isPrepared && co.nodeGraph.leaves.IsLeaf(co.calculatedValidNode) {
 						startTime := prepared.params.TimeBounds.Start
 						endTime := prepared.params.TimeBounds.End
-						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
-						if chain.latestBlockId.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
-							for _, lis := range chain.listeners {
-								lis.AssertionPrepared(ctx, chain, prepared.Clone())
+						endCushion := common.NewTimeBlocks(new(big.Int).Add(co.latestBlockID.Height.AsInt(), big.NewInt(3)))
+						if co.latestBlockID.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
+							for _, lis := range co.listeners {
+								lis.AssertionPrepared(ctx, co, prepared.Clone())
 							}
 						} else {
-							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", startTime.AsInt(), endTime.AsInt(), chain.latestBlockId.Height.AsInt())
+							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", startTime.AsInt(), endTime.AsInt(), co.latestBlockID.Height.AsInt())
 							// Prepared assertion is out of date
-							delete(preparingAssertions, chain.calculatedValidNode.hash)
-							delete(preparedAssertions, chain.calculatedValidNode.hash)
+							delete(preparingAssertions, co.calculatedValidNode.hash)
+							delete(preparedAssertions, co.calculatedValidNode.hash)
 						}
 					}
 				}
-				chain.RUnlock()
-
+				co.RUnlock()
 			}
 		}
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
-	chain.RLock()
-	currentOpinion := chain.calculatedValidNode
+func (co *ChainObserver) prepareAssertion() *preparedAssertion {
+	co.RLock()
+	currentOpinion := co.calculatedValidNode
 	currentOpinionHash := currentOpinion.hash
 	prevPrevLeafHash := currentOpinion.PrevHash()
 	prevDataHash := currentOpinion.nodeDataHash
-	prevDeadline := common.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
+	prevDeadline := common.TimeTicks{Val: new(big.Int).Set(currentOpinion.deadline.Val)}
 	prevChildType := currentOpinion.linkType
 	beforeState := currentOpinion.vmProtoData.Clone()
-	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
+	if !co.nodeGraph.leaves.IsLeaf(currentOpinion) {
 		return nil
 	}
-	afterPendingTop := chain.pendingInbox.GetTopHash()
+	afterPendingTop := co.pendingInbox.GetTopHash()
 	beforePendingTop := beforeState.PendingTop
-	newMessageCount := new(big.Int).Sub(chain.pendingInbox.TopCount(), beforeState.PendingCount)
+	newMessageCount := new(big.Int).Sub(co.pendingInbox.TopCount(), beforeState.PendingCount)
 
-	inbox, _ := chain.pendingInbox.GenerateInbox(beforePendingTop, newMessageCount.Uint64())
+	inbox, _ := co.pendingInbox.GenerateInbox(beforePendingTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
-	timeBounds := chain.currentTimeBounds()
-	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
-	currentHeight := chain.latestBlockId.Height.Clone()
+
+	timeBounds := co.currentTimeBounds()
+	maxSteps := co.nodeGraph.params.MaxExecutionSteps
+	currentHeight := co.latestBlockID.Height.Clone()
 	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
 	runTicks := common.TimeFromBlockNum(common.NewTimeBlocks(runBlocks))
 	log.Println("Asserting for up to", runTicks.Duration().Seconds(), "seconds")
-	chain.RUnlock()
+	co.RUnlock()
 
 	beforeHash := mach.Hash()
 

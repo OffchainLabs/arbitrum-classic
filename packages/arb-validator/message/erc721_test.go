@@ -40,7 +40,7 @@ func generateTestERC721() ERC721 {
 		To:           addr1,
 		From:         addr2,
 		TokenAddress: addr3,
-		Id:           big.NewInt(89735406),
+		ID:           big.NewInt(89735406),
 	}
 }
 

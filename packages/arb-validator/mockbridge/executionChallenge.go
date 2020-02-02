@@ -50,7 +50,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockID *structures.BlockID) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

@@ -37,7 +37,11 @@ type ChallengeTester struct {
 	auth     *TransactAuth
 }
 
-func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*ChallengeTester, error) {
+func NewChallengeTester(
+	address ethcommon.Address,
+	client *ethclient.Client,
+	auth *TransactAuth,
+) (*ChallengeTester, error) {
 	vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
@@ -52,7 +56,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, *structures.BlockId, error) {
+) (common.Address, *structures.BlockID, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.contract.StartChallenge(

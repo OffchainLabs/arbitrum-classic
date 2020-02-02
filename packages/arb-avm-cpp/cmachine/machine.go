@@ -110,8 +110,8 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val.data), cBlockReason.val.length)
-		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
+		rawTimeoutBytes := C.GoBytes(cBlockReason.val.data, cBlockReason.val.length)
+		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes))
 		if err != nil {
 			panic(err)
 		}
@@ -191,7 +191,7 @@ func (m *Machine) ExecuteAssertion(
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
-	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+	return C.GoBytes(rawProof.data, rawProof.length), nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
@@ -203,21 +203,20 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 
 func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
-
-	if ok {
-		machineHashC := C.CBytes(machineHash.Bytes())
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, machineHashC)
-		C.free(machineHashC)
-
-		return success == 1
-	} else {
+	if !ok {
 		return false
 	}
+	machineHashC := C.CBytes(machineHash.Bytes())
+	success := C.restoreMachine(m.c, cCheckpointStorage.c, machineHashC)
+	C.free(machineHashC)
+
+	return success == 1
 }
 
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)
+
 	for i := 0; i < valCount; i++ {
 		val, err := value.UnmarshalValue(rd)
 		if err != nil {

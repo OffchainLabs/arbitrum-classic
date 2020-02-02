@@ -28,8 +28,9 @@ func TestTupleHash(t *testing.T) {
 		t.Error(err)
 	}
 	for _, testCase := range testCases {
+		test := testCase
 		t.Run(testCase.Name, func(t *testing.T) {
-			valBytes, err := hexutil.Decode("0x" + testCase.Value)
+			valBytes, err := hexutil.Decode("0x" + test.Value)
 			if err != nil {
 				t.Error(err)
 			}
@@ -39,13 +40,17 @@ func TestTupleHash(t *testing.T) {
 			}
 			valHash := val.Hash()
 
-			hashBytes, err := hexutil.Decode("0x" + testCase.Hash)
+			hashBytes, err := hexutil.Decode("0x" + test.Hash)
 			if err != nil {
 				t.Error(err)
 			}
 
 			if !bytes.Equal(valHash[:], hashBytes) {
-				t.Errorf("Calculated wrong hash value: %v, expected hash value is: %v", hexutil.Encode(valHash[:]), hexutil.Encode(hashBytes[:]))
+				t.Errorf(
+					"calculated wrong hash value: %v, expected hash value is: %v",
+					valHash,
+					hexutil.Encode(hashBytes),
+				)
 			}
 		})
 	}

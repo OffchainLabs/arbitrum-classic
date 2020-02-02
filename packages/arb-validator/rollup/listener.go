@@ -67,6 +67,7 @@ type ValidatorChainListener struct {
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
 	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
+	broadcastRecoverStakes map[common.Address]bool
 }
 
 func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
@@ -78,6 +79,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 		broadcastConfirmations: make(map[common.Hash]bool),
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
 		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
+		broadcastRecoverStakes: make(map[common.Address]bool),
 	}
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
@@ -92,6 +94,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 				ret.broadcastConfirmations = make(map[common.Hash]bool)
 				ret.broadcastLeafPrunes = make(map[common.Hash]bool)
 				ret.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+				ret.broadcastRecoverStakes = make(map[common.Address]bool)
 				ret.Unlock()
 			}
 		}
@@ -192,10 +195,10 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 		lis.Lock()
 		stakeTime, placedStake := lis.broadcastCreateStakes[stakingAddress]
 		if placedStake {
-			log.Println("Thinking about placing stake", chain.latestBlockId.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
+			log.Println("Thinking about placing stake", chain.latestBlockID.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
 		}
-		if !placedStake || chain.latestBlockId.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
-			lis.broadcastCreateStakes[stakingAddress] = chain.latestBlockId.Height
+		if !placedStake || chain.latestBlockID.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
+			lis.broadcastCreateStakes[stakingAddress] = chain.latestBlockID.Height
 			log.Println("No stake is currently down, so setting up a stake")
 			lis.Unlock()
 			// Put down new stake so that we can assert next time
@@ -310,7 +313,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 
 func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, asserterAncestor *Node) {
 	// Must already be staked to be challenged
-	startBlockId := ev.BlockId
+	startBlockID := ev.BlockID
 	startLogIndex := ev.LogIndex - 1
 	asserterKey, ok := lis.stakingKeys[ev.Asserter]
 	if ok {
@@ -321,7 +324,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					asserterKey.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
 					conflictNode.disputable.AssertionClaim.AfterPendingTop,
@@ -343,7 +346,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					asserterKey.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
 					conflictNode.vmProtoData.PendingTop,
@@ -362,7 +365,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					asserterKey.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.executionPrecondition(conflictNode),
 					conflictNode.prev.machine,
@@ -389,7 +392,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					challenger.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
 					false,
@@ -406,7 +409,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					challenger.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
 					conflictNode.vmProtoData.PendingTop,
@@ -425,7 +428,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					ctx,
 					challenger.client,
 					ev.ChallengeContract,
-					startBlockId,
+					startBlockID,
 					startLogIndex,
 					chain.executionPrecondition(conflictNode),
 					conflictNode.prev.machine,
@@ -529,46 +532,74 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 		lis.broadcastLeafPrunes[prune.leafHash] = true
 		pruneCopy := prune.Clone()
 		go func() {
-			lis.actor.PruneLeaf(
+			err := lis.actor.PruneLeaf(
 				ctx,
 				pruneCopy.ancestorHash,
 				pruneCopy.leafProof,
 				pruneCopy.ancProof,
 			)
+			if err != nil {
+				log.Println("Failed to prune leaf", err)
+				lis.Lock()
+				delete(lis.broadcastLeafPrunes, pruneCopy.leafHash)
+				lis.Unlock()
+			}
 		}()
 	}
 }
 
 func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {
 	// Anyone can moot any stake
-	for _, moot := range params {
+	for _, param := range params {
+		moot := param
+		_, alreadySent := lis.broadcastRecoverStakes[moot.addr]
+		if alreadySent {
+			continue
+		}
 		go func() {
-			lis.actor.RecoverStakeMooted(
+			err := lis.actor.RecoverStakeMooted(
 				ctx,
 				moot.ancestorHash,
 				moot.addr,
 				moot.lcProof,
 				moot.stProof,
 			)
+			if err != nil {
+				log.Println("Failed to moot old stake", err)
+				lis.Lock()
+				delete(lis.broadcastRecoverStakes, moot.addr)
+				lis.Unlock()
+			}
 		}()
 	}
 }
 
 func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeOldParams) {
 	// Anyone can remove an old stake
-	for _, old := range params {
+	for _, param := range params {
+		old := param
+		_, alreadySent := lis.broadcastRecoverStakes[old.addr]
+		if alreadySent {
+			continue
+		}
 		go func() {
-			lis.actor.RecoverStakeOld(
+			err := lis.actor.RecoverStakeOld(
 				ctx,
 				old.addr,
 				old.proof,
 			)
+			if err != nil {
+				log.Println("Failed to prune old stake", err)
+				lis.Lock()
+				delete(lis.broadcastRecoverStakes, old.addr)
+				lis.Unlock()
+			}
 		}()
 	}
 }
 
 func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
-	for stakingAddress, _ := range lis.stakingKeys {
+	for stakingAddress := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
 		if staker == nil {
 			continue
@@ -577,7 +608,12 @@ func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Conte
 		if newValidNode.depth > staker.location.depth {
 			proof1 := GeneratePathProof(staker.location, newValidNode)
 			proof2 := GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
-			lis.actor.MoveStake(ctx, proof1, proof2)
+			go func() {
+				err := lis.actor.MoveStake(ctx, proof1, proof2)
+				if err != nil {
+					log.Println("Error moving stake", err)
+				}
+			}()
 		}
 	}
 }

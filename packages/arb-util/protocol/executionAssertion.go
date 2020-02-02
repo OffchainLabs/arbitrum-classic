@@ -29,8 +29,20 @@ type ExecutionAssertion struct {
 	Logs         []value.Value
 }
 
-func NewExecutionAssertion(afterHash common.Hash, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
-	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
+func NewExecutionAssertion(
+	afterHash common.Hash,
+	didInboxInsn bool,
+	numGas uint64,
+	outMsgs []value.Value,
+	logs []value.Value,
+) *ExecutionAssertion {
+	return &ExecutionAssertion{
+		AfterHash:    afterHash,
+		DidInboxInsn: didInboxInsn,
+		NumGas:       numGas,
+		OutMsgs:      outMsgs,
+		Logs:         logs,
+	}
 }
 
 func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
@@ -44,6 +56,7 @@ func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
 		valBytes := value.MarshalValueToBytes(msg)
 		logs = append(logs, valBytes)
 	}
+
 	return &ExecutionAssertionBuf{
 		AfterHash:    a.AfterHash.MarshalToBuf(),
 		DidInboxInsn: a.DidInboxInsn,
@@ -71,6 +84,7 @@ func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
 		}
 		logs = append(logs, val)
 	}
+
 	return &ExecutionAssertion{
 		AfterHash:    a.AfterHash.Unmarshal(),
 		DidInboxInsn: a.DidInboxInsn,
@@ -98,5 +112,6 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 			return false
 		}
 	}
+
 	return true
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-func UnanimousAssertPartialPartialHash(
+func PartialPartialHash(
 	newInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
 ) common.Hash {
@@ -33,7 +33,7 @@ func UnanimousAssertPartialPartialHash(
 	)
 }
 
-func UnanimousAssertPartialHash(
+func PartialHash(
 	sequenceNum uint64,
 	beforeHash common.Hash,
 	newInboxHash common.Hash,
@@ -41,7 +41,7 @@ func UnanimousAssertPartialHash(
 	assertion *protocol.ExecutionAssertion,
 ) (common.Hash, error) {
 	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-	unanRest := UnanimousAssertPartialPartialHash(
+	unanRest := PartialPartialHash(
 		newInboxHash,
 		assertion,
 	)
@@ -54,7 +54,7 @@ func UnanimousAssertPartialHash(
 	), nil
 }
 
-func UnanimousAssertHash(
+func Hash(
 	vmID common.Address,
 	sequenceNum uint64,
 	beforeHash common.Hash,
@@ -62,7 +62,7 @@ func UnanimousAssertHash(
 	originalInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
 ) (common.Hash, error) {
-	partialHash, err := UnanimousAssertPartialHash(
+	partialHash, err := PartialHash(
 		sequenceNum,
 		beforeHash,
 		newInboxHash,

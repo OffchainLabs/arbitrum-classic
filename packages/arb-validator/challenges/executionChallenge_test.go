@@ -40,8 +40,8 @@ func testExecutionChallenge(t *testing.T) {
 	}
 
 	timeBounds := &protocol.TimeBoundsBlocks{
-		common.NewTimeBlocks(big.NewInt(100)),
-		common.NewTimeBlocks(big.NewInt(120)),
+		Start: common.NewTimeBlocks(big.NewInt(100)),
+		End:   common.NewTimeBlocks(big.NewInt(120)),
 	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
@@ -58,12 +58,12 @@ func testExecutionChallenge(t *testing.T) {
 		challengeHash,
 		"9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc",
 		"27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockID *structures.BlockID) (ChallengeState, error) {
 			return DefendExecutionClaim(
 				context.Background(),
 				client,
 				challengeAddress,
-				blockId,
+				blockID,
 				0,
 				precondition,
 				mach.Clone(),
@@ -71,12 +71,12 @@ func testExecutionChallenge(t *testing.T) {
 				4,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockID *structures.BlockID) (ChallengeState, error) {
 			return ChallengeExecutionClaim(
 				context.Background(),
 				client,
 				challengeAddress,
-				blockId,
+				blockID,
 				0,
 				precondition,
 				mach.Clone(),

@@ -28,5 +28,5 @@ type MaybeEvent struct {
 }
 
 type ContractWatcher interface {
-	GetEvents(ctx context.Context, blockId *structures.BlockId) ([]Event, error)
+	GetEvents(ctx context.Context, blockID *structures.BlockID) ([]Event, error)
 }

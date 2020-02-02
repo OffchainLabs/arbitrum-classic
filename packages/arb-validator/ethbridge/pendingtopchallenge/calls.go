@@ -21,18 +21,19 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethutils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func (_PendingTopChallenge *PendingTopChallengeTransactor) BisectCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _chainLength *big.Int) error {
+func (_PendingTopChallenge *PendingTopChallengeTransactor) BisectCall(ctx context.Context, client ethereum.PendingContractCaller, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _chainLength *big.Int) error {
 	return callCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _chainLength)
 }
 
-func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
+func callCheck(ctx context.Context, client ethereum.PendingContractCaller, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(PendingTopChallengeABI)))
 	if err != nil {
 		return err

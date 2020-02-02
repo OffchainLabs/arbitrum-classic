@@ -96,13 +96,13 @@ func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
 }
 
-func (m *MachineAssertionContext) GetInbox() value.TupleValue {
-	return m.inbox
+func (ac *MachineAssertionContext) GetInbox() value.TupleValue {
+	return ac.inbox
 }
 
-func (m *MachineAssertionContext) ReadInbox() {
-	m.didInboxInsn = true
-	m.inbox = value.NewEmptyTuple()
+func (ac *MachineAssertionContext) ReadInbox() {
+	ac.didInboxInsn = true
+	ac.inbox = value.NewEmptyTuple()
 }
 
 func (ac *MachineAssertionContext) Send(message value.Value) {
@@ -121,12 +121,12 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (m *MachineAssertionContext) GetStartTime() value.IntValue {
-	return value.NewIntValue(m.timeBounds.Start.AsInt())
+func (ac *MachineAssertionContext) GetStartTime() value.IntValue {
+	return value.NewIntValue(ac.timeBounds.Start.AsInt())
 }
 
-func (m *MachineAssertionContext) GetEndTime() value.IntValue {
-	return value.NewIntValue(m.timeBounds.End.AsInt())
+func (ac *MachineAssertionContext) GetEndTime() value.IntValue {
+	return value.NewIntValue(ac.timeBounds.End.AsInt())
 }
 
 func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {

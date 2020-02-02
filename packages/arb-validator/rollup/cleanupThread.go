@@ -51,7 +51,7 @@ type recoverStakeMootedParams struct {
 	stProof      []common.Hash
 }
 
-func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
+func (co *ChainObserver) startCleanupThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
@@ -60,31 +60,30 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				chain.RLock()
-				if !chain.atHead {
-					chain.RUnlock()
+				co.RLock()
+				if !co.atHead {
+					co.RUnlock()
 					break
 				}
-				prunesToDo := chain.nodeGraph.generateNodePruneInfo(chain.nodeGraph.stakers)
-				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
-				chain.RUnlock()
+				prunesToDo := co.nodeGraph.generateNodePruneInfo()
+				mootedToDo, oldToDo := co.nodeGraph.generateStakerPruneInfo()
+				co.RUnlock()
 
 				if len(prunesToDo) > 0 {
-					for _, listener := range chain.listeners {
-						listener.PrunableLeafs(ctx, chain, prunesToDo)
+					for _, listener := range co.listeners {
+						listener.PrunableLeafs(ctx, co, prunesToDo)
 					}
 				}
 				if len(mootedToDo) > 0 {
-					for _, listener := range chain.listeners {
-						listener.MootableStakes(ctx, chain, mootedToDo)
+					for _, listener := range co.listeners {
+						listener.MootableStakes(ctx, co, mootedToDo)
 					}
 				}
 				if len(oldToDo) > 0 {
-					for _, listener := range chain.listeners {
-						listener.OldStakes(ctx, chain, oldToDo)
+					for _, listener := range co.listeners {
+						listener.OldStakes(ctx, co, oldToDo)
 					}
 				}
-
 			}
 		}
 	}()

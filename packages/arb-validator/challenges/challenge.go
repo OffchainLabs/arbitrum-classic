@@ -36,7 +36,7 @@ const (
 
 var replayTimeout = time.Second
 
-var challengeNoEvents = errors.New("challenge event channel terminated unexpectedly")
+var errNoEvents = errors.New("challenge event channel terminated unexpectedly")
 
 func getSegmentCount(count, segments, index uint64) uint64 {
 	if index == 0 {
@@ -67,7 +67,7 @@ func getAfterState(event arbbridge.Event) ChallengeState {
 func getNextEvent(eventChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
-		return nil, 0, challengeNoEvents
+		return nil, 0, errNoEvents
 	}
 	return event, getAfterState(event), nil
 }
@@ -85,11 +85,11 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return nil, 0, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			blockId, err := client.CurrentBlockId(ctx)
+			blockID, err := client.CurrentBlockID(ctx)
 			if err != nil {
 				return nil, 0, err
 			}
-			if common.TimeFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
+			if common.TimeFromBlockNum(blockID.Height).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return nil, 0, err
@@ -98,7 +98,7 @@ func getNextEventWithTimeout(
 			}
 		case event, ok := <-eventChan:
 			if !ok {
-				return nil, 0, challengeNoEvents
+				return nil, 0, errNoEvents
 			}
 			return event, getAfterState(event), nil
 		}
@@ -110,7 +110,7 @@ func getNextEventIfExists(ctx context.Context, eventChan <-chan arbbridge.Event,
 		select {
 		case event, ok := <-eventChan:
 			if !ok {
-				return false, nil, 0, challengeNoEvents
+				return false, nil, 0, errNoEvents
 			}
 			return false, event, getAfterState(event), nil
 		case <-time.After(timeout):
