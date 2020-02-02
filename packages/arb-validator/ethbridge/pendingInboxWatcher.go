@@ -81,12 +81,13 @@ func (rw *pendingInboxWatcher) GetEvents(ctx context.Context, blockID *structure
 	copy(addressIndex[:], ethcommon.LeftPadBytes(rw.rollupAddress.Bytes(), 32))
 	inboxLogs, err := rw.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
-		Addresses: []ethcommon.Address{rw.rollupAddress},
+		Addresses: []ethcommon.Address{rw.contractAddress},
 		Topics: [][]ethcommon.Hash{{
 			transactionMessageDeliveredID,
 			ethDepositMessageDeliveredID,
 			depositERC20MessageDeliveredID,
 			depositERC721MessageDeliveredID,
+		}, {
 			addressIndex,
 		}},
 	})
