@@ -21,6 +21,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	errors2 "github.com/pkg/errors"
@@ -32,7 +34,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type arbRollup struct {
@@ -167,11 +168,11 @@ func (vm *arbRollup) MakeAssertion(
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
 	prevDeadline common.TimeTicks,
-	prevChildType structures.ChildType,
+	prevChildType valprotocol.ChildType,
 
-	beforeState *structures.VMProtoData,
-	assertionParams *structures.AssertionParams,
-	assertionClaim *structures.AssertionClaim,
+	beforeState *valprotocol.VMProtoData,
+	assertionParams *valprotocol.AssertionParams,
+	assertionClaim *valprotocol.AssertionClaim,
 	stakerProof []common.Hash,
 ) error {
 	vm.auth.Lock()
@@ -205,7 +206,7 @@ func (vm *arbRollup) MakeAssertion(
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
-func (vm *arbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportunity) error {
+func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	nodeOpps := opp.Nodes
 	initalProtoStateHash := nodeOpps[0].StateHash()
 	branchesNums := make([]*big.Int, 0, len(nodeOpps))
@@ -223,7 +224,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportu
 		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
 
 		switch opp := opp.(type) {
-		case structures.ConfirmValidOpportunity:
+		case valprotocol.ConfirmValidOpportunity:
 			logsAcc = append(logsAcc, opp.LogsAcc)
 			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
 
@@ -232,7 +233,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportu
 			}
 			messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
 			prevLen = messageData.Len()
-		case structures.ConfirmInvalidOpportunity:
+		case valprotocol.ConfirmInvalidOpportunity:
 			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
 		}
 	}
@@ -291,8 +292,8 @@ func (vm *arbRollup) StartChallenge(
 	challengerAddress common.Address,
 	prevNode common.Hash,
 	disputableDeadline *big.Int,
-	asserterPosition structures.ChildType,
-	challengerPosition structures.ChildType,
+	asserterPosition valprotocol.ChildType,
+	challengerPosition valprotocol.ChildType,
 	asserterVMProtoHash common.Hash,
 	challengerVMProtoHash common.Hash,
 	asserterProof []common.Hash,

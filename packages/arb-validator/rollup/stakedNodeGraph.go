@@ -21,10 +21,13 @@ import (
 	"log"
 	"sort"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
@@ -36,14 +39,14 @@ type StakedNodeGraph struct {
 	stakers *StakerSet
 }
 
-func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) *StakedNodeGraph {
+func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
 	return &StakedNodeGraph{
 		NodeGraph: NewNodeGraph(machine, params),
 		stakers:   NewStakerSet(),
 	}
 }
 
-func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *StakedNodeGraphBuf {
+func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
@@ -54,7 +57,7 @@ func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx structures.CheckpointCont
 	}
 }
 
-func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *StakedNodeGraph {
+func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *StakedNodeGraph {
 	chain := &StakedNodeGraph{
 		NodeGraph: m.NodeGraph.UnmarshalFromCheckpoint(ctx),
 		stakers:   NewStakerSet(),
@@ -111,7 +114,7 @@ func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
 	chain.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind structures.ChildType) {
+func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind valprotocol.ChildType) {
 	chain.stakers.Get(asserter).challenge = contract
 	chain.stakers.Get(challenger).challenge = contract
 }
@@ -163,14 +166,14 @@ func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []pruneP
 
 func (sng *StakedNodeGraph) generateNextConfProof(
 	currentTime common.TimeTicks,
-) *structures.ConfirmOpportunity {
+) *valprotocol.ConfirmOpportunity {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
 	})
 	sort.Sort(SortableAddressList(stakerAddrs))
 
-	nodeOps := make([]structures.ConfirmNodeOpportunity, 0)
+	nodeOps := make([]valprotocol.ConfirmNodeOpportunity, 0)
 	conf := sng.latestConfirmed
 	keepChecking := true
 	for ; keepChecking; keepChecking = false {
@@ -186,15 +189,18 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				stakerAddrs,
 			)
 			if confirmable {
-				if node.linkType == structures.ValidChildType {
-					nodeOps = append(nodeOps, structures.ConfirmValidOpportunity{
+				if node.linkType == valprotocol.ValidChildType {
+					if node.assertion == nil {
+						break
+					}
+					nodeOps = append(nodeOps, valprotocol.ConfirmValidOpportunity{
 						DeadlineTicks:    node.deadline,
 						Messages:         node.assertion.OutMsgs,
 						LogsAcc:          node.disputable.AssertionClaim.AssertionStub.LastLogHash,
 						VMProtoStateHash: node.vmProtoData.Hash(),
 					})
 				} else {
-					nodeOps = append(nodeOps, structures.ConfirmInvalidOpportunity{
+					nodeOps = append(nodeOps, valprotocol.ConfirmInvalidOpportunity{
 						DeadlineTicks:     node.deadline,
 						ChallengeNodeData: node.nodeDataHash,
 						Branch:            node.linkType,
@@ -217,7 +223,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 		currentTime,
 		stakerAddrs,
 	)
-	return &structures.ConfirmOpportunity{
+	return &valprotocol.ConfirmOpportunity{
 		Nodes:                  nodeOps,
 		CurrentLatestConfirmed: sng.latestConfirmed.hash,
 		StakerAddresses:        stakerAddrs,
@@ -303,8 +309,8 @@ type challengeOpportunity struct {
 	challenger            common.Address
 	prevNodeHash          common.Hash
 	deadlineTicks         common.TimeTicks
-	asserterNodeType      structures.ChildType
-	challengerNodeType    structures.ChildType
+	asserterNodeType      valprotocol.ChildType
+	challengerNodeType    valprotocol.ChildType
 	asserterVMProtoHash   common.Hash
 	challengerVMProtoHash common.Hash
 	asserterProof         []common.Hash

@@ -19,10 +19,8 @@ package arbbridge
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -31,7 +29,7 @@ type Event interface {
 }
 
 type ChainInfo struct {
-	BlockId  *structures.BlockId
+	BlockId  *common.BlockId
 	LogIndex uint
 	TxHash   [32]byte
 }
@@ -50,7 +48,7 @@ type ChallengeStartedEvent struct {
 	ChainInfo
 	Asserter          common.Address
 	Challenger        common.Address
-	ChallengeType     structures.ChildType
+	ChallengeType     valprotocol.ChildType
 	ChallengeContract common.Address
 }
 
@@ -80,8 +78,8 @@ type StakeMovedEvent struct {
 type AssertedEvent struct {
 	ChainInfo
 	PrevLeafHash    common.Hash
-	Params          *structures.AssertionParams
-	Claim           *structures.AssertionClaim
+	Params          *valprotocol.AssertionParams
+	Claim           *valprotocol.AssertionClaim
 	MaxPendingTop   common.Hash
 	MaxPendingCount *big.Int
 }

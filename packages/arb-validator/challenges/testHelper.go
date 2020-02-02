@@ -28,18 +28,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures.BlockId) (ChallengeState, error)
+type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.BlockId) (ChallengeState, error)
 
 func testChallenge(
-	challengeType structures.ChildType,
+	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
 	asserterKey, challengerKey string,
 	asserterFunc, challengerFunc ChallengeFunc,

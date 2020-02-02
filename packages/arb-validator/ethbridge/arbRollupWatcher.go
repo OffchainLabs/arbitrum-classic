@@ -36,7 +36,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -117,7 +116,7 @@ func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client)
 	}, nil
 }
 
-func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	addressIndex := ethcommon.Hash{}
 	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32))
@@ -290,7 +289,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			ChainInfo:         chainInfo,
 			Asserter:          common.NewAddressFromEth(eventVal.Asserter),
 			Challenger:        common.NewAddressFromEth(eventVal.Challenger),
-			ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
+			ChallengeType:     valprotocol.ChildType(eventVal.ChallengeType.Uint64()),
 			ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
 		}, nil
 	} else if ethLog.Topics[0] == rollupChallengeCompletedID {
@@ -340,7 +339,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 		return arbbridge.AssertedEvent{
 			ChainInfo:    chainInfo,
 			PrevLeafHash: eventVal.Fields[0],
-			Params: &structures.AssertionParams{
+			Params: &valprotocol.AssertionParams{
 				NumSteps: eventVal.NumSteps,
 				TimeBounds: &protocol.TimeBoundsBlocks{
 					common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
@@ -348,7 +347,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 				},
 				ImportedMessageCount: eventVal.ImportedMessageCount,
 			},
-			Claim: &structures.AssertionClaim{
+			Claim: &valprotocol.AssertionClaim{
 				AfterPendingTop:       eventVal.Fields[2],
 				ImportedMessagesSlice: eventVal.Fields[3],
 				AssertionStub: &valprotocol.ExecutionAssertionStub{
@@ -385,16 +384,16 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 	return vm.ProcessMessageDeliveredEvents(chainInfo, ethLog)
 }
 
-func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
 	rawParams, err := vm.ArbRollup.VmParams(nil)
 	if err != nil {
-		return structures.ChainParams{}, err
+		return valprotocol.ChainParams{}, err
 	}
 	stakeRequired, err := vm.ArbRollup.GetStakeRequired(nil)
 	if err != nil {
-		return structures.ChainParams{}, err
+		return valprotocol.ChainParams{}, err
 	}
-	return structures.ChainParams{
+	return valprotocol.ChainParams{
 		StakeRequirement:        stakeRequired,
 		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
@@ -408,7 +407,7 @@ func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.NewAddressFromEth(addr), err
 }
 
-func (con *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+func (con *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(addressIndex[:], ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32))
 	logs, err := con.client.FilterLogs(ctx, ethereum.FilterQuery{

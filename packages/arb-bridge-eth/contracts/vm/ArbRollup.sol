@@ -325,7 +325,7 @@ contract ArbRollup is NodeGraph, Staking {
                 data.deadlineTicks[i],
                 nodeDataHash,
                 branchType,
-                data.vmProtoStateHashes[i]
+                vmProtoStateHash
             );
         }
         require(messagesOffset == data.messages.length, "Didn't read all messages");

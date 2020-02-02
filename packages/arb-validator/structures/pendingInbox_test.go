@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 )
@@ -180,6 +182,6 @@ func TestPendingInboxInsert(t *testing.T) {
 }
 
 func marshalUnmarshal(pi *PendingInbox) (*MessageStack, error) {
-	ctx := NewCheckpointContextImpl()
+	ctx := valprotocol.NewCheckpointContextImpl()
 	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }

@@ -20,11 +20,12 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbRollup struct {
@@ -157,11 +158,11 @@ func (vm *ArbRollup) MakeAssertion(
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
 	prevDeadline common.TimeTicks,
-	prevChildType structures.ChildType,
+	prevChildType valprotocol.ChildType,
 
-	beforeState *structures.VMProtoData,
-	assertionParams *structures.AssertionParams,
-	assertionClaim *structures.AssertionClaim,
+	beforeState *valprotocol.VMProtoData,
+	assertionParams *valprotocol.AssertionParams,
+	assertionClaim *valprotocol.AssertionClaim,
 	stakerProof []common.Hash,
 ) error {
 	//vm.auth.Context = ctx
@@ -195,7 +196,7 @@ func (vm *ArbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *ArbRollup) Confirm(ctx context.Context, opp *structures.ConfirmOpportunity) error {
+func (vm *ArbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	return nil
 }
 
@@ -205,8 +206,8 @@ func (vm *ArbRollup) StartChallenge(
 	challengerAddress common.Address,
 	prevNode common.Hash,
 	disputableDeadline *big.Int,
-	asserterPosition structures.ChildType,
-	challengerPosition structures.ChildType,
+	asserterPosition valprotocol.ChildType,
+	challengerPosition valprotocol.ChildType,
 	asserterVMProtoHash common.Hash,
 	challengerVMProtoHash common.Hash,
 	asserterProof []common.Hash,

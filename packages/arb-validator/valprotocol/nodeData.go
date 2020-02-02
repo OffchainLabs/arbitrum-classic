@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package structures
+package valprotocol
 
 import (
 	"fmt"
@@ -23,10 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
-
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
 
 type ChildType uint
 
@@ -155,7 +152,7 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 type AssertionClaim struct {
 	AfterPendingTop       common.Hash
 	ImportedMessagesSlice common.Hash
-	AssertionStub         *valprotocol.ExecutionAssertionStub
+	AssertionStub         *ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {

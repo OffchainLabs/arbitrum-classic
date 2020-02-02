@@ -20,14 +20,14 @@ import (
 	"context"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ArbFactory interface {
 	CreateRollup(
 		ctx context.Context,
 		vmState common.Hash,
-		params structures.ChainParams,
+		params valprotocol.ChainParams,
 		owner common.Address,
 	) (common.Address, error)
 }

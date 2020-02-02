@@ -14,22 +14,6 @@
 * limitations under the License.
  */
 
-package rollup
+package checkpointing
 
-import (
-	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-)
-
-func DefaultChainParams() valprotocol.ChainParams {
-	gracePeriodInBlocks := int64(30)
-	return valprotocol.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(gracePeriodInBlocks))),
-		MaxExecutionSteps:       1000000000,
-		MaxTimeBoundsWidth:      20,
-		ArbGasSpeedLimitPerTick: 20000000,
-	}
-}
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"

@@ -19,10 +19,11 @@ package rollup
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type FinalizedAssertion struct {
@@ -52,7 +53,7 @@ func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, a
 }
 
 func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
-func (al *AssertionListener) NodesConfirmable(context.Context, *ChainObserver, *structures.ConfirmOpportunity) {
+func (al *AssertionListener) NodesConfirmable(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
 }
 func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {}
 func (al *AssertionListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {
