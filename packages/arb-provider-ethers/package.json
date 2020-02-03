@@ -19,8 +19,7 @@
         "prepare": "yarn build",
         "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
         "preversion": "npm run lint",
-        "shrinkABI": "node shrinkABI.js && yarn run prettier src/lib/ArbChain.json src/lib/ArbChannel.json src/lib/GlobalPendingInbox.json --write",
-        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
+        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts src/lib/abi/ArbFactory.d.ts dist/lib/abi",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
         "lint": "eslint . src/**/*.ts tests/**/*.ts",
@@ -28,7 +27,7 @@
     },
     "dependencies": {
         "@types/node-fetch": "^2.5.0",
-        "ethers": "~4.0.28",
+        "ethers": "^4.0.44",
         "jayson": "~2.1.2",
         "node-fetch": "~2.3.0",
         "promise-poller": "~1.7.0",
