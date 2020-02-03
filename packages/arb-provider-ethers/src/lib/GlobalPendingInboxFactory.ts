@@ -5,7 +5,7 @@ import { Contract, ContractFactory, Signer } from 'ethers';
 import { Provider } from 'ethers/providers';
 import { UnsignedTransaction } from 'ethers/utils/transaction';
 
-import { GlobalPendingInbox } from './GlobalPendingInbox';
+import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
 
 export class GlobalPendingInboxFactory extends ContractFactory {
     constructor(signer?: Signer) {
