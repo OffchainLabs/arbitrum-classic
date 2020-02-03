@@ -30,9 +30,9 @@ export enum OpCode {
 
 // Valid opcode ranges (inclusive)
 const OP_CODE_RANGES: Array<[number, number]> = [
-    [0x01, 0x0a],
+    [0x00, 0x0a],
     [0x10, 0x1b],
-    [0x20, 0x21],
+    [0x20, 0x22],
     [0x30, 0x3d],
     [0x40, 0x44],
     [0x50, 0x52],
@@ -62,15 +62,15 @@ export enum ValueType {
 }
 
 // Extracts first n bytes from s returning two separate strings as list
-function extractBytes(s: Uint8Array, n: number): [Uint8Array, Uint8Array] {
+function extractBytes(s: Uint8Array, offset: number, n: number): [Uint8Array, number] {
     if (n < 0 || n > s.length) {
         throw Error('Error extracting bytes: Uint8Array is too short');
     }
-    return [s.slice(0, n), s.slice(n)];
+    return [s.slice(offset, offset + n), offset + n];
 }
 
 // Convert unsigned int i to byte array of n bytes.
-function intToBytes(i: number, n: number): Uint8Array {
+function intToBytes(i: ethers.utils.BigNumberish, n: number): Uint8Array {
     return ethers.utils.padZeros(ethers.utils.arrayify(ethers.utils.bigNumberify(i)), n);
 }
 
@@ -131,14 +131,14 @@ export class IntValue {
 }
 
 export class CodePointValue {
-    public insnNum: number;
+    public insnNum: ethers.utils.BigNumber;
     public op: Operation;
     public nextHash: string;
     // insnNum: 8 byte integer
     // op: BasicOp or ImmOp
     // nextHash: 32 byte hash
-    constructor(insnNum: number, op: Operation, nextHash: string) {
-        this.insnNum = insnNum;
+    constructor(insnNum: ethers.utils.BigNumberish, op: Operation, nextHash: string) {
+        this.insnNum = ethers.utils.bigNumberify(insnNum);
         this.op = op;
         this.nextHash = nextHash;
     }
@@ -433,78 +433,156 @@ export function marshal(someValue: Value): Uint8Array {
     return _marshalValue(new Uint8Array(), someValue);
 }
 
-function unmarshalOpCode(array: Uint8Array): [number, Uint8Array] {
-    const [head, tail] = extractBytes(array, 1);
+function unmarshalContract(array: Uint8Array): [Operation[], Value] {
+    let offset = 0;
+    let versionBytes;
+    [versionBytes, offset] = extractBytes(array, offset, 4);
+    let extensionVersion = ethers.utils.bigNumberify(1);
+    while (!extensionVersion.eq(0)) {
+        let extensionVersionBytes;
+        [extensionVersionBytes, offset] = extractBytes(array, offset, 4);
+        extensionVersion = ethers.utils.bigNumberify(extensionVersionBytes);
+        if (!extensionVersion.eq(0)) {
+            let extensionLengthBytes;
+            [extensionLengthBytes, offset] = extractBytes(array, offset, 4);
+            const extensionLength = ethers.utils.bigNumberify(extensionLengthBytes);
+            offset += extensionLength.toNumber();
+        }
+    }
+
+    let codeCountBytes;
+    [codeCountBytes, offset] = extractBytes(array, offset, 8);
+    const codeCount = ethers.utils.bigNumberify(codeCountBytes).toNumber();
+    const ops: Operation[] = [];
+    for (let i = 0; i < codeCount; ++i) {
+        let op;
+        [op, offset] = unmarshalOp(array, offset);
+        ops.push(op);
+    }
+    const [staticVal] = _unmarshalValue(array, offset);
+    return [ops, staticVal];
+}
+
+function opsToCodePoints(ops: Operation[]): CodePointValue[] {
+    const cps: CodePointValue[] = [];
+    for (const op of ops) {
+        cps.push(new CodePointValue(0, op, ethers.utils.hexZeroPad('0x00', 32)));
+    }
+    for (let i = cps.length - 2; i >= 0; i--) {
+        cps[i].nextHash = cps[i + 1].hash();
+    }
+    return cps;
+}
+
+export function contractMachineHash(array: Uint8Array): string {
+    const [ops, staticVal] = unmarshalContract(array);
+    const codePoints = opsToCodePoints(ops);
+
+    return machineHash(
+        codePoints[0],
+        new TupleValue([]),
+        new TupleValue([]),
+        new TupleValue([]),
+        staticVal,
+        new CodePointValue('18446744073709551615', new BasicOp(0), ethers.utils.hexZeroPad('0x00', 32)),
+    );
+}
+
+export function machineHash(
+    pc: Value,
+    stack: Value,
+    auxstack: Value,
+    registerVal: Value,
+    staticVal: Value,
+    errPc: Value,
+): string {
+    return ethers.utils.solidityKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
+        [pc.hash(), stack.hash(), auxstack.hash(), registerVal.hash(), staticVal.hash(), errPc.hash()],
+    );
+    // let [ops, staticVal] = unmarshalContract(array);
+    // let cps: CodePointValue[] = [];
+    // for (let op of ops) {
+    //     cps.push(new CodePointValue(0, op, ethers.utils.bigNumberify(0).toHexString()));
+    // }
+    // for (var i = cps.length - 2; i >= 0; i--) {
+    //     cps[i].nextHash = cps[i + 1].hash();
+    // }
+}
+
+function unmarshalOpCode(array: Uint8Array, offset: number): [number, number] {
+    let head;
+    [head, offset] = extractBytes(array, offset, 1);
     const opcode = ethers.utils.bigNumberify(head).toNumber();
     if (!VALID_OP_CODES.includes(opcode)) {
         throw Error('Error unmarshalOpCode no such opcode: 0x' + opcode.toString(16));
     }
-    return [opcode, tail];
+    return [opcode, offset];
 }
 
-function unmarshalOp(array: Uint8Array): [Operation, Uint8Array] {
+function unmarshalOp(array: Uint8Array, offset: number): [Operation, number] {
     let head = new Uint8Array();
-    let tail;
-    [head, tail] = extractBytes(array, 1);
+    [head, offset] = extractBytes(array, offset, 1);
     const kind: OperationType = ethers.utils.bigNumberify(head).toNumber();
     if (kind === OperationType.Basic) {
-        const [opcode, rest] = unmarshalOpCode(tail);
-        return [new BasicOp(opcode), rest];
+        let opcode;
+        [opcode, offset] = unmarshalOpCode(array, offset);
+        return [new BasicOp(opcode), offset];
     } else if (kind === OperationType.Immediate) {
         let opcode;
         let value;
-        [opcode, tail] = unmarshalOpCode(tail);
-        [value, tail] = _unmarshalValue(tail);
-        return [new ImmOp(opcode, value), tail];
+        [opcode, offset] = unmarshalOpCode(array, offset);
+        [value, offset] = _unmarshalValue(array, offset);
+        return [new ImmOp(opcode, value), offset];
     } else {
         throw Error('Error unmarshalOp no such immCount: ' + kind);
     }
 }
 
-function unmarshalTuple(array: Uint8Array, size: number): [Value[], Uint8Array] {
+function unmarshalTuple(size: number, array: Uint8Array, offset: number): [Value[], number] {
     const contents = new Array(size);
-    let tail = array;
+    const tail = array;
     for (let i = 0; i < size; i++) {
         let value;
-        [value, tail] = _unmarshalValue(tail);
+        [value, offset] = _unmarshalValue(array, offset);
         contents[i] = value;
     }
-    return [contents, tail];
+    return [contents, offset];
 }
 
-function _unmarshalValue(array: Uint8Array): [Value, Uint8Array] {
-    let [head, tail] = extractBytes(array, 1);
-
+function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
+    let head;
+    [head, offset] = extractBytes(array, offset, 1);
     const ty = ethers.utils.bigNumberify(head).toNumber();
     if (ty === ValueType.Int) {
-        [head, tail] = extractBytes(tail, 32);
+        [head, offset] = extractBytes(array, offset, 32);
         const i = ethers.utils.bigNumberify(head);
-        return [new IntValue(i), tail];
+        return [new IntValue(i), offset];
     } else if (ty === ValueType.CodePoint) {
-        [head, tail] = extractBytes(tail, 8);
-        const pc = ethers.utils.bigNumberify(head).toNumber();
+        [head, offset] = extractBytes(array, offset, 8);
+        const pc = ethers.utils.bigNumberify(head);
         let op;
-        [op, tail] = unmarshalOp(tail);
-        [head, tail] = extractBytes(tail, 32);
+        [op, offset] = unmarshalOp(array, offset);
+        [head, offset] = extractBytes(array, offset, 32);
         const nextHash = ethers.utils.hexlify(head);
-        return [new CodePointValue(pc, op, nextHash), tail];
+        return [new CodePointValue(pc, op, nextHash), offset];
     } else if (ty === ValueType.HashOnly) {
-        [head, tail] = extractBytes(tail, 8);
+        [head, offset] = extractBytes(array, offset, 8);
         const size = ethers.utils.bigNumberify(head);
-        [head, tail] = extractBytes(tail, 32);
+        [head, offset] = extractBytes(array, offset, 32);
         const hash = '0x' + head;
         // return [new HashOnlyValue(hash, size), tail];
         throw Error('Error unmarshaling: HashOnlyValue was not expected');
     } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {
         const size = ty - ValueType.Tuple;
         let contents;
-        [contents, tail] = unmarshalTuple(tail, size);
-        return [new TupleValue(contents), tail];
+        [contents, offset] = unmarshalTuple(size, array, offset);
+        return [new TupleValue(contents), offset];
     } else {
         throw Error('Error unmarshaling value no such TYPE: ' + ty.toString(16));
     }
 }
 
 export function unmarshal(array: ethers.utils.Arrayish): Value {
-    return _unmarshalValue(ethers.utils.arrayify(array))[0];
+    return _unmarshalValue(ethers.utils.arrayify(array), 0)[0];
 }
