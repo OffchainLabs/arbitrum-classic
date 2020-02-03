@@ -3,7 +3,7 @@
 Users and contracts can own Eth or tokens in an Arbitrum Chain.  
 Currently, the supported value types are Eth, ERC 20 fungible tokens, and ERC 721 non-fungible tokens.
 
-To move assets into an ArbChain, you execute a deposit transaction on Arbitrum's global EthBridge. 
+To move assets into an ArbChain, you execute a deposit transaction on Arbitrum's global EthBridge.
 This pays funds to the EthBridge on the Ethereum side, and credits the same funds to you inside the ArbChain you specified.
 Every ArbChain includes precompiled contracts that track the holdings of every user and contract inside that chain.
 
