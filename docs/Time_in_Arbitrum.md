@@ -11,13 +11,15 @@ Messages in an ArbChain's pending inbox are processed in order.
 Generally, some time will elapse between the time when a message is put into the pending inbox (and timestamped) and the time when the contract processes the message and carries out the transaction requested by the message.
 
 If your Solidity contract, running on Arbitrum Rollup, accesses ``block.number``, this will give you the ArbChain's current time. 
-If you want to know when the current message (the one that requested the transaction you're currently running) was timestamped, you can get it in Solidity by writing:
-
-    ArbSys(address(100)).currentMessageTime()
-
 Because ArbChains operate off-chain, an ArbChain's time might differ a little bit from the current Ethereum block time.
 The ArbChain's clock will never get ahead of the Ethereum block time, but the ArbChain's clock might "run a bit slow". 
 In particular, it might be as many as 20 blocks behind the true Ethereum time.
+
+As you would expect, the block time given by `block.number` will never decrease; it can only increase.
+
+If you want to know when the current message (the one that requested the transaction you're currently running) was timestamped, you can get it in Solidity by writing:
+
+    ArbSys(address(100)).currentMessageTime()
 
 At any time, you can get an upper bound on the true Ethereum block time by using this Solidity call:
 
