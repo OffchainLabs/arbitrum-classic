@@ -21,26 +21,22 @@ import (
 	"time"
 )
 
-var AverageSecondsPerBlock = int64(2)
+const (
+	TicksPerBlock = int64(13000)
+)
+
+var AverageDurationPerBlock time.Duration = time.Second * 2
 
 type TimeTicks struct {
 	Val *big.Int
 }
 
-var _timeConversionFactor *big.Int
-var _timeTicksPerSecond *big.Int
-
-func init() {
-	_timeTicksPerSecond = big.NewInt(1000)
-	_timeConversionFactor = new(big.Int).Mul(big.NewInt(13), _timeTicksPerSecond)
-}
-
 func TimeFromBlockNum(blockNum *TimeBlocks) TimeTicks {
-	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
+	return TimeTicks{new(big.Int).Mul(big.NewInt(TicksPerBlock), blockNum.AsInt())}
 }
 
 func TimeFromSeconds(seconds int64) TimeTicks {
-	return TimeTicks{new(big.Int).Mul(_timeTicksPerSecond, big.NewInt(seconds))}
+	return TimeTicks{big.NewInt(int64(time.Duration(seconds*TicksPerBlock) * time.Second / AverageDurationPerBlock))}
 }
 
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
@@ -52,7 +48,11 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 }
 
 func (rt TimeTicks) Duration() time.Duration {
-	return time.Millisecond * time.Duration(AverageSecondsPerBlock*rt.Val.Int64()/13)
+	return time.Duration(rt.Val.Int64()) * AverageDurationPerBlock / time.Duration(TicksPerBlock)
+}
+
+func (rt TimeTicks) Clone() TimeTicks {
+	return TimeTicks{new(big.Int).Set(rt.Val)}
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
