@@ -49,6 +49,10 @@ func (tb *TimeBlocks) AsInt() *big.Int {
 	return (*big.Int)(tb)
 }
 
+func BlocksFromSeconds(seconds int64) *TimeBlocks {
+	return (*TimeBlocks)(big.NewInt(int64(time.Duration(seconds) * time.Second / AverageDurationPerBlock)))
+}
+
 func (tb *TimeBlocks) Duration() time.Duration {
 	return TimeFromBlockNum(tb).Duration()
 }

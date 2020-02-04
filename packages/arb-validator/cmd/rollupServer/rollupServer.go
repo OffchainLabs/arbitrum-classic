@@ -25,6 +25,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -129,14 +130,17 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 5 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
+		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=N] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
+
+	common.AverageDurationPerBlock = time.Duration(*blocktime) * time.Second
 
 	// 2) Private key
 	keyFile, err := os.Open(validateCmd.Arg(1))

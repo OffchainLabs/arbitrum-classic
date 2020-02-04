@@ -25,19 +25,12 @@ type TimeTicks struct {
 	Val *big.Int
 }
 
-const _timeTicksPerBlock = int64(1000)
-
 func TimeFromBlockNum(blockNum *TimeBlocks) TimeTicks {
-	return TimeTicks{new(big.Int).Mul(big.NewInt(_timeTicksPerBlock), blockNum.AsInt())}
+	return TimeTicks{new(big.Int).Mul(big.NewInt(TicksPerBlock), blockNum.AsInt())}
 }
 
 func TimeFromSeconds(seconds int64) TimeTicks {
-	return TimeTicks{
-		new(big.Int).Div(
-			new(big.Int).Mul(big.NewInt(_timeTicksPerBlock), big.NewInt(int64(time.Duration(seconds)*time.Second))),
-			big.NewInt(int64(_durationPerBlock)),
-		),
-	}
+	return TimeTicks{big.NewInt(int64(time.Duration(seconds*TicksPerBlock) * time.Second / AverageDurationPerBlock))}
 }
 
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
@@ -49,7 +42,11 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 }
 
 func (rt TimeTicks) Duration() time.Duration {
-	return _durationPerBlock * time.Duration(rt.Val.Int64()) / time.Duration(_timeTicksPerBlock)
+	return time.Duration(rt.Val.Int64()) * AverageDurationPerBlock / time.Duration(TicksPerBlock)
+}
+
+func (rt TimeTicks) Clone() TimeTicks {
+	return TimeTicks{new(big.Int).Set(rt.Val)}
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
