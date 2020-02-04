@@ -20,7 +20,7 @@ As far as Ethereum knows, all deposited funds are held by Arbitrum's global EthB
 
 In order to programmatically trigger transfers, call one of the following methods in the [`GlobalPendingInbox`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/GlobalPendingInbox.sol) contract with the chain address equal to the address of the Arbitrum Rollup chain.
 
-```javascript
+```
 function depositEthMessage(address chain, address to) external payable;
 function depositERC20Message(
         address chain,
@@ -42,7 +42,7 @@ function depositERC721Message(
 
 -   Eth: The ArbSys library can be used to withdraw Eth, `ArbSys(100).withdrawEth(destAddress, amount)`
 -   ERC-20 and ERC-721: The system generated token contracts in Arbitrum contain a withdraw method
-    ```js
+    ```
     function withdraw(address account, uint256 amount) public; // ERC-20
     function withdraw(address account, uint256 tokenId) public; // ERC-721
     ```
@@ -56,7 +56,7 @@ At any time you can call the EthBridge to recover the funds in your lockbox.
 
 All transaction calls on the Arbitrum chain are sent through the EthBridge using:
 
-```js
+```
 function sendTransactionMessage(
         address chain,
         address to,

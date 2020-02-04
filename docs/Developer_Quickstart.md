@@ -263,61 +263,61 @@ Move your project folder into `arbitrum/workspace/projectname` in order to pick 
 
 ### Configure Truffle
 
-1. Add the `arb-provider-truffle` to your project:
+1.  Add the `arb-provider-truffle` to your project:
 
     ```bash
     yarn add arb-provider-truffle
     ```
 
-2. Edit the `truffle-config.js`:
+2.  Edit the `truffle-config.js`:
 
-    - Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the caller of your contract's constructor when migrating.:
+    -   Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the caller of your contract's constructor when migrating.:
 
-        ```js
-        const ArbProvider = require("arb-provider-truffle");
-        const mnemonic =
-            "jar deny prosper gasp flush glass core corn alarm treat leg smart";
-        ```
+    ```js
+    const ArbProvider = require("arb-provider-truffle");
+    const mnemonic =
+        "jar deny prosper gasp flush glass core corn alarm treat leg smart";
+    ```
 
-    - Add the `arbitrum` network to `module.exports` and `solc` version `0.5.3`:
+    -   Add the `arbitrum` network to `module.exports` and `solc` version `0.5.3`:
 
-        ```js
-        module.exports = {
-          networks: {
-            arbitrum: {
-              provider: function() {
-                if(!this.provider.prov) {
-                    this.provider.prov = ArbProvider.provider(
-                      __dirname,
-                      'build/contracts',
-                      {
-                        'mnemonic': mnemonic,
-                      }
-                    );
-                }
-                return this.provider.prov
-              },
-              network_id: "*",
-            },
-          },
-        },
-        compilers: {
-          solc: {
-            version: "0.5.3",
-            docker: true,
-            settings: {
-              optimizer: {
-                enabled: true,
-                runs: 200
-              }
+    ```js
+    module.exports = {
+      networks: {
+        arbitrum: {
+          provider: function() {
+            if(!this.provider.prov) {
+                this.provider.prov = ArbProvider.provider(
+                  __dirname,
+                  'build/contracts',
+                  {
+                    'mnemonic': mnemonic,
+                  }
+                );
             }
+            return this.provider.prov
+          },
+          network_id: "*",
+        },
+      },
+    },
+    compilers: {
+      solc: {
+        version: "0.5.3",
+        docker: true,
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
           }
         }
-        ```
+      }
+    }
+    ```
 
         > Requires solc version `0.5.10` or below
 
-3. Modify your dapp to use the Arbitrum provider
+3.  Modify your dapp to use the Arbitrum provider
 
     Find the place in your code where you initialize the ethers (or web3) provider.
     For example, this might be in `src/index.js` or `src/app.js` or somewhere else.
