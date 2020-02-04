@@ -22,11 +22,11 @@
     "webpack-dev-server": "~3.7.2"
   },
   "dependencies": {
-    "arb-provider-truffle": "^0.2.0",
-    "arb-provider-ethers": "^0.2.0",
+    "arb-provider-ethers": "^0.3.0",
+    "arb-provider-truffle": "^0.3.3",
     "bootstrap": "3.4.1",
-    "jquery": "^3.4.1",
-    "ethers": "4.0.33"
+    "ethers": "4.0.33",
+    "jquery": "^3.4.1"
   },
   "workspaces": {
     "nohoist": []
