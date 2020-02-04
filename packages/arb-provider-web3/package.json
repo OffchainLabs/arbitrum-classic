@@ -20,7 +20,7 @@
   },
   "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "arb-provider-ethers": "^0.2.0",
+    "arb-provider-ethers": "^0.3.0",
     "ethers": "~4.0.33",
     "ethers-providers": "~2.1.19",
     "ethers-utils": "~2.1.11"
