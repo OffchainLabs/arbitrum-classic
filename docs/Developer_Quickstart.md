@@ -138,7 +138,7 @@ this dApp, you do not need to change any Solidity files.
     truffle migrate --network arbitrum
     ```
 
-2. Create a rollup chain and initialize 3 validators with the given `contract.ao`. This command will initialize your rollup chain and create a `validator-states` folder with configuration information on how to run your chain.
+2. Create a rollup chain with the given `contract.ao` and prepare 3 validators to validate it. This command will initialize your rollup chain and create a `validator-states` folder with configuration information on how to run your chain.
 
     ```bash
     ../../scripts/setup_rollup.py contract.ao 3
@@ -156,7 +156,7 @@ this dApp, you do not need to change any Solidity files.
 
 4. Examine the output from the previous step
 
-    When pet-shop is finished being deployed, start seeing blocks of text like:
+    When pet-shop is finished being deployed, you should start seeing blocks of text like:
 
     ```txt
     arb-validator1_1  | 2020/02/04 16:25:43
