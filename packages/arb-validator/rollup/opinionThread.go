@@ -233,6 +233,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
+	log.Println("timeBounds: ", timeBounds.Start.String(), timeBounds.End.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	currentHeight := chain.latestBlockId.Height.Clone()
 	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())

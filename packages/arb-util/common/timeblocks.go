@@ -50,7 +50,7 @@ func (tb *TimeBlocks) AsInt() *big.Int {
 }
 
 func BlocksFromSeconds(seconds int64) *TimeBlocks {
-	return (*TimeBlocks)(big.NewInt(int64(time.Duration(seconds) * time.Second / AverageDurationPerBlock)))
+	return (*TimeBlocks)(big.NewInt(int64(time.Duration(seconds) * time.Second / _durationPerBlock)))
 }
 
 func (tb *TimeBlocks) Duration() time.Duration {
@@ -67,4 +67,8 @@ func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
 
 func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
 	return (*TimeBlocks)(tb.Val.Unmarshal())
+}
+
+func (tb *TimeBlocks) String() string {
+	return tb.AsInt().String()
 }

@@ -142,7 +142,7 @@ func validateRollupChain() error {
 		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=N] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
 
-	common.AverageDurationPerBlock = time.Duration(*blocktime) * time.Second
+	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	// 2) Private key
 	keyFile, err := os.Open(validateCmd.Arg(1))
