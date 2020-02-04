@@ -1,6 +1,6 @@
 {
   "name": "arb-provider-web3",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Arbitrum provider for web3",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
