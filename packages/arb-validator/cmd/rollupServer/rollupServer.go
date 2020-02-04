@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
@@ -39,15 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
-const (
-	maxReorgDepth = 100
-)
-
-// Launches the rollup validator with the following command line arguments:
-// 1) Compiled Arbitrum bytecode file
-// 2) private key file
-// 3) Global EthBridge addresses json file
-// 4) ethURL
 func main() {
 	// Check number of args
 	flag.Parse()
@@ -66,7 +58,7 @@ func createRollupChain() {
 	// Check number of args
 	flag.Parse()
 	if flag.NArg() != 5 {
-		log.Fatalln("usage: rollupServer create <contract.ao> <private_key.txt> <ethURL> <bridge_eth_addresses.json>")
+		log.Fatalln("usage: rollupServer create <contract.ao> <private_key.txt> <ethURL> <factoryAddress>")
 	}
 
 	// 1) Compiled Arbitrum bytecode
@@ -134,12 +126,17 @@ func validateRollupChain() error {
 		return err
 	}
 
-	if validateCmd.NArg() != 5 {
-		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
+	if validateCmd.NArg() != 3 {
+		return errors.New("usage: rollupServer validate [--rpc] <validator_folder> <ethURL> <rollup_address>")
 	}
 
-	// 2) Private key
-	keyFile, err := os.Open(validateCmd.Arg(1))
+	validatorFolder := validateCmd.Arg(0)
+	ethURL := validateCmd.Arg(1)
+	addressString := validateCmd.Arg(2)
+	address := common.HexToAddress(addressString)
+
+	keyFilePath := filepath.Join(validatorFolder, "private_key.txt")
+	keyFile, err := os.Open(keyFilePath)
 	if err != nil {
 		return err
 	}
@@ -155,16 +152,6 @@ func validateRollupChain() error {
 	if err != nil {
 		return fmt.Errorf("HexToECDSA private key error: %v", err)
 	}
-
-	// 3) URL
-	ethURL := validateCmd.Arg(2)
-
-	// 4) Rollup contract address
-	addressString := validateCmd.Arg(3)
-	address := common.HexToAddress(addressString)
-
-	// 5) Database directory path
-	dbPath := validateCmd.Arg(4)
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
@@ -184,7 +171,9 @@ func validateRollupChain() error {
 		return err
 	}
 
-	manager, err := rollupmanager.CreateManager(address, client, validateCmd.Arg(0), dbPath)
+	contractFile := filepath.Join(validatorFolder, "contract.ao")
+	dbPath := filepath.Join(validatorFolder, "checkpoint_db")
+	manager, err := rollupmanager.CreateManager(address, client, contractFile, dbPath)
 
 	if err != nil {
 		return err

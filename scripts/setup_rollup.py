@@ -46,10 +46,9 @@ VALIDATOR_STATE_DIRNAME = "validator-states/validator"
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(args, sudo_flag=False):
 
-    if not build_validator_docker.is_built(sudo_flag):
-        print("arb-validator is not build, building now")
-        build_validator_docker.build_validator(sudo_flag)
-        return
+    if not args.nobuild:
+        if build_validator_docker.build_validator(sudo_flag) != 0:
+            exit(1)
 
     if os.path.isdir(setup_states.VALIDATOR_STATES):
         shutil.rmtree(setup_states.VALIDATOR_STATES)
@@ -70,13 +69,25 @@ def deploy(args, sudo_flag=False):
         args.contract, args.n_validators, image_name, args.is_geth, sudo_flag
     )
 
-    with open(
-        os.path.join(
-            setup_states.VALIDATOR_STATES, "validator0/bridge_eth_addresses.json"
-        )
-    ) as json_file:
+    ethaddrs = "bridge_eth_addresses.json"
+
+    layer = run(
+        "docker create %s" % image_name, capture_stdout=True, quiet=True, sudo=sudo_flag
+    ).strip()
+    if layer == "":
+        print("Docker image %s does not exist" % image_name)
+        return
+    run(
+        "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
+        sudo=sudo_flag,
+    )
+    run("docker rm %s" % layer, quiet=True, sudo=sudo_flag)
+
+    with open("bridge_eth_addresses.json") as json_file:
         data = json.load(json_file)
         factory_address = data["ArbFactory"]
+
+    os.remove(ethaddrs)
 
     rollup_creation_cmd = (
         "docker run -it --network=arb-network -v %s:/home/user/state arb-validator create state/contract.ao state/private_key.txt ws://%s:%s %s"
@@ -130,7 +141,7 @@ def main():
         type=int,
         help="The number of validators to deploy",
     )
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--ganache",
         action="store_true",
@@ -149,8 +160,18 @@ def main():
         dest="is_parity",
         help="Generate states based on arb-bridge-eth docker images",
     )
+    parser.add_argument(
+        "--no-build",
+        action="store_true",
+        dest="nobuild",
+        help="Don't rebuild the validator docker image",
+    )
 
     args = parser.parse_args()
+
+    if not args.is_parity and not args.is_ganache and not args.is_geth:
+        args.is_geth = True
+
     deploy(args)
 
 

@@ -24,7 +24,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose parity
+brew install python3 docker docker-compose parity rocksdb
 brew cask install docker
 open -a Docker
 ```
@@ -69,11 +69,9 @@ Here are the important dependencies in case you are not running on a supported O
 -   [parity](https://www.parity.io/ethereum)
 -   [yarn](https://yarnpkg.com/en/)
 
-> Requires `node -v` version 8 or 10
+> Requires `node -v` version 8, 10 or 12
 
 > Requires`python3 --version` 3.6 or greater
-
-> Requires `solc` 0.5.10 or less in `truffle version`
 
 ## Install Arbitrum
 
@@ -85,12 +83,6 @@ cd arbitrum
 yarn
 yarn build
 yarn install:deps
-```
-
-Build the local test blockchain docker image:
-
-```bash
-yarn docker:build:parity
 ```
 
 Check `arbc-truffle` was installed:
@@ -107,11 +99,16 @@ Expected output:
 
 In the current alpha, Arbitrum is setup to run against a local test blockchain rather than a public blockchain.
 
-To start the local blockchain with Arbitrum smart contracts already deployed,
-inside the Arbitrum monorepo run:
+To build a docker image hosting a the local test blockchain docker image with Arbitrum smart contracts already deployed, run:
 
 ```bash
-yarn docker:parity
+yarn docker:build:geth
+```
+
+To start the local blockchain inside the Arbitrum monorepo, run:
+
+```bash
+yarn docker:geth
 ```
 
 The local test blockchain should be running for all steps inside this tutorial. Note that
@@ -141,33 +138,34 @@ this dApp, you do not need to change any Solidity files.
     truffle migrate --network arbitrum
     ```
 
-2. Deploy `contract.ao` to 3 Validators
+2. Create a rollup chain and initialize 3 validators with the given `contract.ao`. This command will initialize your rollup chain and create a `validator-states` folder with configuration information on how to run your chain.
 
     ```bash
-    ../../scripts/arb_deploy.py contract.ao 3
+    ../../scripts/setup_rollup.py contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
     > builds are much faster. You can also use the `--up` flag to skip builds
     > if one has completed successfully before.
 
-3. Examine the output from the previous step
+3. Run the 3 validators
 
-    When pet-shop is finished being deployed, you should see output similar to this:
+    ```bash
+    ../../scripts/arb_deploy.py validator-states
+    ```
+
+4. Examine the output from the previous step
+
+    When pet-shop is finished being deployed, start seeing blocks of text like:
 
     ```txt
-    arb-validator-coordinator_1  | Finished waiting for arb-bridge-eth:7545...
-    arb-validator-coordinator_1  | 2019/08/09 23:49:12 Coordinator is trying to create the VM
-    arb-validator-coordinator_1  | 2019/08/09 23:49:13 http: TLS handshake error from 192.168.208.4:32963: EOF
-    arb-validator-coordinator_1  | 2019/08/09 23:49:13 http: TLS handshake error from 192.168.208.5:37875: EOF
-    arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator connected with follower 0x85794eceb590b9b53554bc6d28c964be00aaa893
-    arb-validator2_1             | 2019/08/09 23:49:15 Validator formed connection with coordinator
-    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator connected with follower 0xfbb0fc9161f9c824cb5ff5222166b7ea247e85ca
-    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator gathering signatures
-    arb-validator1_1             | 2019/08/09 23:49:15 Validator formed connection with coordinator
-    arb-validator-coordinator_1  | 2019/08/09 23:49:16 Coordinator created VM
+    arb-validator1_1  | 2020/02/04 16:25:43
+    arb-validator1_1  | == nodes:
+    arb-validator1_1  | ==   0:3097fd
+    arb-validator1_1  | ==     3:e01d08 leaf latestConfirmed stake:dec077 stake:bcaf2d
+    arb-validator1_1  | == stakers:
+    arb-validator1_1  | ==   depth:1 addr:dec077 created:5733000 loc:e01d08
+    arb-validator1_1  | ==   depth:1 addr:bcaf2d created:5733000 loc:e01d08
     ```
 
 ### Use the DApp
@@ -175,22 +173,18 @@ this dApp, you do not need to change any Solidity files.
 1. Install [Metamask](https://metamask.io/)
 
     > Once Metamask is installed, open it and select
-    > `Import Account` and enter one of the following private keys
-    > derived from the mnemonic listed above:
+    > `Import Account` and enter one of the following pre-funded private keys
     >
     > ```
-    > 0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
-    > 0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1
-    > 0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c
-    > 0x646f1ce2fdad0e6deeeb5c7e8e5543bdde65e86029e2fd9fc169899c440a7913
-    > 0xadd53f9a7e588d003326d1cbf9e4a43c061aadd9bc938c843a79e7b4fd2ad743
-    > 0x395df67f0c2d2d9fe1ad08d1bc8b6627011959b79c53d7dd6a3536a33ab8a4fd
+    > 0x979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76
+    > 0xd26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e
+    > 0xaf5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b
+    > 0x9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc
+    > 0x27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa
+    > 0xe4b33c0bb790b88f2463facaf86ae7c17cbdab41187e69ddde8cc1c1fda7c9ab
     > ```
 
-    This mnemonic is the default used by `arb_deploy.py` and these accounts will
-    be pre-funded.
-
-2. Select local network test in Metamask
+2) Select local network test in Metamask
 
     - Go back to Metamask or click the extension icon
     - Select `Main Ethereum Network` top right hand side
@@ -200,7 +194,7 @@ this dApp, you do not need to change any Solidity files.
     - Press the save button
     - Metamask should now have an Local Test account holding ETH
 
-3. Launch the front-end
+3) Launch the front-end
 
     In another session navigate to `demos/pet-shop` and run:
 
@@ -212,7 +206,7 @@ this dApp, you do not need to change any Solidity files.
 
     In the popup window that appears, select `Connect`
 
-4. Adopt some pets
+4) Adopt some pets
 
     The pet shop dapp should now be running in your browser. Choose a pet or two
     and click the adopt button to adopt your new animal friend(s).
@@ -225,7 +219,8 @@ Solidity contract and deploy validators:
 ```bash
 cd demos/election
 truffle migrate --network arbitrum
-../../scripts/arb_deploy.py contract.ao 3
+../../scripts/setup_rollup.py contract.ao 3
+../../scripts/arb_deploy.py validator-states
 ```
 
 Then open a new command line session, navigate to `demos/election`, and run:
@@ -283,39 +278,25 @@ Move your project folder into `arbitrum/workspace/projectname` in order to pick 
 
     ```js
     module.exports = {
-      networks: {
-        arbitrum: {
-          provider: function() {
-            if(!this.provider.prov) {
-                this.provider.prov = ArbProvider.provider(
-                  __dirname,
-                  'build/contracts',
-                  {
-                    'mnemonic': mnemonic,
-                  }
-                );
+        networks: {
+            arbitrum: {
+                provider: function() {
+                    if (!this.provider.prov) {
+                        this.provider.prov = ArbProvider.provider(
+                            __dirname,
+                            "build/contracts",
+                            {
+                                mnemonic: mnemonic
+                            }
+                        );
+                    }
+                    return this.provider.prov;
+                },
+                network_id: "*"
             }
-            return this.provider.prov
-          },
-          network_id: "*",
-        },
-      },
-    },
-    compilers: {
-      solc: {
-        version: "0.5.3",
-        docker: true,
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
         }
-      }
-    }
+    };
     ```
-
-        > Requires solc version `0.5.10` or below
 
 3.  Modify your dapp to use the Arbitrum provider
 
@@ -382,13 +363,14 @@ the Truffle project into Arbitrum bytecode:
 Run the following command to generate `contract.ao`:
 
 ```bash
-truffle migrate --reset --compile-all --network arbitrum
+truffle migrate --reset --network arbitrum
 ```
 
 ### Run the Validators
 
 ```bash
-../../scripts/arb_deploy.py contract.ao 3
+../../scripts/setup_rollup.py contract.ao 3
+../../scripts/arb_deploy.py validator-states
 ```
 
 ### Run the front-end
