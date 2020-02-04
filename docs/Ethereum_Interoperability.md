@@ -1,4 +1,8 @@
-# Ethereum Interoperability
+---
+id: Ethereum_Interoperability
+title: Ethereum / Arbitrum Interoperability
+sidebar_label: Ethereum Interoperability
+---
 
 ## Payments and tokens in Arbitrum Chains
 
@@ -6,7 +10,7 @@ An Arbitrum chain functions as an independent blockchain with its security built
 
 Currently Eth as well as any token confirming to ether the ERC-20 or ERC-721 standard can be transferred over to an Arbitrum chain.
 
-All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain.  Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
+All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
 
 ### Ethereum to Arbitrum
 
@@ -16,7 +20,7 @@ As far as Ethereum knows, all deposited funds are held by Arbitrum's global EthB
 
 In order to programmatically trigger transfers, call one of the following methods in the [`GlobalPendingInbox`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/GlobalPendingInbox.sol) contract with the chain address equal to the address of the Arbitrum Rollup chain.
 
-```javascript
+```
 function depositEthMessage(address chain, address to) external payable;
 function depositERC20Message(
         address chain,
@@ -38,7 +42,7 @@ function depositERC721Message(
 
 -   Eth: The ArbSys library can be used to withdraw Eth, `ArbSys(100).withdrawEth(destAddress, amount)`
 -   ERC-20 and ERC-721: The system generated token contracts in Arbitrum contain a withdraw method
-    ```js
+    ```
     function withdraw(address account, uint256 amount) public; // ERC-20
     function withdraw(address account, uint256 tokenId) public; // ERC-721
     ```
@@ -52,7 +56,7 @@ At any time you can call the EthBridge to recover the funds in your lockbox.
 
 All transaction calls on the Arbitrum chain are sent through the EthBridge using:
 
-```js
+```
 function sendTransactionMessage(
         address chain,
         address to,
