@@ -21,28 +21,23 @@ import (
 	"time"
 )
 
-const (
-	AverageSecondsPerBlock = 2
-)
-
 type TimeTicks struct {
 	Val *big.Int
 }
 
-var _timeConversionFactor *big.Int
-var _timeTicksPerSecond *big.Int
-
-func init() {
-	_timeTicksPerSecond = big.NewInt(1000)
-	_timeConversionFactor = new(big.Int).Mul(big.NewInt(13), _timeTicksPerSecond)
-}
+const _timeTicksPerBlock = int64(1000)
 
 func TimeFromBlockNum(blockNum *TimeBlocks) TimeTicks {
-	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
+	return TimeTicks{new(big.Int).Mul(big.NewInt(_timeTicksPerBlock), blockNum.AsInt())}
 }
 
 func TimeFromSeconds(seconds int64) TimeTicks {
-	return TimeTicks{new(big.Int).Mul(_timeTicksPerSecond, big.NewInt(seconds))}
+	return TimeTicks{
+		new(big.Int).Div(
+			new(big.Int).Mul(big.NewInt(_timeTicksPerBlock), big.NewInt(int64(time.Duration(seconds)*time.Second))),
+			big.NewInt(int64(_durationPerBlock)),
+		),
+	}
 }
 
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
@@ -54,7 +49,7 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 }
 
 func (rt TimeTicks) Duration() time.Duration {
-	return time.Millisecond * time.Duration(AverageSecondsPerBlock*rt.Val.Int64()/13)
+	return _durationPerBlock * time.Duration(rt.Val.Int64()) / time.Duration(_timeTicksPerBlock)
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {

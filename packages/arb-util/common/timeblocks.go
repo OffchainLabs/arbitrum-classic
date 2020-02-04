@@ -23,6 +23,16 @@ import (
 
 type TimeBlocks big.Int
 
+var _durationPerBlock time.Duration
+
+func init() {
+	_durationPerBlock = time.Duration(2) * time.Second
+}
+
+func SetDurationPerBlock(d time.Duration) {
+	_durationPerBlock = d
+}
+
 func NewTimeBlocks(val *big.Int) *TimeBlocks {
 	return (*TimeBlocks)(val)
 }
