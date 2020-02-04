@@ -1,6 +1,6 @@
 {
   "name": "arb-provider-truffle",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Arbitrum provider for truffle",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
