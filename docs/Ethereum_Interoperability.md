@@ -1,4 +1,8 @@
-# Ethereum Interoperability
+---
+id: Ethereum_Interoperability
+title: Ethereum / Arbitrum Interoperability
+sidebar_label: Ethereum Interoperability
+---
 
 ## Payments and tokens in Arbitrum Chains
 
@@ -6,7 +10,7 @@ An Arbitrum chain functions as an independent blockchain with its security built
 
 Currently Eth as well as any token confirming to ether the ERC-20 or ERC-721 standard can be transferred over to an Arbitrum chain.
 
-All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain.  Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
+All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
 
 ### Ethereum to Arbitrum
 
