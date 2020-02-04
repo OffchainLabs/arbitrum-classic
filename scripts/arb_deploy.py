@@ -53,15 +53,15 @@ services:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate --rpc state/contract.ao state/private_key.txt ws://dockerhost:%s %s %s
+        command: validate --rpc state ws://dockerhost:%s %s
         ports:
             - '1235:1235'
             - '1236:1236'
 """
 
 
-def compose_header(state_abspath, ws_port, rollup_address, db_path):
-    return COMPOSE_HEADER % (state_abspath, ws_port, rollup_address, db_path)
+def compose_header(state_abspath, ws_port, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, ws_port, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -73,19 +73,13 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate state/contract.ao state/private_key.txt ws://dockerhost:%s %s %s
+        command: validate state ws://dockerhost:%s %s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, ws_port, rollup_address, db_path):
-    return COMPOSE_VALIDATOR % (
-        validator_id,
-        state_abspath,
-        ws_port,
-        rollup_address,
-        db_path,
-    )
+def compose_validator(validator_id, state_abspath, ws_port, rollup_address):
+    return COMPOSE_VALIDATOR % (validator_id, state_abspath, ws_port, rollup_address)
 
 
 ### ----------------------------------------------------------------------------
@@ -110,13 +104,9 @@ def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
     )
     compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
 
-    contents = compose_header(
-        states_path % 0, ws_port, rollup_address, "state/checkpoint_db"
-    ) + "".join(
+    contents = compose_header(states_path % 0, ws_port, rollup_address) + "".join(
         [
-            compose_validator(
-                i, states_path % i, ws_port, rollup_address, "state/checkpoint_db"
-            )
+            compose_validator(i, states_path % i, ws_port, rollup_address)
             for i in range(1, n_validators)
         ]
     )
