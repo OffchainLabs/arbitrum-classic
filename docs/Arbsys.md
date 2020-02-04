@@ -1,4 +1,8 @@
-# The ArbSys precompiled contract
+---
+id: Arbsys
+title: The ArbSys Precompiled Contract
+sidebar_label: ArbSys Precompiled Contract
+---
 
 ArbSys is a precompiled contract that exists in every Arbitrum Chain.
 As its name would imply, ArbSys provides systems functionality useful to some Arbitrum contracts.
