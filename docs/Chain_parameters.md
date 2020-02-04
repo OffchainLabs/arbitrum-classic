@@ -3,7 +3,7 @@
 When you create an ArbChain, you have to specify some parameters for the chain. 
 This document describes these parameters and recommends how to set them.
 
-[place-holder for info about command-line option to choose default settings]
+Note: If you run rollupServer without any options regarding parameters, you will get the recommended default parameter values.
 
 The parameters are:
 * stake requirement: This specifies how many Eth a validator must deposit as a stake. 
@@ -27,7 +27,7 @@ For executing in a production-like setting, we suggest the following parameters:
 * max execution steps: 1,000,000,000
 * speed limit: 100,000,000 ArbGas per second
 
-(We say "production-like setting" because we do not recommend use of the Arbitrum Rollup beta release for true
+(We say "production-like setting" because we do not currently recommend use of Arbitrum Rollup in a true
 production setting on the main chain.)
 
 ## Recommended parameters for debugging
