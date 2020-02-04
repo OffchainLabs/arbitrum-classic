@@ -47,6 +47,7 @@ contract NodeGraph is ChallengeType {
     string constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
     string constant PRUNE_LEAF = "PRUNE_LEAF";
+    string constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
     string constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
 
     uint256 constant VALID_CHILD_TYPE = 3;
@@ -127,6 +128,7 @@ contract NodeGraph is ChallengeType {
         uint256 prevConfOffset = 0;
         for (uint256 i = 0; i < pruneCount; i++) {
             bytes32 from = fromNodes[i];
+            require(leafProofLengths[i] > 0 && latestConfirmedProofLengths[i] > 0, PRUNE_PROOFLEN);
             uint256 nextLeafOffset = prevLeafOffset + leafProofLengths[i];
             uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLengths[i];
 
