@@ -82,5 +82,5 @@ The client program will then read the call's result from the log item.
 ## Other topics
 
 There are some other topics that have documentation pages of their own:
-* [Eth and tokens in Arbitrum](Payments_and_tokens.md)
+* [Ethereum interoperability](Ethereum_Interoperability.md)
 * [Finality and confirmation in Arbitrum](Finality.md)
