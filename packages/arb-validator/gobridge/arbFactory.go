@@ -1,4 +1,4 @@
-package mockbridge
+package gobridge
 
 import (
 	"context"
@@ -50,7 +50,7 @@ func (con *ArbFactory) CreateRollup(
 		escrowRequired:  params.StakeRequirement,
 		owner:           owner,
 		events:          events,
-		creation:        con.client.MockEthClient.NextBlock,
+		creation:        con.client.MockEthClient.getCurrentBlock(),
 		stakers:         make(map[common.Address]*staker),
 		leaves:          make(map[common.Hash]bool),
 		lastConfirmed:   initialNode,

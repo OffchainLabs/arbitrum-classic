@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/gobridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -75,17 +75,17 @@ func testChallenge(
 		return err
 	}
 
-	//gobridge := false
-	gobridge := true
+	//usegobridge := false
+	usegobridge := true
 	var client1 arbbridge.ArbAuthClient
 	var client2 arbbridge.ArbAuthClient
-	if gobridge {
-		c, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
+	if usegobridge {
+		c, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
 		if err != nil {
 			return err
 		}
 		client1 = c
-		c2, err := mockbridge.NewEthAuthClient(ethURL, &mockbridge.TransOpts{From: common.NewAddressFromEth(auth2.From)})
+		c2, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth2.From)})
 		if err != nil {
 			return err
 		}
@@ -117,6 +117,7 @@ func testChallenge(
 		return errors2.Wrap(err, "Error deploying challenge")
 	}
 
+	fmt.Println("in testHelper.go - starting challenge")
 	challengeAddress, blockId, err := tester.StartChallenge(
 		context.Background(),
 		client1.Address(),

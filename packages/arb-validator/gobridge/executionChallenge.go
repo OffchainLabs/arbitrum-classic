@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -29,7 +30,8 @@ type ExecutionChallenge struct {
 	*bisectionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (*ExecutionChallenge, error) {
+func NewExecutionChallenge(address common.Address, client *MockArbAuthClient) (*ExecutionChallenge, error) {
+	fmt.Println("in NewExecutionChallenge")
 	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
@@ -45,6 +47,7 @@ func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (
 }
 
 func (c *ExecutionChallenge) setupContracts() error {
+	fmt.Println("in ExecutionChallenge setupContracts")
 	//	challengeManagerContract, err := executionchallenge.NewExecutionChallenge(c.address, c.Client)
 	//	if err != nil {
 	//		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
@@ -55,6 +58,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 }
 
 func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+	fmt.Println("in ExecutionChallenge GetEvents")
 	return nil, nil
 }
 
@@ -103,6 +107,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
+	fmt.Println("in ExecutionChallenge BisectAssertion")
 	//machineHashes := make([][32]byte, 0, len(assertions)+1)
 	//didInboxInsns := make([]bool, 0, len(assertions))
 	//messageAccs := make([][32]byte, 0, len(assertions)+1)
@@ -143,6 +148,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
+	fmt.Println("in ExecutionChallenge OneStepProof")
 	//c.auth.Context = ctx
 	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
@@ -215,6 +221,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
+	fmt.Println("in ExecutionChallenge ChooseSegment")
 	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
 		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)

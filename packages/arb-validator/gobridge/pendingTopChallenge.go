@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
@@ -29,7 +29,7 @@ type pendingTopChallenge struct {
 	*bisectionChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*pendingTopChallenge, error) {
+func NewPendingTopChallenge(address common.Address, client *MockArbAuthClient) (*pendingTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

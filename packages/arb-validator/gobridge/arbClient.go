@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
@@ -34,12 +34,12 @@ var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
 type MockArbClient struct {
-	MockEthClient *mockEthdata
+	MockEthClient *goEthdata
 }
 
 func NewEthClient(ethURL string) (*MockArbClient, error) {
-	// call to mockEth.go - getMockEth(ethURL)
-	client := MockArbClient{getMockEth(ethURL)}
+	// call to goEth.go - getGoEth(ethURL)
+	client := MockArbClient{getGoEth(ethURL)}
 
 	return &client, nil
 }
@@ -56,12 +56,12 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 			var nextBlock *structures.BlockId
 			fetchErrorCount := 0
 			for {
-				//var err error
-				//var ok bool
+				if prevBlockId == nil {
+					fmt.Println("prevBlockId nil")
+				}
 				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
-				//nextBlock, ok = c.MockEthClient.blockNumbers[nextHeight]
-				n, ok := c.MockEthClient.blockNumbers[nextHeight.AsInt().Uint64()]
-				if ok {
+				n, notFound := c.MockEthClient.getBlockFromHeight(nextHeight)
+				if notFound == nil {
 					// Got next header
 					nextBlock = n
 					break
@@ -74,7 +74,7 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 				default:
 				}
 
-				if !ok {
+				if notFound != nil {
 					log.Printf("Failed to fetch next header on attempt %v", fetchErrorCount)
 					fetchErrorCount++
 				}
@@ -89,7 +89,7 @@ func (c *MockArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId 
 				time.Sleep(headerRetryDelay)
 			}
 
-			if c.MockEthClient.parentHashes[nextBlock] != prevBlockId.HeaderHash {
+			if c.MockEthClient.parentHashes[*nextBlock] != prevBlockId.HeaderHash {
 				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
 				return
 			}
@@ -111,15 +111,15 @@ func (c *MockArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbR
 }
 
 func (c *MockArbClient) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
-	return newExecutionChallengeWatcher(address.ToEthAddress(), c)
+	return newExecutionChallengeWatcher(address, c)
 }
 
 func (c *MockArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
-	return newMessagesChallengeWatcher(address.ToEthAddress(), c)
+	return newMessagesChallengeWatcher(address, c)
 }
 
 func (c *MockArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
-	return newPendingTopChallengeWatcher(address.ToEthAddress(), c)
+	return newPendingTopChallengeWatcher(address, c)
 }
 
 func (c *MockArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
@@ -131,9 +131,15 @@ func (c *MockArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId
 }
 
 func (c *MockArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
-	block, err := c.MockEthClient.blockNumbers[height.AsInt().Uint64()]
-	if err {
-		return nil, errors.New("block height not found")
+	//if height == nil {panic("nill height")}
+	//fmt.Println("blockNumbers", c.MockEthClient.blockNumbers)
+	//fmt.Println("height", height)
+	//fmt.Println("height.AsInt().Uint64()", height.AsInt().Uint64())
+	//fmt.Println("c.MockEthClient.blockNumbers[height.AsInt().Uint64()]", c.MockEthClient.blockNumbers[height])
+	block, err := c.MockEthClient.getBlockFromHeight(height)
+	if err != nil {
+		errstr := fmt.Sprintln("block height", height, " not found")
+		return nil, errors.New(errstr)
 	}
 	return block, nil
 }

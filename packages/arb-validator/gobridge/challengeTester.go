@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
@@ -72,20 +73,21 @@ func (con *ChallengeTester) StartChallenge(
 
 	// create clone
 	newAddr := eth.getNextAddress()
-	eth.challenges[newAddr] = &challengeData{challengePeriod}
+	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod}
 
 	//initializeBisection
 	eth.challenges[newAddr].deadline = common.TimeFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
 	// emit InitiatedChallenge
 	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: eth.NextBlock,
+			BlockId: eth.getCurrentBlock(),
 		},
 		Deadline: eth.challenges[newAddr].deadline,
 	}
+	fmt.Println("challengeTester - publishing InitiateChallengeEvent")
 	eth.pubMsg(arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
 	//return clone address
-	return newAddr, eth.NextBlock, nil
+	return newAddr, eth.getLastBlock(), nil
 }

@@ -203,6 +203,7 @@ func defendMessages(
 		if !ok {
 			return 0, fmt.Errorf("MessagesChallenge defender expected MessagesBisectionEvent but got %T", event)
 		}
+		fmt.Println("in defendMessages - received MessagesBisectionEvent")
 
 		event, state, err = getNextEventWithTimeout(
 			ctx,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
@@ -90,17 +90,17 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	//emit RollupStakeCreated(msg.sender, location);
 	event := arbbridge.StakeCreatedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		Staker:   vm.Client.auth.From,
 		NodeHash: location,
 	}
-	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock], event)
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()], event)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: event,
 		//Event: arbbridge.StakeCreatedEvent{
 		//	ChainInfo: arbbridge.ChainInfo{
-		//		BlockId: vm.Client.MockEthClient.NextBlock,
+		//		BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		//	},
 		//	Staker:   vm.Client.auth.From,
 		//	NodeHash: location,
@@ -118,7 +118,7 @@ func createStake(vm *arbRollup, stakeAmount *big.Int, location common.Hash) erro
 		return errors.New("staker already exists")
 	}
 	// require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
-	vm.rollup.stakers[vm.Client.auth.From] = &staker{location, vm.Client.MockEthClient.NextBlock.Height, false, stakeAmount}
+	vm.rollup.stakers[vm.Client.auth.From] = &staker{location, vm.Client.MockEthClient.getCurrentBlock().Height, false, stakeAmount}
 	//emit RollupStakeCreated(msg.sender, location);
 
 	return nil
@@ -130,16 +130,16 @@ func refundStaker(vm *arbRollup, staker common.Address) {
 	// TODO:
 	//transfer stake requirement
 	// ???
-	_ = append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events[vm.Client.MockEthClient.NextBlock], arbbridge.StakeRefundedEvent{
+	_ = append(vm.Client.MockEthClient.rollups[vm.Client.Address()].events[vm.Client.MockEthClient.getCurrentBlock()], arbbridge.StakeRefundedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		Staker: staker,
 	})
 	//vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 	//	Event: arbbridge.StakeRefundedEvent{
 	//		ChainInfo: arbbridge.ChainInfo{
-	//			BlockId: vm.Client.MockEthClient.NextBlock,
+	//			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 	//		},
 	//		Staker: staker,
 	//	},
@@ -170,7 +170,7 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.NextBlock,
+				BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 			},
 			Staker: vm.Client.auth.From,
 		},
@@ -244,7 +244,7 @@ func (vm *arbRollup) RecoverStakePassedDeadline(
 	//???
 	//require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
 	//require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
-	if common.TimeFromBlockNum(vm.Client.MockEthClient.NextBlock.Height).Val.Cmp(deadlineTicks) < 0 {
+	if common.TimeFromBlockNum(vm.Client.MockEthClient.getCurrentBlock().Height).Val.Cmp(deadlineTicks) < 0 {
 		return errors.New("Node is not passed deadline")
 	}
 	//refundStaker(stakerAddress);
@@ -272,7 +272,7 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.StakeRefundedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.NextBlock,
+				BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 			},
 			Staker: vm.Client.auth.From,
 		},
@@ -308,7 +308,7 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.PrunedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: vm.Client.MockEthClient.NextBlock,
+				BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 			},
 			Leaf: leaf,
 		},
@@ -399,7 +399,7 @@ func (vm *arbRollup) MakeAssertion(
 	//require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
 	//block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1]
 	//if !withinTimeBounds(assertionParams.TimeBounds) {
-	if assertionParams.TimeBounds.IsValidTime(vm.Client.MockEthClient.NextBlock.Height) != nil {
+	if assertionParams.TimeBounds.IsValidTime(vm.Client.MockEthClient.getCurrentBlock().Height) != nil {
 		return errors.New("makeAssertion - Precondition: not within time bounds")
 	}
 	//require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
@@ -421,7 +421,7 @@ func (vm *arbRollup) MakeAssertion(
 	//if (deadlineTicks < data.prevDeadlineTicks) {
 	//deadlineTicks = data.prevDeadlineTicks;
 	//}
-	currentTicks := common.TimeFromBlockNum(vm.Client.MockEthClient.NextBlock.Height)
+	currentTicks := common.TimeFromBlockNum(vm.Client.MockEthClient.getCurrentBlock().Height)
 	deadlineTicks := currentTicks.Add(vm.params.GracePeriod)
 	if deadlineTicks.Cmp(prevDeadline) < 0 {
 		return errors.New("Node is not passed deadline")
@@ -589,7 +589,7 @@ func (vm *arbRollup) MakeAssertion(
 
 	event := arbbridge.AssertedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		PrevLeafHash:    prevLeaf,
 		Params:          assertionParams,
@@ -597,7 +597,7 @@ func (vm *arbRollup) MakeAssertion(
 		MaxPendingTop:   beforeState.PendingTop,
 		MaxPendingCount: beforeState.PendingCount,
 	}
-	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock], event)
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()], event)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: event,
 	})
@@ -615,13 +615,13 @@ func (vm *arbRollup) MakeAssertion(
 	//emit RollupStakeRefunded(address(_stakerAddress));
 	stakeMovedEvent := arbbridge.StakeMovedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		Staker:   vm.Client.auth.From,
 		Location: valid,
 	}
 	fmt.Println("Publishing StakeMovedEvent to location", valid)
-	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.NextBlock], stakeRefundedEvent)
+	//vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()] = append(vm.Client.MockEthClient.rollups[vm.rollup.contractAddress].events[vm.Client.MockEthClient.getCurrentBlock()], stakeRefundedEvent)
 	vm.Client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: stakeMovedEvent,
 	})
@@ -644,7 +644,7 @@ func (vm *arbRollup) ConfirmValid(
 	fmt.Println("   ----  in ConfirmValid")
 
 	var lastMsgHash common.Hash
-	if outMsgs != nil {
+	if outMsgs != nil && len(outMsgs) > 0 {
 		lastMsgHash = outMsgs[len(outMsgs)-1].Hash()
 	}
 
@@ -665,7 +665,7 @@ func (vm *arbRollup) ConfirmValid(
 
 	ConfirmedAssertionEvent := arbbridge.ConfirmedAssertionEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		LogsAccHash: logsAccHash,
 	}
@@ -740,7 +740,7 @@ func (vm *arbRollup) confirmNode(
 
 	ConfirmedEvent := arbbridge.ConfirmedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.MockEthClient.NextBlock,
+			BlockId: vm.Client.MockEthClient.getCurrentBlock(),
 		},
 		NodeHash: to,
 	}
@@ -829,6 +829,7 @@ func (vm *arbRollup) StartChallenge(
 	//	Staker storage challenger = getValidStaker(challengerAddress);
 	// get asserter and challenger
 	eth := vm.Client.MockEthClient
+	fmt.Println("*************starting challenge")
 	asserter, ok := vm.rollup.stakers[asserterAddress]
 	if !ok {
 		return errors.New("unknown asserter")
@@ -944,7 +945,7 @@ func (vm *arbRollup) StartChallenge(
 	}
 	// generate address
 	newAddr := eth.getNextAddress()
-	eth.challenges[newAddr] = &challengeData{common.TimeTicks{disputableDeadline}}
+	eth.challenges[newAddr] = &challengeData{deadline: common.TimeTicks{disputableDeadline}}
 	// initialize bisection
 	//save data
 	// deadline = current + challenge period
@@ -952,13 +953,15 @@ func (vm *arbRollup) StartChallenge(
 	// emit InitiatedChallenge
 	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: eth.NextBlock,
+			BlockId: eth.getCurrentBlock(),
 		},
 		Deadline: eth.challenges[newAddr].deadline,
 	}
+	fmt.Println("publishing InitiateChallengeEvent")
 	eth.pubMsg(arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
+	fmt.Println("after publishing InitiateChallengeEvent")
 
 	//
 	//	challenges[newChallengeAddr] = true;
@@ -973,13 +976,14 @@ func (vm *arbRollup) StartChallenge(
 	// publish challenge address
 	ChallengeStartedEvent := arbbridge.ChallengeStartedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: eth.NextBlock,
+			BlockId: eth.getCurrentBlock(),
 		},
 		Asserter:          asserterAddress,
 		Challenger:        challengerAddress,
 		ChallengeType:     asserterPosition,
 		ChallengeContract: newAddr,
 	}
+	fmt.Println("publishing ChallengeStartedEvent")
 	eth.pubMsg(arbbridge.MaybeEvent{
 		Event: ChallengeStartedEvent,
 	})

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
@@ -44,10 +44,10 @@ type pendingTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	contract *pendingtopchallenge.PendingTopChallenge
 	client   *MockArbClient
-	address  ethcommon.Address
+	address  common.Address
 }
 
-func newPendingTopChallengeWatcher(address ethcommon.Address, client *MockArbClient) (*pendingTopChallengeWatcher, error) {
+func newPendingTopChallengeWatcher(address common.Address, client *MockArbClient) (*pendingTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
+	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"math/big"
 )
 
 var continuedChallengeID ethcommon.Hash
@@ -32,7 +33,7 @@ type bisectionChallenge struct {
 	//challengeState
 }
 
-func newBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*bisectionChallenge, error) {
+func newBisectionChallenge(address common.Address, client *MockArbAuthClient) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client)
 	if err != nil {
 		return nil, err
@@ -49,6 +50,7 @@ func (c *bisectionChallenge) chooseSegment(
 	segmentToChallenge uint16,
 	segments []common.Hash,
 ) error {
+	fmt.Println("in bisectionChallenge - chooseSegment")
 	//tree := NewMerkleTree(segments)
 	//c.auth.Context = ctx
 	//tx, err := c.bisectionChallenge.ChooseSegment(
@@ -62,6 +64,7 @@ func (c *bisectionChallenge) chooseSegment(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "ChooseSegment")
+
 	//require(_bisectionRoot == challengeState, CON_PREV);
 	//require(
 	//	MerkleLib.verifyProof(
@@ -77,6 +80,15 @@ func (c *bisectionChallenge) chooseSegment(
 	//
 	//challengerResponded();
 	//emit Continued(_segmentToChallenge, deadlineTicks);
+	c.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.ContinueChallengeEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.MockEthClient.getCurrentBlock(),
+			},
+			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
+			Deadline:     c.client.MockEthClient.challenges[c.contractAddress].deadline,
+		},
+	})
 
 	return nil
 }
@@ -86,7 +98,7 @@ type bisectionChallengeWatcher struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallengeWatcher(address ethcommon.Address, client arbbridge.ArbClient) (*bisectionChallengeWatcher, error) {
+func newBisectionChallengeWatcher(address common.Address, client *MockArbClient) (*bisectionChallengeWatcher, error) {
 	challenge, err := newChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -109,17 +121,18 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.challengeWatcher.topics()...)
 }
 
-func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
-	if log.Topics[0] == continuedChallengeID {
-		contChal, err := c.BisectionChallenge.ParseContinued(log)
-		if err != nil {
-			return nil, err
-		}
-		return arbbridge.ContinueChallengeEvent{
-			SegmentIndex: contChal.SegmentIndex,
-			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
-		}, nil
-	} else {
-		return c.challengeWatcher.parseChallengeEvent(log)
-	}
-}
+//
+//func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
+//	if log.Topics[0] == continuedChallengeID {
+//		contChal, err := c.BisectionChallenge.ParseContinued(log)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return arbbridge.ContinueChallengeEvent{
+//			SegmentIndex: contChal.SegmentIndex,
+//			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
+//		}, nil
+//	} else {
+//		return c.challengeWatcher.parseChallengeEvent(log)
+//	}
+//}

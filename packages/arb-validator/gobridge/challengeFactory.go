@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -26,11 +25,11 @@ import (
 
 type challengeFactory struct {
 	contract common.Address
-	client   arbbridge.ArbClient
+	client   *MockArbAuthClient
 	auth     *TransOpts
 }
 
-func newChallengeFactory(address common.Address, client arbbridge.ArbClient, auth *TransOpts) (*challengeFactory, error) {
+func newChallengeFactory(address common.Address, client *MockArbAuthClient, auth *TransOpts) (*challengeFactory, error) {
 	//vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
@@ -71,5 +70,5 @@ func (con *challengeFactory) CreateChallenge(
 	//return common.NewAddressFromEth(receipt.Logs[0].Address), nil
 	// create challenge
 	// return address of new challenge contract
-	return *new(common.Address), nil
+	return con.client.MockEthClient.getNextAddress(), nil
 }

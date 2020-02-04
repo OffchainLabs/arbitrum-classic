@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -42,7 +43,7 @@ func HandleBlockchainEvents(
 		}
 		for maybeBlockId := range headersChan {
 			if maybeBlockId.Err != nil {
-				log.Println("error in challenge", err)
+				log.Println("error in challenge", maybeBlockId.Err)
 				return
 			}
 
@@ -53,15 +54,19 @@ func HandleBlockchainEvents(
 				log.Println("error in challenge", err)
 				return
 			}
+			fmt.Println("events:", events)
 
+			fmt.Println("HandleBlockchainEvents: startBlockId", startBlockId, "blockId:", blockId)
 			if blockId.Height.Cmp(startBlockId.Height) == 0 {
 				for _, event := range events {
 					if event.GetChainInfo().LogIndex >= startLogIndex {
+						fmt.Printf("sending event type %T to eventChan \n", event)
 						eventChan <- event
 					}
 				}
 			} else {
 				for _, event := range events {
+					fmt.Printf("sending event type %T to eventChan\n", event)
 					eventChan <- event
 				}
 			}

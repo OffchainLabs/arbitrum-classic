@@ -67,7 +67,7 @@ func CreateManager(
 			aoFilePath,
 			dbPath,
 			big.NewInt(defaultMaxReorgDepth),
-			false,
+			true,
 		),
 	)
 }

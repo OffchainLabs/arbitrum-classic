@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package mockbridge
+package gobridge
 
 import (
+	"errors"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -88,6 +89,7 @@ type rollupData struct {
 }
 
 type challengeData struct {
+	sync.Mutex
 	deadline common.TimeTicks
 }
 
@@ -107,23 +109,25 @@ type void struct{}
 
 var Void void
 
-// mockEthData one per 'URL'
-type mockEthdata struct {
-	//sync.Mutex
-	Vm             map[common.Address]*VmData
-	channels       map[common.Address]*channelData
-	rollups        map[common.Address]*rollupData    // contract address to rollup
-	challenges     map[common.Address]*challengeData // contract address to rollup
-	arbFactory     common.Address                    // eth address to factory address
-	nextAddress    common.Address                    // unique 'address'
-	BlockNumber    uint64
-	pending        map[common.Address]*PendingInbox
-	NextBlock      *structures.BlockId
-	LastMinedBlock *structures.BlockId
+// goEthData one per 'URL'
+type goEthdata struct {
+	blockMutex        sync.Mutex
+	Vm                map[common.Address]*VmData
+	channels          map[common.Address]*channelData
+	rollups           map[common.Address]*rollupData    // contract address to rollup
+	challenges        map[common.Address]*challengeData // contract address to rollup
+	challengeWatchers map[*challengeData]map[*structures.BlockId][]arbbridge.Event
+	arbFactory        common.Address // eth address to factory address
+	nextAddress       common.Address // unique 'address'
+	nextMsgs          map[*structures.BlockId][]arbbridge.MaybeEvent
+	BlockNumber       uint64
+	pending           map[common.Address]*PendingInbox
+	NextBlock         *structures.BlockId
+	LastMinedBlock    *structures.BlockId
 	//LatestHeight *big.Int
 	blockNumbers map[uint64]*structures.BlockId      // block height to blockId
 	blockHashes  map[common.Hash]*structures.BlockId // block hash to blockId
-	parentHashes map[*structures.BlockId]common.Hash // blokcId to block hash
+	parentHashes map[structures.BlockId]common.Hash  // blokcId to block hash
 	//headerNumber map[*big.Int]common.Hash
 	//headerhash   map[common.Hash]*big.Int
 
@@ -135,16 +139,18 @@ type mockEthdata struct {
 	//create channel manager for adding, removing and publishing to list of outchans
 }
 
-var MockEth map[string]*mockEthdata
+var GoEth map[string]*goEthdata
 
 var once map[string]*sync.Once
+var onceMutex sync.Mutex
 
 func init() {
-	MockEth = make(map[string]*mockEthdata)
+	GoEth = make(map[string]*goEthdata)
 }
 
-func getMockEth(ethURL string) *mockEthdata {
+func getGoEth(ethURL string) *goEthdata {
 	// once for each ethURL, set up data
+	onceMutex.Lock()
 	tmpOnce, ok := once[ethURL]
 	if !ok {
 		once = make(map[string]*sync.Once)
@@ -153,32 +159,35 @@ func getMockEth(ethURL string) *mockEthdata {
 	}
 	tmpOnce.Do(func() {
 		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
-		mEthData := new(mockEthdata)
-		MockEth[ethURL] = mEthData
+		mEthData := new(goEthdata)
+		GoEth[ethURL] = mEthData
 		mEthData.Vm = make(map[common.Address]*VmData)
 		mEthData.channels = make(map[common.Address]*channelData)
 		mEthData.rollups = make(map[common.Address]*rollupData)
 		mEthData.challenges = make(map[common.Address]*challengeData)
+		mEthData.challengeWatchers = make(map[*challengeData]map[*structures.BlockId][]arbbridge.Event)
 		mEthData.arbFactory = mEthData.getNextAddress()
 		mEthData.pending = make(map[common.Address]*PendingInbox)
 		mEthData.blockHashes = make(map[common.Hash]*structures.BlockId)
 		mEthData.blockNumbers = make(map[uint64]*structures.BlockId)
-		mEthData.parentHashes = make(map[*structures.BlockId]common.Hash)
+		mEthData.parentHashes = make(map[structures.BlockId]common.Hash)
 		//init header number to 0 at startup
 		mEthData.LastMinedBlock = new(structures.BlockId)
 		mEthData.LastMinedBlock.Height = common.NewTimeBlocks(big.NewInt(0))
 		mEthData.LastMinedBlock.HeaderHash = blockHash
 		mEthData.NextBlock = new(structures.BlockId)
 		mEthData.NextBlock.Height = common.NewTimeBlocks(big.NewInt(1))
+		mEthData.nextMsgs = make(map[*structures.BlockId][]arbbridge.MaybeEvent)
 		mEthData.blockHashes[blockHash] = mEthData.LastMinedBlock
 		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
-		mEthData.parentHashes[mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
+		mEthData.parentHashes[*mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
 		mEthData.nextAddress = common.NewAddressFromEth(ethcommon.BigToAddress(big.NewInt(1)))
 		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
 		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
 		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
 		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
+		onceMutex.Unlock()
 		go func() {
 			for {
 				select {
@@ -192,15 +201,15 @@ func getMockEth(ethURL string) *mockEthdata {
 			}
 		}()
 		go func() {
-			for x := range time.Tick(3 * time.Second) {
+			for x := range time.Tick(2 * time.Second) {
 				mine(mEthData, x)
 			}
 		}()
 	})
-	return MockEth[ethURL]
+	return GoEth[ethURL]
 }
 
-func (m *mockEthdata) getNextAddress() common.Address {
+func (m *goEthdata) getNextAddress() common.Address {
 	addr := m.nextAddress
 	addrInt := new(big.Int)
 	addrInt.SetBytes(addr[:])
@@ -208,40 +217,82 @@ func (m *mockEthdata) getNextAddress() common.Address {
 	return addr
 }
 
-func (m *mockEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
+func (m *goEthdata) getCurrentBlock() *structures.BlockId {
+	m.blockMutex.Lock()
+	defer m.blockMutex.Unlock()
+
+	return m.NextBlock
+}
+
+func (m *goEthdata) getLastBlock() *structures.BlockId {
+	m.blockMutex.Lock()
+	defer m.blockMutex.Unlock()
+
+	return m.LastMinedBlock
+}
+
+func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*structures.BlockId, error) {
+	m.blockMutex.Lock()
+	defer m.blockMutex.Unlock()
+
+	b, ok := m.blockNumbers[height.AsInt().Uint64()]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+
+	return b, nil
+}
+
+func (m *goEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 	fmt.Println("registering outchan")
 	m.chanMgr <- oc
 }
 
-func (m *mockEthdata) pubMsg(msg arbbridge.MaybeEvent) {
+func (m *goEthdata) pubMsg(msg arbbridge.MaybeEvent) {
 	//fmt.Println("publishing event", msg)
-	for _, ru := range m.rollups {
-		ru.events[msg.Event.GetChainInfo().BlockId] = append(ru.events[msg.Event.GetChainInfo().BlockId], msg.Event)
-	}
-	m.pubchan <- msg
+	//if msg.Event.GetChainInfo().BlockId == m.NextBlock {
+	m.nextMsgs[msg.Event.GetChainInfo().BlockId] = append(m.nextMsgs[msg.Event.GetChainInfo().BlockId], msg)
+	//} else {
+	//	for _, ru := range m.rollups {
+	//		ru.events[msg.Event.GetChainInfo().BlockId] = append(ru.events[msg.Event.GetChainInfo().BlockId], msg.Event)
+	//	}
+	//	for _, watcher := range m.challengeWatchers {
+	//		watcher[msg.Event.GetChainInfo().BlockId] = append(watcher[msg.Event.GetChainInfo().BlockId], msg.Event)
+	//	}
+	//	m.pubchan <- msg
+	//}
 }
 
-func mine(m *mockEthdata, t time.Time) {
-	//fmt.Println("mining - time = ", t)
-	//m.Lock()
+func mine(m *goEthdata, t time.Time) {
+	m.blockMutex.Lock()
 	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
 	m.NextBlock.HeaderHash = blockHash
 	lastBlock := m.LastMinedBlock
 	m.blockNumbers[m.NextBlock.Height.AsInt().Uint64()] = m.NextBlock
 	m.blockHashes[m.NextBlock.HeaderHash] = m.NextBlock
-	m.parentHashes[m.NextBlock] = lastBlock.HeaderHash
+	m.parentHashes[*m.NextBlock] = lastBlock.HeaderHash
 	m.LastMinedBlock = m.NextBlock
+	for _, event := range m.nextMsgs[m.NextBlock] {
+		for _, ru := range m.rollups {
+			ru.events[m.NextBlock] = append(ru.events[m.NextBlock], event.Event)
+		}
+		for _, watcher := range m.challengeWatchers {
+			watcher[m.NextBlock] = append(watcher[m.NextBlock], event.Event)
+		}
+		m.pubchan <- event
+	}
 	fmt.Println("mined block number", m.NextBlock)
-	//m.Unlock()
 	newBlock := new(structures.BlockId)
 	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))
 	m.NextBlock = newBlock
 	blockEvent := arbbridge.NewTimeEvent{
 		arbbridge.ChainInfo{
-			BlockId: m.NextBlock,
+			BlockId: m.LastMinedBlock,
 		},
 	}
 
+	m.blockMutex.Unlock()
+	fmt.Println("publishing NewTimeEvent block - ", blockEvent.BlockId)
 	m.pubMsg(arbbridge.MaybeEvent{
 		Event: blockEvent,
 	})
