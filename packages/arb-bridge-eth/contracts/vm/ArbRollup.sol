@@ -52,7 +52,7 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    address owner;
+    address payable owner;
 
     event ConfirmedAssertion(
         bytes32[] logsAccHash
@@ -227,16 +227,10 @@ contract ArbRollup is NodeGraph, Staking {
         _;
     }
 
-/*    function activateVM() external onlyOwner {
-        if (vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
+    function ownerShutdown() external onlyOwner {
+        owner.transfer(address(this).balance);
     }
 
-    function ownerShutdown() external onlyOwner {
-        _shutdown();
-    }
-    */
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
