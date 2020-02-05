@@ -16,13 +16,13 @@
     },
     "homepage": "https://offchainlabs.com",
     "scripts": {
-        "prepublishOnly": "npm run lint && npm run format && npm run test",
-        "preversion": "npm run lint",
+        "prepublishOnly": "yarn lint && yarn format && yarn test",
+        "preversion": "yarn lint",
         "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
         "test": "jest --config jest.config.js",
-        "format": "npx prettier '**/*.{js,json,md,ts,yml}' --write && npm run lint --fix",
-        "lint": "npx eslint src/**/*.ts tests/**/*.ts",
-        "update-abi": "./scripts/update-abi && npm run format"
+        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
+        "lint": "yarn run eslint src/**/*.ts tests/**/*.ts",
+        "update-abi": "./scripts/update-abi && yarn format"
     },
     "dependencies": {
         "@types/node-fetch": "^2.5.4",
