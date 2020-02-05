@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -123,13 +124,14 @@ func validateRollupChain() error {
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
 	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
+	gasPrice := validateCmd.Int64("gasprice", 5, "gasprice=NumGwei")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 3 {
-		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] <validator_folder> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] [--gasprice==NumGwei] <validator_folder> <ethURL> <rollup_address>")
 	}
 
 	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
@@ -159,6 +161,7 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
+	auth.GasPrice = big.NewInt(*gasPrice)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return err
