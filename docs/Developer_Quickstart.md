@@ -9,6 +9,10 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
+Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
+
+The following documention describes how to use Arbitrum Rollup.
+
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
 read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 
