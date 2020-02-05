@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func getInsnMultiplier(filePath string) uint64 {
@@ -65,7 +66,7 @@ func runAoFile(b *testing.B, filePath string) {
 		common.NewTimeBlocks(big.NewInt(0)),
 	}
 	b.ResetTimer()
-	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple())
+	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple(), time.Hour)
 }
 
 func nameFromFn(fn string) string {

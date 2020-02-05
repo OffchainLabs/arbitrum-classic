@@ -63,6 +63,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
+        uint64 _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
@@ -75,6 +76,7 @@ contract ArbRollup is NodeGraph, Staking {
             _gracePeriodTicks,
             _arbGasSpeedLimitPerTick,
             _maxExecutionSteps,
+            _maxTimeBoundsWidth,
             _globalInboxAddress
         );
         Staking.init(

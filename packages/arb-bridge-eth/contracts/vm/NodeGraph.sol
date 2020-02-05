@@ -139,6 +139,7 @@ contract NodeGraph is ChallengeType {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
+        uint64 _maxTimeBoundsWidth,
         address _globalInboxAddress
     )
         internal
@@ -165,6 +166,7 @@ contract NodeGraph is ChallengeType {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
+        vmParams.maxTimeBoundsWidth = _maxTimeBoundsWidth;
 
         emit RollupCreated(_vmState);
     }
@@ -185,6 +187,7 @@ contract NodeGraph is ChallengeType {
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
+        require(data.timeBoundsBlocks[1] <= data.timeBoundsBlocks[0]+vmParams.maxTimeBoundsWidth);
         require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
         require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
 

@@ -74,7 +74,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	cont := true
 
 	for cont {
-		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
+		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple(), 0)
 		if mach.CurrentStatus() == machine.ErrorStop {
 			t.Fatal("Machine in error state")
 		}

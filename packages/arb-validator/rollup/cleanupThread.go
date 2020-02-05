@@ -53,7 +53,7 @@ type recoverStakeMootedParams struct {
 
 func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(time.Second * 5)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
 		for {
 			select {
