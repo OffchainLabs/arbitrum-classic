@@ -296,11 +296,15 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     return '0x100';
                 }
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                return arbInfo.getCode(params.address);
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                return arbInfo.getCode(params.address, { blockTag: params.blockTag });
             }
             case 'getTransactionCount': {
                 const arbsys = this.getArbSys();
-                const count = await arbsys.getTransactionCount(params.address);
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                const count = await arbsys.getTransactionCount(params.address, { blockTag: params.blockTag });
                 return count.toNumber();
             }
             case 'getTransactionReceipt': {
@@ -377,7 +381,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             }
             case 'getBalance': {
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                return arbInfo.getBalance(params.address);
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                return arbInfo.getBalance(params.address, { blockTag: params.blockTag });
             }
         }
         const forwardResponse = this.provider.perform(method, params);
