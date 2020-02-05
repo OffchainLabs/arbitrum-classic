@@ -18,7 +18,7 @@
     "scripts": {
         "prepublishOnly": "yarn lint && yarn format && yarn test",
         "preversion": "yarn lint",
-        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
+        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts src/lib/abi/ArbFactory.d.ts dist/lib/abi",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
         "lint": "yarn run eslint src/**/*.ts tests/**/*.ts",
