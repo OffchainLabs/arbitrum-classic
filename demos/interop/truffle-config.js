@@ -10,6 +10,12 @@ module.exports = {
       port: 7545,
       network_id: "*" // Match any network id
     },
+    rinkeby: {
+      host: "localhost", // Connect to geth on the specified
+      port: 8545,
+      from: "0xf4a7f2c6bbe40a67e74f1b44bed16c6302eb07f6", // default address to use for any transaction Truffle makes during migrations
+      network_id: 4
+    },
     arbitrum: {
       provider: function() {
         if (typeof this.provider.prov == "undefined") {
