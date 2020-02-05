@@ -122,7 +122,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public async globalInboxConn(): Promise<GlobalPendingInbox> {
         if (!this.inboxManagerCache) {
             const arbRollup = await this.arbRollupConn();
-            const globalInboxAddress = arbRollup.globalInbox();
+            const globalInboxAddress = await arbRollup.globalInbox();
             const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
             this.inboxManagerCache = inboxManager;
             return inboxManager;
@@ -296,11 +296,15 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     return '0x100';
                 }
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                return arbInfo.getCode(params.address, { blockTag: params.blockTag });
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                return arbInfo.getCode(params.address);
             }
             case 'getTransactionCount': {
                 const arbsys = this.getArbSys();
-                const count = await arbsys.getTransactionCount(params.address, { blockTag: params.blockTag });
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                const count = await arbsys.getTransactionCount(params.address);
                 return count.toNumber();
             }
             case 'getTransactionReceipt': {
@@ -377,7 +381,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             }
             case 'getBalance': {
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                return arbInfo.getBalance(params.address, { blockTag: params.blockTag });
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                // @ts-ignore remove when implemented
+                return arbInfo.getBalance(params.address);
             }
         }
         const forwardResponse = this.provider.perform(method, params);
