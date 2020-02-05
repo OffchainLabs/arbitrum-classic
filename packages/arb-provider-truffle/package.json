@@ -20,15 +20,15 @@
   },
   "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "callsite": "~1.0.0",
-    "ganache-core": "2.7.0"
+    "callsite": "^1.0.0",
+    "ganache-core": "^2.10.1"
   },
   "devDependencies": {
-    "eslint": "^6.2.1",
-    "eslint-config-prettier": "^6.1.0",
-    "eslint-plugin-prettier": "^3.1.0",
-    "jest": "^24.9.0",
-    "jest-junit": "^7.0.0",
-    "prettier": "^1.18.2"
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jest": "^25.1.0",
+    "jest-junit": "^10.0.0",
+    "prettier": "^1.19.1"
   }
 }
