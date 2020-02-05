@@ -18,6 +18,9 @@ pragma solidity ^0.5.3;
 
 
 library RollupUtils {
+    string constant ARG_LENGTHS = "ARG_LENGTHS";
+    string constant NODE_MATCH = "NODE_MATCH";
+
     function protoStateHash(
         bytes32 machineHash,
         bytes32 pendingTop,
@@ -125,5 +128,35 @@ library RollupUtils {
             node = keccak256(abi.encodePacked(node, proof[i]));
         }
         return node;
+    }
+
+    function verifyMultipathProof(
+        bytes32 from,
+        bytes32[] memory to,
+        uint64[] memory startingPoints,
+        bytes32[] memory proofs,
+        uint64[] memory proofLengths,
+        uint64[] memory permutation
+    ) public pure returns(bool) {
+        require(startingPoints.length == proofLengths.length, ARG_LENGTHS);
+        require(to.length == permutation.length, ARG_LENGTHS);
+
+        bytes32[] memory proven = new bytes32[](1+startingPoints.length);
+
+        proven[0] = from;
+        uint64 proofOffset = 0;
+        for (uint64 i=0; i<startingPoints.length; i++) {
+            proven[i+1] = calculatePathOffset(
+                proven[startingPoints[i]],
+                proofs, 
+                proofOffset, 
+                proofOffset+proofLengths[i]
+            );
+            proofOffset += proofLengths[i];
+        }
+
+        for (uint64 i=0; i<startingPoints.length; i++) {
+            require(proven[permutation[i]] == to[i], NODE_MATCH);
+        }
     }
 }
