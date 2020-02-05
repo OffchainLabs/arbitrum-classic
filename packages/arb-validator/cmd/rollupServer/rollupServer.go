@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -161,7 +162,10 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	auth.GasPrice = big.NewInt(int64(1e9*(*gasPrice))
+	gasPriceAsFloat := 1e9 * (*gasPrice)
+	if gasPriceAsFloat < math.MaxInt64 {
+		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
+	}
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return err
