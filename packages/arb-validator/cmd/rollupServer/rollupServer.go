@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -121,14 +122,17 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 3 {
-		return errors.New("usage: rollupServer validate [--rpc] <validator_folder> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] <validator_folder> <ethURL> <rollup_address>")
 	}
+
+  common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	validatorFolder := validateCmd.Arg(0)
 	ethURL := validateCmd.Arg(1)
