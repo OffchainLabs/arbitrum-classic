@@ -11,6 +11,7 @@ export class ArbFactoryFactory extends ContractFactory {
     constructor(signer?: Signer) {
         super(_abi, _bytecode, signer);
     }
+
     deploy(
         _rollupTemplate: string,
         _globalInboxAddress: string,

@@ -86,7 +86,7 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	chain.stakers.Add(&Staker{
 		ev.Staker,
 		node,
-		common.TimeFromBlockNum(ev.BlockId.Height),
+		common.TicksFromBlockNum(ev.BlockId.Height),
 		common.Address{},
 	})
 }

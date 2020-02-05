@@ -43,7 +43,7 @@ func (cp ChainParams) WithGracePeriod(period common.TimeTicks) ChainParams {
 }
 
 func (cp ChainParams) WithGracePeriodBlocks(period common.TimeBlocks) ChainParams {
-	return cp.WithGracePeriod(common.TimeFromBlockNum(&period))
+	return cp.WithGracePeriod(common.TicksFromBlockNum(&period))
 }
 
 func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {

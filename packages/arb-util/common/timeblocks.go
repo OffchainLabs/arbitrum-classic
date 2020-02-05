@@ -23,6 +23,16 @@ import (
 
 type TimeBlocks big.Int
 
+var _durationPerBlock time.Duration
+
+func init() {
+	_durationPerBlock = time.Duration(2) * time.Second
+}
+
+func SetDurationPerBlock(d time.Duration) {
+	_durationPerBlock = d
+}
+
 func NewTimeBlocks(val *big.Int) *TimeBlocks {
 	return (*TimeBlocks)(val)
 }
@@ -39,8 +49,12 @@ func (tb *TimeBlocks) AsInt() *big.Int {
 	return (*big.Int)(tb)
 }
 
+func BlocksFromSeconds(seconds int64) *TimeBlocks {
+	return (*TimeBlocks)(big.NewInt(int64(time.Duration(seconds) * time.Second / _durationPerBlock)))
+}
+
 func (tb *TimeBlocks) Duration() time.Duration {
-	return TimeFromBlockNum(tb).Duration()
+	return TicksFromBlockNum(tb).Duration()
 }
 
 func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {
@@ -53,4 +67,8 @@ func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
 
 func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
 	return (*TimeBlocks)(tb.Val.Unmarshal())
+}
+
+func (tb *TimeBlocks) String() string {
+	return tb.AsInt().String()
 }

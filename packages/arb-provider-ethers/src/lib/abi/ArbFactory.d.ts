@@ -8,6 +8,14 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbFactoryInterface extends Interface {
     functions: {
+        challengeFactoryAddress: TypedFunctionDescription<{
+            encode([]: []): string;
+        }>;
+
+        globalInboxAddress: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        rollupTemplate: TypedFunctionDescription<{ encode([]: []): string }>;
+
         createRollup: TypedFunctionDescription<{
             encode([
                 _vmState,
@@ -42,6 +50,12 @@ export class ArbFactory extends Contract {
     interface: ArbFactoryInterface;
 
     functions: {
+        challengeFactoryAddress(): Promise<string>;
+
+        globalInboxAddress(): Promise<string>;
+
+        rollupTemplate(): Promise<string>;
+
         createRollup(
             _vmState: Arrayish,
             _gracePeriodTicks: BigNumberish,
@@ -52,17 +66,36 @@ export class ArbFactory extends Contract {
             _owner: string,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
-
-        challengeFactoryAddress(): Promise<string>;
-        globalInboxAddress(): Promise<string>;
-        rollupTemplate(): Promise<string>;
     };
+
+    challengeFactoryAddress(): Promise<string>;
+
+    globalInboxAddress(): Promise<string>;
+
+    rollupTemplate(): Promise<string>;
+
+    createRollup(
+        _vmState: Arrayish,
+        _gracePeriodTicks: BigNumberish,
+        _arbGasSpeedLimitPerTick: BigNumberish,
+        _maxExecutionSteps: BigNumberish,
+        _maxTimeBoundsWidth: BigNumberish,
+        _stakeRequirement: BigNumberish,
+        _owner: string,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
 
     filters: {
         RollupCreated(vmAddress: null): EventFilter;
     };
 
     estimate: {
+        challengeFactoryAddress(): Promise<BigNumber>;
+
+        globalInboxAddress(): Promise<BigNumber>;
+
+        rollupTemplate(): Promise<BigNumber>;
+
         createRollup(
             _vmState: Arrayish,
             _gracePeriodTicks: BigNumberish,
