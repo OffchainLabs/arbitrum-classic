@@ -17,11 +17,11 @@
     "build": "truffle compile"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.4.0",
-    "arb-provider-truffle": "^0.2.0"
+    "@openzeppelin/contracts": "^2.5.0",
+    "arb-provider-truffle": "^0.3.3"
   },
   "devDependencies": {
-    "truffle": "^5.0.33"
+    "truffle": "^5.1.11"
   },
   "workspaces": {
     "nohoist": [
