@@ -3,18 +3,18 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IReputationToken.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/factories/MarketFactory.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/libraries/token/VariableSupplyToken.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/CashSender.sol';
+import './IDisputeWindow.sol';
+import '../libraries/Initializable.sol';
+import './IUniverse.sol';
+import './IReputationToken.sol';
+import './IMarket.sol';
+import '../ICash.sol';
+import '../factories/MarketFactory.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import './IDisputeWindow.sol';
+import '../libraries/token/VariableSupplyToken.sol';
+import '../IAugur.sol';
+import '../CashSender.sol';
 
 
 /**

@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/legacy_reputation/OldLegacyRepToken.sol';
+import './legacy_reputation/OldLegacyRepToken.sol';
 
 
 contract LegacyReputationToken is OldLegacyReputationToken {

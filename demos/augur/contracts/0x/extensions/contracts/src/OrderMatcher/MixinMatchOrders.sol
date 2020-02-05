@@ -55,7 +55,7 @@ contract MixinMatchOrders is
             rightSignature
         );
 
-        uint256 leftMakerAssetSpreadAmount = matchedFillResults.leftMakerAssetSpreadAmount;
+        uint256 leftMakerAssetSpreadAmount = matchedFillResults.left.makerAssetSpreadAmount;
         uint256 rightOrderTakerAssetAmount = rightOrder.takerAssetAmount;
 
         // Do not attempt to call `fillOrder` if no spread was taken or `rightOrder` has been completely filled

@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/external/IDaiFaucet.sol';
+import './libraries/token/IERC20.sol';
+import './external/IDaiFaucet.sol';
 
 
 contract CashFaucetProxy {

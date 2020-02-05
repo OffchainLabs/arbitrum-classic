@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import "ROOT/libraries/token/IERC1155Receiver.sol";
-import "ROOT/libraries/ERC165.sol";
+import "./IERC1155Receiver.sol";
+import "../ERC165.sol";
 
 
 contract ERC1155Receiver is ERC165, IERC1155Receiver {

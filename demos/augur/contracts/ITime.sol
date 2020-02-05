@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/ITyped.sol';
+import './libraries/ITyped.sol';
 
 
 contract ITime is ITyped {

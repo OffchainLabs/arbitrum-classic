@@ -1,13 +1,13 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/external/IGnosisSafe.sol';
-import 'ROOT/external/IProxyFactory.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/external/IProxy.sol';
-import 'ROOT/libraries/token/IERC1155.sol';
-import 'ROOT/reporting/IAffiliates.sol';
+import './IAugur.sol';
+import './trading/IAugurTrading.sol';
+import './external/IGnosisSafe.sol';
+import './external/IProxyFactory.sol';
+import './libraries/Initializable.sol';
+import './external/IProxy.sol';
+import './libraries/token/IERC1155.sol';
+import './reporting/IAffiliates.sol';
 
 /**
  * @title Gnosis Safe Registry

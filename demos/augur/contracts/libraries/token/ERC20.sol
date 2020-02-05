@@ -1,7 +1,7 @@
 pragma solidity ^0.5.0;
 
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
+import './IERC20.sol';
+import '../math/SafeMathUint256.sol';
 
 
 /**

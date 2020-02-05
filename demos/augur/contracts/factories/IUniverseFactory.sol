@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IUniverse.sol';
+import '../reporting/IUniverse.sol';
 
 
 contract IUniverseFactory {

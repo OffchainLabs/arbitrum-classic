@@ -18,7 +18,7 @@
 
 pragma solidity 0.5.15;
 
-import "ROOT/0x/utils/contracts/src/LibSafeMath.sol";
+import "../../../utils/contracts/src/LibSafeMath.sol";
 import "./ERC721Token.sol";
 
 

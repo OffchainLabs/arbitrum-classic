@@ -21,7 +21,7 @@ pragma experimental ABIEncoderV2;
 
 import "../../../exchange-libs/contracts/src/LibZeroExTransaction.sol";
 import "../../../exchange-libs/contracts/src/LibEIP712ExchangeDomain.sol";
-import "../../..exchange-libs/contracts/src/LibExchangeRichErrors.sol";
+import "../../../exchange-libs/contracts/src/LibExchangeRichErrors.sol";
 
 import "../../../utils/contracts/src/Refundable.sol";
 import "./interfaces/ITransactions.sol";

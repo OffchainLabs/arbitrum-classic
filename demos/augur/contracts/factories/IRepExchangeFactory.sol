@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/ISimpleDex.sol';
+import '../IAugur.sol';
+import '../ISimpleDex.sol';
 
 
 contract IRepExchangeFactory {

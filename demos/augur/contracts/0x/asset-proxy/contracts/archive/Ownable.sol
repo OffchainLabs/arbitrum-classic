@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import "../../utils/contracts/src/interfaces/IOwnable.sol";
+import "../../../utils/contracts/src/interfaces/IOwnable.sol";
 
 
 contract Ownable is

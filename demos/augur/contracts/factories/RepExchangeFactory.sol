@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/CloneFactory.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/Universe.sol';
-import 'ROOT/ISimpleDex.sol';
-import 'ROOT/IRepExchange.sol';
+import '../libraries/CloneFactory.sol';
+import '../IAugur.sol';
+import '../reporting/Universe.sol';
+import '../ISimpleDex.sol';
+import '../IRepExchange.sol';
 
 
 /**

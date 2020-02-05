@@ -20,8 +20,8 @@ pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
 import "../../../exchange-libs/contracts/src/LibEIP712ExchangeDomain.sol";
-import "../libs/LibConstants.sol";
-import "../libs/LibEIP712CoordinatorDomain.sol";
+import "./libs/LibConstants.sol";
+import "./libs/LibEIP712CoordinatorDomain.sol";
 import "./MixinSignatureValidator.sol";
 import "./MixinCoordinatorApprovalVerifier.sol";
 import "./MixinCoordinatorCore.sol";

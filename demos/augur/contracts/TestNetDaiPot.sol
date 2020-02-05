@@ -1,8 +1,8 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/external/IDaiVat.sol';
-import 'ROOT/external/IDaiPot.sol';
-import 'ROOT/ITime.sol';
+import './external/IDaiVat.sol';
+import './external/IDaiPot.sol';
+import './ITime.sol';
 
 
 contract TestNetDaiPot is IDaiPot {

@@ -1,9 +1,9 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/IAugur.sol';
+import './IReportingParticipant.sol';
+import './IDisputeWindow.sol';
+import '../libraries/token/IERC20.sol';
+import '../IAugur.sol';
 
 
 contract IDisputeCrowdsourcer is IReportingParticipant, IERC20 {

@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
-import 'ROOT/reporting/IMarket.sol';
+import './reporting/IMarket.sol';
 
 
 contract IAugurCreationDataGetter {

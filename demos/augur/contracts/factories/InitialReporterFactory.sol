@@ -1,9 +1,9 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/CloneFactory.sol';
-import 'ROOT/reporting/IInitialReporter.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/IAugur.sol';
+import '../libraries/CloneFactory.sol';
+import '../reporting/IInitialReporter.sol';
+import '../reporting/IMarket.sol';
+import '../IAugur.sol';
 
 
 /**

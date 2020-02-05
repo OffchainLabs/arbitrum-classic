@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import "ROOT/libraries/IERC165.sol";
+import "./IERC165.sol";
 
 /**
  * @dev Implementation of the {IERC165} interface.

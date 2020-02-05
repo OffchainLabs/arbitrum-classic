@@ -2,19 +2,19 @@ pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
 
-import 'ROOT/trading/IFillOrder.sol';
-import 'ROOT/libraries/ReentrancyGuard.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/trading/IProfitLoss.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/libraries/TokenId.sol';
-import 'ROOT/external/IDaiVat.sol';
+import './IFillOrder.sol';
+import '../libraries/ReentrancyGuard.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../reporting/IMarket.sol';
+import '../ICash.sol';
+import './IOrders.sol';
+import '../reporting/IShareToken.sol';
+import './IProfitLoss.sol';
+import './Order.sol';
+import '../libraries/Initializable.sol';
+import './IAugurTrading.sol';
+import '../libraries/TokenId.sol';
+import '../external/IDaiVat.sol';
 
 
 library Trade {

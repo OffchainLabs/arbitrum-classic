@@ -1,27 +1,27 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/factories/IReputationTokenFactory.sol';
-import 'ROOT/factories/IDisputeWindowFactory.sol';
-import 'ROOT/factories/IMarketFactory.sol';
-import 'ROOT/factories/IOICashFactory.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/Reporting.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/reporting/IOICash.sol';
-import 'ROOT/reporting/IAffiliateValidator.sol';
-import 'ROOT/external/IDaiVat.sol';
-import 'ROOT/external/IDaiPot.sol';
-import 'ROOT/external/IDaiJoin.sol';
-import 'ROOT/utility/IFormulas.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/IRepExchange.sol';
-import 'ROOT/factories/IRepExchangeFactory.sol';
+import './IUniverse.sol';
+import '../factories/IReputationTokenFactory.sol';
+import '../factories/IDisputeWindowFactory.sol';
+import '../factories/IMarketFactory.sol';
+import '../factories/IOICashFactory.sol';
+import './IMarket.sol';
+import './IV2ReputationToken.sol';
+import './IDisputeWindow.sol';
+import './Reporting.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../ICash.sol';
+import './IOICash.sol';
+import './IAffiliateValidator.sol';
+import '../external/IDaiVat.sol';
+import '../external/IDaiPot.sol';
+import '../external/IDaiJoin.sol';
+import '../utility/IFormulas.sol';
+import '../IAugur.sol';
+import '../CashSender.sol';
+import '../IRepExchange.sol';
+import '../factories/IRepExchangeFactory.sol';
 
 
 /**

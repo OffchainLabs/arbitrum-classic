@@ -1,25 +1,25 @@
 pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/IAugurCreationDataGetter.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/factories/IUniverseFactory.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IReputationToken.sol';
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IDisputeCrowdsourcer.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/reporting/Reporting.sol';
-import 'ROOT/libraries/ContractExists.sol';
-import 'ROOT/ITime.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/reporting/IAffiliates.sol';
+import './IAugur.sol';
+import './IAugurCreationDataGetter.sol';
+import './libraries/token/IERC20.sol';
+import './libraries/math/SafeMathUint256.sol';
+import './factories/IUniverseFactory.sol';
+import './reporting/IUniverse.sol';
+import './reporting/IMarket.sol';
+import './reporting/IDisputeWindow.sol';
+import './reporting/IReputationToken.sol';
+import './reporting/IReportingParticipant.sol';
+import './reporting/IDisputeCrowdsourcer.sol';
+import './reporting/IShareToken.sol';
+import './trading/IOrders.sol';
+import './trading/Order.sol';
+import './reporting/Reporting.sol';
+import './libraries/ContractExists.sol';
+import './ITime.sol';
+import './CashSender.sol';
+import './reporting/IAffiliates.sol';
 
 
 // Centralized approval authority and event emissions

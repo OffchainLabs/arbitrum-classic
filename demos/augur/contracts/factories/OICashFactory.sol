@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/libraries/CloneFactory.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IOICash.sol';
-import 'ROOT/IAugur.sol';
+import '../libraries/CloneFactory.sol';
+import '../reporting/IUniverse.sol';
+import '../reporting/IOICash.sol';
+import '../IAugur.sol';
 
 
 /**

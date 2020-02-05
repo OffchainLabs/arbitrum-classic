@@ -1,22 +1,22 @@
 pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
-import 'ROOT/IAugurCreationDataGetter.sol';
-import "ROOT/libraries/math/SafeMathUint256.sol";
-import "ROOT/libraries/ContractExists.sol";
-import "ROOT/libraries/token/IERC20.sol";
-import "ROOT/external/IExchange.sol";
-import "ROOT/trading/IFillOrder.sol";
-import "ROOT/ICash.sol";
-import "ROOT/trading/Order.sol";
-import "ROOT/trading/IZeroXTrade.sol";
-import "ROOT/trading/IAugurTrading.sol";
-import 'ROOT/libraries/Initializable.sol';
-import "ROOT/IAugur.sol";
-import 'ROOT/libraries/token/IERC1155.sol';
-import 'ROOT/libraries/LibBytes.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/ISimpleDex.sol';
+import '../IAugurCreationDataGetter.sol';
+import "../libraries/math/SafeMathUint256.sol";
+import "../libraries/ContractExists.sol";
+import "../libraries/token/IERC20.sol";
+import "../external/IExchange.sol";
+import "./IFillOrder.sol";
+import "../ICash.sol";
+import "./Order.sol";
+import "./IZeroXTrade.sol";
+import "./IAugurTrading.sol";
+import '../libraries/Initializable.sol';
+import "../IAugur.sol";
+import '../libraries/token/IERC1155.sol';
+import '../libraries/LibBytes.sol';
+import '../CashSender.sol';
+import '../ISimpleDex.sol';
 
 
 contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155, CashSender {

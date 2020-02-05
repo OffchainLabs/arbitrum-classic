@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import "ROOT/BaseSimpleDex.sol";
+import "./BaseSimpleDex.sol";
 
 
 contract EthExchange is BaseSimpleDex {

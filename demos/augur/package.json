@@ -1,7 +1,7 @@
 {
-  "name": "pet-shop",
+  "name": "Augur",
   "version": "0.2.0",
-  "description": "Pet shop demo dApp",
+  "description": "Prediction Markets dApp",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
   "private": true,
@@ -10,27 +10,21 @@
     "start": "webpack-dev-server --open",
     "dev": "webpack-dev-server --open",
     "watch": "webpack --watch",
-    "migrate": "truffle migrate --network arbitrum",
-    "compile": "truffle compile"
+    "compile": "truffle compile",
+    "migrate": "truffle migrate --network arbitrum"
+  },
+  "dependencies": {
+    "arb-provider-truffle": "file:../../packages/arb-provider-truffle",
+    "arb-provider-web3": "^0.2.0",
+    "truffle": "^5.1.11"
   },
   "devDependencies": {
     "css-loader": "^3.2.0",
     "file-loader": "^4.2.0",
     "style-loader": "^1.0.0",
     "svg-inline-loader": "^0.8.0",
-    "truffle": "^5.0.31",
     "webpack": "~4.35.2",
     "webpack-cli": "~3.3.5",
     "webpack-dev-server": "~3.7.2"
-  },
-  "dependencies": {
-    "arb-provider-truffle": "^0.2.0",
-    "arb-provider-web3": "^0.2.0",
-    "bootstrap": "^3.4.1",
-    "jquery": "^3.4.1",
-    "web3": "~1.2.1"
-  },
-  "workspaces": {
-    "nohoist": []
   }
 }

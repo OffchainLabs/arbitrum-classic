@@ -1,11 +1,11 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/ICashFaucet.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/libraries/ITyped.sol';
-import 'ROOT/external/IDaiVat.sol';
-import 'ROOT/external/IDaiJoin.sol';
+import './ICashFaucet.sol';
+import './IAugur.sol';
+import './ICash.sol';
+import './libraries/ITyped.sol';
+import './external/IDaiVat.sol';
+import './external/IDaiJoin.sol';
 
 
 /**

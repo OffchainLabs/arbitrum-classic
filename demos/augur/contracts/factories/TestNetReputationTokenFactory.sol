@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/TestNetReputationToken.sol';
-import 'ROOT/factories/IReputationTokenFactory.sol';
+import '../IAugur.sol';
+import '../reporting/IUniverse.sol';
+import '../reporting/IV2ReputationToken.sol';
+import '../TestNetReputationToken.sol';
+import '../factories/IReputationTokenFactory.sol';
 
 
 /**

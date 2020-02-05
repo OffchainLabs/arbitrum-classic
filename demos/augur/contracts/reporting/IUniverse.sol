@@ -1,12 +1,12 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/ISimpleDex.sol';
+import './IV2ReputationToken.sol';
+import './IDisputeWindow.sol';
+import './IMarket.sol';
+import './IDisputeWindow.sol';
+import './IReportingParticipant.sol';
+import './IShareToken.sol';
+import '../ISimpleDex.sol';
 
 
 contract IUniverse {

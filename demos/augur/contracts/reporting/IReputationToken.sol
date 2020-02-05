@@ -1,8 +1,8 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/ITyped.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/reporting/IUniverse.sol';
+import '../libraries/ITyped.sol';
+import '../libraries/token/IERC20.sol';
+import './IUniverse.sol';
 
 
 contract IReputationToken is IERC20 {

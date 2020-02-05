@@ -1,15 +1,15 @@
 pragma solidity 0.5.15;
 pragma experimental ABIEncoderV2;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/IAugurCreationDataGetter.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/trading/IFillOrder.sol';
-import 'ROOT/trading/IOrders.sol';
+import '../IAugur.sol';
+import '../IAugurCreationDataGetter.sol';
+import '../reporting/IMarket.sol';
+import '../libraries/token/IERC20.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../reporting/IReportingParticipant.sol';
+import '../reporting/IDisputeWindow.sol';
+import '../trading/IFillOrder.sol';
+import '../trading/IOrders.sol';
 
 
 /**

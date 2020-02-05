@@ -1,24 +1,24 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/Ownable.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IDisputeCrowdsourcer.sol';
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/reporting/IAffiliateValidator.sol';
-import 'ROOT/external/IDaiVat.sol';
-import 'ROOT/reporting/IAffiliates.sol';
-import 'ROOT/factories/IDisputeCrowdsourcerFactory.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/factories/InitialReporterFactory.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/Reporting.sol';
-import 'ROOT/reporting/IInitialReporter.sol';
-import 'ROOT/IWarpSync.sol';
-import 'ROOT/libraries/token/IERC1155.sol';
-import 'ROOT/CashSender.sol';
+import './IMarket.sol';
+import '../libraries/Initializable.sol';
+import '../libraries/Ownable.sol';
+import './IUniverse.sol';
+import './IReportingParticipant.sol';
+import './IDisputeCrowdsourcer.sol';
+import './IV2ReputationToken.sol';
+import './IAffiliateValidator.sol';
+import '../external/IDaiVat.sol';
+import './IAffiliates.sol';
+import '../factories/IDisputeCrowdsourcerFactory.sol';
+import '../ICash.sol';
+import '../factories/InitialReporterFactory.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import './Reporting.sol';
+import './IInitialReporter.sol';
+import '../IWarpSync.sol';
+import '../libraries/token/IERC1155.sol';
+import '../CashSender.sol';
 
 
 /**

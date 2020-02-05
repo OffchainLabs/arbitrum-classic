@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/trading/Order.sol';
+import './libraries/token/IERC20.sol';
+import './reporting/IUniverse.sol';
+import './reporting/IMarket.sol';
+import './reporting/IDisputeWindow.sol';
+import './trading/Order.sol';
 
 
 contract IAugur {

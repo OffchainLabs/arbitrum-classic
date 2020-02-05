@@ -1,12 +1,12 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IWarpSync.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/reporting/IAffiliateValidator.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
+import './IWarpSync.sol';
+import './reporting/IUniverse.sol';
+import './reporting/IMarket.sol';
+import './reporting/IV2ReputationToken.sol';
+import './reporting/IAffiliateValidator.sol';
+import './libraries/Initializable.sol';
+import './libraries/math/SafeMathUint256.sol';
 
 /**
  * @title Warp Sync

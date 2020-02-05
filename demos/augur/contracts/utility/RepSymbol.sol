@@ -1,11 +1,11 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/IAugurMarketDataGetter.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/libraries/math/UintToString.sol';
-import 'ROOT/libraries/BytesToString.sol';
-import 'ROOT/utility/IRepSymbol.sol';
+import '../IAugur.sol';
+import '../IAugurMarketDataGetter.sol';
+import '../reporting/IUniverse.sol';
+import '../libraries/math/UintToString.sol';
+import '../libraries/BytesToString.sol';
+import './IRepSymbol.sol';
 
 
 /**

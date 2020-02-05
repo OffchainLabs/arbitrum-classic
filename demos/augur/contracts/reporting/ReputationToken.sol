@@ -1,16 +1,16 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/libraries/ITyped.sol';
-import 'ROOT/libraries/token/VariableSupplyToken.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/Reporting.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IDisputeCrowdsourcer.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/utility/IRepSymbol.sol';
+import './IV2ReputationToken.sol';
+import '../libraries/ITyped.sol';
+import '../libraries/token/VariableSupplyToken.sol';
+import '../libraries/token/IERC20.sol';
+import './IUniverse.sol';
+import './IMarket.sol';
+import './Reporting.sol';
+import './IDisputeWindow.sol';
+import './IDisputeCrowdsourcer.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../utility/IRepSymbol.sol';
 
 
 /**

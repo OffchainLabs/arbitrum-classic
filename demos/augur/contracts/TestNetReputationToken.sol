@@ -1,8 +1,8 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/ReputationToken.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/IUniverse.sol';
+import './reporting/ReputationToken.sol';
+import './IAugur.sol';
+import './reporting/IUniverse.sol';
 
 
 contract TestNetReputationToken is ReputationToken {

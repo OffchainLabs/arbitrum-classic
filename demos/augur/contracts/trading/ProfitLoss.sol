@@ -1,11 +1,11 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/libraries/math/SafeMathInt256.sol';
-import 'ROOT/trading/IAugurTrading.sol';
+import '../IAugur.sol';
+import './IOrders.sol';
+import '../libraries/Initializable.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../libraries/math/SafeMathInt256.sol';
+import './IAugurTrading.sol';
 
 
 /**

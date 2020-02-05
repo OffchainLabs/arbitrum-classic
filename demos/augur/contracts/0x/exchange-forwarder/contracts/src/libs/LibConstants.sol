@@ -20,7 +20,7 @@ pragma solidity 0.5.15;
 
 import "../../../../exchange/contracts/src/interfaces/IExchange.sol";
 import "../../../../erc20/contracts/src/interfaces/IEtherToken.sol";
-import "../../../../exchange/contracts/src/interfaces/IExchangeV2.sol";
+import "../../../../exchange-forwarder/contracts/src/interfaces/IExchangeV2.sol";
 
 
 contract LibConstants {

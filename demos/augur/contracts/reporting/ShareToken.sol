@@ -1,14 +1,14 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/libraries/token/ERC1155.sol';
-import 'ROOT/libraries/ReentrancyGuard.sol';
-import 'ROOT/libraries/ITyped.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/libraries/TokenId.sol';
+import './IShareToken.sol';
+import '../libraries/token/ERC1155.sol';
+import '../libraries/ReentrancyGuard.sol';
+import '../libraries/ITyped.sol';
+import '../libraries/Initializable.sol';
+import './IMarket.sol';
+import '../IAugur.sol';
+import '../CashSender.sol';
+import '../libraries/TokenId.sol';
 
 
 /**

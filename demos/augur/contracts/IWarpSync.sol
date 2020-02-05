@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
+import './reporting/IUniverse.sol';
+import './reporting/IMarket.sol';
 
 
 contract IWarpSync {

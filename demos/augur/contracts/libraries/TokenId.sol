@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IMarket.sol';
+import '../reporting/IMarket.sol';
 
 
 library TokenId {

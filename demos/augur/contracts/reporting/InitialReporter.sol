@@ -1,11 +1,11 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/reporting/IInitialReporter.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/BaseReportingParticipant.sol';
-import 'ROOT/libraries/Ownable.sol';
-import 'ROOT/IAugur.sol';
+import '../libraries/Initializable.sol';
+import './IInitialReporter.sol';
+import './IMarket.sol';
+import './BaseReportingParticipant.sol';
+import '../libraries/Ownable.sol';
+import '../IAugur.sol';
 
 
 /**

@@ -1,9 +1,9 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IReputationToken.sol';
+import './IReportingParticipant.sol';
+import './IMarket.sol';
+import './IDisputeWindow.sol';
+import './IReputationToken.sol';
 
 
 contract BaseReportingParticipant is IReportingParticipant {

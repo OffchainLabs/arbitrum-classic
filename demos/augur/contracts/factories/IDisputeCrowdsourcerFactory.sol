@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/IDisputeCrowdsourcer.sol';
+import '../IAugur.sol';
+import '../reporting/IDisputeCrowdsourcer.sol';
 
 
 contract IDisputeCrowdsourcerFactory {

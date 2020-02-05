@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import "ROOT/BaseSimpleDex.sol";
-import "ROOT/reporting/IV2ReputationToken.sol";
+import "./BaseSimpleDex.sol";
+import "./reporting/IV2ReputationToken.sol";
 
 
 contract RepExchange is BaseSimpleDex {

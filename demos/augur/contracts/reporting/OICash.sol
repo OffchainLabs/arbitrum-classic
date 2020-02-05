@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/token/VariableSupplyToken.sol';
-import 'ROOT/reporting/IOICash.sol';
-import 'ROOT/CashSender.sol';
+import '../IAugur.sol';
+import '../libraries/Initializable.sol';
+import '../libraries/token/VariableSupplyToken.sol';
+import './IOICash.sol';
+import '../CashSender.sol';
 
 
 /**

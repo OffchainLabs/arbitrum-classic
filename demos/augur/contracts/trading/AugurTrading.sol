@@ -1,18 +1,18 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/libraries/token/IERC1155.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/trading/IProfitLoss.sol';
-import 'ROOT/libraries/ContractExists.sol';
-import 'ROOT/external/IDaiVat.sol';
+import '../IAugur.sol';
+import '../libraries/token/IERC20.sol';
+import '../libraries/token/IERC1155.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../reporting/IUniverse.sol';
+import '../reporting/IMarket.sol';
+import './IAugurTrading.sol';
+import '../reporting/IShareToken.sol';
+import './IOrders.sol';
+import './Order.sol';
+import './IProfitLoss.sol';
+import '../libraries/ContractExists.sol';
+import '../external/IDaiVat.sol';
 
 
 // Centralized approval authority and event emissions for trading.

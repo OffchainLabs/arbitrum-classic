@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IAffiliateValidator.sol';
-import 'ROOT/reporting/AffiliateValidator.sol';
+import './IAffiliateValidator.sol';
+import './AffiliateValidator.sol';
 
 /**
  * @title Affiliates

@@ -3,17 +3,17 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/libraries/ReentrancyGuard.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/trading/ICreateOrder.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/trading/IProfitLoss.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/libraries/TokenId.sol';
+import '../libraries/ReentrancyGuard.sol';
+import './Order.sol';
+import './ICreateOrder.sol';
+import '../libraries/Initializable.sol';
+import '../libraries/token/IERC20.sol';
+import '../IAugur.sol';
+import './IProfitLoss.sol';
+import './IAugurTrading.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../CashSender.sol';
+import '../libraries/TokenId.sol';
 
 
 /**

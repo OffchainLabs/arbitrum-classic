@@ -1,8 +1,8 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/ICash.sol';
-import 'ROOT/external/IDaiVat.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
+import './ICash.sol';
+import './external/IDaiVat.sol';
+import './libraries/math/SafeMathUint256.sol';
 
 
 contract CashSender {

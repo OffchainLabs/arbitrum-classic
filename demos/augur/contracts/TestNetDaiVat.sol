@@ -1,6 +1,6 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/external/IDaiVat.sol';
+import './external/IDaiVat.sol';
 
 
 contract TestNetDaiVat is IDaiVat {

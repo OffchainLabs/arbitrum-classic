@@ -32,15 +32,15 @@ contract BalanceThresholdFilter is
     /// @param exchange Address of 0x exchange.
     /// @param thresholdAsset The asset that must be held by makers/takers.
     /// @param balanceThreshold The minimum balance of `thresholdAsset` that must be held by makers/takers.
-    constructor (
-        address exchange,
-        address thresholdAsset,
-        uint256 balanceThreshold
-    )
-        public
-    {
-        EXCHANGE = IExchange(exchange);
-        THRESHOLD_ASSET = IThresholdAsset(thresholdAsset);
-        BALANCE_THRESHOLD = balanceThreshold;
-    }
+    // constructor (
+    //     address exchange,
+    //     address thresholdAsset,
+    //     uint256 balanceThreshold
+    // )
+    //     public
+    // {
+    //     EXCHANGE = IExchange(exchange);
+    //     THRESHOLD_ASSET = IThresholdAsset(thresholdAsset);
+    //     BALANCE_THRESHOLD = balanceThreshold;
+    // }
 }

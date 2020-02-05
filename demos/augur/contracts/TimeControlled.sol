@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/ITime.sol';
-import 'ROOT/IAugur.sol';
+import './ITime.sol';
+import './IAugur.sol';
 
 
 contract TimeControlled is ITime {

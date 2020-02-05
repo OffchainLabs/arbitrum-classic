@@ -1,8 +1,8 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
+import '../IAugur.sol';
+import '../reporting/IUniverse.sol';
+import '../reporting/IDisputeWindow.sol';
 
 
 contract IDisputeWindowFactory {

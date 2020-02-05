@@ -8,13 +8,13 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/IAugur.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/libraries/token/IERC20.sol';
+import '../IAugur.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../reporting/IMarket.sol';
+import './IAugurTrading.sol';
+import './IOrders.sol';
+import '../reporting/IShareToken.sol';
+import '../libraries/token/IERC20.sol';
 
 
 // CONSIDER: Is `price` the most appropriate name for the value being used? It does correspond 1:1 with the attoCASH per share, but the range might be considered unusual?

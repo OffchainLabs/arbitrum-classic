@@ -1,15 +1,15 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/libraries/math/SafeMathInt256.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/trading/IProfitLoss.sol';
+import './IOrders.sol';
+import '../libraries/math/SafeMathUint256.sol';
+import '../libraries/math/SafeMathInt256.sol';
+import './Order.sol';
+import '../reporting/IMarket.sol';
+import '../libraries/Initializable.sol';
+import '../libraries/token/IERC20.sol';
+import './IAugurTrading.sol';
+import './IProfitLoss.sol';
 
 
 /**

@@ -1036,6 +1036,12 @@ aproba@^1.0.3, aproba@^1.1.1:
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-1.2.0.tgz#6802e6264efd18c790a1b0d517f0f2627bf2c94a"
   integrity sha512-Y9J6ZjXtoYh8RnXVCMOU/ttDmk1aBjunq9vO0ta5x85WDQiQfUF9sIPBITdbiiIVcBo03Hi3jMxigBtsddlXRw==
 
+"arb-provider-truffle@file:packages/arb-provider-truffle":
+  version "0.2.0"
+  dependencies:
+    callsite "~1.0.0"
+    ganache-core "2.7.0"
+
 archy@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/archy/-/archy-1.0.0.tgz#f9c8c13757cc1dd7bc379ac77b2c62a5c2868c40"
@@ -10552,6 +10558,15 @@ truffle@^5.0.33:
   version "5.0.33"
   resolved "https://registry.yarnpkg.com/truffle/-/truffle-5.0.33.tgz#7a56552fca630d8255faaf5133f17ef9a127abd0"
   integrity sha512-Fc8fFZ/Pk6s/CZSvbe4RTd3gGMBTZQ2C6BYhN/xViwgKH/4NwuZmOC0EtO/eu/k7O3r8z3svz0jLMdH16DpRnw==
+  dependencies:
+    app-module-path "^2.2.0"
+    mocha "5.2.0"
+    original-require "1.0.1"
+
+truffle@^5.1.11:
+  version "5.1.11"
+  resolved "https://registry.yarnpkg.com/truffle/-/truffle-5.1.11.tgz#227e84df0b821ca775b7bc26984080d3c0989147"
+  integrity sha512-BzF5FoNJf0PP+R2KuIsxNsfbPzJ7VUrzC9iv/rKzK0S+MmafhntJf90shL6XJBgb0kNX/jDp4x2blk77bt3WMQ==
   dependencies:
     app-module-path "^2.2.0"
     mocha "5.2.0"

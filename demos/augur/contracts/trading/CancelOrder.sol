@@ -5,18 +5,18 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/trading/ICancelOrder.sol';
-import 'ROOT/libraries/ReentrancyGuard.sol';
-import 'ROOT/trading/Order.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/trading/IOrders.sol';
-import 'ROOT/libraries/Initializable.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/trading/IProfitLoss.sol';
-import 'ROOT/trading/IAugurTrading.sol';
-import 'ROOT/CashSender.sol';
-import 'ROOT/libraries/TokenId.sol';
+import './ICancelOrder.sol';
+import '../libraries/ReentrancyGuard.sol';
+import './Order.sol';
+import '../reporting/IMarket.sol';
+import '../ICash.sol';
+import './IOrders.sol';
+import '../libraries/Initializable.sol';
+import '../IAugur.sol';
+import './IProfitLoss.sol';
+import './IAugurTrading.sol';
+import '../CashSender.sol';
+import '../libraries/TokenId.sol';
 
 
 /**

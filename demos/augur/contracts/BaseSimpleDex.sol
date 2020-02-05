@@ -1,13 +1,13 @@
 pragma solidity 0.5.15;
 
-import "ROOT/IAugur.sol";
-import "ROOT/ISimpleDex.sol";
-import "ROOT/CashSender.sol";
-import "ROOT/libraries/token/IERC20.sol";
-import "ROOT/libraries/token/VariableSupplyToken.sol";
-import "ROOT/libraries/Initializable.sol";
-import "ROOT/libraries/ReentrancyGuard.sol";
-import "ROOT/libraries/math/SafeMathUint256.sol";
+import "./IAugur.sol";
+import "./ISimpleDex.sol";
+import "./CashSender.sol";
+import "./libraries/token/IERC20.sol";
+import "./libraries/token/VariableSupplyToken.sol";
+import "./libraries/Initializable.sol";
+import "./libraries/ReentrancyGuard.sol";
+import "./libraries/math/SafeMathUint256.sol";
 
 
 contract BaseSimpleDex is Initializable, ReentrancyGuard, VariableSupplyToken, CashSender {

@@ -1,7 +1,7 @@
 pragma solidity 0.5.15;
 
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IUniverse.sol';
+import '../reporting/IDisputeWindow.sol';
+import '../reporting/IUniverse.sol';
 
 
 /**

@@ -18,7 +18,7 @@
 
 pragma solidity 0.5.15;
 
-import "ROOT/0x/asset-proxy/contracts/src/interfaces/IUniswapExchange.sol";
+import "./IUniswapExchange.sol";
 
 
 interface IUniswapExchangeFactory {

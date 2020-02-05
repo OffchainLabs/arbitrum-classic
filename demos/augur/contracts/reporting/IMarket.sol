@@ -1,16 +1,16 @@
 pragma solidity 0.5.15;
 
 
-import 'ROOT/libraries/IOwnable.sol';
-import 'ROOT/ICash.sol';
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/reporting/IDisputeWindow.sol';
-import 'ROOT/reporting/IShareToken.sol';
-import 'ROOT/reporting/IReportingParticipant.sol';
-import 'ROOT/reporting/IV2ReputationToken.sol';
-import 'ROOT/reporting/IInitialReporter.sol';
-import 'ROOT/reporting/IAffiliateValidator.sol';
-import 'ROOT/IAugur.sol';
+import '../libraries/IOwnable.sol';
+import '../ICash.sol';
+import './IUniverse.sol';
+import './IDisputeWindow.sol';
+import './IShareToken.sol';
+import './IReportingParticipant.sol';
+import './IV2ReputationToken.sol';
+import './IInitialReporter.sol';
+import './IAffiliateValidator.sol';
+import '../IAugur.sol';
 
 
 contract IMarket is IOwnable {

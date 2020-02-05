@@ -1,10 +1,10 @@
 pragma solidity 0.5.15;
 
-import "ROOT/libraries/token/IERC1155.sol";
-import "ROOT/libraries/token/IERC1155Receiver.sol";
-import "ROOT/libraries/math/SafeMathUint256.sol";
-import "ROOT/libraries/ContractExists.sol";
-import "ROOT/libraries/ERC165.sol";
+import "./IERC1155.sol";
+import "./IERC1155Receiver.sol";
+import "../math/SafeMathUint256.sol";
+import "../ContractExists.sol";
+import "../ERC165.sol";
 
 
 /**
