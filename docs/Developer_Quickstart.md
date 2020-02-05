@@ -368,10 +368,15 @@ Run the following command to generate `contract.ao`:
 truffle migrate --reset --network arbitrum
 ```
 
-### Run the Validators
+### Launch the Arbitrum Rollup Chain
 
 ```bash
 ../../scripts/setup_rollup.py contract.ao 3
+```
+
+### Run the Validators
+
+```bash
 ../../scripts/arb_deploy.py validator-states
 ```
 

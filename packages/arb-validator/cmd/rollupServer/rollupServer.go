@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,17 +124,18 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
+	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=NumSeconds")
+	gasPrice := validateCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 3 {
-		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] <validator_folder> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
 	}
 
-  common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
+	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	validatorFolder := validateCmd.Arg(0)
 	ethURL := validateCmd.Arg(1)
@@ -159,6 +162,10 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
+	gasPriceAsFloat := 1e9 * (*gasPrice)
+	if gasPriceAsFloat < math.MaxInt64 {
+		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
+	}
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return err
