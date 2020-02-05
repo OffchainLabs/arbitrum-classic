@@ -52,7 +52,7 @@ describe('Constructors', function() {
 
     test('CodePointValue', function() {
         const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash);
-        expect(cpv.insnNum).toBe(0);
+        expect(cpv.insnNum.toNumber()).toBe(0);
         expect(cpv.op.opcode).toBe(0x60);
         expect(cpv.nextHash).toBe(nullHash);
 
@@ -182,14 +182,14 @@ describe('Marshaling', function() {
     });
 
     test('marshal and unmarshal CodePointValue', function() {
-        const pc = 0;
+        const pc = ethers.utils.bigNumberify(0);
         const op = new arb.BasicOp(arb.OpCode.Halt);
         const nextHash = '0x' + ZEROS_32B;
         const basicTCV = new arb.CodePointValue(pc, op, nextHash);
         const marshaledBytes = arb.marshal(basicTCV);
         expect(marshaledBytes.length).toBe(M_CODE_POINT_SIZE);
         const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue;
-        expect(revValue.insnNum).toEqual(pc);
+        expect(revValue.insnNum.toString()).toEqual(pc.toString());
         expect(revValue.op.opcode).toBe(op.opcode);
         expect(revValue.nextHash).toEqual(nextHash);
         expect(revValue.toString()).toEqual(basicTCV.toString());
