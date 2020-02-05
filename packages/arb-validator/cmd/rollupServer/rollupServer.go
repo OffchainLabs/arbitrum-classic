@@ -132,7 +132,7 @@ func validateRollupChain() error {
 		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=NumSeconds] <validator_folder> <ethURL> <rollup_address>")
 	}
 
-  common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
+	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	validatorFolder := validateCmd.Arg(0)
 	ethURL := validateCmd.Arg(1)
