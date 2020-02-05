@@ -27,11 +27,11 @@ type TimeTicks struct {
 	Val *big.Int
 }
 
-func TimeFromBlockNum(blockNum *TimeBlocks) TimeTicks {
+func TicksFromBlockNum(blockNum *TimeBlocks) TimeTicks {
 	return TimeTicks{new(big.Int).Mul(big.NewInt(TicksPerBlock), blockNum.AsInt())}
 }
 
-func TimeFromSeconds(seconds int64) TimeTicks {
+func TicksFromSeconds(seconds int64) TimeTicks {
 	return TimeTicks{big.NewInt(int64(time.Duration(seconds*TicksPerBlock) * time.Second / _durationPerBlock))}
 }
 

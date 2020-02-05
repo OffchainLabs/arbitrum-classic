@@ -54,7 +54,7 @@ func BlocksFromSeconds(seconds int64) *TimeBlocks {
 }
 
 func (tb *TimeBlocks) Duration() time.Duration {
-	return TimeFromBlockNum(tb).Duration()
+	return TicksFromBlockNum(tb).Duration()
 }
 
 func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {

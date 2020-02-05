@@ -119,7 +119,7 @@ func NewNodeFromPrev(
 	assertionTxHash common.Hash,
 ) *Node {
 	checkTime := disputable.CheckTime(params)
-	deadlineTicks := common.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
+	deadlineTicks := common.TicksFromBlockNum(currentTime).Add(params.GracePeriod)
 	if deadlineTicks.Cmp(prev.deadline) >= 0 {
 		deadlineTicks = deadlineTicks.Add(checkTime)
 	} else {
@@ -195,7 +195,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash,
 			node.disputable.MaxPendingTop,
 			pendingLeft,
 		)
-		challengePeriod := params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
 		ret := structures.MessageChallengeDataHash(
@@ -205,7 +205,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash,
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
-		challengePeriod := params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidExecutionChildType:
 		ret := structures.ExecutionDataHash(
