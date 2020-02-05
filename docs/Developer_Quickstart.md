@@ -24,7 +24,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose parity rocksdb
+brew install python3 docker docker-compose rocksdb
 brew cask install docker
 open -a Docker
 ```
@@ -40,7 +40,6 @@ Using apt:
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-pip docker docker-compose
-bash <(curl https://get.parity.io -L)
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
@@ -66,7 +65,6 @@ Here are the important dependencies in case you are not running on a supported O
 -   [node](https://nodejs.org/en/)
 -   [python3 and pip3](https://www.python.org/downloads/)
 -   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [parity](https://www.parity.io/ethereum)
 -   [yarn](https://yarnpkg.com/en/)
 
 > Requires `node -v` version 8, 10 or 12
@@ -78,7 +76,7 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.2.1 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.3.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build

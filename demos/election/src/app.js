@@ -156,10 +156,14 @@ let App = {
 
   castVote: async function() {
     var candidateId = $("#candidatesSelect").val();
-    await App.contracts.Election.vote(candidateId);
-    // Wait for votes to update
+    let tx = await App.contracts.Election.vote(candidateId);
+
     $("#content").hide();
     $("#loader").show();
+
+    await tx.wait();
+    // Wait for votes to update
+    App.render();
   }
 };
 
