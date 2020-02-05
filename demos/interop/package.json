@@ -23,8 +23,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
-    "arb-provider-truffle": "^0.2.0",
-    "arb-provider-ethers": "^0.2.0",
+    "arb-provider-truffle": "^0.3.0",
+    "arb-provider-ethers": "^0.3.0",
     "bootstrap": "^4.4.1",
     "ethers": "4.0.33",
     "jquery": "^3.4.1"

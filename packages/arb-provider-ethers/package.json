@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.3.0",
+    "version": "0.3.2",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
@@ -18,11 +18,11 @@
     "scripts": {
         "prepare": "yarn build",
         "prepublishOnly": "yarn lint && yarn format && yarn test",
-        "preversion": "npm run lint",
+        "preversion": "yarn lint",
         "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-        "lint": "eslint . src/**/*.ts tests/**/*.ts",
+        "lint": "eslint src/**/*.ts tests/**/*.ts",
         "update-abi": "./scripts/update-abi"
     },
     "dependencies": {
@@ -48,6 +48,6 @@
         "typescript": "^3.5.3"
     },
     "files": [
-        "lib/**/*"
+        "dist/**/*"
     ]
 }
