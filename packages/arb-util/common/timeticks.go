@@ -51,10 +51,6 @@ func (rt TimeTicks) Duration() time.Duration {
 	return time.Duration(rt.Val.Int64()) * _durationPerBlock / time.Duration(TicksPerBlock)
 }
 
-func (rt TimeTicks) Clone() TimeTicks {
-	return TimeTicks{new(big.Int).Set(rt.Val)}
-}
-
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
 	return &TimeTicksBuf{
 		Val: MarshalBigInt(rt.Val),
