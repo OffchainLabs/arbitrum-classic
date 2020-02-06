@@ -9,8 +9,12 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
+Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
+
+The following documention describes how to use Arbitrum Rollup.
+
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
-read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
+read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
 
 ## Install System Dependencies
 
@@ -24,7 +28,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose parity rocksdb
+brew install python3 docker docker-compose rocksdb
 brew cask install docker
 open -a Docker
 ```
@@ -40,7 +44,6 @@ Using apt:
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-pip docker docker-compose
-bash <(curl https://get.parity.io -L)
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
@@ -66,7 +69,6 @@ Here are the important dependencies in case you are not running on a supported O
 -   [node](https://nodejs.org/en/)
 -   [python3 and pip3](https://www.python.org/downloads/)
 -   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [parity](https://www.parity.io/ethereum)
 -   [yarn](https://yarnpkg.com/en/)
 
 > Requires `node -v` version 8, 10 or 12
@@ -78,7 +80,7 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.2.1 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.3.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build
@@ -366,10 +368,15 @@ Run the following command to generate `contract.ao`:
 truffle migrate --reset --network arbitrum
 ```
 
-### Run the Validators
+### Launch the Arbitrum Rollup Chain
 
 ```bash
 ../../scripts/setup_rollup.py contract.ao 3
+```
+
+### Run the Validators
+
+```bash
 ../../scripts/arb_deploy.py validator-states
 ```
 

@@ -48,7 +48,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 		leafHash:         pa.leafHash,
 		prevPrevLeafHash: pa.prevPrevLeafHash,
 		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     common.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevDeadline:     pa.prevDeadline.Clone(),
 		prevChildType:    pa.prevChildType,
 		beforeState:      pa.beforeState.Clone(),
 		params:           pa.params.Clone(),
@@ -60,7 +60,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(4).Duration())
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		assertionPreparedChan := make(chan *preparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*preparedAssertion)
@@ -232,17 +232,18 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
+	log.Println("timeBounds: ", timeBounds.Start.String(), timeBounds.End.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	currentHeight := chain.latestBlockId.Height.Clone()
 	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
-	runTicks := common.TimeFromBlockNum(common.NewTimeBlocks(runBlocks))
-	log.Println("Asserting for up to", runTicks.Duration().Seconds(), "seconds")
+	runDuration := common.NewTimeBlocks(runBlocks).Duration()
+	log.Println("Asserting for up to", runBlocks, " blocks")
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal, runTicks.Duration())
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal, runDuration)
 
 	afterHash := mach.Hash()
 

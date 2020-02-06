@@ -89,7 +89,7 @@ func getNextEventWithTimeout(
 			if err != nil {
 				return nil, 0, err
 			}
-			if common.TimeFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
+			if common.TicksFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return nil, 0, err
