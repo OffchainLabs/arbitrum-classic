@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -27,7 +29,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type arbFactory struct {
@@ -47,7 +48,7 @@ func newArbFactory(address ethcommon.Address, client *ethclient.Client, auth *Tr
 func (con *arbFactory) CreateRollup(
 	ctx context.Context,
 	vmState common.Hash,
-	params structures.ChainParams,
+	params valprotocol.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
 	con.auth.Lock()

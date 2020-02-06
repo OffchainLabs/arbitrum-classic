@@ -54,11 +54,11 @@ func testExecutionChallenge(t *testing.T) {
 	)
 
 	if err := testChallenge(
-		structures.InvalidExecutionChildType,
+		valprotocol.InvalidExecutionChildType,
 		challengeHash,
 		"9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc",
 		"27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendExecutionClaim(
 				context.Background(),
 				client,
@@ -71,7 +71,7 @@ func testExecutionChallenge(t *testing.T) {
 				4,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return ChallengeExecutionClaim(
 				context.Background(),
 				client,

@@ -20,8 +20,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -80,7 +78,7 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client *ethclient.Cl
 	}, nil
 }
 
-func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,

@@ -24,8 +24,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -44,22 +42,22 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
 }
 
-func getBlockID(header *types.Header) *structures.BlockId {
-	return &structures.BlockId{
+func getBlockID(header *types.Header) *common.BlockId {
+	return &common.BlockId{
 		Height:     common.NewTimeBlocks(header.Number),
 		HeaderHash: common.NewHashFromEth(header.Hash()),
 	}
 }
 
-func getLogBlockID(ethLog types.Log) *structures.BlockId {
-	return &structures.BlockId{
+func getLogBlockID(ethLog types.Log) *common.BlockId {
+	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 	}
 }
 
-func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
-	return &structures.BlockId{
+func getTxBlockID(receipt *types.Receipt) *common.BlockId {
+	return &common.BlockId{
 		Height:     common.NewTimeBlocks(receipt.BlockNumber),
 		HeaderHash: common.NewHashFromEth(receipt.BlockHash),
 	}

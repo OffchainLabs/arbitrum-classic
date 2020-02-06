@@ -46,7 +46,7 @@ type ChainObserver struct {
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockId       *structures.BlockId
+	latestBlockId       *common.BlockId
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
@@ -56,9 +56,9 @@ type ChainObserver struct {
 func NewChain(
 	rollupAddr common.Address,
 	checkpointer checkpointing.RollupCheckpointer,
-	vmParams structures.ChainParams,
+	vmParams valprotocol.ChainParams,
 	updateOpinion bool,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -107,7 +107,7 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
@@ -119,14 +119,14 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx checkpointing.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
 
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
-	restoreCtx structures.RestoreContext,
+	restoreCtx checkpointing.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
@@ -183,11 +183,11 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	}
 }
 
-func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
+func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := structures.NewCheckpointContextImpl()
+	ckptCtx := checkpointing.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +195,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
 }
 
-func (chain *ChainObserver) CurrentBlockId() *structures.BlockId {
+func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
 	blockId := chain.latestBlockId
 	chain.RUnlock()
@@ -318,7 +318,7 @@ func (chain *ChainObserver) updateOldest() {
 }
 
 func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
-	disputableNode := structures.NewDisputableNode(
+	disputableNode := valprotocol.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
 		ev.MaxPendingTop,

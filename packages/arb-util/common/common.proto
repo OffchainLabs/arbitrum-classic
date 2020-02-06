@@ -21,3 +21,8 @@ message TimeTicksBuf {
 message AddressBuf {
     bytes value = 1;
 }
+
+message BlockIdBuf {
+    TimeBlocksBuf height = 1;
+    HashBuf headerHash = 2;
+}

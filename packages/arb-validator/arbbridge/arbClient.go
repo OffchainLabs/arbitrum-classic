@@ -19,18 +19,16 @@ package arbbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type MaybeBlockId struct {
-	BlockId *structures.BlockId
+	BlockId *common.BlockId
 	Err     error
 }
 
 type ArbClient interface {
-	SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan MaybeBlockId, error)
+	SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
@@ -38,8 +36,8 @@ type ArbClient interface {
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
-	CurrentBlockId(ctx context.Context) (*structures.BlockId, error)
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error)
+	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
+	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 }
 
 type ArbAuthClient interface {

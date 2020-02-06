@@ -18,20 +18,23 @@ syntax = "proto3";
 package rollup;
 import "common/common.proto";
 import "structures/structures.proto";
+import "valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message NodeBuf {
     common.HashBuf prevHash = 1;
     common.TimeTicksBuf deadline = 2;
-    structures.DisputableNodeBuf disputableNode = 3;
+    valprotocol.DisputableNodeBuf disputableNode = 3;
     uint32 linkType = 4;
-    structures.VMProtoDataBuf vmProtoData = 5;
+    valprotocol.VMProtoDataBuf vmProtoData = 5;
 
     common.HashBuf machineHash = 6;
-    uint64 depth = 7;
-    common.HashBuf nodeDataHash = 8;
-    common.HashBuf innerHash = 9;
-    common.HashBuf hash = 10;
+    structures.ExecutionAssertionBuf assertion = 7;
+    uint64 depth = 8;
+    common.HashBuf nodeDataHash = 9;
+    common.HashBuf innerHash = 10;
+    common.HashBuf hash = 11;
+    common.HashBuf assertionTxHash = 12;
 }
 
 message NodeGraphBuf {
@@ -39,7 +42,7 @@ message NodeGraphBuf {
     common.HashBuf oldestNodeHash = 2;
     common.HashBuf latestConfirmedHash = 3;
     repeated common.HashBuf    leafHashes = 4;
-    structures.ChainParamsBuf params = 5;
+    valprotocol.ChainParamsBuf params = 5;
 }
 
 message StakedNodeGraphBuf {
@@ -53,7 +56,7 @@ message ChainObserverBuf {
     structures.PendingInboxBuf pendingInbox = 3;
     common.HashBuf knownValidNode = 4;
     common.HashBuf calculatedValidNode = 5;
-    structures.BlockIdBuf latestBlockId = 6;
+    common.BlockIdBuf latestBlockId = 6;
     bool isOpinionated = 7;
 }
 

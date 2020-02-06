@@ -18,14 +18,14 @@ package rolluptest
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
 )
 
 type EvilRollupCheckpointerFactory struct {
@@ -75,7 +75,7 @@ func (e evilRollupCheckpointer) RestoreLatestState(
 	clnt arbbridge.ArbClient,
 	contractAddr common.Address,
 	beOpinionated bool,
-) (content []byte, resCtx structures.RestoreContext, err error) {
+) (content []byte, resCtx checkpointing.RestoreContext, err error) {
 	content, resCtx, err = e.cp.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated)
 	if err == nil {
 		resCtx = e
@@ -91,6 +91,6 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx checkpointing.CheckpointContext, closeWhenDone chan struct{}) {
 	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx, closeWhenDone)
 }

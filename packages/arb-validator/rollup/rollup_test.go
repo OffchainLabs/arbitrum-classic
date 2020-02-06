@@ -29,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -59,7 +58,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
-	ctx := structures.NewCheckpointContextImpl()
+	ctx := checkpointing.NewCheckpointContextImpl()
 	chainBuf := chain.marshalForCheckpoint(ctx)
 	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if err != nil {
@@ -71,11 +70,11 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 }
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
-	blockId := &structures.BlockId{
+	blockId := &common.BlockId{
 		common.NewTimeBlocks(big.NewInt(7337)),
 		common.Hash{},
 	}
-	ctx := structures.NewCheckpointContextImpl()
+	ctx := checkpointing.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +108,7 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 	}
 
 	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
+	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
 	doAnAssertion(chain, validTip)
 	if chain.nodeGraph.leaves.NumLeaves() != 7 {
 		t.Fatal("unexpected leaf count")
@@ -134,8 +133,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	staker1addr := common.Address{1}
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
-	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.InvalidMessagesChildType)
+	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
+	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.InvalidMessagesChildType)
 	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
@@ -144,14 +143,14 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	if !confNode.Equals(chain.nodeGraph.latestConfirmed) {
 		t.Fatal("unexpected value for conflict ancestor")
 	}
-	if childType != structures.InvalidMessagesChildType {
+	if childType != valprotocol.InvalidMessagesChildType {
 		t.Fatal("unexpected value for conflict type")
 	}
 
 	createOneStaker(chain, staker1addr, validTip.hash)
 	createOneStaker(chain, staker2addr, tip2.hash)
 
-	chain.nodeGraph.NewChallenge(contractAddr, staker1addr, staker2addr, structures.InvalidMessagesChildType)
+	chain.nodeGraph.NewChallenge(contractAddr, staker1addr, staker2addr, valprotocol.InvalidMessagesChildType)
 
 	tryMarshalUnmarshal(chain, t)
 
@@ -169,7 +168,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
-	assertionParams := &structures.AssertionParams{
+	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             1,
 		TimeBounds:           timeBounds,
 		ImportedMessageCount: big.NewInt(0),
@@ -183,12 +182,12 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		FirstLogHash:     common.Hash{},
 		LastLogHash:      common.Hash{},
 	}
-	assertionClaim := &structures.AssertionClaim{
+	assertionClaim := &valprotocol.AssertionClaim{
 		AfterPendingTop:       chain.pendingInbox.GetTopHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 		AssertionStub:         assertionStub,
 	}
-	disputableNode := structures.NewDisputableNode(
+	disputableNode := valprotocol.NewDisputableNode(
 		assertionParams,
 		assertionClaim,
 		chain.pendingInbox.GetTopHash(),
@@ -234,7 +233,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	chain, err := NewChain(
 		dummyAddress,
 		checkpointer,
-		structures.ChainParams{
+		valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
@@ -242,7 +241,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		&structures.BlockId{
+		&common.BlockId{
 			Height:     common.NewTimeBlocks(big.NewInt(10)),
 			HeaderHash: common.Hash{},
 		},
@@ -263,7 +262,7 @@ func createSomeStakers(chain *ChainObserver) {
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
 	chain.createStake(context.Background(), arbbridge.StakeCreatedEvent{
 		ChainInfo: arbbridge.ChainInfo{
-			BlockId: &structures.BlockId{
+			BlockId: &common.BlockId{
 				Height:     common.NewTimeBlocks(big.NewInt(73)),
 				HeaderHash: common.Hash{},
 			},
