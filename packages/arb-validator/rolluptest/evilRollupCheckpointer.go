@@ -59,7 +59,7 @@ func (e evilRollupCheckpointer) GetValue(h common.Hash) value.Value {
 }
 
 func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.GetMachine(h).(*cmachine.Machine))
+	return NewEvilMachine(e.cp.GetMachine(_inverseTweakHash(h)).(*cmachine.Machine))
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
