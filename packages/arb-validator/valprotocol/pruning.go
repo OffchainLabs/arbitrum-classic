@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,22 @@
  * limitations under the License.
  */
 
-package arbbridge
+package valprotocol
 
-import (
-	"context"
+import "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-)
-
-type ArbFactory interface {
-	CreateRollup(
-		ctx context.Context,
-		vmState common.Hash,
-		params valprotocol.ChainParams,
-		owner common.Address,
-	) (common.Address, error)
+type PruneParams struct {
+	LeafHash     common.Hash
+	AncestorHash common.Hash
+	LeafProof    []common.Hash
+	AncProof     []common.Hash
 }
 
-type ArbFactoryWatcher interface {
-	GlobalPendingInboxAddress() (common.Address, error)
-	ChallengeFactoryAddress() (common.Address, error)
+func (pp PruneParams) Clone() PruneParams {
+	return PruneParams{
+		LeafHash:     pp.LeafHash,
+		AncestorHash: pp.AncestorHash,
+		LeafProof:    append(make([]common.Hash, 0), pp.LeafProof...),
+		AncProof:     append(make([]common.Hash, 0), pp.AncProof...),
+	}
 }

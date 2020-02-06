@@ -14,11 +14,9 @@
 * limitations under the License.
  */
 
-package structures
+package checkpointing
 
 import (
-	"fmt"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -113,34 +111,4 @@ func (src *SimpleRestoreContext) AddValue(val value.Value) {
 
 func (src *SimpleRestoreContext) AddMachine(mach machine.Machine) {
 	src.machines[mach.Hash()] = mach
-}
-
-type BlockId struct {
-	Height     *common.TimeBlocks
-	HeaderHash common.Hash
-}
-
-func (id *BlockId) Clone() *BlockId {
-	return &BlockId{
-		Height:     id.Height.Clone(),
-		HeaderHash: id.HeaderHash,
-	}
-}
-
-func (id *BlockId) MarshalToBuf() *BlockIdBuf {
-	return &BlockIdBuf{
-		Height:     id.Height.Marshal(),
-		HeaderHash: id.HeaderHash.MarshalToBuf(),
-	}
-}
-
-func (idb *BlockIdBuf) Unmarshal() *BlockId {
-	return &BlockId{
-		Height:     idb.Height.Unmarshal(),
-		HeaderHash: idb.HeaderHash.Unmarshal(),
-	}
-}
-
-func (id *BlockId) String() string {
-	return fmt.Sprintf("Block(%v, %v)", id.Height.AsInt(), id.HeaderHash)
 }

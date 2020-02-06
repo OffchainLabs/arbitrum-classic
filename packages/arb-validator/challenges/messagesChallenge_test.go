@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -70,11 +72,11 @@ func testMessagesChallenge(t *testing.T) {
 	)
 
 	if err := testChallenge(
-		structures.InvalidMessagesChildType,
+		valprotocol.InvalidMessagesChildType,
 		challengeHash,
 		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
 		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
 				client,
@@ -87,7 +89,7 @@ func testMessagesChallenge(t *testing.T) {
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return ChallengeMessagesClaim(
 				context.Background(),
 				client,

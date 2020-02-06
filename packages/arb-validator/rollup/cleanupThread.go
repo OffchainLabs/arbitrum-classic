@@ -23,22 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type pruneParams struct {
-	leafHash     common.Hash
-	ancestorHash common.Hash
-	leafProof    []common.Hash
-	ancProof     []common.Hash
-}
-
-func (pp pruneParams) Clone() pruneParams {
-	return pruneParams{
-		leafHash:     pp.leafHash,
-		ancestorHash: pp.ancestorHash,
-		leafProof:    append(make([]common.Hash, 0), pp.leafProof...),
-		ancProof:     append(make([]common.Hash, 0), pp.ancProof...),
-	}
-}
-
 type recoverStakeOldParams struct {
 	addr  common.Address
 	proof []common.Hash

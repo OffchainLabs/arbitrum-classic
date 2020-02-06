@@ -20,8 +20,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -52,7 +50,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, *structures.BlockId, error) {
+) (common.Address, *common.BlockId, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.contract.StartChallenge(

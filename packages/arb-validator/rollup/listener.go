@@ -23,12 +23,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+)
+
+const (
+	PruneSizeLimit = 120
 )
 
 type ChainListener interface {
@@ -43,9 +48,8 @@ type ChainListener interface {
 	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
 
 	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
-	ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity)
-	InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity)
-	PrunableLeafs(context.Context, *ChainObserver, []pruneParams)
+	ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
+	PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams)
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
@@ -63,7 +67,7 @@ type ValidatorChainListener struct {
 	actor                  arbbridge.ArbRollup
 	rollupAddress          common.Address
 	stakingKeys            map[common.Address]*StakingKey
-	broadcastAssertions    map[common.Hash]*structures.AssertionParams
+	broadcastAssertions    map[common.Hash]*valprotocol.AssertionParams
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
 	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
@@ -74,7 +78,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 		actor:                  actor,
 		rollupAddress:          rollupAddress,
 		stakingKeys:            make(map[common.Address]*StakingKey),
-		broadcastAssertions:    make(map[common.Hash]*structures.AssertionParams),
+		broadcastAssertions:    make(map[common.Hash]*valprotocol.AssertionParams),
 		broadcastConfirmations: make(map[common.Hash]bool),
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
 		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
@@ -88,7 +92,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 				return
 			case <-ticker.C:
 				ret.Lock()
-				ret.broadcastAssertions = make(map[common.Hash]*structures.AssertionParams)
+				ret.broadcastAssertions = make(map[common.Hash]*valprotocol.AssertionParams)
 				ret.broadcastConfirmations = make(map[common.Hash]bool)
 				ret.broadcastLeafPrunes = make(map[common.Hash]bool)
 				ret.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
@@ -315,7 +319,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	asserterKey, ok := lis.stakingKeys[ev.Asserter]
 	if ok {
 		switch conflictNode.linkType {
-		case structures.InvalidPendingChildType:
+		case valprotocol.InvalidPendingChildType:
 			go func() {
 				res, err := challenges.DefendPendingTopClaim(
 					ctx,
@@ -337,7 +341,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					log.Println("Completed defending pending top claim", res)
 				}
 			}()
-		case structures.InvalidMessagesChildType:
+		case valprotocol.InvalidMessagesChildType:
 			go func() {
 				res, err := challenges.DefendMessagesClaim(
 					ctx,
@@ -356,7 +360,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					log.Println("Completed defending messages claim", res)
 				}
 			}()
-		case structures.InvalidExecutionChildType:
+		case valprotocol.InvalidExecutionChildType:
 			go func() {
 				res, err := challenges.DefendExecutionClaim(
 					ctx,
@@ -383,7 +387,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 	challenger, ok := lis.stakingKeys[ev.Challenger]
 	if ok {
 		switch conflictNode.linkType {
-		case structures.InvalidPendingChildType:
+		case valprotocol.InvalidPendingChildType:
 			go func() {
 				res, err := challenges.ChallengePendingTopClaim(
 					ctx,
@@ -400,7 +404,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					log.Println("Completed challenging pending top claim", res)
 				}
 			}()
-		case structures.InvalidMessagesChildType:
+		case valprotocol.InvalidMessagesChildType:
 			go func() {
 				res, err := challenges.ChallengeMessagesClaim(
 					ctx,
@@ -419,7 +423,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 					log.Println("Completed challenging messages claim", res)
 				}
 			}()
-		case structures.InvalidExecutionChildType:
+		case valprotocol.InvalidExecutionChildType:
 			go func() {
 				res, err := challenges.ChallengeExecutionClaim(
 					ctx,
@@ -457,89 +461,58 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) ValidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmValidOpportunity) {
+func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observer *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
-	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
+	_, alreadySent := lis.broadcastConfirmations[conf.CurrentLatestConfirmed]
 	if alreadySent {
 		lis.Unlock()
 		return
 	}
-	lis.broadcastConfirmations[conf.nodeHash] = true
+	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
+	confClone := conf.Clone()
 	go func() {
-		err := lis.actor.ConfirmValid(
-			ctx,
-			conf.deadlineTicks,
-			conf.messages,
-			conf.logsAcc,
-			conf.vmProtoStateHash,
-			conf.stakerAddresses,
-			conf.stakerProofs,
-			conf.stakerProofOffsets,
-		)
+		err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
 			log.Println("Failed to confirm valid node", err)
 			lis.Lock()
-			delete(lis.broadcastConfirmations, conf.nodeHash)
+			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
 		}
 	}()
 }
 
-func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, observer *ChainObserver, conf *confirmInvalidOpportunity) {
-	// Anyone confirm a node
-	// No need to have your own stake
-	lis.Lock()
-	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
-	if alreadySent {
-		lis.Unlock()
-		return
-	}
-	lis.broadcastConfirmations[conf.nodeHash] = true
-	lis.Unlock()
-	go func() {
-		err := lis.actor.ConfirmInvalid(
-			ctx,
-			conf.deadlineTicks,
-			conf.challengeNodeData,
-			conf.branch,
-			conf.vmProtoStateHash,
-			conf.stakerAddresses,
-			conf.stakerProofs,
-			conf.stakerProofOffsets,
-		)
-		if err != nil {
-			log.Println("Failed to confirm invalid node", err)
-			lis.Lock()
-			delete(lis.broadcastConfirmations, conf.nodeHash)
-			lis.Unlock()
-		}
-	}()
-}
-
-func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []pruneParams) {
+func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []valprotocol.PruneParams) {
 	// Anyone can prune a leaf
+	leavesToPrune := make([]valprotocol.PruneParams, 0, len(params))
+	lis.Lock()
+	totalSize := 0
 	for _, prune := range params {
-		lis.Lock()
-		_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
+		_, alreadySent := lis.broadcastLeafPrunes[prune.LeafHash]
 		if alreadySent {
-			lis.Unlock()
 			continue
 		}
-		lis.broadcastLeafPrunes[prune.leafHash] = true
-		lis.Unlock()
-		pruneCopy := prune.Clone()
-		go func() {
-			lis.actor.PruneLeaf(
-				ctx,
-				pruneCopy.ancestorHash,
-				pruneCopy.leafProof,
-				pruneCopy.ancProof,
-			)
-		}()
+		leavesToPrune = append(leavesToPrune, prune)
+		lis.broadcastLeafPrunes[prune.LeafHash] = true
+		totalSize += len(prune.LeafProof) + len(prune.AncProof) + 1
+		if totalSize > PruneSizeLimit {
+			break
+		}
 	}
+	lis.Unlock()
+	go func() {
+		err := lis.actor.PruneLeaves(ctx, leavesToPrune)
+		if err != nil {
+			log.Println("Failed pruning leaves", err)
+			lis.Lock()
+			for _, prune := range leavesToPrune {
+				delete(lis.broadcastLeafPrunes, prune.LeafHash)
+			}
+			lis.Unlock()
+		}
+	}()
 }
 
 func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {

@@ -21,8 +21,7 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ArbRollup interface {
@@ -32,36 +31,17 @@ type ArbRollup interface {
 	RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error
 	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error
 	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
-	PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error
-	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof []common.Hash) error
-	ConfirmValid(
-		ctx context.Context,
-		deadline common.TimeTicks,
-		outMsgs []value.Value,
-		logsAccHash common.Hash,
-		protoHash common.Hash,
-		stakerAddresses []common.Address,
-		stakerProofs []common.Hash,
-		stakerProofOffsets []*big.Int,
-	) error
-	ConfirmInvalid(
-		ctx context.Context,
-		deadline common.TimeTicks,
-		challengeNodeData common.Hash,
-		branch structures.ChildType,
-		protoHash common.Hash,
-		stakerAddresses []common.Address,
-		stakerProofs []common.Hash,
-		stakerProofOffsets []*big.Int,
-	) error
+	PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) error
+	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType valprotocol.ChildType, beforeState *valprotocol.VMProtoData, assertionParams *valprotocol.AssertionParams, assertionClaim *valprotocol.AssertionClaim, stakerProof []common.Hash) error
+	Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error
 	StartChallenge(
 		ctx context.Context,
 		asserterAddress common.Address,
 		challengerAddress common.Address,
 		prevNode common.Hash,
 		disputableDeadline *big.Int,
-		asserterPosition structures.ChildType,
-		challengerPosition structures.ChildType,
+		asserterPosition valprotocol.ChildType,
+		challengerPosition valprotocol.ChildType,
 		asserterVMProtoHash common.Hash,
 		challengerVMProtoHash common.Hash,
 		asserterProof []common.Hash,

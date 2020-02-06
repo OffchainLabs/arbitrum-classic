@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -35,11 +34,11 @@ type preparedAssertion struct {
 	prevPrevLeafHash common.Hash
 	prevDataHash     common.Hash
 	prevDeadline     common.TimeTicks
-	prevChildType    structures.ChildType
+	prevChildType    valprotocol.ChildType
 
-	beforeState *structures.VMProtoData
-	params      *structures.AssertionParams
-	claim       *structures.AssertionClaim
+	beforeState *valprotocol.VMProtoData
+	params      *valprotocol.AssertionParams
+	claim       *valprotocol.AssertionClaim
 	assertion   *protocol.ExecutionAssertion
 	machine     machine.Machine
 }
@@ -85,7 +84,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				panic("Node has no successor")
 			}
 
-			var newOpinion structures.ChildType
+			var newOpinion valprotocol.ChildType
 			var nextMachine machine.Machine
 			var validExecution *protocol.ExecutionAssertion
 			prepped, found := preparedAssertions[currentHash]
@@ -97,7 +96,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			if found &&
 				prepped.params.Equals(successor.disputable.AssertionParams) &&
 				prepped.claim.Equals(successor.disputable.AssertionClaim) {
-				newOpinion = structures.ValidChildType
+				newOpinion = valprotocol.ValidChildType
 				nextMachine = prepped.machine
 				validExecution = prepped.assertion
 				chain.RUnlock()
@@ -128,7 +127,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			if ok {
 				chain.RUnlock()
 				chain.Lock()
-				if newOpinion == structures.ValidChildType {
+				if newOpinion == valprotocol.ValidChildType {
 					correctNode.machine = nextMachine
 					correctNode.assertion = validExecution
 				} else {
@@ -141,7 +140,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				chain.Unlock()
 				chain.RLock()
-				if newOpinion == structures.ValidChildType {
+				if newOpinion == valprotocol.ValidChildType {
 					for _, lis := range chain.listeners {
 						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
 					}
@@ -261,26 +260,26 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		currentOpinionHash,
 	)
 
-	var params *structures.AssertionParams
-	var claim *structures.AssertionClaim
+	var params *valprotocol.AssertionParams
+	var claim *valprotocol.AssertionClaim
 	if assertion.DidInboxInsn {
-		params = &structures.AssertionParams{
+		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
 			TimeBounds:           timeBounds,
 			ImportedMessageCount: newMessageCount,
 		}
-		claim = &structures.AssertionClaim{
+		claim = &valprotocol.AssertionClaim{
 			AfterPendingTop:       afterPendingTop,
 			ImportedMessagesSlice: inbox.Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
-		params = &structures.AssertionParams{
+		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
 			TimeBounds:           timeBounds,
 			ImportedMessageCount: big.NewInt(0),
 		}
-		claim = &structures.AssertionClaim{
+		claim = &valprotocol.AssertionClaim{
 			AfterPendingTop:       beforePendingTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
@@ -301,18 +300,18 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 }
 
 func getNodeOpinion(
-	params *structures.AssertionParams,
-	claim *structures.AssertionClaim,
+	params *valprotocol.AssertionParams,
+	claim *valprotocol.AssertionClaim,
 	afterPendingTop *common.Hash,
 	calculatedMessagesSlice common.Hash,
 	messagesVal value.TupleValue,
 	mach machine.Machine,
-) (structures.ChildType, *protocol.ExecutionAssertion) {
+) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
 	if afterPendingTop == nil || claim.AfterPendingTop != *afterPendingTop {
-		return structures.InvalidPendingChildType, nil
+		return valprotocol.InvalidPendingChildType, nil
 	}
 	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
-		return structures.InvalidMessagesChildType, nil
+		return valprotocol.InvalidMessagesChildType, nil
 	}
 
 	assertion, stepsRun := mach.ExecuteAssertion(
@@ -322,8 +321,8 @@ func getNodeOpinion(
 		0,
 	)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
-		return structures.InvalidExecutionChildType, nil
+		return valprotocol.InvalidExecutionChildType, nil
 	}
 
-	return structures.ValidChildType, assertion
+	return valprotocol.ValidChildType, assertion
 }

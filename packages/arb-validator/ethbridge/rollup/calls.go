@@ -30,14 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Solidity: function confirmValid(uint256 deadlineTicks, bytes _messages, bytes32 logsAcc, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
-func (_ArbRollup *ArbRollupTransactor) ConfirmValidCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, deadlineTicks *big.Int, _messages []byte, logsAcc [32]byte, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return callCheck(ctx, client, from, contractAddress, "confirmValid", deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
-}
-
-// Solidity: function confirmInvalid(uint256 deadlineTicks, bytes32 challengeNodeData, uint256 branch, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
-func (_ArbRollup *ArbRollupTransactor) ConfirmInvalidCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, deadlineTicks *big.Int, challengeNodeData [32]byte, branch *big.Int, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return callCheck(ctx, client, from, contractAddress, "confirmInvalid", deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
+func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, initalProtoStateHash [32]byte, branches []*big.Int, deadlineTicks []*big.Int, challengeNodeData [][32]byte, logsAcc [][32]byte, vmProtoStateHashes [][32]byte, messagesLengths []*big.Int, messages []byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
+	return callCheck(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
 func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {

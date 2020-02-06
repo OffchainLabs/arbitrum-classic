@@ -22,8 +22,6 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -242,8 +240,8 @@ func getEvents(
 func nextBlockHash(
 	ctx context.Context,
 	client *ethclient.Client,
-	prevBlock *structures.BlockId,
-) (*structures.BlockId, error) {
+	prevBlock *common.BlockId,
+) (*common.BlockId, error) {
 	if prevBlock == nil {
 		header, err := client.HeaderByNumber(ctx, big.NewInt(0))
 		if err != nil {
@@ -266,7 +264,7 @@ func getNextLogs(
 	ctx context.Context,
 	client *ethclient.Client,
 	filter ethereum.FilterQuery,
-	prevBlock *structures.BlockId,
+	prevBlock *common.BlockId,
 ) ([]types.Log, error) {
 	nextBlock, err := nextBlockHash(ctx, client, prevBlock)
 	if err != nil {
