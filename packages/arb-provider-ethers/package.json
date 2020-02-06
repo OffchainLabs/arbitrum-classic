@@ -18,10 +18,10 @@
     "scripts": {
         "prepublishOnly": "yarn format && yarn test",
         "preversion": "yarn lint",
-        "build": "tsc",
+        "build": "./scripts/builder",
         "test": "jest --config jest.config.js",
-        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
         "lint": "yarn run eslint src/**/*.ts tests/**/*.ts",
+        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
         "update-abi": "./scripts/update-abi && yarn format"
     },
     "dependencies": {

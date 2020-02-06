@@ -36,9 +36,3 @@ yarn run typechain \
     --target=ethers \
     --outDir src/lib/abi \
     '../arb-compiler-evm/contract-templates/build/contracts/ArbInfo.json'
-
-for filepath in ./src/lib/abi/*.d.ts; do
-    fullfilename=$(basename -- "$filepath")
-    filename="${fullfilename%.*.*}"
-    touch "./src/lib/abi/${filename}.js"
-done
