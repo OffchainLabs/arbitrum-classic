@@ -196,6 +196,8 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 			if confirmable {
 				var confOpp valprotocol.ConfirmNodeOpportunity
 				if node.linkType == valprotocol.ValidChildType {
+					// We need to know the contents of the actual assertion to confirm it
+					// We've only seen the hash accumulator of the messages before whereas this requires the full values
 					if node.assertion == nil {
 						break
 					}
@@ -298,10 +300,7 @@ func (sng *StakedNodeGraph) isConfirmableNode(
 		}
 		stakeCount++
 	}
-	if stakeCount == 0 {
-		return false
-	}
-	return true
+	return stakeCount > 0
 }
 
 func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {
