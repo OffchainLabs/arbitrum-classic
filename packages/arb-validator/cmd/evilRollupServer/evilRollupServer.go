@@ -24,8 +24,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -40,10 +42,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-)
-
-const (
-	maxReorgDepth = 100
 )
 
 // Launches the rollup validator with the following command line arguments:
@@ -133,19 +131,25 @@ func validateRollupChain() error {
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
 	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
+	gasPrice := validateCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
-	if validateCmd.NArg() != 5 {
-		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=N] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
+	if validateCmd.NArg() != 3 {
+		return errors.New("usage: evilRollupServer validate [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
 	}
 
 	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
-	// 2) Private key
-	keyFile, err := os.Open(validateCmd.Arg(1))
+	validatorFolder := validateCmd.Arg(0)
+	ethURL := validateCmd.Arg(1)
+	addressString := validateCmd.Arg(2)
+	address := common.HexToAddress(addressString)
+
+	keyFilePath := filepath.Join(validatorFolder, "private_key.txt")
+	keyFile, err := os.Open(keyFilePath)
 	if err != nil {
 		return err
 	}
@@ -162,18 +166,12 @@ func validateRollupChain() error {
 		return fmt.Errorf("HexToECDSA private key error: %v", err)
 	}
 
-	// 3) URL
-	ethURL := validateCmd.Arg(2)
-
-	// 4) Rollup contract address
-	addressString := validateCmd.Arg(3)
-	address := common.HexToAddress(addressString)
-
-	// 5) Database directory path
-	dbPath := validateCmd.Arg(4)
-
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
+	gasPriceAsFloat := 1e9 * (*gasPrice)
+	if gasPriceAsFloat < math.MaxInt64 {
+		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
+	}
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return err
@@ -190,17 +188,19 @@ func validateRollupChain() error {
 		return err
 	}
 
-	ctx := context.Background()
+	contractFile := filepath.Join(validatorFolder, "contract.ao")
+	dbPath := filepath.Join(validatorFolder, "checkpoint_db")
+
 	manager, err := rollupmanager.CreateManagerAdvanced(
-		ctx,
+		context.Background(),
 		address,
 		true,
 		client,
 		rolluptest.NewEvilRollupCheckpointerFactory(
 			address,
-			validateCmd.Arg(0),
+			contractFile,
 			dbPath,
-			big.NewInt(maxReorgDepth),
+			big.NewInt(100),
 			false,
 		),
 	)
