@@ -47,7 +47,7 @@ func (cs *ChallengeSet) Add(newChallenge *Challenge) {
 }
 
 func (cs *ChallengeSet) Delete(contract common.Address) {
-	delete(cs.idx, challenge.contract)
+	delete(cs.idx, contract)
 }
 
 func (cs *ChallengeSet) Get(addr common.Address) *Challenge {

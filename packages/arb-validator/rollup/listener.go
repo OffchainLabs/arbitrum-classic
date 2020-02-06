@@ -41,6 +41,7 @@ type ChainListener interface {
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
 	StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent)
 	StartedChallenge(context.Context, *ChainObserver, *Challenge)
+	ResumedChallenge(context.Context, *ChainObserver, *Challenge)
 	CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent)
 	SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent)
 	ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent)
@@ -313,6 +314,14 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 // All functions below are either only called if you have a stake down, or don't require a stake
 
 func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, chal *Challenge) {
+	lis.launchChallenge(ctx, chain, chal)
+}
+
+func (lis *ValidatorChainListener) ResumedChallenge(ctx context.Context, chain *ChainObserver, chal *Challenge) {
+	lis.launchChallenge(ctx, chain, chal)
+}
+
+func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *ChainObserver, chal *Challenge) {
 	// Must already be staked to be challenged
 	startBlockId := chal.blockId
 	startLogIndex := chal.logIndex - 1

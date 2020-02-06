@@ -47,6 +47,10 @@ func (al *AnnouncerListener) StartedChallenge(context.Context, *ChainObserver, *
 	log.Println(al.Prefix, "StartedChallenge")
 }
 
+func (al *AnnouncerListener) ResumedChallenge(context.Context, *ChainObserver, *Challenge) {
+	log.Println(al.Prefix, "ResumedChallenge")
+}
+
 func (al *AnnouncerListener) CompletedChallenge(ctx context.Context, observer *ChainObserver, event arbbridge.ChallengeCompletedEvent) {
 	log.Println(al.Prefix, "CompletedChallenge")
 }

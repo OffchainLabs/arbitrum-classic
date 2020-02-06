@@ -87,6 +87,11 @@ func NewChain(
 }
 
 func (chain *ChainObserver) Start(ctx context.Context) {
+	chain.nodeGraph.challenges.forall(func(c *Challenge) {
+		for _, listener := range chain.listeners {
+			listener.ResumedChallenge(ctx, chain, c)
+		}
+	})
 	chain.startCleanupThread(ctx)
 	chain.startConfirmThread(ctx)
 
