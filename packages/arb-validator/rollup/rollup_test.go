@@ -149,8 +149,14 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 	createOneStaker(chain, staker1addr, validTip.hash)
 	createOneStaker(chain, staker2addr, tip2.hash)
-
-	chain.nodeGraph.NewChallenge(contractAddr, staker1addr, staker2addr, valprotocol.InvalidMessagesChildType)
+	chain.nodeGraph.NewChallenge(&Challenge{
+		blockId:      chain.latestBlockId,
+		logIndex:     0,
+		asserter:     staker1addr,
+		challenger:   staker2addr,
+		contract:     contractAddr,
+		conflictNode: confNode,
+	})
 
 	tryMarshalUnmarshal(chain, t)
 
