@@ -62,15 +62,12 @@ func (cs *ChallengeSet) forall(f func(*Challenge)) {
 
 func (c *Challenge) MarshalToBuf() *ChallengeBuf {
 	return &ChallengeBuf{
-		BlockId:              c.blockId.MarshalToBuf(),
-		LogIndex:             uint64(c.logIndex),
-		Asserter:             c.asserter.MarshallToBuf(),
-		Challenger:           c.challenger.MarshallToBuf(),
-		Contract:             c.contract.MarshallToBuf(),
-		ConflictNodeHash:     c.conflictNode.hash.MarshalToBuf(),
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+		BlockId:          c.blockId.MarshalToBuf(),
+		LogIndex:         uint64(c.logIndex),
+		Asserter:         c.asserter.MarshallToBuf(),
+		Challenger:       c.challenger.MarshallToBuf(),
+		Contract:         c.contract.MarshallToBuf(),
+		ConflictNodeHash: c.conflictNode.hash.MarshalToBuf(),
 	}
 }
 
