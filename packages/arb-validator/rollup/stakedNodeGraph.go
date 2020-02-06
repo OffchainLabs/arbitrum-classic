@@ -70,8 +70,9 @@ func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointC
 
 func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *StakedNodeGraph {
 	chain := &StakedNodeGraph{
-		NodeGraph: m.NodeGraph.UnmarshalFromCheckpoint(ctx),
-		stakers:   NewStakerSet(),
+		NodeGraph:  m.NodeGraph.UnmarshalFromCheckpoint(ctx),
+		stakers:    NewStakerSet(),
+		challenges: NewChallengeSet(),
 	}
 	for _, stakerBuf := range m.Stakers {
 		chain.stakers.Add(stakerBuf.Unmarshal(chain.NodeGraph))
