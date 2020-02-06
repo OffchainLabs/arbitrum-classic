@@ -40,7 +40,7 @@ func (al *AssertionListener) StakeCreated(context.Context, *ChainObserver, arbbr
 func (al *AssertionListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
 }
 func (al *AssertionListener) StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent) {}
-func (al *AssertionListener) StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AssertionListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
 }
 func (al *AssertionListener) CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent) {
 }

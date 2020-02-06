@@ -40,13 +40,15 @@ const (
 
 type StakedNodeGraph struct {
 	*NodeGraph
-	stakers *StakerSet
+	stakers    *StakerSet
+	challenges *ChallengeSet
 }
 
 func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
 	return &StakedNodeGraph{
-		NodeGraph: NewNodeGraph(machine, params),
-		stakers:   NewStakerSet(),
+		NodeGraph:  NewNodeGraph(machine, params),
+		stakers:    NewStakerSet(),
+		challenges: NewChallengeSet(),
 	}
 }
 
@@ -55,9 +57,14 @@ func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointC
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
+	var allChallenges []*ChallengeBuf
+	chain.challenges.forall(func(c *Challenge) {
+		allChallenges = append(allChallenges, c.MarshalToBuf())
+	})
 	return &StakedNodeGraphBuf{
-		NodeGraph: chain.NodeGraph.MarshalForCheckpoint(ctx),
-		Stakers:   allStakers,
+		NodeGraph:  chain.NodeGraph.MarshalForCheckpoint(ctx),
+		Stakers:    allStakers,
+		Challenges: allChallenges,
 	}
 }
 
@@ -67,7 +74,10 @@ func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreCo
 		stakers:   NewStakerSet(),
 	}
 	for _, stakerBuf := range m.Stakers {
-		chain.stakers.Add(stakerBuf.Unmarshal(chain))
+		chain.stakers.Add(stakerBuf.Unmarshal(chain.NodeGraph))
+	}
+	for _, challengeBuf := range m.Challenges {
+		chain.challenges.Add(challengeBuf.Unmarshal(chain.NodeGraph))
 	}
 	return chain
 }
@@ -79,7 +89,8 @@ func (m *StakedNodeGraph) DebugString(prefix string) string {
 
 func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 	return s.NodeGraph.Equals(s2.NodeGraph) &&
-		s.stakers.Equals(s2.stakers)
+		s.stakers.Equals(s2.stakers) &&
+		s.challenges.Equals(s2.challenges)
 }
 
 func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
@@ -118,14 +129,16 @@ func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
 	chain.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind valprotocol.ChildType) {
-	chain.stakers.Get(asserter).challenge = contract
-	chain.stakers.Get(challenger).challenge = contract
+func (chain *StakedNodeGraph) NewChallenge(chal *Challenge) {
+	chain.stakers.Get(chal.asserter).challenge = chal.contract
+	chain.stakers.Get(chal.challenger).challenge = chal.contract
+	chain.challenges.Add(chal)
 }
 
 func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
 	chain.stakers.Get(winner).challenge = common.Address{}
 	chain.RemoveStake(loser)
+	chain.challenges.Delete(contract)
 }
 
 type SortableAddressList []common.Address

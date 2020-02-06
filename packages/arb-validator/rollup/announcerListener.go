@@ -43,7 +43,7 @@ func (al *AnnouncerListener) StakeMoved(ctx context.Context, observer *ChainObse
 	log.Printf("%v Staker %v moved to location: %v\n", al.Prefix, ev.Staker, ev.Location)
 }
 
-func (al *AnnouncerListener) StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AnnouncerListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
 	log.Println(al.Prefix, "StartedChallenge")
 }
 

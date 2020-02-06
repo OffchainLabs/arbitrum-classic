@@ -40,7 +40,7 @@ type ChainListener interface {
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
 	StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent)
-	StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node)
+	StartedChallenge(context.Context, *ChainObserver, *Challenge)
 	CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent)
 	SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent)
 	ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent)
@@ -312,26 +312,26 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 
 // All functions below are either only called if you have a stake down, or don't require a stake
 
-func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, ev arbbridge.ChallengeStartedEvent, conflictNode *Node, asserterAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *ChainObserver, chal *Challenge) {
 	// Must already be staked to be challenged
-	startBlockId := ev.BlockId
-	startLogIndex := ev.LogIndex - 1
-	asserterKey, ok := lis.stakingKeys[ev.Asserter]
+	startBlockId := chal.blockId
+	startLogIndex := chal.logIndex - 1
+	asserterKey, ok := lis.stakingKeys[chal.asserter]
 	if ok {
-		switch conflictNode.linkType {
+		switch chal.conflictNode.linkType {
 		case valprotocol.InvalidPendingChildType:
 			go func() {
 				res, err := challenges.DefendPendingTopClaim(
 					ctx,
 					asserterKey.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
-					conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					chal.conflictNode.disputable.AssertionClaim.AfterPendingTop,
 					new(big.Int).Sub(
-						conflictNode.disputable.MaxPendingCount,
-						new(big.Int).Add(conflictNode.prev.vmProtoData.PendingCount, conflictNode.disputable.AssertionParams.ImportedMessageCount),
+						chal.conflictNode.disputable.MaxPendingCount,
+						new(big.Int).Add(chal.conflictNode.prev.vmProtoData.PendingCount, chal.conflictNode.disputable.AssertionParams.ImportedMessageCount),
 					),
 					100,
 				)
@@ -346,12 +346,12 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				res, err := challenges.DefendMessagesClaim(
 					ctx,
 					asserterKey.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
-					conflictNode.vmProtoData.PendingTop,
-					conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					chal.conflictNode.vmProtoData.PendingTop,
+					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
 					100,
 				)
 				if err != nil {
@@ -365,12 +365,12 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				res, err := challenges.DefendExecutionClaim(
 					ctx,
 					asserterKey.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.executionPrecondition(conflictNode),
-					conflictNode.prev.machine,
-					conflictNode.disputable.AssertionParams.NumSteps,
+					chain.executionPrecondition(chal.conflictNode),
+					chal.conflictNode.prev.machine,
+					chal.conflictNode.disputable.AssertionParams.NumSteps,
 					50,
 				)
 				if err != nil {
@@ -384,15 +384,15 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 		}
 	}
 
-	challenger, ok := lis.stakingKeys[ev.Challenger]
+	challenger, ok := lis.stakingKeys[chal.challenger]
 	if ok {
-		switch conflictNode.linkType {
+		switch chal.conflictNode.linkType {
 		case valprotocol.InvalidPendingChildType:
 			go func() {
 				res, err := challenges.ChallengePendingTopClaim(
 					ctx,
 					challenger.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
@@ -409,12 +409,12 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				res, err := challenges.ChallengeMessagesClaim(
 					ctx,
 					challenger.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
 					chain.pendingInbox.MessageStack,
-					conflictNode.vmProtoData.PendingTop,
-					conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					chal.conflictNode.vmProtoData.PendingTop,
+					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
 					false,
 				)
 				if err != nil {
@@ -428,11 +428,11 @@ func (lis *ValidatorChainListener) StartedChallenge(ctx context.Context, chain *
 				res, err := challenges.ChallengeExecutionClaim(
 					ctx,
 					challenger.client,
-					ev.ChallengeContract,
+					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.executionPrecondition(conflictNode),
-					conflictNode.prev.machine,
+					chain.executionPrecondition(chal.conflictNode),
+					chal.conflictNode.prev.machine,
 					false,
 				)
 				if err != nil {

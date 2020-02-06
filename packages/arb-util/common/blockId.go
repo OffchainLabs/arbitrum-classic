@@ -46,6 +46,11 @@ func (idb *BlockIdBuf) Unmarshal() *BlockId {
 	}
 }
 
+func (id *BlockId) Equals(id2 *BlockId) bool {
+	return id.Height.Cmp(id2.Height) == 0 &&
+		id.HeaderHash.Equals(id2.HeaderHash)
+}
+
 func (id *BlockId) String() string {
 	return fmt.Sprintf("Block(%v, %v)", id.Height.AsInt(), id.HeaderHash)
 }
