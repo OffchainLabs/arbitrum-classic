@@ -1,19 +1,44 @@
 #!/bin/bash
 ### --------------------------------------------------------------------
-### update-go-abi
+### update-ts-abi
 ### --------------------------------------------------------------------
 
-yarn workspace arb-bridge-eth install
-yarn workspace arb-bridge-eth build
-yarn workspace contract-templates install
-yarn workspace contract-templates build
+# yarn workspace arb-bridge-eth install
+# yarn workspace arb-bridge-eth build
+# yarn workspace contract-templates install
+# yarn workspace contract-templates build
 
-typechain \
+yarn run typechain \
     --target=ethers \
     --outDir src/lib/abi \
-    '../arb-bridge-eth/build/contracts/{ArbFactory,ArbRollup,GlobalPendingInbox}.json'
-
-typechain \
+    '../arb-bridge-eth/build/contracts/ArbFactory.json'
+yarn run typechain \
     --target=ethers \
     --outDir src/lib/abi \
-    '../arb-compiler-evm/contract-templates/build/contracts/{ArbERC20,ArbERC721,ArbSys,ArbInfo}.json'
+    '../arb-bridge-eth/build/contracts/ArbRollup.json'
+yarn run typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-bridge-eth/build/contracts/GlobalPendingInbox.json'
+yarn run typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-compiler-evm/contract-templates/build/contracts/ArbERC721.json'
+yarn run typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-compiler-evm/contract-templates/build/contracts/ArbERC20.json'
+yarn run typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-compiler-evm/contract-templates/build/contracts/ArbSys.json'
+yarn run typechain \
+    --target=ethers \
+    --outDir src/lib/abi \
+    '../arb-compiler-evm/contract-templates/build/contracts/ArbInfo.json'
+
+for filepath in ./src/lib/abi/*.d.ts; do
+    fullfilename=$(basename -- "$filepath")
+    filename="${fullfilename%.*.*}"
+    touch "./src/lib/abi/${filename}.js"
+done
