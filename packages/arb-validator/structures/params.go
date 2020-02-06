@@ -26,7 +26,42 @@ type ChainParams struct {
 	StakeRequirement        *big.Int
 	GracePeriod             common.TimeTicks
 	MaxExecutionSteps       uint64
+	MaxTimeBoundsWidth      uint64
 	ArbGasSpeedLimitPerTick uint64
+}
+
+func (cp ChainParams) WithStakeRequirement(amount *big.Int) ChainParams {
+	ret := cp
+	ret.StakeRequirement = amount
+	return ret
+}
+
+func (cp ChainParams) WithGracePeriod(period common.TimeTicks) ChainParams {
+	ret := cp
+	ret.GracePeriod = period
+	return ret
+}
+
+func (cp ChainParams) WithGracePeriodBlocks(period common.TimeBlocks) ChainParams {
+	return cp.WithGracePeriod(common.TicksFromBlockNum(&period))
+}
+
+func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
+	ret := cp
+	ret.MaxExecutionSteps = steps
+	return ret
+}
+
+func (cp ChainParams) WithMaxTimeBoundsWidth(width uint64) ChainParams {
+	ret := cp
+	ret.MaxTimeBoundsWidth = width
+	return ret
+}
+
+func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
+	ret := cp
+	ret.ArbGasSpeedLimitPerTick = limit
+	return ret
 }
 
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
@@ -43,6 +78,7 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 		StakeRequirement:        m.StakeRequirement.Unmarshal(),
 		GracePeriod:             m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps:       m.MaxExecutionSteps,
+		MaxTimeBoundsWidth:      m.MaxTimeBoundsWidth,
 		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }

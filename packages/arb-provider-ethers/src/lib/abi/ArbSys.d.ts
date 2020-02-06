@@ -20,10 +20,6 @@ interface ArbSysInterface extends Interface {
             encode([dest, amount]: [string, BigNumberish]): string;
         }>;
 
-        currentMessageTime: TypedFunctionDescription<{ encode([]: []): string }>;
-
-        timeUpperBound: TypedFunctionDescription<{ encode([]: []): string }>;
-
         cloneContract: TypedFunctionDescription<{
             encode([account]: [string]): string;
         }>;
@@ -58,11 +54,10 @@ export class ArbSys extends Contract {
 
         withdrawEth(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        currentMessageTime(overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
-        timeUpperBound(overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         cloneContract(account: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        currentMessageTime(): Promise<BigNumber>;
+        timeUpperBound(): Promise<BigNumber>;
     };
 
     filters: {};
@@ -73,10 +68,6 @@ export class ArbSys extends Contract {
         withdrawERC721(dest: string, id: BigNumberish): Promise<BigNumber>;
 
         withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>;
-
-        currentMessageTime(): Promise<BigNumber>;
-
-        timeUpperBound(): Promise<BigNumber>;
 
         cloneContract(account: string): Promise<BigNumber>;
     };

@@ -37,12 +37,12 @@
     ]
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.4.0"
+    "@openzeppelin/contracts": "^2.5.0"
   },
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.4",
-    "truffle": "^5.0.33",
-    "truffle-flattener": "^1.4.0"
+    "truffle": "^5.1.11",
+    "truffle-flattener": "^1.4.2"
   },
   "workspaces": {
     "nohoist": [

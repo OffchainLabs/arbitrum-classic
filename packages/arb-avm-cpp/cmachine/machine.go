@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"time"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -133,6 +134,7 @@ func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
+	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	startTime := timeBounds.Start.AsInt()
 	endTime := timeBounds.End.AsInt()
@@ -167,6 +169,7 @@ func (m *Machine) ExecuteAssertion(
 		startTimeDataC,
 		endTimeDataC,
 		msgDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 	C.free(startTimeDataC)
 	C.free(endTimeDataC)

@@ -27,6 +27,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
@@ -39,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 const (
@@ -103,13 +103,6 @@ func createRollupChain() {
 	addressString := flag.Arg(4)
 	factoryAddress := common.HexToAddress(addressString)
 
-	config := structures.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 10)},
-		MaxExecutionSteps:       100000000,
-		ArbGasSpeedLimitPerTick: 100000,
-	}
-
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
@@ -125,7 +118,7 @@ func createRollupChain() {
 	address, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		config,
+		rollup.DefaultChainParams(),
 		common.Address{},
 	)
 	if err != nil {
@@ -139,14 +132,17 @@ func validateRollupChain() error {
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=N")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if validateCmd.NArg() != 5 {
-		return errors.New("usage: evilRollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
+		return errors.New("usage: rollupServer validate [--rpc] [--blocktime=N] <contract.ao> <private_key.txt> <ethURL> <rollup_address> <db_path>")
 	}
+
+	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	// 2) Private key
 	keyFile, err := os.Open(validateCmd.Arg(1))

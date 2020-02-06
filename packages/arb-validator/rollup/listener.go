@@ -80,7 +80,7 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
 	}
 	go func() {
-		ticker := time.NewTicker(time.Minute)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
 		defer ticker.Stop()
 		for {
 			select {
@@ -522,11 +522,14 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(ctx context.Context, o
 func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []pruneParams) {
 	// Anyone can prune a leaf
 	for _, prune := range params {
+		lis.Lock()
 		_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
 		if alreadySent {
+			lis.Unlock()
 			continue
 		}
 		lis.broadcastLeafPrunes[prune.leafHash] = true
+		lis.Unlock()
 		pruneCopy := prune.Clone()
 		go func() {
 			lis.actor.PruneLeaf(

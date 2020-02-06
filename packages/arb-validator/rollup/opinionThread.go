@@ -49,7 +49,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 		leafHash:         pa.leafHash,
 		prevPrevLeafHash: pa.prevPrevLeafHash,
 		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     common.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevDeadline:     pa.prevDeadline.Clone(),
 		prevChildType:    pa.prevChildType,
 		beforeState:      pa.beforeState.Clone(),
 		params:           pa.params.Clone(),
@@ -61,7 +61,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(time.Second)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		assertionPreparedChan := make(chan *preparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*preparedAssertion)
@@ -117,7 +117,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, prevPendingCount, afterPendingTop, inbox.Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, afterPendingTop, inbox.Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
@@ -233,13 +233,18 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
+	log.Println("timeBounds: ", timeBounds.Start.String(), timeBounds.End.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	currentHeight := chain.latestBlockId.Height.Clone()
+	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())
+	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
+	runDuration := common.NewTimeBlocks(runBlocks).Duration()
+	log.Println("Asserting for up to", runBlocks, " blocks")
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal, runDuration)
 
 	afterHash := mach.Hash()
 
@@ -298,7 +303,6 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 func getNodeOpinion(
 	params *structures.AssertionParams,
 	claim *structures.AssertionClaim,
-	prevPendingCount *big.Int,
 	afterPendingTop *common.Hash,
 	calculatedMessagesSlice common.Hash,
 	messagesVal value.TupleValue,
@@ -311,7 +315,12 @@ func getNodeOpinion(
 		return structures.InvalidMessagesChildType, nil
 	}
 
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(
+		params.NumSteps,
+		params.TimeBounds,
+		messagesVal,
+		0,
+	)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
 		return structures.InvalidExecutionChildType, nil
 	}

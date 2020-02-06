@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.2.1",
+    "version": "0.3.2",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
@@ -17,38 +17,37 @@
     "homepage": "https://offchainlabs.com",
     "scripts": {
         "prepare": "yarn build",
-        "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
-        "preversion": "npm run lint",
-        "shrinkABI": "node shrinkABI.js && yarn run prettier src/lib/ArbChain.json src/lib/ArbChannel.json src/lib/GlobalPendingInbox.json --write",
-        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/",
+        "prepublishOnly": "yarn lint && yarn format && yarn test",
+        "preversion": "yarn lint",
+        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-        "lint": "eslint . src/**/*.ts tests/**/*.ts",
+        "lint": "eslint src/**/*.ts tests/**/*.ts",
         "update-abi": "./scripts/update-abi"
     },
     "dependencies": {
-        "@types/node-fetch": "^2.5.0",
-        "ethers": "~4.0.28",
-        "jayson": "~2.1.2",
-        "node-fetch": "~2.3.0",
-        "promise-poller": "~1.7.0",
+        "@types/node-fetch": "^2.5.4",
+        "ethers": "^4.0.44",
+        "jayson": "^3.2.0",
+        "node-fetch": "^2.6.0",
+        "promise-poller": "^1.9.1",
         "solidity-bytes-utils": "^0.0.8"
     },
     "devDependencies": {
-        "@types/jest": "^24.0.17",
-        "@typescript-eslint/eslint-plugin": "^2.0.0",
-        "@typescript-eslint/parser": "^2.0.0",
-        "eslint": "^6.2.1",
-        "eslint-config-prettier": "^6.1.0",
-        "eslint-plugin-prettier": "^3.1.0",
-        "jest": "^24.9.0",
-        "jest-junit": "^7.0.0",
-        "prettier": "^1.18.2",
-        "ts-jest": "^24.0.2",
-        "typechain": "^0.3.21",
-        "typescript": "^3.5.3"
+        "@types/jest": "^25.1.1",
+        "@typescript-eslint/eslint-plugin": "^2.19.0",
+        "@typescript-eslint/parser": "^2.19.0",
+        "eslint": "^6.8.0",
+        "eslint-config-prettier": "^6.10.0",
+        "eslint-plugin-prettier": "^3.1.2",
+        "jest": "^25.1.0",
+        "jest-junit": "^10.0.0",
+        "prettier": "^1.19.1",
+        "ts-jest": "^25.2.0",
+        "typechain": "^1.0.4",
+        "typescript": "^3.7.5"
     },
     "files": [
-        "lib/**/*"
+        "dist/**/*"
     ]
 }

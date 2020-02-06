@@ -22,8 +22,6 @@ from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from eth_account import Account
 
-from support.run import run
-
 NAME = "setup_states"
 DESCRIPTION = ""
 VALIDATOR_STATES = "validator-states"
@@ -36,21 +34,7 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 def setup_validator_states_docker(
     contract, n_validators, image_name, is_geth, sudo=False
 ):
-    ethaddrs = "bridge_eth_addresses.json"
-
-    layer = run(
-        "docker create %s" % image_name, capture_stdout=True, quiet=True, sudo=sudo
-    ).strip()
-    if layer == "":
-        print("Docker image %s does not exist" % image_name)
-        return
-    run(
-        "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
-        sudo=sudo,
-    )
-    run("docker rm %s" % layer, quiet=True, sudo=sudo)
-
-    addresses = setup_validator_states_folder(contract, n_validators, ethaddrs)
+    addresses = setup_validator_states_folder(contract, n_validators)
 
     web3 = Web3(Web3.HTTPProvider("http://localhost:7545"))
 
@@ -58,8 +42,6 @@ def setup_validator_states_docker(
         web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     setup_validator_funds(web3, "0x81183C9C61bdf79DB7330BBcda47Be30c0a85064", addresses)
-
-    os.remove(ethaddrs)
 
 
 def setup_validator_funds(web3, source_address, addresses):
@@ -73,9 +55,7 @@ def setup_validator_funds(web3, source_address, addresses):
         web3.eth.waitForTransactionReceipt(tx_hash)
 
 
-def setup_validator_states_folder(contract, n_validators, ethaddrs):
-    ARB_VALIDATOR = os.path.join(ROOT_DIR, "packages", "arb-validator")
-
+def setup_validator_states_folder(contract, n_validators):
     # Check for validator_states in cwd
     if os.path.isdir(VALIDATOR_STATES):
         exit("Error: " + VALIDATOR_STATES + " exists in the current working directory")
@@ -92,14 +72,6 @@ def setup_validator_states_folder(contract, n_validators, ethaddrs):
         os.mkdir(state)
         # contract.ao
         shutil.copyfile(contract, os.path.join(state, "contract.ao"))
-        # bridge_eth_addresses.json
-        shutil.copyfile(ethaddrs, os.path.join(state, "bridge_eth_addresses.json"))
-        # server.crt and server.key
-        shutil.copy(os.path.join(ARB_VALIDATOR, "server.crt"), state)
-        shutil.copy(os.path.join(ARB_VALIDATOR, "server.key"), state)
-        # validator_addresses.txt
-        with open(os.path.join(state, "validator_addresses.txt"), "w") as f:
-            f.write("\n".join(addresses))
         # private_key.txt
         with open(os.path.join(state, "private_key.txt"), "w") as f:
             f.write(privates[i])

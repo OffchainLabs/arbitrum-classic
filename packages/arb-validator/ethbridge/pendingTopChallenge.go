@@ -60,7 +60,14 @@ func (c *pendingTopChallenge) Bisect(
 		chainLength,
 	)
 	if err != nil {
-		return err
+		return c.contract.BisectCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			hashSliceToRaw(chainHashes),
+			chainLength,
+		)
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }

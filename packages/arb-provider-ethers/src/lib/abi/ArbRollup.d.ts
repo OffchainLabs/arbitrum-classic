@@ -50,11 +50,22 @@ interface ArbRollupInterface extends Interface {
                 _gracePeriodTicks,
                 _arbGasSpeedLimitPerTick,
                 _maxExecutionSteps,
+                _maxTimeBoundsWidth,
                 _stakeRequirement,
                 _owner,
                 _challengeFactoryAddress,
                 _globalInboxAddress,
-            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
+            ]: [
+                Arrayish,
+                BigNumberish,
+                BigNumberish,
+                BigNumberish,
+                BigNumberish,
+                BigNumberish,
+                string,
+                string,
+                string,
+            ]): string;
         }>;
 
         placeStake: TypedFunctionDescription<{
@@ -217,9 +228,11 @@ export class ArbRollup extends Contract {
             gracePeriodTicks: BigNumber;
             arbGasSpeedLimitPerTick: BigNumber;
             maxExecutionSteps: BigNumber;
+            maxTimeBoundsWidth: BigNumber;
             0: BigNumber;
             1: BigNumber;
             2: BigNumber;
+            3: BigNumber;
         }>;
 
         pruneLeaf(
@@ -256,6 +269,7 @@ export class ArbRollup extends Contract {
             _gracePeriodTicks: BigNumberish,
             _arbGasSpeedLimitPerTick: BigNumberish,
             _maxExecutionSteps: BigNumberish,
+            _maxTimeBoundsWidth: BigNumberish,
             _stakeRequirement: BigNumberish,
             _owner: string,
             _challengeFactoryAddress: string,
@@ -402,6 +416,7 @@ export class ArbRollup extends Contract {
             _gracePeriodTicks: BigNumberish,
             _arbGasSpeedLimitPerTick: BigNumberish,
             _maxExecutionSteps: BigNumberish,
+            _maxTimeBoundsWidth: BigNumberish,
             _stakeRequirement: BigNumberish,
             _owner: string,
             _challengeFactoryAddress: string,

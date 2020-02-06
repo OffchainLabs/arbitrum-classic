@@ -30,14 +30,14 @@ interface ArbSys {
     function withdrawEth(address dest, uint256 amount) external;
 
     // Return time when current message was posted on-chain
-    function currentMessageTime() external returns(uint);
+    function currentMessageTime() external view returns(uint);
 
     // Return upper bound on the on-chain block number
-    function timeUpperBound() external returns(uint);
+    function timeUpperBound() external view returns(uint);
 
     // Return the number of transactions issued by the given external account
     // or the account sequence number of the given contract
-    function getTransactionCount(address account) external pure returns(uint256);
+    function getTransactionCount(address account) external view returns(uint256);
 
     // Generate a new contract with the same code as the given contract
     // This function returns the address of the new contract
