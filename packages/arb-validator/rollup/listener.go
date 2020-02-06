@@ -515,32 +515,6 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 	}()
 }
 
-<<<<<<< HEAD
-=======
-func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []pruneParams) {
-	// Anyone can prune a leaf
-	for _, prune := range params {
-		lis.Lock()
-		_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
-		if alreadySent {
-			lis.Unlock()
-			continue
-		}
-		lis.broadcastLeafPrunes[prune.leafHash] = true
-		lis.Unlock()
-		pruneCopy := prune.Clone()
-		go func() {
-			lis.actor.PruneLeaf(
-				ctx,
-				pruneCopy.ancestorHash,
-				pruneCopy.leafProof,
-				pruneCopy.ancProof,
-			)
-		}()
-	}
-}
-
->>>>>>> master
 func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {
 	// Anyone can moot any stake
 	for _, moot := range params {
