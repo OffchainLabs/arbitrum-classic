@@ -193,19 +193,20 @@ func (vm *arbRollup) MakeAssertion(
 ) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
+	extraParams := [9][32]byte{
+		beforeState.MachineHash,
+		beforeState.PendingTop,
+		prevPrevLeafHash,
+		prevDataHash,
+		assertionClaim.AfterPendingTop,
+		assertionClaim.ImportedMessagesSlice,
+		assertionClaim.AssertionStub.AfterHash,
+		assertionClaim.AssertionStub.LastMessageHash,
+		assertionClaim.AssertionStub.LastLogHash,
+	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
-		[9][32]byte{
-			beforeState.MachineHash,
-			beforeState.PendingTop,
-			prevPrevLeafHash,
-			prevDataHash,
-			assertionClaim.AfterPendingTop,
-			assertionClaim.ImportedMessagesSlice,
-			assertionClaim.AssertionStub.AfterHash,
-			assertionClaim.AssertionStub.LastMessageHash,
-			assertionClaim.AssertionStub.LastLogHash,
-		},
+		extraParams,
 		beforeState.PendingCount,
 		prevDeadline.Val,
 		uint32(prevChildType),
@@ -217,7 +218,22 @@ func (vm *arbRollup) MakeAssertion(
 		hashSliceToRaw(stakerProof),
 	)
 	if err != nil {
-		return err
+		return vm.ArbRollup.MakeAssertionCall(
+			ctx,
+			vm.Client,
+			vm.auth.auth.From,
+			vm.contractAddress,
+			extraParams,
+			beforeState.PendingCount,
+			prevDeadline.Val,
+			uint32(prevChildType),
+			assertionParams.NumSteps,
+			assertionParams.TimeBounds.AsIntArray(),
+			assertionParams.ImportedMessageCount,
+			assertionClaim.AssertionStub.DidInboxInsn,
+			assertionClaim.AssertionStub.NumGas,
+			hashSliceToRaw(stakerProof),
+		)
 	}
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
