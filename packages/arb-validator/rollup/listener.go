@@ -48,7 +48,7 @@ type ChainListener interface {
 	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
 
 	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
-	NodesConfirmable(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
+	ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
 	PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams)
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
@@ -461,7 +461,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) NodesConfirmable(ctx context.Context, observer *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
+func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observer *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()

@@ -53,7 +53,7 @@ func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, a
 }
 
 func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
-func (al *AssertionListener) NodesConfirmable(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
+func (al *AssertionListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
 }
 func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
 }

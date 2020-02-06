@@ -40,7 +40,7 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 				confOpp := chain.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(chain.latestBlockId.Height))
 				if confOpp != nil {
 					for _, listener := range chain.listeners {
-						listener.NodesConfirmable(ctx, chain, confOpp)
+						listener.ConfirmableNodes(ctx, chain, confOpp)
 					}
 				}
 				chain.RUnlock()
