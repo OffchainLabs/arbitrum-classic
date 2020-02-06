@@ -48,6 +48,7 @@ message NodeGraphBuf {
 message StakedNodeGraphBuf {
     NodeGraphBuf nodeGraph = 1;
     repeated StakerBuf stakers = 2;
+    repeated ChallengeBuf challenges = 3;
 }
 
 message ChainObserverBuf {
@@ -65,4 +66,13 @@ message StakerBuf {
     common.HashBuf location = 2;
     common.TimeTicksBuf creationTime = 3;
     common.AddressBuf challengeAddr = 4;
+}
+
+message ChallengeBuf {
+    common.BlockIdBuf blockId = 1;
+    uint64 logIndex = 2;
+    common.AddressBuf asserter = 3;
+    common.AddressBuf challenger = 4;
+    common.AddressBuf contract = 5;
+    common.HashBuf conflictNodeHash = 6;
 }

@@ -87,6 +87,11 @@ func NewChain(
 }
 
 func (chain *ChainObserver) Start(ctx context.Context) {
+	chain.nodeGraph.challenges.forall(func(c *Challenge) {
+		for _, listener := range chain.listeners {
+			listener.ResumedChallenge(ctx, chain, c)
+		}
+	})
 	chain.startCleanupThread(ctx)
 	chain.startConfirmThread(ctx)
 
@@ -259,19 +264,22 @@ func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMov
 func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
+	_, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
+	challenge := &Challenge{
+		blockId:      ev.BlockId,
+		logIndex:     ev.LogIndex,
+		asserter:     ev.Asserter,
+		challenger:   ev.Challenger,
+		contract:     ev.ChallengeContract,
+		conflictNode: challengerAncestor,
+	}
 
-	chain.nodeGraph.NewChallenge(
-		ev.ChallengeContract,
-		ev.Asserter,
-		ev.Challenger,
-		ev.ChallengeType,
-	)
+	chain.nodeGraph.NewChallenge(challenge)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
+		lis.StartedChallenge(ctx, chain, challenge)
 	}
 }
 
