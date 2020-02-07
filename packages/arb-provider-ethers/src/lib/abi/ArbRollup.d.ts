@@ -156,8 +156,6 @@ interface ArbRollupInterface extends Interface {
             ]): string;
         }>;
 
-        ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
-
         confirm: TypedFunctionDescription<{
             encode([
                 initalProtoStateHash,
@@ -373,8 +371,6 @@ export class ArbRollup extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         confirm(
             initalProtoStateHash: Arrayish,
             branches: BigNumberish[],
@@ -503,8 +499,6 @@ export class ArbRollup extends Contract {
         _stakerProof: Arrayish[],
         overrides?: TransactionOverrides,
     ): Promise<ContractTransaction>;
-
-    ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     confirm(
         initalProtoStateHash: Arrayish,
@@ -645,8 +639,6 @@ export class ArbRollup extends Contract {
             _numArbGas: BigNumberish,
             _stakerProof: Arrayish[],
         ): Promise<BigNumber>;
-
-        ownerShutdown(): Promise<BigNumber>;
 
         confirm(
             initalProtoStateHash: Arrayish,

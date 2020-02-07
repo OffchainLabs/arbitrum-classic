@@ -3,10 +3,10 @@
 ### update-ts-abi
 ### --------------------------------------------------------------------
 
-# yarn workspace arb-bridge-eth install
-# yarn workspace arb-bridge-eth build
-# yarn workspace contract-templates install
-# yarn workspace contract-templates build
+yarn workspace arb-bridge-eth install
+yarn workspace arb-bridge-eth build
+yarn workspace contract-templates install
+yarn workspace contract-templates build
 
 yarn run typechain \
     --target=ethers \
