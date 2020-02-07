@@ -131,7 +131,7 @@ interface ArbRollupInterface extends Interface {
         makeAssertion: TypedFunctionDescription<{
             encode([
                 _fields,
-                _beforePendingCount,
+                _beforeInboxCount,
                 _prevDeadlineTicks,
                 _prevChildType,
                 _numSteps,
@@ -191,7 +191,7 @@ interface ArbRollupInterface extends Interface {
         RollupAsserted: TypedEventDescription<{
             encodeTopics([
                 fields,
-                pendingCount,
+                inboxCount,
                 importedMessageCount,
                 timeBoundsBlocks,
                 numArbGas,
@@ -355,7 +355,7 @@ export class ArbRollup extends Contract {
 
         makeAssertion(
             _fields: Arrayish[],
-            _beforePendingCount: BigNumberish,
+            _beforeInboxCount: BigNumberish,
             _prevDeadlineTicks: BigNumberish,
             _prevChildType: BigNumberish,
             _numSteps: BigNumberish,
@@ -482,7 +482,7 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
         _fields: Arrayish[],
-        _beforePendingCount: BigNumberish,
+        _beforeInboxCount: BigNumberish,
         _prevDeadlineTicks: BigNumberish,
         _prevChildType: BigNumberish,
         _numSteps: BigNumberish,
@@ -514,7 +514,7 @@ export class ArbRollup extends Contract {
 
         RollupAsserted(
             fields: null,
-            pendingCount: null,
+            inboxCount: null,
             importedMessageCount: null,
             timeBoundsBlocks: null,
             numArbGas: null,
@@ -621,7 +621,7 @@ export class ArbRollup extends Contract {
 
         makeAssertion(
             _fields: Arrayish[],
-            _beforePendingCount: BigNumberish,
+            _beforeInboxCount: BigNumberish,
             _prevDeadlineTicks: BigNumberish,
             _prevChildType: BigNumberish,
             _numSteps: BigNumberish,

@@ -28,7 +28,7 @@ var (
 )
 
 // ArbRollupABI is the input ABI used to generate the binding from.
-const ArbRollupABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"logsAccHash\",\"type\":\"bytes32[]\"}],\"name\":\"ConfirmedAssertion\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[7]\",\"name\":\"fields\",\"type\":\"bytes32[7]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"pendingCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"importedMessageCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint128[2]\",\"name\":\"timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numArbGas\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numSteps\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"didInboxInsn\",\"type\":\"bool\"}],\"name\":\"RollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"initVMHash\",\"type\":\"bytes32\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"toNodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeMoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"RollupStakeRefunded\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"initalProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"branches\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deadlineTicks\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"challengeNodeData\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"logsAcc\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"vmProtoStateHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"messagesLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"messages\",\"type\":\"bytes\"},{\"internalType\":\"address[]\",\"name\":\"stakerAddresses\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"stakerProofOffsets\",\"type\":\"uint256[]\"}],\"name\":\"confirm\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getStakeRequired\",\"outputs\":[{\"internalType\":\"uint128\",\"name\":\"\",\"type\":\"uint128\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalPendingInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"_maxTimeBoundsWidth\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakerAddress\",\"type\":\"address\"}],\"name\":\"isStaked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"isValidLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"latestConfirmed\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[9]\",\"name\":\"_fields\",\"type\":\"bytes32[9]\"},{\"internalType\":\"uint256\",\"name\":\"_beforePendingCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_prevDeadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"_prevChildType\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"uint256\",\"name\":\"_importedMessageCount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint64\",\"name\":\"_numArbGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[]\",\"name\":\"_stakerProof\",\"type\":\"bytes32[]\"}],\"name\":\"makeAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"moveStake\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"placeStake\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"fromNodes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"leafProofLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"latestConfirmedProofLengths\",\"type\":\"uint256[]\"}],\"name\":\"pruneLeaves\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeOld\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"disputableNodeHashVal\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"childType\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakePassedDeadline\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"prevNode\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256[2]\",\"name\":\"stakerNodeTypes\",\"type\":\"uint256[2]\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"asserterProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"challengerProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"asserterNodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"vmParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"gracePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"arbGasSpeedLimitPerTick\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"maxTimeBoundsWidth\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbRollupABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"logsAccHash\",\"type\":\"bytes32[]\"}],\"name\":\"ConfirmedAssertion\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[7]\",\"name\":\"fields\",\"type\":\"bytes32[7]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"inboxCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"importedMessageCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint128[2]\",\"name\":\"timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numArbGas\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numSteps\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"didInboxInsn\",\"type\":\"bool\"}],\"name\":\"RollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"initVMHash\",\"type\":\"bytes32\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"toNodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeMoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"RollupStakeRefunded\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"initalProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"branches\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deadlineTicks\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"challengeNodeData\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"logsAcc\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"vmProtoStateHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"messagesLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"messages\",\"type\":\"bytes\"},{\"internalType\":\"address[]\",\"name\":\"stakerAddresses\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"stakerProofOffsets\",\"type\":\"uint256[]\"}],\"name\":\"confirm\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getStakeRequired\",\"outputs\":[{\"internalType\":\"uint128\",\"name\":\"\",\"type\":\"uint128\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"_maxTimeBoundsWidth\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakerAddress\",\"type\":\"address\"}],\"name\":\"isStaked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"isValidLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"latestConfirmed\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[9]\",\"name\":\"_fields\",\"type\":\"bytes32[9]\"},{\"internalType\":\"uint256\",\"name\":\"_beforeInboxCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_prevDeadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"_prevChildType\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"uint256\",\"name\":\"_importedMessageCount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint64\",\"name\":\"_numArbGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[]\",\"name\":\"_stakerProof\",\"type\":\"bytes32[]\"}],\"name\":\"makeAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"moveStake\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"placeStake\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"fromNodes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"leafProofLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"latestConfirmedProofLengths\",\"type\":\"uint256[]\"}],\"name\":\"pruneLeaves\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeOld\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"disputableNodeHashVal\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"childType\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakePassedDeadline\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"prevNode\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256[2]\",\"name\":\"stakerNodeTypes\",\"type\":\"uint256[2]\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"asserterProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"challengerProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"asserterNodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"vmParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"gracePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"arbGasSpeedLimitPerTick\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"maxTimeBoundsWidth\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbRollupFuncSigs maps the 4-byte function signature to its string representation.
 var ArbRollupFuncSigs = map[string]string{
@@ -54,7 +54,7 @@ var ArbRollupFuncSigs = map[string]string{
 }
 
 // ArbRollupBin is the compiled bytecode used for deploying new contracts.
-var ArbRollupBin = "0x608060405234801561001057600080fd5b50614a2c806100206000396000f3fe6080604052600436106101145760003560e01c80637cfaaf67116100a0578063d489113a11610064578063d489113a14610cb6578063d684f94b14610ccb578063dbad0a3914610d97578063e0620d6414610e62578063fcfd8d3f14610f2057610114565b80637cfaaf6714610963578063bac5963f146109de578063badb3f1414610b9d578063bbc2cc0014610c40578063d16c305d14610c8557610114565b80635dbaf68b116100e75780635dbaf68b1461080f5780636177fd181461084057806365f7f80d146108735780636bc3cd221461089a57806379d1120b146108dd57610114565b8063113ec9d8146101195780631a072771146101a657806333554032146106f157806357ca6d1b146107d1575b600080fd5b34801561012557600080fd5b506101a46004803603604081101561013c57600080fd5b6001600160a01b038235169190810190604081016020820135600160201b81111561016657600080fd5b82018360208201111561017857600080fd5b803590602001918460208302840111600160201b8311171561019957600080fd5b5090925090506111d6565b005b3480156101b257600080fd5b506101a460048036036101608110156101ca57600080fd5b81359190810190604081016020820135600160201b8111156101eb57600080fd5b8201836020820111156101fd57600080fd5b803590602001918460208302840111600160201b8311171561021e57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561026d57600080fd5b82018360208201111561027f57600080fd5b803590602001918460208302840111600160201b831117156102a057600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156102ef57600080fd5b82018360208201111561030157600080fd5b803590602001918460208302840111600160201b8311171561032257600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561037157600080fd5b82018360208201111561038357600080fd5b803590602001918460208302840111600160201b831117156103a457600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156103f357600080fd5b82018360208201111561040557600080fd5b803590602001918460208302840111600160201b8311171561042657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561047557600080fd5b82018360208201111561048757600080fd5b803590602001918460208302840111600160201b831117156104a857600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156104f757600080fd5b82018360208201111561050957600080fd5b803590602001918460018302840111600160201b8311171561052a57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295949360208101935035915050600160201b81111561057c57600080fd5b82018360208201111561058e57600080fd5b803590602001918460208302840111600160201b831117156105af57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156105fe57600080fd5b82018360208201111561061057600080fd5b803590602001918460208302840111600160201b8311171561063157600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561068057600080fd5b82018360208201111561069257600080fd5b803590602001918460208302840111600160201b831117156106b357600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295506112c7945050505050565b3480156106fd57600080fd5b506101a46004803603608081101561071457600080fd5b6001600160a01b0382351691602081013591810190606081016040820135600160201b81111561074357600080fd5b82018360208201111561075557600080fd5b803590602001918460208302840111600160201b8311171561077657600080fd5b919390929091602081019035600160201b81111561079357600080fd5b8201836020820111156107a557600080fd5b803590602001918460208302840111600160201b831117156107c657600080fd5b509092509050611328565b3480156107dd57600080fd5b506107fb600480360360208110156107f457600080fd5b5035611480565b604080519115158252519081900360200190f35b34801561081b57600080fd5b50610824611498565b604080516001600160a01b039092168252519081900360200190f35b34801561084c57600080fd5b506107fb6004803603602081101561086357600080fd5b50356001600160a01b03166114a7565b34801561087f57600080fd5b506108886114c4565b60408051918252519081900360200190f35b3480156108a657600080fd5b506101a4600480360360608110156108bd57600080fd5b506001600160a01b038135811691602081013590911690604001356114ca565b3480156108e957600080fd5b506101a4600480360361012081101561090157600080fd5b508035906001600160801b036020820135811691604081013582169167ffffffffffffffff606083013581169260808101359091169160a082013516906001600160a01b0360c082013581169160e08101358216916101009091013516611626565b34801561096f57600080fd5b506101a46004803603602081101561098657600080fd5b810190602081018135600160201b8111156109a057600080fd5b8201836020820111156109b257600080fd5b803590602001918460208302840111600160201b831117156109d357600080fd5b509092509050611668565b3480156109ea57600080fd5b506101a460048036036101a0811015610a0257600080fd5b6040805180820182526001600160a01b0384358116946020810135909116938382013593606083013593918301929160c083019160808401906002908390839080828437600092019190915250506040805180820182529295949381810193925090600290839083908082843760009201919091525091949392602081019250359050600160201b811115610a9657600080fd5b820183602082011115610aa857600080fd5b803590602001918460208302840111600160201b83111715610ac957600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610b1857600080fd5b820183602082011115610b2a57600080fd5b803590602001918460208302840111600160201b83111715610b4b57600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955050823593505050602081013590604001356001600160801b03166116a9565b348015610ba957600080fd5b506101a4600480360360c0811015610bc057600080fd5b6001600160a01b03823516916020810135916040820135916060810135916080820135919081019060c0810160a0820135600160201b811115610c0257600080fd5b820183602082011115610c1457600080fd5b803590602001918460208302840111600160201b83111715610c3557600080fd5b509092509050611c4f565b348015610c4c57600080fd5b50610c55611dca565b60408051948552602085019390935267ffffffffffffffff91821684840152166060830152519081900360800190f35b348015610c9157600080fd5b50610c9a611deb565b604080516001600160801b039092168252519081900360200190f35b348015610cc257600080fd5b50610824611dfa565b348015610cd757600080fd5b506101a46004803603610260811015610cef57600080fd5b610120820135906101408301359063ffffffff610160850135169067ffffffffffffffff6101808601358116916101a08701916101e0880135916102008901351515916102208a013516908901896102608101610240820135600160201b811115610d5957600080fd5b820183602082011115610d6b57600080fd5b803590602001918460208302840111600160201b83111715610d8c57600080fd5b509092509050611e09565b348015610da357600080fd5b506101a460048036036040811015610dba57600080fd5b810190602081018135600160201b811115610dd457600080fd5b820183602082011115610de657600080fd5b803590602001918460208302840111600160201b83111715610e0757600080fd5b919390929091602081019035600160201b811115610e2457600080fd5b820183602082011115610e3657600080fd5b803590602001918460208302840111600160201b83111715610e5757600080fd5b509092509050612038565b6101a460048036036040811015610e7857600080fd5b810190602081018135600160201b811115610e9257600080fd5b820183602082011115610ea457600080fd5b803590602001918460208302840111600160201b83111715610ec557600080fd5b919390929091602081019035600160201b811115610ee257600080fd5b820183602082011115610ef457600080fd5b803590602001918460208302840111600160201b83111715610f1557600080fd5b509092509050612149565b348015610f2c57600080fd5b506101a4600480360360a0811015610f4357600080fd5b810190602081018135600160201b811115610f5d57600080fd5b820183602082011115610f6f57600080fd5b803590602001918460208302840111600160201b83111715610f9057600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610fdf57600080fd5b820183602082011115610ff157600080fd5b803590602001918460208302840111600160201b8311171561101257600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561106157600080fd5b82018360208201111561107357600080fd5b803590602001918460208302840111600160201b8311171561109457600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156110e357600080fd5b8201836020820111156110f557600080fd5b803590602001918460208302840111600160201b8311171561111657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561116557600080fd5b82018360208201111561117757600080fd5b803590602001918460208302840111600160201b8311171561119857600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955061225c945050505050565b60408051808201909152600e81526d0a48a86ac9e9888be988a9c8ea8960931b6020820152816112845760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015611249578181015183820152602001611231565b50505050905090810190601f1680156112765780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b506112c2838383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506124fa92505050565b505050565b61131b6040518061016001604052808d81526020018c81526020018b81526020018a815260200189815260200188815260200187815260200186815260200185815260200184815260200183815250612599565b5050505050505050505050565b6000611333336129fb565b90508282600081811061134257fe5b905060200201358585600081811061135657fe5b90506020020135141580156113ad575061136e6114c4565b6113ab87878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b145b80156113f45750806113f287858580806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b145b604051806040016040528060148152602001732922a1a7ab2fa1a7a7232624a1aa2fa82927a7a360611b8152509061146d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061147787612aa2565b50505050505050565b60008181526004602052604090205460ff165b919050565b6006546001600160a01b031681565b6001600160a01b0316600090815260086020526040902054151590565b60055490565b336000908152600a6020908152604091829020548251808401909352600f83526e2922a9afa1a420a62fa9a2a72222a960891b9183019190915260ff166115525760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50336000908152600a60205260408120805460ff1916905561157384612b2b565b6007546040519192506001600160a01b0386169160026001600160801b039283160490911680156108fc02916000818181858888f193505050501580156115be573d6000803e3d6000fd5b5060018101805460ff60801b191690556115d783612bb5565b604080513381526001600160a01b03808716602083015285168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050565b611634898989898986612bf6565b61163e8483612cea565b5050600b80546001600160a01b0319166001600160a01b0392909216919091179055505050505050565b6116a5338383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506124fa92505050565b5050565b60006116b48c612b2b565b905060006116c18c612b2b565b60018301549091508a906116dd906001600160801b0316612e20565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906117505760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060018101548a9061176a906001600160801b0316612e20565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906117dd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff161561185d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156118dd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506020808a01518a5160408051808201909152600a8152692a2ca822afa7a92222a960b11b93810193909352116119555760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50815461197d6119778d8d898e600060200201518e60005b6020020151612e27565b89612a8b565b146040518060400160405280600c81526020016b20a9a9a2a92a2fa82927a7a360a11b815250906119ef5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b508054611a20611a1a8d8d611a0d896001600160801b038a16612e8f565b60208f01518e600161196d565b88612a8b565b146040518060400160405280600a81526020016921a420a62fa82927a7a360b11b81525090611a905760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff0219169083151502179055506000600660009054906101000a90046001600160a01b03166001600160a01b031663865da1c28f8f87898f600160028110611b0257fe5b60200201516040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b03168152602001846001600160801b0316815260200183815260200182815260200195505050505050602060405180830381600087803b158015611b8657600080fd5b505af1158015611b9a573d6000803e3d6000fd5b505050506040513d6020811015611bb057600080fd5b50516001600160a01b0381166000908152600a60205260409020805460ff191660019081179091559091507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f908f908f908d9060209081029190910151604080516001600160a01b0395861681529385169284019290925282820152918416606082015290519081900360800190a15050505050505050505050505050565b6000611c5a336129fb565b90506000611c6b8289898989612e27565b90506000611cac82868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b9050611cb781611480565b604051806040016040528060138152602001722922a1a7ab2fa222a0a22624a722afa622a0a360691b81525090611d2f5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50611d3989612e20565b431015604051806040016040528060138152602001725245434f565f444541444c494e455f54494d4560681b81525090611db45760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50611dbe8a612aa2565b50505050505050505050565b60015460025460035467ffffffffffffffff80821691600160401b90041684565b6007546001600160801b031690565b6000546001600160a01b031681565b600080611f576040518061022001604052808f600060098110611e2857fe5b602002013581526020018f600160098110611e3f57fe5b602002013581526020018e81526020018f600260098110611e5c57fe5b602002013581526020018d81526020018f600360098110611e7957fe5b602002013581526020018c63ffffffff1681526020018b67ffffffffffffffff1681526020018a600280602002604051908101604052809291908260026020028082843760009201919091525050508152602081018a90526040018f6004602002013581526020018f600560098110611eee57fe5b602002013581526020018f600660098110611f0557fe5b6020020135815260200188151581526020018767ffffffffffffffff1681526020018f600760098110611f3457fe5b602002013581526020018f600860098110611f4b57fe5b60200201359052612ebb565b915091506000611f66336129fb565b905082611fa682878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b146040518060400160405280601181526020017026a0a5a2afa9aa20a5a2a92fa82927a7a360791b8152509061201d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061202833836133e5565b5050505050505050505050505050565b6000612043336129fb565b9050600061208482878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b905060006120c582868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b90506120d081611480565b6040518060400160405280600981526020016826a7ab22afa622a0a360b91b8152509061213e5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061147733836133e5565b600061218f6121566114c4565b868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b905060006121d082858580806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b90506121db81611480565b6040518060400160405280600a815260200169282620a1a2afa622a0a360b11b8152509061224a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506122548261343e565b505050505050565b845183518114801561226e5750808251145b6122b8576040805162461bcd60e51b81526020600482015260166024820152750d2dce0eae840d8cadccee8d040dad2e6e8dac2e8c6d60531b604482015290519081900360640190fd5b600080805b838110156124ef5760008982815181106122d357fe5b6020026020010151905060008883815181106122eb57fe5b60200260200101511180156123135750600086838151811061230957fe5b6020026020010151115b6040518060400160405280600e81526020016d28292aa722afa82927a7a32622a760911b815250906123865760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600088838151811061239557fe5b60200260200101518501905060008784815181106123af57fe5b6020026020010151850190508885815181106123c757fe5b60200260200101518b87815181106123db57fe5b60200260200101511415801561240257506123f46114c4565b612400848b88856135ec565b145b6040518060400160405280600e81526020016d141495539157d0d3d391931250d560921b815250906124755760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506000612484848d89866135ec565b905061248f81611480565b156124e057600081815260046020908152604091829020805460ff19169055815183815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a15b509094509250506001016122bd565b505050505050505050565b6000612505336129fb565b905061250f6114c4565b6125198284612a8b565b146040518060400160405280601081526020016f2922a1a7ab2fa820aa242fa82927a7a360811b8152509061258f5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506112c283612aa2565b60208101515160c08201515160a08301515181146125b657600080fd5b80836080015151146125c757600080fd5b81836040015151146125d857600080fd5b808203836060015151146125eb57600080fd5b60008080806125f86114c4565b875190915060005b878110156126fc5760008960200151828151811061261a57fe5b60200260200101519050600060038214156126a95760008b60c00151898151811061264157fe5b6020026020010151905061267a61265d8d60e001518984613656565b8d608001518b8151811061266d57fe5b6020026020010151612e8f565b915080870196508b60a00151898151811061269157fe5b602002602001015194508880600101995050506126cc565b8a6060015187815181106126b957fe5b6020026020010151905086806001019750505b6126f0858c6040015185815181106126e057fe5b6020026020010151838588612e27565b94505050600101612600565b508760e00151518314612756576040805162461bcd60e51b815260206004820152601860248201527f4469646e2774207265616420616c6c206d657373616765730000000000000000604482015290519081900360640190fd5b8760400151600188038151811061276957fe5b602002602001015161277a43612e20565b101560405180604001604052806009815260200168434f4e465f54494d4560b81b815250906127ea5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506000612823838a6040015160018b038151811061280457fe5b60200260200101518b61010001518c61012001518d61014001516137aa565b9050600081116040518060400160405280600f81526020016e21a7a7232fa420a9afa9aa20a5a2a960891b8152509061289d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506128a783613a55565b6000805460e08b015160405163e4eb8c6360e01b81526020600482018181528351602484015283516001600160a01b039095169563e4eb8c639591938493604490910192908601918190849084905b8381101561290e5781810151838201526020016128f6565b50505050905090810190601f16801561293b5780820380516001836020036101000a031916815260200191505b5092505050600060405180830381600087803b15801561295a57600080fd5b505af115801561296e573d6000803e3d6000fd5b5050505060008611156124ef57608089015160408051602080825283518183015283517fded5fa103431438087188a5f8c6a4c3ea90996bbd63be7b1b3fa0a425b37fdd59493839290830191818601910280838360005b838110156129dd5781810151838201526020016129c5565b505050509050019250505060405180910390a1505050505050505050565b6001600160a01b0381166000908152600860209081526040808320548151808301909252600a82526924a72b2fa9aa20a5a2a960b11b9282019290925281612a845760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5092915050565b6000612a9b8383600085516135ec565b9392505050565b612aab81612bb5565b6007546040516001600160a01b038316916001600160801b031680156108fc02916000818181858888f19350505050158015612aeb573d6000803e3d6000fd5b50604080516001600160a01b038316815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a150565b6001600160a01b038116600090815260086020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291612a845760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b6001600160a01b03166000908152600860205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560098054600019019055565b600080546001600160a01b0319166001600160a01b038316178155612c2487612c1d613a90565b6000613b03565b90506000612c358180808086612e27565b6005819055600081815260046020908152604091829020805460ff191660019081179091556001600160801b03808c1690915589166002556003805467ffffffffffffffff898116600160401b026fffffffffffffffff000000000000000019918c1667ffffffffffffffff19909316929092171617905581518b815291519293507f4ac0014773275a3dfb58c58539631006301de41998cce7c4f8698d297c88bb2d92918290030190a15050505050505050565b60065460408051808201909152600a815269494e49545f545749434560b01b6020820152906001600160a01b031615612d645760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060408051808201909152600c81526b494e49545f4e4f4e5a45524f60a01b60208201526001600160a01b038216612ddd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600680546001600160a01b0319166001600160a01b0392909216919091179055600780546001600160801b0319166001600160801b0392909216919091179055565b6103e80290565b6040805160208082018490528183018790526060820186905260808083018690528351808403909101815260a08301845280519082012060c0830189905260e08084019190915283518084039091018152610100909201909252805191012095945050505050565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b6000806000612ed7846000015185602001518660400151613b03565b90506000612efe856060015186608001518760a001518860c0015163ffffffff1686612e27565b9050612f0981611480565b6040518060400160405280600981526020016826a0a5a2afa622a0a360b91b81525090612f775760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b508451612f8390613b3a565b158015612f9857508451612f9690613b40565b155b6040518060400160405280600881526020016726a0a5a2afa92aa760c11b815250906130055760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060035460e086015160408051808201909152600981526804d414b455f535445560bc1b60208201529167ffffffffffffffff9081169116111561308a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506003546101008601518051600160401b90920467ffffffffffffffff169091016001600160801b031690600160200201516001600160801b031611156130d057600080fd5b6130de856101000151613b44565b604051806040016040528060098152602001684d414b455f54494d4560b81b8152509061314c5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061012085015115806131615750846101a001515b6040518060400160405280600d81526020016c4d414b455f4d4553534147455360981b815250906131d35760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060008054604080516308d74f6960e11b8152815184936001600160a01b0316926311ae9ed2926004808201939182900301818787803b15801561321657600080fd5b505af115801561322a573d6000803e3d6000fd5b505050506040513d604081101561324057600080fd5b5080516020909101516040890151919350915061326490829063ffffffff613b7416565b87610120015111156040518060400160405280601081526020016f135052d157d35154d4d051d157d0d39560821b815250906132e15760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506001546002546101c08901516000919067ffffffffffffffff168161330357fe5b04905060008261331243612e20565b0190508960800151811015613328575060808901515b8101600061333b8b888489898d8a613bb6565b9050600061334c8c89858c89613c07565b9050600061335e8d8a868d8a8a613c66565b9050600061336d8e8b87613cf0565b6000858152600460205260408082208054600160ff19918216811790925587845282842080548216831790558684528284208054821683179055848452828420805482169092179091558d835291208054909116905590506133d18e8b8b8b613d32565b989b50979950505050505050505050915091565b6001600160a01b0382166000818152600860209081526040918290208490558151928352820183905280517fbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f49281900390910190a15050565b60078054604080518082019091529182526614d512d7d0535560ca1b60208301526001600160801b031634146134b55760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5033600090815260086020908152604091829020548251808401909352600c83526b105314911657d4d51052d15160a21b91830191909152156135395760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50604080516060810182528281526001600160801b03438116602080840191825260008486018181523380835260088452918790209551865592516001958601805494511515600160801b0260ff60801b19929096166001600160801b031990951694909417169390931790915560098054909301909255825190815290810183905281517fcbafbb223ed21c82af9e2ad20cdfdf55d3263d06f9a65b3f70da613f32d81f88929181900390910190a150565b600084835b8381101561364a578186828151811061360657fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120915080806001019150506135f1565b5090505b949350505050565b8251600090819081908190868601908111156136aa576040805162461bcd60e51b815260206004820152600e60248201526d0d2dcecc2d8d2c840d8cadccee8d60931b604482015290519081900360640190fd5b865b81811015613747576136be8982613e5e565b919650909350905084613711576040805162461bcd60e51b8152602060048201526016602482015275496e76616c6964206f7574707574206d65737361676560501b604482015290519081900360640190fd5b838360405160200180838152602001828152602001925050506040516020818303038152906040528051906020012093506136ac565b868801811461379d576040805162461bcd60e51b815260206004820152601a60248201527f76616c756520657874656e6465642070617374206c656e677468000000000000604482015290519081900360640190fd5b5091979650505050505050565b825160095460408051808201909152600a81526910d210d2d7d0d3d5539560b21b60208201526000929182146138215760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50825181600101146040518060400160405280600c81526020016b4348434b5f4f46465345545360a01b8152509061389a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600080805b83811015613a485760008882815181106138b657fe5b60200260200101519050836bffffffffffffffffffffffff19168160601b6bffffffffffffffffffffffff1916116040518060400160405280600a81526020016921a421a5afa7a92222a960b11b815250906139535760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600061395f82612b2b565b60018101549091508b9061397b906001600160801b0316612e20565b1015613a3a5780600001546139bb8d8b8b878151811061399757fe5b60200260200101518c88600101815181106139ae57fe5b60200260200101516135ec565b146040518060400160405280601181526020017021a421a5afa9aa20a5a2a92fa82927a7a360791b81525090613a325760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506001909301925b5060601b92506001016138a0565b5098975050505050505050565b60058190556040805182815290517f9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f639181900360200190a150565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b83811015613adc578181015183820152602001613ac4565b50505050905001925050506040516020818303038152906040528051906020012091505090565b6040805160208082019590955280820193909352606080840192909252805180840390920182526080909201909152805191012090565b60011490565b1590565b80516000906001600160801b03164310801590613b6e575060208201516001600160801b03164311155b92915050565b6000612a9b83836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f770000815250613eb5565b600080613bd6896101400151878b61012001518c60400151018803613b03565b9050613bfa8888613bf284613beb6001612e20565b8801612e8f565b600088612e27565b9998505050505050505050565b600080613c318760200151886101400151613c20613a90565b8a61016001518b6101200151613f0f565b90506000613c4a82613c436001612e20565b8601612e8f565b9050613c5a878783600189612e27565b98975050505050505050565b600080613c8288600001518961010001518a6101600151613f55565b90506000613cb48961018001518a6101a001518b6101c001516000801b8d6101e001516000801b8f6102000151613fa7565b90506000613cc78a60e00151848461400a565b9050613ce28989613cda84898b01612e8f565b60028b612e27565b9a9950505050505050505050565b600061364e8383613d0b876101e00151886102000151612e8f565b6003613d2d8961018001518a61014001518b61012001518c6040015101613b03565b612e27565b7f5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c970356040518060e00160405280858152602001848152602001866101400151815260200186610160015181526020018661018001518152602001866101e00151815260200186610200015181525082866101200151876101000151886101c001518960e001518a6101a001516040518088600760200280838360005b83811015613de5578181015183820152602001613dcd565b5050505090500187815260200186815260200185600260200280838360005b83811015613e1c578181015183820152602001613e04565b50505067ffffffffffffffff9788169390910192835250509290931660208301521515604080830191909152519081900360600195509350505050a150505050565b6000806000806000613e6e614990565b613e788888614052565b92509250925082613e96575060009450859350849250613eae915050565b600182613ea2836141a1565b51919750955093505050505b9250925092565b60008184841115613f075760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b505050900390565b60408051602080820197909752808201959095526060850193909352608084019190915260a0808401919091528151808403909101815260c09092019052805191012090565b815160209283015160408051808601969096526001600160801b0319608093841b81168783015291831b9091166050860152606080860193909352805180860390930183529301909252815191012090565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b6040805160c09490941b6001600160c01b0319166020808601919091526028850193909352604880850192909252805180850390920182526068909301909252815191012090565b60008061405d614990565b8451841061407d5760008461407260006142d7565b925092509250613eae565b600080859050600087828151811061409157fe5b016020015160019092019160f81c905060006140ab6149be565b60ff83166140df576140bd8a85614355565b9196509450915084846140cf846142d7565b9750975097505050505050613eae565b60ff831660011415614107576140f58a856143a8565b9196509450905084846140cf83614509565b60ff83166002141561412f5761411d8a85614355565b9196509450915084846140cf84614569565b600360ff8416108015906141465750600c60ff8416105b15614181576002198301606061415d828d886145e7565b91985096509050868661416f836146a5565b99509950995050505050505050613eae565b60008061418e60006142d7565b9199509750955050505050509250925092565b6141a96149e5565b6060820151600c60ff909116106141fb576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff1661422857604051806020016040528061421f8460000151614755565b90529050611493565b606082015160ff166001141561426f57604051806020016040528061421f846020015160000151856020015160400151866020015160600151876020015160200151614779565b606082015160ff16600214156142945750604080516020810190915281518152611493565b600360ff16826060015160ff16101580156142b857506060820151600c60ff909116105b156142d557604051806020016040528061421f8460400151614821565bfe5b6142df614990565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191614344565b614331614990565b8152602001906001900390816143295790505b508152600060209091015292915050565b600080600080855190508481108061436f57506020858203105b15614384575060009250839150829050613eae565b60016020860161439a888863ffffffff61496d16565b935093509350509250925092565b6000806143b36149be565b600084905060008682815181106143c657fe5b602001015160f81c60f81b60f81c9050818060010192505060008783815181106143ec57fe5b016020015160019384019360f89190911c915060009060ff84161415614473576000614416614990565b6144208b87614052565b90975090925090508161446457505060408051608081018252600080825260208201819052918101829052606081018290529097508896509450613eae9350505050565b61446d816141a1565b51925050505b60006144858a8663ffffffff61496d16565b90506020850194508360ff16600114156144d1576040805160808101825260ff90941684526020840191909152600190830181905260608301919091529550919350909150613eae9050565b6040805160808101825260ff949094168452602084019190915260009083018190526060830152506001989297509550909350505050565b614511614990565b604080516080810182526000808252602080830186905283518281529081018452919283019190614558565b614545614990565b81526020019060019003908161453d5790505b508152600160209091015292915050565b614571614990565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916145d6565b6145c3614990565b8152602001906001900390816145bb5790505b508152600260209091015292915050565b60008060606000849050600060608860ff1660405190808252806020026020018201604052801561463257816020015b61461f614990565b8152602001906001900390816146175790505b50905060005b8960ff168160ff16101561468f576146508985614052565b8451859060ff861690811061466157fe5b60209081029190910101529450925082614687575060009550869450925061469c915050565b600101614638565b5060019550919350909150505b93509350939050565b6146ad614990565b6146b78251614989565b614708576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b60408051602080820193909352815180820384018152908201909152805191012090565b600083156147d3575060408051600160f81b6020808301919091526001600160f81b031960f888901b166021830152602282018590526042808301859052835180840390910181526062909201909252805191012061364e565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228083018590528351808403909101815260429092019092528051910120949350505050565b6000600882511115614871576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b6060825160405190808252806020026020018201604052801561489e578160200160208202803883390190505b50805190915060005b818110156148fa576148b76149e5565b6148d38683815181106148c657fe5b60200260200101516141a1565b905080600001518483815181106148e657fe5b6020908102919091010152506001016148a7565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b8381101561494357818101518382015260200161492b565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b6000816020018351101561498057600080fd5b50016020015190565b6008101590565b6040518060800160405280600081526020016149aa6149be565b815260606020820152600060409091015290565b60408051608081018252600080825260208201819052918101829052606081019190915290565b6040805160208101909152600081529056fea265627a7a72315820dec8aca28aa29f0c79925396a8968eb52b66315186b0c1e01d70aff0b935703f64736f6c634300050d0032"
+var ArbRollupBin = "0x608060405234801561001057600080fd5b50614a31806100206000396000f3fe6080604052600436106101145760003560e01c80637cfaaf67116100a0578063d489113a11610064578063d489113a14610cb6578063d684f94b14610ccb578063dbad0a3914610d97578063e0620d6414610e62578063fcfd8d3f14610f2057610114565b80637cfaaf6714610963578063bac5963f146109de578063badb3f1414610b9d578063bbc2cc0014610c40578063d16c305d14610c8557610114565b80635dbaf68b116100e75780635dbaf68b1461080f5780636177fd181461084057806365f7f80d146108735780636bc3cd221461089a57806379d1120b146108dd57610114565b8063113ec9d8146101195780631a072771146101a657806333554032146106f157806357ca6d1b146107d1575b600080fd5b34801561012557600080fd5b506101a46004803603604081101561013c57600080fd5b6001600160a01b038235169190810190604081016020820135600160201b81111561016657600080fd5b82018360208201111561017857600080fd5b803590602001918460208302840111600160201b8311171561019957600080fd5b5090925090506111d6565b005b3480156101b257600080fd5b506101a460048036036101608110156101ca57600080fd5b81359190810190604081016020820135600160201b8111156101eb57600080fd5b8201836020820111156101fd57600080fd5b803590602001918460208302840111600160201b8311171561021e57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561026d57600080fd5b82018360208201111561027f57600080fd5b803590602001918460208302840111600160201b831117156102a057600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156102ef57600080fd5b82018360208201111561030157600080fd5b803590602001918460208302840111600160201b8311171561032257600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561037157600080fd5b82018360208201111561038357600080fd5b803590602001918460208302840111600160201b831117156103a457600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156103f357600080fd5b82018360208201111561040557600080fd5b803590602001918460208302840111600160201b8311171561042657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561047557600080fd5b82018360208201111561048757600080fd5b803590602001918460208302840111600160201b831117156104a857600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156104f757600080fd5b82018360208201111561050957600080fd5b803590602001918460018302840111600160201b8311171561052a57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295949360208101935035915050600160201b81111561057c57600080fd5b82018360208201111561058e57600080fd5b803590602001918460208302840111600160201b831117156105af57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156105fe57600080fd5b82018360208201111561061057600080fd5b803590602001918460208302840111600160201b8311171561063157600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561068057600080fd5b82018360208201111561069257600080fd5b803590602001918460208302840111600160201b831117156106b357600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295506112c7945050505050565b3480156106fd57600080fd5b506101a46004803603608081101561071457600080fd5b6001600160a01b0382351691602081013591810190606081016040820135600160201b81111561074357600080fd5b82018360208201111561075557600080fd5b803590602001918460208302840111600160201b8311171561077657600080fd5b919390929091602081019035600160201b81111561079357600080fd5b8201836020820111156107a557600080fd5b803590602001918460208302840111600160201b831117156107c657600080fd5b509092509050611328565b3480156107dd57600080fd5b506107fb600480360360208110156107f457600080fd5b5035611480565b604080519115158252519081900360200190f35b34801561081b57600080fd5b50610824611498565b604080516001600160a01b039092168252519081900360200190f35b34801561084c57600080fd5b506107fb6004803603602081101561086357600080fd5b50356001600160a01b03166114a7565b34801561087f57600080fd5b506108886114c4565b60408051918252519081900360200190f35b3480156108a657600080fd5b506101a4600480360360608110156108bd57600080fd5b506001600160a01b038135811691602081013590911690604001356114ca565b3480156108e957600080fd5b506101a4600480360361012081101561090157600080fd5b508035906001600160801b036020820135811691604081013582169167ffffffffffffffff606083013581169260808101359091169160a082013516906001600160a01b0360c082013581169160e08101358216916101009091013516611626565b34801561096f57600080fd5b506101a46004803603602081101561098657600080fd5b810190602081018135600160201b8111156109a057600080fd5b8201836020820111156109b257600080fd5b803590602001918460208302840111600160201b831117156109d357600080fd5b509092509050611668565b3480156109ea57600080fd5b506101a460048036036101a0811015610a0257600080fd5b6040805180820182526001600160a01b0384358116946020810135909116938382013593606083013593918301929160c083019160808401906002908390839080828437600092019190915250506040805180820182529295949381810193925090600290839083908082843760009201919091525091949392602081019250359050600160201b811115610a9657600080fd5b820183602082011115610aa857600080fd5b803590602001918460208302840111600160201b83111715610ac957600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610b1857600080fd5b820183602082011115610b2a57600080fd5b803590602001918460208302840111600160201b83111715610b4b57600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955050823593505050602081013590604001356001600160801b03166116a9565b348015610ba957600080fd5b506101a4600480360360c0811015610bc057600080fd5b6001600160a01b03823516916020810135916040820135916060810135916080820135919081019060c0810160a0820135600160201b811115610c0257600080fd5b820183602082011115610c1457600080fd5b803590602001918460208302840111600160201b83111715610c3557600080fd5b509092509050611c4f565b348015610c4c57600080fd5b50610c55611dca565b60408051948552602085019390935267ffffffffffffffff91821684840152166060830152519081900360800190f35b348015610c9157600080fd5b50610c9a611deb565b604080516001600160801b039092168252519081900360200190f35b348015610cc257600080fd5b50610824611dfa565b348015610cd757600080fd5b506101a46004803603610260811015610cef57600080fd5b610120820135906101408301359063ffffffff610160850135169067ffffffffffffffff6101808601358116916101a08701916101e0880135916102008901351515916102208a013516908901896102608101610240820135600160201b811115610d5957600080fd5b820183602082011115610d6b57600080fd5b803590602001918460208302840111600160201b83111715610d8c57600080fd5b509092509050611e09565b348015610da357600080fd5b506101a460048036036040811015610dba57600080fd5b810190602081018135600160201b811115610dd457600080fd5b820183602082011115610de657600080fd5b803590602001918460208302840111600160201b83111715610e0757600080fd5b919390929091602081019035600160201b811115610e2457600080fd5b820183602082011115610e3657600080fd5b803590602001918460208302840111600160201b83111715610e5757600080fd5b509092509050612038565b6101a460048036036040811015610e7857600080fd5b810190602081018135600160201b811115610e9257600080fd5b820183602082011115610ea457600080fd5b803590602001918460208302840111600160201b83111715610ec557600080fd5b919390929091602081019035600160201b811115610ee257600080fd5b820183602082011115610ef457600080fd5b803590602001918460208302840111600160201b83111715610f1557600080fd5b509092509050612149565b348015610f2c57600080fd5b506101a4600480360360a0811015610f4357600080fd5b810190602081018135600160201b811115610f5d57600080fd5b820183602082011115610f6f57600080fd5b803590602001918460208302840111600160201b83111715610f9057600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610fdf57600080fd5b820183602082011115610ff157600080fd5b803590602001918460208302840111600160201b8311171561101257600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561106157600080fd5b82018360208201111561107357600080fd5b803590602001918460208302840111600160201b8311171561109457600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156110e357600080fd5b8201836020820111156110f557600080fd5b803590602001918460208302840111600160201b8311171561111657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561116557600080fd5b82018360208201111561117757600080fd5b803590602001918460208302840111600160201b8311171561119857600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955061225c945050505050565b60408051808201909152600e81526d0a48a86ac9e9888be988a9c8ea8960931b6020820152816112845760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015611249578181015183820152602001611231565b50505050905090810190601f1680156112765780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b506112c2838383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506124fa92505050565b505050565b61131b6040518061016001604052808d81526020018c81526020018b81526020018a815260200189815260200188815260200187815260200186815260200185815260200184815260200183815250612599565b5050505050505050505050565b6000611333336129fb565b90508282600081811061134257fe5b905060200201358585600081811061135657fe5b90506020020135141580156113ad575061136e6114c4565b6113ab87878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b145b80156113f45750806113f287858580806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b145b604051806040016040528060148152602001732922a1a7ab2fa1a7a7232624a1aa2fa82927a7a360611b8152509061146d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061147787612aa2565b50505050505050565b60008181526004602052604090205460ff165b919050565b6006546001600160a01b031681565b6001600160a01b0316600090815260086020526040902054151590565b60055490565b336000908152600a6020908152604091829020548251808401909352600f83526e2922a9afa1a420a62fa9a2a72222a960891b9183019190915260ff166115525760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50336000908152600a60205260408120805460ff1916905561157384612b2b565b6007546040519192506001600160a01b0386169160026001600160801b039283160490911680156108fc02916000818181858888f193505050501580156115be573d6000803e3d6000fd5b5060018101805460ff60801b191690556115d783612bb5565b604080513381526001600160a01b03808716602083015285168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050565b611634898989898986612bf6565b61163e8483612cea565b5050600b80546001600160a01b0319166001600160a01b0392909216919091179055505050505050565b6116a5338383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506124fa92505050565b5050565b60006116b48c612b2b565b905060006116c18c612b2b565b60018301549091508a906116dd906001600160801b0316612e20565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906117505760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060018101548a9061176a906001600160801b0316612e20565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906117dd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff161561185d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156118dd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506020808a01518a5160408051808201909152600a8152692a2ca822afa7a92222a960b11b93810193909352116119555760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50815461197d6119778d8d898e600060200201518e60005b6020020151612e27565b89612a8b565b146040518060400160405280600c81526020016b20a9a9a2a92a2fa82927a7a360a11b815250906119ef5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b508054611a20611a1a8d8d611a0d896001600160801b038a16612e8f565b60208f01518e600161196d565b88612a8b565b146040518060400160405280600a81526020016921a420a62fa82927a7a360b11b81525090611a905760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff0219169083151502179055506000600660009054906101000a90046001600160a01b03166001600160a01b031663865da1c28f8f87898f600160028110611b0257fe5b60200201516040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b03168152602001846001600160801b0316815260200183815260200182815260200195505050505050602060405180830381600087803b158015611b8657600080fd5b505af1158015611b9a573d6000803e3d6000fd5b505050506040513d6020811015611bb057600080fd5b50516001600160a01b0381166000908152600a60205260409020805460ff191660019081179091559091507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f908f908f908d9060209081029190910151604080516001600160a01b0395861681529385169284019290925282820152918416606082015290519081900360800190a15050505050505050505050505050565b6000611c5a336129fb565b90506000611c6b8289898989612e27565b90506000611cac82868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b9050611cb781611480565b604051806040016040528060138152602001722922a1a7ab2fa222a0a22624a722afa622a0a360691b81525090611d2f5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50611d3989612e20565b431015604051806040016040528060138152602001725245434f565f444541444c494e455f54494d4560681b81525090611db45760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50611dbe8a612aa2565b50505050505050505050565b60015460025460035467ffffffffffffffff80821691600160401b90041684565b6007546001600160801b031690565b6000546001600160a01b031681565b600080611f576040518061022001604052808f600060098110611e2857fe5b602002013581526020018f600160098110611e3f57fe5b602002013581526020018e81526020018f600260098110611e5c57fe5b602002013581526020018d81526020018f600360098110611e7957fe5b602002013581526020018c63ffffffff1681526020018b67ffffffffffffffff1681526020018a600280602002604051908101604052809291908260026020028082843760009201919091525050508152602081018a90526040018f6004602002013581526020018f600560098110611eee57fe5b602002013581526020018f600660098110611f0557fe5b6020020135815260200188151581526020018767ffffffffffffffff1681526020018f600760098110611f3457fe5b602002013581526020018f600860098110611f4b57fe5b60200201359052612ebb565b915091506000611f66336129fb565b905082611fa682878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b146040518060400160405280601181526020017026a0a5a2afa9aa20a5a2a92fa82927a7a360791b8152509061201d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061202833836133ea565b5050505050505050505050505050565b6000612043336129fb565b9050600061208482878780806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b905060006120c582868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b90506120d081611480565b6040518060400160405280600981526020016826a7ab22afa622a0a360b91b8152509061213e5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061147733836133ea565b600061218f6121566114c4565b868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b905060006121d082858580806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250612a8b92505050565b90506121db81611480565b6040518060400160405280600a815260200169282620a1a2afa622a0a360b11b8152509061224a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061225482613443565b505050505050565b845183518114801561226e5750808251145b6122b8576040805162461bcd60e51b81526020600482015260166024820152750d2dce0eae840d8cadccee8d040dad2e6e8dac2e8c6d60531b604482015290519081900360640190fd5b600080805b838110156124ef5760008982815181106122d357fe5b6020026020010151905060008883815181106122eb57fe5b60200260200101511180156123135750600086838151811061230957fe5b6020026020010151115b6040518060400160405280600e81526020016d28292aa722afa82927a7a32622a760911b815250906123865760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600088838151811061239557fe5b60200260200101518501905060008784815181106123af57fe5b6020026020010151850190508885815181106123c757fe5b60200260200101518b87815181106123db57fe5b60200260200101511415801561240257506123f46114c4565b612400848b88856135f1565b145b6040518060400160405280600e81526020016d141495539157d0d3d391931250d560921b815250906124755760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506000612484848d89866135f1565b905061248f81611480565b156124e057600081815260046020908152604091829020805460ff19169055815183815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a15b509094509250506001016122bd565b505050505050505050565b6000612505336129fb565b905061250f6114c4565b6125198284612a8b565b146040518060400160405280601081526020016f2922a1a7ab2fa820aa242fa82927a7a360811b8152509061258f5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506112c283612aa2565b60208101515160c08201515160a08301515181146125b657600080fd5b80836080015151146125c757600080fd5b81836040015151146125d857600080fd5b808203836060015151146125eb57600080fd5b60008080806125f86114c4565b875190915060005b878110156126fc5760008960200151828151811061261a57fe5b60200260200101519050600060038214156126a95760008b60c00151898151811061264157fe5b6020026020010151905061267a61265d8d60e00151898461365b565b8d608001518b8151811061266d57fe5b6020026020010151612e8f565b915080870196508b60a00151898151811061269157fe5b602002602001015194508880600101995050506126cc565b8a6060015187815181106126b957fe5b6020026020010151905086806001019750505b6126f0858c6040015185815181106126e057fe5b6020026020010151838588612e27565b94505050600101612600565b508760e00151518314612756576040805162461bcd60e51b815260206004820152601860248201527f4469646e2774207265616420616c6c206d657373616765730000000000000000604482015290519081900360640190fd5b8760400151600188038151811061276957fe5b602002602001015161277a43612e20565b101560405180604001604052806009815260200168434f4e465f54494d4560b81b815250906127ea5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506000612823838a6040015160018b038151811061280457fe5b60200260200101518b61010001518c61012001518d61014001516137af565b9050600081116040518060400160405280600f81526020016e21a7a7232fa420a9afa9aa20a5a2a960891b8152509061289d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506128a783613a5a565b6000805460e08b015160405163e4eb8c6360e01b81526020600482018181528351602484015283516001600160a01b039095169563e4eb8c639591938493604490910192908601918190849084905b8381101561290e5781810151838201526020016128f6565b50505050905090810190601f16801561293b5780820380516001836020036101000a031916815260200191505b5092505050600060405180830381600087803b15801561295a57600080fd5b505af115801561296e573d6000803e3d6000fd5b5050505060008611156124ef57608089015160408051602080825283518183015283517fded5fa103431438087188a5f8c6a4c3ea90996bbd63be7b1b3fa0a425b37fdd59493839290830191818601910280838360005b838110156129dd5781810151838201526020016129c5565b505050509050019250505060405180910390a1505050505050505050565b6001600160a01b0381166000908152600860209081526040808320548151808301909252600a82526924a72b2fa9aa20a5a2a960b11b9282019290925281612a845760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5092915050565b6000612a9b8383600085516135f1565b9392505050565b612aab81612bb5565b6007546040516001600160a01b038316916001600160801b031680156108fc02916000818181858888f19350505050158015612aeb573d6000803e3d6000fd5b50604080516001600160a01b038316815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a150565b6001600160a01b038116600090815260086020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291612a845760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b6001600160a01b03166000908152600860205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560098054600019019055565b600080546001600160a01b0319166001600160a01b038316178155612c2487612c1d613a95565b6000613b08565b90506000612c358180808086612e27565b6005819055600081815260046020908152604091829020805460ff191660019081179091556001600160801b03808c1690915589166002556003805467ffffffffffffffff898116600160401b026fffffffffffffffff000000000000000019918c1667ffffffffffffffff19909316929092171617905581518b815291519293507f4ac0014773275a3dfb58c58539631006301de41998cce7c4f8698d297c88bb2d92918290030190a15050505050505050565b60065460408051808201909152600a815269494e49545f545749434560b01b6020820152906001600160a01b031615612d645760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060408051808201909152600c81526b494e49545f4e4f4e5a45524f60a01b60208201526001600160a01b038216612ddd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600680546001600160a01b0319166001600160a01b0392909216919091179055600780546001600160801b0319166001600160801b0392909216919091179055565b6103e80290565b6040805160208082018490528183018790526060820186905260808083018690528351808403909101815260a08301845280519082012060c0830189905260e08084019190915283518084039091018152610100909201909252805191012095945050505050565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b6000806000612ed7846000015185602001518660400151613b08565b90506000612efe856060015186608001518760a001518860c0015163ffffffff1686612e27565b9050612f0981611480565b6040518060400160405280600981526020016826a0a5a2afa622a0a360b91b81525090612f775760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b508451612f8390613b3f565b158015612f9857508451612f9690613b45565b155b6040518060400160405280600881526020016726a0a5a2afa92aa760c11b815250906130055760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5060035460e086015160408051808201909152600981526804d414b455f535445560bc1b60208201529167ffffffffffffffff9081169116111561308a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506003546101008601518051600160401b90920467ffffffffffffffff169091016001600160801b031690600160200201516001600160801b031611156130d057600080fd5b6130de856101000151613b49565b604051806040016040528060098152602001684d414b455f54494d4560b81b8152509061314c5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5061012085015115806131615750846101a001515b6040518060400160405280600d81526020016c4d414b455f4d4553534147455360981b815250906131d35760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506000805460408051630220168160e01b8152306004820152815184936001600160a01b03169263022016819260248082019391829003018186803b15801561321b57600080fd5b505afa15801561322f573d6000803e3d6000fd5b505050506040513d604081101561324557600080fd5b5080516020909101516040890151919350915061326990829063ffffffff613b7916565b87610120015111156040518060400160405280601081526020016f135052d157d35154d4d051d157d0d39560821b815250906132e65760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506001546002546101c08901516000919067ffffffffffffffff168161330857fe5b04905060008261331743612e20565b019050896080015181101561332d575060808901515b810160006133408b888489898d8a613bbb565b905060006133518c89858c89613c0c565b905060006133638d8a868d8a8a613c6b565b905060006133728e8b87613cf5565b6000858152600460205260408082208054600160ff19918216811790925587845282842080548216831790558684528284208054821683179055848452828420805482169092179091558d835291208054909116905590506133d68e8b8b8b613d37565b989b50979950505050505050505050915091565b6001600160a01b0382166000818152600860209081526040918290208490558151928352820183905280517fbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f49281900390910190a15050565b60078054604080518082019091529182526614d512d7d0535560ca1b60208301526001600160801b031634146134ba5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b5033600090815260086020908152604091829020548251808401909352600c83526b105314911657d4d51052d15160a21b918301919091521561353e5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50604080516060810182528281526001600160801b03438116602080840191825260008486018181523380835260088452918790209551865592516001958601805494511515600160801b0260ff60801b19929096166001600160801b031990951694909417169390931790915560098054909301909255825190815290810183905281517fcbafbb223ed21c82af9e2ad20cdfdf55d3263d06f9a65b3f70da613f32d81f88929181900390910190a150565b600084835b8381101561364f578186828151811061360b57fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120915080806001019150506135f6565b5090505b949350505050565b8251600090819081908190868601908111156136af576040805162461bcd60e51b815260206004820152600e60248201526d0d2dcecc2d8d2c840d8cadccee8d60931b604482015290519081900360640190fd5b865b8181101561374c576136c38982613e63565b919650909350905084613716576040805162461bcd60e51b8152602060048201526016602482015275496e76616c6964206f7574707574206d65737361676560501b604482015290519081900360640190fd5b838360405160200180838152602001828152602001925050506040516020818303038152906040528051906020012093506136b1565b86880181146137a2576040805162461bcd60e51b815260206004820152601a60248201527f76616c756520657874656e6465642070617374206c656e677468000000000000604482015290519081900360640190fd5b5091979650505050505050565b825160095460408051808201909152600a81526910d210d2d7d0d3d5539560b21b60208201526000929182146138265760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50825181600101146040518060400160405280600c81526020016b4348434b5f4f46465345545360a01b8152509061389f5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600080805b83811015613a4d5760008882815181106138bb57fe5b60200260200101519050836bffffffffffffffffffffffff19168160601b6bffffffffffffffffffffffff1916116040518060400160405280600a81526020016921a421a5afa7a92222a960b11b815250906139585760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b50600061396482612b2b565b60018101549091508b90613980906001600160801b0316612e20565b1015613a3f5780600001546139c08d8b8b878151811061399c57fe5b60200260200101518c88600101815181106139b357fe5b60200260200101516135f1565b146040518060400160405280601181526020017021a421a5afa9aa20a5a2a92fa82927a7a360791b81525090613a375760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b506001909301925b5060601b92506001016138a5565b5098975050505050505050565b60058190556040805182815290517f9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f639181900360200190a150565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b83811015613ae1578181015183820152602001613ac9565b50505050905001925050506040516020818303038152906040528051906020012091505090565b6040805160208082019590955280820193909352606080840192909252805180840390920182526080909201909152805191012090565b60011490565b1590565b80516000906001600160801b03164310801590613b73575060208201516001600160801b03164311155b92915050565b6000612a9b83836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f770000815250613eba565b600080613bdb896101400151878b61012001518c60400151018803613b08565b9050613bff8888613bf784613bf06001612e20565b8801612e8f565b600088612e27565b9998505050505050505050565b600080613c368760200151886101400151613c25613a95565b8a61016001518b6101200151613f14565b90506000613c4f82613c486001612e20565b8601612e8f565b9050613c5f878783600189612e27565b98975050505050505050565b600080613c8788600001518961010001518a6101600151613f5a565b90506000613cb98961018001518a6101a001518b6101c001516000801b8d6101e001516000801b8f6102000151613fac565b90506000613ccc8a60e00151848461400f565b9050613ce78989613cdf84898b01612e8f565b60028b612e27565b9a9950505050505050505050565b60006136538383613d10876101e00151886102000151612e8f565b6003613d328961018001518a61014001518b61012001518c6040015101613b08565b612e27565b7f5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c970356040518060e00160405280858152602001848152602001866101400151815260200186610160015181526020018661018001518152602001866101e00151815260200186610200015181525082866101200151876101000151886101c001518960e001518a6101a001516040518088600760200280838360005b83811015613dea578181015183820152602001613dd2565b5050505090500187815260200186815260200185600260200280838360005b83811015613e21578181015183820152602001613e09565b50505067ffffffffffffffff9788169390910192835250509290931660208301521515604080830191909152519081900360600195509350505050a150505050565b6000806000806000613e73614995565b613e7d8888614057565b92509250925082613e9b575060009450859350849250613eb3915050565b600182613ea7836141a6565b51919750955093505050505b9250925092565b60008184841115613f0c5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315611249578181015183820152602001611231565b505050900390565b60408051602080820197909752808201959095526060850193909352608084019190915260a0808401919091528151808403909101815260c09092019052805191012090565b815160209283015160408051808601969096526001600160801b0319608093841b81168783015291831b9091166050860152606080860193909352805180860390930183529301909252815191012090565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b6040805160c09490941b6001600160c01b0319166020808601919091526028850193909352604880850192909252805180850390920182526068909301909252815191012090565b600080614062614995565b845184106140825760008461407760006142dc565b925092509250613eb3565b600080859050600087828151811061409657fe5b016020015160019092019160f81c905060006140b06149c3565b60ff83166140e4576140c28a8561435a565b9196509450915084846140d4846142dc565b9750975097505050505050613eb3565b60ff83166001141561410c576140fa8a856143ad565b9196509450905084846140d48361450e565b60ff831660021415614134576141228a8561435a565b9196509450915084846140d48461456e565b600360ff84161080159061414b5750600c60ff8416105b156141865760021983016060614162828d886145ec565b919850965090508686614174836146aa565b99509950995050505050505050613eb3565b60008061419360006142dc565b9199509750955050505050509250925092565b6141ae6149ea565b6060820151600c60ff90911610614200576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff1661422d576040518060200160405280614224846000015161475a565b90529050611493565b606082015160ff166001141561427457604051806020016040528061422484602001516000015185602001516040015186602001516060015187602001516020015161477e565b606082015160ff16600214156142995750604080516020810190915281518152611493565b600360ff16826060015160ff16101580156142bd57506060820151600c60ff909116105b156142da5760405180602001604052806142248460400151614826565bfe5b6142e4614995565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191614349565b614336614995565b81526020019060019003908161432e5790505b508152600060209091015292915050565b600080600080855190508481108061437457506020858203105b15614389575060009250839150829050613eb3565b60016020860161439f888863ffffffff61497216565b935093509350509250925092565b6000806143b86149c3565b600084905060008682815181106143cb57fe5b602001015160f81c60f81b60f81c9050818060010192505060008783815181106143f157fe5b016020015160019384019360f89190911c915060009060ff8416141561447857600061441b614995565b6144258b87614057565b90975090925090508161446957505060408051608081018252600080825260208201819052918101829052606081018290529097508896509450613eb39350505050565b614472816141a6565b51925050505b600061448a8a8663ffffffff61497216565b90506020850194508360ff16600114156144d6576040805160808101825260ff90941684526020840191909152600190830181905260608301919091529550919350909150613eb39050565b6040805160808101825260ff949094168452602084019190915260009083018190526060830152506001989297509550909350505050565b614516614995565b60408051608081018252600080825260208083018690528351828152908101845291928301919061455d565b61454a614995565b8152602001906001900390816145425790505b508152600160209091015292915050565b614576614995565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916145db565b6145c8614995565b8152602001906001900390816145c05790505b508152600260209091015292915050565b60008060606000849050600060608860ff1660405190808252806020026020018201604052801561463757816020015b614624614995565b81526020019060019003908161461c5790505b50905060005b8960ff168160ff161015614694576146558985614057565b8451859060ff861690811061466657fe5b6020908102919091010152945092508261468c57506000955086945092506146a1915050565b60010161463d565b5060019550919350909150505b93509350939050565b6146b2614995565b6146bc825161498e565b61470d576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b60408051602080820193909352815180820384018152908201909152805191012090565b600083156147d8575060408051600160f81b6020808301919091526001600160f81b031960f888901b1660218301526022820185905260428083018590528351808403909101815260629092019092528051910120613653565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228083018590528351808403909101815260429092019092528051910120949350505050565b6000600882511115614876576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b606082516040519080825280602002602001820160405280156148a3578160200160208202803883390190505b50805190915060005b818110156148ff576148bc6149ea565b6148d88683815181106148cb57fe5b60200260200101516141a6565b905080600001518483815181106148eb57fe5b6020908102919091010152506001016148ac565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b83811015614948578181015183820152602001614930565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b6000816020018351101561498557600080fd5b50016020015190565b6008101590565b6040518060800160405280600081526020016149af6149c3565b815260606020820152600060409091015290565b60408051608081018252600080825260208201819052918101829052606081019190915290565b6040805160208101909152600081529056fea265627a7a723158209085e36923b3ac9b19279ec3c41d50a441a6c82ed83913ff7fd18d274281300c64736f6c634300050d0032"
 
 // DeployArbRollup deploys a new Ethereum contract, binding an instance of ArbRollup to it.
 func DeployArbRollup(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ArbRollup, error) {
@@ -456,23 +456,23 @@ func (_ArbRollup *ArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeri
 
 // MakeAssertion is a paid mutator transaction binding the contract method 0xd684f94b.
 //
-// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforePendingCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
-func (_ArbRollup *ArbRollupTransactor) MakeAssertion(opts *bind.TransactOpts, _fields [9][32]byte, _beforePendingCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "makeAssertion", _fields, _beforePendingCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
+// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforeInboxCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
+func (_ArbRollup *ArbRollupTransactor) MakeAssertion(opts *bind.TransactOpts, _fields [9][32]byte, _beforeInboxCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "makeAssertion", _fields, _beforeInboxCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
 }
 
 // MakeAssertion is a paid mutator transaction binding the contract method 0xd684f94b.
 //
-// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforePendingCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
-func (_ArbRollup *ArbRollupSession) MakeAssertion(_fields [9][32]byte, _beforePendingCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _beforePendingCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
+// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforeInboxCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
+func (_ArbRollup *ArbRollupSession) MakeAssertion(_fields [9][32]byte, _beforeInboxCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _beforeInboxCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
 }
 
 // MakeAssertion is a paid mutator transaction binding the contract method 0xd684f94b.
 //
-// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforePendingCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
-func (_ArbRollup *ArbRollupTransactorSession) MakeAssertion(_fields [9][32]byte, _beforePendingCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _beforePendingCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
+// Solidity: function makeAssertion(bytes32[9] _fields, uint256 _beforeInboxCount, uint256 _prevDeadlineTicks, uint32 _prevChildType, uint64 _numSteps, uint128[2] _timeBoundsBlocks, uint256 _importedMessageCount, bool _didInboxInsn, uint64 _numArbGas, bytes32[] _stakerProof) returns()
+func (_ArbRollup *ArbRollupTransactorSession) MakeAssertion(_fields [9][32]byte, _beforeInboxCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _beforeInboxCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
 }
 
 // MoveStake is a paid mutator transaction binding the contract method 0xdbad0a39.
@@ -867,7 +867,7 @@ func (it *ArbRollupRollupAssertedIterator) Close() error {
 // ArbRollupRollupAsserted represents a RollupAsserted event raised by the ArbRollup contract.
 type ArbRollupRollupAsserted struct {
 	Fields               [7][32]byte
-	PendingCount         *big.Int
+	InboxCount           *big.Int
 	ImportedMessageCount *big.Int
 	TimeBoundsBlocks     [2]*big.Int
 	NumArbGas            uint64
@@ -878,7 +878,7 @@ type ArbRollupRollupAsserted struct {
 
 // FilterRollupAsserted is a free log retrieval operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupAsserted(opts *bind.FilterOpts) (*ArbRollupRollupAssertedIterator, error) {
 
 	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupAsserted")
@@ -890,7 +890,7 @@ func (_ArbRollup *ArbRollupFilterer) FilterRollupAsserted(opts *bind.FilterOpts)
 
 // WatchRollupAsserted is a free log subscription operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupAsserted(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupAsserted) (event.Subscription, error) {
 
 	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupAsserted")
@@ -927,7 +927,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupAsserted(opts *bind.WatchOpts, s
 
 // ParseRollupAsserted is a log parse operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupAsserted(log types.Log) (*ArbRollupRollupAsserted, error) {
 	event := new(ArbRollupRollupAsserted)
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
@@ -2173,7 +2173,7 @@ func (_BytesLib *BytesLibTransactorRaw) Transact(opts *bind.TransactOpts, method
 const ChallengeTypeABI = "[]"
 
 // ChallengeTypeBin is the compiled bytecode used for deploying new contracts.
-var ChallengeTypeBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820766d50c810c1a016f65f4cdb737678cb861546547c2459c88dc18e453db0c0bf64736f6c634300050d0032"
+var ChallengeTypeBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582022b77c85b5fc06a9af3a4a0d6d6ee856ab2c07ba44bd5245ee6e95680a5c1c8c64736f6c634300050d0032"
 
 // DeployChallengeType deploys a new Ethereum contract, binding an instance of ChallengeType to it.
 func DeployChallengeType(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeType, error) {
@@ -2335,7 +2335,7 @@ func (_ChallengeType *ChallengeTypeTransactorRaw) Transact(opts *bind.TransactOp
 const ChallengeUtilsABI = "[]"
 
 // ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
-var ChallengeUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158205bebeb7233812a7d81e56a133dfefcd46e9a7223ef3cb9a1123883fc692f141f64736f6c634300050d0032"
+var ChallengeUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820607aae7be6ed60ed7096d0341561f4183aaa07bcafa77d66f753e60c7600bc2264736f6c634300050d0032"
 
 // DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
 func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
@@ -2691,118 +2691,118 @@ func (_IChallengeFactory *IChallengeFactoryTransactorSession) CreateChallenge(_a
 	return _IChallengeFactory.Contract.CreateChallenge(&_IChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriodTicks, _challengeHash, challengeType)
 }
 
-// IGlobalPendingInboxABI is the input ABI used to generate the binding from.
-const IGlobalPendingInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getPending\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// IGlobalInboxABI is the input ABI used to generate the binding from.
+const IGlobalInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// IGlobalPendingInboxFuncSigs maps the 4-byte function signature to its string representation.
-var IGlobalPendingInboxFuncSigs = map[string]string{
+// IGlobalInboxFuncSigs maps the 4-byte function signature to its string representation.
+var IGlobalInboxFuncSigs = map[string]string{
 	"bca22b76": "depositERC20Message(address,address,address,uint256)",
 	"8b7010aa": "depositERC721Message(address,address,address,uint256)",
 	"5bd21290": "depositEthMessage(address,address)",
 	"8bef8df0": "forwardTransactionMessage(address,address,uint256,uint256,bytes,bytes)",
-	"11ae9ed2": "getPending()",
+	"02201681": "getInbox(address)",
 	"e4eb8c63": "sendMessages(bytes)",
 	"8f5ed73e": "sendTransactionMessage(address,address,uint256,uint256,bytes)",
 }
 
-// IGlobalPendingInbox is an auto generated Go binding around an Ethereum contract.
-type IGlobalPendingInbox struct {
-	IGlobalPendingInboxCaller     // Read-only binding to the contract
-	IGlobalPendingInboxTransactor // Write-only binding to the contract
-	IGlobalPendingInboxFilterer   // Log filterer for contract events
+// IGlobalInbox is an auto generated Go binding around an Ethereum contract.
+type IGlobalInbox struct {
+	IGlobalInboxCaller     // Read-only binding to the contract
+	IGlobalInboxTransactor // Write-only binding to the contract
+	IGlobalInboxFilterer   // Log filterer for contract events
 }
 
-// IGlobalPendingInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxCaller struct {
+// IGlobalInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IGlobalInboxCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxTransactor struct {
+// IGlobalInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IGlobalInboxTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IGlobalPendingInboxFilterer struct {
+// IGlobalInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IGlobalInboxFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxSession is an auto generated Go binding around an Ethereum contract,
+// IGlobalInboxSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type IGlobalPendingInboxSession struct {
-	Contract     *IGlobalPendingInbox // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts        // Call options to use throughout this session
-	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+type IGlobalInboxSession struct {
+	Contract     *IGlobalInbox     // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IGlobalPendingInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// IGlobalInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type IGlobalPendingInboxCallerSession struct {
-	Contract *IGlobalPendingInboxCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts              // Call options to use throughout this session
+type IGlobalInboxCallerSession struct {
+	Contract *IGlobalInboxCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// IGlobalPendingInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// IGlobalInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type IGlobalPendingInboxTransactorSession struct {
-	Contract     *IGlobalPendingInboxTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
+type IGlobalInboxTransactorSession struct {
+	Contract     *IGlobalInboxTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// IGlobalPendingInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
-type IGlobalPendingInboxRaw struct {
-	Contract *IGlobalPendingInbox // Generic contract binding to access the raw methods on
+// IGlobalInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IGlobalInboxRaw struct {
+	Contract *IGlobalInbox // Generic contract binding to access the raw methods on
 }
 
-// IGlobalPendingInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxCallerRaw struct {
-	Contract *IGlobalPendingInboxCaller // Generic read-only contract binding to access the raw methods on
+// IGlobalInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IGlobalInboxCallerRaw struct {
+	Contract *IGlobalInboxCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IGlobalPendingInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxTransactorRaw struct {
-	Contract *IGlobalPendingInboxTransactor // Generic write-only contract binding to access the raw methods on
+// IGlobalInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IGlobalInboxTransactorRaw struct {
+	Contract *IGlobalInboxTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewIGlobalPendingInbox creates a new instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInbox(address common.Address, backend bind.ContractBackend) (*IGlobalPendingInbox, error) {
-	contract, err := bindIGlobalPendingInbox(address, backend, backend, backend)
+// NewIGlobalInbox creates a new instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInbox(address common.Address, backend bind.ContractBackend) (*IGlobalInbox, error) {
+	contract, err := bindIGlobalInbox(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInbox{IGlobalPendingInboxCaller: IGlobalPendingInboxCaller{contract: contract}, IGlobalPendingInboxTransactor: IGlobalPendingInboxTransactor{contract: contract}, IGlobalPendingInboxFilterer: IGlobalPendingInboxFilterer{contract: contract}}, nil
+	return &IGlobalInbox{IGlobalInboxCaller: IGlobalInboxCaller{contract: contract}, IGlobalInboxTransactor: IGlobalInboxTransactor{contract: contract}, IGlobalInboxFilterer: IGlobalInboxFilterer{contract: contract}}, nil
 }
 
-// NewIGlobalPendingInboxCaller creates a new read-only instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxCaller(address common.Address, caller bind.ContractCaller) (*IGlobalPendingInboxCaller, error) {
-	contract, err := bindIGlobalPendingInbox(address, caller, nil, nil)
+// NewIGlobalInboxCaller creates a new read-only instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxCaller(address common.Address, caller bind.ContractCaller) (*IGlobalInboxCaller, error) {
+	contract, err := bindIGlobalInbox(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxCaller{contract: contract}, nil
+	return &IGlobalInboxCaller{contract: contract}, nil
 }
 
-// NewIGlobalPendingInboxTransactor creates a new write-only instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*IGlobalPendingInboxTransactor, error) {
-	contract, err := bindIGlobalPendingInbox(address, nil, transactor, nil)
+// NewIGlobalInboxTransactor creates a new write-only instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*IGlobalInboxTransactor, error) {
+	contract, err := bindIGlobalInbox(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxTransactor{contract: contract}, nil
+	return &IGlobalInboxTransactor{contract: contract}, nil
 }
 
-// NewIGlobalPendingInboxFilterer creates a new log filterer instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*IGlobalPendingInboxFilterer, error) {
-	contract, err := bindIGlobalPendingInbox(address, nil, nil, filterer)
+// NewIGlobalInboxFilterer creates a new log filterer instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*IGlobalInboxFilterer, error) {
+	contract, err := bindIGlobalInbox(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxFilterer{contract: contract}, nil
+	return &IGlobalInboxFilterer{contract: contract}, nil
 }
 
-// bindIGlobalPendingInbox binds a generic wrapper to an already deployed contract.
-func bindIGlobalPendingInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(IGlobalPendingInboxABI))
+// bindIGlobalInbox binds a generic wrapper to an already deployed contract.
+func bindIGlobalInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IGlobalInboxABI))
 	if err != nil {
 		return nil, err
 	}
@@ -2813,190 +2813,199 @@ func bindIGlobalPendingInbox(address common.Address, caller bind.ContractCaller,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxCaller.contract.Call(opts, result, method, params...)
+func (_IGlobalInbox *IGlobalInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IGlobalInbox.Contract.IGlobalInboxCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxTransactor.contract.Transfer(opts)
+func (_IGlobalInbox *IGlobalInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.IGlobalInboxTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxTransactor.contract.Transact(opts, method, params...)
+func (_IGlobalInbox *IGlobalInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.IGlobalInboxTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IGlobalPendingInbox *IGlobalPendingInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IGlobalPendingInbox.Contract.contract.Call(opts, result, method, params...)
+func (_IGlobalInbox *IGlobalInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IGlobalInbox.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.contract.Transfer(opts)
+func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.contract.Transact(opts, method, params...)
+func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
+	var (
+		ret0 = new([32]byte)
+		ret1 = new(*big.Int)
+	)
+	out := &[]interface{}{
+		ret0,
+		ret1,
+	}
+	err := _IGlobalInbox.contract.Call(opts, out, "getInbox", account)
+	return *ret0, *ret1, err
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC20Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC20Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC20Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC20Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC721Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC721Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc721, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC721Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC721Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc721, _value)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositEthMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to)
+func (_IGlobalInbox *IGlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositEthMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
+func (_IGlobalInbox *IGlobalInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.ForwardTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
+func (_IGlobalInbox *IGlobalInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.ForwardTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.ForwardTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) GetPending(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "getPending")
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) GetPending() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) GetPending() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.ForwardTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "sendMessages", _messages)
+func (_IGlobalInbox *IGlobalInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "sendMessages", _messages)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendMessages(&_IGlobalPendingInbox.TransactOpts, _messages)
+func (_IGlobalInbox *IGlobalInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendMessages(&_IGlobalInbox.TransactOpts, _messages)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendMessages(&_IGlobalPendingInbox.TransactOpts, _messages)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendMessages(&_IGlobalInbox.TransactOpts, _messages)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
 }
 
-// IGlobalPendingInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC20DepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxERC20DepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -3010,7 +3019,7 @@ type IGlobalPendingInboxERC20DepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -3019,7 +3028,7 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxERC20DepositMessageDelivered)
+			it.Event = new(IGlobalInboxERC20DepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -3034,7 +3043,7 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxERC20DepositMessageDelivered)
+		it.Event = new(IGlobalInboxERC20DepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -3050,19 +3059,19 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC20DepositMessageDelivered struct {
+// IGlobalInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxERC20DepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -3075,7 +3084,7 @@ type IGlobalPendingInboxERC20DepositMessageDelivered struct {
 // FilterERC20DepositMessageDelivered is a free log retrieval operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxERC20DepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxERC20DepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3090,17 +3099,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC20DepositMessa
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxERC20DepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxERC20DepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchERC20DepositMessageDelivered is a free log subscription operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3115,7 +3124,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3125,8 +3134,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxERC20DepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxERC20DepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -3150,17 +3159,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 // ParseERC20DepositMessageDelivered is a log parse operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*IGlobalPendingInboxERC20DepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxERC20DepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*IGlobalInboxERC20DepositMessageDelivered, error) {
+	event := new(IGlobalInboxERC20DepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC721DepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxERC721DepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -3174,7 +3183,7 @@ type IGlobalPendingInboxERC721DepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -3183,7 +3192,7 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxERC721DepositMessageDelivered)
+			it.Event = new(IGlobalInboxERC721DepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -3198,7 +3207,7 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxERC721DepositMessageDelivered)
+		it.Event = new(IGlobalInboxERC721DepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -3214,19 +3223,19 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC721DepositMessageDelivered struct {
+// IGlobalInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxERC721DepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -3239,7 +3248,7 @@ type IGlobalPendingInboxERC721DepositMessageDelivered struct {
 // FilterERC721DepositMessageDelivered is a free log retrieval operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxERC721DepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxERC721DepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3254,17 +3263,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC721DepositMess
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxERC721DepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxERC721DepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchERC721DepositMessageDelivered is a free log subscription operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3279,7 +3288,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3289,8 +3298,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxERC721DepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxERC721DepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -3314,17 +3323,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 // ParseERC721DepositMessageDelivered is a log parse operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*IGlobalPendingInboxERC721DepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxERC721DepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*IGlobalInboxERC721DepositMessageDelivered, error) {
+	event := new(IGlobalInboxERC721DepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxEthDepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxEthDepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -3338,7 +3347,7 @@ type IGlobalPendingInboxEthDepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -3347,7 +3356,7 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxEthDepositMessageDelivered)
+			it.Event = new(IGlobalInboxEthDepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -3362,7 +3371,7 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxEthDepositMessageDelivered)
+		it.Event = new(IGlobalInboxEthDepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -3378,19 +3387,19 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxEthDepositMessageDelivered struct {
+// IGlobalInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxEthDepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -3402,7 +3411,7 @@ type IGlobalPendingInboxEthDepositMessageDelivered struct {
 // FilterEthDepositMessageDelivered is a free log retrieval operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxEthDepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxEthDepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3417,17 +3426,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterEthDepositMessage
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxEthDepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxEthDepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchEthDepositMessageDelivered is a free log subscription operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3442,7 +3451,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3452,8 +3461,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxEthDepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxEthDepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -3477,17 +3486,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 // ParseEthDepositMessageDelivered is a log parse operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*IGlobalPendingInboxEthDepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxEthDepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*IGlobalInboxEthDepositMessageDelivered, error) {
+	event := new(IGlobalInboxEthDepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxTransactionMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxTransactionMessageDeliveredIterator struct {
+	Event *IGlobalInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -3501,7 +3510,7 @@ type IGlobalPendingInboxTransactionMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -3510,7 +3519,7 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxTransactionMessageDelivered)
+			it.Event = new(IGlobalInboxTransactionMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -3525,7 +3534,7 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxTransactionMessageDelivered)
+		it.Event = new(IGlobalInboxTransactionMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -3541,19 +3550,19 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxTransactionMessageDelivered struct {
+// IGlobalInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxTransactionMessageDelivered struct {
 	Chain     common.Address
 	To        common.Address
 	From      common.Address
@@ -3566,7 +3575,7 @@ type IGlobalPendingInboxTransactionMessageDelivered struct {
 // FilterTransactionMessageDelivered is a free log retrieval operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxTransactionMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxTransactionMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3581,17 +3590,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterTransactionMessag
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxTransactionMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxTransactionMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchTransactionMessageDelivered is a free log subscription operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -3606,7 +3615,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3616,8 +3625,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxTransactionMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxTransactionMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -3641,16 +3650,16 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 // ParseTransactionMessageDelivered is a log parse operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*IGlobalPendingInboxTransactionMessageDelivered, error) {
-	event := new(IGlobalPendingInboxTransactionMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*IGlobalInboxTransactionMessageDelivered, error) {
+	event := new(IGlobalInboxTransactionMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
 // NodeGraphABI is the input ABI used to generate the binding from.
-const NodeGraphABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[7]\",\"name\":\"fields\",\"type\":\"bytes32[7]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"pendingCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"importedMessageCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint128[2]\",\"name\":\"timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numArbGas\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numSteps\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"didInboxInsn\",\"type\":\"bool\"}],\"name\":\"RollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"initVMHash\",\"type\":\"bytes32\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalPendingInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"isValidLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"latestConfirmed\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"fromNodes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"leafProofLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"latestConfirmedProofLengths\",\"type\":\"uint256[]\"}],\"name\":\"pruneLeaves\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"vmParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"gracePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"arbGasSpeedLimitPerTick\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"maxTimeBoundsWidth\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const NodeGraphABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[7]\",\"name\":\"fields\",\"type\":\"bytes32[7]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"inboxCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"importedMessageCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint128[2]\",\"name\":\"timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numArbGas\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numSteps\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"didInboxInsn\",\"type\":\"bool\"}],\"name\":\"RollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"initVMHash\",\"type\":\"bytes32\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"}],\"name\":\"isValidLeaf\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"latestConfirmed\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"fromNodes\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"leafProofLengths\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"latestConfirmedProofLengths\",\"type\":\"uint256[]\"}],\"name\":\"pruneLeaves\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"vmParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"gracePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"arbGasSpeedLimitPerTick\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"maxTimeBoundsWidth\",\"type\":\"uint64\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // NodeGraphFuncSigs maps the 4-byte function signature to its string representation.
 var NodeGraphFuncSigs = map[string]string{
@@ -3662,7 +3671,7 @@ var NodeGraphFuncSigs = map[string]string{
 }
 
 // NodeGraphBin is the compiled bytecode used for deploying new contracts.
-var NodeGraphBin = "0x608060405234801561001057600080fd5b50610776806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806357ca6d1b1461005c57806365f7f80d1461008d578063bbc2cc00146100a7578063d489113a146100df578063fcfd8d3f14610103575b600080fd5b6100796004803603602081101561007257600080fd5b50356103ae565b604080519115158252519081900360200190f35b6100956103c3565b60408051918252519081900360200190f35b6100af6103c9565b60408051948552602085019390935267ffffffffffffffff91821684840152166060830152519081900360800190f35b6100e76103ef565b604080516001600160a01b039092168252519081900360200190f35b6103ac600480360360a081101561011957600080fd5b810190602081018135600160201b81111561013357600080fd5b82018360208201111561014557600080fd5b803590602001918460208302840111600160201b8311171561016657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156101b557600080fd5b8201836020820111156101c757600080fd5b803590602001918460208302840111600160201b831117156101e857600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561023757600080fd5b82018360208201111561024957600080fd5b803590602001918460208302840111600160201b8311171561026a57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156102b957600080fd5b8201836020820111156102cb57600080fd5b803590602001918460208302840111600160201b831117156102ec57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561033b57600080fd5b82018360208201111561034d57600080fd5b803590602001918460208302840111600160201b8311171561036e57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295506103fe945050505050565b005b60009081526004602052604090205460ff1690565b60055490565b60015460025460035467ffffffffffffffff808216916801000000000000000090041684565b6000546001600160a01b031681565b84518351811480156104105750808251145b61045a576040805162461bcd60e51b81526020600482015260166024820152750d2dce0eae840d8cadccee8d040dad2e6e8dac2e8c6d60531b604482015290519081900360640190fd5b600080805b838110156106ce57600089828151811061047557fe5b60200260200101519050600088838151811061048d57fe5b60200260200101511180156104b5575060008683815181106104ab57fe5b6020026020010151115b6040518060400160405280600e81526020016d28292aa722afa82927a7a32622a760911b815250906105655760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561052a578181015183820152602001610512565b50505050905090810190601f1680156105575780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b50600088838151811061057457fe5b602002602001015185019050600087848151811061058e57fe5b6020026020010151850190508885815181106105a657fe5b60200260200101518b87815181106105ba57fe5b6020026020010151141580156105e157506105d36103c3565b6105df848b88856106d9565b145b6040518060400160405280600e81526020016d141495539157d0d3d391931250d560921b815250906106545760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561052a578181015183820152602001610512565b506000610663848d89866106d9565b905061066e816103ae565b156106bf57600081815260046020908152604091829020805460ff19169055815183815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a15b5090945092505060010161045f565b505050505050505050565b600084835b8381101561073757818682815181106106f357fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120915080806001019150506106de565b509594505050505056fea265627a7a7231582087834ce7d719f6c5a677329dca644d2b22aa6039dc0e8e2663a7f876b39c6d6064736f6c634300050d0032"
+var NodeGraphBin = "0x608060405234801561001057600080fd5b50610776806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806357ca6d1b1461005c57806365f7f80d1461008d578063bbc2cc00146100a7578063d489113a146100df578063fcfd8d3f14610103575b600080fd5b6100796004803603602081101561007257600080fd5b50356103ae565b604080519115158252519081900360200190f35b6100956103c3565b60408051918252519081900360200190f35b6100af6103c9565b60408051948552602085019390935267ffffffffffffffff91821684840152166060830152519081900360800190f35b6100e76103ef565b604080516001600160a01b039092168252519081900360200190f35b6103ac600480360360a081101561011957600080fd5b810190602081018135600160201b81111561013357600080fd5b82018360208201111561014557600080fd5b803590602001918460208302840111600160201b8311171561016657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156101b557600080fd5b8201836020820111156101c757600080fd5b803590602001918460208302840111600160201b831117156101e857600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561023757600080fd5b82018360208201111561024957600080fd5b803590602001918460208302840111600160201b8311171561026a57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156102b957600080fd5b8201836020820111156102cb57600080fd5b803590602001918460208302840111600160201b831117156102ec57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561033b57600080fd5b82018360208201111561034d57600080fd5b803590602001918460208302840111600160201b8311171561036e57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295506103fe945050505050565b005b60009081526004602052604090205460ff1690565b60055490565b60015460025460035467ffffffffffffffff808216916801000000000000000090041684565b6000546001600160a01b031681565b84518351811480156104105750808251145b61045a576040805162461bcd60e51b81526020600482015260166024820152750d2dce0eae840d8cadccee8d040dad2e6e8dac2e8c6d60531b604482015290519081900360640190fd5b600080805b838110156106ce57600089828151811061047557fe5b60200260200101519050600088838151811061048d57fe5b60200260200101511180156104b5575060008683815181106104ab57fe5b6020026020010151115b6040518060400160405280600e81526020016d28292aa722afa82927a7a32622a760911b815250906105655760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561052a578181015183820152602001610512565b50505050905090810190601f1680156105575780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b50600088838151811061057457fe5b602002602001015185019050600087848151811061058e57fe5b6020026020010151850190508885815181106105a657fe5b60200260200101518b87815181106105ba57fe5b6020026020010151141580156105e157506105d36103c3565b6105df848b88856106d9565b145b6040518060400160405280600e81526020016d141495539157d0d3d391931250d560921b815250906106545760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561052a578181015183820152602001610512565b506000610663848d89866106d9565b905061066e816103ae565b156106bf57600081815260046020908152604091829020805460ff19169055815183815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a15b5090945092505060010161045f565b505050505050505050565b600084835b8381101561073757818682815181106106f357fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120915080806001019150506106de565b509594505050505056fea265627a7a72315820d479807485f218ac063a7e4e466cfd2c478c5b758a9e06697b49cd901807c0b964736f6c634300050d0032"
 
 // DeployNodeGraph deploys a new Ethereum contract, binding an instance of NodeGraph to it.
 func DeployNodeGraph(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *NodeGraph, error) {
@@ -4033,7 +4042,7 @@ func (it *NodeGraphRollupAssertedIterator) Close() error {
 // NodeGraphRollupAsserted represents a RollupAsserted event raised by the NodeGraph contract.
 type NodeGraphRollupAsserted struct {
 	Fields               [7][32]byte
-	PendingCount         *big.Int
+	InboxCount           *big.Int
 	ImportedMessageCount *big.Int
 	TimeBoundsBlocks     [2]*big.Int
 	NumArbGas            uint64
@@ -4044,7 +4053,7 @@ type NodeGraphRollupAsserted struct {
 
 // FilterRollupAsserted is a free log retrieval operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_NodeGraph *NodeGraphFilterer) FilterRollupAsserted(opts *bind.FilterOpts) (*NodeGraphRollupAssertedIterator, error) {
 
 	logs, sub, err := _NodeGraph.contract.FilterLogs(opts, "RollupAsserted")
@@ -4056,7 +4065,7 @@ func (_NodeGraph *NodeGraphFilterer) FilterRollupAsserted(opts *bind.FilterOpts)
 
 // WatchRollupAsserted is a free log subscription operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_NodeGraph *NodeGraphFilterer) WatchRollupAsserted(opts *bind.WatchOpts, sink chan<- *NodeGraphRollupAsserted) (event.Subscription, error) {
 
 	logs, sub, err := _NodeGraph.contract.WatchLogs(opts, "RollupAsserted")
@@ -4093,7 +4102,7 @@ func (_NodeGraph *NodeGraphFilterer) WatchRollupAsserted(opts *bind.WatchOpts, s
 
 // ParseRollupAsserted is a log parse operation binding the contract event 0x5761ea2104e5d52e617adb7f0bfc8970ffa1d06f57d28cb2bb3a034532c97035.
 //
-// Solidity: event RollupAsserted(bytes32[7] fields, uint256 pendingCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
+// Solidity: event RollupAsserted(bytes32[7] fields, uint256 inboxCount, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, uint64 numArbGas, uint64 numSteps, bool didInboxInsn)
 func (_NodeGraph *NodeGraphFilterer) ParseRollupAsserted(log types.Log) (*NodeGraphRollupAsserted, error) {
 	event := new(NodeGraphRollupAsserted)
 	if err := _NodeGraph.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
@@ -4505,7 +4514,7 @@ func (_NodeGraph *NodeGraphFilterer) ParseRollupPruned(log types.Log) (*NodeGrap
 const ProtocolABI = "[]"
 
 // ProtocolBin is the compiled bytecode used for deploying new contracts.
-var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158201860b5981bb2b288ee04587ca5b68c606f25ce84aaa06d830f38ceeba364c1b564736f6c634300050d0032"
+var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820f5d3d62f76f9016f7d90add090a37f8ed493edae0dd09786a7ef111e5f082d3264736f6c634300050d0032"
 
 // DeployProtocol deploys a new Ethereum contract, binding an instance of Protocol to it.
 func DeployProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Protocol, error) {
@@ -4829,7 +4838,7 @@ func (_RollupTime *RollupTimeTransactorRaw) Transact(opts *bind.TransactOpts, me
 const RollupUtilsABI = "[]"
 
 // RollupUtilsBin is the compiled bytecode used for deploying new contracts.
-var RollupUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158207210b8f211757b7ff69aa2c457600344ce5b6999e0d35e3038550d047b1cc96564736f6c634300050d0032"
+var RollupUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158206ae6e6c37eb66b55893b17b5a8fdc54210367646b6821d82918d896172aaaac464736f6c634300050d0032"
 
 // DeployRollupUtils deploys a new Ethereum contract, binding an instance of RollupUtils to it.
 func DeployRollupUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RollupUtils, error) {
@@ -5162,7 +5171,7 @@ var StakingFuncSigs = map[string]string{
 }
 
 // StakingBin is the compiled bytecode used for deploying new contracts.
-var StakingBin = "0x608060405234801561001057600080fd5b50610c66806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80635dbaf68b1461005c5780636177fd18146100805780636bc3cd22146100ba578063bac5963f146100f2578063d16c305d146102a8575b600080fd5b6100646102cc565b604080516001600160a01b039092168252519081900360200190f35b6100a66004803603602081101561009657600080fd5b50356001600160a01b03166102db565b604080519115158252519081900360200190f35b6100f0600480360360608110156100d057600080fd5b506001600160a01b038135811691602081013590911690604001356102f8565b005b6100f060048036036101a081101561010957600080fd5b6040805180820182526001600160a01b0384358116946020810135909116938382013593606083013593918301929160c08301916080840190600290839083908082843760009201919091525050604080518082018252929594938181019392509060029083908390808284376000920191909152509194939260208101925035905064010000000081111561019e57600080fd5b8201836020820111156101b057600080fd5b803590602001918460208302840111640100000000831117156101d257600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929594936020810193503591505064010000000081111561022257600080fd5b82018360208201111561023457600080fd5b8035906020019184602083028401116401000000008311171561025657600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955050823593505050602081013590604001356001600160801b0316610491565b6102b0610a36565b604080516001600160801b039092168252519081900360200190f35b6000546001600160a01b031681565b6001600160a01b0316600090815260026020526040902054151590565b33600090815260046020908152604091829020548251808401909352600f83526e2922a9afa1a420a62fa9a2a72222a960891b9183019190915260ff166103bd5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561038257818101518382015260200161036a565b50505050905090810190601f1680156103af5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b50336000908152600460205260408120805460ff191690556103de84610a45565b6001546040519192506001600160a01b0386169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015610429573d6000803e3d6000fd5b5060018101805460ff60801b1916905561044283610ad6565b604080513381526001600160a01b03808716602083015285168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050565b600061049c8c610a45565b905060006104a98c610a45565b60018301549091508a906104c5906001600160801b0316610b17565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906105385760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5060018101548a90610552906001600160801b0316610b17565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906105c55760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156106455760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156106c55760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b506020808a01518a5160408051808201909152600a8152692a2ca822afa7a92222a960b11b938101939093521161073d5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50815461076561075f8d8d898e600060200201518e60005b6020020151610b1e565b89610b86565b146040518060400160405280600c81526020016b20a9a9a2a92a2fa82927a7a360a11b815250906107d75760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5080546108086108028d8d6107f5896001600160801b038a16610b9d565b60208f01518e6001610755565b88610b86565b146040518060400160405280600a81526020016921a420a62fa82927a7a360b11b815250906108785760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663865da1c28f8f87898f6001600281106108e957fe5b60200201516040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b03168152602001846001600160801b0316815260200183815260200182815260200195505050505050602060405180830381600087803b15801561096d57600080fd5b505af1158015610981573d6000803e3d6000fd5b505050506040513d602081101561099757600080fd5b50516001600160a01b0381166000908152600460205260409020805460ff191660019081179091559091507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f908f908f908d9060209081029190910151604080516001600160a01b0395861681529385169284019290925282820152918416606082015290519081900360800190a15050505050505050505050505050565b6001546001600160801b031690565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291610acf5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b6103e80290565b6040805160208082018490528183018790526060820186905260808083018690528351808403909101815260a08301845280519082012060c0830189905260e08084019190915283518084039091018152610100909201909252805191012095945050505050565b6000610b96838360008551610bc9565b9392505050565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b600084835b83811015610c275781868281518110610be357fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012091508080600101915050610bce565b509594505050505056fea265627a7a72315820ce62809ecc2cf9b901ec63c6913658adf4d9e5fe386f30658f73062a0cdff4d464736f6c634300050d0032"
+var StakingBin = "0x608060405234801561001057600080fd5b50610c66806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80635dbaf68b1461005c5780636177fd18146100805780636bc3cd22146100ba578063bac5963f146100f2578063d16c305d146102a8575b600080fd5b6100646102cc565b604080516001600160a01b039092168252519081900360200190f35b6100a66004803603602081101561009657600080fd5b50356001600160a01b03166102db565b604080519115158252519081900360200190f35b6100f0600480360360608110156100d057600080fd5b506001600160a01b038135811691602081013590911690604001356102f8565b005b6100f060048036036101a081101561010957600080fd5b6040805180820182526001600160a01b0384358116946020810135909116938382013593606083013593918301929160c08301916080840190600290839083908082843760009201919091525050604080518082018252929594938181019392509060029083908390808284376000920191909152509194939260208101925035905064010000000081111561019e57600080fd5b8201836020820111156101b057600080fd5b803590602001918460208302840111640100000000831117156101d257600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929594936020810193503591505064010000000081111561022257600080fd5b82018360208201111561023457600080fd5b8035906020019184602083028401116401000000008311171561025657600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955050823593505050602081013590604001356001600160801b0316610491565b6102b0610a36565b604080516001600160801b039092168252519081900360200190f35b6000546001600160a01b031681565b6001600160a01b0316600090815260026020526040902054151590565b33600090815260046020908152604091829020548251808401909352600f83526e2922a9afa1a420a62fa9a2a72222a960891b9183019190915260ff166103bd5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561038257818101518382015260200161036a565b50505050905090810190601f1680156103af5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b50336000908152600460205260408120805460ff191690556103de84610a45565b6001546040519192506001600160a01b0386169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015610429573d6000803e3d6000fd5b5060018101805460ff60801b1916905561044283610ad6565b604080513381526001600160a01b03808716602083015285168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050565b600061049c8c610a45565b905060006104a98c610a45565b60018301549091508a906104c5906001600160801b0316610b17565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906105385760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5060018101548a90610552906001600160801b0316610b17565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906105c55760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156106455760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156106c55760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b506020808a01518a5160408051808201909152600a8152692a2ca822afa7a92222a960b11b938101939093521161073d5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b50815461076561075f8d8d898e600060200201518e60005b6020020151610b1e565b89610b86565b146040518060400160405280600c81526020016b20a9a9a2a92a2fa82927a7a360a11b815250906107d75760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5080546108086108028d8d6107f5896001600160801b038a16610b9d565b60208f01518e6001610755565b88610b86565b146040518060400160405280600a81526020016921a420a62fa82927a7a360b11b815250906108785760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663865da1c28f8f87898f6001600281106108e957fe5b60200201516040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b03168152602001846001600160801b0316815260200183815260200182815260200195505050505050602060405180830381600087803b15801561096d57600080fd5b505af1158015610981573d6000803e3d6000fd5b505050506040513d602081101561099757600080fd5b50516001600160a01b0381166000908152600460205260409020805460ff191660019081179091559091507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f908f908f908d9060209081029190910151604080516001600160a01b0395861681529385169284019290925282820152918416606082015290519081900360800190a15050505050505050505050505050565b6001546001600160801b031690565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291610acf5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561038257818101518382015260200161036a565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b6103e80290565b6040805160208082018490528183018790526060820186905260808083018690528351808403909101815260a08301845280519082012060c0830189905260e08084019190915283518084039091018152610100909201909252805191012095945050505050565b6000610b96838360008551610bc9565b9392505050565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b600084835b83811015610c275781868281518110610be357fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012091508080600101915050610bce565b509594505050505056fea265627a7a723158208f123e989b5049d95886c76a26c514af648bacac411c22cbfac6645f8275d1d164736f6c634300050d0032"
 
 // DeployStaking deploys a new Ethereum contract, binding an instance of Staking to it.
 func DeployStaking(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Staking, error) {

@@ -77,11 +77,11 @@ type StakeMovedEvent struct {
 
 type AssertedEvent struct {
 	ChainInfo
-	PrevLeafHash    common.Hash
-	Params          *valprotocol.AssertionParams
-	Claim           *valprotocol.AssertionClaim
-	MaxPendingTop   common.Hash
-	MaxPendingCount *big.Int
+	PrevLeafHash  common.Hash
+	Params        *valprotocol.AssertionParams
+	Claim         *valprotocol.AssertionClaim
+	MaxInboxTop   common.Hash
+	MaxInboxCount *big.Int
 }
 
 type ConfirmedEvent struct {
@@ -117,7 +117,7 @@ type OneStepProofEvent struct {
 	ChainInfo
 }
 
-type PendingTopBisectionEvent struct {
+type InboxTopBisectionEvent struct {
 	ChainInfo
 	ChainHashes []common.Hash
 	TotalLength *big.Int
@@ -141,7 +141,7 @@ type ExecutionBisectionEvent struct {
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	Message message.PendingMessage
+	Message message.InboxMessage
 }
 
 type NewTimeEvent struct {
