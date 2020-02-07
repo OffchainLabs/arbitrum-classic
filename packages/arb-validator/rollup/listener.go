@@ -328,26 +328,26 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 	asserterKey, ok := lis.stakingKeys[chal.asserter]
 	if ok {
 		switch chal.conflictNode.linkType {
-		case valprotocol.InvalidPendingChildType:
+		case valprotocol.InvalidInboxTopChildType:
 			go func() {
-				res, err := challenges.DefendPendingTopClaim(
+				res, err := challenges.DefendInboxTopClaim(
 					ctx,
 					asserterKey.client,
 					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.pendingInbox.MessageStack,
-					chal.conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					chain.inbox.MessageStack,
+					chal.conflictNode.disputable.AssertionClaim.AfterInboxTop,
 					new(big.Int).Sub(
-						chal.conflictNode.disputable.MaxPendingCount,
-						new(big.Int).Add(chal.conflictNode.prev.vmProtoData.PendingCount, chal.conflictNode.disputable.AssertionParams.ImportedMessageCount),
+						chal.conflictNode.disputable.MaxInboxCount,
+						new(big.Int).Add(chal.conflictNode.prev.vmProtoData.InboxCount, chal.conflictNode.disputable.AssertionParams.ImportedMessageCount),
 					),
 					100,
 				)
 				if err != nil {
-					log.Println("Failed defending pending top claim", err)
+					log.Println("Failed defending inbox top claim", err)
 				} else {
-					log.Println("Completed defending pending top claim", res)
+					log.Println("Completed defending inbox top claim", res)
 				}
 			}()
 		case valprotocol.InvalidMessagesChildType:
@@ -358,8 +358,8 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.pendingInbox.MessageStack,
-					chal.conflictNode.vmProtoData.PendingTop,
+					chain.inbox.MessageStack,
+					chal.conflictNode.vmProtoData.InboxTop,
 					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
 					100,
 				)
@@ -396,21 +396,21 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 	challenger, ok := lis.stakingKeys[chal.challenger]
 	if ok {
 		switch chal.conflictNode.linkType {
-		case valprotocol.InvalidPendingChildType:
+		case valprotocol.InvalidInboxTopChildType:
 			go func() {
-				res, err := challenges.ChallengePendingTopClaim(
+				res, err := challenges.ChallengeInboxTopClaim(
 					ctx,
 					challenger.client,
 					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.pendingInbox.MessageStack,
+					chain.inbox.MessageStack,
 					false,
 				)
 				if err != nil {
-					log.Println("Failed challenging pending top claim", err)
+					log.Println("Failed challenging inbox top claim", err)
 				} else {
-					log.Println("Completed challenging pending top claim", res)
+					log.Println("Completed challenging inbox top claim", res)
 				}
 			}()
 		case valprotocol.InvalidMessagesChildType:
@@ -421,8 +421,8 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					chal.contract,
 					startBlockId,
 					startLogIndex,
-					chain.pendingInbox.MessageStack,
-					chal.conflictNode.vmProtoData.PendingTop,
+					chain.inbox.MessageStack,
+					chal.conflictNode.vmProtoData.InboxTop,
 					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
 					false,
 				)

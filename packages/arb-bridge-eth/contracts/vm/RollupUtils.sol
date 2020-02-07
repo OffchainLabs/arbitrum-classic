@@ -20,8 +20,8 @@ pragma solidity ^0.5.3;
 library RollupUtils {
     function protoStateHash(
         bytes32 machineHash,
-        bytes32 pendingTop,
-        uint256 pendingCount
+        bytes32 inboxTop,
+        uint256 inboxCount
     )
         internal
         pure
@@ -30,8 +30,8 @@ library RollupUtils {
         return keccak256(
             abi.encodePacked(
                 machineHash,
-                pendingTop,
-                pendingCount
+                inboxTop,
+                inboxCount
             )
         );
     }

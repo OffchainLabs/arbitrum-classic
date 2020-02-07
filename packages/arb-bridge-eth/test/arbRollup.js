@@ -16,11 +16,11 @@
 
 const ArbRollup = artifacts.require("ArbRollup");
 const ChallengeFactory = artifacts.require("ChallengeFactory");
-const GlobalPendingInbox = artifacts.require("GlobalPendingInbox");
+const GlobalInbox = artifacts.require("GlobalInbox");
 
 const { expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
 
-function pendingTopHash(lowerHash, topHash, chainLength) {
+function inboxTopHash(lowerHash, topHash, chainLength) {
   return web3.utils.soliditySha3(
     { t: "bytes32", v: lowerHash },
     { t: "bytes32", v: topHash },
@@ -28,14 +28,9 @@ function pendingTopHash(lowerHash, topHash, chainLength) {
   );
 }
 
-function invalidPendingTopHash(
-  lowerHash,
-  topHash,
-  chainLength,
-  challengePeriod
-) {
+function invalidInboxTopHash(lowerHash, topHash, chainLength, challengePeriod) {
   return web3.utils.soliditySha3(
-    { t: "bytes32", v: pendingTopHash(lowerHash, topHash, chainLength) },
+    { t: "bytes32", v: inboxTopHash(lowerHash, topHash, chainLength) },
     { t: "uint256", v: challengePeriod }
   );
 }
@@ -143,17 +138,17 @@ async function makeEmptyAssertion(
 }
 
 class VMProtoData {
-  constructor(machineHash, pendingTop, pendingCount) {
+  constructor(machineHash, inboxTop, inboxCount) {
     this.machineHash = machineHash;
-    this.pendingTop = pendingTop;
-    this.pendingCount = pendingCount;
+    this.inboxTop = inboxTop;
+    this.inboxCount = inboxCount;
   }
 
   hash() {
     return web3.utils.soliditySha3(
       { t: "bytes32", v: this.machineHash },
-      { t: "bytes32", v: this.pendingTop },
-      { t: "uint256", v: this.pendingCount }
+      { t: "bytes32", v: this.inboxTop },
+      { t: "uint256", v: this.inboxCount }
     );
   }
 }
@@ -177,8 +172,8 @@ class ExecutionAssertion {
 }
 
 class AssertionClaim {
-  constructor(afterPendingTop, importedMessageSlice, executionAssertion) {
-    this.afterPendingTop = afterPendingTop;
+  constructor(afterInboxTop, importedMessageSlice, executionAssertion) {
+    this.afterInboxTop = afterInboxTop;
     this.importedMessageSlice = importedMessageSlice;
     this.executionAssertion = executionAssertion;
   }
@@ -187,8 +182,8 @@ class AssertionClaim {
 class Assertion {
   constructor(
     blockNumber,
-    pendingValue,
-    pendingCount,
+    inboxValue,
+    inboxCount,
     prevPrevNode,
     prevProtoData,
     prevDeadline,
@@ -198,8 +193,8 @@ class Assertion {
     claims
   ) {
     this.blockNumber = blockNumber;
-    this.pendingValue = pendingValue;
-    this.pendingCount = pendingCount;
+    this.inboxValue = inboxValue;
+    this.inboxCount = inboxCount;
 
     this.prevPrevNode = prevPrevNode;
     this.prevProtoData = prevProtoData;
@@ -224,14 +219,14 @@ class Assertion {
     return 13000 * this.blockNumber + grace_period_ticks;
   }
 
-  invalidPendingTopHashInner() {
+  invalidInboxTopHashInner() {
     return childNodeInnerHash(
       this.deadline(),
-      invalidPendingTopHash(
-        this.claims.afterPendingTop,
-        this.pendingValue,
-        this.pendingCount -
-          (this.prevPrevNode.pendingCount + this.params.importedMessageCount),
+      invalidInboxTopHash(
+        this.claims.afterInboxTop,
+        this.inboxValue,
+        this.inboxCount -
+          (this.prevPrevNode.inboxCount + this.params.importedMessageCount),
         grace_period_ticks + 13000
       ),
       0,
@@ -239,10 +234,10 @@ class Assertion {
     );
   }
 
-  invalidPendingTopHash() {
+  invalidInboxTopHash() {
     return childNodeShortHash(
       this.prevNodeHash(),
-      this.invalidPendingTopHashInner()
+      this.invalidInboxTopHashInner()
     );
   }
 
@@ -250,8 +245,8 @@ class Assertion {
     return childNodeInnerHash(
       this.deadline(),
       invalidMessagesHash(
-        this.prevProtoData.pendingTop,
-        this.claims.afterPendingTop,
+        this.prevProtoData.inboxTop,
+        this.claims.afterInboxTop,
         empty_tuple_hash,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
@@ -272,8 +267,8 @@ class Assertion {
   updatedProtoData() {
     return new VMProtoData(
       this.claims.executionAssertion.afterState,
-      this.claims.afterPendingTop,
-      this.prevProtoData.pendingCount + this.params.importedMessageCount
+      this.claims.afterInboxTop,
+      this.prevProtoData.inboxCount + this.params.importedMessageCount
     );
   }
 
@@ -311,16 +306,16 @@ async function makeAssertion(
   let receipt = await arb_rollup.makeAssertion(
     [
       prevProtoData.machineHash,
-      prevProtoData.pendingTop,
+      prevProtoData.inboxTop,
       prevPrevNode,
       prevDataHash,
-      claims.afterPendingTop,
+      claims.afterInboxTop,
       claims.importedMessageSlice,
       claims.executionAssertion.afterState,
       claims.executionAssertion.outMessagesAcc,
       claims.executionAssertion.outLogsAcc
     ],
-    prevProtoData.pendingCount,
+    prevProtoData.inboxCount,
     prevDeadline,
     prevChildType,
     params.numSteps,
@@ -335,7 +330,7 @@ async function makeAssertion(
     receipt: receipt,
     assertion: new Assertion(
       receipt.receipt.blockNumber,
-      receipt.logs[0].args.pendingValue,
+      receipt.logs[0].args.inboxValue,
       0,
       prevPrevNode,
       prevProtoData,
@@ -359,7 +354,7 @@ var assertionInfo;
 contract("ArbRollup", accounts => {
   it("should initialize", async () => {
     let challenge_factory = await ChallengeFactory.deployed();
-    let global_inbox = await GlobalPendingInbox.deployed();
+    let global_inbox = await GlobalInbox.deployed();
     arb_rollup = await ArbRollup.new();
     await arb_rollup.init(
       initial_vm_state, // vmState
@@ -424,7 +419,7 @@ contract("ArbRollup", accounts => {
     );
   });
 
-  it("should fail if reading past lastest pending", async () => {
+  it("should fail if reading past lastest inbox message", async () => {
     let current_block = await web3.eth.getBlock("latest");
     await expectRevert(
       makeEmptyAssertion(initial_vm_state, 0, current_block.number, 10, true),
@@ -476,8 +471,8 @@ contract("ArbRollup", accounts => {
       "original_node confirmed should be removed as leaf"
     );
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
-      "invalid pending top should be leaf"
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
+      "invalid inbox top should be leaf"
     );
     assert.isTrue(
       await arb_rollup.isValidLeaf(assertionInfo.invalidMessagesHash()),
@@ -512,7 +507,7 @@ contract("ArbRollup", accounts => {
 
     assert.isTrue(
       await arb_rollup.isValidLeaf(assertionInfo.validHash()),
-      "invalid pending top should be leaf"
+      "invalid inbox top should be leaf"
     );
 
     console.log("confirmValid gas used:", receipt.receipt.gasUsed);
@@ -520,17 +515,17 @@ contract("ArbRollup", accounts => {
 
   it("should prune a leaf", async () => {
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       "invalid messages should be leaf"
     );
     let receipt = await arb_rollup.pruneLeaf(
       original_node,
-      [assertionInfo.invalidPendingTopHashInner()],
+      [assertionInfo.invalidInboxTopHashInner()],
       [assertionInfo.validHashInner()]
     );
     await expectEvent(receipt, "RollupPruned");
     assert.isFalse(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       "invalid messages should be leaf"
     );
     console.log("pruneLeaf gas used:", receipt.receipt.gasUsed);

@@ -29,16 +29,16 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
     string constant INVALID_TYPE = "INVALID_TYPE";
 
     address public messagesChallengeTemplate;
-    address public pendingTopChallengeTemplate;
+    address public inboxTopChallengeTemplate;
     address public executionChallengeTemplate;
 
     constructor(
         address _messagesChallengeTemplate,
-        address _pendingTopChallengeTemplate,
+        address _inboxTopChallengeTemplate,
         address _executionChallengeTemplate
     ) public {
         messagesChallengeTemplate = _messagesChallengeTemplate;
-        pendingTopChallengeTemplate = _pendingTopChallengeTemplate;
+        inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
         executionChallengeTemplate = _executionChallengeTemplate;
     }
 
@@ -102,8 +102,8 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
     }
 
     function getChallengeTemplate(uint256 challengeType) private view returns(address) {
-        if (challengeType == INVALID_PENDING_TOP_TYPE) {
-            return pendingTopChallengeTemplate;
+        if (challengeType == INVALID_INBOX_TOP_TYPE) {
+            return inboxTopChallengeTemplate;
         } else if (challengeType == INVALID_MESSAGES_TYPE) {
             return messagesChallengeTemplate;
         } else if (challengeType == INVALID_EXECUTION_TYPE) {

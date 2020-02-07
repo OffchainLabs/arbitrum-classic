@@ -24,24 +24,24 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-type PendingInbox struct {
-	//GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
+type GlobalInbox struct {
+	//GlobalInbox *globalinbox.GlobalInbox
 	client arbbridge.ArbClient
 }
 
-func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
-	//globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
+func NewGlobalInbox(address common.Address, client arbbridge.ArbClient) (*GlobalInbox, error) {
+	//globalInboxContract, err := globalinbox.NewGlobalInbox(address, client)
 	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	//}
-	return &PendingInbox{client}, nil
+	return &GlobalInbox{client}, nil
 }
 
-func (con *PendingInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
+func (con *GlobalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
 	return nil
 }
 
-func (con *PendingInbox) DepositEthMessage(
+func (con *GlobalInbox) DepositEthMessage(
 	ctx context.Context,
 	vmAddress common.Address,
 	destination common.Address,
@@ -50,17 +50,7 @@ func (con *PendingInbox) DepositEthMessage(
 	return nil
 }
 
-func (con *PendingInbox) DepositERC20Message(
-	ctx context.Context,
-	vmAddress common.Address,
-	tokenAddress common.Address,
-	destination common.Address,
-	value *big.Int,
-) error {
-	return nil
-}
-
-func (con *PendingInbox) DepositERC721Message(
+func (con *GlobalInbox) DepositERC20Message(
 	ctx context.Context,
 	vmAddress common.Address,
 	tokenAddress common.Address,
@@ -70,12 +60,22 @@ func (con *PendingInbox) DepositERC721Message(
 	return nil
 }
 
-func (con *PendingInbox) GetTokenBalance(
+func (con *GlobalInbox) DepositERC721Message(
+	ctx context.Context,
+	vmAddress common.Address,
+	tokenAddress common.Address,
+	destination common.Address,
+	value *big.Int,
+) error {
+	return nil
+}
+
+func (con *GlobalInbox) GetTokenBalance(
 	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	//return con.GlobalPendingInbox.GetTokenBalance(
+	//return con.GlobalInbox.GetTokenBalance(
 	//	auth,
 	//	tokenContract,
 	//	user,
