@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-interface IGlobalPendingInbox {
+interface IGlobalInbox {
 
     event TransactionMessageDelivered(
         address indexed chain,
@@ -53,7 +53,7 @@ interface IGlobalPendingInbox {
         uint256 messageNum
     );
 
-    function getPending() external returns(bytes32, uint);
+    function getInbox(address account) external view returns(bytes32, uint);
 
     function sendMessages(bytes calldata _messages) external;
 

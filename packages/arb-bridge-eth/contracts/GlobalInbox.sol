@@ -19,7 +19,7 @@ pragma solidity ^0.5.3;
 import "./GlobalEthWallet.sol";
 import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
-import "./IGlobalPendingInbox.sol";
+import "./IGlobalInbox.sol";
 import "./Messages.sol";
 
 import "./arch/Protocol.sol";
@@ -27,7 +27,7 @@ import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
 
-contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalPendingInbox {
+contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox {
 
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
@@ -38,16 +38,16 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
     address internal constant ETH_ADDRESS = address(0);
 
-    struct PendingInbox {
+    struct Inbox {
         bytes32 value;
         uint256 count;
     }
 
-    mapping(address => PendingInbox) pending;
+    mapping(address => Inbox) inboxes;
 
-    function getPending() external returns(bytes32, uint) {
-        PendingInbox storage pendingInbox = pending[msg.sender];
-        return (pendingInbox.value, pendingInbox.count);
+    function getInbox() external view returns(bytes32, uint) {
+        Inbox storage inbox = inboxes[msg.sender];
+        return (inbox.value, inbox.count);
     }
 
     function sendMessages(bytes calldata _messages) external {
@@ -252,7 +252,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverMessage(_chain, messageHash);
 
-        emit IGlobalPendingInbox.TransactionMessageDelivered(
+        emit IGlobalInbox.TransactionMessageDelivered(
             _chain,
             _to,
             _from,
@@ -270,7 +270,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     )
         private
     {
-        uint256 messageNum = pending[_chain].count + 1;
+        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.ethHash(
             _to,
             _from,
@@ -281,7 +281,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverMessage(_chain, messageHash);
 
-        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+        emit IGlobalInbox.EthDepositMessageDelivered(
             _chain,
             _to,
             msg.sender,
@@ -299,7 +299,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     )
         private
     {
-        uint256 messageNum = pending[_chain].count + 1;
+        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc20Hash(
             _to,
             _from,
@@ -311,7 +311,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverMessage(_chain, messageHash);
 
-        emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
+        emit IGlobalInbox.ERC20DepositMessageDelivered(
             _chain,
             _to,
             _from,
@@ -330,7 +330,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     )
         private
     {
-        uint256 messageNum = pending[_chain].count + 1;
+        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc721Hash(
             _to,
             _from,
@@ -342,7 +342,7 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
 
         _deliverMessage(_chain, messageHash);
 
-        emit IGlobalPendingInbox.ERC721DepositMessageDelivered(
+        emit IGlobalInbox.ERC721DepositMessageDelivered(
             _chain,
             _to,
             _from,
@@ -353,8 +353,8 @@ contract GlobalPendingInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet,
     }
 
     function _deliverMessage(address _chain, bytes32 _messageHash) private {
-        PendingInbox storage pendingInbox = pending[_chain];
-        pendingInbox.value = Protocol.addMessageToPending(pendingInbox.value, _messageHash);
-        pendingInbox.count++;
+        Inbox storage inbox = inboxes[_chain];
+        inbox.value = Protocol.addMessageToInbox(inbox.value, _messageHash);
+        inbox.count++;
     }
 }
