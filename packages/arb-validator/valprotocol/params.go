@@ -23,16 +23,16 @@ import (
 )
 
 type ChainParams struct {
-	StakeRequirement        *big.Int
-	GracePeriod             common.TimeTicks
+	StakeRequirement        *big.Int         // in Wei
+	GracePeriod             common.TimeTicks // in Ticks
 	MaxExecutionSteps       uint64
-	MaxTimeBoundsWidth      uint64
-	ArbGasSpeedLimitPerTick uint64
+	MaxTimeBoundsWidth      uint64 // in blocks
+	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
 }
 
-func (cp ChainParams) WithStakeRequirement(amount *big.Int) ChainParams {
+func (cp ChainParams) WithStakeRequirement(amountInWei *big.Int) ChainParams {
 	ret := cp
-	ret.StakeRequirement = amount
+	ret.StakeRequirement = amountInWei
 	return ret
 }
 
