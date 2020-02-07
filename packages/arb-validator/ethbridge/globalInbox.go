@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalinbox"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,27 +30,26 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
 )
 
-type pendingInbox struct {
-	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
-	client             *ethclient.Client
-	auth               *TransactAuth
+type globalInbox struct {
+	GlobalInbox *globalinbox.GlobalInbox
+	client      *ethclient.Client
+	auth        *TransactAuth
 }
 
-func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingInbox, error) {
-	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
+func newGlobalInbox(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*globalInbox, error) {
+	globalInboxContract, err := globalinbox.NewGlobalInbox(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	}
-	return &pendingInbox{globalPendingInboxContract, client, auth}, nil
+	return &globalInbox{globalInboxContract, client, auth}, nil
 }
 
-func (con *pendingInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
+func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalPendingInbox.SendTransactionMessage(
+	tx, err := con.GlobalInbox.SendTransactionMessage(
 		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		contactAddress.ToEthAddress(),
@@ -62,14 +63,14 @@ func (con *pendingInbox) SendTransactionMessage(ctx context.Context, data []byte
 	return con.waitForReceipt(ctx, tx, "SendTransactionMessage")
 }
 
-func (con *pendingInbox) DepositEthMessage(
+func (con *globalInbox) DepositEthMessage(
 	ctx context.Context,
 	vmAddress common.Address,
 	destination common.Address,
 	value *big.Int,
 ) error {
 
-	tx, err := con.GlobalPendingInbox.DepositEthMessage(
+	tx, err := con.GlobalInbox.DepositEthMessage(
 		&bind.TransactOpts{
 			From:     con.auth.auth.From,
 			Signer:   con.auth.auth.Signer,
@@ -88,7 +89,7 @@ func (con *pendingInbox) DepositEthMessage(
 	return con.waitForReceipt(ctx, tx, "DepositEthMessage")
 }
 
-func (con *pendingInbox) DepositERC20Message(
+func (con *globalInbox) DepositERC20Message(
 	ctx context.Context,
 	vmAddress common.Address,
 	tokenAddress common.Address,
@@ -97,7 +98,7 @@ func (con *pendingInbox) DepositERC20Message(
 ) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalPendingInbox.DepositERC20Message(
+	tx, err := con.GlobalInbox.DepositERC20Message(
 		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
@@ -112,7 +113,7 @@ func (con *pendingInbox) DepositERC20Message(
 	return con.waitForReceipt(ctx, tx, "DepositERC20Message")
 }
 
-func (con *pendingInbox) DepositERC721Message(
+func (con *globalInbox) DepositERC721Message(
 	ctx context.Context,
 	vmAddress common.Address,
 	tokenAddress common.Address,
@@ -121,7 +122,7 @@ func (con *pendingInbox) DepositERC721Message(
 ) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalPendingInbox.DepositERC721Message(
+	tx, err := con.GlobalInbox.DepositERC721Message(
 		con.auth.getAuth(ctx),
 		vmAddress.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
@@ -136,18 +137,18 @@ func (con *pendingInbox) DepositERC721Message(
 	return con.waitForReceipt(ctx, tx, "DepositERC721Message")
 }
 
-func (con *pendingInbox) GetTokenBalance(
+func (con *globalInbox) GetTokenBalance(
 	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	return con.GlobalPendingInbox.GetERC20Balance(
+	return con.GlobalInbox.GetERC20Balance(
 		&bind.CallOpts{Context: ctx},
 		tokenContract.ToEthAddress(),
 		user.ToEthAddress(),
 	)
 }
 
-func (con *pendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+func (con *globalInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, con.client, con.auth.auth.From, tx, methodName)
 }

@@ -48,7 +48,7 @@ type Message interface {
 	DeliveredHeight() *common.TimeBlocks
 }
 
-type PendingMessage interface {
+type InboxMessage interface {
 	Message
 	CommitmentHash() common.Hash
 	CheckpointValue() value.Value
@@ -69,7 +69,7 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
-func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (PendingMessage, error) {
+func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (InboxMessage, error) {
 	switch msgType {
 	case TransactionType:
 		return UnmarshalTransactionFromCheckpoint(v)

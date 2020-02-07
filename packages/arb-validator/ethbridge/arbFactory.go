@@ -94,7 +94,7 @@ func newArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (
 	return &arbFactoryWatcher{contract: vmCreatorContract, client: client, address: address}, nil
 }
 
-func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
+func (con *arbFactoryWatcher) GlobalInboxAddress() (common.Address, error) {
 	addr, err := con.contract.GlobalInboxAddress(nil)
 	return common.NewAddressFromEth(addr), err
 }

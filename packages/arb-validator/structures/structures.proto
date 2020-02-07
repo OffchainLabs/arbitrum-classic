@@ -32,7 +32,7 @@ message InboxItemBuf {
     common.HashBuf valHash = 2;
 }
 
-message PendingInboxBuf {
+message InboxBuf {
     common.BigIntegerBuf topCount = 1;
     repeated InboxItemBuf items = 2;
     common.HashBuf hashOfRest = 3;

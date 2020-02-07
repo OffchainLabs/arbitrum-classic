@@ -253,9 +253,9 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
-                Protocol.addMessageToPending(_lowerHashA, _valueHashA),
+                Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
                 _lowerHashB,
-                Protocol.addMessageToInbox(_lowerHashB, _valueHashB),
+                Protocol.addMessageToVMInbox(_lowerHashB, _valueHashB),
                 1
             )
         );

@@ -30,54 +30,54 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/inboxtopchallenge"
 )
 
-var pendingTopBisectedID ethcommon.Hash
-var pendingTopOneStepProofCompletedID ethcommon.Hash
+var inboxTopBisectedID ethcommon.Hash
+var inboxTopOneStepProofCompletedID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(pendingtopchallenge.PendingTopChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(inboxtopchallenge.InboxTopChallengeABI))
 	if err != nil {
 		panic(err)
 	}
-	pendingTopBisectedID = parsed.Events["Bisected"].ID()
-	pendingTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+	inboxTopBisectedID = parsed.Events["Bisected"].ID()
+	inboxTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
 }
 
-type pendingTopChallengeWatcher struct {
+type inboxTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
-	contract *pendingtopchallenge.PendingTopChallenge
+	contract *inboxtopchallenge.InboxTopChallenge
 	client   *ethclient.Client
 	address  ethcommon.Address
 	topics   [][]ethcommon.Hash
 }
 
-func newPendingTopChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*pendingTopChallengeWatcher, error) {
+func newInboxTopChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*inboxTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
-	pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
+	inboxTopContract, err := inboxtopchallenge.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
+		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}
 	tops := []ethcommon.Hash{
-		pendingTopBisectedID,
-		pendingTopOneStepProofCompletedID,
+		inboxTopBisectedID,
+		inboxTopOneStepProofCompletedID,
 	}
 	tops = append(tops, bisectionChallenge.topics()...)
 
-	return &pendingTopChallengeWatcher{
+	return &inboxTopChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
-		contract:                  pendingTopContract,
+		contract:                  inboxTopContract,
 		client:                    client,
 		address:                   address,
 		topics:                    [][]ethcommon.Hash{tops},
 	}, nil
 }
 
-func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (c *inboxTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
@@ -89,7 +89,7 @@ func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *com
 	}
 	events := make([]arbbridge.Event, 0, len(logs))
 	for _, evmLog := range logs {
-		event, err := c.parsePendingTopEvent(getLogChainInfo(evmLog), evmLog)
+		event, err := c.parseInboxTopEvent(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}
@@ -98,19 +98,19 @@ func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *com
 	return events, nil
 }
 
-func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
-	if log.Topics[0] == pendingTopBisectedID {
+func (c *inboxTopChallengeWatcher) parseInboxTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == inboxTopBisectedID {
 		eventVal, err := c.contract.ParseBisected(log)
 		if err != nil {
 			return nil, err
 		}
-		return arbbridge.PendingTopBisectionEvent{
+		return arbbridge.InboxTopBisectionEvent{
 			ChainInfo:   chainInfo,
 			ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
 			TotalLength: eventVal.TotalLength,
 			Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
 		}, nil
-	} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
+	} else if log.Topics[0] == inboxTopOneStepProofCompletedID {
 		_, err := c.contract.ParseOneStepProofCompleted(log)
 		if err != nil {
 			return nil, err

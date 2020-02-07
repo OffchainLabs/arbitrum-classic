@@ -11,11 +11,11 @@ abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
 abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
 
 abigen --sol=challenge/ChallengeFactory.sol --pkg=challengefactory --out=challengefactory.go
-abigen --sol=challenge/PendingTopChallenge.sol --pkg=pendingtopchallenge --out=pendingtopchallenge.go
+abigen --sol=challenge/InboxTopChallenge.sol --pkg=inboxtopchallenge --out=inboxtopchallenge.go
 abigen --sol=challenge/MessagesChallenge.sol --pkg=messageschallenge --out=messageschallenge.go
 abigen --sol=challenge/ExecutionChallenge.sol --pkg=executionchallenge --out=executionchallenge.go
 
-abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
+abigen --sol=GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
@@ -23,17 +23,17 @@ abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester
 \cp arbfactory.go ../../arb-validator/ethbridge/arbfactory/
 \cp arbrollup.go ../../arb-validator/ethbridge/rollup/
 \cp challengefactory.go ../../arb-validator/ethbridge/challengefactory/
-\cp pendingtopchallenge.go ../../arb-validator/ethbridge/pendingtopchallenge/
+\cp inboxtopchallenge.go ../../arb-validator/ethbridge/inboxtopchallenge/
 \cp messageschallenge.go ../../arb-validator/ethbridge/messageschallenge/
 \cp executionchallenge.go ../../arb-validator/ethbridge/executionchallenge/
-\cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
+\cp globalinbox.go ../../arb-validator/ethbridge/globalinbox/
 \cp challengetester.go ../../arb-validator/ethbridge/challengetester/
 \cp messagetester.go ../../arb-validator/ethbridge/messagetester/
 rm -rf @openzeppelin bytes
 rm -f arbfactory.go arbrollup.go
 rm -f challengefactory.go
-rm -f pendingtopchallenge.go messageschallenge.go executionchallenge.go
-rm -f globalpendinginbox.go
+rm -f inboxtopchallenge.go messageschallenge.go executionchallenge.go
+rm -f globalinbox.go
 rm -f challengetester.go messagetester.go
 cd ../../..
 

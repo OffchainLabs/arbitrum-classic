@@ -24,22 +24,22 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-type PendingTopChallenge struct {
+type InboxTopChallenge struct {
 	*BisectionChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*PendingTopChallenge, error) {
+func NewInboxTopChallenge(address common.Address, client arbbridge.ArbClient) (*InboxTopChallenge, error) {
 	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
-	vm := &PendingTopChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &InboxTopChallenge{BisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *PendingTopChallenge) setupContracts() error {
-	//challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
+func (c *InboxTopChallenge) setupContracts() error {
+	//challengeManagerContract, err := inboxtopchallenge.NewInboxTopChallenge(c.address, c.Client)
 	//if err != nil {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	//}
@@ -48,23 +48,23 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (vm *InboxTopChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
-//func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+//func (c *InboxTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
-//		if log.Topics[0] == pendingTopBisectedID {
+//		if log.Topics[0] == inboxTopBisectedID {
 //			eventVal, err := c.challenge.ParseBisected(log)
 //			if err != nil {
 //				return nil, err
 //			}
-//			return arbbridge.PendingTopBisectionEvent{
+//			return arbbridge.InboxTopBisectionEvent{
 //				ChainHashes: eventVal.ChainHashes,
 //				TotalLength: eventVal.TotalLength,
 //				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
 //			}, nil
-//		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
+//		} else if log.Topics[0] == inboxTopOneStepProofCompletedID {
 //			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
@@ -91,7 +91,7 @@ func (vm *PendingTopChallenge) GetEvents(ctx context.Context, blockId *common.Bl
 //	return nil
 //}
 
-func (c *PendingTopChallenge) Bisect(
+func (c *InboxTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	chainLength *big.Int,
@@ -109,7 +109,7 @@ func (c *PendingTopChallenge) Bisect(
 	return nil
 }
 
-func (c *PendingTopChallenge) OneStepProof(
+func (c *InboxTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	value common.Hash,
@@ -128,7 +128,7 @@ func (c *PendingTopChallenge) OneStepProof(
 	return nil
 }
 
-func (c *PendingTopChallenge) ChooseSegment(
+func (c *InboxTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,

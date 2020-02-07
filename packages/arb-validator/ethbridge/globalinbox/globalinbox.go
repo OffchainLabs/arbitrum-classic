@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package globalpendinginbox
+package globalinbox
 
 import (
 	"math/big"
@@ -646,6 +646,1218 @@ func (_GlobalFTWallet *GlobalFTWalletTransactorSession) WithdrawERC20(_tokenCont
 	return _GlobalFTWallet.Contract.WithdrawERC20(&_GlobalFTWallet.TransactOpts, _tokenContract)
 }
 
+// GlobalInboxABI is the input ABI used to generate the binding from.
+const GlobalInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getERC20Balance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getERC721Tokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getEthBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"hasERC721\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"ownedERC20s\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"ownedERC721s\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenContract\",\"type\":\"address\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// GlobalInboxFuncSigs maps the 4-byte function signature to its string representation.
+var GlobalInboxFuncSigs = map[string]string{
+	"bca22b76": "depositERC20Message(address,address,address,uint256)",
+	"8b7010aa": "depositERC721Message(address,address,address,uint256)",
+	"5bd21290": "depositEthMessage(address,address)",
+	"8bef8df0": "forwardTransactionMessage(address,address,uint256,uint256,bytes,bytes)",
+	"c3a8962c": "getERC20Balance(address,address)",
+	"0758fb0a": "getERC721Tokens(address,address)",
+	"4d2301cc": "getEthBalance(address)",
+	"02201681": "getInbox(address)",
+	"45a53f09": "hasERC721(address,address,uint256)",
+	"6e2b89c5": "ownedERC20s(address)",
+	"33f2ac42": "ownedERC721s(address)",
+	"e4eb8c63": "sendMessages(bytes)",
+	"8f5ed73e": "sendTransactionMessage(address,address,uint256,uint256,bytes)",
+	"f4f3b200": "withdrawERC20(address)",
+	"f3e414f8": "withdrawERC721(address,uint256)",
+	"a0ef91df": "withdrawEth()",
+}
+
+// GlobalInboxBin is the compiled bytecode used for deploying new contracts.
+var GlobalInboxBin = "0x608060405234801561001057600080fd5b506121ff806100206000396000f3fe6080604052600436106100f35760003560e01c80638bef8df01161008a578063c3a8962c11610059578063c3a8962c14610538578063e4eb8c6314610573578063f3e414f8146105ee578063f4f3b20014610627576100f3565b80638bef8df01461034a5780638f5ed73e1461043a578063a0ef91df146104da578063bca22b76146104ef576100f3565b80634d2301cc116100c65780634d2301cc146102595780635bd212901461029e5780636e2b89c5146102ce5780638b7010aa14610301576100f3565b806302201681146100f85780630758fb0a1461014457806333f2ac42146101cf57806345a53f0914610202575b600080fd5b34801561010457600080fd5b5061012b6004803603602081101561011b57600080fd5b50356001600160a01b031661065a565b6040805192835260208301919091528051918290030190f35b34801561015057600080fd5b5061017f6004803603604081101561016757600080fd5b506001600160a01b038135811691602001351661067d565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156101bb5781810151838201526020016101a3565b505050509050019250505060405180910390f35b3480156101db57600080fd5b5061017f600480360360208110156101f257600080fd5b50356001600160a01b0316610743565b34801561020e57600080fd5b506102456004803603606081101561022557600080fd5b506001600160a01b03813581169160208101359091169060400135610806565b604080519115158252519081900360200190f35b34801561026557600080fd5b5061028c6004803603602081101561027c57600080fd5b50356001600160a01b0316610886565b60408051918252519081900360200190f35b6102cc600480360360408110156102b457600080fd5b506001600160a01b03813581169160200135166108a1565b005b3480156102da57600080fd5b5061017f600480360360208110156102f157600080fd5b50356001600160a01b03166108ba565b34801561030d57600080fd5b506102cc6004803603608081101561032457600080fd5b506001600160a01b03813581169160208101358216916040820135169060600135610971565b34801561035657600080fd5b506102cc600480360360c081101561036d57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359181019060a081016080820135600160201b8111156103ac57600080fd5b8201836020820111156103be57600080fd5b803590602001918460018302840111600160201b831117156103df57600080fd5b919390929091602081019035600160201b8111156103fc57600080fd5b82018360208201111561040e57600080fd5b803590602001918460018302840111600160201b8311171561042f57600080fd5b50909250905061098f565b34801561044657600080fd5b506102cc600480360360a081101561045d57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359181019060a081016080820135600160201b81111561049c57600080fd5b8201836020820111156104ae57600080fd5b803590602001918460018302840111600160201b831117156104cf57600080fd5b509092509050610a9b565b3480156104e657600080fd5b506102cc610ae7565b3480156104fb57600080fd5b506102cc6004803603608081101561051257600080fd5b506001600160a01b03813581169160208101358216916040820135169060600135610b32565b34801561054457600080fd5b5061028c6004803603604081101561055b57600080fd5b506001600160a01b0381358116916020013516610b4a565b34801561057f57600080fd5b506102cc6004803603602081101561059657600080fd5b810190602081018135600160201b8111156105b057600080fd5b8201836020820111156105c257600080fd5b803590602001918460018302840111600160201b831117156105e357600080fd5b509092509050610bb3565b3480156105fa57600080fd5b506102cc6004803603604081101561061157600080fd5b506001600160a01b038135169060200135610c77565b34801561063357600080fd5b506102cc6004803603602081101561064a57600080fd5b50356001600160a01b0316610d3b565b6001600160a01b0316600090815260036020526040902080546001909101549091565b6001600160a01b03808216600090815260026020908152604080832093861683529083905290205460609190806106c6575050604080516000815260208101909152905061073d565b8160010160018203815481106106d857fe5b906000526020600020906003020160020180548060200260200160405190810160405280929190818152602001828054801561073357602002820191906000526020600020905b81548152602001906001019080831161071f575b5050505050925050505b92915050565b6001600160a01b038116600090815260026020908152604091829020600181015483518181528184028101909301909352606092909183918015610791578160200160208202803883390190505b50805190915060005b818110156107fc578360010181815481106107b157fe5b600091825260209091206003909102015483516001600160a01b03909116908490839081106107dc57fe5b6001600160a01b039092166020928302919091019091015260010161079a565b5090949350505050565b6001600160a01b038083166000908152600260209081526040808320938716835290839052812054909190806108415760009250505061087f565b81600101600182038154811061085357fe5b906000526020600020906003020160010160008581526020019081526020016000205460001415925050505b9392505050565b6001600160a01b031660009081526020819052604090205490565b6108aa82610e08565b6108b682823334610e27565b5050565b6001600160a01b03811660009081526001602081815260409283902091820154835181815281830281019092019093526060928391908015610906578160200160208202803883390190505b50805190915060005b818110156107fc5783600101818154811061092657fe5b600091825260209091206002909102015483516001600160a01b039091169084908390811061095157fe5b6001600160a01b039092166020928302919091019091015260010161090f565b61097c828583610ec5565b6109898484338585610f41565b50505050565b6000610a4a89898989898960405160200180876001600160a01b03166001600160a01b031660601b8152601401866001600160a01b03166001600160a01b031660601b81526014018581526020018481526020018383808284378083019250505096505050505050506040516020818303038152906040528051906020012084848080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250610fda92505050565b9050610a908989838a8a8a8a8080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525061110d92505050565b505050505050505050565b610adf868633878787878080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525061110d92505050565b505050505050565b6000610af233610886565b3360008181526020819052604080822082905551929350909183156108fc0291849190818181858888f193505050501580156108b6573d6000803e3d6000fd5b610b3d8285836111fa565b6109898484338585611287565b6001600160a01b03808216600090815260016020908152604080832093861683529083905281205490919080610b855760009250505061073d565b816001016001820381548110610b9757fe5b9060005260206000209060020201600101549250505092915050565b6000808080845b80841015610c6e57610c0387878080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250889250611320915050565b9297509095509350915084610c1757610c6e565b610c5a87878080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152508892508791506113e29050565b909550935084610c6957610c6e565b610bba565b50505050505050565b610c823383836114e6565b610cd3576040805162461bcd60e51b815260206004820152601860248201527f57616c6c657420646f65736e2774206f776e20746f6b656e0000000000000000604482015290519081900360640190fd5b60408051632142170760e11b81523060048201523360248201526044810183905290516001600160a01b038416916342842e0e91606480830192600092919082900301818387803b158015610d2757600080fd5b505af1158015610adf573d6000803e3d6000fd5b6000610d478233610b4a565b9050610d5433838361174e565b610d8f5760405162461bcd60e51b815260040180806020018281038252602e81526020018061219d602e913960400191505060405180910390fd5b6040805163a9059cbb60e01b81523360048201526024810183905290516001600160a01b0384169163a9059cbb9160448083019260209291908290030181600087803b158015610dde57600080fd5b505af1158015610df2573d6000803e3d6000fd5b505050506040513d602081101561098957600080fd5b6001600160a01b03166000908152602081905260409020805434019055565b6001600160a01b03841660009081526003602052604081206001908101540190610e5485858543866118e1565b9050610e60868261194c565b336001600160a01b0316856001600160a01b0316876001600160a01b03167ffd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a3582907053486604051808381526020018281526020019250505060405180910390a4505050505050565b604080516323b872dd60e01b81523360048201523060248201526044810183905290516001600160a01b038516916323b872dd91606480830192600092919082900301818387803b158015610f1957600080fd5b505af1158015610f2d573d6000803e3d6000fd5b50505050610f3c828483611982565b505050565b6001600160a01b03851660009081526003602052604081206001908101540190610f6f868686864387611b06565b9050610f7b878261194c565b604080516001600160a01b0386811682526020820186905281830185905291518288169289811692908b16917f40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e0959181900360600190a450505050505050565b60008060008060606040518060400160405280601c81526020017f19457468657265756d205369676e6564204d6573736167653a0a3332000000008152509050600081886040516020018083805190602001908083835b602083106110505780518252601f199092019160209182019101611031565b51815160209384036101000a600019018019909216911617905292019384525060408051808503815293820190528251920191909120925061109791508890506000611b23565b6040805160008152602080820180845287905260ff8616828401526060820185905260808201849052915194995092975090955060019260a080840193601f198301929081900390910190855afa1580156110f6573d6000803e3d6000fd5b5050604051601f1901519998505050505050505050565b600061111e87878787878743611bb1565b905061112a878261194c565b846001600160a01b0316866001600160a01b0316886001600160a01b03167fcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b38787876040518084815260200183815260200180602001828103825283818151815260200191508051906020019080838360005b838110156111b557818101518382015260200161119d565b50505050905090810190601f1680156111e25780820380516001836020036101000a031916815260200191505b5094505050505060405180910390a450505050505050565b604080516323b872dd60e01b81523360048201523060248201526044810183905290516001600160a01b038516916323b872dd9160648083019260209291908290030181600087803b15801561124f57600080fd5b505af1158015611263573d6000803e3d6000fd5b505050506040513d602081101561127957600080fd5b50610f3c9050828483611ca6565b6001600160a01b038516600090815260036020526040812060019081015401906112b5868686864387611d7d565b90506112c1878261194c565b604080516001600160a01b0386811682526020820186905281830185905291518288169289811692908b16917fb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e609181900360600190a450505050505050565b60008060008060008060008088905060008a828151811061133d57fe5b016020015160019092019160f81c90506006811461136d5750600097508896508795508594506113d99350505050565b6113778b83611d8f565b91965090945091508461139c5750600097508896508795508594506113d99350505050565b6113a68b83611d8f565b9196509093509150846113cb5750600097508896508795508594506113d99350505050565b506001975095509093509150505b92959194509250565b6000806001831415611437576000806000806113fe8989611e07565b93509350935093508361141b5760008895509550505050506114de565b611426338383611e54565b5060018395509550505050506114de565b60028314156114905760008060008060006114528a8a611eb2565b9450945094509450945084611472576000899650965050505050506114de565b61147e33838584611fb9565b506001849650965050505050506114de565b60038314156114d75760008060008060006114ab8a8a611eb2565b94509450945094509450846114cb576000899650965050505050506114de565b61147e33838584611fe9565b5060009050825b935093915050565b6001600160a01b038084166000908152600260209081526040808320938616835290839052812054909190806115215760009250505061087f565b600082600101600183038154811061153557fe5b60009182526020808320888452600160039093020191820190526040909120549091508061156a57600094505050505061087f565b6002820180548291600185019160009190600019810190811061158957fe5b6000918252602080832090910154835282019290925260400190205560028201805460001981019081106115b957fe5b90600052602060002001548260020160018303815481106115d657fe5b60009182526020808320909101929092558781526001840190915260408120556002820180548061160357fe5b6000828152602081208201600019908101919091550190556002820154611740576001840180548491869160009190600019810190811061164057fe5b600091825260208083206003909202909101546001600160a01b03168352820192909252604001902055600184018054600019810190811061167e57fe5b906000526020600020906003020184600101600185038154811061169e57fe5b60009182526020909120825460039092020180546001600160a01b0319166001600160a01b03909216919091178155600280830180546116e192840191906120d3565b5050506001600160a01b0387166000908152602085905260408120556001840180548061170a57fe5b60008281526020812060036000199093019283020180546001600160a01b03191681559061173b6002830182612123565b505090555b506001979650505050505050565b60008161175d5750600161087f565b6001600160a01b038085166000908152600160209081526040808320938716835290839052902054806117955760009250505061087f565b60008260010160018303815481106117a957fe5b9060005260206000209060020201905080600101548511156117d1576000935050505061087f565b600181018054869003908190556118d457600183018054839185916000919060001981019081106117fe57fe5b600091825260208083206002909202909101546001600160a01b03168352820192909252604001902055600183018054600019810190811061183c57fe5b906000526020600020906002020183600101600184038154811061185c57fe5b60009182526020808320845460029093020180546001600160a01b0319166001600160a01b03938416178155600194850154908501559089168252859052604081205583018054806118aa57fe5b60008281526020812060026000199093019283020180546001600160a01b03191681556001015590555b5060019695505050505050565b60408051600160f81b6020808301919091526bffffffffffffffffffffffff19606089811b8216602185015288901b166035830152604982018690526069820185905260898083018590528351808403909101815260a9909201909252805191012095945050505050565b6001600160a01b03821660009081526003602052604090208054611970908361200d565b81556001908101805490910190555050565b6001600160a01b03808416600090815260026020908152604080832093861683529083905290205480611a42576040805180820182526001600160a01b0386811682528251600080825260208083019095528484019182526001878101805491820180825590835291869020855160039092020180546001600160a01b03191691909416178355905180519194611a2192600285019290910190612144565b5050506001600160a01b038516600090815260208490526040902081905590505b6000826001016001830381548110611a5657fe5b9060005260206000209060030201905080600101600085815260200190815260200160002054600014611ad0576040805162461bcd60e51b815260206004820152601d60248201527f63616e27742061646420616c7265616479206f776e656420746f6b656e000000604482015290519081900360640190fd5b60028101805460018181018355600083815260208082209093018890559254968352909201909152604090209290925550505050565b6000611b186003888888888888612039565b979650505050505050565b604180820283810160208101516040820151919093015160ff169291601b841015611b4f57601b840193505b8360ff16601b1480611b6457508360ff16601c145b611ba9576040805162461bcd60e51b8152602060048201526011602482015270496e636f727265637420762076616c756560781b604482015290519081900360640190fd5b509250925092565b60008088888888888888604051602001808960ff1660ff1660f81b8152600101886001600160a01b03166001600160a01b031660601b8152601401876001600160a01b03166001600160a01b031660601b8152601401866001600160a01b03166001600160a01b031660601b815260140185815260200184815260200183805190602001908083835b60208310611c595780518252601f199092019160209182019101611c3a565b51815160001960209485036101000a019081169019919091161790529201938452506040805180850381529382019052825192019190912098505050505050505050979650505050505050565b80611cb057610f3c565b6001600160a01b03808416600090815260016020908152604080832093861683529083905290205480611d4957506040805180820182526001600160a01b0385811680835260006020808501828152600188810180548083018083559186528486209851600290910290980180546001600160a01b03191698909716979097178655905194019390935590815290849052919091208190555b82826001016001830381548110611d5c57fe5b60009182526020909120600160029092020101805490910190555050505050565b6000611b186002888888888888612039565b6000806000808551905084811080611da957506021858203105b80611dcb5750600060ff16868681518110611dc057fe5b016020015160f81c14155b15611de0575060009250839150829050611e00565b600160218601611df88888840163ffffffff6120b716565b935093509350505b9250925092565b60008060008060008060008088905060008a8281518110611e2457fe5b016020015160019092019160f81c90506005811461136d5750600097508896508795508594506113d99350505050565b6001600160a01b038316600090815260208190526040812054821115611e7c5750600061087f565b506001600160a01b0392831660009081526020819052604080822080548490039055929093168352912080549091019055600190565b6000806000806000806000806000808a905060008c8281518110611ed257fe5b016020015160019092019160f81c905060068114611f065750600099508a9850899750879650869550611faf945050505050565b611f108d83611d8f565b919750909550915085611f395750600099508a9850899750879650869550611faf945050505050565b611f438d83611d8f565b919750909450915085611f6c5750600099508a9850899750879650869550611faf945050505050565b611f768d83611d8f565b919750909350915085611f9f5750600099508a9850899750879650869550611faf945050505050565b5060019950975091955093509150505b9295509295909350565b6000611fc685848461174e565b611fd257506000611fe1565b611fdd848484611ca6565b5060015b949350505050565b6000611ff68584846114e6565b61200257506000611fe1565b611fdd848484611982565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b6040805160f89890981b6001600160f81b0319166020808a0191909152606097881b6bffffffffffffffffffffffff1990811660218b015296881b871660358a01529490961b9094166049870152605d860191909152607d850152609d808501929092528251808503909201825260bd909301909152805191012090565b600081602001835110156120ca57600080fd5b50016020015190565b8280548282559060005260206000209081019282156121135760005260206000209182015b828111156121135782548255916001019190600101906120f8565b5061211f92915061217f565b5090565b5080546000825590600052602060002090810190612141919061217f565b50565b828054828255906000526020600020908101928215612113579160200282015b82811115612113578251825591602001919060010190612164565b61219991905b8082111561211f5760008155600101612185565b9056fe57616c6c657420646f65736e2774206f776e2073756666696369656e742062616c616e6365206f6620746f6b656ea265627a7a72315820e704a10bcda809d1d56029c1b1f5850f56a1fd0c33d2b653b1bb23bee8888a3864736f6c634300050d0032"
+
+// DeployGlobalInbox deploys a new Ethereum contract, binding an instance of GlobalInbox to it.
+func DeployGlobalInbox(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GlobalInbox, error) {
+	parsed, err := abi.JSON(strings.NewReader(GlobalInboxABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(GlobalInboxBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &GlobalInbox{GlobalInboxCaller: GlobalInboxCaller{contract: contract}, GlobalInboxTransactor: GlobalInboxTransactor{contract: contract}, GlobalInboxFilterer: GlobalInboxFilterer{contract: contract}}, nil
+}
+
+// GlobalInbox is an auto generated Go binding around an Ethereum contract.
+type GlobalInbox struct {
+	GlobalInboxCaller     // Read-only binding to the contract
+	GlobalInboxTransactor // Write-only binding to the contract
+	GlobalInboxFilterer   // Log filterer for contract events
+}
+
+// GlobalInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
+type GlobalInboxCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// GlobalInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type GlobalInboxTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// GlobalInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type GlobalInboxFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// GlobalInboxSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type GlobalInboxSession struct {
+	Contract     *GlobalInbox      // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// GlobalInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type GlobalInboxCallerSession struct {
+	Contract *GlobalInboxCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts      // Call options to use throughout this session
+}
+
+// GlobalInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type GlobalInboxTransactorSession struct {
+	Contract     *GlobalInboxTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// GlobalInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
+type GlobalInboxRaw struct {
+	Contract *GlobalInbox // Generic contract binding to access the raw methods on
+}
+
+// GlobalInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type GlobalInboxCallerRaw struct {
+	Contract *GlobalInboxCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// GlobalInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type GlobalInboxTransactorRaw struct {
+	Contract *GlobalInboxTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewGlobalInbox creates a new instance of GlobalInbox, bound to a specific deployed contract.
+func NewGlobalInbox(address common.Address, backend bind.ContractBackend) (*GlobalInbox, error) {
+	contract, err := bindGlobalInbox(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInbox{GlobalInboxCaller: GlobalInboxCaller{contract: contract}, GlobalInboxTransactor: GlobalInboxTransactor{contract: contract}, GlobalInboxFilterer: GlobalInboxFilterer{contract: contract}}, nil
+}
+
+// NewGlobalInboxCaller creates a new read-only instance of GlobalInbox, bound to a specific deployed contract.
+func NewGlobalInboxCaller(address common.Address, caller bind.ContractCaller) (*GlobalInboxCaller, error) {
+	contract, err := bindGlobalInbox(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxCaller{contract: contract}, nil
+}
+
+// NewGlobalInboxTransactor creates a new write-only instance of GlobalInbox, bound to a specific deployed contract.
+func NewGlobalInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*GlobalInboxTransactor, error) {
+	contract, err := bindGlobalInbox(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxTransactor{contract: contract}, nil
+}
+
+// NewGlobalInboxFilterer creates a new log filterer instance of GlobalInbox, bound to a specific deployed contract.
+func NewGlobalInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*GlobalInboxFilterer, error) {
+	contract, err := bindGlobalInbox(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxFilterer{contract: contract}, nil
+}
+
+// bindGlobalInbox binds a generic wrapper to an already deployed contract.
+func bindGlobalInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(GlobalInboxABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_GlobalInbox *GlobalInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _GlobalInbox.Contract.GlobalInboxCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_GlobalInbox *GlobalInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.GlobalInboxTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_GlobalInbox *GlobalInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.GlobalInboxTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_GlobalInbox *GlobalInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _GlobalInbox.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_GlobalInbox *GlobalInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_GlobalInbox *GlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
+//
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "getERC20Balance", _tokenContract, _owner)
+	return *ret0, err
+}
+
+// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
+//
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
+	return _GlobalInbox.Contract.GetERC20Balance(&_GlobalInbox.CallOpts, _tokenContract, _owner)
+}
+
+// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
+//
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxCallerSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
+	return _GlobalInbox.Contract.GetERC20Balance(&_GlobalInbox.CallOpts, _tokenContract, _owner)
+}
+
+// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
+//
+// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+func (_GlobalInbox *GlobalInboxCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
+	var (
+		ret0 = new([]*big.Int)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "getERC721Tokens", _erc721, _owner)
+	return *ret0, err
+}
+
+// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
+//
+// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+func (_GlobalInbox *GlobalInboxSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
+	return _GlobalInbox.Contract.GetERC721Tokens(&_GlobalInbox.CallOpts, _erc721, _owner)
+}
+
+// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
+//
+// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+func (_GlobalInbox *GlobalInboxCallerSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
+	return _GlobalInbox.Contract.GetERC721Tokens(&_GlobalInbox.CallOpts, _erc721, _owner)
+}
+
+// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
+//
+// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "getEthBalance", _owner)
+	return *ret0, err
+}
+
+// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
+//
+// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
+	return _GlobalInbox.Contract.GetEthBalance(&_GlobalInbox.CallOpts, _owner)
+}
+
+// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
+//
+// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+func (_GlobalInbox *GlobalInboxCallerSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
+	return _GlobalInbox.Contract.GetEthBalance(&_GlobalInbox.CallOpts, _owner)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_GlobalInbox *GlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
+	var (
+		ret0 = new([32]byte)
+		ret1 = new(*big.Int)
+	)
+	out := &[]interface{}{
+		ret0,
+		ret1,
+	}
+	err := _GlobalInbox.contract.Call(opts, out, "getInbox", account)
+	return *ret0, *ret1, err
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_GlobalInbox *GlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _GlobalInbox.Contract.GetInbox(&_GlobalInbox.CallOpts, account)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_GlobalInbox *GlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _GlobalInbox.Contract.GetInbox(&_GlobalInbox.CallOpts, account)
+}
+
+// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
+//
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+func (_GlobalInbox *GlobalInboxCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "hasERC721", _erc721, _owner, _tokenId)
+	return *ret0, err
+}
+
+// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
+//
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+func (_GlobalInbox *GlobalInboxSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
+	return _GlobalInbox.Contract.HasERC721(&_GlobalInbox.CallOpts, _erc721, _owner, _tokenId)
+}
+
+// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
+//
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+func (_GlobalInbox *GlobalInboxCallerSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
+	return _GlobalInbox.Contract.HasERC721(&_GlobalInbox.CallOpts, _erc721, _owner, _tokenId)
+}
+
+// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
+//
+// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
+	var (
+		ret0 = new([]common.Address)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "ownedERC20s", _owner)
+	return *ret0, err
+}
+
+// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
+//
+// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
+	return _GlobalInbox.Contract.OwnedERC20s(&_GlobalInbox.CallOpts, _owner)
+}
+
+// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
+//
+// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxCallerSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
+	return _GlobalInbox.Contract.OwnedERC20s(&_GlobalInbox.CallOpts, _owner)
+}
+
+// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
+//
+// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
+	var (
+		ret0 = new([]common.Address)
+	)
+	out := ret0
+	err := _GlobalInbox.contract.Call(opts, out, "ownedERC721s", _owner)
+	return *ret0, err
+}
+
+// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
+//
+// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
+	return _GlobalInbox.Contract.OwnedERC721s(&_GlobalInbox.CallOpts, _owner)
+}
+
+// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
+//
+// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+func (_GlobalInbox *GlobalInboxCallerSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
+	return _GlobalInbox.Contract.OwnedERC721s(&_GlobalInbox.CallOpts, _owner)
+}
+
+// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
+//
+// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
+func (_GlobalInbox *GlobalInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
+}
+
+// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
+//
+// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
+func (_GlobalInbox *GlobalInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositERC20Message(&_GlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
+}
+
+// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
+//
+// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositERC20Message(&_GlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
+}
+
+// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
+//
+// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
+func (_GlobalInbox *GlobalInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _id)
+}
+
+// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
+//
+// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
+func (_GlobalInbox *GlobalInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositERC721Message(&_GlobalInbox.TransactOpts, _chain, _to, _erc721, _id)
+}
+
+// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
+//
+// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositERC721Message(&_GlobalInbox.TransactOpts, _chain, _to, _erc721, _id)
+}
+
+// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
+//
+// Solidity: function depositEthMessage(address _chain, address _to) returns()
+func (_GlobalInbox *GlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
+}
+
+// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
+//
+// Solidity: function depositEthMessage(address _chain, address _to) returns()
+func (_GlobalInbox *GlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositEthMessage(&_GlobalInbox.TransactOpts, _chain, _to)
+}
+
+// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
+//
+// Solidity: function depositEthMessage(address _chain, address _to) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.DepositEthMessage(&_GlobalInbox.TransactOpts, _chain, _to)
+}
+
+// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
+//
+// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
+func (_GlobalInbox *GlobalInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
+}
+
+// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
+//
+// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
+func (_GlobalInbox *GlobalInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.ForwardTransactionMessage(&_GlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
+}
+
+// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
+//
+// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.ForwardTransactionMessage(&_GlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
+}
+
+// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
+//
+// Solidity: function sendMessages(bytes _messages) returns()
+func (_GlobalInbox *GlobalInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "sendMessages", _messages)
+}
+
+// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
+//
+// Solidity: function sendMessages(bytes _messages) returns()
+func (_GlobalInbox *GlobalInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.SendMessages(&_GlobalInbox.TransactOpts, _messages)
+}
+
+// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
+//
+// Solidity: function sendMessages(bytes _messages) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.SendMessages(&_GlobalInbox.TransactOpts, _messages)
+}
+
+// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
+//
+// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
+func (_GlobalInbox *GlobalInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
+}
+
+// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
+//
+// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
+func (_GlobalInbox *GlobalInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.SendTransactionMessage(&_GlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+}
+
+// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
+//
+// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.SendTransactionMessage(&_GlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+}
+
+// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
+//
+// Solidity: function withdrawERC20(address _tokenContract) returns()
+func (_GlobalInbox *GlobalInboxTransactor) WithdrawERC20(opts *bind.TransactOpts, _tokenContract common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "withdrawERC20", _tokenContract)
+}
+
+// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
+//
+// Solidity: function withdrawERC20(address _tokenContract) returns()
+func (_GlobalInbox *GlobalInboxSession) WithdrawERC20(_tokenContract common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawERC20(&_GlobalInbox.TransactOpts, _tokenContract)
+}
+
+// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
+//
+// Solidity: function withdrawERC20(address _tokenContract) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) WithdrawERC20(_tokenContract common.Address) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawERC20(&_GlobalInbox.TransactOpts, _tokenContract)
+}
+
+// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
+//
+// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
+func (_GlobalInbox *GlobalInboxTransactor) WithdrawERC721(opts *bind.TransactOpts, _erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "withdrawERC721", _erc721, _tokenId)
+}
+
+// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
+//
+// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
+func (_GlobalInbox *GlobalInboxSession) WithdrawERC721(_erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawERC721(&_GlobalInbox.TransactOpts, _erc721, _tokenId)
+}
+
+// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
+//
+// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) WithdrawERC721(_erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawERC721(&_GlobalInbox.TransactOpts, _erc721, _tokenId)
+}
+
+// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
+//
+// Solidity: function withdrawEth() returns()
+func (_GlobalInbox *GlobalInboxTransactor) WithdrawEth(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _GlobalInbox.contract.Transact(opts, "withdrawEth")
+}
+
+// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
+//
+// Solidity: function withdrawEth() returns()
+func (_GlobalInbox *GlobalInboxSession) WithdrawEth() (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawEth(&_GlobalInbox.TransactOpts)
+}
+
+// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
+//
+// Solidity: function withdrawEth() returns()
+func (_GlobalInbox *GlobalInboxTransactorSession) WithdrawEth() (*types.Transaction, error) {
+	return _GlobalInbox.Contract.WithdrawEth(&_GlobalInbox.TransactOpts)
+}
+
+// GlobalInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the GlobalInbox contract.
+type GlobalInboxERC20DepositMessageDeliveredIterator struct {
+	Event *GlobalInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GlobalInboxERC20DepositMessageDeliveredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GlobalInboxERC20DepositMessageDelivered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GlobalInboxERC20DepositMessageDelivered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GlobalInboxERC20DepositMessageDeliveredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GlobalInboxERC20DepositMessageDeliveredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GlobalInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the GlobalInbox contract.
+type GlobalInboxERC20DepositMessageDelivered struct {
+	Chain      common.Address
+	To         common.Address
+	From       common.Address
+	Erc20      common.Address
+	Value      *big.Int
+	MessageNum *big.Int
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterERC20DepositMessageDelivered is a free log retrieval operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
+//
+// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalInboxERC20DepositMessageDeliveredIterator, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxERC20DepositMessageDeliveredIterator{contract: _GlobalInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
+}
+
+// WatchERC20DepositMessageDelivered is a free log subscription operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
+//
+// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GlobalInboxERC20DepositMessageDelivered)
+				if err := _GlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseERC20DepositMessageDelivered is a log parse operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
+//
+// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*GlobalInboxERC20DepositMessageDelivered, error) {
+	event := new(GlobalInboxERC20DepositMessageDelivered)
+	if err := _GlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// GlobalInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the GlobalInbox contract.
+type GlobalInboxERC721DepositMessageDeliveredIterator struct {
+	Event *GlobalInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GlobalInboxERC721DepositMessageDeliveredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GlobalInboxERC721DepositMessageDelivered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GlobalInboxERC721DepositMessageDelivered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GlobalInboxERC721DepositMessageDeliveredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GlobalInboxERC721DepositMessageDeliveredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GlobalInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the GlobalInbox contract.
+type GlobalInboxERC721DepositMessageDelivered struct {
+	Chain      common.Address
+	To         common.Address
+	From       common.Address
+	Erc721     common.Address
+	Id         *big.Int
+	MessageNum *big.Int
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterERC721DepositMessageDelivered is a free log retrieval operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
+//
+// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalInboxERC721DepositMessageDeliveredIterator, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxERC721DepositMessageDeliveredIterator{contract: _GlobalInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
+}
+
+// WatchERC721DepositMessageDelivered is a free log subscription operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
+//
+// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GlobalInboxERC721DepositMessageDelivered)
+				if err := _GlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseERC721DepositMessageDelivered is a log parse operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
+//
+// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*GlobalInboxERC721DepositMessageDelivered, error) {
+	event := new(GlobalInboxERC721DepositMessageDelivered)
+	if err := _GlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// GlobalInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the GlobalInbox contract.
+type GlobalInboxEthDepositMessageDeliveredIterator struct {
+	Event *GlobalInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GlobalInboxEthDepositMessageDeliveredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GlobalInboxEthDepositMessageDelivered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GlobalInboxEthDepositMessageDelivered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GlobalInboxEthDepositMessageDeliveredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GlobalInboxEthDepositMessageDeliveredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GlobalInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the GlobalInbox contract.
+type GlobalInboxEthDepositMessageDelivered struct {
+	Chain      common.Address
+	To         common.Address
+	From       common.Address
+	Value      *big.Int
+	MessageNum *big.Int
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterEthDepositMessageDelivered is a free log retrieval operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
+//
+// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalInboxEthDepositMessageDeliveredIterator, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxEthDepositMessageDeliveredIterator{contract: _GlobalInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
+}
+
+// WatchEthDepositMessageDelivered is a free log subscription operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
+//
+// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GlobalInboxEthDepositMessageDelivered)
+				if err := _GlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseEthDepositMessageDelivered is a log parse operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
+//
+// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
+func (_GlobalInbox *GlobalInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*GlobalInboxEthDepositMessageDelivered, error) {
+	event := new(GlobalInboxEthDepositMessageDelivered)
+	if err := _GlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// GlobalInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the GlobalInbox contract.
+type GlobalInboxTransactionMessageDeliveredIterator struct {
+	Event *GlobalInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GlobalInboxTransactionMessageDeliveredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GlobalInboxTransactionMessageDelivered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GlobalInboxTransactionMessageDelivered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GlobalInboxTransactionMessageDeliveredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GlobalInboxTransactionMessageDeliveredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GlobalInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the GlobalInbox contract.
+type GlobalInboxTransactionMessageDelivered struct {
+	Chain     common.Address
+	To        common.Address
+	From      common.Address
+	SeqNumber *big.Int
+	Value     *big.Int
+	Data      []byte
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransactionMessageDelivered is a free log retrieval operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
+//
+// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
+func (_GlobalInbox *GlobalInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalInboxTransactionMessageDeliveredIterator, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GlobalInboxTransactionMessageDeliveredIterator{contract: _GlobalInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
+}
+
+// WatchTransactionMessageDelivered is a free log subscription operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
+//
+// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
+func (_GlobalInbox *GlobalInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+
+	var chainRule []interface{}
+	for _, chainItem := range chain {
+		chainRule = append(chainRule, chainItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+
+	logs, sub, err := _GlobalInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GlobalInboxTransactionMessageDelivered)
+				if err := _GlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTransactionMessageDelivered is a log parse operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
+//
+// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
+func (_GlobalInbox *GlobalInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*GlobalInboxTransactionMessageDelivered, error) {
+	event := new(GlobalInboxTransactionMessageDelivered)
+	if err := _GlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 // GlobalNFTWalletABI is the input ABI used to generate the binding from.
 const GlobalNFTWalletABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getERC721Tokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"hasERC721\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"ownedERC721s\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
@@ -913,1209 +2125,6 @@ func (_GlobalNFTWallet *GlobalNFTWalletSession) WithdrawERC721(_erc721 common.Ad
 // Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
 func (_GlobalNFTWallet *GlobalNFTWalletTransactorSession) WithdrawERC721(_erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
 	return _GlobalNFTWallet.Contract.WithdrawERC721(&_GlobalNFTWallet.TransactOpts, _erc721, _tokenId)
-}
-
-// GlobalPendingInboxABI is the input ABI used to generate the binding from.
-const GlobalPendingInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getERC20Balance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getERC721Tokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"getEthBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getPending\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"hasERC721\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"ownedERC20s\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"ownedERC721s\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenContract\",\"type\":\"address\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tokenId\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// GlobalPendingInboxFuncSigs maps the 4-byte function signature to its string representation.
-var GlobalPendingInboxFuncSigs = map[string]string{
-	"bca22b76": "depositERC20Message(address,address,address,uint256)",
-	"8b7010aa": "depositERC721Message(address,address,address,uint256)",
-	"5bd21290": "depositEthMessage(address,address)",
-	"8bef8df0": "forwardTransactionMessage(address,address,uint256,uint256,bytes,bytes)",
-	"c3a8962c": "getERC20Balance(address,address)",
-	"0758fb0a": "getERC721Tokens(address,address)",
-	"4d2301cc": "getEthBalance(address)",
-	"11ae9ed2": "getPending()",
-	"45a53f09": "hasERC721(address,address,uint256)",
-	"6e2b89c5": "ownedERC20s(address)",
-	"33f2ac42": "ownedERC721s(address)",
-	"e4eb8c63": "sendMessages(bytes)",
-	"8f5ed73e": "sendTransactionMessage(address,address,uint256,uint256,bytes)",
-	"f4f3b200": "withdrawERC20(address)",
-	"f3e414f8": "withdrawERC721(address,uint256)",
-	"a0ef91df": "withdrawEth()",
-}
-
-// GlobalPendingInboxBin is the compiled bytecode used for deploying new contracts.
-var GlobalPendingInboxBin = "0x608060405234801561001057600080fd5b506121d9806100206000396000f3fe6080604052600436106100f35760003560e01c80638bef8df01161008a578063c3a8962c11610059578063c3a8962c1461051a578063e4eb8c6314610555578063f3e414f8146105d0578063f4f3b20014610609576100f3565b80638bef8df01461032c5780638f5ed73e1461041c578063a0ef91df146104bc578063bca22b76146104d1576100f3565b80634d2301cc116100c65780634d2301cc1461023b5780635bd21290146102805780636e2b89c5146102b05780638b7010aa146102e3576100f3565b80630758fb0a146100f857806311ae9ed21461018357806333f2ac42146101b157806345a53f09146101e4575b600080fd5b34801561010457600080fd5b506101336004803603604081101561011b57600080fd5b506001600160a01b038135811691602001351661063c565b60408051602080825283518183015283519192839290830191858101910280838360005b8381101561016f578181015183820152602001610157565b505050509050019250505060405180910390f35b34801561018f57600080fd5b50610198610702565b6040805192835260208301919091528051918290030190f35b3480156101bd57600080fd5b50610133600480360360208110156101d457600080fd5b50356001600160a01b031661071d565b3480156101f057600080fd5b506102276004803603606081101561020757600080fd5b506001600160a01b038135811691602081013590911690604001356107e0565b604080519115158252519081900360200190f35b34801561024757600080fd5b5061026e6004803603602081101561025e57600080fd5b50356001600160a01b0316610860565b60408051918252519081900360200190f35b6102ae6004803603604081101561029657600080fd5b506001600160a01b038135811691602001351661087b565b005b3480156102bc57600080fd5b50610133600480360360208110156102d357600080fd5b50356001600160a01b0316610894565b3480156102ef57600080fd5b506102ae6004803603608081101561030657600080fd5b506001600160a01b0381358116916020810135821691604082013516906060013561094b565b34801561033857600080fd5b506102ae600480360360c081101561034f57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359181019060a081016080820135600160201b81111561038e57600080fd5b8201836020820111156103a057600080fd5b803590602001918460018302840111600160201b831117156103c157600080fd5b919390929091602081019035600160201b8111156103de57600080fd5b8201836020820111156103f057600080fd5b803590602001918460018302840111600160201b8311171561041157600080fd5b509092509050610969565b34801561042857600080fd5b506102ae600480360360a081101561043f57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359181019060a081016080820135600160201b81111561047e57600080fd5b82018360208201111561049057600080fd5b803590602001918460018302840111600160201b831117156104b157600080fd5b509092509050610a75565b3480156104c857600080fd5b506102ae610ac1565b3480156104dd57600080fd5b506102ae600480360360808110156104f457600080fd5b506001600160a01b03813581169160208101358216916040820135169060600135610b0c565b34801561052657600080fd5b5061026e6004803603604081101561053d57600080fd5b506001600160a01b0381358116916020013516610b24565b34801561056157600080fd5b506102ae6004803603602081101561057857600080fd5b810190602081018135600160201b81111561059257600080fd5b8201836020820111156105a457600080fd5b803590602001918460018302840111600160201b831117156105c557600080fd5b509092509050610b8d565b3480156105dc57600080fd5b506102ae600480360360408110156105f357600080fd5b506001600160a01b038135169060200135610c51565b34801561061557600080fd5b506102ae6004803603602081101561062c57600080fd5b50356001600160a01b0316610d15565b6001600160a01b038082166000908152600260209081526040808320938616835290839052902054606091908061068557505060408051600081526020810190915290506106fc565b81600101600182038154811061069757fe5b90600052602060002090600302016002018054806020026020016040519081016040528092919081815260200182805480156106f257602002820191906000526020600020905b8154815260200190600101908083116106de575b5050505050925050505b92915050565b33600090815260036020526040902080546001909101549091565b6001600160a01b03811660009081526002602090815260409182902060018101548351818152818402810190930190935260609290918391801561076b578160200160208202803883390190505b50805190915060005b818110156107d65783600101818154811061078b57fe5b600091825260209091206003909102015483516001600160a01b03909116908490839081106107b657fe5b6001600160a01b0390921660209283029190910190910152600101610774565b5090949350505050565b6001600160a01b0380831660009081526002602090815260408083209387168352908390528120549091908061081b57600092505050610859565b81600101600182038154811061082d57fe5b906000526020600020906003020160010160008581526020019081526020016000205460001415925050505b9392505050565b6001600160a01b031660009081526020819052604090205490565b61088482610de2565b61089082823334610e01565b5050565b6001600160a01b038116600090815260016020818152604092839020918201548351818152818302810190920190935260609283919080156108e0578160200160208202803883390190505b50805190915060005b818110156107d65783600101818154811061090057fe5b600091825260209091206002909102015483516001600160a01b039091169084908390811061092b57fe5b6001600160a01b03909216602092830291909101909101526001016108e9565b610956828583610e9f565b6109638484338585610f1b565b50505050565b6000610a2489898989898960405160200180876001600160a01b03166001600160a01b031660601b8152601401866001600160a01b03166001600160a01b031660601b81526014018581526020018481526020018383808284378083019250505096505050505050506040516020818303038152906040528051906020012084848080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250610fb492505050565b9050610a6a8989838a8a8a8a8080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152506110e792505050565b505050505050505050565b610ab9868633878787878080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152506110e792505050565b505050505050565b6000610acc33610860565b3360008181526020819052604080822082905551929350909183156108fc0291849190818181858888f19350505050158015610890573d6000803e3d6000fd5b610b178285836111d4565b6109638484338585611261565b6001600160a01b03808216600090815260016020908152604080832093861683529083905281205490919080610b5f576000925050506106fc565b816001016001820381548110610b7157fe5b9060005260206000209060020201600101549250505092915050565b6000808080845b80841015610c4857610bdd87878080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152508892506112fa915050565b9297509095509350915084610bf157610c48565b610c3487878080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152508892508791506113bc9050565b909550935084610c4357610c48565b610b94565b50505050505050565b610c5c3383836114c0565b610cad576040805162461bcd60e51b815260206004820152601860248201527f57616c6c657420646f65736e2774206f776e20746f6b656e0000000000000000604482015290519081900360640190fd5b60408051632142170760e11b81523060048201523360248201526044810183905290516001600160a01b038416916342842e0e91606480830192600092919082900301818387803b158015610d0157600080fd5b505af1158015610ab9573d6000803e3d6000fd5b6000610d218233610b24565b9050610d2e338383611728565b610d695760405162461bcd60e51b815260040180806020018281038252602e815260200180612177602e913960400191505060405180910390fd5b6040805163a9059cbb60e01b81523360048201526024810183905290516001600160a01b0384169163a9059cbb9160448083019260209291908290030181600087803b158015610db857600080fd5b505af1158015610dcc573d6000803e3d6000fd5b505050506040513d602081101561096357600080fd5b6001600160a01b03166000908152602081905260409020805434019055565b6001600160a01b03841660009081526003602052604081206001908101540190610e2e85858543866118bb565b9050610e3a8682611926565b336001600160a01b0316856001600160a01b0316876001600160a01b03167ffd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a3582907053486604051808381526020018281526020019250505060405180910390a4505050505050565b604080516323b872dd60e01b81523360048201523060248201526044810183905290516001600160a01b038516916323b872dd91606480830192600092919082900301818387803b158015610ef357600080fd5b505af1158015610f07573d6000803e3d6000fd5b50505050610f1682848361195c565b505050565b6001600160a01b03851660009081526003602052604081206001908101540190610f49868686864387611ae0565b9050610f558782611926565b604080516001600160a01b0386811682526020820186905281830185905291518288169289811692908b16917f40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e0959181900360600190a450505050505050565b60008060008060606040518060400160405280601c81526020017f19457468657265756d205369676e6564204d6573736167653a0a3332000000008152509050600081886040516020018083805190602001908083835b6020831061102a5780518252601f19909201916020918201910161100b565b51815160209384036101000a600019018019909216911617905292019384525060408051808503815293820190528251920191909120925061107191508890506000611afd565b6040805160008152602080820180845287905260ff8616828401526060820185905260808201849052915194995092975090955060019260a080840193601f198301929081900390910190855afa1580156110d0573d6000803e3d6000fd5b5050604051601f1901519998505050505050505050565b60006110f887878787878743611b8b565b90506111048782611926565b846001600160a01b0316866001600160a01b0316886001600160a01b03167fcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b38787876040518084815260200183815260200180602001828103825283818151815260200191508051906020019080838360005b8381101561118f578181015183820152602001611177565b50505050905090810190601f1680156111bc5780820380516001836020036101000a031916815260200191505b5094505050505060405180910390a450505050505050565b604080516323b872dd60e01b81523360048201523060248201526044810183905290516001600160a01b038516916323b872dd9160648083019260209291908290030181600087803b15801561122957600080fd5b505af115801561123d573d6000803e3d6000fd5b505050506040513d602081101561125357600080fd5b50610f169050828483611c80565b6001600160a01b0385166000908152600360205260408120600190810154019061128f868686864387611d57565b905061129b8782611926565b604080516001600160a01b0386811682526020820186905281830185905291518288169289811692908b16917fb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e609181900360600190a450505050505050565b60008060008060008060008088905060008a828151811061131757fe5b016020015160019092019160f81c9050600681146113475750600097508896508795508594506113b39350505050565b6113518b83611d69565b9196509094509150846113765750600097508896508795508594506113b39350505050565b6113808b83611d69565b9196509093509150846113a55750600097508896508795508594506113b39350505050565b506001975095509093509150505b92959194509250565b6000806001831415611411576000806000806113d88989611de1565b9350935093509350836113f55760008895509550505050506114b8565b611400338383611e2e565b5060018395509550505050506114b8565b600283141561146a57600080600080600061142c8a8a611e8c565b945094509450945094508461144c576000899650965050505050506114b8565b61145833838584611f93565b506001849650965050505050506114b8565b60038314156114b15760008060008060006114858a8a611e8c565b94509450945094509450846114a5576000899650965050505050506114b8565b61145833838584611fc3565b5060009050825b935093915050565b6001600160a01b038084166000908152600260209081526040808320938616835290839052812054909190806114fb57600092505050610859565b600082600101600183038154811061150f57fe5b600091825260208083208884526001600390930201918201905260409091205490915080611544576000945050505050610859565b6002820180548291600185019160009190600019810190811061156357fe5b60009182526020808320909101548352820192909252604001902055600282018054600019810190811061159357fe5b90600052602060002001548260020160018303815481106115b057fe5b6000918252602080832090910192909255878152600184019091526040812055600282018054806115dd57fe5b600082815260208120820160001990810191909155019055600282015461171a576001840180548491869160009190600019810190811061161a57fe5b600091825260208083206003909202909101546001600160a01b03168352820192909252604001902055600184018054600019810190811061165857fe5b906000526020600020906003020184600101600185038154811061167857fe5b60009182526020909120825460039092020180546001600160a01b0319166001600160a01b03909216919091178155600280830180546116bb92840191906120ad565b5050506001600160a01b038716600090815260208590526040812055600184018054806116e457fe5b60008281526020812060036000199093019283020180546001600160a01b03191681559061171560028301826120fd565b505090555b506001979650505050505050565b60008161173757506001610859565b6001600160a01b0380851660009081526001602090815260408083209387168352908390529020548061176f57600092505050610859565b600082600101600183038154811061178357fe5b9060005260206000209060020201905080600101548511156117ab5760009350505050610859565b600181018054869003908190556118ae57600183018054839185916000919060001981019081106117d857fe5b600091825260208083206002909202909101546001600160a01b03168352820192909252604001902055600183018054600019810190811061181657fe5b906000526020600020906002020183600101600184038154811061183657fe5b60009182526020808320845460029093020180546001600160a01b0319166001600160a01b039384161781556001948501549085015590891682528590526040812055830180548061188457fe5b60008281526020812060026000199093019283020180546001600160a01b03191681556001015590555b5060019695505050505050565b60408051600160f81b6020808301919091526bffffffffffffffffffffffff19606089811b8216602185015288901b166035830152604982018690526069820185905260898083018590528351808403909101815260a9909201909252805191012095945050505050565b6001600160a01b0382166000908152600360205260409020805461194a9083611fe7565b81556001908101805490910190555050565b6001600160a01b03808416600090815260026020908152604080832093861683529083905290205480611a1c576040805180820182526001600160a01b0386811682528251600080825260208083019095528484019182526001878101805491820180825590835291869020855160039092020180546001600160a01b031916919094161783559051805191946119fb9260028501929091019061211e565b5050506001600160a01b038516600090815260208490526040902081905590505b6000826001016001830381548110611a3057fe5b9060005260206000209060030201905080600101600085815260200190815260200160002054600014611aaa576040805162461bcd60e51b815260206004820152601d60248201527f63616e27742061646420616c7265616479206f776e656420746f6b656e000000604482015290519081900360640190fd5b60028101805460018181018355600083815260208082209093018890559254968352909201909152604090209290925550505050565b6000611af26003888888888888612013565b979650505050505050565b604180820283810160208101516040820151919093015160ff169291601b841015611b2957601b840193505b8360ff16601b1480611b3e57508360ff16601c145b611b83576040805162461bcd60e51b8152602060048201526011602482015270496e636f727265637420762076616c756560781b604482015290519081900360640190fd5b509250925092565b60008088888888888888604051602001808960ff1660ff1660f81b8152600101886001600160a01b03166001600160a01b031660601b8152601401876001600160a01b03166001600160a01b031660601b8152601401866001600160a01b03166001600160a01b031660601b815260140185815260200184815260200183805190602001908083835b60208310611c335780518252601f199092019160209182019101611c14565b51815160001960209485036101000a019081169019919091161790529201938452506040805180850381529382019052825192019190912098505050505050505050979650505050505050565b80611c8a57610f16565b6001600160a01b03808416600090815260016020908152604080832093861683529083905290205480611d2357506040805180820182526001600160a01b0385811680835260006020808501828152600188810180548083018083559186528486209851600290910290980180546001600160a01b03191698909716979097178655905194019390935590815290849052919091208190555b82826001016001830381548110611d3657fe5b60009182526020909120600160029092020101805490910190555050505050565b6000611af26002888888888888612013565b6000806000808551905084811080611d8357506021858203105b80611da55750600060ff16868681518110611d9a57fe5b016020015160f81c14155b15611dba575060009250839150829050611dda565b600160218601611dd28888840163ffffffff61209116565b935093509350505b9250925092565b60008060008060008060008088905060008a8281518110611dfe57fe5b016020015160019092019160f81c9050600581146113475750600097508896508795508594506113b39350505050565b6001600160a01b038316600090815260208190526040812054821115611e5657506000610859565b506001600160a01b0392831660009081526020819052604080822080548490039055929093168352912080549091019055600190565b6000806000806000806000806000808a905060008c8281518110611eac57fe5b016020015160019092019160f81c905060068114611ee05750600099508a9850899750879650869550611f89945050505050565b611eea8d83611d69565b919750909550915085611f135750600099508a9850899750879650869550611f89945050505050565b611f1d8d83611d69565b919750909450915085611f465750600099508a9850899750879650869550611f89945050505050565b611f508d83611d69565b919750909350915085611f795750600099508a9850899750879650869550611f89945050505050565b5060019950975091955093509150505b9295509295909350565b6000611fa0858484611728565b611fac57506000611fbb565b611fb7848484611c80565b5060015b949350505050565b6000611fd08584846114c0565b611fdc57506000611fbb565b611fb784848461195c565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b6040805160f89890981b6001600160f81b0319166020808a0191909152606097881b6bffffffffffffffffffffffff1990811660218b015296881b871660358a01529490961b9094166049870152605d860191909152607d850152609d808501929092528251808503909201825260bd909301909152805191012090565b600081602001835110156120a457600080fd5b50016020015190565b8280548282559060005260206000209081019282156120ed5760005260206000209182015b828111156120ed5782548255916001019190600101906120d2565b506120f9929150612159565b5090565b508054600082559060005260206000209081019061211b9190612159565b50565b8280548282559060005260206000209081019282156120ed579160200282015b828111156120ed57825182559160200191906001019061213e565b61217391905b808211156120f9576000815560010161215f565b9056fe57616c6c657420646f65736e2774206f776e2073756666696369656e742062616c616e6365206f6620746f6b656ea265627a7a723158200d18d5045718ea1b8381b78688e44aa61a790edd0bd7cbe8f90213958965f9fa64736f6c634300050d0032"
-
-// DeployGlobalPendingInbox deploys a new Ethereum contract, binding an instance of GlobalPendingInbox to it.
-func DeployGlobalPendingInbox(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GlobalPendingInbox, error) {
-	parsed, err := abi.JSON(strings.NewReader(GlobalPendingInboxABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(GlobalPendingInboxBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &GlobalPendingInbox{GlobalPendingInboxCaller: GlobalPendingInboxCaller{contract: contract}, GlobalPendingInboxTransactor: GlobalPendingInboxTransactor{contract: contract}, GlobalPendingInboxFilterer: GlobalPendingInboxFilterer{contract: contract}}, nil
-}
-
-// GlobalPendingInbox is an auto generated Go binding around an Ethereum contract.
-type GlobalPendingInbox struct {
-	GlobalPendingInboxCaller     // Read-only binding to the contract
-	GlobalPendingInboxTransactor // Write-only binding to the contract
-	GlobalPendingInboxFilterer   // Log filterer for contract events
-}
-
-// GlobalPendingInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
-type GlobalPendingInboxCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// GlobalPendingInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type GlobalPendingInboxTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// GlobalPendingInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type GlobalPendingInboxFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// GlobalPendingInboxSession is an auto generated Go binding around an Ethereum contract,
-// with pre-set call and transact options.
-type GlobalPendingInboxSession struct {
-	Contract     *GlobalPendingInbox // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts       // Call options to use throughout this session
-	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
-}
-
-// GlobalPendingInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
-// with pre-set call options.
-type GlobalPendingInboxCallerSession struct {
-	Contract *GlobalPendingInboxCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts             // Call options to use throughout this session
-}
-
-// GlobalPendingInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
-// with pre-set transact options.
-type GlobalPendingInboxTransactorSession struct {
-	Contract     *GlobalPendingInboxTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
-}
-
-// GlobalPendingInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
-type GlobalPendingInboxRaw struct {
-	Contract *GlobalPendingInbox // Generic contract binding to access the raw methods on
-}
-
-// GlobalPendingInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type GlobalPendingInboxCallerRaw struct {
-	Contract *GlobalPendingInboxCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// GlobalPendingInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type GlobalPendingInboxTransactorRaw struct {
-	Contract *GlobalPendingInboxTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewGlobalPendingInbox creates a new instance of GlobalPendingInbox, bound to a specific deployed contract.
-func NewGlobalPendingInbox(address common.Address, backend bind.ContractBackend) (*GlobalPendingInbox, error) {
-	contract, err := bindGlobalPendingInbox(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInbox{GlobalPendingInboxCaller: GlobalPendingInboxCaller{contract: contract}, GlobalPendingInboxTransactor: GlobalPendingInboxTransactor{contract: contract}, GlobalPendingInboxFilterer: GlobalPendingInboxFilterer{contract: contract}}, nil
-}
-
-// NewGlobalPendingInboxCaller creates a new read-only instance of GlobalPendingInbox, bound to a specific deployed contract.
-func NewGlobalPendingInboxCaller(address common.Address, caller bind.ContractCaller) (*GlobalPendingInboxCaller, error) {
-	contract, err := bindGlobalPendingInbox(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxCaller{contract: contract}, nil
-}
-
-// NewGlobalPendingInboxTransactor creates a new write-only instance of GlobalPendingInbox, bound to a specific deployed contract.
-func NewGlobalPendingInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*GlobalPendingInboxTransactor, error) {
-	contract, err := bindGlobalPendingInbox(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxTransactor{contract: contract}, nil
-}
-
-// NewGlobalPendingInboxFilterer creates a new log filterer instance of GlobalPendingInbox, bound to a specific deployed contract.
-func NewGlobalPendingInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*GlobalPendingInboxFilterer, error) {
-	contract, err := bindGlobalPendingInbox(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxFilterer{contract: contract}, nil
-}
-
-// bindGlobalPendingInbox binds a generic wrapper to an already deployed contract.
-func bindGlobalPendingInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(GlobalPendingInboxABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_GlobalPendingInbox *GlobalPendingInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _GlobalPendingInbox.Contract.GlobalPendingInboxCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_GlobalPendingInbox *GlobalPendingInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.GlobalPendingInboxTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_GlobalPendingInbox *GlobalPendingInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.GlobalPendingInboxTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_GlobalPendingInbox *GlobalPendingInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _GlobalPendingInbox.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.contract.Transact(opts, method, params...)
-}
-
-// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
-//
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "getERC20Balance", _tokenContract, _owner)
-	return *ret0, err
-}
-
-// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
-//
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetERC20Balance(&_GlobalPendingInbox.CallOpts, _tokenContract, _owner)
-}
-
-// GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
-//
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetERC20Balance(&_GlobalPendingInbox.CallOpts, _tokenContract, _owner)
-}
-
-// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
-//
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
-	var (
-		ret0 = new([]*big.Int)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "getERC721Tokens", _erc721, _owner)
-	return *ret0, err
-}
-
-// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
-//
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
-func (_GlobalPendingInbox *GlobalPendingInboxSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetERC721Tokens(&_GlobalPendingInbox.CallOpts, _erc721, _owner)
-}
-
-// GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
-//
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetERC721Tokens(&_GlobalPendingInbox.CallOpts, _erc721, _owner)
-}
-
-// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
-//
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "getEthBalance", _owner)
-	return *ret0, err
-}
-
-// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
-//
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetEthBalance(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
-//
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
-	return _GlobalPendingInbox.Contract.GetEthBalance(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
-//
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "hasERC721", _erc721, _owner, _tokenId)
-	return *ret0, err
-}
-
-// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
-//
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
-func (_GlobalPendingInbox *GlobalPendingInboxSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
-	return _GlobalPendingInbox.Contract.HasERC721(&_GlobalPendingInbox.CallOpts, _erc721, _owner, _tokenId)
-}
-
-// HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
-//
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
-	return _GlobalPendingInbox.Contract.HasERC721(&_GlobalPendingInbox.CallOpts, _erc721, _owner, _tokenId)
-}
-
-// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
-//
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "ownedERC20s", _owner)
-	return *ret0, err
-}
-
-// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
-//
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
-	return _GlobalPendingInbox.Contract.OwnedERC20s(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
-//
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
-	return _GlobalPendingInbox.Contract.OwnedERC20s(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
-//
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalPendingInbox.contract.Call(opts, out, "ownedERC721s", _owner)
-	return *ret0, err
-}
-
-// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
-//
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
-	return _GlobalPendingInbox.Contract.OwnedERC721s(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
-//
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
-func (_GlobalPendingInbox *GlobalPendingInboxCallerSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
-	return _GlobalPendingInbox.Contract.OwnedERC721s(&_GlobalPendingInbox.CallOpts, _owner)
-}
-
-// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
-//
-// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
-}
-
-// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
-//
-// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositERC20Message(&_GlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
-}
-
-// DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
-//
-// Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositERC20Message(&_GlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
-}
-
-// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
-//
-// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _id)
-}
-
-// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
-//
-// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositERC721Message(&_GlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _id)
-}
-
-// DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
-//
-// Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _id) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _id *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositERC721Message(&_GlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _id)
-}
-
-// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
-//
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
-}
-
-// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
-//
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositEthMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to)
-}
-
-// DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
-//
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.DepositEthMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to)
-}
-
-// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
-//
-// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
-}
-
-// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
-//
-// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.ForwardTransactionMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
-}
-
-// ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
-//
-// Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.ForwardTransactionMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) GetPending(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "getPending")
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxSession) GetPending() (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.GetPending(&_GlobalPendingInbox.TransactOpts)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) GetPending() (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.GetPending(&_GlobalPendingInbox.TransactOpts)
-}
-
-// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
-//
-// Solidity: function sendMessages(bytes _messages) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "sendMessages", _messages)
-}
-
-// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
-//
-// Solidity: function sendMessages(bytes _messages) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.SendMessages(&_GlobalPendingInbox.TransactOpts, _messages)
-}
-
-// SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
-//
-// Solidity: function sendMessages(bytes _messages) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.SendMessages(&_GlobalPendingInbox.TransactOpts, _messages)
-}
-
-// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
-//
-// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
-}
-
-// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
-//
-// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.SendTransactionMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
-}
-
-// SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
-//
-// Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.SendTransactionMessage(&_GlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
-}
-
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
-//
-// Solidity: function withdrawERC20(address _tokenContract) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) WithdrawERC20(opts *bind.TransactOpts, _tokenContract common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "withdrawERC20", _tokenContract)
-}
-
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
-//
-// Solidity: function withdrawERC20(address _tokenContract) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) WithdrawERC20(_tokenContract common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawERC20(&_GlobalPendingInbox.TransactOpts, _tokenContract)
-}
-
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xf4f3b200.
-//
-// Solidity: function withdrawERC20(address _tokenContract) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) WithdrawERC20(_tokenContract common.Address) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawERC20(&_GlobalPendingInbox.TransactOpts, _tokenContract)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) WithdrawERC721(opts *bind.TransactOpts, _erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "withdrawERC721", _erc721, _tokenId)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) WithdrawERC721(_erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawERC721(&_GlobalPendingInbox.TransactOpts, _erc721, _tokenId)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address _erc721, uint256 _tokenId) returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) WithdrawERC721(_erc721 common.Address, _tokenId *big.Int) (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawERC721(&_GlobalPendingInbox.TransactOpts, _erc721, _tokenId)
-}
-
-// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
-//
-// Solidity: function withdrawEth() returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactor) WithdrawEth(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _GlobalPendingInbox.contract.Transact(opts, "withdrawEth")
-}
-
-// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
-//
-// Solidity: function withdrawEth() returns()
-func (_GlobalPendingInbox *GlobalPendingInboxSession) WithdrawEth() (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawEth(&_GlobalPendingInbox.TransactOpts)
-}
-
-// WithdrawEth is a paid mutator transaction binding the contract method 0xa0ef91df.
-//
-// Solidity: function withdrawEth() returns()
-func (_GlobalPendingInbox *GlobalPendingInboxTransactorSession) WithdrawEth() (*types.Transaction, error) {
-	return _GlobalPendingInbox.Contract.WithdrawEth(&_GlobalPendingInbox.TransactOpts)
-}
-
-// GlobalPendingInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxERC20DepositMessageDeliveredIterator struct {
-	Event *GlobalPendingInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GlobalPendingInboxERC20DepositMessageDelivered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GlobalPendingInboxERC20DepositMessageDelivered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GlobalPendingInboxERC20DepositMessageDeliveredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GlobalPendingInboxERC20DepositMessageDeliveredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GlobalPendingInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxERC20DepositMessageDelivered struct {
-	Chain      common.Address
-	To         common.Address
-	From       common.Address
-	Erc20      common.Address
-	Value      *big.Int
-	MessageNum *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
-}
-
-// FilterERC20DepositMessageDelivered is a free log retrieval operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
-//
-// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalPendingInboxERC20DepositMessageDeliveredIterator, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxERC20DepositMessageDeliveredIterator{contract: _GlobalPendingInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
-}
-
-// WatchERC20DepositMessageDelivered is a free log subscription operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
-//
-// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalPendingInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GlobalPendingInboxERC20DepositMessageDelivered)
-				if err := _GlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseERC20DepositMessageDelivered is a log parse operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
-//
-// Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*GlobalPendingInboxERC20DepositMessageDelivered, error) {
-	event := new(GlobalPendingInboxERC20DepositMessageDelivered)
-	if err := _GlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// GlobalPendingInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxERC721DepositMessageDeliveredIterator struct {
-	Event *GlobalPendingInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GlobalPendingInboxERC721DepositMessageDelivered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GlobalPendingInboxERC721DepositMessageDelivered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GlobalPendingInboxERC721DepositMessageDeliveredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GlobalPendingInboxERC721DepositMessageDeliveredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GlobalPendingInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxERC721DepositMessageDelivered struct {
-	Chain      common.Address
-	To         common.Address
-	From       common.Address
-	Erc721     common.Address
-	Id         *big.Int
-	MessageNum *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
-}
-
-// FilterERC721DepositMessageDelivered is a free log retrieval operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
-//
-// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalPendingInboxERC721DepositMessageDeliveredIterator, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxERC721DepositMessageDeliveredIterator{contract: _GlobalPendingInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
-}
-
-// WatchERC721DepositMessageDelivered is a free log subscription operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
-//
-// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalPendingInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GlobalPendingInboxERC721DepositMessageDelivered)
-				if err := _GlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseERC721DepositMessageDelivered is a log parse operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
-//
-// Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*GlobalPendingInboxERC721DepositMessageDelivered, error) {
-	event := new(GlobalPendingInboxERC721DepositMessageDelivered)
-	if err := _GlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// GlobalPendingInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxEthDepositMessageDeliveredIterator struct {
-	Event *GlobalPendingInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GlobalPendingInboxEthDepositMessageDelivered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GlobalPendingInboxEthDepositMessageDelivered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GlobalPendingInboxEthDepositMessageDeliveredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GlobalPendingInboxEthDepositMessageDeliveredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GlobalPendingInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxEthDepositMessageDelivered struct {
-	Chain      common.Address
-	To         common.Address
-	From       common.Address
-	Value      *big.Int
-	MessageNum *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
-}
-
-// FilterEthDepositMessageDelivered is a free log retrieval operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
-//
-// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalPendingInboxEthDepositMessageDeliveredIterator, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxEthDepositMessageDeliveredIterator{contract: _GlobalPendingInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
-}
-
-// WatchEthDepositMessageDelivered is a free log subscription operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
-//
-// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalPendingInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GlobalPendingInboxEthDepositMessageDelivered)
-				if err := _GlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseEthDepositMessageDelivered is a log parse operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
-//
-// Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*GlobalPendingInboxEthDepositMessageDelivered, error) {
-	event := new(GlobalPendingInboxEthDepositMessageDelivered)
-	if err := _GlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-// GlobalPendingInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxTransactionMessageDeliveredIterator struct {
-	Event *GlobalPendingInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GlobalPendingInboxTransactionMessageDelivered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GlobalPendingInboxTransactionMessageDelivered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GlobalPendingInboxTransactionMessageDeliveredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GlobalPendingInboxTransactionMessageDeliveredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GlobalPendingInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the GlobalPendingInbox contract.
-type GlobalPendingInboxTransactionMessageDelivered struct {
-	Chain     common.Address
-	To        common.Address
-	From      common.Address
-	SeqNumber *big.Int
-	Value     *big.Int
-	Data      []byte
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterTransactionMessageDelivered is a free log retrieval operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
-//
-// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*GlobalPendingInboxTransactionMessageDeliveredIterator, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GlobalPendingInboxTransactionMessageDeliveredIterator{contract: _GlobalPendingInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
-}
-
-// WatchTransactionMessageDelivered is a free log subscription operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
-//
-// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *GlobalPendingInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
-
-	var chainRule []interface{}
-	for _, chainItem := range chain {
-		chainRule = append(chainRule, chainItem)
-	}
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var fromRule []interface{}
-	for _, fromItem := range from {
-		fromRule = append(fromRule, fromItem)
-	}
-
-	logs, sub, err := _GlobalPendingInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GlobalPendingInboxTransactionMessageDelivered)
-				if err := _GlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseTransactionMessageDelivered is a log parse operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
-//
-// Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_GlobalPendingInbox *GlobalPendingInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*GlobalPendingInboxTransactionMessageDelivered, error) {
-	event := new(GlobalPendingInboxTransactionMessageDelivered)
-	if err := _GlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
-		return nil, err
-	}
-	return event, nil
 }
 
 // IERC165ABI is the input ABI used to generate the binding from.
@@ -3765,118 +3774,118 @@ func (_IERC721 *IERC721Filterer) ParseTransfer(log types.Log) (*IERC721Transfer,
 	return event, nil
 }
 
-// IGlobalPendingInboxABI is the input ABI used to generate the binding from.
-const IGlobalPendingInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getPending\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// IGlobalInboxABI is the input ABI used to generate the binding from.
+const IGlobalInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc20\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC20DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"erc721\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"ERC721DepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"messageNum\",\"type\":\"uint256\"}],\"name\":\"EthDepositMessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"chain\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"seqNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TransactionMessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc20\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC20Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_erc721\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"depositERC721Message\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"depositEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chain\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_seqNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendTransactionMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// IGlobalPendingInboxFuncSigs maps the 4-byte function signature to its string representation.
-var IGlobalPendingInboxFuncSigs = map[string]string{
+// IGlobalInboxFuncSigs maps the 4-byte function signature to its string representation.
+var IGlobalInboxFuncSigs = map[string]string{
 	"bca22b76": "depositERC20Message(address,address,address,uint256)",
 	"8b7010aa": "depositERC721Message(address,address,address,uint256)",
 	"5bd21290": "depositEthMessage(address,address)",
 	"8bef8df0": "forwardTransactionMessage(address,address,uint256,uint256,bytes,bytes)",
-	"11ae9ed2": "getPending()",
+	"02201681": "getInbox(address)",
 	"e4eb8c63": "sendMessages(bytes)",
 	"8f5ed73e": "sendTransactionMessage(address,address,uint256,uint256,bytes)",
 }
 
-// IGlobalPendingInbox is an auto generated Go binding around an Ethereum contract.
-type IGlobalPendingInbox struct {
-	IGlobalPendingInboxCaller     // Read-only binding to the contract
-	IGlobalPendingInboxTransactor // Write-only binding to the contract
-	IGlobalPendingInboxFilterer   // Log filterer for contract events
+// IGlobalInbox is an auto generated Go binding around an Ethereum contract.
+type IGlobalInbox struct {
+	IGlobalInboxCaller     // Read-only binding to the contract
+	IGlobalInboxTransactor // Write-only binding to the contract
+	IGlobalInboxFilterer   // Log filterer for contract events
 }
 
-// IGlobalPendingInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxCaller struct {
+// IGlobalInboxCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IGlobalInboxCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxTransactor struct {
+// IGlobalInboxTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IGlobalInboxTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IGlobalPendingInboxFilterer struct {
+// IGlobalInboxFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IGlobalInboxFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGlobalPendingInboxSession is an auto generated Go binding around an Ethereum contract,
+// IGlobalInboxSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type IGlobalPendingInboxSession struct {
-	Contract     *IGlobalPendingInbox // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts        // Call options to use throughout this session
-	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+type IGlobalInboxSession struct {
+	Contract     *IGlobalInbox     // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IGlobalPendingInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// IGlobalInboxCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type IGlobalPendingInboxCallerSession struct {
-	Contract *IGlobalPendingInboxCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts              // Call options to use throughout this session
+type IGlobalInboxCallerSession struct {
+	Contract *IGlobalInboxCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// IGlobalPendingInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// IGlobalInboxTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type IGlobalPendingInboxTransactorSession struct {
-	Contract     *IGlobalPendingInboxTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
+type IGlobalInboxTransactorSession struct {
+	Contract     *IGlobalInboxTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// IGlobalPendingInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
-type IGlobalPendingInboxRaw struct {
-	Contract *IGlobalPendingInbox // Generic contract binding to access the raw methods on
+// IGlobalInboxRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IGlobalInboxRaw struct {
+	Contract *IGlobalInbox // Generic contract binding to access the raw methods on
 }
 
-// IGlobalPendingInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxCallerRaw struct {
-	Contract *IGlobalPendingInboxCaller // Generic read-only contract binding to access the raw methods on
+// IGlobalInboxCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IGlobalInboxCallerRaw struct {
+	Contract *IGlobalInboxCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IGlobalPendingInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type IGlobalPendingInboxTransactorRaw struct {
-	Contract *IGlobalPendingInboxTransactor // Generic write-only contract binding to access the raw methods on
+// IGlobalInboxTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IGlobalInboxTransactorRaw struct {
+	Contract *IGlobalInboxTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewIGlobalPendingInbox creates a new instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInbox(address common.Address, backend bind.ContractBackend) (*IGlobalPendingInbox, error) {
-	contract, err := bindIGlobalPendingInbox(address, backend, backend, backend)
+// NewIGlobalInbox creates a new instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInbox(address common.Address, backend bind.ContractBackend) (*IGlobalInbox, error) {
+	contract, err := bindIGlobalInbox(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInbox{IGlobalPendingInboxCaller: IGlobalPendingInboxCaller{contract: contract}, IGlobalPendingInboxTransactor: IGlobalPendingInboxTransactor{contract: contract}, IGlobalPendingInboxFilterer: IGlobalPendingInboxFilterer{contract: contract}}, nil
+	return &IGlobalInbox{IGlobalInboxCaller: IGlobalInboxCaller{contract: contract}, IGlobalInboxTransactor: IGlobalInboxTransactor{contract: contract}, IGlobalInboxFilterer: IGlobalInboxFilterer{contract: contract}}, nil
 }
 
-// NewIGlobalPendingInboxCaller creates a new read-only instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxCaller(address common.Address, caller bind.ContractCaller) (*IGlobalPendingInboxCaller, error) {
-	contract, err := bindIGlobalPendingInbox(address, caller, nil, nil)
+// NewIGlobalInboxCaller creates a new read-only instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxCaller(address common.Address, caller bind.ContractCaller) (*IGlobalInboxCaller, error) {
+	contract, err := bindIGlobalInbox(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxCaller{contract: contract}, nil
+	return &IGlobalInboxCaller{contract: contract}, nil
 }
 
-// NewIGlobalPendingInboxTransactor creates a new write-only instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*IGlobalPendingInboxTransactor, error) {
-	contract, err := bindIGlobalPendingInbox(address, nil, transactor, nil)
+// NewIGlobalInboxTransactor creates a new write-only instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxTransactor(address common.Address, transactor bind.ContractTransactor) (*IGlobalInboxTransactor, error) {
+	contract, err := bindIGlobalInbox(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxTransactor{contract: contract}, nil
+	return &IGlobalInboxTransactor{contract: contract}, nil
 }
 
-// NewIGlobalPendingInboxFilterer creates a new log filterer instance of IGlobalPendingInbox, bound to a specific deployed contract.
-func NewIGlobalPendingInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*IGlobalPendingInboxFilterer, error) {
-	contract, err := bindIGlobalPendingInbox(address, nil, nil, filterer)
+// NewIGlobalInboxFilterer creates a new log filterer instance of IGlobalInbox, bound to a specific deployed contract.
+func NewIGlobalInboxFilterer(address common.Address, filterer bind.ContractFilterer) (*IGlobalInboxFilterer, error) {
+	contract, err := bindIGlobalInbox(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxFilterer{contract: contract}, nil
+	return &IGlobalInboxFilterer{contract: contract}, nil
 }
 
-// bindIGlobalPendingInbox binds a generic wrapper to an already deployed contract.
-func bindIGlobalPendingInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(IGlobalPendingInboxABI))
+// bindIGlobalInbox binds a generic wrapper to an already deployed contract.
+func bindIGlobalInbox(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IGlobalInboxABI))
 	if err != nil {
 		return nil, err
 	}
@@ -3887,190 +3896,199 @@ func bindIGlobalPendingInbox(address common.Address, caller bind.ContractCaller,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxCaller.contract.Call(opts, result, method, params...)
+func (_IGlobalInbox *IGlobalInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IGlobalInbox.Contract.IGlobalInboxCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxTransactor.contract.Transfer(opts)
+func (_IGlobalInbox *IGlobalInboxRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.IGlobalInboxTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IGlobalPendingInbox *IGlobalPendingInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.IGlobalPendingInboxTransactor.contract.Transact(opts, method, params...)
+func (_IGlobalInbox *IGlobalInboxRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.IGlobalInboxTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IGlobalPendingInbox *IGlobalPendingInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IGlobalPendingInbox.Contract.contract.Call(opts, result, method, params...)
+func (_IGlobalInbox *IGlobalInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IGlobalInbox.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.contract.Transfer(opts)
+func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.contract.Transact(opts, method, params...)
+func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
+	var (
+		ret0 = new([32]byte)
+		ret1 = new(*big.Int)
+	)
+	out := &[]interface{}{
+		ret0,
+		ret1,
+	}
+	err := _IGlobalInbox.contract.Call(opts, out, "getInbox", account)
+	return *ret0, *ret1, err
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
+}
+
+// GetInbox is a free data retrieval call binding the contract method 0x02201681.
+//
+// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+func (_IGlobalInbox *IGlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
+	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositERC20Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositERC20Message", _chain, _to, _erc20, _value)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC20Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC20Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
 }
 
 // DepositERC20Message is a paid mutator transaction binding the contract method 0xbca22b76.
 //
 // Solidity: function depositERC20Message(address _chain, address _to, address _erc20, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC20Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc20, _value)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC20Message(_chain common.Address, _to common.Address, _erc20 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC20Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc20, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositERC721Message(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositERC721Message", _chain, _to, _erc721, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC721Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC721Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc721, _value)
 }
 
 // DepositERC721Message is a paid mutator transaction binding the contract method 0x8b7010aa.
 //
 // Solidity: function depositERC721Message(address _chain, address _to, address _erc721, uint256 _value) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositERC721Message(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _erc721, _value)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC721Message(_chain common.Address, _to common.Address, _erc721 common.Address, _value *big.Int) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositERC721Message(&_IGlobalInbox.TransactOpts, _chain, _to, _erc721, _value)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
+func (_IGlobalInbox *IGlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositEthMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to)
+func (_IGlobalInbox *IGlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
 // Solidity: function depositEthMessage(address _chain, address _to) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.DepositEthMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
+func (_IGlobalInbox *IGlobalInboxTransactor) ForwardTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "forwardTransactionMessage", _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.ForwardTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
+func (_IGlobalInbox *IGlobalInboxSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.ForwardTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // ForwardTransactionMessage is a paid mutator transaction binding the contract method 0x8bef8df0.
 //
 // Solidity: function forwardTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data, bytes _signature) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.ForwardTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) GetPending(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "getPending")
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) GetPending() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
-}
-
-// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
-//
-// Solidity: function getPending() returns(bytes32, uint256)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) GetPending() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte, _signature []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.ForwardTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data, _signature)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "sendMessages", _messages)
+func (_IGlobalInbox *IGlobalInboxTransactor) SendMessages(opts *bind.TransactOpts, _messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "sendMessages", _messages)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendMessages(&_IGlobalPendingInbox.TransactOpts, _messages)
+func (_IGlobalInbox *IGlobalInboxSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendMessages(&_IGlobalInbox.TransactOpts, _messages)
 }
 
 // SendMessages is a paid mutator transaction binding the contract method 0xe4eb8c63.
 //
 // Solidity: function sendMessages(bytes _messages) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendMessages(&_IGlobalPendingInbox.TransactOpts, _messages)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) SendMessages(_messages []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendMessages(&_IGlobalInbox.TransactOpts, _messages)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxTransactor) SendTransactionMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.contract.Transact(opts, "sendTransactionMessage", _chain, _to, _seqNumber, _value, _data)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
 }
 
 // SendTransactionMessage is a paid mutator transaction binding the contract method 0x8f5ed73e.
 //
 // Solidity: function sendTransactionMessage(address _chain, address _to, uint256 _seqNumber, uint256 _value, bytes _data) returns()
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.SendTransactionMessage(&_IGlobalPendingInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
+func (_IGlobalInbox *IGlobalInboxTransactorSession) SendTransactionMessage(_chain common.Address, _to common.Address, _seqNumber *big.Int, _value *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IGlobalInbox.Contract.SendTransactionMessage(&_IGlobalInbox.TransactOpts, _chain, _to, _seqNumber, _value, _data)
 }
 
-// IGlobalPendingInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC20DepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxERC20DepositMessageDeliveredIterator is returned from FilterERC20DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC20DepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxERC20DepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxERC20DepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -4084,7 +4102,7 @@ type IGlobalPendingInboxERC20DepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -4093,7 +4111,7 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxERC20DepositMessageDelivered)
+			it.Event = new(IGlobalInboxERC20DepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -4108,7 +4126,7 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxERC20DepositMessageDelivered)
+		it.Event = new(IGlobalInboxERC20DepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -4124,19 +4142,19 @@ func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxERC20DepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxERC20DepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC20DepositMessageDelivered struct {
+// IGlobalInboxERC20DepositMessageDelivered represents a ERC20DepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxERC20DepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -4149,7 +4167,7 @@ type IGlobalPendingInboxERC20DepositMessageDelivered struct {
 // FilterERC20DepositMessageDelivered is a free log retrieval operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxERC20DepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterERC20DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxERC20DepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4164,17 +4182,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC20DepositMessa
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxERC20DepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxERC20DepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "ERC20DepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchERC20DepositMessageDelivered is a free log subscription operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchERC20DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxERC20DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4189,7 +4207,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "ERC20DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -4199,8 +4217,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxERC20DepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxERC20DepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -4224,17 +4242,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC20DepositMessag
 // ParseERC20DepositMessageDelivered is a log parse operation binding the contract event 0xb13d04085b4a9f87fecfccf9b72081bb8a273498d6b08b4bccf2940d555b5e60.
 //
 // Solidity: event ERC20DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc20, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*IGlobalPendingInboxERC20DepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxERC20DepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseERC20DepositMessageDelivered(log types.Log) (*IGlobalInboxERC20DepositMessageDelivered, error) {
+	event := new(IGlobalInboxERC20DepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "ERC20DepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC721DepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxERC721DepositMessageDeliveredIterator is returned from FilterERC721DepositMessageDelivered and is used to iterate over the raw logs and unpacked data for ERC721DepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxERC721DepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxERC721DepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -4248,7 +4266,7 @@ type IGlobalPendingInboxERC721DepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -4257,7 +4275,7 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxERC721DepositMessageDelivered)
+			it.Event = new(IGlobalInboxERC721DepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -4272,7 +4290,7 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxERC721DepositMessageDelivered)
+		it.Event = new(IGlobalInboxERC721DepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -4288,19 +4306,19 @@ func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxERC721DepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxERC721DepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxERC721DepositMessageDelivered struct {
+// IGlobalInboxERC721DepositMessageDelivered represents a ERC721DepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxERC721DepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -4313,7 +4331,7 @@ type IGlobalPendingInboxERC721DepositMessageDelivered struct {
 // FilterERC721DepositMessageDelivered is a free log retrieval operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxERC721DepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterERC721DepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxERC721DepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4328,17 +4346,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterERC721DepositMess
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxERC721DepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxERC721DepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "ERC721DepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchERC721DepositMessageDelivered is a free log subscription operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchERC721DepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxERC721DepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4353,7 +4371,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "ERC721DepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -4363,8 +4381,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxERC721DepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxERC721DepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -4388,17 +4406,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchERC721DepositMessa
 // ParseERC721DepositMessageDelivered is a log parse operation binding the contract event 0x40baf11a4a4a4be2a155dbf303fbaec6fabd52e267268bd7e3de4b4ed8a2e095.
 //
 // Solidity: event ERC721DepositMessageDelivered(address indexed chain, address indexed to, address indexed from, address erc721, uint256 id, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*IGlobalPendingInboxERC721DepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxERC721DepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseERC721DepositMessageDelivered(log types.Log) (*IGlobalInboxERC721DepositMessageDelivered, error) {
+	event := new(IGlobalInboxERC721DepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "ERC721DepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxEthDepositMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxEthDepositMessageDeliveredIterator is returned from FilterEthDepositMessageDelivered and is used to iterate over the raw logs and unpacked data for EthDepositMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxEthDepositMessageDeliveredIterator struct {
+	Event *IGlobalInboxEthDepositMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -4412,7 +4430,7 @@ type IGlobalPendingInboxEthDepositMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -4421,7 +4439,7 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxEthDepositMessageDelivered)
+			it.Event = new(IGlobalInboxEthDepositMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -4436,7 +4454,7 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxEthDepositMessageDelivered)
+		it.Event = new(IGlobalInboxEthDepositMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -4452,19 +4470,19 @@ func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxEthDepositMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxEthDepositMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxEthDepositMessageDelivered struct {
+// IGlobalInboxEthDepositMessageDelivered represents a EthDepositMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxEthDepositMessageDelivered struct {
 	Chain      common.Address
 	To         common.Address
 	From       common.Address
@@ -4476,7 +4494,7 @@ type IGlobalPendingInboxEthDepositMessageDelivered struct {
 // FilterEthDepositMessageDelivered is a free log retrieval operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxEthDepositMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterEthDepositMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxEthDepositMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4491,17 +4509,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterEthDepositMessage
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxEthDepositMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxEthDepositMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "EthDepositMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchEthDepositMessageDelivered is a free log subscription operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchEthDepositMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxEthDepositMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4516,7 +4534,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "EthDepositMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -4526,8 +4544,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxEthDepositMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxEthDepositMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -4551,17 +4569,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchEthDepositMessageD
 // ParseEthDepositMessageDelivered is a log parse operation binding the contract event 0xfd0d0553177fec183128f048fbde54554a3a67302f7ebd7f735215a358290705.
 //
 // Solidity: event EthDepositMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 value, uint256 messageNum)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*IGlobalPendingInboxEthDepositMessageDelivered, error) {
-	event := new(IGlobalPendingInboxEthDepositMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseEthDepositMessageDelivered(log types.Log) (*IGlobalInboxEthDepositMessageDelivered, error) {
+	event := new(IGlobalInboxEthDepositMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "EthDepositMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
 }
 
-// IGlobalPendingInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxTransactionMessageDeliveredIterator struct {
-	Event *IGlobalPendingInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
+// IGlobalInboxTransactionMessageDeliveredIterator is returned from FilterTransactionMessageDelivered and is used to iterate over the raw logs and unpacked data for TransactionMessageDelivered events raised by the IGlobalInbox contract.
+type IGlobalInboxTransactionMessageDeliveredIterator struct {
+	Event *IGlobalInboxTransactionMessageDelivered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -4575,7 +4593,7 @@ type IGlobalPendingInboxTransactionMessageDeliveredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -4584,7 +4602,7 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IGlobalPendingInboxTransactionMessageDelivered)
+			it.Event = new(IGlobalInboxTransactionMessageDelivered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -4599,7 +4617,7 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IGlobalPendingInboxTransactionMessageDelivered)
+		it.Event = new(IGlobalInboxTransactionMessageDelivered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -4615,19 +4633,19 @@ func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Error() error {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IGlobalPendingInboxTransactionMessageDeliveredIterator) Close() error {
+func (it *IGlobalInboxTransactionMessageDeliveredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IGlobalPendingInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the IGlobalPendingInbox contract.
-type IGlobalPendingInboxTransactionMessageDelivered struct {
+// IGlobalInboxTransactionMessageDelivered represents a TransactionMessageDelivered event raised by the IGlobalInbox contract.
+type IGlobalInboxTransactionMessageDelivered struct {
 	Chain     common.Address
 	To        common.Address
 	From      common.Address
@@ -4640,7 +4658,7 @@ type IGlobalPendingInboxTransactionMessageDelivered struct {
 // FilterTransactionMessageDelivered is a free log retrieval operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalPendingInboxTransactionMessageDeliveredIterator, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) FilterTransactionMessageDelivered(opts *bind.FilterOpts, chain []common.Address, to []common.Address, from []common.Address) (*IGlobalInboxTransactionMessageDeliveredIterator, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4655,17 +4673,17 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) FilterTransactionMessag
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.FilterLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
-	return &IGlobalPendingInboxTransactionMessageDeliveredIterator{contract: _IGlobalPendingInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
+	return &IGlobalInboxTransactionMessageDeliveredIterator{contract: _IGlobalInbox.contract, event: "TransactionMessageDelivered", logs: logs, sub: sub}, nil
 }
 
 // WatchTransactionMessageDelivered is a free log subscription operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalPendingInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
+func (_IGlobalInbox *IGlobalInboxFilterer) WatchTransactionMessageDelivered(opts *bind.WatchOpts, sink chan<- *IGlobalInboxTransactionMessageDelivered, chain []common.Address, to []common.Address, from []common.Address) (event.Subscription, error) {
 
 	var chainRule []interface{}
 	for _, chainItem := range chain {
@@ -4680,7 +4698,7 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _IGlobalPendingInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
+	logs, sub, err := _IGlobalInbox.contract.WatchLogs(opts, "TransactionMessageDelivered", chainRule, toRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -4690,8 +4708,8 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IGlobalPendingInboxTransactionMessageDelivered)
-				if err := _IGlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+				event := new(IGlobalInboxTransactionMessageDelivered)
+				if err := _IGlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -4715,9 +4733,9 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) WatchTransactionMessage
 // ParseTransactionMessageDelivered is a log parse operation binding the contract event 0xcf612c95e8993eca9c6e0be96b26b47022996db601dc12b4cf68ec37829d87b3.
 //
 // Solidity: event TransactionMessageDelivered(address indexed chain, address indexed to, address indexed from, uint256 seqNumber, uint256 value, bytes data)
-func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*IGlobalPendingInboxTransactionMessageDelivered, error) {
-	event := new(IGlobalPendingInboxTransactionMessageDelivered)
-	if err := _IGlobalPendingInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
+func (_IGlobalInbox *IGlobalInboxFilterer) ParseTransactionMessageDelivered(log types.Log) (*IGlobalInboxTransactionMessageDelivered, error) {
+	event := new(IGlobalInboxTransactionMessageDelivered)
+	if err := _IGlobalInbox.contract.UnpackLog(event, "TransactionMessageDelivered", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -4889,7 +4907,7 @@ func (_Messages *MessagesTransactorRaw) Transact(opts *bind.TransactOpts, method
 const ProtocolABI = "[]"
 
 // ProtocolBin is the compiled bytecode used for deploying new contracts.
-var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158201860b5981bb2b288ee04587ca5b68c606f25ce84aaa06d830f38ceeba364c1b564736f6c634300050d0032"
+var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820f5d3d62f76f9016f7d90add090a37f8ed493edae0dd09786a7ef111e5f082d3264736f6c634300050d0032"
 
 // DeployProtocol deploys a new Ethereum contract, binding an instance of Protocol to it.
 func DeployProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Protocol, error) {

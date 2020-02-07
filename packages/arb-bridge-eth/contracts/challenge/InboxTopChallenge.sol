@@ -22,7 +22,7 @@ import "./ChallengeUtils.sol";
 import "../arch/Protocol.sol";
 
 
-contract PendingTopChallenge is BisectionChallenge {
+contract InboxTopChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
@@ -45,7 +45,7 @@ contract PendingTopChallenge is BisectionChallenge {
         uint256 bisectionCount = _chainHashes.length - 1;
 
         requireMatchesPrevState(
-            ChallengeUtils.pendingTopHash(
+            ChallengeUtils.inboxTopHash(
                 _chainHashes[0],
                 _chainHashes[bisectionCount],
                 _chainLength
@@ -54,13 +54,13 @@ contract PendingTopChallenge is BisectionChallenge {
 
         require(_chainLength > 1, "Can't bisect chain of less than 2");
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = ChallengeUtils.pendingTopHash(
+        hashes[0] = ChallengeUtils.inboxTopHash(
             _chainHashes[0],
             _chainHashes[1],
             firstSegmentSize(_chainLength, bisectionCount)
         );
         for (uint256 i = 1; i < bisectionCount; i++) {
-            hashes[i] = ChallengeUtils.pendingTopHash(
+            hashes[i] = ChallengeUtils.inboxTopHash(
                 _chainHashes[i],
                 _chainHashes[i + 1],
                 otherSegmentSize(_chainLength, bisectionCount)
@@ -78,9 +78,9 @@ contract PendingTopChallenge is BisectionChallenge {
 
     function oneStepProof(bytes32 _lowerHash, bytes32 _value) public asserterAction {
         requireMatchesPrevState(
-            ChallengeUtils.pendingTopHash(
+            ChallengeUtils.inboxTopHash(
                 _lowerHash,
-                Protocol.addMessageToPending(_lowerHash, _value),
+                Protocol.addMessageToInbox(_lowerHash, _value),
                 1
             )
         );
@@ -90,10 +90,10 @@ contract PendingTopChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_PENDING_TOP_TYPE);
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_INBOX_TOP_TYPE);
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_PENDING_TOP_TYPE);
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_INBOX_TOP_TYPE);
     }
 }

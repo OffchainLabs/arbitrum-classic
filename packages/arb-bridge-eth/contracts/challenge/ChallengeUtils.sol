@@ -19,7 +19,7 @@ pragma solidity ^0.5.3;
 
 library ChallengeUtils {
 
-    function pendingTopHash(
+    function inboxTopHash(
         bytes32 _lowerHash,
         bytes32 _topHash,
         uint256 _chainLength
