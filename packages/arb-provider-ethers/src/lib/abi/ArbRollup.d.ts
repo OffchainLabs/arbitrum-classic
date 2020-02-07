@@ -8,6 +8,8 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbRollupInterface extends Interface {
     functions: {
+        VERSION: TypedFunctionDescription<{ encode([]: []): string }>;
+
         challengeFactory: TypedFunctionDescription<{ encode([]: []): string }>;
 
         getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -250,6 +252,8 @@ export class ArbRollup extends Contract {
     interface: ArbRollupInterface;
 
     functions: {
+        VERSION(): Promise<string>;
+
         challengeFactory(): Promise<string>;
 
         getStakeRequired(): Promise<BigNumber>;
@@ -386,6 +390,8 @@ export class ArbRollup extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
     };
+
+    VERSION(): Promise<string>;
 
     challengeFactory(): Promise<string>;
 
@@ -551,6 +557,8 @@ export class ArbRollup extends Contract {
     };
 
     estimate: {
+        VERSION(): Promise<BigNumber>;
+
         challengeFactory(): Promise<BigNumber>;
 
         getStakeRequired(): Promise<BigNumber>;
