@@ -34,7 +34,7 @@ type ArbClient interface {
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
-	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
+	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
@@ -45,9 +45,9 @@ type ArbAuthClient interface {
 	Address() common.Address
 	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
-	NewPendingInbox(address common.Address) (PendingInbox, error)
+	NewGlobalInbox(address common.Address) (GlobalInbox, error)
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
-	NewPendingTopChallenge(address common.Address) (PendingTopChallenge, error)
+	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
 }

@@ -9,7 +9,7 @@ yarn workspace contract-templates build
 typechain \
     --target=ethers \
     --outDir src/lib/abi \
-    '../arb-bridge-eth/build/contracts/{ArbRollup,GlobalPendingInbox}.json'
+    '../arb-bridge-eth/build/contracts/{ArbRollup,GlobalInbox}.json'
 
 typechain \
     --target=ethers \

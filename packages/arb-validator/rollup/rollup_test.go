@@ -189,14 +189,14 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		LastLogHash:      common.Hash{},
 	}
 	assertionClaim := &valprotocol.AssertionClaim{
-		AfterPendingTop:       chain.pendingInbox.GetTopHash(),
+		AfterInboxTop:         chain.inbox.GetTopHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 		AssertionStub:         assertionStub,
 	}
 	disputableNode := valprotocol.NewDisputableNode(
 		assertionParams,
 		assertionClaim,
-		chain.pendingInbox.GetTopHash(),
+		chain.inbox.GetTopHash(),
 		big.NewInt(0),
 	)
 

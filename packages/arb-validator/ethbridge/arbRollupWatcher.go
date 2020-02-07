@@ -60,7 +60,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	parsedInbox, err := abi.JSON(strings.NewReader(rollup.IGlobalPendingInboxABI))
+	parsedInbox, err := abi.JSON(strings.NewReader(rollup.IGlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
@@ -82,8 +82,8 @@ func init() {
 }
 
 type ethRollupWatcher struct {
-	ArbRollup          *rollup.ArbRollup
-	GlobalPendingInbox *rollup.IGlobalPendingInbox
+	ArbRollup   *rollup.ArbRollup
+	GlobalInbox *rollup.IGlobalInbox
 
 	rollupAddress ethcommon.Address
 	inboxAddress  ethcommon.Address
@@ -96,24 +96,24 @@ func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client)
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
 
-	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
+	globalInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
 		Pending: false,
 		Context: context.Background(),
 	})
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
+		return nil, errors2.Wrap(err, "Failed to get GlobalInbox address")
 	}
-	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
+	globalInboxContract, err := rollup.NewIGlobalInbox(globalInboxAddress, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	}
 
 	return &ethRollupWatcher{
-		ArbRollup:          arbitrumRollupContract,
-		GlobalPendingInbox: globalPendingContract,
-		rollupAddress:      rollupAddress,
-		inboxAddress:       globalPendingInboxAddress,
-		client:             client,
+		ArbRollup:     arbitrumRollupContract,
+		GlobalInbox:   globalInboxContract,
+		rollupAddress: rollupAddress,
+		inboxAddress:  globalInboxAddress,
+		client:        client,
 	}, nil
 }
 
@@ -178,7 +178,7 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 
 func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
-		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
+		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +201,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
-		val, err := vm.GlobalPendingInbox.ParseEthDepositMessageDelivered(ethLog)
+		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +222,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
-		val, err := vm.GlobalPendingInbox.ParseERC20DepositMessageDelivered(ethLog)
+		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 		}, nil
 
 	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
-		val, err := vm.GlobalPendingInbox.ParseERC721DepositMessageDelivered(ethLog)
+		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
@@ -349,7 +349,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 				ImportedMessageCount: eventVal.ImportedMessageCount,
 			},
 			Claim: &valprotocol.AssertionClaim{
-				AfterPendingTop:       eventVal.Fields[2],
+				AfterInboxTop:         eventVal.Fields[2],
 				ImportedMessagesSlice: eventVal.Fields[3],
 				AssertionStub: &valprotocol.ExecutionAssertionStub{
 					AfterHash:        eventVal.Fields[4],
@@ -361,8 +361,8 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 					LastLogHash:      eventVal.Fields[6],
 				},
 			},
-			MaxPendingTop:   eventVal.Fields[1],
-			MaxPendingCount: eventVal.PendingCount,
+			MaxInboxTop:   eventVal.Fields[1],
+			MaxInboxCount: eventVal.InboxCount,
 		}, nil
 	} else if ethLog.Topics[0] == rollupConfirmedID {
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
