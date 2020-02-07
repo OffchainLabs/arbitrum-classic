@@ -20,6 +20,14 @@ message ExecutionAssertionStubBuf {
     common.HashBuf lastLogHash = 7;
 }
 
+message ChainParamsBuf {
+    common.BigIntegerBuf stakeRequirement = 1;
+    common.TimeTicksBuf gracePeriod = 2;
+    uint64 maxExecutionSteps = 3;
+    uint64 maxTimeBoundsWidth = 4;
+    uint64 ArbGasSpeedLimitPerTick = 5;
+}
+
 message TokenTypeBuf {
     bytes value = 1;
 }
@@ -31,3 +39,27 @@ message MessageBuf {
     common.AddressBuf sender = 4;
 }
 
+message VMProtoDataBuf {
+    common.HashBuf machineHash = 1;
+    common.HashBuf pendingTop = 2;
+    common.BigIntegerBuf pendingCount = 3;
+}
+
+message AssertionParamsBuf {
+    uint64 numSteps = 1;
+    protocol.TimeBoundsBlocksBuf timeBounds = 2;
+    common.BigIntegerBuf importedMessageCount = 3;
+}
+
+message AssertionClaimBuf {
+    common.HashBuf afterPendingTop = 1;
+    common.HashBuf importedMessagesSlice = 2;
+    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
+}
+
+message DisputableNodeBuf {
+    AssertionParamsBuf assertionParams = 1;
+    AssertionClaimBuf assertionClaim = 2;
+    common.HashBuf maxPendingTop = 3;
+    common.BigIntegerBuf maxPendingCount = 4;
+}

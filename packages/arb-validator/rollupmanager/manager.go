@@ -26,8 +26,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -36,6 +34,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+)
+
+const (
+	ValidEthBridgeVersion = "1"
 )
 
 type Manager struct {
@@ -99,6 +101,32 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
+			ethbridgeVersion, err := watcher.GetVersion(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if ethbridgeVersion != ValidEthBridgeVersion {
+				log.Fatalf("VM has EthBridge version %v, but validator implements version %v."+
+					" To find a validator version which supports your EthBridge, visit "+
+					"https://offchainlabs.com/ethbridge-version-support",
+					ethbridgeVersion, ValidEthBridgeVersion)
+			}
+
+			blockId, initialVMHash, err := watcher.GetCreationInfo(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			initialMachine, err := checkpointer.GetInitialMachine()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if initialMachine.Hash() != initialVMHash {
+				log.Fatal("ArbChain was initialized with different VM")
+			}
+
 			if checkpointer.HasCheckpointedState() {
 				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
 				if err != nil {
@@ -114,10 +142,6 @@ func CreateManagerAdvanced(
 				}
 			} else {
 				params, err := watcher.GetParams(ctx)
-				if err != nil {
-					log.Fatal(err)
-				}
-				blockId, err := watcher.GetCreationHeight(ctx)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -246,8 +270,8 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	return ret.ExecutionAssertion, ret.uint64
 }
 
-func (man *Manager) CurrentBlockId() *structures.BlockId {
-	retChan := make(chan *structures.BlockId, 1)
+func (man *Manager) CurrentBlockId() *common.BlockId {
+	retChan := make(chan *common.BlockId, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		retChan <- chain.CurrentBlockId()
 	}

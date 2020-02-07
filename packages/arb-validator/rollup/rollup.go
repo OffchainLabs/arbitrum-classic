@@ -46,7 +46,7 @@ type ChainObserver struct {
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockId       *structures.BlockId
+	latestBlockId       *common.BlockId
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
@@ -56,9 +56,9 @@ type ChainObserver struct {
 func NewChain(
 	rollupAddr common.Address,
 	checkpointer checkpointing.RollupCheckpointer,
-	vmParams structures.ChainParams,
+	vmParams valprotocol.ChainParams,
 	updateOpinion bool,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -87,6 +87,11 @@ func NewChain(
 }
 
 func (chain *ChainObserver) Start(ctx context.Context) {
+	chain.nodeGraph.challenges.forall(func(c *Challenge) {
+		for _, listener := range chain.listeners {
+			listener.ResumedChallenge(ctx, chain, c)
+		}
+	})
 	chain.startCleanupThread(ctx)
 	chain.startConfirmThread(ctx)
 
@@ -107,7 +112,7 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
@@ -119,14 +124,14 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx checkpointing.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
 
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
-	restoreCtx structures.RestoreContext,
+	restoreCtx checkpointing.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
@@ -183,11 +188,11 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	}
 }
 
-func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
+func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := structures.NewCheckpointContextImpl()
+	ckptCtx := checkpointing.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +200,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
 }
 
-func (chain *ChainObserver) CurrentBlockId() *structures.BlockId {
+func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
 	blockId := chain.latestBlockId
 	chain.RUnlock()
@@ -259,19 +264,22 @@ func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMov
 func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
+	_, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
+	challenge := &Challenge{
+		blockId:      ev.BlockId,
+		logIndex:     ev.LogIndex,
+		asserter:     ev.Asserter,
+		challenger:   ev.Challenger,
+		contract:     ev.ChallengeContract,
+		conflictNode: challengerAncestor,
+	}
 
-	chain.nodeGraph.NewChallenge(
-		ev.ChallengeContract,
-		ev.Asserter,
-		ev.Challenger,
-		ev.ChallengeType,
-	)
+	chain.nodeGraph.NewChallenge(challenge)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
+		lis.StartedChallenge(ctx, chain, challenge)
 	}
 }
 
@@ -318,7 +326,7 @@ func (chain *ChainObserver) updateOldest() {
 }
 
 func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
-	disputableNode := structures.NewDisputableNode(
+	disputableNode := valprotocol.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
 		ev.MaxPendingTop,

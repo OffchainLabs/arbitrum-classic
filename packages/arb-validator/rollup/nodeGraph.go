@@ -21,9 +21,12 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type NodeGraph struct {
@@ -31,10 +34,10 @@ type NodeGraph struct {
 	leaves          *LeafSet
 	nodeFromHash    map[common.Hash]*Node
 	oldestNode      *Node
-	params          structures.ChainParams
+	params          valprotocol.ChainParams
 }
 
-func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeGraph {
+func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
 	newNode := NewInitialNode(machine)
 	nodeFromHash := make(map[common.Hash]*Node)
 	nodeFromHash[newNode.hash] = newNode
@@ -49,7 +52,7 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
+func (chain *NodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*NodeBuf
 	for _, n := range chain.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))
@@ -67,7 +70,7 @@ func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *
 	}
 }
 
-func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *NodeGraph {
+func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *NodeGraph {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
@@ -131,7 +134,7 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet,
 	})
 	ret = ret + "\n"
 	subPrefix := prefix + "  "
-	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
+	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succi := node.successorHashes[i]
 		if !succi.Equals(common.Hash{}) {
 			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
@@ -167,7 +170,7 @@ func (chain *NodeGraph) pruneNode(node *Node) {
 }
 
 func (chain *NodeGraph) pruneOldestNode(oldest *Node) {
-	for i := structures.MinChildType; i <= structures.MaxChildType; i++ {
+	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succHash := oldest.successorHashes[i]
 		if !succHash.Equals(common.Hash{}) {
 			chain.nodeFromHash[succHash].prev = nil
@@ -205,7 +208,7 @@ func (chain *NodeGraph) getLeaf(node *Node) *Node {
 
 func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
-	dispNode *structures.DisputableNode,
+	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) {
@@ -215,7 +218,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	chain.leaves.Delete(prevNode)
 
 	// create nodes for invalid branches
-	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
+	for kind := valprotocol.ChildType(0); kind <= valprotocol.MaxInvalidChildType; kind++ {
 		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
 		chain.nodeFromHash[newNode.hash] = newNode
 		chain.leaves.Add(newNode)
@@ -236,7 +239,7 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	return n1.prev
 }
 
-func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
+func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, valprotocol.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1

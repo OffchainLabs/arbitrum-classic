@@ -20,6 +20,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -41,8 +43,12 @@ func (al *AnnouncerListener) StakeMoved(ctx context.Context, observer *ChainObse
 	log.Printf("%v Staker %v moved to location: %v\n", al.Prefix, ev.Staker, ev.Location)
 }
 
-func (al *AnnouncerListener) StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AnnouncerListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
 	log.Println(al.Prefix, "StartedChallenge")
+}
+
+func (al *AnnouncerListener) ResumedChallenge(context.Context, *ChainObserver, *Challenge) {
+	log.Println(al.Prefix, "ResumedChallenge")
 }
 
 func (al *AnnouncerListener) CompletedChallenge(ctx context.Context, observer *ChainObserver, event arbbridge.ChallengeCompletedEvent) {
@@ -70,13 +76,10 @@ func (al *AnnouncerListener) MessageDelivered(context.Context, *ChainObserver, a
 func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {
 	log.Println(al.Prefix, "AssertionPrepared")
 }
-func (al *AnnouncerListener) ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity) {
-	log.Println(al.Prefix, "ValidNodeConfirmable")
+func (al *AnnouncerListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
+	log.Println(al.Prefix, "ConfirmableNodes")
 }
-func (al *AnnouncerListener) InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity) {
-	log.Println(al.Prefix, "InvalidNodeConfirmable")
-}
-func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {
+func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
 	log.Println(al.Prefix, "PrunableLeafs")
 }
 func (al *AnnouncerListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {

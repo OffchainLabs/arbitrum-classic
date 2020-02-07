@@ -7,7 +7,13 @@ import { Arrayish, BigNumber, BigNumberish, Interface } from 'ethers/utils';
 import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription } from '.';
 
 interface ArbInfoInterface extends Interface {
-    functions: {};
+    functions: {
+        getBalance: TypedFunctionDescription<{
+            encode([account]: [string]): string;
+        }>;
+
+        getCode: TypedFunctionDescription<{ encode([account]: [string]): string }>;
+    };
 
     events: {};
 }
@@ -31,7 +37,15 @@ export class ArbInfo extends Contract {
         getCode(account: string): Promise<string>;
     };
 
+    getBalance(account: string): Promise<BigNumber>;
+
+    getCode(account: string): Promise<string>;
+
     filters: {};
 
-    estimate: {};
+    estimate: {
+        getBalance(account: string): Promise<BigNumber>;
+
+        getCode(account: string): Promise<BigNumber>;
+    };
 }

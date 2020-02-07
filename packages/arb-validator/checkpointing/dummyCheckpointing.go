@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type DummyCheckpointerFactory struct {
@@ -54,7 +53,7 @@ func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }
 
-func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, contractAddr common.Address, beOpinionated bool) ([]byte, structures.RestoreContext, error) {
+func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, contractAddr common.Address, beOpinionated bool) ([]byte, RestoreContext, error) {
 	return nil, nil, errors.New("no checkpoints in database")
 }
 
@@ -62,7 +61,7 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.fac.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx CheckpointContext, closeWhenDone chan struct{}) {
 	if closeWhenDone != nil {
 		closeWhenDone <- struct{}{}
 	}
@@ -70,7 +69,7 @@ func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, c
 
 type dummyCheckpointer struct {
 	metadata       []byte
-	cp             map[*structures.BlockId]*dummyCheckpoint
+	cp             map[*common.BlockId]*dummyCheckpoint
 	initialMachine machine.Machine
 }
 
@@ -81,14 +80,14 @@ func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
 	}
 	return &dummyCheckpointer{
 		nil,
-		make(map[*structures.BlockId]*dummyCheckpoint),
+		make(map[*common.BlockId]*dummyCheckpoint),
 		theMachine,
 	}
 }
 
 type dummyCheckpoint struct {
 	contents []byte
-	manifest *structures.CheckpointManifest
+	manifest *CheckpointManifest
 	values   map[common.Hash]value.Value
 	machines map[common.Hash]machine.Machine
 }
@@ -110,16 +109,16 @@ func (cp *dummyCheckpointer) RestoreMetadata() []byte {
 }
 
 func (cp *dummyCheckpointer) SaveCheckpoint(
-	id *structures.BlockId,
+	id *common.BlockId,
 	contents []byte,
-	manifest *structures.CheckpointManifest,
+	manifest *CheckpointManifest,
 	values map[common.Hash]value.Value,
 	machines map[common.Hash]machine.Machine,
 ) {
 	cp.cp[id] = &dummyCheckpoint{contents, manifest, values, machines}
 }
 
-func (cp *dummyCheckpointer) RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) {
+func (cp *dummyCheckpointer) RestoreCheckpoint(blockId *common.BlockId) ([]byte, RestoreContext) {
 	dcp := cp.cp[blockId]
 	if dcp == nil {
 		return nil, nil

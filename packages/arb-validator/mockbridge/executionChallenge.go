@@ -19,8 +19,6 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -50,7 +48,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

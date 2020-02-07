@@ -19,7 +19,7 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -28,6 +28,6 @@ type ClientConnection struct {
 	Client arbbridge.ArbClient
 }
 
-func (c *ClientConnection) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+func (c *ClientConnection) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
 	return c.Client.CurrentBlockId(ctx)
 }

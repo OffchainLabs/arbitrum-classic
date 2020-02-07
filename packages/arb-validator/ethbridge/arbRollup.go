@@ -17,8 +17,13 @@
 package ethbridge
 
 import (
+	"bytes"
 	"context"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	errors2 "github.com/pkg/errors"
 
@@ -28,9 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type arbRollup struct {
@@ -144,14 +147,30 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return vm.waitForReceipt(ctx, tx, "MoveStake")
 }
 
-func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PruneParams) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.PruneLeaf(
+
+	fromNodes := make([]common.Hash, 0, len(opps))
+	leafProofs := make([]common.Hash, 0, len(opps))
+	leafProofLengths := make([]*big.Int, 0, len(opps))
+	confProofs := make([]common.Hash, 0, len(opps))
+	confProofLengths := make([]*big.Int, 0, len(opps))
+	for _, opp := range opps {
+		fromNodes = append(fromNodes, opp.AncestorHash)
+		leafProofs = append(leafProofs, opp.LeafProof...)
+		leafProofLengths = append(leafProofLengths, big.NewInt(int64(len(opp.LeafProof))))
+		confProofs = append(confProofs, opp.AncProof...)
+		confProofLengths = append(confProofLengths, big.NewInt(int64(len(opp.AncProof))))
+	}
+
+	tx, err := vm.ArbRollup.PruneLeaves(
 		vm.auth.getAuth(ctx),
-		from,
-		hashSliceToRaw(proof1),
-		hashSliceToRaw(proof2),
+		hashSliceToRaw(fromNodes),
+		hashSliceToRaw(leafProofs),
+		leafProofLengths,
+		hashSliceToRaw(confProofs),
+		confProofLengths,
 	)
 	if err != nil {
 		return err
@@ -165,11 +184,11 @@ func (vm *arbRollup) MakeAssertion(
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
 	prevDeadline common.TimeTicks,
-	prevChildType structures.ChildType,
+	prevChildType valprotocol.ChildType,
 
-	beforeState *structures.VMProtoData,
-	assertionParams *structures.AssertionParams,
-	assertionClaim *structures.AssertionClaim,
+	beforeState *valprotocol.VMProtoData,
+	assertionParams *valprotocol.AssertionParams,
+	assertionClaim *valprotocol.AssertionClaim,
 	stakerProof []common.Hash,
 ) error {
 	vm.auth.Lock()
@@ -203,85 +222,84 @@ func (vm *arbRollup) MakeAssertion(
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
-func (vm *arbRollup) ConfirmValid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	outMsgs []value.Value,
-	logsAccHash common.Hash,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	vm.auth.Lock()
-	defer vm.auth.Unlock()
-	messages := combineMessages(outMsgs)
-	tx, err := vm.ArbRollup.ConfirmValid(
-		vm.auth.getAuth(ctx),
-		deadline.Val,
-		messages,
-		logsAccHash,
-		protoHash,
-		addressSliceToRaw(stakerAddresses),
-		hashSliceToRaw(stakerProofs),
-		stakerProofOffsets,
-	)
-	if err != nil {
-		return vm.ArbRollup.ConfirmValidCall(
-			ctx,
-			vm.Client,
-			vm.auth.auth.From,
-			vm.contractAddress,
-			deadline.Val,
-			messages,
-			logsAccHash,
-			protoHash,
-			addressSliceToRaw(stakerAddresses),
-			hashSliceToRaw(stakerProofs),
-			stakerProofOffsets,
-		)
-	}
-	return vm.waitForReceipt(ctx, tx, "ConfirmValid")
-}
+func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
+	nodeOpps := opp.Nodes
+	initalProtoStateHash := nodeOpps[0].StateHash()
+	branchesNums := make([]*big.Int, 0, len(nodeOpps))
+	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
+	challengeNodeData := make([]common.Hash, 0)
+	logsAcc := make([]common.Hash, 0)
+	vmProtoStateHashes := make([]common.Hash, 0)
 
-func (vm *arbRollup) ConfirmInvalid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	challengeNodeData common.Hash,
-	branch structures.ChildType,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
+	messagesLengths := make([]*big.Int, 0)
+	var messageData bytes.Buffer
+	prevLen := 0
+
+	for _, opp := range nodeOpps {
+		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
+		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
+
+		switch opp := opp.(type) {
+		case valprotocol.ConfirmValidOpportunity:
+			logsAcc = append(logsAcc, opp.LogsAcc)
+			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
+
+			for _, msg := range opp.Messages {
+				_ = value.MarshalValue(msg, &messageData)
+			}
+			messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
+			prevLen = messageData.Len()
+		case valprotocol.ConfirmInvalidOpportunity:
+			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
+		}
+	}
+
+	messages := messageData.Bytes()
+
+	combinedProofs := make([]common.Hash, 0)
+	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
+	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
+	for _, proof := range opp.StakerProofs {
+		combinedProofs = append(combinedProofs, proof...)
+		stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
+	}
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.ConfirmInvalid(
+
+	tx, err := vm.ArbRollup.Confirm(
 		vm.auth.getAuth(ctx),
-		deadline.Val,
-		challengeNodeData,
-		new(big.Int).SetUint64(uint64(branch)),
-		protoHash,
-		addressSliceToRaw(stakerAddresses),
-		hashSliceToRaw(stakerProofs),
+		initalProtoStateHash,
+		branchesNums,
+		deadlineTicks,
+		hashSliceToRaw(challengeNodeData),
+		hashSliceToRaw(logsAcc),
+		hashSliceToRaw(vmProtoStateHashes),
+		messagesLengths,
+		messages,
+		addressSliceToRaw(opp.StakerAddresses),
+		hashSliceToRaw(combinedProofs),
 		stakerProofOffsets,
 	)
 	if err != nil {
-		return vm.ArbRollup.ConfirmInvalidCall(
+		return vm.ArbRollup.ConfirmCall(
 			ctx,
 			vm.Client,
 			vm.auth.auth.From,
 			vm.contractAddress,
-			deadline.Val,
-			challengeNodeData,
-			new(big.Int).SetUint64(uint64(branch)),
-			protoHash,
-			addressSliceToRaw(stakerAddresses),
-			hashSliceToRaw(stakerProofs),
+			initalProtoStateHash,
+			branchesNums,
+			deadlineTicks,
+			hashSliceToRaw(challengeNodeData),
+			hashSliceToRaw(logsAcc),
+			hashSliceToRaw(vmProtoStateHashes),
+			messagesLengths,
+			messages,
+			addressSliceToRaw(opp.StakerAddresses),
+			hashSliceToRaw(combinedProofs),
 			stakerProofOffsets,
 		)
 	}
-	return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
+	return vm.waitForReceipt(ctx, tx, "Confirm")
 }
 
 func (vm *arbRollup) StartChallenge(
@@ -290,8 +308,8 @@ func (vm *arbRollup) StartChallenge(
 	challengerAddress common.Address,
 	prevNode common.Hash,
 	disputableDeadline *big.Int,
-	asserterPosition structures.ChildType,
-	challengerPosition structures.ChildType,
+	asserterPosition valprotocol.ChildType,
+	challengerPosition valprotocol.ChildType,
 	asserterVMProtoHash common.Hash,
 	challengerVMProtoHash common.Hash,
 	asserterProof []common.Hash,

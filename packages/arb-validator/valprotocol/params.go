@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package structures
+package valprotocol
 
 import (
 	"math/big"

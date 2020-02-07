@@ -12,6 +12,8 @@ interface ArbERC20Interface extends Interface {
             encode([spender, amount]: [string, BigNumberish]): string;
         }>;
 
+        totalSupply: TypedFunctionDescription<{ encode([]: []): string }>;
+
         transferFrom: TypedFunctionDescription<{
             encode([sender, recipient, amount]: [string, string, BigNumberish]): string;
         }>;
@@ -20,12 +22,20 @@ interface ArbERC20Interface extends Interface {
             encode([spender, addedValue]: [string, BigNumberish]): string;
         }>;
 
+        balanceOf: TypedFunctionDescription<{
+            encode([account]: [string]): string;
+        }>;
+
         decreaseAllowance: TypedFunctionDescription<{
             encode([spender, subtractedValue]: [string, BigNumberish]): string;
         }>;
 
         transfer: TypedFunctionDescription<{
             encode([recipient, amount]: [string, BigNumberish]): string;
+        }>;
+
+        allowance: TypedFunctionDescription<{
+            encode([owner, spender]: [string, string]): string;
         }>;
 
         adminMint: TypedFunctionDescription<{
@@ -62,11 +72,9 @@ export class ArbERC20 extends Contract {
     interface: ArbERC20Interface;
 
     functions: {
-        balanceOf(account: string): Promise<BigNumber>;
-
-        allowance(owner: string, spender: string): Promise<BigNumber>;
-
         approve(spender: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        totalSupply(): Promise<BigNumber>;
 
         transferFrom(
             sender: string,
@@ -81,6 +89,8 @@ export class ArbERC20 extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        balanceOf(account: string): Promise<BigNumber>;
+
         decreaseAllowance(
             spender: string,
             subtractedValue: BigNumberish,
@@ -93,6 +103,8 @@ export class ArbERC20 extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        allowance(owner: string, spender: string): Promise<BigNumber>;
+
         adminMint(
             account: string,
             amount: BigNumberish,
@@ -100,9 +112,40 @@ export class ArbERC20 extends Contract {
         ): Promise<ContractTransaction>;
 
         withdraw(account: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
-        totalSupply(): Promise<BigNumber>;
     };
+
+    approve(spender: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    totalSupply(): Promise<BigNumber>;
+
+    transferFrom(
+        sender: string,
+        recipient: string,
+        amount: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    increaseAllowance(
+        spender: string,
+        addedValue: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    balanceOf(account: string): Promise<BigNumber>;
+
+    decreaseAllowance(
+        spender: string,
+        subtractedValue: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    transfer(recipient: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    allowance(owner: string, spender: string): Promise<BigNumber>;
+
+    adminMint(account: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdraw(account: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     filters: {
         Transfer(from: string | null, to: string | null, value: null): EventFilter;
@@ -113,13 +156,19 @@ export class ArbERC20 extends Contract {
     estimate: {
         approve(spender: string, amount: BigNumberish): Promise<BigNumber>;
 
+        totalSupply(): Promise<BigNumber>;
+
         transferFrom(sender: string, recipient: string, amount: BigNumberish): Promise<BigNumber>;
 
         increaseAllowance(spender: string, addedValue: BigNumberish): Promise<BigNumber>;
 
+        balanceOf(account: string): Promise<BigNumber>;
+
         decreaseAllowance(spender: string, subtractedValue: BigNumberish): Promise<BigNumber>;
 
         transfer(recipient: string, amount: BigNumberish): Promise<BigNumber>;
+
+        allowance(owner: string, spender: string): Promise<BigNumber>;
 
         adminMint(account: string, amount: BigNumberish): Promise<BigNumber>;
 

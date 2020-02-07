@@ -14,7 +14,7 @@ Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels an
 The following documention describes how to use Arbitrum Rollup.
 
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
-read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
+read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
 
 ## Install System Dependencies
 

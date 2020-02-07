@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
@@ -29,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var db1 = "testman1db"
@@ -91,7 +92,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	ckpFac := checkpointing.NewDummyCheckpointerFactory(contract)
 
 	checkpointer1 := ckpFac.New(context.TODO())
-	config := structures.ChainParams{
+	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       250000,

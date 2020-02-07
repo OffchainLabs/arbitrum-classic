@@ -20,7 +20,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type InMemoryCheckpointContext struct {
@@ -43,7 +42,7 @@ func (c *InMemoryCheckpointContext) AddMachine(m machine.Machine) {
 	c.machs[m.Hash()] = m.Clone()
 }
 
-func (c *InMemoryCheckpointContext) Manifest() *structures.CheckpointManifest {
+func (c *InMemoryCheckpointContext) Manifest() *CheckpointManifest {
 	valHashes := []*common.HashBuf{}
 	for h, _ := range c.vals {
 		valHashes = append(valHashes, h.MarshalToBuf())
@@ -52,7 +51,7 @@ func (c *InMemoryCheckpointContext) Manifest() *structures.CheckpointManifest {
 	for h, _ := range c.machs {
 		machHashes = append(machHashes, h.MarshalToBuf())
 	}
-	return &structures.CheckpointManifest{
+	return &CheckpointManifest{
 		Values:   valHashes,
 		Machines: machHashes,
 	}
