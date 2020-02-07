@@ -8,6 +8,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 * Arbitrum Chain: A chain running on Arbitrum, containing some contracts. Many Arbitrum chains can exist at the same time.
 * Arbitrum executable file: The output of the Arbitrum compiler, usually in a file with the .ao file extension. An Arbitrum executable has all of the information needed to launch an Arbitrum Chain.
 * AVM: The Arbitrum Virtual Machine
+* Chain factory: A contract running on Ethereum which, when called, creates a new Arbitrum Chain.
 * Challenge: When two stakers disagree about the correct verdict on an assertion, those stakers can be put in a challenge. The challenge is refereed by the EthBridge. Eventually one staker wins the challenge. The loser forfeits their stake. Half of the loser's stake is given to the winner, and the other half is burned. 
 * Client: A program running on a user's machine, often in the user's browser, that interacts with contracts on an Arbitrum chain and provides a user interface.
 * Compiler: A part of the Arbitrum toolchain that takes a set of Solidity contracts and compiles them into an Arbitrum executable file.
