@@ -45,8 +45,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
     mapping(address => Inbox) inboxes;
 
-    function getInbox() external view returns(bytes32, uint) {
-        Inbox storage inbox = inboxes[msg.sender];
+    function getInbox(address account) external view returns(bytes32, uint) {
+        Inbox storage inbox = inboxes[account];
         return (inbox.value, inbox.count);
     }
 
