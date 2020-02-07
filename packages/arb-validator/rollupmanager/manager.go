@@ -36,6 +36,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
+const (
+	ValidEthBridgeVersion = "1"
+)
+
 type Manager struct {
 	sync.Mutex
 	RollupAddress common.Address
@@ -97,14 +101,28 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
-			blockId, initialVMHash, err := watcher.GetCreationInfo(ctx)
+			ethbridgeVersion, err := watcher.GetVersion(runCtx)
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			if ethbridgeVersion != ValidEthBridgeVersion {
+				log.Fatalf("VM has EthBridge version %v, but validator implements version %v."+
+					" To find a validator version which supports your EthBridge, visit "+
+					"https://offchainlabs.com/ethbridge-version-support",
+					ethbridgeVersion, ValidEthBridgeVersion)
+			}
+
+			blockId, initialVMHash, err := watcher.GetCreationInfo(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			initialMachine, err := checkpointer.GetInitialMachine()
 			if err != nil {
 				log.Fatal(err)
 			}
+
 			if initialMachine.Hash() != initialVMHash {
 				log.Fatal("ArbChain was initialized with different VM")
 			}

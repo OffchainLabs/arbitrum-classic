@@ -428,3 +428,7 @@ func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.Block
 
 	return getLogBlockID(logs[0]), ev.InitVMHash, nil
 }
+
+func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
+	return con.ArbRollup.VERSION(&bind.CallOpts{Context: ctx})
+}
