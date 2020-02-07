@@ -19,7 +19,7 @@ yarn run typechain \
 yarn run typechain \
     --target=ethers \
     --outDir src/lib/abi \
-    '../arb-bridge-eth/build/contracts/GlobalPendingInbox.json'
+    '../arb-bridge-eth/build/contracts/GlobalInbox.json'
 yarn run typechain \
     --target=ethers \
     --outDir src/lib/abi \

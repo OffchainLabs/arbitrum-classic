@@ -33,10 +33,10 @@ var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000000000
 var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
 
 type ArbConnection struct {
-	proxy        ValidatorProxy
-	vmId         common.Address
-	pendingInbox arbbridge.PendingInbox
-	sequenceNum  *big.Int
+	proxy       ValidatorProxy
+	vmId        common.Address
+	globalInbox arbbridge.GlobalInbox
+	sequenceNum *big.Int
 }
 
 func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
@@ -63,11 +63,11 @@ func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, er
 	if err != nil {
 		return nil, err
 	}
-	pendingInbox, err := client.NewPendingInbox(inboxAddr)
+	globalInbox, err := client.NewGlobalInbox(inboxAddr)
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{proxy: proxy, vmId: vmId, pendingInbox: pendingInbox}, nil
+	return &ArbConnection{proxy: proxy, vmId: vmId, globalInbox: globalInbox}, nil
 }
 
 func (conn *ArbConnection) getInfoCon() (*ArbInfo, error) {
@@ -221,7 +221,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return conn.pendingInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
+	return conn.globalInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
 }
 
 ///////////////////////////////////////////////////////////////////////////////

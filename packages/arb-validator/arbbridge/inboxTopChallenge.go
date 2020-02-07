@@ -23,31 +23,29 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type PendingInbox interface {
-	SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error
-	DepositEthMessage(
+type InboxTopChallenge interface {
+	Challenge
+
+	Bisect(
 		ctx context.Context,
-		vmAddress common.Address,
-		destination common.Address,
-		value *big.Int,
+		chainHashes []common.Hash,
+		chainLength *big.Int,
 	) error
-	DepositERC20Message(
+
+	OneStepProof(
 		ctx context.Context,
-		vmAddress common.Address,
-		tokenAddress common.Address,
-		destination common.Address,
-		value *big.Int,
+		lowerHashA common.Hash,
+		value common.Hash,
 	) error
-	DepositERC721Message(
+
+	ChooseSegment(
 		ctx context.Context,
-		vmAddress common.Address,
-		tokenAddress common.Address,
-		destination common.Address,
-		value *big.Int,
+		assertionToChallenge uint16,
+		chainHashes []common.Hash,
+		chainLength uint64,
 	) error
-	GetTokenBalance(
-		ctx context.Context,
-		user common.Address,
-		tokenContract common.Address,
-	) (*big.Int, error)
+}
+
+type InboxTopChallengeWatcher interface {
+	ContractWatcher
 }

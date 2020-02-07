@@ -30,7 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func testPendingTopChallenge(t *testing.T) {
+func testInboxTopChallenge(t *testing.T) {
 	t.Parallel()
 	msg1 := message.DeliveredEth{
 		Eth: message.Eth{
@@ -83,15 +83,15 @@ func testPendingTopChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	challengeHash := structures.PendingTopChallengeDataHash(bottomHash, topHash, big.NewInt(3))
+	challengeHash := structures.InboxTopChallengeDataHash(bottomHash, topHash, big.NewInt(3))
 
 	if err := testChallenge(
-		valprotocol.InvalidPendingChildType,
+		valprotocol.InvalidInboxTopChildType,
 		challengeHash,
 		"ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39",
 		"979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return DefendPendingTopClaim(
+			return DefendInboxTopClaim(
 				context.Background(),
 				client,
 				challengeAddress,
@@ -104,7 +104,7 @@ func testPendingTopChallenge(t *testing.T) {
 			)
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return ChallengePendingTopClaim(
+			return ChallengeInboxTopClaim(
 				context.Background(),
 				client,
 				challengeAddress,

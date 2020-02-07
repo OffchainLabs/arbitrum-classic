@@ -28,7 +28,7 @@ import (
 type ChildType uint
 
 const (
-	InvalidPendingChildType   ChildType = 0
+	InvalidInboxTopChildType  ChildType = 0
 	InvalidMessagesChildType  ChildType = 1
 	InvalidExecutionChildType ChildType = 2
 	ValidChildType            ChildType = 3
@@ -39,67 +39,67 @@ const (
 )
 
 type VMProtoData struct {
-	MachineHash  common.Hash
-	PendingTop   common.Hash
-	PendingCount *big.Int
+	MachineHash common.Hash
+	InboxTop    common.Hash
+	InboxCount  *big.Int
 }
 
 func NewVMProtoData(
 	machineHash common.Hash,
-	pendingTop common.Hash,
-	pendingCount *big.Int,
+	inboxTop common.Hash,
+	inboxCount *big.Int,
 ) *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  machineHash,
-		PendingTop:   pendingTop,
-		PendingCount: pendingCount,
+		MachineHash: machineHash,
+		InboxTop:    inboxTop,
+		InboxCount:  inboxCount,
 	}
 }
 
 func (d *VMProtoData) String() string {
 	return fmt.Sprintf(
-		"VMProtoData(MachineHash: %v, PendingTop: %v, PendingCount: %v)",
+		"VMProtoData(MachineHash: %v, InboxTop: %v, InboxCount: %v)",
 		d.MachineHash,
-		d.PendingTop,
-		d.PendingCount,
+		d.InboxTop,
+		d.InboxCount,
 	)
 }
 
 func (d *VMProtoData) Equals(o *VMProtoData) bool {
 	return d.MachineHash == o.MachineHash &&
-		d.PendingTop == o.PendingTop &&
-		d.PendingCount.Cmp(o.PendingCount) == 0
+		d.InboxTop == o.InboxTop &&
+		d.InboxCount.Cmp(o.InboxCount) == 0
 }
 
 func (d *VMProtoData) Clone() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  d.MachineHash,
-		PendingTop:   d.PendingTop,
-		PendingCount: new(big.Int).Set(d.PendingCount),
+		MachineHash: d.MachineHash,
+		InboxTop:    d.InboxTop,
+		InboxCount:  new(big.Int).Set(d.InboxCount),
 	}
 }
 
 func (d *VMProtoData) Hash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(d.MachineHash),
-		hashing.Bytes32(d.PendingTop),
-		hashing.Uint256(new(big.Int).Set(d.PendingCount)),
+		hashing.Bytes32(d.InboxTop),
+		hashing.Uint256(new(big.Int).Set(d.InboxCount)),
 	)
 }
 
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash:  node.MachineHash.MarshalToBuf(),
-		PendingTop:   node.PendingTop.MarshalToBuf(),
-		PendingCount: common.MarshalBigInt(node.PendingCount),
+		MachineHash: node.MachineHash.MarshalToBuf(),
+		InboxTop:    node.InboxTop.MarshalToBuf(),
+		InboxCount:  common.MarshalBigInt(node.InboxCount),
 	}
 }
 
 func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  buf.MachineHash.Unmarshal(),
-		PendingTop:   buf.PendingTop.Unmarshal(),
-		PendingCount: buf.PendingCount.Unmarshal(),
+		MachineHash: buf.MachineHash.Unmarshal(),
+		InboxTop:    buf.InboxTop.Unmarshal(),
+		InboxCount:  buf.InboxCount.Unmarshal(),
 	}
 }
 
@@ -150,29 +150,29 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 }
 
 type AssertionClaim struct {
-	AfterPendingTop       common.Hash
+	AfterInboxTop         common.Hash
 	ImportedMessagesSlice common.Hash
 	AssertionStub         *ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
-		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
-		dn.AfterPendingTop,
+		"AssertionClaim(AfterInboxTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
+		dn.AfterInboxTop,
 		dn.ImportedMessagesSlice,
 		dn.AssertionStub,
 	)
 }
 
 func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {
-	return dn.AfterPendingTop == o.AfterPendingTop &&
+	return dn.AfterInboxTop == o.AfterInboxTop &&
 		dn.ImportedMessagesSlice == o.ImportedMessagesSlice &&
 		dn.AssertionStub.Equals(o.AssertionStub)
 }
 
 func (dn *AssertionClaim) Clone() *AssertionClaim {
 	return &AssertionClaim{
-		AfterPendingTop:       dn.AfterPendingTop,
+		AfterInboxTop:         dn.AfterInboxTop,
 		ImportedMessagesSlice: dn.ImportedMessagesSlice,
 		AssertionStub:         dn.AssertionStub.Clone(),
 	}
@@ -180,7 +180,7 @@ func (dn *AssertionClaim) Clone() *AssertionClaim {
 
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
-		AfterPendingTop:       dn.AfterPendingTop.MarshalToBuf(),
+		AfterInboxTop:         dn.AfterInboxTop.MarshalToBuf(),
 		ImportedMessagesSlice: dn.ImportedMessagesSlice.MarshalToBuf(),
 		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
 	}
@@ -188,7 +188,7 @@ func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 
 func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
-		AfterPendingTop:       m.AfterPendingTop.Unmarshal(),
+		AfterInboxTop:         m.AfterInboxTop.Unmarshal(),
 		ImportedMessagesSlice: m.ImportedMessagesSlice.Unmarshal(),
 		AssertionStub:         m.AssertionStub.Unmarshal(),
 	}
@@ -197,21 +197,21 @@ func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 type DisputableNode struct {
 	AssertionParams *AssertionParams
 	AssertionClaim  *AssertionClaim
-	MaxPendingTop   common.Hash
-	MaxPendingCount *big.Int
+	MaxInboxTop     common.Hash
+	MaxInboxCount   *big.Int
 }
 
 func NewDisputableNode(
 	assertionParams *AssertionParams,
 	assertionClaim *AssertionClaim,
-	maxPendingTop common.Hash,
-	maxPendingCount *big.Int,
+	maxInboxTop common.Hash,
+	maxInboxCount *big.Int,
 ) *DisputableNode {
 	return &DisputableNode{
 		AssertionParams: assertionParams,
 		AssertionClaim:  assertionClaim,
-		MaxPendingTop:   maxPendingTop,
-		MaxPendingCount: maxPendingCount,
+		MaxInboxTop:     maxInboxTop,
+		MaxInboxCount:   maxInboxCount,
 	}
 }
 
@@ -219,8 +219,8 @@ func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.AssertionParams.MarshalToBuf(),
 		AssertionClaim:  dn.AssertionClaim.MarshalToBuf(),
-		MaxPendingTop:   dn.MaxPendingTop.MarshalToBuf(),
-		MaxPendingCount: common.MarshalBigInt(dn.MaxPendingCount),
+		MaxInboxTop:     dn.MaxInboxTop.MarshalToBuf(),
+		MaxInboxCount:   common.MarshalBigInt(dn.MaxInboxCount),
 	}
 }
 
@@ -228,8 +228,8 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
 		buf.AssertionParams.Unmarshal(),
 		buf.AssertionClaim.Unmarshal(),
-		buf.MaxPendingTop.Unmarshal(),
-		buf.MaxPendingCount.Unmarshal(),
+		buf.MaxInboxTop.Unmarshal(),
+		buf.MaxInboxCount.Unmarshal(),
 	)
 }
 
@@ -241,7 +241,7 @@ func (dn *DisputableNode) CheckTime(params ChainParams) common.TimeTicks {
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
 		dn.AssertionClaim.AssertionStub.AfterHash,
-		dn.AssertionClaim.AfterPendingTop,
-		new(big.Int).Add(prevState.PendingCount, dn.AssertionParams.ImportedMessageCount),
+		dn.AssertionClaim.AfterInboxTop,
+		new(big.Int).Add(prevState.InboxCount, dn.AssertionParams.ImportedMessageCount),
 	)
 }

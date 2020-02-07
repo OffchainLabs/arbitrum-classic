@@ -28,8 +28,8 @@ const promisePoller = require('promise-poller').default;
 import { ArbRollupFactory } from './abi/ArbRollupFactory';
 import { ArbRollup } from './abi/ArbRollup';
 
-import { GlobalPendingInboxFactory } from './abi/GlobalPendingInboxFactory';
-import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
+import { GlobalInboxFactory } from './abi/GlobalInboxFactory';
+import { GlobalInbox } from './abi/GlobalInbox';
 
 import { ArbSysFactory } from './abi/ArbSysFactory';
 import { ArbSys } from './abi/ArbSys';
@@ -94,7 +94,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public client: ArbClient;
 
     private arbRollupCache?: ArbRollup;
-    private inboxManagerCache?: GlobalPendingInbox;
+    private globalInboxCache?: GlobalInbox;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
 
@@ -119,15 +119,15 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.client.getVmID();
     }
 
-    public async globalInboxConn(): Promise<GlobalPendingInbox> {
-        if (!this.inboxManagerCache) {
+    public async globalInboxConn(): Promise<GlobalInbox> {
+        if (!this.globalInboxCache) {
             const arbRollup = await this.arbRollupConn();
             const globalInboxAddress = await arbRollup.globalInbox();
-            const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
-            this.inboxManagerCache = inboxManager;
-            return inboxManager;
+            const globalInbox = GlobalInboxFactory.connect(globalInboxAddress, this.provider);
+            this.globalInboxCache = globalInbox;
+            return globalInbox;
         }
-        return this.inboxManagerCache;
+        return this.globalInboxCache;
     }
 
     public getArbSys(): ArbSys {
@@ -208,9 +208,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     private async getArbTxId(ethReceipt: ethers.providers.TransactionReceipt): Promise<string | null> {
-        const inboxManager = await this.globalInboxConn();
+        const globalInbox = await this.globalInboxConn();
         if (ethReceipt.logs) {
-            const logs = ethReceipt.logs.map(log => inboxManager.interface.parseLog(log));
+            const logs = ethReceipt.logs.map(log => globalInbox.interface.parseLog(log));
             for (const log of logs) {
                 if (!log) {
                     continue;
@@ -296,14 +296,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                     return '0x100';
                 }
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore remove when implemented
                 return arbInfo.getCode(params.address);
             }
             case 'getTransactionCount': {
                 const arbsys = this.getArbSys();
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore remove when implemented
                 const count = await arbsys.getTransactionCount(params.address);
                 return count.toNumber();
             }
@@ -381,8 +377,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             }
             case 'getBalance': {
                 const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this);
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore remove when implemented
                 return arbInfo.getBalance(params.address);
             }
         }

@@ -105,17 +105,17 @@ func TestBisection(t *testing.T) {
 	}
 }
 
-func TestPendingInboxInsert(t *testing.T) {
-	pi := NewPendingInbox()
+func TestInboxInsert(t *testing.T) {
+	pi := NewInbox()
 	if pi.newest != nil {
-		t.Error("newest of new PendingInbox should be nil")
+		t.Error("newest of new Inbox should be nil")
 	}
 	pi2, err := marshalUnmarshal(pi)
 	if err != nil {
 		t.Error(err)
 	}
 	if pi.hashOfRest != pi2.hashOfRest {
-		t.Error("marshal/unmarshal changes hash of empty pending inbox")
+		t.Error("marshal/unmarshal changes hash of empty inbox")
 	}
 
 	msg1 := message.DeliveredEth{
@@ -140,26 +140,26 @@ func TestPendingInboxInsert(t *testing.T) {
 
 	pi.DeliverMessage(msg1)
 	if !pi.newest.message.Equals(msg1) {
-		t.Error("newest of PendingInbox wrong at val1")
+		t.Error("newest of Inbox wrong at val1")
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
 		t.Error(err)
 	}
 	if pi.newest.hash != pi2.newest.hash {
-		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
+		t.Error("marshal/unmarshal changes hash of one-item inbox")
 	}
 
 	pi.DeliverMessage(msg2)
 	if !pi.newest.message.Equals(msg2) {
-		t.Error("newest of PendingInbox wrong at val2")
+		t.Error("newest of Inbox wrong at val2")
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
 		t.Error(err)
 	}
 	if pi.newest.hash != pi2.newest.hash {
-		t.Error("marshal/unmarshal changes hash of two-item pending inbox")
+		t.Error("marshal/unmarshal changes hash of two-item inbox")
 	}
 
 	pi.DiscardUpToCount(big.NewInt(0))
@@ -168,7 +168,7 @@ func TestPendingInboxInsert(t *testing.T) {
 		t.Error(err)
 	}
 	if pi.newest.hash != pi2.newest.hash {
-		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
+		t.Error("marshal/unmarshal changes hash of one-item inbox")
 	}
 
 	pi.DiscardUpToCount(big.NewInt(1))
@@ -177,11 +177,11 @@ func TestPendingInboxInsert(t *testing.T) {
 		t.Error(err)
 	}
 	if pi.newest.hash != pi2.newest.hash {
-		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
+		t.Error("marshal/unmarshal changes hash of one-item inbox")
 	}
 }
 
-func marshalUnmarshal(pi *PendingInbox) (*MessageStack, error) {
+func marshalUnmarshal(pi *Inbox) (*MessageStack, error) {
 	ctx := checkpointing.NewCheckpointContextImpl()
 	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }
