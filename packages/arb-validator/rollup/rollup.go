@@ -43,7 +43,7 @@ type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph           *StakedNodeGraph
 	rollupAddr          common.Address
-	pendingInbox        *structures.PendingInbox
+	inbox               *structures.Inbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
 	latestBlockId       *common.BlockId
@@ -69,7 +69,7 @@ func NewChain(
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          rollupAddr,
-		pendingInbox:        structures.NewPendingInbox(),
+		inbox:               structures.NewInbox(),
 		knownValidNode:      nodeGraph.latestConfirmed,
 		calculatedValidNode: nodeGraph.latestConfirmed,
 		latestBlockId:       startBlockId,
@@ -116,7 +116,7 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointCon
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
-		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
+		Inbox:               chain.inbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      chain.knownValidNode.hash.MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.hash.MarshalToBuf(),
 		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
@@ -135,7 +135,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
-	pendingInbox, err := m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)
+	inbox, err := m.Inbox.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
-		pendingInbox:        &structures.PendingInbox{pendingInbox},
+		inbox:               &structures.Inbox{inbox},
 		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
 		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
 		latestBlockId:       m.LatestBlockId.Unmarshal(),
@@ -222,7 +222,7 @@ func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 }
 
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.pendingInbox.DeliverMessage(ev.Message)
+	chain.inbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, chain, ev)
 	}
@@ -329,8 +329,8 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 	disputableNode := valprotocol.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
-		ev.MaxPendingTop,
-		ev.MaxPendingCount,
+		ev.MaxInboxTop,
+		ev.MaxInboxCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
@@ -347,12 +347,12 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 	return co.nodeGraph.Equals(co2.nodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
-		co.pendingInbox.Equals(co2.pendingInbox)
+		co.inbox.Equals(co2.inbox)
 }
 
 func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	inbox, _ := chain.pendingInbox.GenerateInbox(node.prev.vmProtoData.PendingTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
+	inbox, _ := chain.inbox.GenerateVMInbox(node.prev.vmProtoData.InboxTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,

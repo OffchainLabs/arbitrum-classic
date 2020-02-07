@@ -44,7 +44,7 @@ func testMessagesChallenge(t *testing.T) {
 			MessageNum: big.NewInt(i),
 		})
 	}
-	beforePending, err := messageStack.GetHashAtIndex(big.NewInt(2))
+	beforeInbox, err := messageStack.GetHashAtIndex(big.NewInt(2))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,20 +52,20 @@ func testMessagesChallenge(t *testing.T) {
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(messageCount))
-	afterPending, err := messageStack.GetHashAtIndex(startIndex)
+	afterInbox, err := messageStack.GetHashAtIndex(startIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inbox, err := messageStack.GenerateInbox(beforePending, messageCount)
+	inbox, err := messageStack.GenerateVMInbox(beforeInbox, messageCount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	importedMessages := inbox.Hash()
 	challengeHash := structures.MessageChallengeDataHash(
-		beforePending,
-		afterPending,
+		beforeInbox,
+		afterInbox,
 		value.NewEmptyTuple().Hash(),
 		importedMessages,
 		big.NewInt(4),
@@ -84,7 +84,7 @@ func testMessagesChallenge(t *testing.T) {
 				blockId,
 				0,
 				messageStack,
-				beforePending,
+				beforeInbox,
 				new(big.Int).SetUint64(messageCount),
 				2,
 			)
@@ -97,7 +97,7 @@ func testMessagesChallenge(t *testing.T) {
 				blockId,
 				0,
 				messageStack,
-				beforePending,
+				beforeInbox,
 				new(big.Int).SetUint64(messageCount),
 				true,
 			)

@@ -6,7 +6,7 @@ import { Listener, Provider } from 'ethers/providers';
 import { Arrayish, BigNumber, BigNumberish, Interface } from 'ethers/utils';
 import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription } from '.';
 
-interface GlobalPendingInboxInterface extends Interface {
+interface GlobalInboxInterface extends Interface {
     functions: {
         getERC20Balance: TypedFunctionDescription<{
             encode([_tokenContract, _owner]: [string, string]): string;
@@ -42,7 +42,7 @@ interface GlobalPendingInboxInterface extends Interface {
 
         withdrawEth: TypedFunctionDescription<{ encode([]: []): string }>;
 
-        getPending: TypedFunctionDescription<{ encode([]: []): string }>;
+        getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>;
 
         sendMessages: TypedFunctionDescription<{
             encode([_messages]: [Arrayish]): string;
@@ -128,18 +128,18 @@ interface GlobalPendingInboxInterface extends Interface {
     };
 }
 
-export class GlobalPendingInbox extends Contract {
-    connect(signerOrProvider: Signer | Provider | string): GlobalPendingInbox;
-    attach(addressOrName: string): GlobalPendingInbox;
-    deployed(): Promise<GlobalPendingInbox>;
+export class GlobalInbox extends Contract {
+    connect(signerOrProvider: Signer | Provider | string): GlobalInbox;
+    attach(addressOrName: string): GlobalInbox;
+    deployed(): Promise<GlobalInbox>;
 
-    on(event: EventFilter | string, listener: Listener): GlobalPendingInbox;
-    once(event: EventFilter | string, listener: Listener): GlobalPendingInbox;
-    addListener(eventName: EventFilter | string, listener: Listener): GlobalPendingInbox;
-    removeAllListeners(eventName: EventFilter | string): GlobalPendingInbox;
-    removeListener(eventName: any, listener: Listener): GlobalPendingInbox;
+    on(event: EventFilter | string, listener: Listener): GlobalInbox;
+    once(event: EventFilter | string, listener: Listener): GlobalInbox;
+    addListener(eventName: EventFilter | string, listener: Listener): GlobalInbox;
+    removeAllListeners(eventName: EventFilter | string): GlobalInbox;
+    removeListener(eventName: any, listener: Listener): GlobalInbox;
 
-    interface: GlobalPendingInboxInterface;
+    interface: GlobalInboxInterface;
 
     functions: {
         getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
@@ -164,7 +164,12 @@ export class GlobalPendingInbox extends Contract {
 
         withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+        getInbox(
+            account: string,
+        ): Promise<{
+            0: string;
+            1: BigNumber;
+        }>;
 
         sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -228,7 +233,12 @@ export class GlobalPendingInbox extends Contract {
 
     withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-    getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+    getInbox(
+        account: string,
+    ): Promise<{
+        0: string;
+        1: BigNumber;
+    }>;
 
     sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -325,7 +335,7 @@ export class GlobalPendingInbox extends Contract {
 
         withdrawEth(): Promise<BigNumber>;
 
-        getPending(): Promise<BigNumber>;
+        getInbox(account: string): Promise<BigNumber>;
 
         sendMessages(_messages: Arrayish): Promise<BigNumber>;
 

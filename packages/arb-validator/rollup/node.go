@@ -189,20 +189,20 @@ func (node *Node) NodeDataHash(params valprotocol.ChainParams) common.Hash {
 func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash, common.TimeTicks) {
 	vmProtoData := node.prev.vmProtoData
 	switch node.linkType {
-	case valprotocol.InvalidPendingChildType:
-		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, node.disputable.AssertionParams.ImportedMessageCount)
-		pendingLeft = pendingLeft.Sub(node.disputable.MaxPendingCount, pendingLeft)
-		ret := structures.PendingTopChallengeDataHash(
-			node.disputable.AssertionClaim.AfterPendingTop,
-			node.disputable.MaxPendingTop,
-			pendingLeft,
+	case valprotocol.InvalidInboxTopChildType:
+		inboxLeft := new(big.Int).Add(vmProtoData.InboxCount, node.disputable.AssertionParams.ImportedMessageCount)
+		inboxLeft = inboxLeft.Sub(node.disputable.MaxInboxCount, inboxLeft)
+		ret := structures.InboxTopChallengeDataHash(
+			node.disputable.AssertionClaim.AfterInboxTop,
+			node.disputable.MaxInboxTop,
+			inboxLeft,
 		)
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case valprotocol.InvalidMessagesChildType:
 		ret := structures.MessageChallengeDataHash(
-			vmProtoData.PendingTop,
-			node.disputable.AssertionClaim.AfterPendingTop,
+			vmProtoData.InboxTop,
+			node.disputable.AssertionClaim.AfterInboxTop,
 			value.NewEmptyTuple().Hash(),
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,
