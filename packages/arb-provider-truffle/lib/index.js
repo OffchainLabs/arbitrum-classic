@@ -43,14 +43,14 @@ function provider(outputFolder, buildLocation, options, should_compile) {
 
   const contractCode = {};
 
-  let storageTrackFuncGen = function(address_string) {
+  const storageTrackFuncGen = function(address_string) {
     return function(err, code) {
       contractCode[address_string] = code;
     };
   };
 
   arbProvider.engine.on("block", function(block) {
-    for (let [address_string, value] of Object.entries(storage)) {
+    for (const [address_string, value] of Object.entries(storage)) {
       arbProvider.engine.manager.eth_getCode(
         address_string,
         "latest",
@@ -63,12 +63,14 @@ function provider(outputFolder, buildLocation, options, should_compile) {
   const netID = arbProvider.options.network_id;
   arbProvider.engine.manager.waitForInitialization(function(err, state) {
     state.blockchain.vm.on("step", function(info) {
-      let address_string = "0x" + info.address.toString("hex");
+      const address_string = "0x" + info.address.toString("hex");
       if (!(address_string in storage)) {
         storage[address_string] = {};
       }
       if (info.opcode.name == "SSTORE") {
-        let args = info.stack.slice(-2).map(arg => "0x" + arg.toString("hex"));
+        const args = info.stack
+          .slice(-2)
+          .map(arg => "0x" + arg.toString("hex"));
         storage[address_string][args[1]] = args[0];
       }
     });
@@ -76,7 +78,7 @@ function provider(outputFolder, buildLocation, options, should_compile) {
   process.on("exit", code => {
     const contracts = [];
     const files = fs.readdirSync(buildLocation, {});
-    for (let filePath of files) {
+    for (const filePath of files) {
       const contract = JSON.parse(
         fs.readFileSync(path.resolve(buildLocation, filePath))
       );
