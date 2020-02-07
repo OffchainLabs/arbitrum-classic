@@ -331,7 +331,7 @@ func (m *Machine) PrintState() {
 	errHandlerHash := m.errHandler.Hash()
 	fmt.Println("machine state", m.status)
 	fmt.Println("codePointHash", codePointHash)
-	fmt.Println("stackHash", stackHash[:])
+	fmt.Println("stackHash", stackHash)
 	fmt.Println("auxStackHash", auxStackHash)
 	fmt.Println("registerHash", registerHash)
 	fmt.Println("staticHash", staticHash)
