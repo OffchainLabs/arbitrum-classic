@@ -49,6 +49,7 @@ contract NodeGraph is ChallengeType {
     string constant PRUNE_LEAF = "PRUNE_LEAF";
     string constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
     string constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
+    string constant DEADLINE_FAR = "DEADLINE_FAR";
 
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
@@ -225,6 +226,7 @@ contract NodeGraph is ChallengeType {
             deadlineTicks = data.prevDeadlineTicks;
         }
         deadlineTicks += checkTimeTicks;
+        require(deadlineTicks <= RollupTime.blocksToTicks(block.number) + 2*gracePeriodTicks, DEADLINE_FAR);
 
         bytes32 invalidPending = generateInvalidPendingTopLeaf(
             data,
