@@ -18,7 +18,7 @@
 import * as ArbValue from './lib/value';
 
 export { ArbRollupFactory } from './lib/abi/ArbRollupFactory';
-export { GlobalPendingInboxFactory } from './lib/abi/GlobalPendingInboxFactory';
+export { GlobalInboxFactory } from './lib/abi/GlobalInboxFactory';
 export { ArbFactoryFactory } from './lib/abi/ArbFactoryFactory';
 
 export { ArbValue };
