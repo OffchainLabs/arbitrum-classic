@@ -20,34 +20,35 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/inboxtopchallenge"
+
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type pendingTopChallenge struct {
+type inboxTopChallenge struct {
 	*bisectionChallenge
-	contract *pendingtopchallenge.PendingTopChallenge
+	contract *inboxtopchallenge.InboxTopChallenge
 }
 
-func newPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingTopChallenge, error) {
+func newInboxTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*inboxTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
+	inboxTopContract, err := inboxtopchallenge.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
+		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}
-	return &pendingTopChallenge{bisectionChallenge: bisectionChallenge, contract: pendingTopContract}, nil
+	return &inboxTopChallenge{bisectionChallenge: bisectionChallenge, contract: inboxTopContract}, nil
 }
 
-func (c *pendingTopChallenge) Bisect(
+func (c *inboxTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	chainLength *big.Int,
@@ -72,7 +73,7 @@ func (c *pendingTopChallenge) Bisect(
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
-func (c *pendingTopChallenge) OneStepProof(
+func (c *inboxTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	value common.Hash,
@@ -90,7 +91,7 @@ func (c *pendingTopChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *pendingTopChallenge) ChooseSegment(
+func (c *inboxTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
@@ -102,7 +103,7 @@ func (c *pendingTopChallenge) ChooseSegment(
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.PendingTopChallengeDataHash(
+			structures.InboxTopChallengeDataHash(
 				chainHashes[i],
 				chainHashes[i+1],
 				new(big.Int).SetUint64(uint64(stepCount)),

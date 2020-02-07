@@ -31,28 +31,28 @@ func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint64) ui
 	}
 }
 
-func PendingTopChallengeDataHash(
-	lowerPending common.Hash,
-	upperPending common.Hash,
+func InboxTopChallengeDataHash(
+	lowerInbox common.Hash,
+	upperInbox common.Hash,
 	messageCount *big.Int,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Bytes32(lowerPending),
-		hashing.Bytes32(upperPending),
+		hashing.Bytes32(lowerInbox),
+		hashing.Bytes32(upperInbox),
 		hashing.Uint256(messageCount),
 	)
 }
 
 func MessageChallengeDataHash(
-	lowerPending common.Hash,
-	upperPending common.Hash,
+	lowerInbox common.Hash,
+	upperInbox common.Hash,
 	lowerMessages common.Hash,
 	upperMessages common.Hash,
 	messageCount *big.Int,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Bytes32(lowerPending),
-		hashing.Bytes32(upperPending),
+		hashing.Bytes32(lowerInbox),
+		hashing.Bytes32(upperInbox),
 		hashing.Bytes32(lowerMessages),
 		hashing.Bytes32(upperMessages),
 		hashing.Uint256(messageCount),

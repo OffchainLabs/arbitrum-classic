@@ -33,6 +33,6 @@ type ArbFactory interface {
 }
 
 type ArbFactoryWatcher interface {
-	GlobalPendingInboxAddress() (common.Address, error)
+	GlobalInboxAddress() (common.Address, error)
 	ChallengeFactoryAddress() (common.Address, error)
 }

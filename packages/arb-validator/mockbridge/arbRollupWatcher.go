@@ -44,20 +44,20 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //		return errors2.Wrap(err, "Failed to connect to ArbRollup")
 //	}
 //
-//	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
+//	globalInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
 //		Pending: false,
 //		Context: context.Background(),
 //	})
 //	if err != nil {
-//		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
+//		return errors2.Wrap(err, "Failed to get GlobalInbox address")
 //	}
-//	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
+//	globalInboxContract, err := rollup.NewIGlobalInbox(globalInboxAddress, vm.Client)
 //	if err != nil {
-//		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+//		return errors2.Wrap(err, "Failed to connect to GlobalInbox")
 //	}
 //
 //	vm.ArbRollup = arbitrumRollupContract
-//	vm.GlobalPendingInbox = globalPendingContract
+//	vm.GlobalInbox = globalInboxContract
 //	return nil
 //}
 
@@ -138,7 +138,7 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 //					ImportedMessageCount: eventVal.ImportedMessageCount,
 //				},
 //				Claim: &structures.AssertionClaim{
-//					AfterPendingTop:       eventVal.AfterPendingTop,
+//					AfterInboxTop:       eventVal.AfterInboxTop,
 //					ImportedMessagesSlice: eventVal.ImportedMessagesSlice,
 //					AssertionStub: protocol.NewExecutionAssertionStub(
 //						eventVal.AfterVMHash,
@@ -148,7 +148,7 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 //						eventVal.LogsAccHash,
 //					),
 //				},
-//				MaxPendingTop: eventVal.PendingValue,
+//				MaxInboxTop: eventVal.InboxValue,
 //			}, nil
 //		} else if log.Topics[0] == rollupConfirmedID {
 //			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)
@@ -179,8 +179,8 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 //
 //			//fmt.Println("PrevLeaf", hexutil.Encode(eventVal.PrevLeaf[:]))
 //			//fmt.Println("DeadlineTicks", eventVal.DeadlineTicks)
-//			//fmt.Println("BeforePendingTop", hexutil.Encode(eventVal.BeforePendingTop[:]))
-//			//fmt.Println("AfterPendingTop", hexutil.Encode(eventVal.AfterPendingTop[:]))
+//			//fmt.Println("BeforeInboxTop", hexutil.Encode(eventVal.BeforeInboxTop[:]))
+//			//fmt.Println("AfterInboxTop", hexutil.Encode(eventVal.AfterInboxTop[:]))
 //			//fmt.Println("ImportedMessagesSlice", hexutil.Encode(eventVal.ImportedMessagesSlice[:]))
 //			//fmt.Println("ImportedMessageCount", eventVal.ImportedMessageCount)
 //			//fmt.Println("ChallengePeriod", eventVal.ChallengePeriod)
