@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"strings"
 
@@ -407,7 +408,7 @@ func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.NewAddressFromEth(addr), err
 }
 
-func (con *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
+func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(addressIndex[:], ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32))
 	logs, err := con.client.FilterLogs(ctx, ethereum.FilterQuery{
@@ -415,7 +416,15 @@ func (con *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.Blo
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	})
 	if err != nil {
-		return nil, err
+		return nil, common.Hash{}, err
 	}
-	return getLogBlockID(logs[0]), nil
+	if len(logs) != 1 {
+		return nil, common.Hash{}, errors.New("more than one chain created with same address")
+	}
+	ev, err := con.ArbRollup.ParseRollupCreated(logs[0])
+	if err != nil {
+		return nil, common.Hash{}, err
+	}
+
+	return getLogBlockID(logs[0]), ev.InitVMHash, nil
 }

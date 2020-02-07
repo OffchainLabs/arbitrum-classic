@@ -28,5 +28,5 @@ type ArbRollupWatcher interface {
 
 	GetParams(ctx context.Context) (valprotocol.ChainParams, error)
 	InboxAddress(ctx context.Context) (common.Address, error)
-	GetCreationHeight(ctx context.Context) (*common.BlockId, error)
+	GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error)
 }

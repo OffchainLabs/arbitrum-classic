@@ -97,6 +97,18 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
+			blockId, initialVMHash, err := watcher.GetCreationInfo(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			initialMachine, err := checkpointer.GetInitialMachine()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if initialMachine.Hash() != initialVMHash {
+				log.Fatal("ArbChain was initialized with different VM")
+			}
+
 			if checkpointer.HasCheckpointedState() {
 				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
 				if err != nil {
@@ -112,10 +124,6 @@ func CreateManagerAdvanced(
 				}
 			} else {
 				params, err := watcher.GetParams(ctx)
-				if err != nil {
-					log.Fatal(err)
-				}
-				blockId, err := watcher.GetCreationHeight(ctx)
 				if err != nil {
 					log.Fatal(err)
 				}
