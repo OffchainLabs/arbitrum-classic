@@ -150,25 +150,16 @@ export class CodePointValue {
     public hash(): string {
         switch (this.op.kind) {
             case OperationType.Basic: {
-                const packed =
-                    '0x' +
-                    this.typeCode()
-                        .toString()
-                        .padStart(2, '0') +
-                    this.op.opcode.toString().padStart(2, '0') +
-                    this.nextHash.slice(2);
-                return ethers.utils.keccak256(packed);
+                return ethers.utils.solidityKeccak256(
+                    ['uint8', 'uint8', 'bytes32'],
+                    [this.typeCode(), this.op.opcode, this.nextHash],
+                );
             }
             case OperationType.Immediate: {
-                const packed =
-                    '0x' +
-                    this.typeCode()
-                        .toString()
-                        .padStart(2, '0') +
-                    this.op.opcode.toString().padStart(2, '0') +
-                    this.op.value.hash().slice(2) +
-                    this.nextHash.slice(2);
-                return ethers.utils.keccak256(packed);
+                return ethers.utils.solidityKeccak256(
+                    ['uint8', 'uint8', 'bytes32', 'bytes32'],
+                    [this.typeCode(), this.op.opcode, this.op.value.hash(), this.nextHash],
+                );
             }
             default:
                 assertNever(this.op);
@@ -500,14 +491,6 @@ export function machineHash(
         ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
         [pc.hash(), stack.hash(), auxstack.hash(), registerVal.hash(), staticVal.hash(), errPc.hash()],
     );
-    // let [ops, staticVal] = unmarshalContract(array);
-    // let cps: CodePointValue[] = [];
-    // for (let op of ops) {
-    //     cps.push(new CodePointValue(0, op, ethers.utils.bigNumberify(0).toHexString()));
-    // }
-    // for (var i = cps.length - 2; i >= 0; i--) {
-    //     cps[i].nextHash = cps[i + 1].hash();
-    // }
 }
 
 function unmarshalOpCode(array: Uint8Array, offset: number): [number, number] {
@@ -529,8 +512,8 @@ function unmarshalOp(array: Uint8Array, offset: number): [Operation, number] {
         [opcode, offset] = unmarshalOpCode(array, offset);
         return [new BasicOp(opcode), offset];
     } else if (kind === OperationType.Immediate) {
-        let opcode;
-        let value;
+        let opcode: number;
+        let value: Value;
         [opcode, offset] = unmarshalOpCode(array, offset);
         [value, offset] = _unmarshalValue(array, offset);
         return [new ImmOp(opcode, value), offset];
