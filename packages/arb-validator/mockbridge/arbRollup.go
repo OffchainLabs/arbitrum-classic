@@ -20,12 +20,12 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbRollup struct {
@@ -137,7 +137,7 @@ func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	return nil
 }
 
-func (vm *ArbRollup) PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error {
+func (vm *ArbRollup) PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) error {
 	//vm.auth.Context = ctx
 	//tx, err := vm.ArbRollup.PruneLeaf(
 	//	vm.auth,
@@ -158,11 +158,11 @@ func (vm *ArbRollup) MakeAssertion(
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
 	prevDeadline common.TimeTicks,
-	prevChildType structures.ChildType,
+	prevChildType valprotocol.ChildType,
 
-	beforeState *structures.VMProtoData,
-	assertionParams *structures.AssertionParams,
-	assertionClaim *structures.AssertionClaim,
+	beforeState *valprotocol.VMProtoData,
+	assertionParams *valprotocol.AssertionParams,
+	assertionClaim *valprotocol.AssertionClaim,
 	stakerProof []common.Hash,
 ) error {
 	//vm.auth.Context = ctx
@@ -196,60 +196,7 @@ func (vm *ArbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *ArbRollup) ConfirmValid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	outMsgs []value.Value,
-	logsAccHash common.Hash,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	//vm.auth.Context = ctx
-	//messages := hashing.CombineMessages(outMsgs)
-	//tx, err := vm.ArbRollup.ConfirmValid(
-	//	vm.auth,
-	//	deadline.Val,
-	//	messages,
-	//	logsAccHash,
-	//	protoHash,
-	//	stakerAddresses,
-	//	stakerProofs,
-	//	stakerProofOffsets,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return vm.waitForReceipt(ctx, tx, "ConfirmValid")
-	return nil
-}
-
-func (vm *ArbRollup) ConfirmInvalid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	challengeNodeData common.Hash,
-	branch structures.ChildType,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	//vm.auth.Context = ctx
-	//tx, err := vm.ArbRollup.ConfirmInvalid(
-	//	vm.auth,
-	//	deadline.Val,
-	//	challengeNodeData,
-	//	new(big.Int).SetUint64(uint64(branch)),
-	//	protoHash,
-	//	stakerAddresses,
-	//	stakerProofs,
-	//	stakerProofOffsets,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
+func (vm *ArbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	return nil
 }
 
@@ -259,8 +206,8 @@ func (vm *ArbRollup) StartChallenge(
 	challengerAddress common.Address,
 	prevNode common.Hash,
 	disputableDeadline *big.Int,
-	asserterPosition structures.ChildType,
-	challengerPosition structures.ChildType,
+	asserterPosition valprotocol.ChildType,
+	challengerPosition valprotocol.ChildType,
 	asserterVMProtoHash common.Hash,
 	challengerVMProtoHash common.Hash,
 	asserterProof []common.Hash,

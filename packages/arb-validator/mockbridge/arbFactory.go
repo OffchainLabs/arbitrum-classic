@@ -3,9 +3,10 @@ package mockbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbFactory struct {
@@ -20,7 +21,7 @@ func NewArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFact
 func (con *ArbFactory) CreateRollup(
 	ctx context.Context,
 	vmState common.Hash,
-	params structures.ChainParams,
+	params valprotocol.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
 	//tx, err := con.contract.CreateRollup(

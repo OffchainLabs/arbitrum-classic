@@ -30,8 +30,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -53,7 +51,7 @@ var reorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
 
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId}
@@ -130,7 +128,7 @@ func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSte
 	return newOneStepProof(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -138,7 +136,7 @@ func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId,
 	return getBlockID(header), nil
 }
 
-func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
 	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
 	if err != nil {
 		return nil, err

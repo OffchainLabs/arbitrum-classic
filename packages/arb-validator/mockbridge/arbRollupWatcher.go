@@ -19,9 +19,10 @@ package mockbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type EthRollupWatcher struct {
@@ -60,7 +61,7 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
@@ -210,8 +211,8 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *structures.B
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
-	return structures.ChainParams{
+func (vm *EthRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
+	return valprotocol.ChainParams{
 		StakeRequirement:        nil,
 		GracePeriod:             common.TimeTicks{},
 		MaxExecutionSteps:       0,
@@ -224,6 +225,6 @@ func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.Address{}, nil
 }
 
-func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
+func (vm *EthRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
 	return nil, nil
 }

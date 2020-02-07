@@ -20,13 +20,13 @@ import (
 	"context"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ArbRollupWatcher interface {
 	ContractWatcher
 
-	GetParams(ctx context.Context) (structures.ChainParams, error)
+	GetParams(ctx context.Context) (valprotocol.ChainParams, error)
 	InboxAddress(ctx context.Context) (common.Address, error)
-	GetCreationHeight(ctx context.Context) (*structures.BlockId, error)
+	GetCreationHeight(ctx context.Context) (*common.BlockId, error)
 }

@@ -20,13 +20,13 @@ import (
 	"context"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func HandleBlockchainEvents(
 	ctx context.Context,
 	client ArbAuthClient,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 	startLogIndex uint,
 	contract ContractWatcher,
 ) (context.Context, <-chan Event) {

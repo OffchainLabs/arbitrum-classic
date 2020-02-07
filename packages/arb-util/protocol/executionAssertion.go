@@ -33,53 +33,6 @@ func NewExecutionAssertion(afterHash common.Hash, didInboxInsn bool, numGas uint
 	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
 }
 
-func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
-	messages := make([][]byte, 0, len(a.OutMsgs))
-	for _, msg := range a.OutMsgs {
-		valBytes := value.MarshalValueToBytes(msg)
-		messages = append(messages, valBytes)
-	}
-	logs := make([][]byte, 0, len(a.Logs))
-	for _, msg := range a.OutMsgs {
-		valBytes := value.MarshalValueToBytes(msg)
-		logs = append(logs, valBytes)
-	}
-	return &ExecutionAssertionBuf{
-		AfterHash:    a.AfterHash.MarshalToBuf(),
-		DidInboxInsn: a.DidInboxInsn,
-		NumGas:       a.NumGas,
-		Messages:     messages,
-		Logs:         logs,
-	}
-}
-
-func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
-	messages := make([]value.Value, 0, len(a.Logs))
-	for _, valLog := range a.Messages {
-		val, err := value.UnmarshalValueFromBytes(valLog)
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, val)
-	}
-
-	logs := make([]value.Value, 0, len(a.Logs))
-	for _, valLog := range a.Logs {
-		val, err := value.UnmarshalValueFromBytes(valLog)
-		if err != nil {
-			return nil, err
-		}
-		logs = append(logs, val)
-	}
-	return &ExecutionAssertion{
-		AfterHash:    a.AfterHash.Unmarshal(),
-		DidInboxInsn: a.DidInboxInsn,
-		NumGas:       a.NumGas,
-		OutMsgs:      messages,
-		Logs:         logs,
-	}, nil
-}
-
 func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 	if a.AfterHash != b.AfterHash ||
 		a.DidInboxInsn != b.DidInboxInsn ||

@@ -26,8 +26,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -246,8 +244,8 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	return ret.ExecutionAssertion, ret.uint64
 }
 
-func (man *Manager) CurrentBlockId() *structures.BlockId {
-	retChan := make(chan *structures.BlockId, 1)
+func (man *Manager) CurrentBlockId() *common.BlockId {
+	retChan := make(chan *common.BlockId, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		retChan <- chain.CurrentBlockId()
 	}

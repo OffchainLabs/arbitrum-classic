@@ -80,8 +80,8 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	}
 }
 
-func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
-	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
+func (buf *StakerBuf) Unmarshal(chain *NodeGraph) *Staker {
+	// chain.nodeFromHash must have already been unmarshaled
 	locArr := buf.Location.Unmarshal()
 	if buf.ChallengeAddr != nil {
 		return &Staker{

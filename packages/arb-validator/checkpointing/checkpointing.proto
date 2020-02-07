@@ -17,23 +17,24 @@
 syntax = "proto3";
 package structures;
 import "common/common.proto";
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing";
 
-message ExecutionAssertionBuf {
-    common.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    repeated common.HashBuf messages = 4;
-    repeated common.HashBuf logs = 5;
+message BlockIdBufList {
+    repeated common.BlockIdBuf bufs = 1;
 }
 
-message InboxItemBuf {
-    uint32 valType = 1;
-    common.HashBuf valHash = 2;
+message CheckpointMetadata {
+    uint64 formatVersion = 1;
+    common.BlockIdBuf oldest = 2;
+    common.BlockIdBuf newest = 3;
 }
 
-message PendingInboxBuf {
-    common.BigIntegerBuf topCount = 1;
-    repeated InboxItemBuf items = 2;
-    common.HashBuf hashOfRest = 3;
+message CheckpointLinks {
+    common.BlockIdBuf next = 1;
+    common.BlockIdBuf prev = 2;
+}
+
+message CheckpointManifest {
+    repeated common.HashBuf values = 1;
+    repeated common.HashBuf machines = 2;
 }

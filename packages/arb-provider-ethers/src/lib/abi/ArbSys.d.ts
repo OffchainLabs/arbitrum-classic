@@ -20,6 +20,14 @@ interface ArbSysInterface extends Interface {
             encode([dest, amount]: [string, BigNumberish]): string;
         }>;
 
+        currentMessageTime: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        timeUpperBound: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        getTransactionCount: TypedFunctionDescription<{
+            encode([account]: [string]): string;
+        }>;
+
         cloneContract: TypedFunctionDescription<{
             encode([account]: [string]): string;
         }>;
@@ -42,8 +50,6 @@ export class ArbSys extends Contract {
     interface: ArbSysInterface;
 
     functions: {
-        getTransactionCount(account: string): Promise<BigNumber>;
-
         withdrawERC20(
             dest: string,
             amount: BigNumberish,
@@ -54,11 +60,28 @@ export class ArbSys extends Contract {
 
         withdrawEth(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        cloneContract(account: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         currentMessageTime(): Promise<BigNumber>;
+
         timeUpperBound(): Promise<BigNumber>;
+
+        getTransactionCount(account: string): Promise<BigNumber>;
+
+        cloneContract(account: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
     };
+
+    withdrawERC20(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdrawERC721(dest: string, id: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdrawEth(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    currentMessageTime(): Promise<BigNumber>;
+
+    timeUpperBound(): Promise<BigNumber>;
+
+    getTransactionCount(account: string): Promise<BigNumber>;
+
+    cloneContract(account: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     filters: {};
 
@@ -68,6 +91,12 @@ export class ArbSys extends Contract {
         withdrawERC721(dest: string, id: BigNumberish): Promise<BigNumber>;
 
         withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>;
+
+        currentMessageTime(): Promise<BigNumber>;
+
+        timeUpperBound(): Promise<BigNumber>;
+
+        getTransactionCount(account: string): Promise<BigNumber>;
 
         cloneContract(account: string): Promise<BigNumber>;
     };

@@ -22,8 +22,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -52,7 +50,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

@@ -18,9 +18,10 @@ package checkpointing
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type asyncCheckpointWriter struct {

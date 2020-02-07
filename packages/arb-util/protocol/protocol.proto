@@ -7,11 +7,3 @@ message TimeBoundsBlocksBuf {
     common.TimeBlocksBuf start = 1;
     common.TimeBlocksBuf end = 2;
 }
-
-message ExecutionAssertionBuf {
-    common.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    repeated bytes messages = 4;
-    repeated bytes logs = 5;
-}
