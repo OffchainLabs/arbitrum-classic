@@ -36,6 +36,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
+const (
+	ValidEthBridgeVersion = "1"
+)
+
 type Manager struct {
 	sync.Mutex
 	RollupAddress common.Address
@@ -97,6 +101,32 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
+			ethbridgeVersion, err := watcher.GetVersion(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if ethbridgeVersion != ValidEthBridgeVersion {
+				log.Fatalf("VM has EthBridge version %v, but validator implements version %v."+
+					" To find a validator version which supports your EthBridge, visit "+
+					"https://offchainlabs.com/ethbridge-version-support",
+					ethbridgeVersion, ValidEthBridgeVersion)
+			}
+
+			blockId, initialVMHash, err := watcher.GetCreationInfo(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			initialMachine, err := checkpointer.GetInitialMachine()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if initialMachine.Hash() != initialVMHash {
+				log.Fatal("ArbChain was initialized with different VM")
+			}
+
 			if checkpointer.HasCheckpointedState() {
 				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
 				if err != nil {
@@ -112,10 +142,6 @@ func CreateManagerAdvanced(
 				}
 			} else {
 				params, err := watcher.GetParams(ctx)
-				if err != nil {
-					log.Fatal(err)
-				}
-				blockId, err := watcher.GetCreationHeight(ctx)
 				if err != nil {
 					log.Fatal(err)
 				}

@@ -52,6 +52,8 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
+    string public constant VERSION = "1";
+
     address owner;
 
     event ConfirmedAssertion(
