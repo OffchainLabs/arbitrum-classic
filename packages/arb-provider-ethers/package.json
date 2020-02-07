@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
@@ -16,7 +16,7 @@
     },
     "homepage": "https://offchainlabs.com",
     "scripts": {
-        "prepublishOnly": "yarn format && yarn test",
+        "prepublishOnly": "yarn build && yarn format && yarn test",
         "preversion": "yarn lint",
         "build": "./scripts/builder",
         "test": "jest --config jest.config.js",
