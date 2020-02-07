@@ -10714,6 +10714,13 @@ type@^1.0.1:
   resolved "https://registry.yarnpkg.com/type/-/type-1.0.3.tgz#16f5d39f27a2d28d86e48f8981859e9d3296c179"
   integrity sha512-51IMtNfVcee8+9GJvj0spSuFcZHe9vSib6Xtgsny1Km9ugyz2mbS08I3rsUIRYgJohFRFU1160sgRodYz378Hg==
 
+typechain-target-ethers@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/typechain-target-ethers/-/typechain-target-ethers-1.0.3.tgz#2a55eead6190c87082a3237c55a315695ef0cd43"
+  integrity sha512-01bzf/eJW9QATZcGAXhaVc1WuEup7CIW22xEu22IaNuUlRCWW0yhNGA3H0UInUBVzT7yfsSapyLB8gYTqQnDjg==
+  dependencies:
+    lodash "^4.17.15"
+
 typechain@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/typechain/-/typechain-1.0.4.tgz#8e35ed1a3189b28c8ffdd31ab51b97c58490c7b1"
