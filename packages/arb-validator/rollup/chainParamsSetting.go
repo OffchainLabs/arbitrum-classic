@@ -26,10 +26,7 @@ import (
 func DefaultChainParams() valprotocol.ChainParams {
 	gracePeriodInBlocks := int64(30)
 	return valprotocol.ChainParams{
-		StakeRequirement: new(big.Int).Mul(
-			big.NewInt(1),
-			big.NewInt(1000*1000*1000*1000*1000*1000),
-		),
+		StakeRequirement:        big.NewInt(10 * 1000 * 1000 * 1000 * 1000 * 1000), // 0.01 Eth
 		GracePeriod:             common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(gracePeriodInBlocks))),
 		MaxExecutionSteps:       1000000000,
 		MaxTimeBoundsWidth:      20,
