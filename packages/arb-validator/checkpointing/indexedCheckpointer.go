@@ -40,7 +40,7 @@ type IndexedCheckpointer struct {
 	nextCheckpointToWrite *writableCheckpoint
 }
 
-func NewIndexedCheckpoinerFactory(
+func NewIndexedCheckpointerFactory(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
@@ -109,6 +109,9 @@ func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 func (cp *IndexedCheckpointer) getDepthBounds() (*ckpDepthBounds, error) {
 	key := []byte{0}
 	valBytes := cp.db.GetData(key)
+	if valBytes == nil {
+		return nil, nil
+	}
 	depthBounds := &DepthBoundsBuf{}
 	if err := proto.Unmarshal(valBytes, depthBounds); err != nil {
 		return nil, err
@@ -135,8 +138,15 @@ func (cp *IndexedCheckpointer) updateDepthUpperBound(depth *common.TimeBlocks) e
 	if err != nil {
 		return err
 	}
-	if bounds.hi.Cmp(depth) < 0 {
-		bounds.hi = depth
+	if bounds == nil {
+		bounds = &ckpDepthBounds{
+			lo: depth.Clone(),
+			hi: depth.Clone(),
+		}
+		return cp.setDepthBounds(bounds)
+
+	} else if bounds.hi.Cmp(depth) < 0 {
+		bounds.hi = depth.Clone()
 		return cp.setDepthBounds(bounds)
 	} else {
 		return nil
@@ -212,7 +222,7 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	cp.Lock()
 	defer cp.Unlock()
 
-	if cp.nextCheckpointToWrite != nil {
+	if cp.nextCheckpointToWrite != nil && cp.nextCheckpointToWrite.closeWhenDone != nil {
 		close(cp.nextCheckpointToWrite.closeWhenDone)
 	}
 	cp.nextCheckpointToWrite = &writableCheckpoint{
@@ -249,6 +259,9 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 	defer cp.Unlock()
 
 	depthBounds, err := cp.getDepthBounds()
+	if depthBounds == nil {
+		return nil, nil, errors.New("Cannot restore because no checkpoint exists")
+	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -287,7 +300,9 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 			if err != nil {
 				log.Println("Error writing checkpoint: {}", err)
 			}
-			close(cp.nextCheckpointToWrite.closeWhenDone)
+			if cp.nextCheckpointToWrite.closeWhenDone != nil {
+				close(cp.nextCheckpointToWrite.closeWhenDone)
+			}
 			cp.nextCheckpointToWrite = nil
 		}
 		cp.Unlock()
