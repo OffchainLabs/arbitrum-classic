@@ -346,8 +346,72 @@ func (cp *IndexedCheckpointer) writeCheckpoint(wc *writableCheckpoint) error {
 }
 
 func (cp *IndexedCheckpointer) cleanupDaemon() {
-	//TODO
-	log.Println("Checkpoint cleanup daemon not yet implemented")
+	ticker := time.NewTicker(common.NewTimeBlocksInt(25).Duration())
+	defer ticker.Stop()
+	for {
+		<-ticker.C
+		func() {
+			cp.Lock()
+			bounds, err := cp.getDepthBounds()
+			cp.Unlock()
+			if err != nil {
+				return
+			}
+			depth := bounds.lo
+			depthLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), cp.maxReorgDepth))
+			var prevDepth *common.TimeBlocks = nil
+			prevIds := []*common.BlockId{}
+			for depth.Cmp(depthLimit) < 0 {
+				cp.Lock()
+				ids, err := cp.getIdsAtDepth(depth)
+				cp.Unlock()
+				if err != nil {
+					return
+				}
+				if len(ids) > 0 {
+					for _, id := range prevIds {
+						_ = cp.deleteCheckpointForId(id) // OK to call without lock; callee will acquire lock
+					}
+					cp.Lock()
+					if err := cp.setIdsAtDepth(prevDepth, []*common.BlockId{}); err != nil {
+						cp.Unlock()
+						return
+					}
+					bounds.lo = depth
+					if err := cp.setDepthBounds(bounds); err != nil {
+						cp.Unlock()
+						return
+					}
+					cp.Unlock()
+					prevDepth = depth
+					prevIds = ids
+				}
+				depth = common.NewTimeBlocks(new(big.Int).Add(depth.AsInt(), big.NewInt(1)))
+			}
+		}()
+	}
+}
+
+func (cp *IndexedCheckpointer) deleteCheckpointForId(id *common.BlockId) error {
+	cp.Lock()
+	defer cp.Unlock()
+
+	key := cp.makeContentsKey(id)
+	val := cp.db.GetData(key)
+	ckp := &CheckpointWithManifest{}
+	if err := proto.Unmarshal(val, ckp); err != nil {
+		return err
+	}
+	_ = cp.db.DeleteData(key) // ignore error
+	for _, hbuf := range ckp.Manifest.Values {
+		h := hbuf.Unmarshal()
+		_ = cp.db.DeleteValue(h) // ignore error
+	}
+	for _, hbuf := range ckp.Manifest.Machines {
+		h := hbuf.Unmarshal()
+		_ = cp.db.DeleteCheckpoint(h) // ignore error
+	}
+	return nil
 }
 
 func (cp *IndexedCheckpointer) GetValue(h common.Hash) value.Value {
