@@ -20,11 +20,13 @@
     "build": "yarn workspace arb-provider-ethers build",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
+    "docker:build:geth": "yarn workspace arb-bridge-eth docker:build:geth",
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
-    "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache"
+    "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
+    "docker:geth": "yarn workspace arb-bridge-eth docker:geth"
   },
   "engines": {
-    "node": ">= 8.0.0 < 12.0.0",
+    "node": ">= 8.0.0 < 13.0.0",
     "npm": "^6.0.0",
     "yarn": "^1.0.0"
   },
@@ -36,9 +38,19 @@
       "packages/arb-provider-ethers",
       "packages/arb-provider-truffle",
       "packages/arb-provider-web3",
+      "packages/arb-compiler-evm/contract-templates",
       "packages/arb-compiler-evm/tests/sol-syscall",
       "demos/*",
       "workspace/*"
     ]
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.19.0",
+    "@typescript-eslint/parser": "^2.19.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "prettier": "^1.19.1",
+    "typescript": "^3.7.5"
   }
 }

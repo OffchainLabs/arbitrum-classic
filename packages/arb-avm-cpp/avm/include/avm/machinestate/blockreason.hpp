@@ -17,7 +17,11 @@
 #ifndef blockreason_hpp
 #define blockreason_hpp
 
-#include <avm/machinestate/tokenTracker.hpp>
+#include <avm_values/bigint.hpp>
+
+#include <nonstd/variant.hpp>
+
+#include <unordered_map>
 
 enum BlockType { Not, Halt, Error, Breakpoint, Inbox };
 
@@ -39,13 +43,10 @@ struct BreakpointBlocked {
 
 struct InboxBlocked {
     static constexpr BlockType type = Inbox;
-    uint256_t inbox;
-    InboxBlocked() {}
+    uint256_t timout;
 
-    InboxBlocked(uint256_t inbox_) { inbox = inbox_; }
+    InboxBlocked(uint256_t timeout_) { timout = timeout_; }
 };
-
-extern std::unordered_map<BlockType, int> blockreason_type_length;
 
 using BlockReason = nonstd::variant<NotBlocked,
                                     HaltBlocked,
@@ -53,7 +54,11 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     BreakpointBlocked,
                                     InboxBlocked>;
 
-std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);
+std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
+std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);
+std::ostream& operator<<(std::ostream& os, const ErrorBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BreakpointBlocked& val);
+std::ostream& operator<<(std::ostream& os, const InboxBlocked& val);
+std::ostream& operator<<(std::ostream& os, const BlockReason& val);
 
 #endif /* blockreason_hpp */

@@ -15,8 +15,9 @@
  */
 
 #include <avm/machinestate/machineoperation.hpp>
-
 #include <avm/machinestate/machinestate.hpp>
+#include <avm_values/util.hpp>
+#include <bigint_utils.hpp>
 
 namespace machineoperation {
 
@@ -356,6 +357,32 @@ void typeOp(MachineState& m) {
     ++m.pc;
 }
 
+void ethhash2Op(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto& aNum = assumeInt(m.stack[0]);
+    auto& bNum = assumeInt(m.stack[1]);
+
+    std::array<unsigned char, 64> inData;
+    std::array<uint64_t, 4> anumInts;
+    to_big_endian(aNum, anumInts.begin());
+    std::copy(reinterpret_cast<unsigned char*>(anumInts.data()),
+              reinterpret_cast<unsigned char*>(anumInts.data()) + 32,
+              inData.begin());
+    std::array<uint64_t, 4> bnumInts;
+    to_big_endian(bNum, bnumInts.begin());
+    std::copy(reinterpret_cast<unsigned char*>(bnumInts.data()),
+              reinterpret_cast<unsigned char*>(bnumInts.data()) + 32,
+              inData.begin() + 32);
+
+    std::array<unsigned char, 32> hashData;
+    evm::Keccak_256(inData.data(), 64, hashData.data());
+
+    m.stack[1] = from_big_endian(hashData.begin(), hashData.end());
+
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void pop(MachineState& m) {
     m.stack.popClear();
     ++m.pc;
@@ -567,13 +594,13 @@ void getTime(MachineState& m) {
 
 BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
-    auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
-    if (stackTop && m.inbox.messages == *stackTop) {
-        return InboxBlocked(hash(m.inbox.messages));
+    auto& aNum = assumeInt(m.stack[0]);
+    if (aNum > m.context.timeBounds[0] && m.context.inbox.tuple_size() == 0) {
+        return InboxBlocked(aNum);
     } else {
-        value inboxCopy = m.inbox.messages;
-        m.stack[0] = std::move(inboxCopy);
+        m.stack[0] = std::move(m.context.inbox);
         ++m.pc;
+        m.context.executedInbox();
         return NotBlocked{};
     }
 }

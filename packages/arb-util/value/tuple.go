@@ -23,37 +23,36 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 const MaxTupleSize = 8
 
-var hashOfNone [32]byte
+var hashOfNone common.Hash
 
 func init() {
-	hashOfNoneVal := solsha3.SoliditySHA3(solsha3.Uint8(TypeCodeTuple))
-	copy(hashOfNone[:], hashOfNoneVal)
+	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple))
 }
 
 type TupleValue struct {
-	contentsArr [MaxTupleSize]Value
-	itemCount   int8
-	cachedHash  [32]byte
-	size        int64
+	contentsArr     [MaxTupleSize]Value
+	itemCount       int8
+	cachedHash      common.Hash
+	size            int64
+	deferredHashing bool
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1}
+	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, [32]byte{}, 0}
+	ret := TupleValue{contents, size, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret, nil
 }
 
@@ -61,12 +60,12 @@ func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
 	if !IsValidTupleSize(big.NewInt(size)) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), [32]byte{}, 0}
+
+	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0, true}
 	for i := int64(0); i < size; i++ {
 		ret.contentsArr[i] = value
 	}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret, nil
 }
 
@@ -82,9 +81,8 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, [32]byte{}, 0}
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
-	ret.cachedHash = ret.internalHash()
 	return ret
 }
 
@@ -93,7 +91,7 @@ func (tv TupleValue) init2(value1 Value, value2 Value) {
 	tv.contentsArr[1] = value2
 	tv.itemCount = 2
 	tv.size = tv.internalSize()
-	tv.cachedHash = tv.internalHash()
+	tv.deferredHashing = true
 }
 
 func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
@@ -182,7 +180,7 @@ func (tv TupleValue) Clone() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) CloneShallow() Value {
@@ -194,7 +192,7 @@ func (tv TupleValue) CloneShallow() Value {
 			newContents[i] = NewHashOnlyValueFromValue(b)
 		}
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
@@ -203,7 +201,7 @@ func (tv TupleValue) Equal(val Value) bool {
 	} else if val.TypeCode() != TypeCodeTuple {
 		return false
 	} else {
-		return tv.cachedHash == val.(TupleValue).cachedHash
+		return tv.Hash() == val.Hash()
 	}
 }
 
@@ -232,29 +230,22 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func Bytes32ArrayEncoded(input [][32]byte) []byte {
-	var values []byte
-	for _, val := range input {
-		values = append(values, common.RightPadBytes(val[:], 32)...)
-	}
-	return values
-}
-
-func (tv TupleValue) internalHash() [32]byte {
-	hashes := make([][32]byte, 0, tv.itemCount)
+func (tv TupleValue) internalHash() common.Hash {
+	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
 	}
 
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Uint8(tv.InternalTypeCode()),
-		Bytes32ArrayEncoded(hashes),
+	return hashing.SoliditySHA3(
+		hashing.Uint8(tv.InternalTypeCode()),
+		hashing.Bytes32ArrayEncoded(hashes),
 	)
-	ret := [32]byte{}
-	copy(ret[:], hashVal)
-	return ret
 }
 
-func (tv TupleValue) Hash() [32]byte {
+func (tv TupleValue) Hash() common.Hash {
+	if tv.deferredHashing {
+		tv.cachedHash = tv.internalHash()
+		tv.deferredHashing = false
+	}
 	return tv.cachedHash
 }

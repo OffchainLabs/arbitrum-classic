@@ -16,7 +16,8 @@
 # Credit to https://github.com/ethereum/pyethereum/blob/master/ethereum/vm.py
 # for EVM-like implementation details
 
-from eth_utils import big_endian_to_int
+from eth_utils import big_endian_to_int, keccak
+from eth_abi.packed import encode_single_packed
 from . import instructions
 from .ast import AVMLabeledCodePoint
 from . import value
@@ -47,15 +48,6 @@ class VMEnv:
         self.messages = value.Tuple([])
         self.pending_messages = value.Tuple([])
         self.time_bounds = value.Tuple([0, 100000000])
-
-    def send_message(self, message):
-        self.pending_messages = value.Tuple(
-            [0, self.pending_messages, value.Tuple(message)]
-        )
-
-    def deliver_pending(self):
-        self.messages = value.Tuple([1, self.messages, self.pending_messages])
-        self.pending_messages = value.Tuple([])
 
 
 class Stack:
@@ -117,11 +109,15 @@ class BasicVM:
             self.stack.push(val)
 
     def inbox(self):
-        if self.stack.peak() == self.env.messages:
+        if (
+            self.env.messages == value.Tuple([])
+            and self.stack.peak() > self.env.time_bounds[0]
+        ):
             raise VMBlocked()
 
         self.stack.pop()
         self.stack.push(self.env.messages)
+        self.env.messages = value.Tuple([])
 
     def send(self):
         msg = self.stack.pop()
@@ -355,6 +351,12 @@ class BasicVM:
     def hash(self):
         op = self.stack.pop()
         self.stack.push(big_endian_to_int(value.value_hash(op)))
+
+    def ethhash2(self):
+        op1 = self.stack.pop()
+        op2 = self.stack.pop()
+        res = keccak(encode_single_packed("(uint256,uint256)", [op1, op2]))
+        self.stack.push(big_endian_to_int(res))
 
     def gettime(self):
         self.stack.push(self.env.time_bounds)

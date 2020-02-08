@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+import "../arch/Value.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 
@@ -25,53 +26,22 @@ library VM {
     bytes32 private constant MACHINE_HALT_HASH = bytes32(0);
     bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
 
-    enum State {
-        Uninitialized,
-        Waiting,
-        PendingDisputable,
-        PendingUnanimous
+    struct Params {  // these are defined just once for each vM
+        uint256 gracePeriodTicks;
+        uint256 arbGasSpeedLimitPerTick;
+        uint64  maxExecutionSteps;
+        uint64  maxTimeBoundsWidth;
     }
 
-    struct Data {
-        bytes32 machineHash;
-        bytes32 pendingHash; // Lock pending and confirm asserts together
-        bytes32 inbox;
-        address asserter;
-        uint128 escrowRequired;
-        uint64 deadline;
-        uint64 sequenceNum;
-        uint32 gracePeriod;
-        uint32 maxExecutionSteps;
-        State state;
-        address activeChallengeManager;
+    function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
+        return vmStateHash == MACHINE_ERROR_HASH;
     }
 
-    struct FullAssertion {
-        bytes messageData;
-        uint16[] messageTokenNums;
-        uint256[] messageAmounts;
-        address[] messageDestinations;
-        bytes32 logsAccHash;
+    function isHalted(bytes32 vmStateHash) internal pure returns(bool) {
+        return vmStateHash == MACHINE_HALT_HASH;
     }
 
-    function acceptAssertion(Data storage _vm, bytes32 _afterHash) external {
-        _vm.machineHash = _afterHash;
-        _vm.state = VM.State.Waiting;
-    }
-
-    function withinDeadline(Data storage _vm) external view returns(bool) {
-        return block.number <= _vm.deadline;
-    }
-
-    function resetDeadline(Data storage _vm) external {
-        _vm.deadline = uint64(block.number) + _vm.gracePeriod;
-    }
-
-    function isErrored(Data storage _vm) external view returns(bool) {
-        return _vm.machineHash == MACHINE_ERROR_HASH;
-    }
-
-    function isHalted(Data storage _vm) external view returns(bool) {
-        return _vm.machineHash == MACHINE_HALT_HASH;
+    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks) internal view returns (bool) {
+        return block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1];
     }
 }

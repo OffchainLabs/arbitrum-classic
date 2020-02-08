@@ -16,8 +16,9 @@
 
 syntax = "proto3";
 package valmessage;
+import "valprotocol/valprotocol.proto";
 import "protocol/protocol.proto";
-import "value/value.proto";
+import "common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage";
 
 message TokenTypeBuf {
@@ -26,11 +27,11 @@ message TokenTypeBuf {
 
 message VMConfiguration {
     uint64 grace_period = 1;
-    value.BigIntegerBuf escrow_required = 2;
-    protocol.AddressBuf escrow_currency = 3;
-    repeated protocol.AddressBuf assert_keys = 4;
+    common.BigIntegerBuf escrow_required = 2;
+    common.AddressBuf escrow_currency = 3;
+    repeated common.AddressBuf assert_keys = 4;
     uint32 max_execution_step_count = 5;
-    protocol.AddressBuf owner = 6;
+    common.AddressBuf owner = 6;
 }
 
 message UnanimousAssertionValidatorNotification {
@@ -39,20 +40,20 @@ message UnanimousAssertionValidatorNotification {
 }
 
 message SignedMessage {
-    protocol.MessageBuf message = 1;
+    valprotocol.MessageBuf message = 1;
     bytes signature = 2;
 }
 
 message UnanimousAssertionValidatorRequest {
-    value.HashBuf beforeHash = 1;
-    value.HashBuf beforeInbox = 2;
+    common.HashBuf beforeHash = 1;
+    common.HashBuf beforeInbox = 2;
     uint64 sequenceNum = 3;
-    protocol.TimeBounds timeBounds = 4;
+    protocol.TimeBoundsBlocksBuf timeBounds = 4;
     repeated SignedMessage signedMessages = 5;
 }
 
 message ValidatorRequest {
-    value.HashBuf request_id = 1;
+    common.HashBuf request_id = 1;
     oneof request {
         UnanimousAssertionValidatorRequest unanimous = 2;
         UnanimousAssertionValidatorNotification unanimousNotification = 3;
@@ -62,10 +63,10 @@ message ValidatorRequest {
 message UnanimousAssertionFollowerResponse {
     bool accepted = 1;
     bytes signature = 2;
-    value.HashBuf assertion_hash = 3;
+    common.HashBuf assertion_hash = 3;
 }
 
 message FollowerResponse {
-    value.HashBuf request_id = 1;
+    common.HashBuf request_id = 1;
     UnanimousAssertionFollowerResponse unanimous = 3;
 }

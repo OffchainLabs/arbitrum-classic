@@ -15,7 +15,7 @@ module.exports = {
   plugins: ["truffle-security"],
   compilers: {
     solc: {
-      version: "0.5.10",
+      version: "0.5.15",
       // docker: true,
       settings: {
         optimizer: {

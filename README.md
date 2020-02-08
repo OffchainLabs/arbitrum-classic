@@ -4,7 +4,7 @@
 
 [![CircleCI](https://circleci.com/gh/OffchainLabs/arbitrum.svg?style=svg)](https://circleci.com/gh/OffchainLabs/arbitrum) [![codecov](https://codecov.io/gh/OffchainLabs/arbitrum/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arbitrum)
 
-Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalable, fast, and private. Arbitrum interoperates closely with Ethereum, so Ethereum developers can easily cross-compile their contracts to run on Arbitrum. Arbitrum achieves these goals through a unique combination of incentives, network protocol design, and virtual machine architecture.
+Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalable, fast, and private. Arbitrum interoperates closely with Ethereum, so Ethereum developers can easily cross-compile their contracts to run on Arbitrum. Arbitrum achieves these goals through a unique combination of incentives, network protocol design, and virtual machine architecture. Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
 
 Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), follow the [developer guide](https://developer.offchainlabs.com), and read the [white paper](https://offchainlabs.com/arbitrum.pdf)!
 
@@ -23,12 +23,21 @@ git clone -b master --depth=1 -c advice.detachedHead=false https://github.com/Of
 cd arbitrum
 yarn
 yarn install:deps
+yarn build
+
+# In one session
+yarn docker:build:geth
+yarn docker:geth
+
+# In another session
 cd demos/pet-shop
 truffle migrate --reset --compile-all --network arbitrum
 cd ../..
-./scripts/arb_deploy.py demos/pet-shop/contract.ao 3
+./scripts/setup_rollup.py --geth demos/pet-shop/contract.ao 3
 
-# Start the frontend in another session:
+./scripts/arb_deploy.py validator-states
+
+# In a third session:
 cd demos/pet-shop && yarn start
 ```
 

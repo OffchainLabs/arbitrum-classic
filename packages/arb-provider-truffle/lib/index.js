@@ -25,7 +25,11 @@ const spawnSync = require("child_process").spawnSync;
 const filenameEVM = "compiled.json";
 const filenameAO = "contract.ao";
 
-function provider(outputFolder, buildLocation, options) {
+function provider(outputFolder, buildLocation, options, should_compile) {
+  if (should_compile === undefined) {
+    should_compile = true;
+  }
+
   const outputLocationEVM = path.resolve(outputFolder, filenameEVM);
   const outputLocationAO = path.resolve(outputFolder, filenameAO);
   const stack = callsite();
@@ -33,20 +37,20 @@ function provider(outputFolder, buildLocation, options) {
   if (!buildLocation) {
     buildLocation = path.resolve(rootPath, "build/contracts");
   }
-  options.network_id = 123456789;
   options.allowUnlimitedContractSize = true;
+  options.network_id = 123456789;
   const arbProvider = ganache.provider(options);
 
   const contractCode = {};
 
-  let storageTrackFuncGen = function(address_string) {
+  const storageTrackFuncGen = function(address_string) {
     return function(err, code) {
       contractCode[address_string] = code;
     };
   };
 
   arbProvider.engine.on("block", function(block) {
-    for (let [address_string, value] of Object.entries(storage)) {
+    for (const [address_string, value] of Object.entries(storage)) {
       arbProvider.engine.manager.eth_getCode(
         address_string,
         "latest",
@@ -59,12 +63,14 @@ function provider(outputFolder, buildLocation, options) {
   const netID = arbProvider.options.network_id;
   arbProvider.engine.manager.waitForInitialization(function(err, state) {
     state.blockchain.vm.on("step", function(info) {
-      let address_string = "0x" + info.address.toString("hex");
+      const address_string = "0x" + info.address.toString("hex");
       if (!(address_string in storage)) {
         storage[address_string] = {};
       }
       if (info.opcode.name == "SSTORE") {
-        let args = info.stack.slice(-2).map(arg => "0x" + arg.toString("hex"));
+        const args = info.stack
+          .slice(-2)
+          .map(arg => "0x" + arg.toString("hex"));
         storage[address_string][args[1]] = args[0];
       }
     });
@@ -72,7 +78,7 @@ function provider(outputFolder, buildLocation, options) {
   process.on("exit", code => {
     const contracts = [];
     const files = fs.readdirSync(buildLocation, {});
-    for (let filePath of files) {
+    for (const filePath of files) {
       const contract = JSON.parse(
         fs.readFileSync(path.resolve(buildLocation, filePath))
       );
@@ -101,18 +107,21 @@ function provider(outputFolder, buildLocation, options) {
       );
       throw e;
     }
-    console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
-    try {
-      var compile = spawnSync(
-        "arbc-truffle",
-        [outputLocationEVM, outputLocationAO],
-        { encoding: "utf-8" }
-      );
-      console.log(compile.stdout);
-      console.log(compile.stderr);
-    } catch (e) {
-      console.log("Error arbc-truffle: " + e.name + " " + e.message);
-      throw e;
+
+    if (should_compile) {
+      console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
+      try {
+        var compile = spawnSync(
+          "arbc-truffle",
+          [outputLocationEVM, outputLocationAO],
+          { encoding: "utf-8" }
+        );
+        console.log(compile.stdout);
+        console.log(compile.stderr);
+      } catch (e) {
+        console.log("Error arbc-truffle: " + e.name + " " + e.message);
+        throw e;
+      }
     }
   });
   return arbProvider;

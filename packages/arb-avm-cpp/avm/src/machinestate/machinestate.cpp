@@ -16,30 +16,14 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm_values/exceptions.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatesaver.hpp>
 
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
-
-namespace {
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
-    std::vector<CodePoint> cps;
-    cps.reserve(ops.size());
-    uint64_t pc = 0;
-    for (auto& op : ops) {
-        cps.emplace_back(pc, std::move(op), 0);
-        pc++;
-    }
-    for (uint64_t i = 0; i < cps.size() - 1; i++) {
-        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
-    }
-    return cps;
-}
-}  // namespace
 
 void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
@@ -48,10 +32,35 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()),
-      pendingInbox(pool.get()),
-      context({0, 0}),
-      inbox(pool.get()) {}
+    : pool(std::make_unique<TuplePool>()), context({0, 0}, Tuple()) {}
+
+MachineState::MachineState(const std::vector<CodePoint>& code_,
+                           const value& static_val_,
+                           std::shared_ptr<TuplePool> pool_)
+    : pool(std::move(pool_)), context({0, 0}, Tuple()) {
+    code = code_;
+    staticVal = static_val_;
+
+    errpc = getErrCodePoint();
+    pc = 0;
+}
+
+bool MachineState::initialize_machinestate(
+    const std::string& contract_filename) {
+    auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
+
+    if (initial_state.valid_state) {
+        code = initial_state.code;
+        staticVal = initial_state.staticVal;
+
+        errpc = getErrCodePoint();
+        pc = 0;
+
+        return true;
+    } else {
+        return false;
+    }
+}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -115,74 +124,6 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-bool MachineState::deserialize(const char* bufptr) {
-    uint32_t version;
-    memcpy(&version, bufptr, sizeof(version));
-    version = __builtin_bswap32(version);
-    bufptr += sizeof(version);
-
-    if (version != CURRENT_AO_VERSION) {
-        std::cerr << "incorrect version of .ao file" << std::endl;
-        std::cerr << "expected version " << CURRENT_AO_VERSION
-                  << " found version " << version << std::endl;
-        return false;
-    }
-
-    uint32_t extentionId = 1;
-    while (extentionId != 0) {
-        memcpy(&extentionId, bufptr, sizeof(extentionId));
-        extentionId = __builtin_bswap32(extentionId);
-        bufptr += sizeof(extentionId);
-        if (extentionId > 0) {
-            //            std::cout << "found extention" << std::endl;
-        }
-    }
-    uint64_t codeCount;
-    memcpy(&codeCount, bufptr, sizeof(codeCount));
-    bufptr += sizeof(codeCount);
-    codeCount = boost::endian::big_to_native(codeCount);
-    code.reserve(codeCount);
-
-    std::vector<Operation> ops;
-    for (uint64_t i = 0; i < codeCount; i++) {
-        ops.emplace_back(deserializeOperation(bufptr, *pool));
-    }
-    code = opsToCodePoints(ops);
-    errpc = getErrCodePoint();
-    staticVal = deserialize_value(bufptr, *pool);
-    pc = 0;
-    return true;
-}
-
-uint64_t MachineState::pendingMessageCount() const {
-    return pendingInbox.messageCount;
-}
-
-void MachineState::sendOnchainMessage(const Message& msg) {
-    pendingInbox.addMessage(msg);
-}
-
-void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
-    MessageStack messageStack(pool.get());
-    for (const auto& message : messages) {
-        messageStack.addMessage(message);
-    }
-    inbox.addMessageStack(std::move(messageStack));
-}
-
-void MachineState::deliverOnchainMessages() {
-    inbox.addMessageStack(std::move(pendingInbox));
-    pendingInbox.clear();
-}
-
-void MachineState::setInbox(MessageStack ms) {
-    inbox = ms;
-}
-
-void MachineState::setPendingInbox(MessageStack ms) {
-    pendingInbox = ms;
-}
-
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
     auto opcode = code[pc].op.opcode;
@@ -214,39 +155,23 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
-    auto inbox_results = inbox.checkpointState(stateSaver);
-    auto pending_results = pendingInbox.checkpointState(stateSaver);
 
-    auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto err_code_point = stateSaver.saveValue(errpc);
     auto pc_results = stateSaver.saveValue(code[pc]);
 
     auto status_str = static_cast<unsigned char>(state);
-    auto blockreason_str = serializeForCheckpoint(blockReason);
 
-    auto hash_key = GetHashKey(hash());
+    std::vector<unsigned char> hash_key;
+    marshal_uint256_t(hash(), hash_key);
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        inbox_results.msgs_tuple_results.status.ok() &&
-        inbox_results.msg_count_results.status.ok() &&
-        pending_results.msgs_tuple_results.status.ok() &&
-        pending_results.msg_count_results.status.ok() &&
-        static_val_results.status.ok() && register_val_results.status.ok() &&
-        pc_results.status.ok() && err_code_point.status.ok()) {
-        auto machine_state_data =
-            ParsedState{static_val_results.storage_key,
-                        register_val_results.storage_key,
-                        datastack_results.storage_key,
-                        auxstack_results.storage_key,
-                        inbox_results.msgs_tuple_results.storage_key,
-                        inbox_results.msg_count_results.storage_key,
-                        pending_results.msgs_tuple_results.storage_key,
-                        pending_results.msg_count_results.storage_key,
-                        pc_results.storage_key,
-                        err_code_point.storage_key,
-                        status_str,
-                        blockreason_str};
+        register_val_results.status.ok() && pc_results.status.ok() &&
+        err_code_point.status.ok()) {
+        auto machine_state_data = MachineStateKeys{
+            register_val_results.storage_key, datastack_results.storage_key,
+            auxstack_results.storage_key,     pc_results.storage_key,
+            err_code_point.storage_key,       status_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -260,15 +185,20 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(storage, pool.get(), code);
+    auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
+
+    auto initial_values = storage.getInitialVmValues();
+    if (!initial_values.valid_state) {
+        return false;
+    }
+
+    code = initial_values.code;
+    staticVal = initial_values.staticVal;
+    pool = storage.pool;
 
     if (results.status.ok()) {
         auto state_data = results.data;
-
-        auto static_val_results =
-            stateFetcher.getValue(state_data.static_val_key);
-        staticVal = static_val_results.data;
 
         auto register_results =
             stateFetcher.getValue(state_data.register_val_key);
@@ -290,21 +220,43 @@ bool MachineState::restoreCheckpoint(
             return false;
         }
 
-        if (!inbox.initializeMessageStack(stateFetcher, state_data.inbox_key,
-                                          state_data.inbox_count_key)) {
-            return false;
-        }
-
-        if (!pendingInbox.initializeMessageStack(
-                stateFetcher, state_data.pending_key,
-                state_data.pending_count_key)) {
-            return false;
-        }
-
         state = static_cast<Status>(state_data.status_char);
-        blockReason = deserializeBlockReason(state_data.blockreason_str);
     }
     return results.status.ok();
+}
+
+BlockReason MachineState::isBlocked(uint256_t currentTime,
+                                    bool newMessages) const {
+    if (state == Status::Error) {
+        return ErrorBlocked();
+    } else if (state == Status::Halted) {
+        return HaltBlocked();
+    }
+    auto& instruction = code[pc];
+    if (instruction.op.opcode == OpCode::INBOX) {
+        if (newMessages) {
+            return NotBlocked();
+        }
+
+        auto& immediate = instruction.op.immediate;
+        const value* param;
+        if (immediate) {
+            param = immediate.get();
+        } else {
+            param = &stack[0];
+        }
+        auto paramNum = nonstd::get_if<uint256_t>(param);
+        if (!paramNum) {
+            return NotBlocked();
+        }
+        if (currentTime < *paramNum) {
+            return InboxBlocked(*paramNum);
+        } else {
+            return NotBlocked();
+        }
+    } else {
+        return NotBlocked();
+    }
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
@@ -388,9 +340,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HASH:
             machineoperation::hashOp(*this);
             break;
-
         case OpCode::TYPE:
             machineoperation::typeOp(*this);
+            break;
+        case OpCode::ETHHASH2:
+            machineoperation::ethhash2Op(*this);
             break;
 
             /***********************************************/

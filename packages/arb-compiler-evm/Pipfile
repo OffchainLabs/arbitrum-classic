@@ -4,10 +4,23 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+nose = "*"
 
 [packages]
-eth-abi = ">=2.0.0"
-eth-utils = "<2.0.0,>=1.2.0"
-networkx = "*"
-pycryptodome = "*"
-pyevmasm = "*"
+cytoolz = "==0.10.1"
+decorator = "==4.4.1"
+eth-abi = "==2.0.0"
+eth-hash = "==0.2.0"
+eth-typing = "==2.2.1"
+eth-utils = "==1.8.1"
+future = "==0.18.2"
+networkx = "==2.4"
+parsimonious = "==0.8.1"
+pycryptodome = "==3.9.4"
+pyevmasm = "==0.2.1"
+six = "==1.13.0"
+toolz = "==0.10.0"
+importlib_resources = "==1.0.2"
+
+[requires]
+python_version = "3.7"

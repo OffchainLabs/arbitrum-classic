@@ -16,8 +16,8 @@
 
 #include "config.hpp"
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/machine.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -29,18 +29,24 @@ auto save_path = execution_path.generic_string() + "/machineDb";
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
     auto results = machine.checkpoint(storage);
 
+    std::vector<unsigned char> hash_vector;
+    marshal_uint256_t(machine.hash(), hash_vector);
+
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
-    REQUIRE(results.storage_key == GetHashKey(machine.hash()));
+    REQUIRE(results.storage_key == hash_vector);
 }
 
 void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
     auto results = machine.checkpoint(storage);
     auto results2 = machine.checkpoint(storage);
 
+    std::vector<unsigned char> hash_vector;
+    marshal_uint256_t(machine.hash(), hash_vector);
+
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
-    REQUIRE(results2.storage_key == GetHashKey(machine.hash()));
+    REQUIRE(results2.storage_key == hash_vector);
 }
 
 void deleteCheckpoint(CheckpointStorage& storage,
@@ -64,7 +70,8 @@ void restoreCheckpoint(CheckpointStorage& storage,
 
 TEST_CASE("Checkpoint State") {
     SECTION("default") {
-        CheckpointStorage storage(save_path);
+        TuplePool pool;
+        CheckpointStorage storage(save_path, test_contract_path);
         Machine machine;
 
         bool initialized = machine.initializeMachine(test_contract_path);
@@ -74,18 +81,49 @@ TEST_CASE("Checkpoint State") {
     }
     boost::filesystem::remove_all(save_path);
     SECTION("save twice") {
-        CheckpointStorage storage(save_path);
+        TuplePool pool;
+        CheckpointStorage storage(save_path, test_contract_path);
         Machine machine;
         machine.initializeMachine(test_contract_path);
 
         checkpointStateTwice(storage, machine);
     }
     boost::filesystem::remove_all(save_path);
+    SECTION("assert machine hash") {
+        Machine machine;
+        machine.initializeMachine(test_contract_path);
+
+        CheckpointStorage storage(save_path, test_contract_path);
+        auto initial_machine = storage.getInitialVmValues();
+        MachineState machine_state(initial_machine.code,
+                                   initial_machine.staticVal, storage.pool);
+
+        auto machine2 = new Machine();
+        machine2->initializeMachine(machine_state);
+
+        auto hash1 = machine.hash();
+        auto hash2 = machine2->hash();
+
+        machine.checkpoint(storage);
+
+        std::vector<unsigned char> hash_vector;
+        marshal_uint256_t(hash1, hash_vector);
+
+        Machine machine3;
+        machine3.restoreCheckpoint(storage, hash_vector);
+
+        auto hash3 = machine3.hash();
+
+        REQUIRE(hash1 == hash2);
+        REQUIRE(hash3 == hash2);
+    }
+    boost::filesystem::remove_all(save_path);
 }
 
 TEST_CASE("Delete machine checkpoint") {
     SECTION("default") {
-        CheckpointStorage storage(save_path);
+        TuplePool pool;
+        CheckpointStorage storage(save_path, test_contract_path);
         Machine machine;
         machine.initializeMachine(test_contract_path);
         auto results = machine.checkpoint(storage);
@@ -98,7 +136,7 @@ TEST_CASE("Delete machine checkpoint") {
 TEST_CASE("Restore checkpoint") {
     SECTION("default") {
         TuplePool pool;
-        CheckpointStorage storage(save_path);
+        CheckpointStorage storage(save_path, test_contract_path);
         Machine machine;
         machine.initializeMachine(test_contract_path);
         auto results = machine.checkpoint(storage);

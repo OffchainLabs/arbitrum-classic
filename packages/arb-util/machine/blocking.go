@@ -17,18 +17,25 @@
 package machine
 
 import (
+	"fmt"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type BlockReason interface {
-	IsBlocked(m Machine, currentTime uint64) bool
+	IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool
 	Equals(b BlockReason) bool
 }
 
 type HaltBlocked struct {
 }
 
-func (b HaltBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b HaltBlocked) String() string {
+	return "HaltBlocked"
+}
+
+func (b HaltBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
 	return true
 }
 
@@ -40,7 +47,11 @@ func (b HaltBlocked) Equals(a BlockReason) bool {
 type ErrorBlocked struct {
 }
 
-func (b ErrorBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b ErrorBlocked) String() string {
+	return "ErrorBlocked"
+}
+
+func (b ErrorBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
 	return true
 }
 
@@ -52,7 +63,11 @@ func (b ErrorBlocked) Equals(a BlockReason) bool {
 type BreakpointBlocked struct {
 }
 
-func (b BreakpointBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b BreakpointBlocked) String() string {
+	return "BreakpointBlocked"
+}
+
+func (b BreakpointBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
 	return false
 }
 
@@ -62,11 +77,15 @@ func (b BreakpointBlocked) Equals(a BlockReason) bool {
 }
 
 type InboxBlocked struct {
-	Inbox value.HashOnlyValue
+	Timeout value.IntValue
 }
 
-func (b InboxBlocked) IsBlocked(m Machine, currentTime uint64) bool {
-	return value.Eq(m.InboxHash(), b.Inbox)
+func (b InboxBlocked) String() string {
+	return fmt.Sprintf("InboxBlocked(%v)", b.Timeout)
+}
+
+func (b InboxBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
+	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0 && !newMessages
 }
 
 func (b InboxBlocked) Equals(a BlockReason) bool {
@@ -74,5 +93,5 @@ func (b InboxBlocked) Equals(a BlockReason) bool {
 	if !ok {
 		return false
 	}
-	return value.Eq(aBlock.Inbox, b.Inbox)
+	return value.Eq(aBlock.Timeout, b.Timeout)
 }

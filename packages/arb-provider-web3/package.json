@@ -1,6 +1,6 @@
 {
   "name": "arb-provider-web3",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "Arbitrum provider for web3",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -13,24 +13,24 @@
   "scripts": {
     "test": "jest --config jest.config.js",
     "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-    "lint": "eslint ."
+    "lint": "yarn run eslint ."
   },
   "bugs": {
     "url": "https://github.com/OffchainLabs/arbitrum/issues"
   },
   "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "arb-provider-ethers": "^0.2.0",
-    "ethers": "~4.0.33",
-    "ethers-providers": "~2.1.19",
-    "ethers-utils": "~2.1.11"
+    "arb-provider-ethers": "^0.3.2",
+    "ethers": "^4.0.44",
+    "ethers-providers": "^2.1.19",
+    "ethers-utils": "^2.1.11"
   },
   "devDependencies": {
-    "eslint": "^6.2.1",
-    "eslint-config-prettier": "^6.1.0",
-    "eslint-plugin-prettier": "^3.1.0",
-    "jest": "^24.9.0",
-    "jest-junit": "^7.0.0",
-    "prettier": "^1.18.2"
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jest": "^25.1.0",
+    "jest-junit": "^10.0.0",
+    "prettier": "^1.19.1"
   }
 }

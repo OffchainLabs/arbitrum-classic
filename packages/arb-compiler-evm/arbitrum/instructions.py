@@ -42,6 +42,7 @@ OP_CODES = [
     # SHA3
     ("hash", 0x20, [ValueType()], [IntType()]),
     ("type", 0x21, [ValueType()], [IntType()]),
+    ("ethhash2", 0x22, [IntType(), IntType()], [IntType()]),
     # Stack, Memory, Storage and Flow Operations
     ("pop", 0x30, [ValueType()], []),
     ("spush", 0x31, [], [ValueType()]),
@@ -82,8 +83,8 @@ OP_CODES = [
     ("log", 0x61, [ValueType()], []),
     # System operations
     ("send", 0x70, [TupleType()], []),
-    ("gettime", 0x71, [], [TupleType()]),
-    ("inbox", 0x72, [TupleType()], [TupleType()]),
+    ("gettime", 0x71, [], [TupleType([IntType(), IntType()])]),
+    ("inbox", 0x72, [IntType()], [TupleType()]),
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
     ("debug", 0x75, [], []),

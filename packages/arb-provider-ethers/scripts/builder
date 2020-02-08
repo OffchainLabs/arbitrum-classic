@@ -1,0 +1,8 @@
+rm -r ./dist
+
+yarn run tsc
+
+for filepath in ./src/lib/abi/*.d.ts; do
+    filename=$(basename -- "$filepath")
+    cp $filepath "./dist/lib/abi/$filename"
+done

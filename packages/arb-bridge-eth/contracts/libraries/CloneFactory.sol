@@ -17,22 +17,74 @@ pragma solidity ^0.5.10;
   }
 */
 
+contract Spawn {
+  constructor(address logicContract) public {
+    // place eip-1167 runtime code in memory.
+    bytes memory runtimeCode = abi.encodePacked(
+      bytes10(0x363d3d373d3d3d363d73),
+      logicContract,
+      bytes15(0x5af43d82803e903d91602b57fd5bf3)
+    );
+
+    // return eip-1167 code to write it to spawned contract runtime.
+    assembly {
+      return(add(0x20, runtimeCode), 45) // eip-1167 runtime code, length
+    }
+  }
+}
+
 
 contract CloneFactory {
-    function createClone(address target) internal returns (address result) {
-        // convert address to bytes20 for assembly use
-        bytes20 targetBytes = bytes20(target);
+    function createClone(address target) internal returns (address spawnedContract) {
+        bytes memory initCode = abi.encodePacked(
+            type(Spawn).creationCode,
+            abi.encode(target)
+        );
         assembly {
-            // allocate clone memory
-            let clone := mload(0x40)
-            // store initial portion of the delegation contract code in bytes form
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            // store the provided address
-            mstore(add(clone, 0x14), targetBytes)
-            // store the remaining delegation contract code
-            mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            // create the actual delegate contract reference and return its address
-            result := create(0, clone, 0x37)
+            let encoded_data := add(0x20, initCode) // load initialization code.
+            let encoded_size := mload(initCode)     // load the init code's length.
+            spawnedContract := create(              // call `CREATE` w/ 3 arguments.
+                callvalue,                          // forward any supplied endowment.
+                encoded_data,                       // pass in initialization code.
+                encoded_size                        // pass in init code's length.
+            )
+
+          // pass along failure message from failed contract deployment and revert.
+            if iszero(spawnedContract) {
+                returndatacopy(0, 0, returndatasize)
+                revert(0, returndatasize)
+            }
         }
+    }
+
+    function create2Clone(address target, uint256 salt) internal returns (address spawnedContract) {
+        bytes memory initCode = abi.encodePacked(
+            type(Spawn).creationCode,
+            abi.encode(target)
+        );
+        assembly {
+            let encoded_data := add(0x20, initCode) // load initialization code.
+            let encoded_size := mload(initCode)     // load the init code's length.
+            spawnedContract := create2(             // call `CREATE2` w/ 4 arguments.
+                callvalue,                          // forward any supplied endowment.
+                encoded_data,                       // pass in initialization code.
+                encoded_size,                       // pass in init code's length.
+                salt                                // pass in the salt value.
+            )
+
+          // pass along failure message from failed contract deployment and revert.
+            if iszero(spawnedContract) {
+                returndatacopy(0, 0, returndatasize)
+                revert(0, returndatasize)
+            }
+        }
+    }
+
+    function cloneCodeHash(address target) internal pure returns (bytes32 result) {
+        bytes memory initCode = abi.encodePacked(
+            type(Spawn).creationCode,
+            abi.encode(target)
+        );
+        return keccak256(initCode);
     }
 }

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 from unittest import TestCase
 
-from arbitrum.std import stack
+from arbitrum.std import stack, bytestack_frombytes, bytestack_tohex
 from arbitrum import VM
 
 
@@ -43,3 +44,11 @@ class TestStack(TestCase):
         stack.push(vm)
         stack.isempty(vm)
         self.assertFalse(vm.stack[0])
+
+    def test_bytestack(self):
+        data = bytearray(random.getrandbits(8) for _ in range(60))
+        bs = bytestack_frombytes(data)
+        print(bs)
+
+        print(data.hex())
+        print(bytestack_tohex(bs))

@@ -58,7 +58,7 @@ def make_bigtuple_type(typ, default_val=None):
         @modifies_stack([], [bigtuple_type.typ], default_val)
         def new(vm):
             vm.push(BigTuple.make())
-            vm.cast(bigtuple_type)
+            vm.cast(bigtuple_type.typ)
 
         @staticmethod
         @modifies_stack(

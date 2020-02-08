@@ -1,0 +1,31 @@
+{
+  "name": "contract-templates",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum.git",
+    "directory": "packages/arb-compiler-evm/contract-templates"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum/issues"
+  },
+  "homepage": "https://offchainlabs.com/",
+  "scripts": {
+    "build": "truffle compile"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.5.0",
+    "arb-provider-truffle": "^0.3.3"
+  },
+  "devDependencies": {
+    "truffle": "^5.1.11"
+  },
+  "workspaces": {
+    "nohoist": [
+      "@openzeppelin/contracts"
+    ]
+  }
+}

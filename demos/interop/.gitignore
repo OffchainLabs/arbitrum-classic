@@ -1,0 +1,8 @@
+*.ao
+.DS_Store
+build
+compiled.json
+docker-compose.yml
+node_modules
+validator-states
+yarn-error.log

@@ -19,41 +19,97 @@ pragma solidity ^0.5.3;
 import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
-import "./IChallenge.sol";
+import "./IBisectionChallenge.sol";
+import "./ChallengeType.sol";
 
 
-contract ChallengeFactory is CloneFactory, IChallengeFactory {
+contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
 
-    address public challengeTemplate;
+    // Invalid challenge type
+    string constant INVALID_TYPE = "INVALID_TYPE";
 
-    constructor(address _challengeTemplate) public {
-        challengeTemplate = _challengeTemplate;
+    address public messagesChallengeTemplate;
+    address public inboxTopChallengeTemplate;
+    address public executionChallengeTemplate;
+
+    constructor(
+        address _messagesChallengeTemplate,
+        address _inboxTopChallengeTemplate,
+        address _executionChallengeTemplate
+    ) public {
+        messagesChallengeTemplate = _messagesChallengeTemplate;
+        inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
+        executionChallengeTemplate = _executionChallengeTemplate;
+    }
+
+    function generateCloneAddress(
+        address asserter,
+        address challenger,
+        uint256 challengeType
+    )
+        public
+        view
+        returns(address)
+    {
+        return address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff),
+                            address(this),
+                            generateNonce(asserter, challenger),
+                            cloneCodeHash(getChallengeTemplate(challengeType))
+                        )
+                    )
+                )
+            )
+        );
     }
 
     function createChallenge(
-        address[2] calldata _players,
-        uint128[2] calldata _escrows,
-        uint32 _challengePeriod,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] calldata _timeBounds,
-        bytes32 _assertionHash
+        address payable _asserter,
+        address payable _challenger,
+        uint256 _challengePeriodTicks,
+        bytes32 _challengeHash,
+        uint256 challengeType
     )
         external
         returns(address)
     {
+        address challengeTemplate = getChallengeTemplate(challengeType);
         address clone = createClone(challengeTemplate);
-        IChallenge(clone).init(
+        IBisectionChallenge(clone).initializeBisection(
             msg.sender,
-            _players,
-            _escrows,
-            _challengePeriod,
-            _beforeHash,
-            _beforeInbox,
-            _timeBounds,
-            _assertionHash
+            _asserter,
+            _challenger,
+            _challengePeriodTicks,
+            _challengeHash
         );
         return address(clone);
     }
-}
 
+    function generateNonce(address asserter, address challenger) private view returns(uint) {
+        return uint(
+            keccak256(
+                abi.encodePacked(
+                    asserter,
+                    challenger,
+                    msg.sender
+                )
+            )
+        );
+    }
+
+    function getChallengeTemplate(uint256 challengeType) private view returns(address) {
+        if (challengeType == INVALID_INBOX_TOP_TYPE) {
+            return inboxTopChallengeTemplate;
+        } else if (challengeType == INVALID_MESSAGES_TYPE) {
+            return messagesChallengeTemplate;
+        } else if (challengeType == INVALID_EXECUTION_TYPE) {
+            return executionChallengeTemplate;
+        } else {
+            require(false, INVALID_TYPE);
+        }
+    }
+}

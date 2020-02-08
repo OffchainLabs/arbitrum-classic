@@ -15,48 +15,66 @@
 from .. import std
 from .. import value
 
-contract_state = std.Struct(
-    "contract_state",
-    [("storage", std.keyvalue_int_int.typ), ("wallet", std.currency_store.typ)],
-)
 
 message = std.Struct(
     "message",
     [
-        ("data", value.ValueType()),
-        ("sender", value.IntType()),
-        ("amount", value.IntType()),
         ("type", value.IntType()),
+        ("sender", value.IntType()),
+        ("message", value.ValueType()),
     ],
 )
 
-message_blockchain_data = std.Struct(
-    "message_blockchain_data",
+token_transfer_message = std.Struct(
+    "token_transfer_message",
     [
-        ("data", value.ValueType()),
-        ("timestamp", value.IntType()),
-        ("block_number", value.IntType()),
-        ("txhash", value.IntType()),
+        ("token_address", value.IntType()),
+        ("dest", value.IntType()),
+        ("amount", value.IntType()),
     ],
 )
 
-message_data = std.Struct(
-    "message_data",
+eth_transfer_message = std.Struct(
+    "eth_transfer_message", [("dest", value.IntType()), ("amount", value.IntType())]
+)
+
+tx_message = std.Struct(
+    "tx_message",
     [
-        ("data", value.ValueType()),
-        ("contract_id", value.IntType()),
+        ("to", value.IntType()),
         ("sequence_num", value.IntType()),
+        ("value", value.IntType()),
+        ("data", value.ValueType()),
     ],
 )
 
-contract_store = std.make_keyvalue_type(value.IntType(), contract_state.typ)
+call_message = std.Struct(
+    "call_message", [("to", value.IntType()), ("data", value.ValueType())]
+)
+
+tx_call_data = std.Struct(
+    "tx_call_data",
+    [
+        ("dest", value.IntType()),
+        ("value", value.IntType()),
+        ("data", std.sized_byterange.typ),
+    ],
+)
 
 local_exec_state = std.Struct(
     "local_exec_state",
     [
-        ("data", value.ValueType()),
-        ("sender", value.IntType()),
-        ("amount", value.IntType()),
-        ("type", value.IntType()),
+        ("data", std.sized_byterange.typ),
+        ("caller", value.IntType()),
+        ("value", value.IntType()),
+    ],
+)
+
+ethbridge_message = std.Struct(
+    "ethbridge_message",
+    [
+        ("block_number", value.IntType()),
+        ("txhash", value.IntType()),
+        ("message", message.typ),
     ],
 )

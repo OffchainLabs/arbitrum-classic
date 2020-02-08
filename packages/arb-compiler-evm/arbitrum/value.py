@@ -351,10 +351,10 @@ class AVMCodePoint:
         self.path = path
 
     def __repr__(self):
-        return "AVMCodePoint({}, {}, {})".format(self.pc, self.op, self.next_hash.hex())
+        return "AVMCodePoint({}, {})".format(self.pc, self.op)
 
 
-ERROR_CODE_POINT = AVMCodePoint(0, 0, b"\0" * 32)
+ERROR_CODE_POINT = AVMCodePoint(18446744073709551615, 0, b"\0" * 32)
 
 
 def value_hash(val):
