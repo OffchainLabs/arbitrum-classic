@@ -38,3 +38,13 @@ message CheckpointManifest {
     repeated common.HashBuf values = 1;
     repeated common.HashBuf machines = 2;
 }
+
+message DepthBoundsBuf {
+    common.TimeBlocksBuf lo = 1;
+    common.TimeBlocksBuf hi = 2;
+}
+
+message CheckpointWithManifest {
+    bytes              contents = 1;
+    CheckpointManifest manifest = 2;
+}
