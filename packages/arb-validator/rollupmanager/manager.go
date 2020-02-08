@@ -64,7 +64,7 @@ func CreateManager(
 		rollupAddr,
 		true,
 		clnt,
-		checkpointing.NewRollupCheckpointerImplFactory(
+		checkpointing.NewIndexedCheckpointerFactory(
 			rollupAddr,
 			aoFilePath,
 			dbPath,
