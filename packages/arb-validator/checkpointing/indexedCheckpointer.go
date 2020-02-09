@@ -258,29 +258,26 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 	clnt arbbridge.ArbClient,
 	_ common.Address,
 	_ bool,
-) (
-	[]byte,
-	RestoreContext,
-	error,
-) {
+	callback func([]byte, RestoreContext),
+) error {
 	cp.Lock()
 	defer cp.Unlock()
 
 	depthBounds, err := cp.getDepthBounds()
 	if depthBounds == nil {
-		return nil, nil, errors.New("Cannot restore because no checkpoint exists")
+		return errors.New("Cannot restore because no checkpoint exists")
 	}
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	for depth := depthBounds.hi; depth.Cmp(depthBounds.lo) >= 0; depth = common.NewTimeBlocks(new(big.Int).Sub(depth.AsInt(), big.NewInt(1))) {
 		ids, err := cp.getIdsAtDepth(depth)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		onchainId, err := clnt.BlockIdForHeight(ctx, depth)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		for _, id := range ids {
 			if id.Equals(onchainId) {
@@ -288,13 +285,15 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 				val := cp.db.GetData(key)
 				ckpWithMan := &CheckpointWithManifest{}
 				if err := proto.Unmarshal(val, ckpWithMan); err != nil {
-					return nil, nil, err
+					return err
 				}
-				return ckpWithMan.Contents, cp, nil
+				callback(ckpWithMan.Contents, cp.newRestoreContextLocked())
+				return nil
 			}
 		}
 	}
-	return nil, nil, nil
+	callback(nil, nil)
+	return nil
 }
 
 func (cp *IndexedCheckpointer) writeDaemon() {
@@ -424,17 +423,40 @@ func (cp *IndexedCheckpointer) deleteCheckpointForId(id *common.BlockId) error {
 	return nil
 }
 
+type restoreContextLocked struct {
+	cp *IndexedCheckpointer
+}
+
+func (cp *IndexedCheckpointer) newRestoreContextLocked() RestoreContext {
+	return &restoreContextLocked{cp}
+}
+
+func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
+	return rcl.cp.getValue_locked(h)
+}
+
+func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
+	return rcl.cp.getMachine_locked(h)
+}
+
 func (cp *IndexedCheckpointer) GetValue(h common.Hash) value.Value {
 	cp.Lock()
 	defer cp.Unlock()
 
+	return cp.getValue_locked(h)
+}
+
+func (cp *IndexedCheckpointer) getValue_locked(h common.Hash) value.Value {
 	return cp.db.GetValue(h)
 }
 
 func (cp *IndexedCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	cp.Lock()
 	defer cp.Unlock()
+	return cp.getMachine_locked(h)
+}
 
+func (cp *IndexedCheckpointer) getMachine_locked(h common.Hash) machine.Machine {
 	ret, err := cp.db.GetInitialMachine()
 	if err != nil {
 		log.Fatal(err)

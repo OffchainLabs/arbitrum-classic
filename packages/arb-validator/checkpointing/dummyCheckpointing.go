@@ -53,8 +53,14 @@ func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }
 
-func (dcp *DummyCheckpointer) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, contractAddr common.Address, beOpinionated bool) ([]byte, RestoreContext, error) {
-	return nil, nil, errors.New("no checkpoints in database")
+func (dcp *DummyCheckpointer) RestoreLatestState(
+	ctx context.Context,
+	client arbbridge.ArbClient,
+	contractAddr common.Address,
+	beOpinionated bool,
+	callback func([]byte, RestoreContext),
+) error {
+	return errors.New("no checkpoints in database")
 }
 
 func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
