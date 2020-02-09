@@ -24,6 +24,7 @@ library Messages {
     uint8 internal constant ETH_DEPOSIT = 1;
     uint8 internal constant ERC20_DEPOSIT = 2;
     uint8 internal constant ERC721_DEPOSIT = 3;
+    uint8 internal constant CONTRACT_TRANSACTION_MSG = 4;
 
     using Value for Value.Data;
 
@@ -238,6 +239,61 @@ library Messages {
             blockNumber,
             messageNum
         );
+    }
+
+    function contractTransactionHash(
+        address to,
+        address from,
+        uint256 value,
+        bytes memory data,
+        uint256 blockNumber,
+        uint256 messageNum
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                CONTRACT_TRANSACTION_MSG,
+                to,
+                from,
+                value,
+                data,
+                blockNumber,
+                messageNum
+            )
+        );
+    }
+
+    function contractTransactionMessageHash(
+        address to,
+        address from,
+        uint256 value,
+        bytes memory data,
+        uint256 blockNumber,
+        uint256 messageNum
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        bytes32 dataHash = Value.bytesToBytestackHash(data);
+        Value.Data[] memory msgValues = new Value.Data[](3);
+        msgValues[0] = Value.newInt(uint256(to));
+        msgValues[2] = Value.newInt(value);
+        msgValues[3] = Value.newHashOnly(dataHash);
+
+        Value.Data[] memory msgType = new Value.Data[](3);
+        msgType[0] = Value.newInt(CONTRACT_TRANSACTION_MSG);
+        msgType[1] = Value.newInt(uint256(from));
+        msgType[2] = Value.newTuple(msgValues);
+
+        return Value.hashTuple([
+            Value.newInt(blockNumber),
+            Value.newInt(messageNum),
+            Value.newTuple(msgType)
+        ]);
     }
 
     function tokenHash(

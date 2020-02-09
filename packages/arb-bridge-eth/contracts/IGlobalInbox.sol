@@ -53,6 +53,14 @@ interface IGlobalInbox {
         uint256 messageNum
     );
 
+    event ContractTransactionMessageDelivered(
+        address indexed chain,
+        address indexed to,
+        address indexed from,
+        uint256 value,
+        bytes data
+    );
+
     function getInbox(address account) external view returns(bytes32, uint);
 
     function sendMessages(bytes calldata _messages) external;
@@ -93,4 +101,16 @@ interface IGlobalInbox {
         uint256 _value
     )
         external;
+
+    // msg.sender is the chain receiving the message
+    function forwardContractTransactionMessage(
+        address _to,
+        address _from,
+        uint256 _value,
+        bytes calldata _data
+    )
+        external;
+
+    // msg.sender is the chain receiving the message
+    function forwardEthMessage(address _to, address _from) external payable;
 }
