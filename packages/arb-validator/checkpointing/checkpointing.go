@@ -38,13 +38,7 @@ type RollupCheckpointerFactory interface {
 
 type RollupCheckpointer interface {
 	HasCheckpointedState() bool
-	RestoreLatestState(
-		context.Context,
-		arbbridge.ArbClient,
-		common.Address,
-		bool,
-		func([]byte, RestoreContext), // need to use callback so checkpointer can manage its locking safely
-	) error
+	RestoreLatestState(context.Context, arbbridge.ArbClient, func([]byte, RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx CheckpointContext, closeWhenDone chan struct{})
 }
@@ -164,13 +158,7 @@ func (rcp *RollupCheckpointerImpl) HasCheckpointedState() bool {
 	return metadataBytes != nil && len(metadataBytes) > 0
 }
 
-func (rcp *RollupCheckpointerImpl) RestoreLatestState(
-	ctx context.Context,
-	client arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-	callback func([]byte, RestoreContext),
-) error {
+func (rcp *RollupCheckpointerImpl) RestoreLatestState(ctx context.Context, client arbbridge.ArbClient, unmarshalFunc func([]byte, RestoreContext) error) error {
 	rcp.QueueReorgedCheckpointsForDeletion(ctx, client)
 
 	metadataBytes := rcp.RestoreMetadata()
@@ -186,8 +174,7 @@ func (rcp *RollupCheckpointerImpl) RestoreLatestState(
 	if err != nil {
 		return err
 	}
-	callback(cobBytes, resCtx)
-	return nil
+	return unmarshalFunc(cobBytes, resCtx)
 }
 
 func (rcp *RollupCheckpointerImpl) RestoreCheckpoint(blockId *common.BlockId) ([]byte, RestoreContext, error) {

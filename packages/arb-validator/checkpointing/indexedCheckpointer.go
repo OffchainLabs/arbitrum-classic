@@ -73,6 +73,11 @@ func NewIndexedCheckpointerFactory(
 	return ret
 }
 
+// The checkpointer interface uses a factory pattern. The idea is that the rollup manager makes a factory, then
+// uses that factory to make a first checkpointer. On every reorg it kills the old checkpointer and calls the factory
+// to make a new checkpointer. But IndexedCheckpointer is reorg-aware, so it doesn't need to die and get
+// re-instantiated after each reorg.  To comply with the factory-based interface, it just makes a single object
+// which acts as both the factory and the checkpointer. So when the factory's New is called, it just returns itself.
 func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
 }
@@ -248,13 +253,7 @@ func (_ *IndexedCheckpointer) makeContentsKey(id *common.BlockId) []byte {
 	return append([]byte{2}, bytesBuf...)
 }
 
-func (cp *IndexedCheckpointer) RestoreLatestState(
-	ctx context.Context,
-	clnt arbbridge.ArbClient,
-	_ common.Address,
-	_ bool,
-	callback func([]byte, RestoreContext),
-) error {
+func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ArbClient, unmarshalFunc func([]byte, RestoreContext) error) error {
 	cp.Lock()
 	defer cp.Unlock()
 
@@ -282,13 +281,12 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 				if err := proto.Unmarshal(val, ckpWithMan); err != nil {
 					return err
 				}
-				callback(ckpWithMan.Contents, cp.newRestoreContextLocked())
-				return nil
+				return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
 			}
 		}
 	}
-	callback(nil, nil)
-	return nil
+	log.Fatal("Called RestoreLatestState on checkpointer that has no stored checkpoints")
+	return nil // can't reach this but need to make the compiler happy
 }
 
 func (cp *IndexedCheckpointer) writeDaemon() {

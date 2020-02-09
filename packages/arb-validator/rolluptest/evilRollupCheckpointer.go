@@ -73,11 +73,9 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-	callback func([]byte, checkpointing.RestoreContext),
+	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
 ) error {
-	return e.cp.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated, callback)
+	return e.cp.RestoreLatestState(ctx, clnt, unmarshalFunc)
 }
 
 func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {

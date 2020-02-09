@@ -128,23 +128,15 @@ func CreateManagerAdvanced(
 			}
 
 			if checkpointer.HasCheckpointedState() {
-				err := checkpointer.RestoreLatestState(
-					runCtx,
-					clnt,
-					rollupAddr,
-					updateOpinion,
-					func(chainObserverBytes []byte, restoreCtx checkpointing.RestoreContext) {
-						chainObserverBuf := &rollup.ChainObserverBuf{}
-						if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
-							log.Fatal(err)
-						}
-						var err error
-						chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
-						if err != nil {
-							log.Fatal(err)
-						}
-					},
-				)
+				err := checkpointer.RestoreLatestState(runCtx, clnt, func(chainObserverBytes []byte, restoreCtx checkpointing.RestoreContext) error {
+					chainObserverBuf := &rollup.ChainObserverBuf{}
+					if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+						log.Fatal(err)
+					}
+					var err error
+					chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+					return err
+				})
 				if err != nil {
 					log.Fatal(err)
 				}
