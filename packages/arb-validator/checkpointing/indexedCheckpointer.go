@@ -34,10 +34,10 @@ import (
 
 type IndexedCheckpointer struct {
 	*sync.Mutex
-	db             machine.CheckpointStorage
-	maxReorgHeight *big.Int
-
+	db                    machine.CheckpointStorage
+	maxReorgHeight        *big.Int
 	nextCheckpointToWrite *writableCheckpoint
+	chansToClose          []chan struct{}
 }
 
 func NewIndexedCheckpointerFactory(
@@ -65,6 +65,7 @@ func NewIndexedCheckpointerFactory(
 		new(sync.Mutex),
 		cCheckpointer,
 		new(big.Int).Set(maxReorgHeight),
+		nil,
 		nil,
 	}
 	go ret.writeDaemon()
@@ -144,7 +145,6 @@ func (cp *IndexedCheckpointer) updateHeightUpperBound(height *common.TimeBlocks)
 			hi: height.Clone(),
 		}
 		return cp.setHeightBounds(bounds)
-
 	} else if bounds.hi.Cmp(height) < 0 {
 		bounds.hi = height.Clone()
 		return cp.setHeightBounds(bounds)
@@ -215,10 +215,9 @@ func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
 }
 
 type writableCheckpoint struct {
-	blockId       *common.BlockId
-	contents      []byte
-	ckpCtx        CheckpointContext
-	closeWhenDone chan struct{}
+	blockId  *common.BlockId
+	contents []byte
+	ckpCtx   CheckpointContext
 }
 
 func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
@@ -230,22 +229,18 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	cp.Lock()
 	defer cp.Unlock()
 
-	if cp.nextCheckpointToWrite != nil && cp.nextCheckpointToWrite.closeWhenDone != nil {
-		close(cp.nextCheckpointToWrite.closeWhenDone)
+	if closeWhenDone != nil {
+		cp.chansToClose = append(cp.chansToClose, closeWhenDone)
 	}
 	cp.nextCheckpointToWrite = &writableCheckpoint{
-		blockId:       blockId,
-		contents:      contents,
-		ckpCtx:        cpCtx,
-		closeWhenDone: closeWhenDone,
+		blockId:  blockId,
+		contents: contents,
+		ckpCtx:   cpCtx,
 	}
 }
 
 func (_ *IndexedCheckpointer) makeContentsKey(id *common.BlockId) []byte {
-	bidBuf := &common.BlockIdBuf{
-		Height:     id.Height.Marshal(),
-		HeaderHash: id.HeaderHash.MarshalToBuf(),
-	}
+	bidBuf := id.MarshalToBuf()
 	bytesBuf, err := proto.Marshal(bidBuf)
 	if err != nil {
 		log.Fatal(err)
@@ -264,11 +259,11 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 	defer cp.Unlock()
 
 	heightBounds, err := cp.getHeightBounds()
-	if heightBounds == nil {
-		return errors.New("Cannot restore because no checkpoint exists")
-	}
 	if err != nil {
 		return err
+	}
+	if heightBounds == nil {
+		return errors.New("Cannot restore because no checkpoint exists")
 	}
 	for height := heightBounds.hi; height.Cmp(heightBounds.lo) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
 		ids, err := cp.getIdsAtHeight(height)
@@ -307,9 +302,10 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 			if err != nil {
 				log.Println("Error writing checkpoint: {}", err)
 			}
-			if cp.nextCheckpointToWrite.closeWhenDone != nil {
-				close(cp.nextCheckpointToWrite.closeWhenDone)
+			for _, c := range cp.chansToClose {
+				close(c)
 			}
+			cp.chansToClose = nil
 			cp.nextCheckpointToWrite = nil
 		}
 		cp.Unlock()
@@ -386,6 +382,11 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 							return
 						}
 					}
+					bounds, err := cp.getHeightBounds()
+					if err != nil {
+						cp.Unlock()
+						return
+					}
 					bounds.lo = height
 					if err := cp.setHeightBounds(bounds); err != nil {
 						cp.Unlock()
@@ -453,6 +454,7 @@ func (cp *IndexedCheckpointer) getValue_locked(h common.Hash) value.Value {
 func (cp *IndexedCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	cp.Lock()
 	defer cp.Unlock()
+
 	return cp.getMachine_locked(h)
 }
 
