@@ -34,8 +34,8 @@ import (
 
 type IndexedCheckpointer struct {
 	*sync.Mutex
-	db            machine.CheckpointStorage
-	maxReorgDepth *big.Int
+	db             machine.CheckpointStorage
+	maxReorgHeight *big.Int
 
 	nextCheckpointToWrite *writableCheckpoint
 }
@@ -44,7 +44,7 @@ func NewIndexedCheckpointerFactory(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
-	maxReorgDepth *big.Int,
+	maxReorgHeight *big.Int,
 	forceFreshStart bool,
 ) RollupCheckpointerFactory {
 	if databasePath == "" {
@@ -64,7 +64,7 @@ func NewIndexedCheckpointerFactory(
 	ret := &IndexedCheckpointer{
 		new(sync.Mutex),
 		cCheckpointer,
-		new(big.Int).Set(maxReorgDepth),
+		new(big.Int).Set(maxReorgHeight),
 		nil,
 	}
 	go ret.writeDaemon()
@@ -76,20 +76,20 @@ func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
 }
 
-type ckpDepthBounds struct {
+type ckpHeightBounds struct {
 	lo *common.TimeBlocks
 	hi *common.TimeBlocks
 }
 
-func (db *ckpDepthBounds) Marshal() *DepthBoundsBuf {
-	return &DepthBoundsBuf{
+func (db *ckpHeightBounds) Marshal() *HeightBoundsBuf {
+	return &HeightBoundsBuf{
 		Lo: db.lo.Marshal(),
 		Hi: db.hi.Marshal(),
 	}
 }
 
-func (dbuf *DepthBoundsBuf) Unmarshal() *ckpDepthBounds {
-	return &ckpDepthBounds{
+func (dbuf *HeightBoundsBuf) Unmarshal() *ckpHeightBounds {
+	return &ckpHeightBounds{
 		lo: dbuf.Lo.Unmarshal(),
 		hi: dbuf.Hi.Unmarshal(),
 	}
@@ -99,27 +99,27 @@ func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 	cp.Lock()
 	defer cp.Unlock()
 
-	bounds, err := cp.getDepthBounds()
+	bounds, err := cp.getHeightBounds()
 	if err != nil {
 		log.Fatal(err)
 	}
 	return bounds != nil
 }
 
-func (cp *IndexedCheckpointer) getDepthBounds() (*ckpDepthBounds, error) {
+func (cp *IndexedCheckpointer) getHeightBounds() (*ckpHeightBounds, error) {
 	key := []byte{0}
 	valBytes := cp.db.GetData(key)
 	if valBytes == nil {
 		return nil, nil
 	}
-	depthBounds := &DepthBoundsBuf{}
-	if err := proto.Unmarshal(valBytes, depthBounds); err != nil {
+	heightBounds := &HeightBoundsBuf{}
+	if err := proto.Unmarshal(valBytes, heightBounds); err != nil {
 		return nil, err
 	}
-	return depthBounds.Unmarshal(), nil
+	return heightBounds.Unmarshal(), nil
 }
 
-func (cp *IndexedCheckpointer) setDepthBounds(bounds *ckpDepthBounds) error {
+func (cp *IndexedCheckpointer) setHeightBounds(bounds *ckpHeightBounds) error {
 	key := []byte{0}
 	buf := bounds.Marshal()
 	val, err := proto.Marshal(buf)
@@ -128,33 +128,33 @@ func (cp *IndexedCheckpointer) setDepthBounds(bounds *ckpDepthBounds) error {
 	}
 	ok := cp.db.SaveData(key, val)
 	if !ok {
-		return errors.New("db write error in checkpointer.setDepthBounds")
+		return errors.New("db write error in checkpointer.setHeightBounds")
 	}
 	return nil
 }
 
-func (cp *IndexedCheckpointer) updateDepthUpperBound(depth *common.TimeBlocks) error {
-	bounds, err := cp.getDepthBounds()
+func (cp *IndexedCheckpointer) updateHeightUpperBound(height *common.TimeBlocks) error {
+	bounds, err := cp.getHeightBounds()
 	if err != nil {
 		return err
 	}
 	if bounds == nil {
-		bounds = &ckpDepthBounds{
-			lo: depth.Clone(),
-			hi: depth.Clone(),
+		bounds = &ckpHeightBounds{
+			lo: height.Clone(),
+			hi: height.Clone(),
 		}
-		return cp.setDepthBounds(bounds)
+		return cp.setHeightBounds(bounds)
 
-	} else if bounds.hi.Cmp(depth) < 0 {
-		bounds.hi = depth.Clone()
-		return cp.setDepthBounds(bounds)
+	} else if bounds.hi.Cmp(height) < 0 {
+		bounds.hi = height.Clone()
+		return cp.setHeightBounds(bounds)
 	} else {
 		return nil
 	}
 }
 
-func (cp *IndexedCheckpointer) getIdsAtDepth(depth *common.TimeBlocks) ([]*common.BlockId, error) {
-	key := append([]byte{1}, depth.AsInt().Bytes()...)
+func (cp *IndexedCheckpointer) getIdsAtHeight(height *common.TimeBlocks) ([]*common.BlockId, error) {
+	key := append([]byte{1}, height.AsInt().Bytes()...)
 	valBytes := cp.db.GetData(key)
 	if valBytes == nil {
 		return nil, nil
@@ -170,8 +170,8 @@ func (cp *IndexedCheckpointer) getIdsAtDepth(depth *common.TimeBlocks) ([]*commo
 	return ret, nil
 }
 
-func (cp *IndexedCheckpointer) setIdsAtDepth(depth *common.TimeBlocks, ids []*common.BlockId) error {
-	key := append([]byte{1}, depth.AsInt().Bytes()...)
+func (cp *IndexedCheckpointer) setIdsAtHeight(height *common.TimeBlocks, ids []*common.BlockId) error {
+	key := append([]byte{1}, height.AsInt().Bytes()...)
 	idBufs := []*common.BlockIdBuf{}
 	for _, id := range ids {
 		idBufs = append(idBufs, id.MarshalToBuf())
@@ -185,26 +185,26 @@ func (cp *IndexedCheckpointer) setIdsAtDepth(depth *common.TimeBlocks, ids []*co
 	}
 	ok := cp.db.SaveData(key, valBytes)
 	if !ok {
-		return errors.New("db write error in checkpointer.setIdsAtDepth")
+		return errors.New("db write error in checkpointer.setIdsAtHeight")
 	}
 	return nil
 }
 
-func (cp *IndexedCheckpointer) deleteIdsAtDepth(depth *common.TimeBlocks) error {
-	key := append([]byte{1}, depth.AsInt().Bytes()...)
+func (cp *IndexedCheckpointer) deleteIdsAtHeight(height *common.TimeBlocks) error {
+	key := append([]byte{1}, height.AsInt().Bytes()...)
 	if ok := cp.db.DeleteData(key); !ok {
-		return errors.New("Checkpointer failed to delete idsAtDepth")
+		return errors.New("Checkpointer failed to delete idsAtHeight")
 	}
 	return nil
 }
 
 func (cp *IndexedCheckpointer) recordIdAsCheckpointed(newId *common.BlockId) error {
-	ids, err := cp.getIdsAtDepth(newId.Height)
+	ids, err := cp.getIdsAtHeight(newId.Height)
 	if err != nil {
 		return err
 	}
 	ids = append(ids, newId)
-	return cp.setIdsAtDepth(newId.Height, ids)
+	return cp.setIdsAtHeight(newId.Height, ids)
 }
 
 func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -263,19 +263,19 @@ func (cp *IndexedCheckpointer) RestoreLatestState(
 	cp.Lock()
 	defer cp.Unlock()
 
-	depthBounds, err := cp.getDepthBounds()
-	if depthBounds == nil {
+	heightBounds, err := cp.getHeightBounds()
+	if heightBounds == nil {
 		return errors.New("Cannot restore because no checkpoint exists")
 	}
 	if err != nil {
 		return err
 	}
-	for depth := depthBounds.hi; depth.Cmp(depthBounds.lo) >= 0; depth = common.NewTimeBlocks(new(big.Int).Sub(depth.AsInt(), big.NewInt(1))) {
-		ids, err := cp.getIdsAtDepth(depth)
+	for height := heightBounds.hi; height.Cmp(heightBounds.lo) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
+		ids, err := cp.getIdsAtHeight(height)
 		if err != nil {
 			return err
 		}
-		onchainId, err := clnt.BlockIdForHeight(ctx, depth)
+		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
 			return err
 		}
@@ -348,8 +348,8 @@ func (cp *IndexedCheckpointer) writeCheckpoint(wc *writableCheckpoint) error {
 		return nil
 	}
 
-	// update depth bounds if needed
-	return cp.updateDepthUpperBound(wc.blockId.Height)
+	// update height bounds if needed
+	return cp.updateHeightUpperBound(wc.blockId.Height)
 }
 
 func (cp *IndexedCheckpointer) cleanupDaemon() {
@@ -359,18 +359,18 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 		<-ticker.C
 		func() {
 			cp.Lock()
-			bounds, err := cp.getDepthBounds()
+			bounds, err := cp.getHeightBounds()
 			cp.Unlock()
 			if err != nil {
 				return
 			}
-			depth := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
-			depthLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgDepth))
-			var prevDepth *common.TimeBlocks = nil
+			height := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
+			heightLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgHeight))
+			var prevHeight *common.TimeBlocks = nil
 			prevIds := []*common.BlockId{}
-			for depth.Cmp(depthLimit) < 0 {
+			for height.Cmp(heightLimit) < 0 {
 				cp.Lock()
-				ids, err := cp.getIdsAtDepth(depth)
+				ids, err := cp.getIdsAtHeight(height)
 				cp.Unlock()
 				if err != nil {
 					return
@@ -380,22 +380,22 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 						_ = cp.deleteCheckpointForId(id) // OK to call without lock; callee will acquire lock
 					}
 					cp.Lock()
-					if prevDepth != nil {
-						if err := cp.deleteIdsAtDepth(prevDepth); err != nil {
+					if prevHeight != nil {
+						if err := cp.deleteIdsAtHeight(prevHeight); err != nil {
 							cp.Unlock()
 							return
 						}
 					}
-					bounds.lo = depth
-					if err := cp.setDepthBounds(bounds); err != nil {
+					bounds.lo = height
+					if err := cp.setHeightBounds(bounds); err != nil {
 						cp.Unlock()
 						return
 					}
 					cp.Unlock()
-					prevDepth = depth
+					prevHeight = height
 					prevIds = ids
 				}
-				depth = common.NewTimeBlocks(new(big.Int).Add(depth.AsInt(), big.NewInt(1)))
+				height = common.NewTimeBlocks(new(big.Int).Add(height.AsInt(), big.NewInt(1)))
 			}
 		}()
 	}

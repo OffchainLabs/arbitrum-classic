@@ -39,7 +39,7 @@ message CheckpointManifest {
     repeated common.HashBuf machines = 2;
 }
 
-message DepthBoundsBuf {
+message HeightBoundsBuf {
     common.TimeBlocksBuf lo = 1;
     common.TimeBlocksBuf hi = 2;
 }
