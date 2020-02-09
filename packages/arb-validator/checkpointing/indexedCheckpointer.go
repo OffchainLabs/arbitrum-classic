@@ -190,6 +190,14 @@ func (cp *IndexedCheckpointer) setIdsAtDepth(depth *common.TimeBlocks, ids []*co
 	return nil
 }
 
+func (cp *IndexedCheckpointer) deleteIdsAtDepth(depth *common.TimeBlocks) error {
+	key := append([]byte{1}, depth.AsInt().Bytes()...)
+	if ok := cp.db.DeleteData(key); !ok {
+		return errors.New("Checkpointer failed to delete idsAtDepth")
+	}
+	return nil
+}
+
 func (cp *IndexedCheckpointer) recordIdAsCheckpointed(newId *common.BlockId) error {
 	ids, err := cp.getIdsAtDepth(newId.Height)
 	if err != nil {
@@ -357,8 +365,8 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 			if err != nil {
 				return
 			}
-			depth := bounds.lo
-			depthLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), cp.maxReorgDepth))
+			depth := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
+			depthLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgDepth))
 			var prevDepth *common.TimeBlocks = nil
 			prevIds := []*common.BlockId{}
 			for depth.Cmp(depthLimit) < 0 {
@@ -373,9 +381,11 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 						_ = cp.deleteCheckpointForId(id) // OK to call without lock; callee will acquire lock
 					}
 					cp.Lock()
-					if err := cp.setIdsAtDepth(prevDepth, []*common.BlockId{}); err != nil {
-						cp.Unlock()
-						return
+					if prevDepth != nil {
+						if err := cp.deleteIdsAtDepth(prevDepth); err != nil {
+							cp.Unlock()
+							return
+						}
 					}
 					bounds.lo = depth
 					if err := cp.setDepthBounds(bounds); err != nil {
