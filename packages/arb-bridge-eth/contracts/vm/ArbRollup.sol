@@ -248,7 +248,7 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     function ownerShutdown() external onlyOwner {
-        owner.transfer(address(this).balance);
+        selfdestruct(msg.sender);
     }
 
 
