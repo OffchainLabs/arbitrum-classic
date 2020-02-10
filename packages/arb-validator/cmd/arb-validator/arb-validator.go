@@ -127,7 +127,7 @@ func createRollupChain() error {
 	}
 
 	if createCmd.NArg() != 3 {
-		return errors.New("usage: rollupServer create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
+		return errors.New("usage: arb-validator create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -193,7 +193,7 @@ func validateRollupChain() error {
 	}
 
 	if validateCmd.NArg() != 3 {
-		return errors.New("usage: rollupServer validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
+		return errors.New("usage: arb-validator validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
 	}
 
 	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
