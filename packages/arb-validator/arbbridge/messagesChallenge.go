@@ -62,6 +62,13 @@ type MessagesChallenge interface {
 		msg message.DeliveredERC721,
 	) error
 
+	OneStepProofContractTransactionMessage(
+		ctx context.Context,
+		lowerHashA common.Hash,
+		lowerHashB common.Hash,
+		msg message.DeliveredContractTransaction,
+	) error
+
 	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
