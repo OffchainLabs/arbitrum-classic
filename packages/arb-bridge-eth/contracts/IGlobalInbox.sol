@@ -58,7 +58,8 @@ interface IGlobalInbox {
         address indexed to,
         address indexed from,
         uint256 value,
-        bytes data
+        bytes data,
+        uint256 messageNum
     );
 
     function getInbox(address account) external view returns(bytes32, uint);

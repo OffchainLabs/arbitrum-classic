@@ -92,10 +92,11 @@ interface GlobalInboxInterface extends Interface {
 
     events: {
         ContractTransactionMessageDelivered: TypedEventDescription<{
-            encodeTopics([chain, to, from, value, data]: [
+            encodeTopics([chain, to, from, value, data, messageNum]: [
                 string | null,
                 string | null,
                 string | null,
+                null,
                 null,
                 null,
             ]): string[];
@@ -324,6 +325,7 @@ export class GlobalInbox extends Contract {
             from: string | null,
             value: null,
             data: null,
+            messageNum: null,
         ): EventFilter;
 
         ERC20DepositMessageDelivered(

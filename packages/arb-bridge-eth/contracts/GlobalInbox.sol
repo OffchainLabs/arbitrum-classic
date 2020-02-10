@@ -406,7 +406,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _to,
             _from,
             _value,
-            _data
+            _data,
+            messageNum
         );
     }
 
