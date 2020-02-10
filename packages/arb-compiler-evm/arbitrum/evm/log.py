@@ -90,12 +90,12 @@ class LogMessage:
         elif self.message_type == 4:
             tx_message = wrapped_data[2]
             self.contract_id = tx_message[0]
-            self.data = bytestack_tohex(tx_message[1])
+            self.value = tx_message[1]
+            self.data = bytestack_tohex(tx_message[2])
         elif self.message_type == 5:
             tx_message = wrapped_data[2]
             self.contract_id = tx_message[0]
-            self.value = tx_message[1]
-            self.data = bytestack_tohex(tx_message[2])
+            self.data = bytestack_tohex(tx_message[1])
 
     def func_id(self):
         return self.data[2:10]
