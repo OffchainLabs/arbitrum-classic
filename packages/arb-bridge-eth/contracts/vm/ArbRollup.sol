@@ -52,6 +52,8 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
+    string public constant VERSION = "1";
+
     address payable owner;
 
     event ConfirmedAssertion(
@@ -167,10 +169,10 @@ contract ArbRollup is NodeGraph, Staking {
 
     // fields
      // beforeVMHash
-     // beforePendingTop
+     // beforeInboxTop
      // prevPrevLeafHash
      // prevDataHash
-     // afterPendingTop
+     // afterInboxTop
      // importedMessagesSlice
      // afterVMHash
      // messagesAccHash
@@ -178,7 +180,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     function makeAssertion(
         bytes32[9] calldata _fields,
-        uint256 _beforePendingCount,
+        uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
@@ -194,7 +196,7 @@ contract ArbRollup is NodeGraph, Staking {
             MakeAssertionData(
                 _fields[0],
                 _fields[1],
-                _beforePendingCount,
+                _beforeInboxCount,
 
                 _fields[2],
                 _prevDeadlineTicks,

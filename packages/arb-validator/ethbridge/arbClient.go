@@ -120,12 +120,16 @@ func (c *EthArbClient) NewMessagesChallengeWatcher(address common.Address) (arbb
 	return newMessagesChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
-	return newPendingTopChallengeWatcher(address.ToEthAddress(), c.client)
+func (c *EthArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
+	return newInboxTopChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
 func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
 	return newOneStepProof(address.ToEthAddress(), c.client)
+}
+
+func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
 }
 
 func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
@@ -189,8 +193,8 @@ func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollu
 	return newRollup(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return newPendingInbox(address.ToEthAddress(), c.client, c.auth)
+func (c *EthArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+	return newGlobalInbox(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
@@ -205,8 +209,8 @@ func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbrid
 	return newMessagesChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return newPendingTopChallenge(address.ToEthAddress(), c.client, c.auth)
+func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
+	return newInboxTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (*ChallengeTester, error) {

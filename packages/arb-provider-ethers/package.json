@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.3.2",
+    "version": "0.3.6",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
@@ -16,14 +16,13 @@
     },
     "homepage": "https://offchainlabs.com",
     "scripts": {
-        "prepare": "yarn build",
-        "prepublishOnly": "yarn lint && yarn format && yarn test",
+        "prepublishOnly": "yarn build && yarn format && yarn test",
         "preversion": "yarn lint",
-        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
+        "build": "./scripts/builder",
         "test": "jest --config jest.config.js",
-        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-        "lint": "eslint src/**/*.ts tests/**/*.ts",
-        "update-abi": "./scripts/update-abi"
+        "lint": "yarn run eslint src/**/*.ts tests/**/*.ts",
+        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
+        "update-abi": "./scripts/update-abi && yarn format"
     },
     "dependencies": {
         "@types/node-fetch": "^2.5.4",
@@ -35,16 +34,12 @@
     },
     "devDependencies": {
         "@types/jest": "^25.1.1",
-        "@typescript-eslint/eslint-plugin": "^2.19.0",
-        "@typescript-eslint/parser": "^2.19.0",
-        "eslint": "^6.8.0",
-        "eslint-config-prettier": "^6.10.0",
-        "eslint-plugin-prettier": "^3.1.2",
         "jest": "^25.1.0",
         "jest-junit": "^10.0.0",
         "prettier": "^1.19.1",
         "ts-jest": "^25.2.0",
         "typechain": "^1.0.4",
+        "typechain-target-ethers": "^1.0.3",
         "typescript": "^3.7.5"
     },
     "files": [

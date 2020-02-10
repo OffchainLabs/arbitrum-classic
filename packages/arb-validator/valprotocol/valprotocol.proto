@@ -41,8 +41,8 @@ message MessageBuf {
 
 message VMProtoDataBuf {
     common.HashBuf machineHash = 1;
-    common.HashBuf pendingTop = 2;
-    common.BigIntegerBuf pendingCount = 3;
+    common.HashBuf inboxTop = 2;
+    common.BigIntegerBuf inboxCount = 3;
 }
 
 message AssertionParamsBuf {
@@ -52,7 +52,7 @@ message AssertionParamsBuf {
 }
 
 message AssertionClaimBuf {
-    common.HashBuf afterPendingTop = 1;
+    common.HashBuf afterInboxTop = 1;
     common.HashBuf importedMessagesSlice = 2;
     valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
 }
@@ -60,6 +60,6 @@ message AssertionClaimBuf {
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
     AssertionClaimBuf assertionClaim = 2;
-    common.HashBuf maxPendingTop = 3;
-    common.BigIntegerBuf maxPendingCount = 4;
+    common.HashBuf maxInboxTop = 3;
+    common.BigIntegerBuf maxInboxCount = 4;
 }

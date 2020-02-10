@@ -18,6 +18,8 @@ package mockbridge
 
 import (
 	"context"
+	"errors"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -61,12 +63,16 @@ func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepPr
 	return NewOneStepProof(address, c.client)
 }
 
-func (c *ArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address, c.client)
+func (c *ArbClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+	return NewGlobalInbox(address, c.client)
 }
 
-func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client)
+func (c *ArbClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
+	return NewInboxTopChallenge(address, c.client)
+}
+
+func (c *ArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	return nil, errors.New("unimplemented")
 }
 
 func (c *ArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {

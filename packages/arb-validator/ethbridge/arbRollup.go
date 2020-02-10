@@ -195,10 +195,10 @@ func (vm *arbRollup) MakeAssertion(
 	defer vm.auth.Unlock()
 	extraParams := [9][32]byte{
 		beforeState.MachineHash,
-		beforeState.PendingTop,
+		beforeState.InboxTop,
 		prevPrevLeafHash,
 		prevDataHash,
-		assertionClaim.AfterPendingTop,
+		assertionClaim.AfterInboxTop,
 		assertionClaim.ImportedMessagesSlice,
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
@@ -207,7 +207,7 @@ func (vm *arbRollup) MakeAssertion(
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		extraParams,
-		beforeState.PendingCount,
+		beforeState.InboxCount,
 		prevDeadline.Val,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
@@ -224,7 +224,7 @@ func (vm *arbRollup) MakeAssertion(
 			vm.auth.auth.From,
 			vm.contractAddress,
 			extraParams,
-			beforeState.PendingCount,
+			beforeState.InboxCount,
 			prevDeadline.Val,
 			uint32(prevChildType),
 			assertionParams.NumSteps,

@@ -54,7 +54,7 @@ message StakedNodeGraphBuf {
 message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     common.AddressBuf contractAddress = 2;
-    structures.PendingInboxBuf pendingInbox = 3;
+    structures.InboxBuf inbox = 3;
     common.HashBuf knownValidNode = 4;
     common.HashBuf calculatedValidNode = 5;
     common.BlockIdBuf latestBlockId = 6;

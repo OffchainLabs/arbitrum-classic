@@ -103,20 +103,20 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			} else {
 				params := successor.disputable.AssertionParams.Clone()
 				claim := successor.disputable.AssertionClaim.Clone()
-				prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
-				afterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
-				afterPendingTopVal, err := chain.pendingInbox.GetHashAtIndex(afterPendingTopHeight)
-				var afterPendingTop *common.Hash
+				prevInboxCount := new(big.Int).Set(currentOpinion.vmProtoData.InboxCount)
+				afterInboxTopHeight := new(big.Int).Add(prevInboxCount, params.ImportedMessageCount)
+				afterInboxTopVal, err := chain.inbox.GetHashAtIndex(afterInboxTopHeight)
+				var afterInboxTop *common.Hash
 				if err == nil {
-					afterPendingTop = &afterPendingTopVal
+					afterInboxTop = &afterInboxTopVal
 				}
-				inbox, _ := chain.pendingInbox.GenerateInbox(currentOpinion.vmProtoData.PendingTop, params.ImportedMessageCount.Uint64())
+				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.machine.Clone()
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, afterPendingTop, inbox.Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
@@ -179,7 +179,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
-					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+					newMessages := chain.calculatedValidNode.vmProtoData.InboxTop != chain.inbox.GetTopHash()
 					if chain.calculatedValidNode.machine != nil &&
 						chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
 						preparingAssertions[chain.calculatedValidNode.hash] = true
@@ -224,11 +224,11 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
 		return nil
 	}
-	afterPendingTop := chain.pendingInbox.GetTopHash()
-	beforePendingTop := beforeState.PendingTop
-	newMessageCount := new(big.Int).Sub(chain.pendingInbox.TopCount(), beforeState.PendingCount)
+	afterInboxTop := chain.inbox.GetTopHash()
+	beforeInboxTop := beforeState.InboxTop
+	newMessageCount := new(big.Int).Sub(chain.inbox.TopCount(), beforeState.InboxCount)
 
-	inbox, _ := chain.pendingInbox.GenerateInbox(beforePendingTop, newMessageCount.Uint64())
+	inbox, _ := chain.inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
@@ -269,7 +269,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 			ImportedMessageCount: newMessageCount,
 		}
 		claim = &valprotocol.AssertionClaim{
-			AfterPendingTop:       afterPendingTop,
+			AfterInboxTop:         afterInboxTop,
 			ImportedMessagesSlice: inbox.Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
@@ -280,7 +280,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 			ImportedMessageCount: big.NewInt(0),
 		}
 		claim = &valprotocol.AssertionClaim{
-			AfterPendingTop:       beforePendingTop,
+			AfterInboxTop:         beforeInboxTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
@@ -302,13 +302,13 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 func getNodeOpinion(
 	params *valprotocol.AssertionParams,
 	claim *valprotocol.AssertionClaim,
-	afterPendingTop *common.Hash,
+	afterInboxTop *common.Hash,
 	calculatedMessagesSlice common.Hash,
 	messagesVal value.TupleValue,
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
-	if afterPendingTop == nil || claim.AfterPendingTop != *afterPendingTop {
-		return valprotocol.InvalidPendingChildType, nil
+	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
+		return valprotocol.InvalidInboxTopChildType, nil
 	}
 	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
 		return valprotocol.InvalidMessagesChildType, nil

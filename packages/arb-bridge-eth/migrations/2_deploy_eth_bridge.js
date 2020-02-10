@@ -17,9 +17,7 @@
 var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
 
 var MessagesChallenge = artifacts.require("./challenge/MessagesChallenge.sol");
-var PendingTopChallenge = artifacts.require(
-  "./challenge/PendingTopChallenge.sol"
-);
+var InboxTopChallenge = artifacts.require("./challenge/InboxTopChallenge.sol");
 var ExecutionChallenge = artifacts.require(
   "./challenge/ExecutionChallenge.sol"
 );
@@ -30,24 +28,24 @@ var ArbFactory = artifacts.require("./vm/ArbFactory.sol");
 
 var Value = artifacts.require("./arch/Value.sol");
 
-var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
+var GlobalInbox = artifacts.require("./GlobalInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, [ExecutionChallenge]);
 
   deployer.deploy(Value);
-  deployer.link(Value, [GlobalPendingInbox]);
+  deployer.link(Value, [GlobalInbox]);
 
-  await deployer.deploy(GlobalPendingInbox);
+  await deployer.deploy(GlobalInbox);
 
   await deployer.deploy(MessagesChallenge);
-  await deployer.deploy(PendingTopChallenge);
+  await deployer.deploy(InboxTopChallenge);
   await deployer.deploy(ExecutionChallenge);
   await deployer.deploy(
     ChallengeFactory,
     MessagesChallenge.address,
-    PendingTopChallenge.address,
+    InboxTopChallenge.address,
     ExecutionChallenge.address
   );
 
@@ -55,7 +53,7 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(
     ArbFactory,
     ArbRollup.address,
-    GlobalPendingInbox.address,
+    GlobalInbox.address,
     ChallengeFactory.address
   );
 

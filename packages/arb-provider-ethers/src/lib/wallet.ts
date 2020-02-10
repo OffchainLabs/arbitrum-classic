@@ -20,7 +20,7 @@ import { ArbClient } from './client';
 import { Contract } from './contract';
 import { ArbProvider } from './provider';
 import * as ArbValue from './value';
-import { GlobalPendingInbox } from './abi/GlobalPendingInbox';
+import { GlobalInbox } from './abi/GlobalInbox';
 import { ArbSysFactory } from './abi/ArbSysFactory';
 
 import * as ethers from 'ethers';
@@ -31,7 +31,7 @@ export class ArbWallet extends ethers.Signer {
     public client: ArbClient;
     public signer: ethers.Signer;
     public provider: ArbProvider;
-    public inboxManagerCache?: GlobalPendingInbox;
+    public globalInboxCache?: GlobalInbox;
     public seqCache?: number;
     public pubkey?: string;
     public channelMode: boolean;
@@ -62,14 +62,14 @@ export class ArbWallet extends ethers.Signer {
         this.seqCache++;
     }
 
-    public async globalInboxConn(): Promise<GlobalPendingInbox> {
-        if (!this.inboxManagerCache) {
-            const inboxManager = await this.provider.globalInboxConn();
-            const linkedInboxManager = inboxManager.connect(this.signer);
-            this.inboxManagerCache = linkedInboxManager;
-            return linkedInboxManager;
+    public async globalInboxConn(): Promise<GlobalInbox> {
+        if (!this.globalInboxCache) {
+            const globalInbox = await this.provider.globalInboxConn();
+            const linkedGlobalInbox = globalInbox.connect(this.signer);
+            this.globalInboxCache = linkedGlobalInbox;
+            return linkedGlobalInbox;
         }
-        return this.inboxManagerCache;
+        return this.globalInboxCache;
     }
 
     public getAddress(): Promise<string> {
@@ -87,21 +87,21 @@ export class ArbWallet extends ethers.Signer {
     }
 
     public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
-        const inboxManager = await this.globalInboxConn();
-        return inboxManager.withdrawEth();
+        const globalInbox = await this.globalInboxConn();
+        return globalInbox.withdrawEth();
     }
 
     public async withdrawERC20(erc20: string): Promise<ethers.providers.TransactionResponse> {
-        const inboxManager = await this.globalInboxConn();
-        return inboxManager.withdrawERC20(erc20);
+        const globalInbox = await this.globalInboxConn();
+        return globalInbox.withdrawERC20(erc20);
     }
 
     public async withdrawERC721(
         erc721: string,
         tokenId: ethers.utils.BigNumberish,
     ): Promise<ethers.providers.TransactionResponse> {
-        const inboxManager = await this.globalInboxConn();
-        return inboxManager.withdrawERC721(erc721, tokenId);
+        const globalInbox = await this.globalInboxConn();
+        return globalInbox.withdrawERC721(erc721, tokenId);
     }
 
     public async depositERC20(
@@ -111,8 +111,8 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const sendValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-        const inboxManager = await this.globalInboxConn();
-        const tx = await inboxManager.depositERC20Message(chain, to, erc20, sendValue);
+        const globalInbox = await this.globalInboxConn();
+        const tx = await globalInbox.depositERC20Message(chain, to, erc20, sendValue);
         return this.provider._wrapTransaction(tx, tx.hash);
     }
 
@@ -123,8 +123,8 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const tokenValue = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-        const inboxManager = await this.globalInboxConn();
-        const tx = await inboxManager.depositERC721Message(chain, to, tokenAddress, value);
+        const globalInbox = await this.globalInboxConn();
+        const tx = await globalInbox.depositERC721Message(chain, to, tokenAddress, value);
         return this.provider._wrapTransaction(tx, tx.hash);
     }
 
@@ -134,8 +134,8 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const valueNum = ethers.utils.bigNumberify(value);
         const chain = await this.provider.getVmID();
-        const inboxManager = await this.globalInboxConn();
-        const tx = await inboxManager.depositEthMessage(chain, to, { value });
+        const globalInbox = await this.globalInboxConn();
+        const tx = await globalInbox.depositEthMessage(chain, to, { value });
         return this.provider._wrapTransaction(tx, tx.hash);
     }
 
@@ -147,9 +147,9 @@ export class ArbWallet extends ethers.Signer {
         const vmId = await this.provider.getVmID();
         const from = await this.getAddress();
         const valueNum = ethers.utils.bigNumberify(value);
-        const inboxManager = await this.globalInboxConn();
+        const globalInbox = await this.globalInboxConn();
         const seq = await this.generateSeq();
-        const tx = await inboxManager.sendTransactionMessage(vmId, to, seq, valueNum, data);
+        const tx = await globalInbox.sendTransactionMessage(vmId, to, seq, valueNum, data);
         const tx2 = this.provider._wrapTransaction(tx, tx.hash);
         await this.incrementSeq();
         return tx2;

@@ -18,7 +18,7 @@ To move assets into an Arbitrum chain, you execute a deposit transaction on Arbi
 
 As far as Ethereum knows, all deposited funds are held by Arbitrum's global EthBridge contract.
 
-In order to programmatically trigger transfers, call one of the following methods in the [`GlobalPendingInbox`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/GlobalPendingInbox.sol) contract with the chain address equal to the address of the Arbitrum Rollup chain.
+In order to programmatically trigger transfers, call one of the following methods in the [`GlobalInbox`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/GlobalInbox.sol) contract with the chain address equal to the address of the Arbitrum Rollup chain.
 
 ```
 function depositEthMessage(address chain, address to) external payable;

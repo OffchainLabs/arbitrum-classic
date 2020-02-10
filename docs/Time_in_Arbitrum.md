@@ -8,11 +8,11 @@ As on Ethereum, Arbitrum doesn't use real wall-clock time, but instead uses bloc
 
 Also as on Ethereum, clients submit transactions they want to see happen, and the system (usually) executes those transactions at some later time.
 In Arbitrum Rollup, clients submit transactions by posting messages to the Ethereum chain.
-These messages are put into the chain's _pending inbox_.
-Every message is timestamped with the time it was put into the pending inbox.
+These messages are put into the chain's _inbox_.
+Every message is timestamped with the time it was put into the inbox.
 
-Messages in an ArbChain's pending inbox are processed in order.
-Generally, some time will elapse between the time when a message is put into the pending inbox (and timestamped) and the time when the contract processes the message and carries out the transaction requested by the message.
+Messages in an ArbChain's inbox are processed in order.
+Generally, some time will elapse between the time when a message is put into the inbox (and timestamped) and the time when the contract processes the message and carries out the transaction requested by the message.
 
 If your Solidity contract, running on Arbitrum Rollup, accesses `block.number`, this will give you the ArbChain's current time.
 Because ArbChains operate off-chain, an ArbChain's time might differ a little bit from the current Ethereum block time.
@@ -48,7 +48,7 @@ To do that, you'll want to "start the clock ticking" by using code like this:
     deadline = ArbSys(address(100)).timeUpperBound() + N;
     emit StartAuction(..., deadline);
 
-You'll presumably have an `endAuction` call, which can only be called by a transaction submitted to the pending inbox after the deadline.
+You'll presumably have an `endAuction` call, which can only be called by a transaction submitted to the inbox after the deadline.
 To ensure that, you can use code like this:
 
     function endAuction(...) public {

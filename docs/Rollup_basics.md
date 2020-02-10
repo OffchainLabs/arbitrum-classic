@@ -37,7 +37,7 @@ The .ao file is a single program, to be run on the Arbitrum Virtual Machine (AVM
 which will manage and run the contracts and wallets needed for your chain.
 Think of it as an ArbChain in a box.
 
-Next, you start your ArbChain by making a call to an Ethereum contract called the EthBridge.  
+Next, you start your ArbChain by making a call to an Ethereum contract called the EthBridge.
 The EthBridge will start an Ethereum contract to manage your chain,
 and some parameters will be recorded on the main Ethereum chain.
 
@@ -77,10 +77,9 @@ The details in this section are all handled by the plug-ins, so you don't have t
 But read on, if you're interested in how things work.
 
 When a client wants to make a call to a contract in an ArbChain, the client creates an Arbitrum message,
-and makes an Ethereum call to the on-chain Pending Inbox contract, to insert the message into the ArbChain's pending inbox.
+and makes an Ethereum call to the on-chain Inbox contract, to insert the message into the ArbChain's inbox.
 
-Inside the ArbChain, the program running on the chain's Arbitrum Virtual Machine will consume messages from the chain's
-pending inbox in order.
+Inside the ArbChain, the program running on the chain's Arbitrum Virtual Machine will consume messages from the chain's inbox in order.
 It will interpret each message as a call to a contract, and it will execute that call, updating the contract's state.
 At the end of the call, the program will emit an Arbitrum log item, which will become visible to the client program.
 The client program will then read the call's result from the log item.
