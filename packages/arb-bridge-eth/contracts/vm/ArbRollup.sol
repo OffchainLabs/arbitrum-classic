@@ -100,10 +100,10 @@ contract ArbRollup is NodeGraph, Staking {
         globalInbox.forwardContractTransactionMessage(arbContractAddress, _sender, msg.value, _data);
     }
 
-    function spawnCallProxy(address _vmContract) external {
+    function spawnCallProxy(address _arbContract) external {
         ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
-        incomingCallProxies[address(proxy)] = _vmContract;
-        supportedContracts[_vmContract] = address(proxy);
+        incomingCallProxies[address(proxy)] = _arbContract;
+        supportedContracts[_arbContract] = address(proxy);
     }
 
     function placeStake(
