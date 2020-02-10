@@ -32,6 +32,7 @@ const (
 	EthType
 	ERC20Type
 	ERC721Type
+	ContractTransactionType
 	CallType
 )
 
@@ -69,6 +70,25 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
+func UnmarshalUnsent(typecode MessageType, messageVal value.Value, chain common.Address) (UnsentMessage, error) {
+	switch typecode {
+	case TransactionType:
+		return UnmarshalTransaction(messageVal, chain)
+	case EthType:
+		return UnmarshalEth(messageVal)
+	case ERC20Type:
+		return UnmarshalERC20(messageVal)
+	case ERC721Type:
+		return UnmarshalERC721(messageVal)
+	case ContractTransactionType:
+		return UnmarshalContractTransaction(messageVal)
+	case CallType:
+		return UnmarshalCall(messageVal)
+	default:
+		return nil, errors.New("Invalid message type")
+	}
+}
+
 func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (InboxMessage, error) {
 	switch msgType {
 	case TransactionType:
@@ -79,6 +99,8 @@ func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (InboxMessage, 
 		return UnmarshalERC20FromCheckpoint(v)
 	case ERC721Type:
 		return UnmarshalERC721FromCheckpoint(v)
+	case ContractTransactionType:
+		return UnmarshalContractTransactionFromCheckpoint(v)
 	default:
 		return nil, errors.New("bad message type")
 	}

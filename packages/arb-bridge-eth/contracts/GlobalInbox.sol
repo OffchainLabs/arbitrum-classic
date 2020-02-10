@@ -230,6 +230,34 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         );
     }
 
+    function forwardContractTransactionMessage(
+        address _to,
+        address _from,
+        uint256 _value,
+        bytes calldata _data
+    )
+        external
+    {
+        _deliverContractTransactionMessage(
+            msg.sender,
+            _to,
+            _from,
+            _value,
+            _data
+        );
+    }
+
+    function forwardEthMessage(address _to, address _from) external payable {
+        depositEth(msg.sender);
+
+        _deliverEthMessage(
+            msg.sender,
+            _to,
+            _from,
+            msg.value
+        );
+    }
+
     function _deliverTransactionMessage(
         address _chain,
         address _to,
@@ -348,6 +376,37 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _from,
             _erc721,
             _id,
+            messageNum
+        );
+    }
+
+    function _deliverContractTransactionMessage(
+        address _chain,
+        address _to,
+        address _from,
+        uint256 _value,
+        bytes memory _data
+    )
+        private
+    {
+        uint256 messageNum = inboxes[_chain].count + 1;
+        bytes32 messageHash = Messages.contractTransactionHash(
+            _to,
+            _from,
+            _value,
+            _data,
+            block.number,
+            messageNum
+        );
+
+        _deliverMessage(_chain, messageHash);
+
+        emit IGlobalInbox.ContractTransactionMessageDelivered(
+            _chain,
+            _to,
+            _from,
+            _value,
+            _data,
             messageNum
         );
     }

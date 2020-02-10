@@ -91,6 +91,12 @@ def process_deposit_erc721(vm):
     execution.initial_call(vm, "deposit_erc712_initial")
 
 
+def process_contract_tx_call_message(vm):
+    vm.pop()
+    os.process_contract_tx_message(vm)
+    execution.initial_call(vm, "contract_tx_call_initial")
+
+
 def process_call_message(vm):
     vm.pop()
     os.process_call_message(vm)
@@ -133,7 +139,16 @@ def run_loop_start(vm):
                                     vm.push(4),
                                     vm.eq(),
                                     vm.ifelse(
-                                        process_call_message, lambda vm: [vm.pop()]
+                                        process_contract_tx_call_message,
+                                        lambda vm: [
+                                            vm.dup0(),
+                                            vm.push(5),
+                                            vm.eq(),
+                                            vm.ifelse(
+                                                process_call_message,
+                                                lambda vm: [vm.pop()],
+                                            ),
+                                        ],
                                     ),
                                 ],
                             ),

@@ -39,7 +39,7 @@ type Transaction struct {
 }
 
 func (m Transaction) String() string {
-	return fmt.Sprintf("Transaction(chain: %v, to: %v, from: %v, seq: %v, value: %v, data: %v",
+	return fmt.Sprintf("Transaction(chain: %v, to: %v, from: %v, seq: %v, value: %v, data: %v)",
 		m.Chain,
 		m.To,
 		m.From,

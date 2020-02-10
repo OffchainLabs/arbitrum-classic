@@ -90,6 +90,11 @@ class LogMessage:
         elif self.message_type == 4:
             tx_message = wrapped_data[2]
             self.contract_id = tx_message[0]
+            self.value = tx_message[1]
+            self.data = bytestack_tohex(tx_message[2])
+        elif self.message_type == 5:
+            tx_message = wrapped_data[2]
+            self.contract_id = tx_message[0]
             self.data = bytestack_tohex(tx_message[1])
 
     def func_id(self):
@@ -112,6 +117,8 @@ class LogMessage:
         elif self.message_type == 3:
             return "ERC721_DEPOSIT"
         elif self.message_type == 4:
+            return self.func_id()
+        elif self.message_type == 5:
             return self.func_id()
         else:
             raise Exception("Unknown function type")
@@ -145,6 +152,10 @@ class EVMOutput:
                 contract_templates.ERC721_ADDRESS
             ]
         elif self.orig_message.message_type == 4:
+            self.abi = self.orig_message.get_abi(functions)
+            if self.abi:
+                self.name = self.abi["name"]
+        elif self.orig_message.message_type == 5:
             self.abi = self.orig_message.get_abi(functions)
             if self.abi:
                 self.name = self.abi["name"]
