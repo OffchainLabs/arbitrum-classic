@@ -75,7 +75,25 @@ func (e evilRollupCheckpointer) RestoreLatestState(
 	clnt arbbridge.ArbClient,
 	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
 ) error {
-	return e.cp.RestoreLatestState(ctx, clnt, unmarshalFunc)
+	return e.cp.RestoreLatestState(
+		ctx,
+		clnt,
+		func(contents []byte, resCtx checkpointing.RestoreContext) error {
+			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
+		},
+	)
+}
+
+type evilRestoreContext struct {
+	rc checkpointing.RestoreContext
+}
+
+func (erc *evilRestoreContext) GetValue(h common.Hash) value.Value {
+	return erc.rc.GetValue(h)
+}
+
+func (erc *evilRestoreContext) GetMachine(h common.Hash) machine.Machine {
+	return NewEvilMachine(erc.rc.GetMachine(h).(*cmachine.Machine))
 }
 
 func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
