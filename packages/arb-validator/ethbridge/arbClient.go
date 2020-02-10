@@ -128,6 +128,10 @@ func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSte
 	return newOneStepProof(address.ToEthAddress(), c.client)
 }
 
+func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
+}
+
 func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
