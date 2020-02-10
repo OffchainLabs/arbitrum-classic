@@ -80,9 +80,28 @@ interface GlobalInboxInterface extends Interface {
         depositERC721Message: TypedFunctionDescription<{
             encode([_chain, _to, _erc721, _id]: [string, string, string, BigNumberish]): string;
         }>;
+
+        forwardContractTransactionMessage: TypedFunctionDescription<{
+            encode([_to, _from, _value, _data]: [string, string, BigNumberish, Arrayish]): string;
+        }>;
+
+        forwardEthMessage: TypedFunctionDescription<{
+            encode([_to, _from]: [string, string]): string;
+        }>;
     };
 
     events: {
+        ContractTransactionMessageDelivered: TypedEventDescription<{
+            encodeTopics([chain, to, from, value, data, messageNum]: [
+                string | null,
+                string | null,
+                string | null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
+
         ERC20DepositMessageDelivered: TypedEventDescription<{
             encodeTopics([chain, to, from, erc20, value, messageNum]: [
                 string | null,
@@ -209,6 +228,16 @@ export class GlobalInbox extends Contract {
             _id: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
+
+        forwardContractTransactionMessage(
+            _to: string,
+            _from: string,
+            _value: BigNumberish,
+            _data: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        forwardEthMessage(_to: string, _from: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
     };
 
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
@@ -279,7 +308,26 @@ export class GlobalInbox extends Contract {
         overrides?: TransactionOverrides,
     ): Promise<ContractTransaction>;
 
+    forwardContractTransactionMessage(
+        _to: string,
+        _from: string,
+        _value: BigNumberish,
+        _data: Arrayish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    forwardEthMessage(_to: string, _from: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
     filters: {
+        ContractTransactionMessageDelivered(
+            chain: string | null,
+            to: string | null,
+            from: string | null,
+            value: null,
+            data: null,
+            messageNum: null,
+        ): EventFilter;
+
         ERC20DepositMessageDelivered(
             chain: string | null,
             to: string | null,
@@ -361,5 +409,14 @@ export class GlobalInbox extends Contract {
         depositERC20Message(_chain: string, _to: string, _erc20: string, _value: BigNumberish): Promise<BigNumber>;
 
         depositERC721Message(_chain: string, _to: string, _erc721: string, _id: BigNumberish): Promise<BigNumber>;
+
+        forwardContractTransactionMessage(
+            _to: string,
+            _from: string,
+            _value: BigNumberish,
+            _data: Arrayish,
+        ): Promise<BigNumber>;
+
+        forwardEthMessage(_to: string, _from: string): Promise<BigNumber>;
     };
 }

@@ -53,7 +53,7 @@ services:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate --rpc state ws://dockerhost:%s %s
+        command: validate --password pass --rpc state ws://dockerhost:%s %s
         ports:
             - '1235:1235'
             - '1236:1236'
@@ -73,7 +73,7 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate state ws://dockerhost:%s %s
+        command: validate  --password pass state ws://dockerhost:%s %s
 """
 
 

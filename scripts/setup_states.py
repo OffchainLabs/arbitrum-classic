@@ -18,9 +18,13 @@ import argparse
 import json
 import os
 import shutil
+import datetime
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from eth_account import Account
+import eth_keyfile
+
+datetime.datetime.utcnow().isoformat()
 
 NAME = "setup_states"
 DESCRIPTION = ""
@@ -63,7 +67,6 @@ def setup_validator_states_folder(contract, n_validators):
     # Extract keys from acct_keys
     accounts = [Account.create() for _ in range(n_validators)]
     addresses = [account.address for account in accounts]
-    privates = [account.key.hex()[2:] for account in accounts]
 
     # Create VALIDATOR_STATES
     os.mkdir(VALIDATOR_STATES)
@@ -72,9 +75,14 @@ def setup_validator_states_folder(contract, n_validators):
         os.mkdir(state)
         # contract.ao
         shutil.copyfile(contract, os.path.join(state, "contract.ao"))
-        # private_key.txt
-        with open(os.path.join(state, "private_key.txt"), "w") as f:
-            f.write(privates[i])
+        # private key
+        wallet_dir = os.path.join(state, "wallets")
+        os.mkdir(wallet_dir)
+        keyfile_json = eth_keyfile.create_keyfile_json(
+            accounts[i].key, b"pass", kdf="scrypt"
+        )
+        with open(os.path.join(wallet_dir, addresses[i]), "w") as outfile:
+            json.dump(keyfile_json, outfile)
     return addresses
 
 

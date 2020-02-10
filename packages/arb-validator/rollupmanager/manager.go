@@ -64,7 +64,7 @@ func CreateManager(
 		rollupAddr,
 		true,
 		clnt,
-		checkpointing.NewRollupCheckpointerImplFactory(
+		checkpointing.NewIndexedCheckpointerFactory(
 			rollupAddr,
 			aoFilePath,
 			dbPath,
@@ -128,15 +128,15 @@ func CreateManagerAdvanced(
 			}
 
 			if checkpointer.HasCheckpointedState() {
-				chainObserverBytes, restoreCtx, err := checkpointer.RestoreLatestState(runCtx, clnt, rollupAddr, updateOpinion)
-				if err != nil {
-					log.Fatal(err)
-				}
-				chainObserverBuf := &rollup.ChainObserverBuf{}
-				if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
-					log.Fatal(err)
-				}
-				chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+				err := checkpointer.RestoreLatestState(runCtx, clnt, func(chainObserverBytes []byte, restoreCtx checkpointing.RestoreContext) error {
+					chainObserverBuf := &rollup.ChainObserverBuf{}
+					if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+						log.Fatal(err)
+					}
+					var err error
+					chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
+					return err
+				})
 				if err != nil {
 					log.Fatal(err)
 				}
