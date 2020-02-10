@@ -54,6 +54,7 @@ var transactionMessageDeliveredID ethcommon.Hash
 var ethDepositMessageDeliveredID ethcommon.Hash
 var depositERC20MessageDeliveredID ethcommon.Hash
 var depositERC721MessageDeliveredID ethcommon.Hash
+var contractTransactionMessageDeliveredID ethcommon.Hash
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
@@ -79,6 +80,7 @@ func init() {
 	ethDepositMessageDeliveredID = parsedInbox.Events["EthDepositMessageDelivered"].ID()
 	depositERC20MessageDeliveredID = parsedInbox.Events["ERC20DepositMessageDelivered"].ID()
 	depositERC721MessageDeliveredID = parsedInbox.Events["ERC721DepositMessageDelivered"].ID()
+	contractTransactionMessageDeliveredID = parsedInbox.Events["ContractTransactionMessageDelivered"].ID()
 }
 
 type ethRollupWatcher struct {
@@ -264,7 +266,26 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 			ChainInfo: chainInfo,
 			Message:   msg,
 		}, nil
+	} else if ethLog.Topics[0] == contractTransactionMessageDeliveredID {
+		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
 
+		msg := message.DeliveredContractTransaction{
+			ContractTransaction: message.ContractTransaction{
+				To:    common.NewAddressFromEth(val.To),
+				From:  common.NewAddressFromEth(val.From),
+				Value: val.Value,
+				Data:  val.Data,
+			},
+			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			MessageNum: val.MessageNum,
+		}
+		return arbbridge.MessageDeliveredEvent{
+			ChainInfo: chainInfo,
+			Message:   msg,
+		}, nil
 	} else {
 		return nil, errors2.New("unknown arbitrum event type")
 	}

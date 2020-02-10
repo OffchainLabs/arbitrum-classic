@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 pragma solidity ^0.5.3;
 
+import "./IArbRollup.sol";
 
-interface IArbRollup {
-    function init(
-        bytes32 _vmState,
-        uint128 _gracePeriodTicks,
-        uint128 _arbGasSpeedLimitPerTick,
-        uint64 _maxExecutionSteps,
-        uint64 _maxTimeBoundsWidth,
-        uint128 _stakeRequirement,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress
-    )
-        external;
 
-    function forwardContractMessage(address _sender, bytes calldata _data) external payable;
+contract ArbVMContractProxy {
+
+    IArbRollup arbChain;
+
+    constructor(address _arbChain) public {
+        arbChain = IArbRollup(_arbChain);
+    }
+
+    function() external payable {
+        arbChain.forwardContractMessage.value(msg.value)(msg.sender, msg.data);
+    }
 }

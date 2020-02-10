@@ -218,23 +218,6 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 	}, restValTup, nil
 }
 
-func ParseArbMessage(typecode message.MessageType, messageVal value.Value, chain common.Address) (message.UnsentMessage, error) {
-	switch typecode {
-	case message.TransactionType:
-		return message.UnmarshalTransaction(messageVal, chain)
-	case message.EthType:
-		return message.UnmarshalEth(messageVal)
-	case message.ERC20Type:
-		return message.UnmarshalERC20(messageVal)
-	case message.ERC721Type:
-		return message.UnmarshalERC721(messageVal)
-	case message.CallType:
-		return message.UnmarshalCall(messageVal)
-	default:
-		return nil, errors.New("Invalid message type")
-	}
-}
-
 func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
@@ -255,7 +238,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	arbMessage, err := ParseArbMessage(ethMsg.Type, messageVal, chain)
+	arbMessage, err := message.UnmarshalUnsent(ethMsg.Type, messageVal, chain)
 	if err != nil {
 		return nil, err
 	}
