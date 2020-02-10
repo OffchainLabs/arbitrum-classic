@@ -181,6 +181,31 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	return c.waitForReceipt(ctx, tx, "OneStepProofERC721Message")
 }
 
+func (c *messagesChallenge) OneStepProofContractTransactionMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredContractTransaction,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.contract.OneStepProofContractTransactionMessage(
+		c.auth.getAuth(ctx),
+		lowerHashA,
+		lowerHashB,
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.Value,
+		msg.Data,
+		msg.BlockNum.AsInt(),
+		msg.MessageNum,
+	)
+	if err != nil {
+		return err
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProofContractTransactionMessage")
+}
+
 func (c *messagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,

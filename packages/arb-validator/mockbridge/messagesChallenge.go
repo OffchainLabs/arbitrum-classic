@@ -150,6 +150,15 @@ func (c *MessagesChallenge) OneStepProofERC721Message(
 	return nil
 }
 
+func (c *MessagesChallenge) OneStepProofContractTransactionMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredContractTransaction,
+) error {
+	return nil
+}
+
 func (c *MessagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
