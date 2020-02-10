@@ -63,7 +63,7 @@ func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
-	return &evilRollupCheckpointer{fac.fac.New(ctx).(*checkpointing.RollupCheckpointerImpl)}
+	return &evilRollupCheckpointer{fac.fac.New(ctx).(checkpointing.RollupCheckpointer)}
 }
 
 func (e evilRollupCheckpointer) HasCheckpointedState() bool {
