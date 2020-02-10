@@ -57,7 +57,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     address owner;
 
-    mapping(address => address) contractInterfaces;
+    mapping(address => address) incomingCallProxies;
     mapping(address => address) public supportedContracts;
 
     event ConfirmedAssertion(
@@ -93,16 +93,16 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     function forwardContractMessage(address _sender, bytes calldata _data) external payable {
-        address arbContractAddress = contractInterfaces[msg.sender];
+        address arbContractAddress = incomingCallProxies[msg.sender];
         require(arbContractAddress != address(0), "Non interface contract can't send message");
 
         globalInbox.forwardEthMessage.value(msg.value)(arbContractAddress, _sender);
         globalInbox.forwardContractTransactionMessage(arbContractAddress, _sender, msg.value, _data);
     }
 
-    function spawnInterface(address _vmContract) external {
+    function spawnCallProxy(address _vmContract) external {
         ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
-        contractInterfaces[address(proxy)] = _vmContract;
+        incomingCallProxies[address(proxy)] = _vmContract;
         supportedContracts[_vmContract] = address(proxy);
     }
 
