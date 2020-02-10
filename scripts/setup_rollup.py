@@ -90,7 +90,7 @@ def deploy(args, sudo_flag=False):
     os.remove(ethaddrs)
 
     rollup_creation_cmd = (
-        "docker run -it --network=arb-network -v %s:/home/user/state arb-validator create state/contract.ao state/private_key.txt ws://%s:%s %s"
+        "docker run -it --network=arb-network -v %s:/home/user/state arb-validator create --password pass state ws://%s:%s %s"
         % (
             os.path.abspath("validator-states/validator0"),
             image_name,
