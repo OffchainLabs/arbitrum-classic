@@ -26,24 +26,14 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
-	"syscall"
-	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
 
 	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"golang.org/x/crypto/ssh/terminal"
-
-	"github.com/ethereum/go-ethereum/accounts"
-
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -60,61 +50,11 @@ func main() {
 			log.Fatal(err)
 		}
 	case "validate":
-		if err := validateRollupChain(); err != nil {
+		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager); err != nil {
 			log.Fatal(err)
 		}
 	default:
 	}
-}
-
-func getKeystore(validatorFolder string, pass *string, flags *flag.FlagSet) (*bind.TransactOpts, error) {
-	ks := keystore.NewKeyStore(filepath.Join(validatorFolder, "wallets"), keystore.StandardScryptN, keystore.StandardScryptP)
-
-	found := false
-	flags.Visit(func(f *flag.Flag) {
-		if f.Name == "password" {
-			found = true
-		}
-	})
-
-	var passphrase string
-	if !found {
-		if len(ks.Accounts()) == 0 {
-			fmt.Print("Enter new account password: ")
-		} else {
-			fmt.Print("Enter account password: ")
-		}
-
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			return nil, err
-		}
-		passphrase = string(bytePassword)
-
-		passphrase = strings.TrimSpace(passphrase)
-	} else {
-		passphrase = *pass
-	}
-
-	var account accounts.Account
-	if len(ks.Accounts()) == 0 {
-		var err error
-		account, err = ks.NewAccount(passphrase)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		account = ks.Accounts()[0]
-	}
-	err := ks.Unlock(account, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	auth, err := bind.NewKeyStoreTransactor(ks, account)
-	if err != nil {
-		return nil, err
-	}
-	return auth, nil
 }
 
 func createRollupChain() error {
@@ -142,7 +82,7 @@ func createRollupChain() error {
 		return errors2.Wrap(err, "loader error")
 	}
 
-	auth, err := getKeystore(validatorFolder, passphrase, createCmd)
+	auth, err := cmdhelper.GetKeystore(validatorFolder, passphrase, createCmd)
 	if err != nil {
 		return err
 	}
@@ -179,77 +119,6 @@ func createRollupChain() error {
 	return nil
 }
 
-func validateRollupChain() error {
-	// Check number of args
-
-	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	passphrase := validateCmd.String("password", "", "password=pass")
-	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=NumSeconds")
-	gasPrice := validateCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
-	err := validateCmd.Parse(os.Args[2:])
-	if err != nil {
-		return err
-	}
-
-	if validateCmd.NArg() != 3 {
-		return errors.New("usage: arb-validator validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
-	}
-
-	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
-
-	validatorFolder := validateCmd.Arg(0)
-	ethURL := validateCmd.Arg(1)
-	addressString := validateCmd.Arg(2)
-	address := common.HexToAddress(addressString)
-
-	auth, err := getKeystore(validatorFolder, passphrase, validateCmd)
-	if err != nil {
-		return err
-	}
-
-	// Rollup creation
-	gasPriceAsFloat := 1e9 * (*gasPrice)
-	if gasPriceAsFloat < math.MaxInt64 {
-		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
-	}
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
-	if err != nil {
-		return err
-	}
-
-	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
-		return err
-	}
-
-	rollupActor, err := client.NewRollup(address)
-	if err != nil {
-		return err
-	}
-
-	validatorListener := rollup.NewValidatorChainListener(context.Background(), address, rollupActor)
-	err = validatorListener.AddStaker(client)
-	if err != nil {
-		return err
-	}
-
-	contractFile := filepath.Join(validatorFolder, "contract.ao")
-	dbPath := filepath.Join(validatorFolder, "checkpoint_db")
-	manager, err := rollupmanager.CreateManager(address, client, contractFile, dbPath)
-
-	if err != nil {
-		return err
-	}
-	manager.AddListener(&rollup.AnnouncerListener{})
-	manager.AddListener(validatorListener)
-
-	if *rpcEnable {
-		if err := rollupvalidator.LaunchRPC(manager, "1235"); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		wait := make(chan bool)
-		<-wait
-	}
-	return nil
+func createManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+	return rollupmanager.CreateManager(rollupAddress, client, contractFile, dbPath)
 }
