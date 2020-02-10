@@ -57,7 +57,7 @@ COPY --chown=user arb-validator/ /home/user/arb-validator/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
-RUN go install -v ./cmd/rollupServer
+RUN go install -v ./cmd/arb-validator
 
 
 FROM alpine:3.9 as arb-validator
@@ -77,5 +77,5 @@ COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
 COPY --from=arb-avm-cpp /home/user/build /cpp-build
 
-ENTRYPOINT ["/home/user/go/bin/rollupServer"]
+ENTRYPOINT ["/home/user/go/bin/arb-validator"]
 EXPOSE 1235 1236
