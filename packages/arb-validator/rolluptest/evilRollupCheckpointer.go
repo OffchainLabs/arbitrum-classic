@@ -51,19 +51,19 @@ func NewEvilRollupCheckpointerFactory(
 }
 
 type evilRollupCheckpointer struct {
-	cp *checkpointing.RollupCheckpointerImpl
+	cp checkpointing.RollupCheckpointer
 }
 
 func (e evilRollupCheckpointer) GetValue(h common.Hash) value.Value {
-	return e.cp.GetValue(h)
+	return e.cp.(checkpointing.RestoreContext).GetValue(h)
 }
 
 func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.GetMachine(h).(*cmachine.Machine))
+	return NewEvilMachine(e.cp.(checkpointing.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
-	return &evilRollupCheckpointer{fac.fac.New(ctx).(*checkpointing.RollupCheckpointerImpl)}
+	return &evilRollupCheckpointer{fac.fac.New(ctx).(checkpointing.RollupCheckpointer)}
 }
 
 func (e evilRollupCheckpointer) HasCheckpointedState() bool {
@@ -75,7 +75,25 @@ func (e evilRollupCheckpointer) RestoreLatestState(
 	clnt arbbridge.ArbClient,
 	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
 ) error {
-	return e.cp.RestoreLatestState(ctx, clnt, unmarshalFunc)
+	return e.cp.RestoreLatestState(
+		ctx,
+		clnt,
+		func(contents []byte, resCtx checkpointing.RestoreContext) error {
+			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
+		},
+	)
+}
+
+type evilRestoreContext struct {
+	rc checkpointing.RestoreContext
+}
+
+func (erc *evilRestoreContext) GetValue(h common.Hash) value.Value {
+	return erc.rc.GetValue(h)
+}
+
+func (erc *evilRestoreContext) GetMachine(h common.Hash) machine.Machine {
+	return NewEvilMachine(erc.rc.GetMachine(h).(*cmachine.Machine))
 }
 
 func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
