@@ -21,21 +21,29 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+
+	errors2 "github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/ethereum/go-ethereum/accounts"
+
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -48,7 +56,9 @@ func main() {
 	flag.Parse()
 	switch os.Args[1] {
 	case "create":
-		createRollupChain()
+		if err := createRollupChain(); err != nil {
+			log.Fatal(err)
+		}
 	case "validate":
 		if err := validateRollupChain(); err != nil {
 			log.Fatal(err)
@@ -57,54 +67,103 @@ func main() {
 	}
 }
 
-func createRollupChain() {
-	// Check number of args
-	flag.Parse()
-	if flag.NArg() != 5 {
-		log.Fatalln("usage: arb-validator create <contract.ao> <private_key.txt> <ethURL> <factoryAddress>")
+func getKeystore(validatorFolder string, pass *string, flags *flag.FlagSet) (*bind.TransactOpts, error) {
+	ks := keystore.NewKeyStore(filepath.Join(validatorFolder, "wallets"), keystore.StandardScryptN, keystore.StandardScryptP)
+
+	found := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "password" {
+			found = true
+		}
+	})
+
+	var passphrase string
+	if !found {
+		if len(ks.Accounts()) == 0 {
+			fmt.Print("Enter new account password: ")
+		} else {
+			fmt.Print("Enter account password: ")
+		}
+
+		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, err
+		}
+		passphrase = string(bytePassword)
+
+		passphrase = strings.TrimSpace(passphrase)
+	} else {
+		passphrase = *pass
 	}
+
+	var account accounts.Account
+	if len(ks.Accounts()) == 0 {
+		var err error
+		account, err = ks.NewAccount(passphrase)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		account = ks.Accounts()[0]
+	}
+	err := ks.Unlock(account, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	auth, err := bind.NewKeyStoreTransactor(ks, account)
+	if err != nil {
+		return nil, err
+	}
+	return auth, nil
+}
+
+func createRollupChain() error {
+	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
+	passphrase := createCmd.String("password", "", "password=pass")
+	gasPrice := createCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
+	err := createCmd.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+
+	if createCmd.NArg() != 3 {
+		return errors.New("usage: rollupServer create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
+	}
+
+	validatorFolder := createCmd.Arg(0)
+	ethURL := createCmd.Arg(1)
+	addressString := createCmd.Arg(2)
+	factoryAddress := common.HexToAddress(addressString)
+	contractFile := filepath.Join(validatorFolder, "contract.ao")
 
 	// 1) Compiled Arbitrum bytecode
-	mach, err := loader.LoadMachineFromFile(flag.Arg(1), true, "cpp")
+	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
 	if err != nil {
-		log.Fatal("Loader Error: ", err)
+		return errors2.Wrap(err, "loader error")
 	}
 
-	// 2) Private key
-	keyFile, err := os.Open(flag.Arg(2))
+	auth, err := getKeystore(validatorFolder, passphrase, createCmd)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
-	byteValue, err := ioutil.ReadAll(keyFile)
-	if err != nil {
-		log.Fatalln(err)
+	gasPriceAsFloat := 1e9 * (*gasPrice)
+	if gasPriceAsFloat < math.MaxInt64 {
+		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
-	if err := keyFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-	rawKey := strings.TrimPrefix(strings.TrimSpace(string(byteValue)), "0x")
-	key, err := crypto.HexToECDSA(rawKey)
-	if err != nil {
-		log.Fatal("HexToECDSA private key error: ", err)
-	}
-
-	// 3) URL
-	ethURL := flag.Arg(3)
-
-	// 4) Rollup factory address
-	addressString := flag.Arg(4)
-	factoryAddress := common.HexToAddress(addressString)
 
 	// Rollup creation
-	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+
+	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
+		return err
 	}
 
 	factory, err := client.NewArbFactory(factoryAddress)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	address, err := factory.CreateRollup(
@@ -114,15 +173,17 @@ func createRollupChain() {
 		common.Address{},
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(address.Hex())
+	return nil
 }
 
 func validateRollupChain() error {
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
+	passphrase := validateCmd.String("password", "", "password=pass")
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
 	blocktime := validateCmd.Int64("blocktime", 2, "blocktime=NumSeconds")
 	gasPrice := validateCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
@@ -132,7 +193,7 @@ func validateRollupChain() error {
 	}
 
 	if validateCmd.NArg() != 3 {
-		return errors.New("usage: arb-validator validate [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
+		return errors.New("usage: rollupServer validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>")
 	}
 
 	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
@@ -142,32 +203,22 @@ func validateRollupChain() error {
 	addressString := validateCmd.Arg(2)
 	address := common.HexToAddress(addressString)
 
-	keyFilePath := filepath.Join(validatorFolder, "private_key.txt")
-	keyFile, err := os.Open(keyFilePath)
+	auth, err := getKeystore(validatorFolder, passphrase, validateCmd)
 	if err != nil {
 		return err
-	}
-	byteValue, err := ioutil.ReadAll(keyFile)
-	if err != nil {
-		return err
-	}
-	if err := keyFile.Close(); err != nil {
-		return err
-	}
-	rawKey := strings.TrimPrefix(strings.TrimSpace(string(byteValue)), "0x")
-	key, err := crypto.HexToECDSA(rawKey)
-	if err != nil {
-		return fmt.Errorf("HexToECDSA private key error: %v", err)
 	}
 
 	// Rollup creation
-	auth := bind.NewKeyedTransactor(key)
 	gasPriceAsFloat := 1e9 * (*gasPrice)
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
+		return err
+	}
+
+	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 

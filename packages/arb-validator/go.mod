@@ -24,6 +24,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
