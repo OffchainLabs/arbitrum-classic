@@ -155,6 +155,10 @@ class EVMOutput:
             self.abi = self.orig_message.get_abi(functions)
             if self.abi:
                 self.name = self.abi["name"]
+        elif self.orig_message.message_type == 5:
+            self.abi = self.orig_message.get_abi(functions)
+            if self.abi:
+                self.name = self.abi["name"]
 
         self.decoded = True
 
