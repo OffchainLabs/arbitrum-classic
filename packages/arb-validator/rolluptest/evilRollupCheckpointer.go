@@ -40,7 +40,7 @@ func NewEvilRollupCheckpointerFactory(
 	forceFreshStart bool,
 ) checkpointing.RollupCheckpointerFactory {
 	return &EvilRollupCheckpointerFactory{
-		checkpointing.NewRollupCheckpointerImplFactory(
+		checkpointing.NewIndexedCheckpointerFactory(
 			rollupAddr,
 			arbitrumCodeFilePath,
 			databasePath,
@@ -73,14 +73,9 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-) (content []byte, resCtx checkpointing.RestoreContext, err error) {
-	content, resCtx, err = e.cp.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated)
-	if err == nil {
-		resCtx = e
-	}
-	return
+	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
+) error {
+	return e.cp.RestoreLatestState(ctx, clnt, unmarshalFunc)
 }
 
 func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
