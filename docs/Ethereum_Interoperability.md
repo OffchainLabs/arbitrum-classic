@@ -54,6 +54,8 @@ At any time you can call the EthBridge to recover the funds in your lockbox.
 
 ## Transaction calls on Arbitrum
 
+### Transaction calls from clients
+
 All client-generated transaction calls on the Arbitrum chain are sent through the EthBridge using:
 
 ```
@@ -71,6 +73,8 @@ The sequence number is similar to the account nonce in Ethereum. The rollup chai
 
 The value and data fields specify the amount of Eth to transfer with the call and the calldata associated with the call respectively.
 
+### Transaction calls from contracts
+
 A smart contract could also use this interface, but formatting calldata and tracking sequence numbers would be complex to do on-chain. In order to simplify Ethereum contract calls to Arbitrum smart contracts, we provide an Arbitrum contract proxy interface.
 
 The proxy interface is a smart contract which implements all methods of the Arbitrum contract which do not have return values. To find a proxy contract address if it already exists, look it up in the `ArbRollup` smart contract.
@@ -79,10 +83,13 @@ The proxy interface is a smart contract which implements all methods of the Arbi
 mapping(address => address) public supportedContracts;
 ```
 
+Given `arbContractAddress`, the address of a contract on an Arbitrum Chain, the address of the corresponding proxy contract
+with be `supportedContracts[arbContractAddress]`.
+
 If no such proxy contract already exists, a proxy can be launched using:
 
 ```
-function spawnCallProxy(address _vmContract) external;
+function spawnCallProxy(address _arbContract) external;
 ```
 
 Any Ethereum contract can easily and safely make calls to Arbitrum contracts using this interface.
