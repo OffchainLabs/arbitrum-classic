@@ -38,7 +38,9 @@ RUN apk add --no-cache build-base git go \
     libc-dev linux-headers && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
+    mkdir /home/user/arb-validator && \
+    chown user:user /home/user/arb-validator
 USER user
 WORKDIR "/home/user/arb-validator"
 # Build dependencies
