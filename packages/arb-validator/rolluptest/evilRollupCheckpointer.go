@@ -51,15 +51,15 @@ func NewEvilRollupCheckpointerFactory(
 }
 
 type evilRollupCheckpointer struct {
-	cp *checkpointing.RollupCheckpointerImpl
+	cp checkpointing.RollupCheckpointer
 }
 
 func (e evilRollupCheckpointer) GetValue(h common.Hash) value.Value {
-	return e.cp.GetValue(h)
+	return e.cp.(checkpointing.RestoreContext).GetValue(h)
 }
 
 func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.GetMachine(h).(*cmachine.Machine))
+	return NewEvilMachine(e.cp.(checkpointing.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
