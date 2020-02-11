@@ -212,7 +212,6 @@ func RunValidators(t *testing.T) (*FibonacciSession, *goarbitrum.ArbConnection, 
 		return nil, nil, err
 	}
 	auth := bind.NewKeyedTransactor(userKey)
-	auth.GasLimit = 100000000
 
 	ethclint, err := ethclient.Dial(ethURL)
 	if err != nil {
