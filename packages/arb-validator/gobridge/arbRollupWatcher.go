@@ -24,12 +24,12 @@ import (
 )
 
 type ethRollupWatcher struct {
-	client *MockArbClient
+	client *GoArbClient
 
 	address common.Address
 }
 
-func newRollupWatcher(address common.Address, client *MockArbClient) (*ethRollupWatcher, error) {
+func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWatcher, error) {
 	vm := &ethRollupWatcher{client: client, address: address}
 	//err := vm.setupContracts()
 	return vm, nil
@@ -65,24 +65,25 @@ func newRollupWatcher(address common.Address, client *MockArbClient) (*ethRollup
 
 func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
 	// copy events
-	//vm.client.MockEthClient.Lock()
+	//vm.client.GoEthClient.Lock()
 	//var blockEvents []arbbridge.Event
-	//for i, b := range vm.client.MockEthClient.rollups[vm.address].events[blockId] {
+	//for i, b := range vm.client.GoEthClient.rollups[vm.address].events[blockId] {
 	//	blockEvents[i] = b
 	//}
 	//return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
 
 	// delete events
 	// return events
-	return vm.client.MockEthClient.rollups[vm.address].events[blockId], nil
+	return vm.client.GoEthClient.rollups[vm.address].events[blockId], nil
 }
 
 func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	return structures.ChainParams{
-		StakeRequirement:        vm.client.MockEthClient.rollups[vm.address].escrowRequired,
-		GracePeriod:             vm.client.MockEthClient.rollups[vm.address].gracePeriod,
-		MaxExecutionSteps:       vm.client.MockEthClient.rollups[vm.address].maxSteps,
-		ArbGasSpeedLimitPerTick: 200000,
+		StakeRequirement:        vm.client.GoEthClient.rollups[vm.address].escrowRequired,
+		GracePeriod:             vm.client.GoEthClient.rollups[vm.address].gracePeriod,
+		MaxExecutionSteps:       vm.client.GoEthClient.rollups[vm.address].maxSteps,
+		ArbGasSpeedLimitPerTick: vm.client.GoEthClient.rollups[vm.address].arbGasSpeedLimitPerTick,
+		MaxTimeBoundsWidth:      vm.client.GoEthClient.rollups[vm.address].maxTimeBoundsWidth,
 	}, nil
 }
 
@@ -91,5 +92,5 @@ func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 }
 
 func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
-	return vm.client.MockEthClient.rollups[vm.address].creation, nil
+	return vm.client.GoEthClient.rollups[vm.address].creation, nil
 }

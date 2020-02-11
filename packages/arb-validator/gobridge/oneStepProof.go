@@ -18,6 +18,7 @@ package gobridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -35,7 +36,7 @@ func newOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneSt
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
 	//}
-
+	fmt.Println("in newOneStepProof")
 	return &OneStepProof{client}, nil
 }
 
@@ -45,6 +46,7 @@ func (con *OneStepProof) ValidateProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
+	fmt.Println("in OneStepProof - ValidateProof")
 	//return con.contract.ValidateProof(
 	//	auth,
 	//	precondition.BeforeHash,

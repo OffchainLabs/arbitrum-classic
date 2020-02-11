@@ -43,11 +43,11 @@ func init() {
 type pendingTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	contract *pendingtopchallenge.PendingTopChallenge
-	client   *MockArbClient
+	client   *GoArbClient
 	address  common.Address
 }
 
-func newPendingTopChallengeWatcher(address common.Address, client *MockArbClient) (*pendingTopChallengeWatcher, error) {
+func newPendingTopChallengeWatcher(address common.Address, client *GoArbClient) (*pendingTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
 
 func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	headers := make(chan arbbridge.MaybeEvent)
-	c.client.MockEthClient.registerOutChan(headers)
+	c.client.GoEthClient.registerOutChan(headers)
 	//headers := make(chan *types.Header)
 	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	//if err != nil {

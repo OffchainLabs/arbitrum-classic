@@ -18,7 +18,10 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
@@ -33,7 +36,7 @@ type messagesChallenge struct {
 	*bisectionChallenge
 }
 
-func newMessagesChallenge(address common.Address, client *MockArbAuthClient) (*messagesChallenge, error) {
+func newMessagesChallenge(address common.Address, client *GoArbAuthClient) (*messagesChallenge, error) {
 	fmt.Println("in messagesChallenge newMessagesChallenge")
 	bisectionChallenge, err := newBisectionChallenge(address, client) //, auth??
 	if err != nil {
@@ -71,15 +74,15 @@ func (c *messagesChallenge) Bisect(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "Bisect")
-	c.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.MessagesBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.MockEthClient.getCurrentBlock(),
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
 			ChainHashes:   chainHashes,
 			SegmentHashes: segmentHashes,
 			TotalLength:   chainLength,
-			Deadline:      c.client.MockEthClient.challenges[c.contractAddress].deadline,
+			Deadline:      c.client.GoEthClient.challenges[c.contractAddress].deadline,
 		},
 	})
 
@@ -103,70 +106,43 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	msg message.DeliveredEth,
 ) error {
 	fmt.Println("in messagesChallenge OneStepProofEthMessage")
-	//bytes32 messageHash = Messages.ethHash(
-	//	_to,
-	//	_from,
-	//	_value,
-	//	_blockNumber,
-	//	_messageNum
-	//);
-	//		return keccak256(
-	//			abi.encodePacked(
-	//				ETH_DEPOSIT,
-	//				to,
-	//				from,
-	//				value,
-	//				blockNumber,
-	//				messageNum
-	//		)
-	//	);
-	//bytes32 arbMessageHash = Messages.ethMessageHash(
-	//	_to,
-	//	_from,
-	//	_value,
-	//	_blockNumber,
-	//	_messageNum
-	//);
-	//		Value.Data[] memory msgValues = new Value.Data[](2);
-	//		msgValues[0] = Value.newInt(uint256(to));
-	//		msgValues[1] = Value.newInt(value);
-	//
-	//		Value.Data[] memory msgType = new Value.Data[](3);
-	//		msgType[0] = Value.newInt(ETH_DEPOSIT);
-	//		msgType[1] = Value.newInt(uint256(from));
-	//		msgType[2] = Value.newTuple(msgValues);
-	//
-	//		Value.Data[] memory ethMsg = new Value.Data[](3);
-	//		ethMsg[0] = Value.newInt(blockNumber);
-	//		ethMsg[1] = Value.newInt(messageNum);
-	//		ethMsg[2] = Value.newTuple(msgType);
-	//
-	//		return Value.newTuple(ethMsg).hash().hash;
-	//
-	//oneStepProof(
-	//	_lowerHashA,
-	//	_lowerHashB,
-	//	messageHash,
-	//	arbMessageHash
-	//);
-	//	requireMatchesPrevState(
-	//		ChallengeUtils.messagesHash(
-	//			_lowerHashA,
-	//			Protocol.addMessageToPending(_lowerHashA, _valueHashA),
-	//			_lowerHashB,
-	//			Protocol.addMessageToInbox(_lowerHashB, _valueHashB),
-	//			1
-	//	)
-	//);
-	//
-	//	emit OneStepProofCompleted();
-	c.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+
+	messageHash := msg.CommitmentHash()
+
+	msgType := msg.AsValue()
+	ethMsg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(msg.BlockNum.AsInt()),
+		value.NewIntValue(msg.MessageNum),
+		msgType,
+	})
+	ethMsgHash := ethMsg.Hash()
+
+	msgs, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewHashOnlyValue(lowerHashB, 32),
+		value.NewHashOnlyValue(ethMsgHash, 32),
+	})
+	matchHash := structures.MessageChallengeDataHash(
+		lowerHashA,
+		hashing.SoliditySHA3(
+			hashing.Bytes32(lowerHashA),
+			hashing.Bytes32(messageHash)),
+		lowerHashB,
+		msgs.Hash(),
+		big.NewInt(1),
+	)
+
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+		return errors.New("Incorrect previous state")
+	}
+
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.MockEthClient.getCurrentBlock(),
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
 		},
 	})
+	// TODO: handle stake distribution
 	//	_asserterWin();
 	//		resolveChallengeAsserterWon();
 	//			require(challenges[msg.sender], RES_CHAL_SENDER);
@@ -178,10 +154,10 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.MockEthClient.getCurrentBlock(),
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
 			Winner:            msg.From,
 			Loser:             msg.To,
@@ -201,6 +177,63 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	msg message.DeliveredERC20,
 ) error {
 	fmt.Println("in messagesChallenge OneStepProofERC20Message")
+	messageHash := msg.CommitmentHash()
+
+	msgType := msg.AsValue()
+	ethMsg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(msg.BlockNum.AsInt()),
+		value.NewIntValue(msg.MessageNum),
+		msgType,
+	})
+	ethMsgHash := ethMsg.Hash()
+
+	msgs, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewHashOnlyValue(lowerHashB, 32),
+		value.NewHashOnlyValue(ethMsgHash, 32),
+	})
+	matchHash := structures.MessageChallengeDataHash(
+		lowerHashA,
+		hashing.SoliditySHA3(
+			hashing.Bytes32(lowerHashA),
+			hashing.Bytes32(messageHash)),
+		lowerHashB,
+		msgs.Hash(),
+		big.NewInt(1),
+	)
+
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+		return errors.New("Incorrect previous state")
+	}
+
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.OneStepProofEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+		},
+	})
+	// TODO: handle stake distribution
+	//	_asserterWin();
+	//		resolveChallengeAsserterWon();
+	//			require(challenges[msg.sender], RES_CHAL_SENDER);
+	//			delete challenges[msg.sender];
+	//
+	//			Staker storage winningStaker = getValidStaker(address(winner));
+	//			winner.transfer(stakeRequirement / 2);
+	//			winningStaker.inChallenge = false;
+	//			deleteStaker(loser);
+	//
+	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.ChallengeCompletedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+			Winner:            msg.From,
+			Loser:             msg.To,
+			ChallengeContract: c.contractAddress,
+		},
+	})
 	return nil
 }
 
@@ -211,6 +244,63 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	msg message.DeliveredERC721,
 ) error {
 	fmt.Println("in messagesChallenge OneStepProofERC721Message")
+	messageHash := msg.CommitmentHash()
+
+	msgType := msg.AsValue()
+	ethMsg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(msg.BlockNum.AsInt()),
+		value.NewIntValue(msg.MessageNum),
+		msgType,
+	})
+	ethMsgHash := ethMsg.Hash()
+
+	msgs, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewHashOnlyValue(lowerHashB, 32),
+		value.NewHashOnlyValue(ethMsgHash, 32),
+	})
+	matchHash := structures.MessageChallengeDataHash(
+		lowerHashA,
+		hashing.SoliditySHA3(
+			hashing.Bytes32(lowerHashA),
+			hashing.Bytes32(messageHash)),
+		lowerHashB,
+		msgs.Hash(),
+		big.NewInt(1),
+	)
+
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+		return errors.New("Incorrect previous state")
+	}
+
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.OneStepProofEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+		},
+	})
+	// TODO: handle stake distribution
+	//	_asserterWin();
+	//		resolveChallengeAsserterWon();
+	//			require(challenges[msg.sender], RES_CHAL_SENDER);
+	//			delete challenges[msg.sender];
+	//
+	//			Staker storage winningStaker = getValidStaker(address(winner));
+	//			winner.transfer(stakeRequirement / 2);
+	//			winningStaker.inChallenge = false;
+	//			deleteStaker(loser);
+	//
+	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+		Event: arbbridge.ChallengeCompletedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+			Winner:            msg.From,
+			Loser:             msg.To,
+			ChallengeContract: c.contractAddress,
+		},
+	})
 	return nil
 }
 

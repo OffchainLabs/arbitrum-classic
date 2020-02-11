@@ -29,7 +29,7 @@ type pendingTopChallenge struct {
 	*bisectionChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client *MockArbAuthClient) (*pendingTopChallenge, error) {
+func NewPendingTopChallenge(address common.Address, client *GoArbAuthClient) (*pendingTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err

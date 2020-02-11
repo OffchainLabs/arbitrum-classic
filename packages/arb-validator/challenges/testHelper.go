@@ -112,7 +112,7 @@ func testChallenge(
 		return errors2.Wrap(err, "Error getting challenge factory address")
 	}
 
-	tester, err := client1.DeployChallengeTester(challengeFactoryAddress)
+	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
 	}

@@ -27,20 +27,22 @@ var timedOutAsserterID ethcommon.Hash
 var timedOutChallengerID ethcommon.Hash
 
 type challenge struct {
-	client *MockArbAuthClient
+	client *GoArbAuthClient
 	//auth   *bind.TransactOpts
 	contractAddress common.Address
+	state           int
+	deadlineTicks   common.TimeTicks
 }
 
-func newChallenge(address common.Address, client *MockArbAuthClient) (*challenge, error) {
+func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, error) {
 	//challengeContract, err := executionchallenge.NewChallenge(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	//}
-	//ch := client.MockEthClient.challenges[address]
-	//addr := client.MockEthClient.getNextAddress()
+	//ch := client.GoEthClient.challenges[address]
+	//addr := client.GoEthClient.getNextAddress()
 	chal := challenge{client: client, contractAddress: address}
-	//client.MockEthClient.challenges[addr] =
+	//client.GoEthClient.challenges[addr] =
 
 	return &chal, nil
 }
@@ -58,11 +60,11 @@ func (c *challenge) TimeoutChallenge(
 }
 
 type challengeWatcher struct {
-	client    *MockArbClient
+	client    *GoArbClient
 	Challenge common.Address
 }
 
-func newChallengeWatcher(address common.Address, client *MockArbClient) (*challengeWatcher, error) {
+func newChallengeWatcher(address common.Address, client *GoArbClient) (*challengeWatcher, error) {
 	//challengeContract, err := executionchallenge.NewChallenge(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")

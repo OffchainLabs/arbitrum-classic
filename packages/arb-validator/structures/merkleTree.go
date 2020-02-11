@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package structures
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

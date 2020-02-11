@@ -28,15 +28,15 @@ import (
 
 type ChallengeTester struct {
 	contract common.Address
-	client   *MockArbAuthClient
+	client   *GoArbAuthClient
 }
 
-func newChallengeTester(address common.Address, client *MockArbAuthClient) (*ChallengeTester, error) {
+func NewChallengeTester(client *GoArbAuthClient) (*ChallengeTester, error) {
 	//vmCreatorContract, err := challengetester.DeployChallengeTester(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
 	//}
-	return &ChallengeTester{client.MockEthClient.getNextAddress(), client}, nil
+	return &ChallengeTester{client.GoEthClient.getNextAddress(), client}, nil
 }
 
 func (con *ChallengeTester) StartChallenge(
@@ -47,7 +47,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, *structures.BlockId, error) {
-	eth := con.client.MockEthClient
+	eth := con.client.GoEthClient
 	//con.auth.Context = ctx
 	//tx, err := con.contract.StartChallenge(
 	//	con.auth,
@@ -73,10 +73,11 @@ func (con *ChallengeTester) StartChallenge(
 
 	// create clone
 	newAddr := eth.getNextAddress()
-	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod}
+	fmt.Println("in StartChallenge - challengerDataHash = ", challengeHash)
+	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod, challengerDataHash: challengeHash}
 
 	//initializeBisection
-	eth.challenges[newAddr].deadline = common.TimeFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
+	eth.challenges[newAddr].deadline = common.TicksFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
 	// emit InitiatedChallenge
 	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{

@@ -18,6 +18,8 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"strings"
 
@@ -71,7 +73,8 @@ func (c *bisectionChallenge) chooseSegment(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tree := NewMerkleTree(segments)
+	tree := structures.NewMerkleTree(segments)
+	fmt.Println("segments[segmentToCallenge] = ", segments[segmentToChallenge])
 	tx, err := c.BisectionChallenge.ChooseSegment(
 		c.auth.getAuth(ctx),
 		big.NewInt(int64(segmentToChallenge)),

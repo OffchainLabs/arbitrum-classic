@@ -40,11 +40,11 @@ var oneStepProofCompletedID ethcommon.Hash
 type executionChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	challenge *executionchallenge.ExecutionChallenge
-	client    *MockArbClient
+	client    *GoArbClient
 	address   common.Address
 }
 
-func newExecutionChallengeWatcher(address common.Address, client *MockArbClient) (*executionChallengeWatcher, error) {
+func newExecutionChallengeWatcher(address common.Address, client *GoArbClient) (*executionChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (c *executionChallengeWatcher) topics() []ethcommon.Hash {
 
 func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
 	headers := make(chan arbbridge.MaybeEvent)
-	c.client.MockEthClient.registerOutChan(headers)
+	c.client.GoEthClient.registerOutChan(headers)
 	//headers := make(chan *types.Header)
 	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	//if err != nil {

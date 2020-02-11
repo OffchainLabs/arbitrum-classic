@@ -73,24 +73,34 @@ type channelData struct {
 }
 
 type rollupData struct {
-	state           EthState
-	vmState         common.Hash
-	gracePeriod     common.TimeTicks
-	maxSteps        uint64
-	escrowRequired  *big.Int
-	owner           common.Address
-	events          map[*structures.BlockId][]arbbridge.Event
-	creation        *structures.BlockId
-	stakers         map[common.Address]*staker
-	leaves          map[common.Hash]bool
-	lastConfirmed   common.Hash
-	contractAddress common.Address
-	nextConfirmed   common.Hash
+	state                   EthState
+	vmState                 common.Hash
+	gracePeriod             common.TimeTicks
+	maxSteps                uint64
+	maxTimeBoundsWidth      uint64
+	arbGasSpeedLimitPerTick uint64
+	escrowRequired          *big.Int
+	owner                   common.Address
+	events                  map[*structures.BlockId][]arbbridge.Event
+	creation                *structures.BlockId
+	stakers                 map[common.Address]*staker
+	leaves                  map[common.Hash]bool
+	lastConfirmed           common.Hash
+	contractAddress         common.Address
+	nextConfirmed           common.Hash
 }
 
 type challengeData struct {
 	sync.Mutex
-	deadline common.TimeTicks
+	deadline             common.TimeTicks
+	challengerDataHash   common.Hash
+	state                int
+	challengePeriodTicks common.TimeTicks
+	deadlineTicks        common.TimeTicks
+	asserter             common.Address
+	challenger           common.Address
+	challengeHash        common.Hash
+	challengeType        *big.Int
 }
 
 type pendingTopChallengeData struct {
@@ -111,19 +121,21 @@ var Void void
 
 // goEthData one per 'URL'
 type goEthdata struct {
-	blockMutex        sync.Mutex
-	Vm                map[common.Address]*VmData
-	channels          map[common.Address]*channelData
-	rollups           map[common.Address]*rollupData    // contract address to rollup
-	challenges        map[common.Address]*challengeData // contract address to rollup
-	challengeWatchers map[*challengeData]map[*structures.BlockId][]arbbridge.Event
-	arbFactory        common.Address // eth address to factory address
-	nextAddress       common.Address // unique 'address'
-	nextMsgs          map[*structures.BlockId][]arbbridge.MaybeEvent
-	BlockNumber       uint64
-	pending           map[common.Address]*PendingInbox
-	NextBlock         *structures.BlockId
-	LastMinedBlock    *structures.BlockId
+	blockMutex             sync.Mutex
+	msgMutex               sync.Mutex
+	Vm                     map[common.Address]*VmData
+	channels               map[common.Address]*channelData
+	rollups                map[common.Address]*rollupData    // contract address to rollup
+	challenges             map[common.Address]*challengeData // contract address to rollup
+	challengeWatchersMutex sync.Mutex
+	challengeWatchers      map[*challengeData]map[*structures.BlockId][]arbbridge.Event
+	arbFactory             common.Address // eth address to factory address
+	nextAddress            common.Address // unique 'address'
+	nextMsgs               map[*structures.BlockId][]arbbridge.MaybeEvent
+	BlockNumber            uint64
+	pending                map[common.Address]*PendingInbox
+	NextBlock              *structures.BlockId
+	LastMinedBlock         *structures.BlockId
 	//LatestHeight *big.Int
 	blockNumbers map[uint64]*structures.BlockId      // block height to blockId
 	blockHashes  map[common.Hash]*structures.BlockId // block hash to blockId
@@ -249,6 +261,8 @@ func (m *goEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 }
 
 func (m *goEthdata) pubMsg(msg arbbridge.MaybeEvent) {
+	m.msgMutex.Lock()
+	defer m.msgMutex.Unlock()
 	//fmt.Println("publishing event", msg)
 	//if msg.Event.GetChainInfo().BlockId == m.NextBlock {
 	m.nextMsgs[msg.Event.GetChainInfo().BlockId] = append(m.nextMsgs[msg.Event.GetChainInfo().BlockId], msg)
@@ -272,15 +286,19 @@ func mine(m *goEthdata, t time.Time) {
 	m.blockHashes[m.NextBlock.HeaderHash] = m.NextBlock
 	m.parentHashes[*m.NextBlock] = lastBlock.HeaderHash
 	m.LastMinedBlock = m.NextBlock
+	m.msgMutex.Lock()
 	for _, event := range m.nextMsgs[m.NextBlock] {
 		for _, ru := range m.rollups {
 			ru.events[m.NextBlock] = append(ru.events[m.NextBlock], event.Event)
 		}
+		m.challengeWatchersMutex.Lock()
 		for _, watcher := range m.challengeWatchers {
 			watcher[m.NextBlock] = append(watcher[m.NextBlock], event.Event)
 		}
+		m.challengeWatchersMutex.Unlock()
 		m.pubchan <- event
 	}
+	m.msgMutex.Unlock()
 	fmt.Println("mined block number", m.NextBlock)
 	newBlock := new(structures.BlockId)
 	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))

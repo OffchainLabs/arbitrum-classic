@@ -185,6 +185,7 @@ func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {
 }
 
 func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash, common.TimeTicks) {
+	fmt.Println("in ChallengeNodeData - chainParams = ", params)
 	vmProtoData := node.prev.vmProtoData
 	switch node.linkType {
 	case structures.InvalidPendingChildType:

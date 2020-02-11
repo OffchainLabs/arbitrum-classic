@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 )
 
@@ -33,7 +34,7 @@ type bisectionChallenge struct {
 	//challengeState
 }
 
-func newBisectionChallenge(address common.Address, client *MockArbAuthClient) (*bisectionChallenge, error) {
+func newBisectionChallenge(address common.Address, client *GoArbAuthClient) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client)
 	if err != nil {
 		return nil, err
@@ -80,13 +81,16 @@ func (c *bisectionChallenge) chooseSegment(
 	//
 	//challengerResponded();
 	//emit Continued(_segmentToChallenge, deadlineTicks);
-	c.client.MockEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash = segments[segmentToChallenge]
+	fmt.Println("segmentToChallenge = ", segmentToChallenge)
+	fmt.Println("segments[segmentToChallenge] = ", segments[segmentToChallenge])
+	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
 		Event: arbbridge.ContinueChallengeEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.MockEthClient.getCurrentBlock(),
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
 			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
-			Deadline:     c.client.MockEthClient.challenges[c.contractAddress].deadline,
+			Deadline:     c.client.GoEthClient.challenges[c.contractAddress].deadline,
 		},
 	})
 
@@ -98,7 +102,7 @@ type bisectionChallengeWatcher struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallengeWatcher(address common.Address, client *MockArbClient) (*bisectionChallengeWatcher, error) {
+func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (*bisectionChallengeWatcher, error) {
 	challenge, err := newChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -119,6 +123,19 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 		continuedChallengeID,
 	}
 	return append(tops, c.challengeWatcher.topics()...)
+}
+
+func commitToSegment(challengeData *challengeData, hashes [][32]byte) {
+	tree := structures.NewMerkleTree(hashSliceToHashes(hashes))
+	challengeData.challengerDataHash = tree.GetRoot()
+}
+
+//.GoEthClient.challenges[c.contractAddress]
+func asserterResponded(client *GoArbClient) {
+	//challengeData.deadline.
+	//currentTicks := common.TicksFromBlockNum(client.GoEthClient.getCurrentBlock().Height)
+	//deadlineTicks := currentTicks.Add(ch)
+
 }
 
 //

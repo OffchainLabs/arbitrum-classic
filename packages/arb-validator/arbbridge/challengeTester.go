@@ -18,9 +18,8 @@ package arbbridge
 
 import (
 	"context"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -34,5 +33,4 @@ type ChallengeTester interface {
 		challengeHash common.Hash,
 		challengeType *big.Int,
 	) (common.Address, *structures.BlockId, error)
-	//DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (ChallengeTester, error)
 }

@@ -27,15 +27,15 @@ import (
 type PendingInbox struct {
 	//GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
 	pending *structures.PendingInbox
-	client  *MockArbClient
+	client  *GoArbClient
 }
 
-func newPendingInbox(address common.Address, client *MockArbClient) (*PendingInbox, error) {
+func newPendingInbox(address common.Address, client *GoArbClient) (*PendingInbox, error) {
 	//globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	//}
-	client.MockEthClient.pending[address] = &PendingInbox{client: client}
+	client.GoEthClient.pending[address] = &PendingInbox{client: client}
 	return &PendingInbox{structures.NewPendingInbox(), client}, nil
 }
 

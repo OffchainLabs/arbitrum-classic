@@ -12,11 +12,11 @@ import (
 
 type ArbFactory struct {
 	contract common.Address
-	client   *MockArbClient
+	client   *GoArbClient
 }
 
-func newArbFactory(address common.Address, client *MockArbClient) (*ArbFactory, error) {
-	return &ArbFactory{client.MockEthClient.arbFactory, client}, nil
+func newArbFactory(address common.Address, client *GoArbClient) (*ArbFactory, error) {
+	return &ArbFactory{client.GoEthClient.arbFactory, client}, nil
 }
 
 func (con *ArbFactory) CreateRollup(
@@ -26,7 +26,7 @@ func (con *ArbFactory) CreateRollup(
 	owner common.Address,
 ) (common.Address, error) {
 	events := make(map[*structures.BlockId][]arbbridge.Event)
-	addr := con.client.MockEthClient.getNextAddress()
+	addr := con.client.GoEthClient.getNextAddress()
 	vmProto := hashing.SoliditySHA3(
 		hashing.Bytes32(vmState),
 		hashing.Bytes32(value.NewEmptyTuple().Hash()),
@@ -43,20 +43,22 @@ func (con *ArbFactory) CreateRollup(
 		hashing.Bytes32(innerHash),
 	)
 
-	con.client.MockEthClient.rollups[addr] = &rollupData{state: Uninitialized,
-		vmState:         vmState,
-		gracePeriod:     params.GracePeriod,
-		maxSteps:        params.MaxExecutionSteps,
-		escrowRequired:  params.StakeRequirement,
-		owner:           owner,
-		events:          events,
-		creation:        con.client.MockEthClient.getCurrentBlock(),
-		stakers:         make(map[common.Address]*staker),
-		leaves:          make(map[common.Hash]bool),
-		lastConfirmed:   initialNode,
-		contractAddress: addr,
+	con.client.GoEthClient.rollups[addr] = &rollupData{state: Uninitialized,
+		vmState:                 vmState,
+		gracePeriod:             params.GracePeriod,
+		maxSteps:                params.MaxExecutionSteps,
+		maxTimeBoundsWidth:      params.MaxTimeBoundsWidth,
+		arbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
+		escrowRequired:          params.StakeRequirement,
+		owner:                   owner,
+		events:                  events,
+		creation:                con.client.GoEthClient.getCurrentBlock(),
+		stakers:                 make(map[common.Address]*staker),
+		leaves:                  make(map[common.Hash]bool),
+		lastConfirmed:           initialNode,
+		contractAddress:         addr,
 	}
-	con.client.MockEthClient.rollups[addr].leaves[initialNode] = true
+	con.client.GoEthClient.rollups[addr].leaves[initialNode] = true
 
 	//event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
 	//if err != nil {
@@ -67,10 +69,10 @@ func (con *ArbFactory) CreateRollup(
 
 type arbFactoryWatcher struct {
 	contract common.Address
-	client   *MockArbClient
+	client   *GoArbClient
 }
 
-func newArbFactoryWatcher(address common.Address, client *MockArbClient) (*arbFactoryWatcher, error) {
+func newArbFactoryWatcher(address common.Address, client *GoArbClient) (*arbFactoryWatcher, error) {
 	//vmCreatorContract, err := arbfactory.newArbFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")

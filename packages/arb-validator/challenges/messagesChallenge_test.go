@@ -18,6 +18,7 @@ package challenges
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"testing"
@@ -61,6 +62,12 @@ func testMessagesChallenge(t *testing.T) {
 	}
 
 	importedMessages := inbox.Hash()
+	fmt.Println("in testMessagesChallenge")
+	fmt.Println("beforePending", beforePending)
+	fmt.Println("afterPending", afterPending)
+	fmt.Println("value.NewEmptyTuple().Hash()", value.NewEmptyTuple().Hash())
+	fmt.Println("importedMessages", importedMessages)
+
 	challengeHash := structures.MessageChallengeDataHash(
 		beforePending,
 		afterPending,
@@ -68,6 +75,7 @@ func testMessagesChallenge(t *testing.T) {
 		importedMessages,
 		big.NewInt(4),
 	)
+	fmt.Println("challengeHash", challengeHash)
 
 	if err := testChallenge(
 		structures.InvalidMessagesChildType,

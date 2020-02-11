@@ -153,12 +153,16 @@ func defendMessages(
 
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
+					fmt.Println("in defendMessages type DeliveredTransaction")
 					err = contract.OneStepProofTransactionMessage(ctx, startPending, startMessages, msg)
 				case message.DeliveredEth:
+					fmt.Println("in defendMessages type DeliveredEth")
 					err = contract.OneStepProofEthMessage(ctx, startPending, startMessages, msg)
 				case message.DeliveredERC20:
+					fmt.Println("in defendMessages type DeliveredERC20")
 					err = contract.OneStepProofERC20Message(ctx, startPending, startMessages, msg)
 				case message.DeliveredERC721:
+					fmt.Println("in defendMessages type DeliveredERC721")
 					err = contract.OneStepProofERC721Message(ctx, startPending, startMessages, msg)
 				}
 				if err != nil {

@@ -44,11 +44,11 @@ func init() {
 type messagesChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	challengeInfo *challengeData
-	client        *MockArbClient
+	client        *GoArbClient
 	//address  ethcommon.Address
 }
 
-func newMessagesChallengeWatcher(address common.Address, client *MockArbClient) (*messagesChallengeWatcher, error) {
+func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*messagesChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -57,8 +57,10 @@ func newMessagesChallengeWatcher(address common.Address, client *MockArbClient) 
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	//}
-	chalData := client.MockEthClient.challenges[address]
-	client.MockEthClient.challengeWatchers[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+	chalData := client.GoEthClient.challenges[address]
+	client.GoEthClient.challengeWatchersMutex.Lock()
+	client.GoEthClient.challengeWatchers[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+	client.GoEthClient.challengeWatchersMutex.Unlock()
 
 	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, challengeInfo: chalData, client: client}, nil
 }
@@ -83,7 +85,10 @@ func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *struc
 	//	events = append(events, event)
 	//}
 	//return events, nil
-	return c.client.MockEthClient.challengeWatchers[c.challengeInfo][blockId], nil
+	c.client.GoEthClient.challengeWatchersMutex.Lock()
+	cw := c.client.GoEthClient.challengeWatchers[c.challengeInfo][blockId]
+	c.client.GoEthClient.challengeWatchersMutex.Unlock()
+	return cw, nil
 }
 
 func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {

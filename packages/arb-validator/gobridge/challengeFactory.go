@@ -18,18 +18,17 @@ package gobridge
 
 import (
 	"context"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"math/big"
 )
 
 type challengeFactory struct {
 	contract common.Address
-	client   *MockArbAuthClient
+	client   *GoArbAuthClient
 	auth     *TransOpts
 }
 
-func newChallengeFactory(address common.Address, client *MockArbAuthClient, auth *TransOpts) (*challengeFactory, error) {
+func newChallengeFactory(address common.Address, client *GoArbAuthClient, auth *TransOpts) (*challengeFactory, error) {
 	//vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
@@ -70,5 +69,13 @@ func (con *challengeFactory) CreateChallenge(
 	//return common.NewAddressFromEth(receipt.Logs[0].Address), nil
 	// create challenge
 	// return address of new challenge contract
-	return con.client.MockEthClient.getNextAddress(), nil
+	challenge := con.client.GoEthClient.getNextAddress()
+	con.client.GoEthClient.challenges[challenge] = &challengeData{
+		challengePeriodTicks: challengePeriod,
+		asserter:             asserter,
+		challenger:           challenger,
+		challengeHash:        challengeHash,
+		challengeType:        challengeType,
+	}
+	return con.client.GoEthClient.getNextAddress(), nil
 }
