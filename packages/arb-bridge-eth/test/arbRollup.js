@@ -18,9 +18,14 @@ const ArbRollup = artifacts.require("ArbRollup");
 const ChallengeFactory = artifacts.require("ChallengeFactory");
 const GlobalInbox = artifacts.require("GlobalInbox");
 
-const { expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
+const {
+  expectEvent,
+  expectRevert,
+  time
+} = require("@openzeppelin/test-helpers");
 
 function inboxTopHash(lowerHash, topHash, chainLength) {
+  console.log("inboxTopHash", lowerHash, topHash, chainLength);
   return web3.utils.soliditySha3(
     { t: "bytes32", v: lowerHash },
     { t: "bytes32", v: topHash },
@@ -216,10 +221,18 @@ class Assertion {
   }
 
   deadline() {
-    return 13000 * this.blockNumber + grace_period_ticks;
+    return 1000 * this.blockNumber + grace_period_ticks;
   }
 
   invalidInboxTopHashInner() {
+    console.log(
+      "invalidInboxTopHashInner",
+      this.claims.afterInboxTop,
+      this.inboxValue,
+      this.inboxCount -
+        (this.prevPrevNode.inboxCount + this.params.importedMessageCount),
+      grace_period_ticks + 1000
+    );
     return childNodeInnerHash(
       this.deadline(),
       invalidInboxTopHash(
@@ -227,7 +240,7 @@ class Assertion {
         this.inboxValue,
         this.inboxCount -
           (this.prevPrevNode.inboxCount + this.params.importedMessageCount),
-        grace_period_ticks + 13000
+        grace_period_ticks + 1000
       ),
       0,
       this.prevProtoData.hash()
@@ -250,7 +263,7 @@ class Assertion {
         empty_tuple_hash,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
-        grace_period_ticks + 13000
+        grace_period_ticks + 1000
       ),
       1,
       this.prevProtoData.hash()
@@ -330,8 +343,8 @@ async function makeAssertion(
     receipt: receipt,
     assertion: new Assertion(
       receipt.receipt.blockNumber,
-      receipt.logs[0].args.inboxValue,
-      0,
+      receipt.logs[0].args.fields[1],
+      receipt.logs[0].args.inboxCount,
       prevPrevNode,
       prevProtoData,
       prevDeadline,
@@ -346,7 +359,7 @@ async function makeAssertion(
 let initial_vm_state = "0x99";
 let stakeRequirement = 10;
 let max_execution_steps = 50000;
-let grace_period_ticks = 10000;
+let grace_period_ticks = 1000;
 
 var arb_rollup;
 var assertionInfo;
@@ -361,6 +374,7 @@ contract("ArbRollup", accounts => {
       grace_period_ticks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
       max_execution_steps, // maxExecutionSteps
+      20, // maxTimeBoundsWidth
       stakeRequirement, // stakeRequirement
       accounts[0], // owner
       challenge_factory.address,
@@ -488,15 +502,23 @@ contract("ArbRollup", accounts => {
   });
 
   it("should confirm an assertion", async () => {
-    let receipt = await arb_rollup.confirmValid(
-      assertionInfo.deadline(),
+    await time.advanceBlock();
+    await time.advanceBlock();
+    await time.advanceBlock();
+    let receipt = await arb_rollup.confirm(
+      assertionInfo.prevProtoData.hash(),
+      [3],
+      [assertionInfo.deadline()],
+      [],
+      [assertionInfo.claims.executionAssertion.outLogsAcc],
+      [assertionInfo.updatedProtoData().hash()],
+      [0],
       "0x",
-      assertionInfo.claims.executionAssertion.outLogsAcc,
-      assertionInfo.updatedProtoData().hash(),
       [accounts[0]],
       [],
       [0, 0]
     );
+
     await expectEvent(receipt, "RollupConfirmed");
 
     assert.equal(
@@ -518,10 +540,12 @@ contract("ArbRollup", accounts => {
       await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       "invalid messages should be leaf"
     );
-    let receipt = await arb_rollup.pruneLeaf(
-      original_node,
+    let receipt = await arb_rollup.pruneLeaves(
+      [original_node],
       [assertionInfo.invalidInboxTopHashInner()],
-      [assertionInfo.validHashInner()]
+      [1],
+      [assertionInfo.validHashInner()],
+      [1]
     );
     await expectEvent(receipt, "RollupPruned");
     assert.isFalse(
