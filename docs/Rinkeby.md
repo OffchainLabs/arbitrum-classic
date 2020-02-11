@@ -29,7 +29,7 @@ Running the `setup_rollup` command will perform two main tasks 1) Launch an Arbi
 To launch a set of docker images containing your validators, run:
 
 ```bash
-./scripts/arb_deploy.py validator-states
+./scripts/arb_deploy.py validator-states --password=[password]
 ```
 
-`arb_deploy.py` takes a path to the validator-states created in the previous step. Unlike the blockchain docker image, the validators can be stopped and restarted without losing any state.
+`arb_deploy.py` takes a path to the validator-states created in the previous step. Unlike the blockchain docker image, the validators can be stopped and restarted without losing any state. The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
