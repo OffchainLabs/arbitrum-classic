@@ -116,7 +116,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		ctx,
 		mach.Hash(),
 		config,
-		common.Address{},
+		client1.Address(),
 	)
 
 	rollupActor1, err := client1.NewRollup(rollupAddress)

@@ -102,8 +102,8 @@ interface ArbRollupInterface extends Interface {
             encode([_sender, _data]: [string, Arrayish]): string;
         }>;
 
-        spawnInterface: TypedFunctionDescription<{
-            encode([_vmContract]: [string]): string;
+        spawnCallProxy: TypedFunctionDescription<{
+            encode([_arbContract]: [string]): string;
         }>;
 
         placeStake: TypedFunctionDescription<{
@@ -167,6 +167,8 @@ interface ArbRollupInterface extends Interface {
                 Arrayish[],
             ]): string;
         }>;
+
+        ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
 
         confirm: TypedFunctionDescription<{
             encode([
@@ -339,7 +341,7 @@ export class ArbRollup extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        spawnInterface(_vmContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+        spawnCallProxy(_arbContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         placeStake(
             proof1: Arrayish[],
@@ -392,6 +394,8 @@ export class ArbRollup extends Contract {
             _stakerProof: Arrayish[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
+
+        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         confirm(
             initalProtoStateHash: Arrayish,
@@ -486,7 +490,7 @@ export class ArbRollup extends Contract {
         overrides?: TransactionOverrides,
     ): Promise<ContractTransaction>;
 
-    spawnInterface(_vmContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+    spawnCallProxy(_arbContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     placeStake(proof1: Arrayish[], proof2: Arrayish[], overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -531,6 +535,8 @@ export class ArbRollup extends Contract {
         _stakerProof: Arrayish[],
         overrides?: TransactionOverrides,
     ): Promise<ContractTransaction>;
+
+    ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     confirm(
         initalProtoStateHash: Arrayish,
@@ -639,7 +645,7 @@ export class ArbRollup extends Contract {
 
         forwardContractMessage(_sender: string, _data: Arrayish): Promise<BigNumber>;
 
-        spawnInterface(_vmContract: string): Promise<BigNumber>;
+        spawnCallProxy(_arbContract: string): Promise<BigNumber>;
 
         placeStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>;
 
@@ -677,6 +683,8 @@ export class ArbRollup extends Contract {
             _numArbGas: BigNumberish,
             _stakerProof: Arrayish[],
         ): Promise<BigNumber>;
+
+        ownerShutdown(): Promise<BigNumber>;
 
         confirm(
             initalProtoStateHash: Arrayish,

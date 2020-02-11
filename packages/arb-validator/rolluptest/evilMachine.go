@@ -44,15 +44,20 @@ func (e EvilMachine) Hash() common.Hash {
 }
 
 func _tweakHash(h common.Hash) common.Hash {
-	// tweak the hash with probability 1/64; don't modify all-zero hash (it's special)
+	// tweak the hash with probability 1/8; don't modify all-zero hash (it's special)
 	// this is idempotent (calling it more than once has same effect as calling it once)
-	if uint(h[0]) < 33 {
+	if uint(h[0]) >= 224 {
 		h2 := h
-		h2[0] = 0
+		h2[0] = h[0] ^ 1
 		return h2
 	} else {
 		return h
 	}
+}
+
+func _inverseTweakHash(h common.Hash) common.Hash {
+	// the inverse of _tweakHash
+	return _tweakHash(h)
 }
 
 func (e EvilMachine) ExecuteAssertion(
