@@ -10,7 +10,9 @@ An Arbitrum chain functions as an independent blockchain with its security built
 
 Currently Eth as well as any token confirming to ether the ERC-20 or ERC-721 standard can be transferred over to an Arbitrum chain.
 
-All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
+All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain.
+
+Visit the [Arbitrum Token Bridge](https://developer.offchainlabs.com/tools/tokenbridge/local/) to easily move funds back and forth using the facilities described in this document.
 
 ### Ethereum to Arbitrum
 

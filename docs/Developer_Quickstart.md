@@ -16,6 +16,8 @@ The following documention describes how to use Arbitrum Rollup.
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
 read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
 
+Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment an Arbitrum Rollup chain on the local testnet.
+
 ## Setup Blockchain
 
 To build a docker image hosting a local test blockchain docker image with Arbitrum smart contracts already deployed, run:
@@ -57,7 +59,7 @@ cd demos/pet-shop
 2. Create a rollup chain with the given `contract.ao` and prepare 3 validators to validate it.
 
     ```bash
-    ../../scripts/setup_rollup.py contract.ao 3
+    ../../scripts/setup_local_rollup.py contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
@@ -135,7 +137,7 @@ Solidity contract and deploy validators:
 ```bash
 cd demos/election
 truffle migrate --network arbitrum
-../../scripts/setup_rollup.py contract.ao 3
+../../scripts/setup_local_rollup.py contract.ao 3
 ../../scripts/arb_deploy.py validator-states
 ```
 
