@@ -29,6 +29,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -127,10 +129,11 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	ethclint, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
 	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
 		return err

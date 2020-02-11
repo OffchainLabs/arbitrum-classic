@@ -27,6 +27,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
 
 	errors2 "github.com/pkg/errors"
@@ -91,11 +93,13 @@ func createRollupChain() error {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
-	// Rollup creation
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	ethclint, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
+
+	// Rollup creation
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
 	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
 		return err

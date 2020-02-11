@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
 	"io/ioutil"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
@@ -76,18 +77,20 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 
 	auth1 := bind.NewKeyedTransactor(key1)
-
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	ethclint1, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
 
-	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+	ethclint2, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
+
+	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
+	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
 	ckpFac := checkpointing.NewDummyCheckpointerFactory(contract)
 
@@ -203,12 +206,6 @@ func RunValidators(t *testing.T) (*FibonacciSession, *goarbitrum.ArbConnection, 
 		return nil, nil, err
 	}
 
-	privateKeyBytes, _ := hex.DecodeString(userKeyHex)
-	conn, dialerr := goarbitrum.Dial("http://localhost:1235", privateKeyBytes, ethURL)
-	if dialerr != nil {
-		t.Errorf("Dial error %v", dialerr)
-		return nil, nil, err
-	}
 	userKey, err := crypto.HexToECDSA(userKeyHex)
 	if err != nil {
 		t.Errorf("HexToECDSA error %v", err)
@@ -216,7 +213,17 @@ func RunValidators(t *testing.T) (*FibonacciSession, *goarbitrum.ArbConnection, 
 	}
 	auth := bind.NewKeyedTransactor(userKey)
 	auth.GasLimit = 100000000
-	auth.Signer = auth.Signer
+
+	ethclint, err := ethclient.Dial(ethURL)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	conn, dialerr := goarbitrum.Dial("http://localhost:1235", auth, ethclint)
+	if dialerr != nil {
+		t.Errorf("Dial error %v", dialerr)
+		return nil, nil, err
+	}
 
 	var fibAddr common.Address
 	fibAddr = common.HexToAddress("0x895521964D724c8362A36608AAf09A3D7d0A0445")
