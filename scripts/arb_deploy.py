@@ -94,7 +94,7 @@ def compose_validator(validator_id, state_abspath, password, ws_port, rollup_add
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
+def deploy(sudo_flag, build_flag, up_flag, validator_states_dir, password):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
@@ -121,11 +121,15 @@ def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
                 .replace("localhost", "dockerhost")
                 .replace("localhost", "dockerhost")
             )
-            if "password" in data:
-                password = data["password"]
+
+            if not password and "password" in data:
+                pass_arg = "--password " + data["password"]
+            elif password:
                 pass_arg = "--password " + password
             else:
-                pass_arg = ""
+                raise Exception(
+                    "arb_deploy requires validator password through [--password=pass] parameter or in config.json file"
+                )
         if i == 0:
             contents = compose_header(
                 states_path % 0, pass_arg, eth_url, rollup_address
@@ -190,6 +194,8 @@ def main():
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
     parser.add_argument("dir", help="The validator states directory.")
+
+    parser.add_argument("-p", "--password", help="Password protecting validator keys.")
     # Optional
 
     parser.add_argument(
@@ -213,7 +219,7 @@ def main():
     args = parser.parse_args()
 
     # Deploy
-    deploy(args.sudo, args.build, args.up, args.dir)
+    deploy(args.sudo, args.build, args.up, args.dir, args.password)
 
 
 if __name__ == "__main__":
