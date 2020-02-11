@@ -48,17 +48,6 @@ interface GlobalInboxInterface extends Interface {
             encode([_messages]: [Arrayish]): string;
         }>;
 
-        forwardTransactionMessage: TypedFunctionDescription<{
-            encode([_chain, _to, _seqNumber, _value, _data, _signature]: [
-                string,
-                string,
-                BigNumberish,
-                BigNumberish,
-                Arrayish,
-                Arrayish,
-            ]): string;
-        }>;
-
         sendTransactionMessage: TypedFunctionDescription<{
             encode([_chain, _to, _seqNumber, _value, _data]: [
                 string,
@@ -87,6 +76,18 @@ interface GlobalInboxInterface extends Interface {
 
         forwardEthMessage: TypedFunctionDescription<{
             encode([_to, _from]: [string, string]): string;
+        }>;
+
+        deliverTransactionBatch: TypedFunctionDescription<{
+            encode([_chain, _tos, _seqNumbers, _values, _messageLengths, _data, _signatures]: [
+                string,
+                string[],
+                BigNumberish[],
+                BigNumberish[],
+                BigNumberish[],
+                Arrayish,
+                Arrayish,
+            ]): string;
         }>;
     };
 
@@ -192,16 +193,6 @@ export class GlobalInbox extends Contract {
 
         sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        forwardTransactionMessage(
-            _chain: string,
-            _to: string,
-            _seqNumber: BigNumberish,
-            _value: BigNumberish,
-            _data: Arrayish,
-            _signature: Arrayish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
         sendTransactionMessage(
             _chain: string,
             _to: string,
@@ -238,6 +229,17 @@ export class GlobalInbox extends Contract {
         ): Promise<ContractTransaction>;
 
         forwardEthMessage(_to: string, _from: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        deliverTransactionBatch(
+            _chain: string,
+            _tos: string[],
+            _seqNumbers: BigNumberish[],
+            _values: BigNumberish[],
+            _messageLengths: BigNumberish[],
+            _data: Arrayish,
+            _signatures: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
     };
 
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
@@ -270,16 +272,6 @@ export class GlobalInbox extends Contract {
     }>;
 
     sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
-    forwardTransactionMessage(
-        _chain: string,
-        _to: string,
-        _seqNumber: BigNumberish,
-        _value: BigNumberish,
-        _data: Arrayish,
-        _signature: Arrayish,
-        overrides?: TransactionOverrides,
-    ): Promise<ContractTransaction>;
 
     sendTransactionMessage(
         _chain: string,
@@ -317,6 +309,17 @@ export class GlobalInbox extends Contract {
     ): Promise<ContractTransaction>;
 
     forwardEthMessage(_to: string, _from: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    deliverTransactionBatch(
+        _chain: string,
+        _tos: string[],
+        _seqNumbers: BigNumberish[],
+        _values: BigNumberish[],
+        _messageLengths: BigNumberish[],
+        _data: Arrayish,
+        _signatures: Arrayish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
 
     filters: {
         ContractTransactionMessageDelivered(
@@ -387,15 +390,6 @@ export class GlobalInbox extends Contract {
 
         sendMessages(_messages: Arrayish): Promise<BigNumber>;
 
-        forwardTransactionMessage(
-            _chain: string,
-            _to: string,
-            _seqNumber: BigNumberish,
-            _value: BigNumberish,
-            _data: Arrayish,
-            _signature: Arrayish,
-        ): Promise<BigNumber>;
-
         sendTransactionMessage(
             _chain: string,
             _to: string,
@@ -418,5 +412,15 @@ export class GlobalInbox extends Contract {
         ): Promise<BigNumber>;
 
         forwardEthMessage(_to: string, _from: string): Promise<BigNumber>;
+
+        deliverTransactionBatch(
+            _chain: string,
+            _tos: string[],
+            _seqNumbers: BigNumberish[],
+            _values: BigNumberish[],
+            _messageLengths: BigNumberish[],
+            _data: Arrayish,
+            _signatures: Arrayish,
+        ): Promise<BigNumber>;
     };
 }
