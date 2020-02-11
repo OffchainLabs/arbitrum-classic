@@ -41,6 +41,17 @@ func (con *GlobalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 	return nil
 }
 
+func SendTransactionMessage(
+	ctx context.Context,
+	data []byte,
+	vmAddress common.Address,
+	contactAddress common.Address,
+	amount *big.Int,
+	seqNumber *big.Int,
+) error {
+	return nil
+}
+
 func (con *GlobalInbox) DepositEthMessage(
 	ctx context.Context,
 	vmAddress common.Address,
