@@ -20,11 +20,28 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type GlobalInbox interface {
-	SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error
+	SendTransactionMessage(
+		ctx context.Context,
+		data []byte,
+		vmAddress common.Address,
+		contactAddress common.Address,
+		amount *big.Int,
+		seqNumber *big.Int,
+	) error
+
+	DeliverTransactionBatch(
+		ctx context.Context,
+		chain common.Address,
+		transactions []message.Transaction,
+		signatures [][65]byte,
+	) error
+
 	DepositEthMessage(
 		ctx context.Context,
 		vmAddress common.Address,
