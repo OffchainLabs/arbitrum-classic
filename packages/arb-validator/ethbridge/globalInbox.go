@@ -71,8 +71,6 @@ func (con *globalInbox) DeliverTransactionBatch(
 	transactions []message.Transaction,
 	signatures [][65]byte,
 ) error {
-	con.auth.Lock()
-	defer con.auth.Unlock()
 	tos := make([]ethcommon.Address, 0, len(transactions))
 	seqNums := make([]*big.Int, 0, len(transactions))
 	amounts := make([]*big.Int, 0, len(transactions))
@@ -87,6 +85,8 @@ func (con *globalInbox) DeliverTransactionBatch(
 		data = append(data, tx.Data...)
 		signaturesFlat = append(signaturesFlat, signatures[i][:]...)
 	}
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DeliverTransactionBatch(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),

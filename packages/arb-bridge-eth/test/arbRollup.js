@@ -197,7 +197,7 @@ class Assertion {
     params,
     claims
   ) {
-    this.blockNumber = blockNumber;
+    this.blockNumber = new web3.utils.BN(blockNumber);
     this.inboxValue = inboxValue;
     this.inboxCount = inboxCount;
 
@@ -221,26 +221,26 @@ class Assertion {
   }
 
   deadline() {
-    return 1000 * this.blockNumber + grace_period_ticks;
+    let deadlineTicks = this.blockNumber
+      .mul(new web3.utils.BN(1000))
+      .add(grace_period_ticks);
+    if (deadlineTicks.lt(this.prevDeadline)) {
+      deadlineTicks = this.prevDeadline;
+    }
+    // Should be numArbGas / arbGasSpeedLimitPerTick, but numArbGas is 0 in the test
+    return deadlineTicks.add(new web3.utils.BN(0));
   }
 
   invalidInboxTopHashInner() {
-    console.log(
-      "invalidInboxTopHashInner",
-      this.claims.afterInboxTop,
-      this.inboxValue,
-      this.inboxCount -
-        (this.prevPrevNode.inboxCount + this.params.importedMessageCount),
-      grace_period_ticks + 1000
-    );
     return childNodeInnerHash(
       this.deadline(),
       invalidInboxTopHash(
         this.claims.afterInboxTop,
         this.inboxValue,
-        this.inboxCount -
-          (this.prevPrevNode.inboxCount + this.params.importedMessageCount),
-        grace_period_ticks + 1000
+        this.inboxCount.sub(
+          this.prevProtoData.inboxCount.add(this.params.importedMessageCount)
+        ),
+        grace_period_ticks.add(new web3.utils.BN(1000))
       ),
       0,
       this.prevProtoData.hash()
@@ -263,7 +263,7 @@ class Assertion {
         empty_tuple_hash,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
-        grace_period_ticks + 1000
+        grace_period_ticks.add(new web3.utils.BN(1000))
       ),
       1,
       this.prevProtoData.hash()
@@ -281,7 +281,7 @@ class Assertion {
     return new VMProtoData(
       this.claims.executionAssertion.afterState,
       this.claims.afterInboxTop,
-      this.prevProtoData.inboxCount + this.params.importedMessageCount
+      this.prevProtoData.inboxCount.add(this.params.importedMessageCount)
     );
   }
 
@@ -359,7 +359,7 @@ async function makeAssertion(
 let initial_vm_state = "0x99";
 let stakeRequirement = 10;
 let max_execution_steps = 50000;
-let grace_period_ticks = 1000;
+let grace_period_ticks = new web3.utils.BN(1000);
 
 var arb_rollup;
 var assertionInfo;
@@ -456,11 +456,15 @@ contract("ArbRollup", accounts => {
       "latest confirmed should be leaf before asserting"
     );
     let current_block = await web3.eth.getBlock("latest");
-    let prevProtoData = new VMProtoData(initial_vm_state, empty_tuple_hash, 0);
+    let prevProtoData = new VMProtoData(
+      initial_vm_state,
+      empty_tuple_hash,
+      new web3.utils.BN(0)
+    );
     let params = new AssertionParams(
       0,
       [current_block.number, current_block.number + 10],
-      0
+      new web3.utils.BN(0)
     );
     let claims = new AssertionClaim(
       "0x00",
@@ -560,7 +564,7 @@ contract("ArbRollup", accounts => {
     let params = new AssertionParams(
       0,
       [current_block.number, current_block.number + 10],
-      0
+      new web3.utils.BN(0)
     );
     let claims = new AssertionClaim(
       "0x00",
