@@ -12,17 +12,18 @@ The deployment tool will assist you in configuring and launching your Rollup Cha
 
 ## Initializing the validators
 
+Run the following command to initialize a set of validators for a given Rollup contract. The `contract_path` should be to the same file you submitted to the deployment tool, the `rollup_address` should be the address output by the tool after a successful deployment, and the `eth_url` should be a RPC or WebSocket connection to an Ethereum node.
+
+You can select to have one or more validators run on your machine for testing purposes.
+
 ```bash
-./scripts/initialize_validators.py [contract_path] [validator_count]
+./scripts/initialize_validators.py [contract_path] [validator_count] [rollup_address] [eth_url]
 ```
 
-This command will initialize your rollup chain and create a `validator-states` folder with configuration
-information for `validator_count` validators prepared to validator it.
-
-Note that this command executes the `setup_rollup.py` script and if you are not in the root of the `arbitrum`
+Note that this command executes the `initialize_validators.py` script and if you are not in the root of the `arbitrum`
 directory, you may need to use a different path.
 
-Running the `setup_rollup` command will perform two main tasks 1) Launch an Arbitrum Rollup chain on the local testnet 2) Create a `validator-states` folder. This folder contains pre-seeded wallets for the created validators. It serves as a lightweight simulation of an enviroment where the validators are running on multiple machines.
+Running the `initialize_validators` command will create a `validator-states` folder with `validator_count` subfolders, each configured with a validator for the given Rollup contract.. It serves as a lightweight simulation of an enviroment where the validators are running on multiple machines.
 
 ## Deploying your validators
 
