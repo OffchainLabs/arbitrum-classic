@@ -33,6 +33,7 @@ For executing in a production-like setting, we suggest the following parameters:
 
 -   stake requirement: 1 Eth
 -   grace period: 180 minutes
+-   speed limit: 1.0
 -   max assertion size: 50 seconds
 -   max time bounds: 20 blocks
 
@@ -44,7 +45,7 @@ If you're debugging your dapp, you care more about fast turnaround than security
 -   stake requirement: 0.1 Eth
 -   grace period: 10 minutes
 -   speed limit: 0.2
--   max assertion size: 250 seconds
+-   max assertion size: 15 seconds
 -   max time bounds: 20 blocks
 
 The presets on the chain launcher page will follow these recommendations.
