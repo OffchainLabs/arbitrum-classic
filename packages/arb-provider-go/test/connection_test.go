@@ -321,7 +321,7 @@ func TestFib(t *testing.T) {
 			t.Errorf("GenerateFib error %v", err)
 			return
 		}
-		_, err = waitForReceipt(client, tx, common.NewAddressFromEth(session.TransactOpts.From), time.Second*40)
+		_, err = waitForReceipt(client, tx, common.NewAddressFromEth(session.TransactOpts.From), time.Second*60)
 		if err != nil {
 			t.Errorf("GenerateFib receipt error %v", err)
 			return
