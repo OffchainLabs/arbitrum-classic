@@ -41,6 +41,8 @@
   },
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.4",
+    "eth-gas-reporter": "^0.2.14",
+    "ethereumjs-util": "^6.2.0",
     "truffle": "^5.1.11",
     "truffle-flattener": "^1.4.2"
   },

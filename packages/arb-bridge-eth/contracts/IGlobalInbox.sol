@@ -68,16 +68,6 @@ interface IGlobalInbox {
 
     function depositEthMessage(address _chain, address _to) external payable;
 
-    function forwardTransactionMessage(
-        address _chain,
-        address _to,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes calldata _data,
-        bytes calldata _signature
-    )
-        external;
-
     function sendTransactionMessage(
         address _chain,
         address _to,
