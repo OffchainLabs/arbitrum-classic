@@ -42,9 +42,8 @@ type EthArbClient struct {
 	client *ethclient.Client
 }
 
-func NewEthClient(ethURL string) (*EthArbClient, error) {
-	client, err := ethclient.Dial(ethURL)
-	return &EthArbClient{client}, err
+func NewEthClient(client *ethclient.Client) *EthArbClient {
+	return &EthArbClient{client}
 }
 
 var reorgError = errors.New("reorg occured")
@@ -170,15 +169,11 @@ type EthArbAuthClient struct {
 	auth *TransactAuth
 }
 
-func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*EthArbAuthClient, error) {
-	client, err := NewEthClient(ethURL)
-	if err != nil {
-		return nil, err
-	}
+func NewEthAuthClient(client *ethclient.Client, auth *bind.TransactOpts) *EthArbAuthClient {
 	return &EthArbAuthClient{
-		EthArbClient: client,
+		EthArbClient: NewEthClient(client),
 		auth:         &TransactAuth{auth: auth},
-	}, nil
+	}
 }
 
 func (c *EthArbAuthClient) Address() common.Address {

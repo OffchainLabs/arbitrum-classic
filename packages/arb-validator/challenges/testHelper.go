@@ -28,6 +28,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	errors2 "github.com/pkg/errors"
@@ -74,14 +76,18 @@ func testChallenge(
 		return err
 	}
 
-	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	ethclint1, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
-	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+
+	ethclint2, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
+
+	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
+	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {
