@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -37,17 +39,22 @@ func NewGlobalInbox(address common.Address, client arbbridge.ArbClient) (*Global
 	return &GlobalInbox{client}, nil
 }
 
-func (con *GlobalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
-	return nil
-}
-
-func SendTransactionMessage(
+func (con *GlobalInbox) SendTransactionMessage(
 	ctx context.Context,
 	data []byte,
 	vmAddress common.Address,
 	contactAddress common.Address,
 	amount *big.Int,
 	seqNumber *big.Int,
+) error {
+	return nil
+}
+
+func (con *GlobalInbox) DeliverTransactionBatch(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.Transaction,
+	signatures [][65]byte,
 ) error {
 	return nil
 }
