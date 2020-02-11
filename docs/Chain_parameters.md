@@ -11,36 +11,41 @@ Note: If you run the validator (`arb-validator` or `arb_deploy.py`) without any 
 
 The parameters are:
 
--   stake requirement: This specifies how many Eth a validator must deposit as a stake.
+-   stake requirement: This specifies how much currency a validator must deposit as a stake.
     Making this bigger strengthens deterrence against malicious behavior by validators,
     but it also increases the amount of capital that validators have to lock up.
 -   grace period: This is the time period allowed for one validator to challenge an assertion made by another validator.
     Making this bigger makes certain attacks against the system more difficult,
     but it also slows down confirmation of transactions.
--   max execution steps: This is the maximum number of AVM instructions that can be executed in a single assertion.
-    Making this bigger increases the efficiency of the protocol (with diminishing returns as it gets really big),
-    but it can also slow down confirmation of transactions.
--   speed limit: This is the maximum amount of ArbGas consumption that can occur per second of real time.
-    Making this bigger lets the contracts in your ArbChain run faster,
-    but making it too big risks overwhelming validators who can't keep up.
+-   speed limit: This controls how fast computations on the chain can go, to make sure that every validator can keep up with 
+    computations. This is essentially the speed of the slowest validator you expect to have.  The speed is scaled so that 1.0
+    is the speed of a typical developer laptop. For example, if you are using half of a laptop's capacity to run the
+    validator, you should set the speed limit to 0.5.
+-   max assertion size: This is the largest amount of computation that you want to include in one assertion. If the chain is
+    running at 100% capacity, the updated state of the chain will be posted to the Ethereum chain this often.
+-   max time bounds width: This is how much time an assertion has to be accepted on-chain, before it is discarded. It is also
+    the maximum clock lag that can exist between the chain's clock (as returned by `block.number` in Solidity) and the block
+    number on the main Ethereum chain.
 
-## Recommended parameters for production testing
+## Recommended parameters 
 
 For executing in a production-like setting, we suggest the following parameters:
 
--   stake requirement: 2% of total value at stake in your ArbChain
+-   stake requirement: 1 Eth, or 2% of total value in chain, whichever is more
 -   grace period: 180 minutes
--   max execution steps: 1,000,000,000
--   speed limit: 100,000,000 ArbGas per second
+-   speed limit: 1.0
+-   max assertion size: 50 seconds
+-   max time bounds: 20 blocks
 
 (We say "production-like setting" because we do not currently recommend use of Arbitrum Rollup in a true
 production setting on the main chain.)
-
-## Recommended parameters for debugging
 
 If you're debugging your dapp, you care more about fast turnaround than security, so we suggest the following parameters:
 
 -   stake requirement: 0.1 Eth
 -   grace period: 10 minutes
--   max execution steps: 1,000,000,000
--   speed limit: 20,000,000 ArbGas per second
+-   speed limit: 0.2
+-   max assertion size: 15 seconds
+-   max time bounds: 20 blocks
+
+The presets on the chain launcher page will follow these recommendations.
