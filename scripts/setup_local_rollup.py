@@ -101,15 +101,12 @@ def deploy(args, sudo_flag=False):
     rollup_address = run(rollup_creation_cmd, capture_stdout=True, quiet=False)
     print("rollup_address", rollup_address)
 
-    with open("validator-states/config.json", "w") as outfile:
-        json.dump(
-            {
-                "rollup_address": rollup_address.strip(),
-                "websocket_port": ws_port,
-                "validator_count": args.n_validators,
-            },
-            outfile,
-        )
+    config = {
+        "rollup_address": rollup_address.strip(),
+        "eth_url": "ws://localhost:" + str(ws_port),
+        "password": "pass",
+    }
+    setup_states.setup_validator_configs(config, args.n_validators)
 
 
 def check_file(name):
