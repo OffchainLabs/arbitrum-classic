@@ -53,15 +53,15 @@ services:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate --password pass --rpc state ws://dockerhost:%s %s
+        command: validate %s --rpc state %s %s
         ports:
             - '1235:1235'
             - '1236:1236'
 """
 
 
-def compose_header(state_abspath, ws_port, rollup_address):
-    return COMPOSE_HEADER % (state_abspath, ws_port, rollup_address)
+def compose_header(state_abspath, password, ws_port, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, password, ws_port, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -73,13 +73,19 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate  --password pass state ws://dockerhost:%s %s
+        command: validate %s state %s %s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, ws_port, rollup_address):
-    return COMPOSE_VALIDATOR % (validator_id, state_abspath, ws_port, rollup_address)
+def compose_validator(validator_id, state_abspath, password, ws_port, rollup_address):
+    return COMPOSE_VALIDATOR % (
+        validator_id,
+        state_abspath,
+        password,
+        ws_port,
+        rollup_address,
+    )
 
 
 ### ----------------------------------------------------------------------------
@@ -92,24 +98,43 @@ def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
-    with open(os.path.join(validator_states_dir, "config.json")) as json_file:
-        data = json.load(json_file)
-        rollup_address = data["rollup_address"]
-        n_validators = data["validator_count"]
-        ws_port = data["websocket_port"]
-
-    # Overwrite DOCKER_COMPOSE_FILENAME
     states_path = os.path.abspath(
         os.path.join(validator_states_dir, setup_states.VALIDATOR_STATE)
     )
-    compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
 
-    contents = compose_header(states_path % 0, ws_port, rollup_address) + "".join(
-        [
-            compose_validator(i, states_path % i, ws_port, rollup_address)
-            for i in range(1, n_validators)
-        ]
-    )
+    n_validators = 1
+    while True:
+        if not os.path.exists(states_path % n_validators):
+            break
+        n_validators += 1
+
+    # Overwrite DOCKER_COMPOSE_FILENAME
+
+    compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
+    contents = ""
+    for i in range(0, n_validators):
+        with open(os.path.join(states_path % i, "config.json")) as json_file:
+            data = json.load(json_file)
+            rollup_address = data["rollup_address"]
+            eth_url = (
+                data["eth_url"]
+                .replace("localhost", "dockerhost")
+                .replace("localhost", "dockerhost")
+            )
+            if "password" in data:
+                password = data["password"]
+                pass_arg = "--password " + password
+            else:
+                pass_arg = ""
+        if i == 0:
+            contents = compose_header(
+                states_path % 0, pass_arg, eth_url, rollup_address
+            )
+        else:
+            contents += compose_validator(
+                i, states_path % i, pass_arg, eth_url, rollup_address
+            )
+
     with open(compose, "w") as f:
         f.write(contents)
 
