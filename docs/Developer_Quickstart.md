@@ -7,7 +7,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Devel
 Get started with Arbitrum by [installing](Installation.md) the Arbitrum compiler,
 `arbc-truffle`, and its dependencies. Next,
 [build and run the demo app](#hello-arbitrum) or
-[port your own dapp](#porting-to-arbitrum).
+[port your own dapp](Porting.md).
 
 Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
 
@@ -18,7 +18,7 @@ read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbit
 
 ## Setup Blockchain
 
-To build a docker image hosting a the local test blockchain docker image with Arbitrum smart contracts already deployed, run:
+To build a docker image hosting a local test blockchain docker image with Arbitrum smart contracts already deployed, run:
 
 ```bash
 yarn docker:build:geth
