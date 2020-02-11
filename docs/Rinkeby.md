@@ -23,7 +23,7 @@ You can select to have one or more validators run on your machine for testing pu
 Note that this command executes the `initialize_validators.py` script and if you are not in the root of the `arbitrum`
 directory, you may need to use a different path.
 
-Running the `initialize_validators` command will create a `validator-states` folder with `validator_count` subfolders, each configured with a validator for the given Rollup contract.. It serves as a lightweight simulation of an enviroment where the validators are running on multiple machines.
+Running the `initialize_validators` command will create a `validator-states` folder with `validator_count` subfolders, each configured with a validator for the given Rollup contract. It serves as a lightweight simulation of an enviroment where the validators are running on multiple machines.
 
 ## Deploying your validators
 
