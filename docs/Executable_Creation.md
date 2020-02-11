@@ -60,3 +60,5 @@ truffle migrate --reset --network arbitrum
 ```
 
 After this command finished, the current directory will contain a `contract.ao` file which contains the code of your AVM executable.
+
+You'll need to repeat the `truffle migrate` step every time you make a change to the Solidity that you want to deploy.
