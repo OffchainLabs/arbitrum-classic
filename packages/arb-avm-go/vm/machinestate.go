@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -33,17 +33,14 @@ import (
 
 type Machine struct {
 	// implements Machinestate
-	stack       stack.Stack
-	auxstack    stack.Stack
-	register    *MachineValue
-	static      *MachineValue
-	pc          *MachinePC
-	errHandler  value.CodePointValue
-	context     machine.Context
-	status      machine.Status
-	blockReason machine.BlockReason
-
-	inbox *protocol.Inbox
+	stack      stack.Stack
+	auxstack   stack.Stack
+	register   *MachineValue
+	static     *MachineValue
+	pc         *MachinePC
+	errHandler value.CodePointValue
+	context    Context
+	status     machine.Status
 
 	sizeLimit     int64
 	sizeException bool
@@ -55,7 +52,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	panic("implement me")
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	panic("implement me")
 }
 
@@ -94,7 +91,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
-	inbox := protocol.NewEmptyInbox()
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil)
@@ -110,10 +106,8 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		static,
 		pc,
 		errHandler,
-		&machine.NoContext{},
+		&NoContext{},
 		machine.Extensive,
-		nil,
-		inbox,
 		sizeLimit,
 		false,
 		wh,
@@ -150,16 +144,20 @@ func (m *Machine) Static() *MachineValue {
 	return m.static
 }
 
-func (m *Machine) SetContext(mc machine.Context) {
+func (m *Machine) SetContext(mc Context) {
 	m.context = mc
 }
 
-func (m *Machine) ReadInbox() value.Value {
-	return m.inbox.Receive()
+func (m *Machine) GetInbox() value.TupleValue {
+	return m.context.GetInbox()
 }
 
-func (m *Machine) GetTimeBounds() value.Value {
-	return m.context.GetTimeBounds()
+func (m *Machine) GetStartTime() value.IntValue {
+	return m.context.GetStartTime()
+}
+
+func (m *Machine) GetEndTime() value.IntValue {
+	return m.context.GetEndTime()
 }
 
 func (m *Machine) IncrPC() {
@@ -232,45 +230,65 @@ func (m *Machine) CurrentStatus() machine.Status {
 	return m.status
 }
 
-func (m *Machine) LastBlockReason() machine.BlockReason {
-	return m.blockReason
+func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
+	if m.status == machine.ErrorStop {
+		return machine.ErrorBlocked{}
+	}
+	if m.status == machine.Halt {
+		return machine.HaltBlocked{}
+	}
+	op := m.GetOperation()
+	if op.GetOp() == code.INBOX {
+		if newMessages {
+			return nil
+		}
+		var param value.Value
+		if immediate, ok := op.(value.ImmediateOperation); ok {
+			param = immediate.Val
+		} else {
+			param, _ = m.stack.Pop()
+			m.stack.Push(param)
+		}
+		paramInt, ok := param.(value.IntValue)
+		if !ok {
+			return nil
+		}
+		if currentTime.AsInt().Cmp(paramInt.BigInt()) < 0 {
+			return machine.InboxBlocked{Timeout: paramInt}
+		}
+		return nil
+	}
+	return nil
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint64,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	hasTimeLimit := maxWallTime.Nanoseconds() != 0
+	startTime := time.Now()
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
+		inbox,
 	)
-	m.blockReason = nil
-	for assCtx.StepCount() < uint32(maxSteps) {
+	for assCtx.StepCount() < maxSteps {
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
-			m.blockReason = blocked
 			break
+		}
+		if hasTimeLimit && assCtx.StepCount()%10000 == 0 {
+			endTime := time.Now()
+			runTime := endTime.Sub(startTime)
+			if runTime > maxWallTime {
+				break
+			}
 		}
 	}
 	return assCtx.Finalize(m)
-}
-
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	m.inbox.SendMessage(msg.Clone())
-}
-
-func (m *Machine) DeliverOnchainMessage() {
-	m.inbox.DeliverMessages()
-}
-
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	m.inbox.InsertMessageGroup(msgs)
-}
-
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
-}
-
-func (m *Machine) PendingMessageCount() uint64 {
-	return m.inbox.PendingQueue.MessageCount()
 }
 
 func (m *Machine) Send(message value.Value) {
@@ -285,19 +303,17 @@ func (m *Machine) Log(val value.Value) {
 	m.context.LoggedValue(val)
 }
 
-func (m *Machine) Hash() [32]byte {
+func (m *Machine) Hash() common.Hash {
 	switch m.status {
 	case machine.Extensive:
-		ret := [32]byte{}
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
-			solsha3.Bytes32(m.stack.StateValue().Hash()),
-			solsha3.Bytes32(m.auxstack.StateValue().Hash()),
-			solsha3.Bytes32(m.register.StateValue().Hash()),
-			solsha3.Bytes32(m.static.StateValue().Hash()),
-			solsha3.Bytes32(m.errHandler.Hash()),
-		))
-		return ret
+		return hashing.SoliditySHA3(
+			hashing.Bytes32(m.pc.GetCurrentCodePointHash()),
+			hashing.Bytes32(m.stack.StateValue().Hash()),
+			hashing.Bytes32(m.auxstack.StateValue().Hash()),
+			hashing.Bytes32(m.register.StateValue().Hash()),
+			hashing.Bytes32(m.static.StateValue().Hash()),
+			hashing.Bytes32(m.errHandler.Hash()),
+		)
 	case machine.ErrorStop:
 		return value.NewInt64Value(1).ToBytes()
 	case machine.Halt:
@@ -307,19 +323,19 @@ func (m *Machine) Hash() [32]byte {
 }
 
 func (m *Machine) PrintState() {
-	codePointHash := m.pc.GetPC().Hash()
+	codePointHash := m.pc.GetCurrentCodePointHash()
 	stackHash := m.stack.StateValue().Hash()
 	auxStackHash := m.auxstack.StateValue().Hash()
 	registerHash := m.register.StateValue().Hash()
 	staticHash := m.static.StateValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 	fmt.Println("machine state", m.status)
-	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
-	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
-	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))
-	fmt.Println("registerHash", hexutil.Encode(registerHash[:]))
-	fmt.Println("staticHash", hexutil.Encode(staticHash[:]))
-	fmt.Println("errHandlerHash", hexutil.Encode(errHandlerHash[:]))
+	fmt.Println("codePointHash", codePointHash)
+	fmt.Println("stackHash", stackHash)
+	fmt.Println("auxStackHash", auxStackHash)
+	fmt.Println("registerHash", registerHash)
+	fmt.Println("staticHash", staticHash)
+	fmt.Println("errHandlerHash", errHandlerHash)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
@@ -400,10 +416,8 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.static.Clone(),
 		newPcPointer,
 		m.errHandler,
-		&machine.NoContext{},
+		&NoContext{},
 		m.status,
-		m.blockReason,
-		m.inbox.Clone(),
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,

@@ -3,7 +3,7 @@
 
 var $ = require("jquery");
 const ethers = require("ethers");
-const ArbProvider = require("arb-provider-ethers");
+const ArbProvider = require("arb-provider-ethers").ArbProvider;
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
@@ -41,10 +41,8 @@ let App = {
       );
     }
 
-    const contracts = require("../compiled.json");
     App.provider = new ArbProvider(
       "http://localhost:1235",
-      contracts,
       new ethers.providers.Web3Provider(web3Provider)
     );
     return App.initContract();
@@ -59,7 +57,7 @@ let App = {
       election.abi,
       App.provider
     );
-    let wallet = await App.provider.getSigner(0);
+    let wallet = App.provider.getSigner(0);
     App.contracts.Election = electionContractRaw.connect(wallet); // eslint-disable-line require-atomic-updates
     App.account = await wallet.getAddress(); // eslint-disable-line require-atomic-updates
     App.listenForEvents();
@@ -84,18 +82,14 @@ let App = {
     });
 
     var accountInterval = setInterval(function() {
-      App.provider
-        .getSigner(0)
-        .then(wallet => {
-          return wallet.getAddress();
-        })
-        .then(address => {
-          if (address != App.account) {
-            console.log("Updated account", address);
-            App.account = address;
-            App.render();
-          }
-        });
+      let wallet = App.provider.getSigner(0);
+      wallet.getAddress().then(address => {
+        if (address != App.account) {
+          console.log("Updated account", address);
+          App.account = address;
+          App.render();
+        }
+      });
     }, 200);
   },
 
@@ -162,10 +156,14 @@ let App = {
 
   castVote: async function() {
     var candidateId = $("#candidatesSelect").val();
-    await App.contracts.Election.vote(candidateId);
-    // Wait for votes to update
+    let tx = await App.contracts.Election.vote(candidateId);
+
     $("#content").hide();
     $("#loader").show();
+
+    await tx.wait();
+    // Wait for votes to update
+    App.render();
   }
 };
 

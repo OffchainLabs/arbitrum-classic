@@ -18,8 +18,9 @@
 #define machine_hpp
 
 #include <avm/machinestate/machinestate.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/value.hpp>
 
+#include <chrono>
 #include <memory>
 #include <vector>
 
@@ -28,37 +29,33 @@ struct Assertion {
     uint64_t gasCount;
     std::vector<value> outMessages;
     std::vector<value> logs;
+    bool didInboxInsn;
 };
 
 class Machine {
     MachineState machine_state;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    void runOne();
+    BlockReason runOne();
 
    public:
     bool initializeMachine(const std::string& filename);
-    bool deserialize(char* data) { return machine_state.deserialize(data); }
+    void initializeMachine(const MachineState& initial_state);
 
     Assertion run(uint64_t stepCount,
-                  uint64_t timeBoundStart,
-                  uint64_t timeBoundEnd);
+                  uint256_t timeBoundStart,
+                  uint256_t timeBoundEnd,
+                  Tuple messages,
+                  std::chrono::seconds wallLimit);
 
     Status currentStatus() { return machine_state.state; }
-    BlockReason lastBlockReason() { return machine_state.blockReason; }
     uint256_t hash() const { return machine_state.hash(); }
+    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const {
+        return machine_state.isBlocked(currentTime, newMessages);
+    }
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }
-    uint64_t pendingMessageCount() const {
-        return machine_state.pendingMessageCount();
-    }
-
-    uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
-
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
 
     TuplePool& getPool() { return *machine_state.pool; }
 

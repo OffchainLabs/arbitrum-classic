@@ -18,11 +18,29 @@ from . import value
 PUSH_WEIGHT = 5
 
 
+IF_ELSE_STATEMENT = 1
+IF_STATEMENT = 2
+WHILE_STATEMENT = 3
+BLOCK_STATEMENT = 4
+CALL_STATEMENT = 5
+IMMEDIATE_OP = 6
+INDIRECT_PUSH_STATEMENT = 7
+BASIC_OP = 8
+AVM_LABEL = 9
+AVM_UNIQUE_LABEL = 10
+FUNC_DEFINITION = 11
+CAST_STATEMENT = 12
+SET_ERROR_HANDLER_STATEMENT = 13
+AVM_LABELED_POS = 14
+AVM_LABELED_CODE_POINT = 15
+
+
 class ASTNode:
-    def __init__(self, path):
+    def __init__(self, asttype, path):
         if path is None:
             path = []
         self.path = path
+        self.asttype = asttype
 
     def add_node(self, typ):
         self.path.append(typ)
@@ -39,7 +57,7 @@ def add_label_to_ast(node, label):
 
 class BlockStatement(ASTNode):
     def __init__(self, code, path=None):
-        super(BlockStatement, self).__init__(path)
+        super(BlockStatement, self).__init__(BLOCK_STATEMENT, path)
         assert isinstance(code, list)
         self.code = code
 
@@ -95,7 +113,7 @@ class BlockStatement(ASTNode):
 
 class IfElseStatement(ASTNode):
     def __init__(self, true_code, false_code, path=None):
-        super(IfElseStatement, self).__init__(path)
+        super(IfElseStatement, self).__init__(IF_ELSE_STATEMENT, path)
         self.true_code = true_code
         self.false_code = false_code
 
@@ -149,7 +167,7 @@ class IfElseStatement(ASTNode):
 
 class CastStatement(ASTNode):
     def __init__(self, typ, path=None):
-        super(CastStatement, self).__init__(path)
+        super(CastStatement, self).__init__(CAST_STATEMENT, path)
         self.typ = typ
 
     def clone(self):
@@ -177,7 +195,7 @@ class CastStatement(ASTNode):
 
 class IfStatement(ASTNode):
     def __init__(self, true_code, path=None):
-        super(IfStatement, self).__init__(path)
+        super(IfStatement, self).__init__(IF_STATEMENT, path)
         self.true_code = true_code
 
     def clone(self):
@@ -212,7 +230,7 @@ class IfStatement(ASTNode):
 
 class WhileStatement(ASTNode):
     def __init__(self, cond_code, body_code, path=None):
-        super(WhileStatement, self).__init__(path)
+        super(WhileStatement, self).__init__(WHILE_STATEMENT, path)
         self.cond_code = cond_code
         self.body_code = body_code
 
@@ -265,7 +283,7 @@ class WhileStatement(ASTNode):
 
 class FuncDefinition(ASTNode):
     def __init__(self, name, func, code, is_callable, path=None):
-        super(FuncDefinition, self).__init__(path)
+        super(FuncDefinition, self).__init__(FUNC_DEFINITION, path)
         self.name = name
         self.func = func
         self.code = code
@@ -318,7 +336,7 @@ class FuncDefinition(ASTNode):
 
 class CallStatement(ASTNode):
     def __init__(self, func, path=None):
-        super(CallStatement, self).__init__(path)
+        super(CallStatement, self).__init__(CALL_STATEMENT, path)
         self.func = func
         self.func_name = "{}.{}".format(func.__module__, func.__name__)
         self.is_callable = True
@@ -365,7 +383,9 @@ class CallStatement(ASTNode):
 
 class SetErrorHandlerFunctionStatement(ASTNode):
     def __init__(self, func, path=None):
-        super(SetErrorHandlerFunctionStatement, self).__init__(path)
+        super(SetErrorHandlerFunctionStatement, self).__init__(
+            SET_ERROR_HANDLER_STATEMENT, path
+        )
         self.func = func
         self.func_name = "{}.{}".format(func.__module__, func.__name__)
         self.is_callable = False
@@ -381,7 +401,7 @@ class SetErrorHandlerFunctionStatement(ASTNode):
         return 1
 
     def stack_mod(self):
-        return {"pop": 0, "push": 0}
+        return {"pop": 0, "push": 0}, []
 
     def typecheck(self, stack):
         pass
@@ -395,7 +415,7 @@ class SetErrorHandlerFunctionStatement(ASTNode):
 
 class IndirectPushStatement(ASTNode):
     def __init__(self, val, path=None):
-        super(IndirectPushStatement, self).__init__(path)
+        super(IndirectPushStatement, self).__init__(INDIRECT_PUSH_STATEMENT, path)
         self.val = val
 
     def clone(self):
@@ -427,7 +447,7 @@ class IndirectPushStatement(ASTNode):
 
 class AVMLabel(ASTNode):
     def __init__(self, name, path=None):
-        super(AVMLabel, self).__init__(path)
+        super(AVMLabel, self).__init__(AVM_LABEL, path)
         self.name = name
         # print("Label", name)
 
@@ -470,7 +490,7 @@ class AVMLabel(ASTNode):
 
 class AVMUniqueLabel(ASTNode):
     def __init__(self, name, path=None):
-        super(AVMUniqueLabel, self).__init__(path)
+        super(AVMUniqueLabel, self).__init__(AVM_UNIQUE_LABEL, path)
         self.name = name
 
     def clone(self):
@@ -510,7 +530,7 @@ class AVMUniqueLabel(ASTNode):
 
 class AVMLabeledPos(ASTNode):
     def __init__(self, name, pc, path=None):
-        super(AVMLabeledPos, self).__init__(path)
+        super(AVMLabeledPos, self).__init__(AVM_LABELED_POS, path)
         self.name = name
         self.pc = pc
 
@@ -543,7 +563,7 @@ class AVMLabeledPos(ASTNode):
 
 class AVMLabeledCodePoint(ASTNode):
     def __init__(self, name, pc, path=None):
-        super(AVMLabeledCodePoint, self).__init__(path)
+        super(AVMLabeledCodePoint, self).__init__(AVM_LABELED_CODE_POINT, path)
         self.name = name
         self.pc = pc
 
@@ -597,7 +617,7 @@ OP_HANDLER = {
 
 class BasicOp(ASTNode):
     def __init__(self, op_code, path=None):
-        super(BasicOp, self).__init__(path)
+        super(BasicOp, self).__init__(BASIC_OP, path)
         self.op_code = op_code
 
     def clone(self):
@@ -659,7 +679,7 @@ class BasicOp(ASTNode):
 
 class ImmediateOp(ASTNode):
     def __init__(self, op, val, path=None):
-        super(ImmediateOp, self).__init__(path)
+        super(ImmediateOp, self).__init__(IMMEDIATE_OP, path)
         self.op = op
         self.val = val
 

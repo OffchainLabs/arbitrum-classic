@@ -36,7 +36,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/dgraph-io/badger"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -249,7 +252,7 @@ func (vcp *VersionedCheckpointer) IsKnownVersion(num int64) bool {
 }
 
 func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
-	var refs [][32]byte
+	var refs []common.Hash
 	if err := vcp.cp.db.Update(func(txn *badger.Txn) error {
 		if err := txn.Delete(vcpStateDataKey(num)); err != nil {
 			return err
@@ -261,7 +264,7 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 		}
 		if err := item.Value(func(barr []byte) error {
 			rd := bytes.NewReader(barr)
-			refs = make([][32]byte, 5)
+			refs = make([]common.Hash, 5)
 			for i := 0; i < 5; i++ {
 				if _, err := rd.Read(refs[i][:]); err != nil {
 					return err
@@ -306,7 +309,7 @@ func (vcp *VersionedCheckpointer) DiscardVersions(newMinVersionNum int64) error 
 type EventChainCheckpointer struct {
 	cp          *Checkpointer
 	fullKey     []byte
-	machineHash [32]byte
+	machineHash common.Hash
 	timeBounds  [2]uint64
 	nextSeqNo   uint64
 	discarded   bool
@@ -368,7 +371,7 @@ func NewEventChainCheckpointer(
 func (ecc *EventChainCheckpointer) Discard() error {
 	if !ecc.discarded {
 		ecc.discarded = true
-		var inboxHash [32]byte
+		var inboxHash common.Hash
 		needToRemoveInboxRef := false
 		if err := ecc.cp.db.Update(func(txn *badger.Txn) error {
 			item, err := txn.Get(ecc.fullKey)
@@ -398,7 +401,7 @@ func (ecc *EventChainCheckpointer) Discard() error {
 			// ignore all errors in here--no way to recover, and worst possible outcome is that orphaned data is left in database
 			for i := uint64(0); i < ecc.nextSeqNo; i++ {
 				needRemove := false
-				var inboxHash [32]byte
+				var inboxHash common.Hash
 				_ = ecc.cp.db.Update(func(txn *badger.Txn) error {
 					keyIntent := ecc.eccKeyForSeqNum(i, "intentToSign")
 					keySigs := ecc.eccKeyForSeqNum(i, "recordSignatures")
@@ -502,7 +505,7 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 
 	rd := bytes.NewReader(recordedBytes)
 
-	var machineHash [32]byte
+	var machineHash common.Hash
 	if _, err := rd.Read(machineHash[:]); err != nil {
 		return nil, err
 	}
@@ -551,8 +554,8 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 	}
 
 	intentKey := ecc.eccKeyForSeqNum(seqNum, "intentToSign")
-	var machineHash [32]byte
-	var inboxHash [32]byte
+	var machineHash common.Hash
+	var inboxHash common.Hash
 	if err := ecc.cp.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(intentKey)
 		if err != nil {
@@ -667,7 +670,7 @@ func (cp *Checkpointer) restoreMachineInTxn(txn *badger.Txn, keySuffix []byte) (
 
 	rd := bytes.NewReader(machineBytes)
 	var vals [6]value.Value
-	var h [32]byte
+	var h common.Hash
 	for i := 0; i < len(vals); i++ {
 		if _, err := io.ReadFull(rd, h[:]); err != nil {
 			return nil, err
@@ -721,7 +724,7 @@ func (cp *Checkpointer) restoreOp(txn *badger.Txn, rd io.Reader) (value.Operatio
 		return nil, err
 	}
 	if buf[0] == 1 {
-		var h [32]byte
+		var h common.Hash
 		if _, err := io.ReadFull(rd, h[:]); err != nil {
 			return nil, err
 		}

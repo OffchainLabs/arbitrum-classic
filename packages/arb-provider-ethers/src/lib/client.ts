@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,17 +31,19 @@ export enum EVMCode {
     BadSequenceCode = 4,
 }
 
-function logValToLog(val: ArbValue.Value, index: number, orig: OrigMessage): ethers.providers.Log {
+function logValToLog(val: ArbValue.Value, index: number, orig: EthBridgeMessage): ethers.providers.Log {
     const value = val as ArbValue.TupleValue;
     return {
-        blockNumber: orig.blockHeight.toNumber(),
+        blockNumber: orig.blockNumber.toNumber(),
         blockHash: orig.txHash,
         transactionIndex: 0,
         removed: false,
         transactionLogIndex: index,
         address: ethers.utils.hexlify((value.get(0) as ArbValue.IntValue).bignum),
-        data: ethers.utils.hexlify(ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue)),
-        topics: value.contents.slice(2).map(rawTopic => ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum)),
+        data: ethers.utils.hexlify(ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue)),
+        topics: value.contents
+            .slice(2)
+            .map(rawTopic => ethers.utils.hexZeroPad(ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum), 32)),
         transactionHash: orig.txHash,
         logIndex: index,
     };
@@ -56,94 +58,199 @@ function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
     return values;
 }
 
-class OrigMessage {
-    public data: Uint8Array;
-    public calldataHash: string;
-    public contractID: string;
-    public sequenceNum: string;
-    public timestamp: string;
-    public blockHeight: ethers.utils.BigNumber;
+class EthBridgeMessage {
+    public typecode: number;
+    public blockNumber: ethers.utils.BigNumber;
     public txHash: string;
-    public tokenType: string;
-    public value: ethers.utils.BigNumber;
-    public caller: string;
+    public sender: string;
+    public message: ArbValue.TupleValue;
+    public calldataHash: string;
 
     constructor(value: ArbValue.TupleValue) {
-        const wrappedData = value.get(0) as ArbValue.TupleValue;
-        const calldata = wrappedData.get(0) as ArbValue.TupleValue;
-        this.calldataHash = calldata.hash();
-        this.data = ArbValue.sizedByteRangeToBytes(calldata.get(0) as ArbValue.TupleValue);
-        this.contractID = ethers.utils.getAddress((calldata.get(1) as ArbValue.IntValue).bignum.toHexString());
-        this.sequenceNum = (calldata.get(2) as ArbValue.IntValue).bignum.toHexString();
-        this.timestamp = (wrappedData.get(1) as ArbValue.IntValue).bignum.toHexString();
-        this.blockHeight = (wrappedData.get(2) as ArbValue.IntValue).bignum;
-        this.txHash = (wrappedData.get(3) as ArbValue.IntValue).bignum.toHexString();
-        this.tokenType = (value.get(3) as ArbValue.IntValue).bignum.toHexString();
-        this.value = (value.get(2) as ArbValue.IntValue).bignum;
-        this.caller = ethers.utils.getAddress((value.get(1) as ArbValue.IntValue).bignum.toHexString());
+        this.blockNumber = (value.get(0) as ArbValue.IntValue).bignum;
+        this.txHash = ethers.utils.hexZeroPad((value.get(1) as ArbValue.IntValue).bignum.toHexString(), 32);
+        const restVal = value.get(2) as ArbValue.TupleValue;
+        this.typecode = (restVal.get(0) as ArbValue.IntValue).bignum.toNumber();
+        this.sender = ethers.utils.getAddress((restVal.get(1) as ArbValue.IntValue).bignum.toHexString());
+        this.message = restVal.get(2) as ArbValue.TupleValue;
+        this.calldataHash = restVal.hash();
+    }
+
+    getArbMessage(): ArbMessage {
+        switch (this.typecode) {
+            case 0:
+                return new TxMessage(this.message);
+            case 1:
+                return new EthTransferMessage(this.message);
+            case 2:
+                return new TokenTransferMessage(this.message);
+            case 3:
+                return new TokenTransferMessage(this.message);
+            case 4:
+                return new ContractTxMessage(this.message);
+            case 5:
+                return new TxCall(this.message);
+            default:
+                throw 'Invalid arb message type';
+        }
     }
 }
+
+export class TxCall {
+    public to: string;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.data = ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
+    }
+}
+
+export class TxMessage {
+    public to: string;
+    public sequenceNum: ethers.utils.BigNumber;
+    public amount: ethers.utils.BigNumber;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum;
+        this.amount = (value.get(2) as ArbValue.IntValue).bignum;
+        this.data = ArbValue.bytestackToBytes(value.get(3) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
+    }
+}
+
+export class ContractTxMessage {
+    public to: string;
+    public amount: ethers.utils.BigNumber;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.amount = (value.get(1) as ArbValue.IntValue).bignum;
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
+    }
+}
+
+class EthTransferMessage {
+    public dest: string;
+    public amount: ethers.utils.BigNumber;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.dest = ethers.utils.getAddress((value.get(0) as ArbValue.IntValue).bignum.toHexString());
+        this.amount = (value.get(1) as ArbValue.IntValue).bignum;
+    }
+
+    getDest(): string {
+        return this.dest;
+    }
+}
+class TokenTransferMessage {
+    public tokenAddress: string;
+    public dest: string;
+    public amount: ethers.utils.BigNumber;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.tokenAddress = ethers.utils.getAddress((value.get(0) as ArbValue.IntValue).bignum.toHexString());
+        this.dest = ethers.utils.getAddress((value.get(1) as ArbValue.IntValue).bignum.toHexString());
+        this.amount = (value.get(2) as ArbValue.IntValue).bignum;
+    }
+
+    getDest(): string {
+        return this.dest;
+    }
+}
+
+export type ArbMessage = TxMessage | EthTransferMessage | TokenTransferMessage | TxCall;
 
 export type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | EVMInvalid;
 
 export class EVMReturn {
-    public orig: OrigMessage;
+    public bridgeData: EthBridgeMessage;
+    public orig: ArbMessage;
     public data: Uint8Array;
     public logs: ethers.providers.Log[];
     public returnType: EVMCode.Return;
 
     constructor(value: ArbValue.TupleValue) {
-        this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
-        this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
+        this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
+        this.orig = this.bridgeData.getArbMessage();
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map((val, index) => {
-            return logValToLog(val, index, this.orig);
+            return logValToLog(val, index, this.bridgeData);
         });
         this.returnType = EVMCode.Return;
     }
 }
 
 export class EVMRevert {
-    public orig: OrigMessage;
+    public bridgeData: EthBridgeMessage;
+    public orig: ArbMessage;
     public data: Uint8Array;
     public returnType: EVMCode.Revert;
 
     constructor(value: ArbValue.TupleValue) {
-        this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
-        this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
+        this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
+        this.orig = this.bridgeData.getArbMessage();
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
         this.returnType = EVMCode.Revert;
     }
 }
 
 export class EVMStop {
-    public orig: OrigMessage;
+    public bridgeData: EthBridgeMessage;
+    public orig: ArbMessage;
     public logs: ethers.providers.Log[];
     public returnType: EVMCode.Stop;
 
     constructor(value: ArbValue.TupleValue) {
-        this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
+        this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
+        this.orig = this.bridgeData.getArbMessage();
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map((val, index) => {
-            return logValToLog(val, index, this.orig);
+            return logValToLog(val, index, this.bridgeData);
         });
         this.returnType = EVMCode.Stop;
     }
 }
 
 export class EVMBadSequenceCode {
-    public orig: OrigMessage;
+    public bridgeData: EthBridgeMessage;
+    public orig: ArbMessage;
     public returnType: EVMCode.BadSequenceCode;
 
     constructor(value: ArbValue.TupleValue) {
-        this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
+        this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
+        this.orig = this.bridgeData.getArbMessage();
         this.returnType = EVMCode.BadSequenceCode;
     }
 }
 
 export class EVMInvalid {
-    public orig: OrigMessage;
+    public bridgeData: EthBridgeMessage;
+    public orig: ArbMessage;
     public returnType: EVMCode.Invalid;
 
     constructor(value: ArbValue.TupleValue) {
-        this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
+        this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
+        this.orig = this.bridgeData.getArbMessage();
         this.returnType = EVMCode.Invalid;
     }
 }
@@ -301,19 +408,25 @@ export class ArbClient {
         }
     }
 
-    public sendMessage(value: ArbValue.Value, sig: string, pubkey: string): Promise<string> {
-        return this.sendRawMessage(ethers.utils.hexlify(ArbValue.marshal(value)), sig, pubkey);
-    }
-
-    public sendRawMessage(value: string, sig: string, pubkey: string): Promise<string> {
+    public sendMessage(
+        to: string,
+        sequenceNum: ethers.utils.BigNumberish,
+        value: ethers.utils.BigNumberish,
+        data: string,
+        signature: string,
+        pubkey: string,
+    ): Promise<string> {
         return new Promise((resolve, reject): void => {
             this.client.request(
                 'Validator.SendMessage',
                 [
                     {
-                        data: value,
+                        to,
+                        sequenceNum,
+                        value,
+                        data,
+                        signature,
                         pubkey,
-                        signature: sig,
                     },
                 ],
                 (err: Error, error: Error, result: SendMessageReply) => {
@@ -329,13 +442,14 @@ export class ArbClient {
         });
     }
 
-    public call(value: ArbValue.Value, sender: string): Promise<Uint8Array> {
+    public call(contractAddress: string, sender: string, data: string): Promise<Uint8Array> {
         return new Promise((resolve, reject): void => {
             this.client.request(
                 'Validator.CallMessage',
                 [
                     {
-                        data: ethers.utils.hexlify(ArbValue.marshal(value)),
+                        contractAddress,
+                        data,
                         sender,
                     },
                 ],

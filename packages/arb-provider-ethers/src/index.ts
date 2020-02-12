@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,11 @@
  */
 'use strict';
 
-import { ArbProvider } from './lib/provider';
+import * as ArbValue from './lib/value';
 
-export = ArbProvider;
+export { ArbRollupFactory } from './lib/abi/ArbRollupFactory';
+export { GlobalInboxFactory } from './lib/abi/GlobalInboxFactory';
+export { ArbFactoryFactory } from './lib/abi/ArbFactoryFactory';
+
+export { ArbValue };
+export { ArbProvider } from './lib/provider';

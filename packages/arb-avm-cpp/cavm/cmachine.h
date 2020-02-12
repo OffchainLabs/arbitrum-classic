@@ -40,14 +40,8 @@ typedef enum {
 } CStatus;
 
 typedef struct {
-    void* data;
-    int length;
-} ByteSlice;
-
-typedef struct {
     enum CBlockType blockType;
-    ByteSlice val1;
-    ByteSlice val2;
+    ByteSlice val;
 } CBlockReason;
 
 typedef struct {
@@ -59,9 +53,8 @@ typedef struct {
     int logCount;
     uint64_t numSteps;
     uint64_t numGas;
+    int didInboxInsn;
 } RawAssertion;
-
-typedef void CMachine;
 
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
@@ -71,18 +64,15 @@ void machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineInboxHash(CMachine* m, void* ret);
 CStatus machineCurrentStatus(CMachine* m);
-CBlockReason machineLastBlockReason(CMachine* m);
-uint64_t machinePendingMessageCount(CMachine* m);
-void machineSendOnchainMessage(CMachine* m, void* data);
-void machineDeliverOnchainMessages(CMachine* m);
-void machineSendOffchainMessages(CMachine* m, void* data, int messageCount);
+CBlockReason machineIsBlocked(CMachine* m, void* currentTime, int newMessages);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     uint64_t timeboundStart,
-                                     uint64_t timeboundEnd);
+                                     void* timeboundStart,
+                                     void* timeboundEnd,
+                                     void* inbox,
+                                     uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 
@@ -91,7 +81,7 @@ void machinePrint(CMachine* m);
 int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
 int restoreMachine(CMachine* m,
                    CCheckpointStorage* storage,
-                   const char* check_point);
+                   const void* machine_hash);
 
 #ifdef __cplusplus
 }

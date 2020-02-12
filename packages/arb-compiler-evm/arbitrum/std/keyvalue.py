@@ -34,6 +34,7 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
         @modifies_stack(0, [keyvalue_type.typ], default_val)
         def new(vm):
             vm.push(KeyValue.make())
+            vm.cast(keyvalue_type.typ)
 
         @staticmethod
         @modifies_stack([keyvalue_type.typ, key_type], [value_type], default_val)

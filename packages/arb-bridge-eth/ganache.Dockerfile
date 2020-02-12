@@ -43,7 +43,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p 7545 -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset --compile-all -q && [ -f bridge_eth_addresses.json ]
+    truffle migrate -q && [ -f bridge_eth_addresses.json ]
 
 
 # Minimize image

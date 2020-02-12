@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import eth_utils
-from . import byterange
-from . import sized_common
+from . import byterange, sized_common, bytestack, tup, stack_int, bigtuple_int
 from ..annotation import modifies_stack
 from ..vm import VM
 from .. import value
@@ -58,6 +57,107 @@ def set_val8(vm):
 @modifies_stack([typ, value.IntType()], [value.IntType()])
 def get(vm):
     sized_common.get(vm, sized_byterange, byterange.get)
+
+
+# [bytestack] -> [sized_byterange]
+@modifies_stack([bytestack.typ], [typ])
+def from_bytestack(vm):
+    vm.dup0()
+    bytestack.get("size")(vm)
+    vm.swap1()
+    bytestack.get("stack")(vm)
+
+    vm.dup1()
+    vm.push(31)
+    vm.add()
+    vm.push(32)
+    vm.swap1()
+    vm.div()
+    vm.push(1)
+    vm.swap1()
+    vm.sub()
+    # index stack size
+
+    bigtuple_int.new(vm)
+    # bigtuple index stack size
+    vm.swap1()
+    vm.swap2()
+    # stack bigtuple index size
+    vm.while_loop(
+        lambda vm: [vm.dup0(), stack_int.isempty(vm), vm.iszero()],
+        lambda vm: [
+            stack_int.pop(vm),
+            vm.swap1(),
+            vm.auxpush(),
+            # next_val bigtuple index
+            vm.swap1(),
+            vm.dup2(),
+            vm.swap1(),
+            # bigtuple index next_val index
+            bigtuple_int.set_val(vm),
+            # bigtuple index
+            vm.swap1(),
+            vm.push(1),
+            vm.swap1(),
+            vm.sub(),
+            vm.swap1(),
+            vm.auxpop()
+            # stack bigtuple index size
+        ],
+    )
+    vm.pop()
+    vm.swap1()
+    vm.pop()
+    vm.cast(byterange.typ)
+
+    new(vm)
+    sized_byterange.set_val("data")(vm)
+    sized_byterange.set_val("size")(vm)
+
+
+# [sized_byterange] -> [bytestack]
+@modifies_stack([typ], [bytestack.typ])
+def to_bytestack(vm):
+    vm.dup0()
+    sized_byterange.get("size")(vm)
+    vm.swap1()
+    vm.push(0)
+    vm.swap1()
+    sized_byterange.get("data")(vm)
+    stack_int.new(vm)
+    tup.make(4)(vm)
+    # [stack data index size]
+    vm.while_loop(
+        lambda vm: [vm.dup0(), vm.tgetn(3), vm.dup1(), vm.tgetn(2), vm.lt()],
+        lambda vm: [
+            # [stack data index size]
+            vm.dup0(),
+            vm.tgetn(2),
+            vm.dup1(),
+            vm.tgetn(1),
+            byterange.get(vm),
+            # cell [stack data index size]
+            vm.dup1(),
+            vm.tgetn(0),
+            stack_int.push(vm),
+            vm.swap1(),
+            vm.tsetn(0),
+            vm.dup0(),
+            vm.tgetn(2),
+            vm.push(32),
+            vm.add(),
+            vm.swap1(),
+            vm.tsetn(2),
+        ],
+    )
+    vm.dup0()
+    vm.tgetn(3)
+    vm.swap1()
+    vm.tgetn(0)
+    vm.tnewn(2)
+    vm.cast(bytestack.typ)
+    bytestack.set_val("stack")(vm)
+    bytestack.set_val("size")(vm)
 
 
 def get_static(val, index):

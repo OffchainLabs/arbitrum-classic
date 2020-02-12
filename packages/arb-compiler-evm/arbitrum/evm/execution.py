@@ -1,4 +1,4 @@
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2019-2020, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,43 +15,45 @@
 from ..annotation import noreturn, modifies_stack
 from .. import std
 from . import call_frame
-from . import os
+from . import os, arbsys, call_finish
 from .. import ast
 from .. import value
+from .accounts import account_state, account_store
 from .types import local_exec_state
 
 
-@noreturn
-def _get_call_location(vm, dispatch_func):
-    # contract_id
-    dispatch_func(vm)
-    vm.dup0()
-    vm.tnewn(0)
-    vm.eq()
-    vm.ifelse(lambda vm: vm.error())
-    # call_location
-
-
-@noreturn
-def _perform_call(vm, call_num):
-    # destCodePoint destId message
-    os.get_chain_state(vm)
-    os.chain_state.set_val("scratch")(vm)
-    os.set_chain_state(vm)
-    vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
-    vm.swap2()
-    vm.swap1()
-    # contractID message ret_pc destCodePoint
-
-    # setup call frame
+@modifies_stack(0, 0)
+def save_up_call_frame(vm):
     os.get_call_frame(vm)
-    call_frame.spawn(vm)
+    vm.dup0()
+    call_frame.call_frame.get("parent_frame")(vm)
+    call_frame.merge(vm)
+    os.set_call_frame(vm)
+
+
+@modifies_stack(0, 0)
+def clear_up_call_frame(vm):
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
+    os.set_call_frame(vm)
+
+
+def setup_initial_call_frame(vm, label):
+    # caller
+    vm.push(ast.AVMLabel("evm_call_{}".format(label)))
+    os.get_chain_state(vm)
+    os.chain_state.get("accounts")(vm)
+    call_frame.new_fresh(vm)
+    call_frame.call_frame.set_val("return_location")(vm)
+    call_frame.call_frame.set_val("contractID")(vm)
+    call_frame.setup_state(vm)
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
-    os.add_message_to_wallet(vm)
-    _save_call_frame(vm)
 
+
+@noreturn
+def save_stacks(vm):
     std.stack_manip.compress(vm)
     std.stack_manip.compress_aux(vm)
     # compressed_stack compressed_aux_stack
@@ -65,11 +67,126 @@ def _perform_call(vm, call_num):
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
 
-    # Enter call frame
-    os.get_chain_state(vm)
-    os.chain_state.get("scratch")(vm)
-    vm.jump()
 
+@noreturn
+def _perform_call(vm, call_num):
+    # dest local_exec_state
+    vm.dup0()
+    vm.push(100)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [vm.pop(), arbsys.perform_precompile_call(vm)],
+        lambda vm: [_perform_real_call(vm, call_num)],
+    )
+
+
+def _perform_real_call(vm, call_num):
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("balance")(vm)
+    # balance dest local_exec_state
+    vm.dup2()
+    local_exec_state.get("value")(vm)
+    std.comparison.lte(vm)
+    vm.ifelse(lambda vm: [_execute_call(vm, call_num)], lambda vm: [vm.push(0)])
+
+
+@noreturn
+def _enter_exec(vm, call_num):
+    vm.dup0()
+    vm.tnewn(0)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [
+            vm.pop(),
+            vm.push(3),
+            vm.push(ast.AVMLabel("evm_call_{}".format(call_num))),
+            vm.jump(),
+        ],
+        lambda vm: [vm.jump()],
+    )
+
+
+@noreturn
+def _execute_call(vm, call_num):
+    vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
+    vm.swap2()
+    # local_exec_state destId ret_pc
+
+    # setup call frame
+    os.get_call_frame(vm)
+    call_frame.spawn(vm)
+    os.set_call_frame(vm)
+
+    save_stacks(vm)
+
+    # Enter call frame
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("code_point")(vm)
+    _enter_exec(vm, call_num)
+
+    _complete_call(vm, call_num)
+
+
+@noreturn
+def _perform_callcode(vm, call_num):
+    # dest local_exec_state
+    vm.dup0()
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("accounts")(vm)
+    account_store.get(vm)
+    account_state.get("code_point")(vm)
+    os.set_scratch(vm)
+
+    vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
+    vm.swap2()
+    # local_exec_state destId ret_pc
+
+    # setup call frame
+    os.get_call_frame(vm)
+    call_frame.spawn_callcode(vm)
+    os.set_call_frame(vm)
+
+    save_stacks(vm)
+
+    # Enter call frame
+    os.get_scratch(vm)
+    _enter_exec(vm, call_num)
+
+    _complete_call(vm, call_num)
+
+
+@noreturn
+def _perform_delegatecall(vm, call_num):
+    # dest local_exec_state
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("accounts")(vm)
+    account_store.get(vm)
+    account_state.get("code_point")(vm)
+    os.set_scratch(vm)
+
+    # local_exec_state
+    vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
+    vm.swap1()
+    # local_exec_state ret_pc
+
+    # setup call frame
+    os.get_call_frame(vm)
+    call_frame.spawn_delegatecall(vm)
+    os.set_call_frame(vm)
+
+    save_stacks(vm)
+
+    # Enter call frame
+    os.get_scratch(vm)
+    _enter_exec(vm, call_num)
+
+    _complete_call(vm, call_num)
+
+
+@noreturn
+def _complete_call(vm, call_num):
     vm.set_label(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.auxpush()
 
@@ -86,184 +203,12 @@ def _perform_call(vm, call_num):
     std.stack_manip.uncompress_aux(vm)
 
 
-@noreturn
-def setup_initial_call(vm, dispatch_func):
-    # contractID message
-    vm.set_exception_handler(invalid_tx)
-    os.get_chain_state(vm)
-    os.chain_state.get("contracts")(vm)
-    call_frame.new_fresh(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
-
-    _perform_call(vm, "initial")
-
-    vm.clear_exception_handler()
-    vm.auxpush()
-
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")
-    call_frame.merge(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("contracts")(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("contracts")(vm)
-    os.set_chain_state(vm)
-
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("sent_queue")(vm)
-    os.send_all_in_sent_queue(vm)
-
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("parent_frame")(vm)
-    call_frame.call_frame.get("return_data")(vm)
-    vm.auxpop()
-    os.log_func_result(vm)
-
-
-# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
-@noreturn
-def call(vm, dispatch_func, call_num, contract_id):
-    std.tup.make(7)(vm)
-    vm.dup0()
-    os.is_simple_send(vm)
-    vm.ifelse(
-        lambda vm: [
-            # call sends no gas, has no arguments, and gets no return
-            os.evm_call_to_send(vm),
-            os.add_send_to_queue(vm),
-        ],
-        lambda vm: [
-            vm.dup0(),
-            vm.tgetn(1),
-            vm.push(1),
-            vm.eq(),
-            vm.ifelse(
-                lambda vm: [
-                    os.evm_call_to_send(vm),
-                    vm.dup0(),
-                    local_exec_state.get("data")(vm),
-                    vm.push(0),
-                    vm.swap1(),
-                    std.sized_byterange.get(vm),
-                    vm.push(224),
-                    vm.swap1(),
-                    std.bitwise.shift_right(vm),
-                    vm.dup0(),
-                    vm.push(0xDA795EA3),
-                    vm.eq(),
-                    vm.ifelse(
-                        lambda vm: [vm.pop(), send_erc20_interupt(vm)],
-                        lambda vm: [
-                            vm.push(0x8E725EE1),
-                            vm.eq(),
-                            vm.ifelse(send_erc721_interupt, lambda vm: vm.error()),
-                        ],
-                    ),
-                ],
-                lambda vm: [_inner_call(vm, dispatch_func, call_num, contract_id)],
-            ),
-        ],
-    )
-
-
-def _send_interupt(vm):
-    def get_dest(vm):
-        vm.push(4)
-        vm.swap1()
-        std.sized_byterange.get(vm)
-
-    def get_token_type(vm):
-        vm.push(36)
-        vm.swap1()
-        std.sized_byterange.get(vm)
-
-    def get_token_val(vm):
-        vm.push(68)
-        vm.swap1()
-        std.sized_byterange.get(vm)
-
-    vm.tgetn(0)
-    # data
-    vm.dup0()
-    get_token_val(vm)
-    # val data
-    vm.dup1()
-    get_token_type(vm)
-    # type val data
-    vm.swap2()
-    get_dest(vm)
-    # dest val type
-    vm.push(local_exec_state.make())
-    vm.cast(local_exec_state.typ)
-    local_exec_state.set_val("sender")(vm)
-    local_exec_state.set_val("amount")(vm)
-    local_exec_state.set_val("type")(vm)
-
-
-def send_erc20_interupt(vm):
-    _send_interupt(vm)
-    vm.dup0()
-    local_exec_state.get("type")(vm)
-    vm.push(256)
-    vm.mul()
-    vm.swap1()
-    local_exec_state.set_val("type")(vm)
-    os.add_send_to_queue(vm)
-
-
-def send_erc721_interupt(vm):
-    _send_interupt(vm)
-    vm.dup0()
-    local_exec_state.get("type")(vm)
-    vm.push(256)
-    vm.mul()
-    vm.push(1)
-    vm.add()
-    vm.swap1()
-    local_exec_state.set_val("type")(vm)
-    os.add_send_to_queue(vm)
-
-
-@modifies_stack(
-    [value.IntType(), value.TupleType([value.IntType()] * 7)], [value.IntType()]
-)
-def _mutable_call_ret(vm):
+@modifies_stack([value.IntType()], [])
+def _handle_mutable_call_return(vm):
     # ret_type calltup
     translate_ret_type(vm)
     # return_val calltup
-    vm.ifelse(
-        lambda vm: [
-            os.get_call_frame(vm),
-            vm.dup0(),
-            call_frame.call_frame.get("parent_frame")(vm),
-            call_frame.merge(vm),
-            # parent_frame
-            os.get_chain_state(vm),
-            os.chain_state.set_val("call_frame")(vm),
-            os.set_chain_state(vm),
-            vm.push(1),
-        ],
-        lambda vm: [
-            os.get_call_frame(vm),
-            call_frame.call_frame.get("parent_frame")(vm),
-            os.get_chain_state(vm),
-            os.chain_state.set_val("call_frame")(vm),
-            os.set_chain_state(vm),
-            vm.push(0),
-        ],
-    )
-    vm.swap1()
-    os.copy_return_data(vm)
+    vm.ifelse(lambda vm: [save_up_call_frame(vm)], lambda vm: [clear_up_call_frame(vm)])
 
 
 @modifies_stack([], [])
@@ -275,62 +220,109 @@ def _save_call_frame(vm):
     os.set_chain_state(vm)
 
 
+@noreturn
+def initial_call(vm, label):
+    # sender tx_call_data
+    vm.set_exception_handler(call_finish.invalid_tx)
+    vm.dup0()
+    setup_initial_call_frame(vm, label)
+    os.tx_call_to_local_exec_state(vm)
+    _perform_call(vm, label)
+    # ret_code
+    vm.dup0()
+    os.get_call_frame(vm)
+    call_frame.save_state(vm)
+    os.set_call_frame(vm)
+    _handle_mutable_call_return(vm)
+    vm.auxpush()
+    vm.clear_exception_handler()
+    os.get_call_frame(vm)
+    # frame
+    vm.dup0()
+    call_frame.call_frame.get("accounts")(vm)
+    os.get_chain_state(vm)
+    os.chain_state.set_val("accounts")(vm)
+    os.set_chain_state(vm)
+    # frame
+    call_frame.call_frame.get("return_data")(vm)
+
+    vm.auxpop()
+    # ret_code data
+    os.log_func_result(vm)
+
+
+@noreturn
+def initial_static_call(vm, label):
+    # sender tx_call_data
+    vm.set_exception_handler(call_finish.invalid_tx)
+    vm.dup0()
+    setup_initial_call_frame(vm, label)
+    os.tx_call_to_local_exec_state(vm)
+    _perform_call(vm, label)
+    # ret_code
+    vm.clear_exception_handler()
+
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
+    call_frame.call_frame.get("return_data")(vm)
+    vm.swap1()
+
+    # ret_code data
+    vm.swap1()
+    vm.dup1()
+    os.log_func_result(vm)
+    # ret_code
+
+
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def _inner_call(vm, dispatch_func, call_num, contract_id):
+def call(vm, call_num):
+    std.tup.make(7)(vm)
     vm.dup0()
-    os.evm_call_to_send(vm)
-    # msg
-    vm.dup0()
-    vm.tgetn(1)
-    # contractId msg
-    vm.swap1()
-    vm.push(contract_id)
-    vm.swap1()
-    vm.tsetn(1)
-    vm.swap1()
+    os.evm_call_to_tx_call_data(vm)
+    # tx_call calltup
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    os.tx_call_to_local_exec_state(vm)
+    # dest local_exec_state calltup
 
-    # destID msg
     _save_call_frame(vm)
-
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
-
     _perform_call(vm, call_num)
-    _mutable_call_ret(vm)
+    # ret calltup
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
 @noreturn
-def callcode(vm, dispatch_func, call_num, contract_id):
+def callcode(vm, call_num):
     std.tup.make(7)(vm)
     # calltup
     vm.dup0()
-    os.evm_call_to_send(vm)
+    os.evm_call_to_tx_call_data(vm)
     # msg calltup
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    # destCodePoint msg calltup
-    vm.swap1()
-    vm.push(contract_id)
-    vm.swap1()
-    vm.tsetn(1)
-    # msg destCodePoint calltup
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    os.tx_call_to_local_exec_state(vm)
+    # dest local_exec_state calltup
 
-    vm.push(contract_id)
-    vm.swap1()
-    vm.swap2()
-
-    # destCodePoint destId message calltup
     _save_call_frame(vm)
-    _perform_call(vm, call_num)
-    _mutable_call_ret(vm)
+    _perform_callcode(vm, call_num)
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
 # [gas, dest, arg offset, arg length, ret offset, ret length]
 @noreturn
-def delegatecall(vm, dispatch_func, call_num, contract_id):
+def delegatecall(vm, call_num):
     os.message_value(vm)
     # value, gas, dest
     vm.swap2()
@@ -339,31 +331,25 @@ def delegatecall(vm, dispatch_func, call_num, contract_id):
     std.tup.make(7)(vm)
     # calltup
     vm.dup0()
-    os.evm_call_to_send(vm)
+    os.evm_call_to_tx_call_data(vm)
     # msg calltup
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    # destCodePoint msg calltup
-    vm.swap1()
     os.message_caller(vm)
-    vm.swap1()
-    vm.tsetn(1)
-    # msg destCodePoint calltup
+    os.tx_call_to_local_exec_state(vm)
 
-    vm.push(contract_id)
-    vm.swap1()
-    vm.swap2()
-
-    # destCodePoint destId message calltup
+    # dest destId message calltup
     _save_call_frame(vm)
-    _perform_call(vm, call_num)
-    _mutable_call_ret(vm)
+    _perform_delegatecall(vm, call_num)
+    vm.dup0()
+    _handle_mutable_call_return(vm)
+    translate_ret_type(vm)
+    # return_val calltup
+    vm.swap1()
+    os.copy_return_data(vm)
 
 
-# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
+# [[gas, dest, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def staticcall(vm, dispatch_func, call_num, contract_id):
+def staticcall(vm, call_num):
     vm.push(0)
     # value, gas, dest
     vm.swap2()
@@ -373,155 +359,29 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
 
     # calltup
     vm.dup0()
-    os.evm_call_to_send(vm)
-    # msg calltup
-    vm.dup0()
-    vm.tgetn(1)
-    # contractId msg calltup
-    vm.swap1()
-    vm.push(contract_id)
-    vm.swap1()
-    vm.tsetn(1)  # update the sender to this contract
-    vm.swap1()
-    # contractId msg calltup
+    os.evm_call_to_tx_call_data(vm)
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    os.tx_call_to_local_exec_state(vm)
+    # dest msg calltup
     _save_call_frame(vm)
 
-    # contractId msg calltup
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
+    # dest msg calltup
     _perform_call(vm, "static_{}".format(call_num))
     translate_ret_type(vm)
     # ret calltup
     vm.swap1()
 
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("parent_frame")(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
+    clear_up_call_frame(vm)
     # calltup ret
     os.copy_return_data(vm)
 
 
+# TODO: IMPLEMENT EVM SELFDESTRUCT
 @noreturn
 def selfdestruct(vm):
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("sent_queue")(vm)
-    # send waiting messages
-    os.send_all_in_sent_queue(vm)
     vm.pop()  # address to transfer all funds to
     vm.halt()
-
-
-# [offset, length]
-@noreturn
-def ret(vm):
-    vm.dup1()
-    vm.swap1()
-    os.get_mem_segment(vm)
-    std.tup.make(2)(vm)
-    # return_data
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame return_data
-    vm.swap1()
-    vm.swap2()
-    # return_data parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    # parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(2)
-    vm.swap1()
-    vm.jump()
-
-
-@noreturn
-def stop(vm):
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    # call_frame
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    # return_location call_frame
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(3)
-    vm.swap1()
-    vm.jump()
-
-
-# [memory offset, memory length]
-@noreturn
-def revert(vm):
-    vm.dup1()
-    vm.swap1()
-    os.get_mem_segment(vm)
-    std.tup.make(2)(vm)
-    # return_data
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame return_data
-    vm.swap1()
-    vm.swap2()
-    # return_data parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    # parent_frame current_frame
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(0)
-    vm.swap1()
-    vm.jump()
-
-
-# []
-@noreturn
-def invalid_tx(vm):
-    os.get_call_frame(vm)
-    vm.dup0()
-    call_frame.call_frame.get("parent_frame")(vm)
-    # parent_frame current_frame
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("return_data")(vm)
-    vm.swap1()
-    call_frame.call_frame.set_val("parent_frame")(vm)
-    # call_frame
-    vm.dup0()
-    call_frame.call_frame.get("return_location")(vm)
-    # return_location call_frame
-    vm.swap1()
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
-    vm.push(1)
-    vm.swap1()
-    vm.jump()
 
 
 @modifies_stack([value.IntType()], [value.IntType()])

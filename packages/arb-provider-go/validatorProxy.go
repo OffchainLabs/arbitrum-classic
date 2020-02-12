@@ -6,21 +6,22 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/rpc/json"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 type ValidatorProxy interface {
-	SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error)
+	//SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error)
 	GetMessageResult(txHash []byte) (value.Value, bool, error)
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
-	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error)
-	CallMessage(val value.Value, sender common.Address) (value.Value, error)
+	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*rollupvalidator.LogInfo, error)
+	CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -71,34 +72,35 @@ func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, res
 	return ret
 }
 
-func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		log.Println("ValProxy.SendMessage: marshaling error:", err)
-		return nil, err
-	}
-	request := &coordinator.SendMessageArgs{
-		Data:      hexutil.Encode(buf.Bytes()),
-		Pubkey:    hexPubkey,
-		Signature: hexutil.Encode(signature),
-	}
-	var response coordinator.SendMessageReply
-	if err := vp.doCall("SendMessage", request, &response); err != nil {
-		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
-		return nil, err
-	}
-	bs, err := hexutil.Decode(response.TxHash)
-	if err != nil {
-		log.Println("ValProxy.SendMessage error:", err)
-	}
-	return bs, err
-}
+//
+//func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
+//	var buf bytes.Buffer
+//	if err := value.MarshalValue(val, &buf); err != nil {
+//		log.Println("ValProxy.SendMessage: marshaling error:", err)
+//		return nil, err
+//	}
+//	request := &rollupvalidator.SendMessageArgs{
+//		Data:      hexutil.Encode(buf.Bytes()),
+//		Pubkey:    hexPubkey,
+//		Signature: hexutil.Encode(signature),
+//	}
+//	var response rollupvalidator.SendMessageReply
+//	if err := vp.doCall("SendMessage", request, &response); err != nil {
+//		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
+//		return nil, err
+//	}
+//	bs, err := hexutil.Decode(response.TxHash)
+//	if err != nil {
+//		log.Println("ValProxy.SendMessage error:", err)
+//	}
+//	return bs, err
+//}
 
 func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool, error) {
-	request := &coordinator.GetMessageResultArgs{
+	request := &rollupvalidator.GetMessageResultArgs{
 		TxHash: hexutil.Encode(txHash),
 	}
-	var response coordinator.GetMessageResultReply
+	var response rollupvalidator.GetMessageResultReply
 	if err := vp.doCall("GetMessageResult", request, &response); err != nil {
 		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
 		return nil, false, err
@@ -121,7 +123,7 @@ func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool
 
 func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
 	request := &struct{}{}
-	var response coordinator.GetAssertionCountReply
+	var response rollupvalidator.GetAssertionCountReply
 	if err := vp.doCall("GetAssertionCount", request, &response); err != nil {
 		return 0, err
 	}
@@ -130,37 +132,34 @@ func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
 
 func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	request := &struct{}{}
-	var response coordinator.GetVMInfoReply
+	var response rollupvalidator.GetVMInfoReply
 	if err := vp.doCall("GetVMInfo", request, &response); err != nil {
 		return "", err
 	}
 	return response.VmID, nil
 }
 
-func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error) {
-	request := &coordinator.FindLogsArgs{
+func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*rollupvalidator.LogInfo, error) {
+	request := &rollupvalidator.FindLogsArgs{
 		FromHeight: _encodeInt(fromHeight),
 		ToHeight:   _encodeInt(toHeight),
 		Address:    hexutil.Encode(address),
 		Topics:     _encodeByteArraySlice(topics),
 	}
-	var response coordinator.FindLogsReply
+	var response rollupvalidator.FindLogsReply
 	if err := vp.doCall("FindLogs", request, &response); err != nil {
 		return nil, err
 	}
 	return response.Logs, nil
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, error) {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		return nil, err
+func (vp *ValidatorProxyImpl) CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error) {
+	request := &rollupvalidator.CallMessageArgs{
+		ContractAddress: hexutil.Encode(contract[:]),
+		Sender:          hexutil.Encode(sender[:]),
+		Data:            hexutil.Encode(data),
 	}
-	request := &coordinator.CallMessageArgs{
-		Data:   hexutil.Encode(buf.Bytes()),
-		Sender: hexutil.Encode(sender[:]),
-	}
-	var response coordinator.CallMessageReply
+	var response rollupvalidator.CallMessageReply
 	if err := vp.doCall("CallMessage", request, &response); err != nil {
 		return nil, err
 	}

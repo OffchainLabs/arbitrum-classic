@@ -21,12 +21,13 @@ import (
 	"fmt"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 const CodeSaveFrequency = 2
 
-var HashOfLastInstruction [32]byte
+var HashOfLastInstruction common.Hash
 
 type MachinePC struct {
 	// implements Machinestate
@@ -106,7 +107,7 @@ func (m MachinePC) GetPC() value.CodePointValue {
 	return codePoint
 }
 
-func (m MachinePC) GetCurrentCodePointHash() [32]byte {
+func (m MachinePC) GetCurrentCodePointHash() common.Hash {
 	if m.pc == -1 {
 		return HashOfLastInstruction
 	}

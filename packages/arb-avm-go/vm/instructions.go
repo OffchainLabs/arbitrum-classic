@@ -19,13 +19,14 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"log"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -36,44 +37,45 @@ type Instruction struct {
 }
 
 var allInsns = []Instruction{ // code, not necessarily in order
-	{code.ADD, insnAdd, 1},
-	{code.MUL, insnMul, 1},
-	{code.SUB, insnSub, 1},
-	{code.DIV, insnDiv, 1},
-	{code.SDIV, insnSdiv, 1},
-	{code.MOD, insnMod, 1},
-	{code.SMOD, insnSmod, 1},
-	{code.ADDMOD, insnAddmod, 1},
-	{code.MULMOD, insnMulmod, 1},
-	{code.EXP, insnExp, 1},
+	{code.ADD, insnAdd, 3},
+	{code.MUL, insnMul, 3},
+	{code.SUB, insnSub, 3},
+	{code.DIV, insnDiv, 4},
+	{code.SDIV, insnSdiv, 7},
+	{code.MOD, insnMod, 4},
+	{code.SMOD, insnSmod, 7},
+	{code.ADDMOD, insnAddmod, 4},
+	{code.MULMOD, insnMulmod, 4},
+	{code.EXP, insnExp, 25},
 
-	{code.LT, insnLt, 1},
-	{code.GT, insnGt, 1},
-	{code.SLT, insnSlt, 1},
-	{code.SGT, insnSgt, 1},
-	{code.EQ, insnEq, 1},
+	{code.LT, insnLt, 2},
+	{code.GT, insnGt, 2},
+	{code.SLT, insnSlt, 2},
+	{code.SGT, insnSgt, 2},
+	{code.EQ, insnEq, 2},
 	{code.ISZERO, insnIszero, 1},
-	{code.AND, insnAnd, 1},
-	{code.OR, insnOr, 1},
-	{code.XOR, insnXor, 1},
+	{code.AND, insnAnd, 2},
+	{code.OR, insnOr, 2},
+	{code.XOR, insnXor, 2},
 	{code.NOT, insnNot, 1},
-	{code.BYTE, insnByte, 1},
-	{code.SIGNEXTEND, insnSignextend, 1},
+	{code.BYTE, insnByte, 4},
+	{code.SIGNEXTEND, insnSignextend, 7},
 
-	{code.SHA3, insnHash, 1},
-	{code.TYPE, insnType, 1},
+	{code.SHA3, insnHash, 7},
+	{code.TYPE, insnType, 3},
+	{code.ETHHASH2, insnEthhash2, 8},
 
 	{code.POP, insnPop, 1},
 	{code.SPUSH, insnSpush, 1},
 	{code.RPUSH, insnRpush, 1},
-	{code.RSET, insnRset, 1},
-	{code.JUMP, insnJump, 1},
-	{code.CJUMP, insnCjump, 1},
-	{code.STACKEMPTY, insnStackempty, 1},
+	{code.RSET, insnRset, 2},
+	{code.JUMP, insnJump, 4},
+	{code.CJUMP, insnCjump, 4},
+	{code.STACKEMPTY, insnStackempty, 2},
 	{code.PCPUSH, insnPcpush, 1},
 	{code.AUXPUSH, insnAuxpush, 1},
 	{code.AUXPOP, insnAuxpop, 1},
-	{code.AUXSTACKEMPTY, insnAuxStackempty, 1},
+	{code.AUXSTACKEMPTY, insnAuxStackempty, 2},
 	{code.NOP, insnNop, 1},
 	{code.ERRPUSH, insnErrPush, 1},
 	{code.ERRSET, insnErrSet, 1},
@@ -84,19 +86,19 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.SWAP1, insnSwap1, 1},
 	{code.SWAP2, insnSwap2, 1},
 
-	{code.TGET, insnTget, 1},
-	{code.TSET, insnTset, 1},
-	{code.TLEN, insnTlen, 1},
+	{code.TGET, insnTget, 2},
+	{code.TSET, insnTset, 40},
+	{code.TLEN, insnTlen, 2},
 
-	{code.BREAKPOINT, insnBreakpoint, 1},
-	{code.LOG, insnLog, 1},
+	{code.BREAKPOINT, insnBreakpoint, 100},
+	{code.LOG, insnLog, 100},
 
-	{code.SEND, insnSend, 1},
-	{code.GETTIME, insnGettime, 1},
-	{code.INBOX, insnInbox, 1},
-	{code.ERROR, insnError, 1},
-	{code.HALT, insnHalt, 1},
-	{code.DEBUG, insnDebug, 1},
+	{code.SEND, insnSend, 100},
+	{code.GETTIME, insnGettime, 40},
+	{code.INBOX, insnInbox, 40},
+	{code.ERROR, insnError, 5},
+	{code.HALT, insnHalt, 10},
+	{code.DEBUG, insnDebug, 100},
 }
 
 var (
@@ -152,6 +154,9 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
+		if _, ok := op.(value.ImmediateOperation); ok {
+			PopStackBox(m, mods)
+		}
 		return mods, blocked.reason
 	}
 	m.context.NotifyStep(gas)
@@ -642,6 +647,28 @@ func insnHash(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
+func insnEthhash2(state *Machine) (StackMods, error) {
+	mods := NewStackMods(2, 1)
+	arg1, mods, err := PopStackInt(state, mods)
+	if err != nil {
+		return mods, err
+	}
+	arg2, mods, err := PopStackInt(state, mods)
+	if err != nil {
+		return mods, err
+	}
+	hashAsBytes := hashing.SoliditySHA3(
+		hashing.Uint256(arg1.BigInt()),
+		hashing.Uint256(arg2.BigInt()),
+	)
+	hashAsBigInt := new(big.Int).SetBytes(hashAsBytes[:])
+	fmt.Println(hashAsBigInt.Text(10))
+	hashAsInt := value.NewIntValue(hashAsBigInt)
+	mods = PushStackInt(state, mods, hashAsInt)
+	state.IncrPC()
+	return mods, nil
+}
+
 func insnPop(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)
 	_, mods, err := PopStackBox(state, mods)
@@ -679,17 +706,19 @@ func insnRset(state *Machine) (StackMods, error) {
 
 func insnInbox(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 1)
-	x, mods, err := PopStackBox(state, mods)
+	timeout, mods, err := PopStackInt(state, mods)
 	if err != nil {
 		return mods, err
 	}
-	inboxVal := state.ReadInbox()
-	mods = PushStackBox(state, mods, inboxVal)
-	if value.Eq(x, inboxVal) {
-		return mods, BlockedError{machine.InboxBlocked{
-			Inbox: value.NewHashOnlyValueFromValue(inboxVal),
-		}}
+	biTimeout := timeout.BigInt()
+	lowerTimeBound := state.GetStartTime()
+	inboxVal := state.GetInbox()
+	if (biTimeout.Cmp(lowerTimeBound.BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
+		mods = PushStackInt(state, mods, timeout)
+		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
+	state.context.ReadInbox()
+	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
 }
@@ -921,7 +950,7 @@ func insnTget(state *Machine) (StackMods, error) {
 	if err != nil {
 		// index out of range
 		fmt.Println(state.stack)
-		fmt.Println("pc = ", state.pc.GetPC())
+		fmt.Println("pc = ", state.pc.pc, state.pc.GetPC().Op)
 		return mods, fmt.Errorf("insn_tget: index %v out of range %v", index.BigInt(), tuple.Len())
 	}
 
@@ -1011,13 +1040,16 @@ func insnSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackBox(state, mods, state.GetTimeBounds())
+	mods = PushStackTuple(state, mods, value.NewTuple2(state.GetStartTime(), state.GetEndTime()))
 	state.IncrPC()
 	return mods, nil
 }
 
 func insnDebug(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
+	val, _ := state.stack.Pop()
+	log.Println("Debug", val)
+	state.stack.Push(val)
 	state.IncrPC()
 	return mods, nil
 }
