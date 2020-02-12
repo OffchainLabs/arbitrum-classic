@@ -24,16 +24,13 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 const (

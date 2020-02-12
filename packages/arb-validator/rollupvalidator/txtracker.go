@@ -21,12 +21,14 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
@@ -48,7 +50,7 @@ type findLogsRequest struct {
 	address    *big.Int
 	topics     []common.Hash
 
-	resultChan chan<- []*LogInfo
+	resultChan chan<- []*validatorserver.LogInfo
 }
 
 type logsInfo struct {
@@ -151,8 +153,8 @@ func (tr *txTracker) FindLogs(
 	toHeight *int64,
 	address *big.Int,
 	topics []common.Hash,
-) <-chan []*LogInfo {
-	req := make(chan []*LogInfo, 1)
+) <-chan []*validatorserver.LogInfo {
+	req := make(chan []*validatorserver.LogInfo, 1)
 	tr.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
 	return req
 }
@@ -248,7 +250,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 				endHeight = altEndHeight
 			}
 		}
-		logs := make([]*LogInfo, 0)
+		logs := make([]*validatorserver.LogInfo, 0)
 		if startHeight >= int64(len(tr.assertionInfo)) {
 			request.resultChan <- logs
 			break
@@ -264,7 +266,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
 				}
 
-				logs = append(logs, &LogInfo{
+				logs = append(logs, &validatorserver.LogInfo{
 					Address:          hexutil.Encode(addressBytes[12:]),
 					BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
 					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),

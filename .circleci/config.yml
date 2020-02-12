@@ -258,6 +258,14 @@ jobs:
             cd arb-provider-go
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-provider-go
+      - run:
+          name: test fibgo
+          command: |
+            export CGO_LDFLAGS="-lgcov --coverage"
+            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
+            cd ../tests/fibgo
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/fibgo.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          working_directory: /home/user/project/packages
       - run: codecovbash -R /home/user/project
       - store_test_results:
           path: *test-path

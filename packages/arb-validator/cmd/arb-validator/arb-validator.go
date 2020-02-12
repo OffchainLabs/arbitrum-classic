@@ -33,12 +33,12 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )

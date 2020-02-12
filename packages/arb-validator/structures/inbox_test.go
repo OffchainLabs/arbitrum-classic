@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 func getStack() *MessageStack {

@@ -19,17 +19,18 @@ package checkpointing
 import (
 	"context"
 	"errors"
-	"github.com/golang/protobuf/proto"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type IndexedCheckpointer struct {

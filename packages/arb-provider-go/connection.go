@@ -10,24 +10,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 )
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -289,7 +284,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	return
 }
 
-func _decodeLogInfo(ins *rollupvalidator.LogInfo) (*types.Log, error) {
+func _decodeLogInfo(ins *validatorserver.LogInfo) (*types.Log, error) {
 	outs := &types.Log{}
 	addr, err := hexutil.Decode(ins.Address)
 	if err != nil {
