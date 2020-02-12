@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -63,7 +63,7 @@ func testMessagesChallenge(t *testing.T) {
 	}
 
 	importedMessages := inbox.Hash()
-	challengeHash := structures.MessageChallengeDataHash(
+	challengeHash := valprotocol.MessageChallengeDataHash(
 		beforeInbox,
 		afterInbox,
 		value.NewEmptyTuple().Hash(),

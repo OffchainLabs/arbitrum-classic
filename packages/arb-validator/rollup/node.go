@@ -29,8 +29,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Node struct {
@@ -192,7 +192,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 	case valprotocol.InvalidInboxTopChildType:
 		inboxLeft := new(big.Int).Add(vmProtoData.InboxCount, node.disputable.AssertionParams.ImportedMessageCount)
 		inboxLeft = inboxLeft.Sub(node.disputable.MaxInboxCount, inboxLeft)
-		ret := structures.InboxTopChallengeDataHash(
+		ret := valprotocol.InboxTopChallengeDataHash(
 			node.disputable.AssertionClaim.AfterInboxTop,
 			node.disputable.MaxInboxTop,
 			inboxLeft,
@@ -200,7 +200,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case valprotocol.InvalidMessagesChildType:
-		ret := structures.MessageChallengeDataHash(
+		ret := valprotocol.MessageChallengeDataHash(
 			vmProtoData.InboxTop,
 			node.disputable.AssertionClaim.AfterInboxTop,
 			value.NewEmptyTuple().Hash(),
@@ -210,7 +210,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case valprotocol.InvalidExecutionChildType:
-		ret := structures.ExecutionDataHash(
+		ret := valprotocol.ExecutionDataHash(
 			node.disputable.AssertionParams.NumSteps,
 			node.ExecutionPreconditionHash(),
 			node.disputable.AssertionClaim.AssertionStub.Hash(),

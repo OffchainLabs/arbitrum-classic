@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -83,7 +83,7 @@ func testInboxTopChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	challengeHash := structures.InboxTopChallengeDataHash(bottomHash, topHash, big.NewInt(3))
+	challengeHash := valprotocol.InboxTopChallengeDataHash(bottomHash, topHash, big.NewInt(3))
 
 	if err := testChallenge(
 		valprotocol.InvalidInboxTopChildType,
