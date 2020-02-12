@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -39,16 +40,8 @@ type ArbConnection struct {
 	sequenceNum *big.Int
 }
 
-func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
-	privateKey, err := crypto.ToECDSA(privateKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	auth := bind.NewKeyedTransactor(privateKey)
-	client, err := ethbridge.NewEthAuthClient(ethUrl, auth)
-	if err != nil {
-		return nil, err
-	}
+func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {

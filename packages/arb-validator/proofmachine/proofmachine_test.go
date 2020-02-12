@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -45,10 +47,11 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	ethclint, err := ethclient.Dial(ethURL)
 	if err != nil {
 		t.Fatal(err)
 	}
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	osp, err := client.DeployOneStepProof(context.Background())
 	if err != nil {
 		t.Fatal(err)

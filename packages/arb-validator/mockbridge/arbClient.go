@@ -18,6 +18,8 @@ package mockbridge
 
 import (
 	"context"
+	"errors"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -67,6 +69,10 @@ func (c *ArbClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbo
 
 func (c *ArbClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
 	return NewInboxTopChallenge(address, c.client)
+}
+
+func (c *ArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	return nil, errors.New("unimplemented")
 }
 
 func (c *ArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {

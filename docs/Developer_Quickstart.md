@@ -4,10 +4,10 @@ title: Arbitrum Developer Quickstart
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
 ---
 
-Get started with Arbitrum by installing the Arbitrum compiler,
+Get started with Arbitrum by [installing](Installation.md) the Arbitrum compiler,
 `arbc-truffle`, and its dependencies. Next,
 [build and run the demo app](#hello-arbitrum) or
-[port your own dapp](#porting-to-arbitrum).
+[port your own dapp](Porting.md).
 
 Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
 
@@ -16,92 +16,11 @@ The following documention describes how to use Arbitrum Rollup.
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
 read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
 
-## Install System Dependencies
-
-Follow the instructions for supported operating systems or use the comprehensive
-list of dependencies.
-
-### 1. Install python3 and docker:
-
-#### MacOS
-
-Using [Homebrew](https://brew.sh/):
-
-```bash
-brew install python3 docker docker-compose rocksdb
-brew cask install docker
-open -a Docker
-```
-
-Once the Docker app appears in the menu bar, wait until the yellow light turns
-green (no need to log into Docker). Also check that node version 10 is installed
-correctly by running `node -v`.
-
-#### Ubuntu 18.04
-
-Using apt:
-
-```bash
-sudo apt update
-sudo apt install -y python3 python3-pip docker docker-compose
-```
-
-> Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-> to give permissions "equivalent to the `root` user". See [the security warning](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
-
-### 2. Install yarn and truffle
-
-```bash
-touch ~/.bashrc
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-curl -o- -L https://yarnpkg.com/install.sh | bash
-nvm install 10.16.3
-. ~/.bashrc
-yarn global add truffle
-```
-
-### Full List
-
-Here are the important dependencies in case you are not running on a supported OS:
-
--   [docker](https://github.com/docker/docker-ce/releases) and
-    [docker-compose](https://github.com/docker/compose/releases)
--   [node](https://nodejs.org/en/)
--   [python3 and pip3](https://www.python.org/downloads/)
--   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [yarn](https://yarnpkg.com/en/)
-
-> Requires `node -v` version 8, 10 or 12
-
-> Requires`python3 --version` 3.6 or greater
-
-## Install Arbitrum
-
-Download the Arbitrum Monorepo from source:
-
-```bash
-git clone -b v0.3.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
-cd arbitrum
-yarn
-yarn build
-yarn install:deps
-```
-
-Check `arbc-truffle` was installed:
-
-```bash
-which arbc-truffle
-```
-
-Expected output:
-
-> /usr/local/bin/arbc-truffle
+Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment an Arbitrum Rollup chain on the local testnet.
 
 ## Setup Blockchain
 
-In the current alpha, Arbitrum is setup to run against a local test blockchain rather than a public blockchain.
-
-To build a docker image hosting a the local test blockchain docker image with Arbitrum smart contracts already deployed, run:
+To build a docker image hosting a local test blockchain docker image with Arbitrum smart contracts already deployed, run:
 
 ```bash
 yarn docker:build:geth
@@ -129,9 +48,6 @@ cd demos/pet-shop
 
 ### Build and Run
 
-You'll need to do these steps every time you make a change to the Solidity. For
-this dApp, you do not need to change any Solidity files.
-
 1. Compile Solidity to Arbitrum:
 
     Truffle will output the compiled contract as `contract.ao` :
@@ -140,17 +56,17 @@ this dApp, you do not need to change any Solidity files.
     truffle migrate --network arbitrum
     ```
 
-2. Create a rollup chain with the given `contract.ao` and prepare 3 validators to validate it. This command will initialize your rollup chain and create a `validator-states` folder with configuration information on how to run your chain.
+2. Create a rollup chain with the given `contract.ao` and prepare 3 validators to validate it.
 
     ```bash
-    ../../scripts/setup_rollup.py contract.ao 3
+    ../../scripts/setup_local_rollup.py contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
     > builds are much faster. You can also use the `--up` flag to skip builds
     > if one has completed successfully before.
 
-3. Run the 3 validators
+3. Run the 3 validators given a path to the `validator-states` folder created by the previous command
 
     ```bash
     ../../scripts/arb_deploy.py validator-states
@@ -221,168 +137,11 @@ Solidity contract and deploy validators:
 ```bash
 cd demos/election
 truffle migrate --network arbitrum
-../../scripts/setup_rollup.py contract.ao 3
+../../scripts/setup_local_rollup.py contract.ao 3
 ../../scripts/arb_deploy.py validator-states
 ```
 
 Then open a new command line session, navigate to `demos/election`, and run:
-
-```bash
-yarn start
-```
-
-The next step is to learn how to port an Ethereum dapp to Arbitrum.
-
-## Porting to Arbitrum
-
-### Prerequisites
-
-The dApp must:
-
-    - Be a Truffle-based project
-    - Use web3.js or ethers.js
-    - Use webpack or a similar build system
-
-### Overview
-
-Here are the steps needed to port your dApp to Arbitrum:
-
-1. Make sure your dApp compiles and runs correctly on Ethereum or a local testnet
-2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-provider-truffle)
-3. Add the Arbitrum front-end provider (arb-provider-web3 or arb-provider-ethers)
-4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)
-5. Launch a set of Arbitrum Validators with the bytecode
-6. Launch the front-end of your dApp
-
-### Setup your workspace
-
-Move your project folder into `arbitrum/workspace/projectname` in order to pick up local versions of arbitrum packages.
-
-### Configure Truffle
-
-1.  Add the `arb-provider-truffle` to your project:
-
-    ```bash
-    yarn add arb-provider-truffle
-    ```
-
-2.  Edit the `truffle-config.js`:
-
-    -   Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the caller of your contract's constructor when migrating.:
-
-    ```js
-    const ArbProvider = require("arb-provider-truffle");
-    const mnemonic =
-        "jar deny prosper gasp flush glass core corn alarm treat leg smart";
-    ```
-
-    -   Add the `arbitrum` network to `module.exports` and `solc` version `0.5.3`:
-
-    ```js
-    module.exports = {
-        networks: {
-            arbitrum: {
-                provider: function() {
-                    if (!this.provider.prov) {
-                        this.provider.prov = ArbProvider.provider(
-                            __dirname,
-                            "build/contracts",
-                            {
-                                mnemonic: mnemonic
-                            }
-                        );
-                    }
-                    return this.provider.prov;
-                },
-                network_id: "*"
-            }
-        }
-    };
-    ```
-
-3.  Modify your dapp to use the Arbitrum provider
-
-    Find the place in your code where you initialize the ethers (or web3) provider.
-    For example, this might be in `src/index.js` or `src/app.js` or somewhere else.
-
-    At the top of the file, find where `ethers` is imported (or `web3`):
-
-    ```js
-    const ethers = require("ethers"); // or   const Web3 = require('web3');
-    ```
-
-    Right below the ethers import, require the Arbitrum provider:
-
-    ```js
-    const ArbProvider = require("arb-provider-ethers");
-    ```
-
-    or
-
-    ```js
-    const ArbProvider = require("arb-provider-web3");
-    ```
-
-    Next, find where web3 (or ethers) is initialized in your code. For example:
-
-    ```js
-    let standardProvider = null;
-    if (window.ethereum) {
-        standardProvider = ethereum;
-        try {
-            await ethereum.enable();
-        } catch (error) {
-            console.log("User denied account access");
-        }
-    } else if (window.web3) {
-        standardProvider = web3.currentProvider;
-    }
-    this.web3 = new Web3(standardProvider);
-    ```
-
-    Then set the provider to use Arbitrum instead. For example for web3.js replace the last line with:
-
-    ```js
-    this.web3 = new Web3(
-        ArbProvider("http://localhost:1235", standardProvider)
-    );
-    ```
-
-    Or for for ethers.js use
-
-    ```js
-    let provider = new ArbProvider(
-        "http://localhost:1235",
-        new ethers.providers.Web3Provider(standardProvider)
-    );
-    ```
-
-### Compile to Arbitrum bytecode
-
-Now that the Arbitrum provider is setup correctly, the next step is to compile
-the Truffle project into Arbitrum bytecode:
-
-Run the following command to generate `contract.ao`:
-
-```bash
-truffle migrate --reset --network arbitrum
-```
-
-### Launch the Arbitrum Rollup Chain
-
-```bash
-../../scripts/setup_rollup.py contract.ao 3
-```
-
-### Run the Validators
-
-```bash
-../../scripts/arb_deploy.py validator-states
-```
-
-### Run the front-end
-
-For example the command might be:
 
 ```bash
 yarn start

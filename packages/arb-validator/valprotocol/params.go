@@ -69,6 +69,7 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
 		GracePeriod:             params.GracePeriod.MarshalToBuf(),
 		MaxExecutionSteps:       params.MaxExecutionSteps,
+		MaxTimeBoundsWidth:      params.MaxTimeBoundsWidth,
 		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
 	}
 }

@@ -34,6 +34,11 @@ func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client *
 	return callCheck(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
+func (_ArbRollup *ArbRollupTransactor) MakeAssertionCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _fields [9][32]byte, _beforePendingCount *big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32, _numSteps uint64, _timeBoundsBlocks [2]*big.Int, _importedMessageCount *big.Int, _didInboxInsn bool, _numArbGas uint64, _stakerProof [][32]byte) error {
+	return callCheck(ctx, client, from, contractAddress, "makeAssertion", _fields, _beforePendingCount, _prevDeadlineTicks, _prevChildType, _numSteps, _timeBoundsBlocks, _importedMessageCount, _didInboxInsn, _numArbGas, _stakerProof)
+}
+
+
 func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ArbRollupABI)))
 	if err != nil {

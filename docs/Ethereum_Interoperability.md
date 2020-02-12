@@ -10,7 +10,9 @@ An Arbitrum chain functions as an independent blockchain with its security built
 
 Currently Eth as well as any token confirming to ether the ERC-20 or ERC-721 standard can be transferred over to an Arbitrum chain.
 
-All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain
+All standard methods of transferring Eth or tokens, if executed within an Arbitrum chain, will only adjust their balance inside that chain. Withdrawing funds from an Arbitrum chain is a separate operation that you can do at any time, if you own those assets within the Arbitrum chain.
+
+Visit the [Arbitrum Token Bridge](https://developer.offchainlabs.com/tools/tokenbridge/local/) to easily move funds back and forth using the facilities described in this document.
 
 ### Ethereum to Arbitrum
 
@@ -54,7 +56,9 @@ At any time you can call the EthBridge to recover the funds in your lockbox.
 
 ## Transaction calls on Arbitrum
 
-All transaction calls on the Arbitrum chain are sent through the EthBridge using:
+### Transaction calls from clients
+
+All client-generated transaction calls on the Arbitrum chain are sent through the EthBridge using:
 
 ```
 function sendTransactionMessage(
@@ -70,6 +74,27 @@ function sendTransactionMessage(
 The sequence number is similar to the account nonce in Ethereum. The rollup chain tracks a sequence number for each account which is the number of transactions that have been accepted from that sender. If the sequence number supplied in the transaction doesn't match the internal sequence number, the transaction is rejected by the Arbitrum chain.
 
 The value and data fields specify the amount of Eth to transfer with the call and the calldata associated with the call respectively.
+
+### Transaction calls from contracts
+
+A smart contract could also use this interface, but formatting calldata and tracking sequence numbers would be complex to do on-chain. In order to simplify Ethereum contract calls to Arbitrum smart contracts, we provide an Arbitrum contract proxy interface.
+
+The proxy interface is a smart contract which implements all methods of the Arbitrum contract which do not have return values. To find a proxy contract address if it already exists, look it up in the `ArbRollup` smart contract.
+
+```
+mapping(address => address) public supportedContracts;
+```
+
+Given `arbContractAddress`, the address of a contract on an Arbitrum Chain, the address of the corresponding proxy contract
+with be `supportedContracts[arbContractAddress]`.
+
+If no such proxy contract already exists, a proxy can be launched using:
+
+```
+function spawnCallProxy(address _arbContract) external;
+```
+
+Any Ethereum contract can easily and safely make calls to Arbitrum contracts using this interface.
 
 ## Transaction calls from Arbitrum to Ethereum
 

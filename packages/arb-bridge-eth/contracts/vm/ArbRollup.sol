@@ -18,6 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./NodeGraph.sol";
 import "./Staking.sol";
+import "./ArbContractProxy.sol";
 
 
 contract ArbRollup is NodeGraph, Staking {
@@ -54,7 +55,10 @@ contract ArbRollup is NodeGraph, Staking {
 
     string public constant VERSION = "1";
 
-    address owner;
+    address payable owner;
+
+    mapping(address => address) incomingCallProxies;
+    mapping(address => address) public supportedContracts;
 
     event ConfirmedAssertion(
         bytes32[] logsAccHash
@@ -86,6 +90,20 @@ contract ArbRollup is NodeGraph, Staking {
             _challengeFactoryAddress
         );
         owner = _owner;
+    }
+
+    function forwardContractMessage(address _sender, bytes calldata _data) external payable {
+        address arbContractAddress = incomingCallProxies[msg.sender];
+        require(arbContractAddress != address(0), "Non interface contract can't send message");
+
+        globalInbox.forwardEthMessage.value(msg.value)(arbContractAddress, _sender);
+        globalInbox.forwardContractTransactionMessage(arbContractAddress, _sender, msg.value, _data);
+    }
+
+    function spawnCallProxy(address _arbContract) external {
+        ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
+        incomingCallProxies[address(proxy)] = _arbContract;
+        supportedContracts[_arbContract] = address(proxy);
     }
 
     function placeStake(
@@ -229,16 +247,10 @@ contract ArbRollup is NodeGraph, Staking {
         _;
     }
 
-/*    function activateVM() external onlyOwner {
-        if (vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
+    function ownerShutdown() external onlyOwner {
+        selfdestruct(msg.sender);
     }
 
-    function ownerShutdown() external onlyOwner {
-        _shutdown();
-    }
-    */
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);

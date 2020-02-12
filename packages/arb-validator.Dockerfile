@@ -38,7 +38,9 @@ RUN apk add --no-cache build-base git go \
     libc-dev linux-headers && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
+    mkdir /home/user/arb-validator && \
+    chown user:user /home/user/arb-validator
 USER user
 WORKDIR "/home/user/arb-validator"
 # Build dependencies
@@ -57,7 +59,7 @@ COPY --chown=user arb-validator/ /home/user/arb-validator/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
-RUN go install -v ./cmd/rollupServer
+RUN go install -v ./cmd/arb-validator
 
 
 FROM alpine:3.9 as arb-validator
@@ -77,5 +79,5 @@ COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
 COPY --from=arb-avm-cpp /home/user/build /cpp-build
 
-ENTRYPOINT ["/home/user/go/bin/rollupServer"]
+ENTRYPOINT ["/home/user/go/bin/arb-validator"]
 EXPOSE 1235 1236
