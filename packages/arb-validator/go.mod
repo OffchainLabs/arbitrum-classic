@@ -21,9 +21,9 @@ require (
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.0
-	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.0
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.4.0
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.1
+	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.1
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.4.1
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
