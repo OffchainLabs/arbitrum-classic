@@ -6,7 +6,6 @@ require (
 	github.com/ethereum/go-ethereum v1.9.10
 	github.com/golang/protobuf v1.3.2
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.4.2
-	github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.2
 	github.com/pkg/errors v0.9.1
 	google.golang.org/grpc v1.23.1
 )
