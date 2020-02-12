@@ -437,17 +437,17 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
 			}
 
-			evmLogs[i] = &types.Log{
-				Address:     common.BytesToAddress(addressBytes[12:]),
+			evmLogs = append(evmLogs, &types.Log{
+				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
 				Topics:      evmParsedTopics,
 				Data:        l.Data,
-				BlockNumber: ethMsg.Data.Number.Uint64(),
+				BlockNumber: ethMsg.BlockNumber.Uint64(),
 				TxHash:      txHash,
 				TxIndex:     0,
 				BlockHash:   txHash,
 				Index:       uint(i),
 				Removed:     false,
-			}
+			})
 		}
 	}
 
@@ -458,10 +458,10 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		Bloom:             types.BytesToBloom([]byte{0}),
 		Logs:              evmLogs,
 		TxHash:            txHash,
-		ContractAddress:   common.BytesToAddress([]byte{0}),
+		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
 		GasUsed:           1,
 		BlockHash:         txHash,
-		BlockNumber:       ethMsg.Data.Number,
+		BlockNumber:       ethMsg.BlockNumber,
 		TransactionIndex:  0,
 	}, nil
 }
