@@ -165,12 +165,12 @@ func (vp *ValidatorProxyImpl) CallMessage(contract common.Address, sender common
 	}
 	retBuf, err := hexutil.Decode(response.RawVal)
 	if err != nil {
-		log.Println("GetMessageResult error:", err)
+		log.Println("CallMessage error:", err)
 		return nil, err
 	}
 	retVal, err := value.UnmarshalValue(bytes.NewReader(retBuf))
 	if err != nil {
-		log.Println("ValProxy.GetMessageResult: UnmarshalValue returned error:", err)
+		log.Println("ValProxy.CallMessage: UnmarshalValue returned error:", err)
 	}
 	return retVal, err
 }
