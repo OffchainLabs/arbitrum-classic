@@ -63,8 +63,8 @@ def main():
     )
     parser.add_argument(
         "n_validators",
-        choices=range(2, 101),
-        metavar="[2-100]",
+        choices=range(1, 101),
+        metavar="[1-100]",
         type=int,
         help="The number of validators to deploy",
     )
