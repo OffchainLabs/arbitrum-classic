@@ -1,4 +1,4 @@
 -i https://pypi.org/simple
-virtualenv>=20.0.0
+virtualenv
 web3
 eth-account
