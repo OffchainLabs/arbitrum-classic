@@ -46,7 +46,11 @@ def deploy(args, sudo_flag=False):
 
     setup_states.setup_validator_states_folder(args.contract, args.n_validators)
 
-    config = {"rollup_address": args.rollup_address.strip(), "eth_url": args.eth_url}
+    config = {
+        "rollup_address": args.rollup_address.strip(),
+        "eth_url": args.eth_url,
+        "blocktime": 13,
+    }
     setup_states.setup_validator_configs(config, args.n_validators)
 
 

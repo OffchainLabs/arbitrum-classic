@@ -60,8 +60,8 @@ services:
 """
 
 
-def compose_header(state_abspath, password, ws_port, rollup_address):
-    return COMPOSE_HEADER % (state_abspath, password, ws_port, rollup_address)
+def compose_header(state_abspath, extra_flags, ws_port, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, extra_flags, ws_port, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -78,11 +78,13 @@ COMPOSE_VALIDATOR = """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, password, ws_port, rollup_address):
+def compose_validator(
+    validator_id, state_abspath, extra_flags, ws_port, rollup_address
+):
     return COMPOSE_VALIDATOR % (
         validator_id,
         state_abspath,
-        password,
+        extra_flags,
         ws_port,
         rollup_address,
     )
@@ -116,6 +118,7 @@ def deploy(sudo_flag, build_flag, up_flag, validator_states_dir, password):
         with open(os.path.join(states_path % i, "config.json")) as json_file:
             data = json.load(json_file)
             rollup_address = data["rollup_address"]
+            extra_flags = ""
             eth_url = (
                 data["eth_url"]
                 .replace("localhost", "dockerhost")
@@ -123,20 +126,22 @@ def deploy(sudo_flag, build_flag, up_flag, validator_states_dir, password):
             )
 
             if not password and "password" in data:
-                pass_arg = "--password " + data["password"]
+                extra_flags += " -password=" + data["password"]
             elif password:
-                pass_arg = "--password " + password
+                extra_flags += " -password=" + password
             else:
                 raise Exception(
                     "arb_deploy requires validator password through [--password=pass] parameter or in config.json file"
                 )
+            if "blocktime" in data:
+                extra_flags += " -blocktime=%s" % data["blocktime"]
         if i == 0:
             contents = compose_header(
-                states_path % 0, pass_arg, eth_url, rollup_address
+                states_path % 0, extra_flags, eth_url, rollup_address
             )
         else:
             contents += compose_validator(
-                i, states_path % i, pass_arg, eth_url, rollup_address
+                i, states_path % i, extra_flags, eth_url, rollup_address
             )
 
     with open(compose, "w") as f:
