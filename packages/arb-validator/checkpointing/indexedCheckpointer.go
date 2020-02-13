@@ -70,7 +70,7 @@ func NewIndexedCheckpointerFactory(
 		nil,
 	}
 	go ret.writeDaemon()
-	//go ret.cleanupDaemon()
+	go ret.cleanupDaemon()
 	return ret
 }
 
@@ -412,13 +412,15 @@ func (cp *IndexedCheckpointer) deleteCheckpointForId(id *common.BlockId) error {
 		return err
 	}
 	_ = cp.db.DeleteData(key) // ignore error
-	for _, hbuf := range ckp.Manifest.Values {
-		h := hbuf.Unmarshal()
-		_ = cp.db.DeleteValue(h) // ignore error
-	}
-	for _, hbuf := range ckp.Manifest.Machines {
-		h := hbuf.Unmarshal()
-		_ = cp.db.DeleteCheckpoint(h) // ignore error
+	if ckp.Manifest != nil {
+		for _, hbuf := range ckp.Manifest.Values {
+			h := hbuf.Unmarshal()
+			_ = cp.db.DeleteValue(h) // ignore error
+		}
+		for _, hbuf := range ckp.Manifest.Machines {
+			h := hbuf.Unmarshal()
+			_ = cp.db.DeleteCheckpoint(h) // ignore error
+		}
 	}
 	return nil
 }
