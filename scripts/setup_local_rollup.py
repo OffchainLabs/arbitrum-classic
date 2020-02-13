@@ -105,6 +105,7 @@ def deploy(args, sudo_flag=False):
         "rollup_address": rollup_address.strip(),
         "eth_url": "ws://localhost:" + str(ws_port),
         "password": "pass",
+        "blocktime": 2,
     }
     setup_states.setup_validator_configs(config, args.n_validators)
 
