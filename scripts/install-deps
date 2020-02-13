@@ -16,7 +16,7 @@ pip3 install -r requirements-dev.txt --user
 pre-commit install
 
 # Install conan
-virtualenv --no-site-packages vconan
+virtualenv vconan
 . vconan/bin/activate
 pip3 install --upgrade conan
 # conan nonstd-lite
