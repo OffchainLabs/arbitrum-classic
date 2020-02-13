@@ -138,14 +138,31 @@ def run_loop_start(vm):
 
 def generate_evm_code(raw_code, storage):
     contracts = {}
+    fileOpcode = open("OpCode.txt", "x")
+    fileBytecode = open("ByteCode.txt", "x")
     for contract in raw_code:
+        # print("beginning: "+ str(contract) + " -----------------------------------------------------")
         contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
+        if str(contract) == "64707234405428958084383300355972023766899045319":
+            fileBytecode.write(str(raw_code[contract]))
+            fileOpcode.write(str(contracts[contract]))
+        # print(raw_code[contract])
+        # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        # print(contracts[contract])
+
+        # print("end: "+ str(contract) + " -----------------------------------------------------")
 
     impls = []
     contract_info = []
     for contract in sorted(contracts):
         if contract not in storage:
             storage[contract] = {}
+
+        print("contract id: " + str(contract))
+        # if(str(contract) == "64707234405428958084383300355972023766899045319"):
+        #     filex.write(str(contracts[contract]))
+        #     filex.close()
+        # print("contract code: "+ str(contracts[contract]))
         impls.append(
             generate_contract_code(
                 AVMLabel("contract_entry_" + str(contract)),

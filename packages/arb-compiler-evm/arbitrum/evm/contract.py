@@ -52,11 +52,15 @@ def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
         code[contract.address] = strip_cbor(contract.code)
         storage[contract.address] = contract.storage
 
+    print("lenght is: " + str(len(contracts)))
+
     for contract in contracts:
         if includes_metadata:
             contract_code = strip_cbor(contract.code)
         else:
             contract_code = contract.code
+        print(contract)
+        print(contract.address)
         code[contract.address] = contract_code
         storage[contract.address] = contract.storage
 

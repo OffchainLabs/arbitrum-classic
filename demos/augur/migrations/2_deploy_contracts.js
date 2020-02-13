@@ -1,5 +1,7 @@
-//var Adoption = artifacts.require("Adoption");
+var Augur = artifacts.require("./Augur.sol");
+var AugurTrading = artifacts.require("./AugurTrading.sol");
 
-module.exports = function(deployer) {
-  //deployer.deploy(Adoption);
+module.exports = async function(deployer) {
+  await deployer.deploy(Augur);
+  await deployer.deploy(AugurTrading, Augur.address);
 };
