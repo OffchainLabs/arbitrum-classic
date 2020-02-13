@@ -70,7 +70,7 @@ func NewIndexedCheckpointerFactory(
 		nil,
 	}
 	go ret.writeDaemon()
-	go ret.cleanupDaemon()
+	//go ret.cleanupDaemon()
 	return ret
 }
 
