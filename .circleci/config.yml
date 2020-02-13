@@ -241,6 +241,15 @@ jobs:
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
+          name: test arb-validator-core
+          command: |
+            export CGO_LDFLAGS="-lgcov --coverage"
+            cd ..
+            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
+            cd arb-validator-core
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator-core.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          working_directory: /home/user/project/packages/arb-validator-core
+      - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
