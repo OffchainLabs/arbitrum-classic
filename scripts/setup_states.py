@@ -53,7 +53,7 @@ def setup_validator_funds(web3, source_address, addresses):
     hashes = []
     for dest in addresses:
         tx_hash = web3.eth.sendTransaction(
-            {"to": dest, "from": source_address, "value": 100000000000000000000}
+            {"to": dest, "from": source_address, "value": 5000000000000000000}
         )
         hashes.append(tx_hash)
     for tx_hash in hashes:
