@@ -48,6 +48,7 @@ COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
 COPY --chown=user arb-avm-go/go.* /home/user/arb-avm-go/
 COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-validator/go.* /home/user/arb-validator/
+COPY --chown=user arb-validator-core/go.* /home/user/arb-validator-core/
 RUN go mod download
 # Copy source code
 COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
@@ -56,6 +57,7 @@ COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 COPY --chown=user arb-avm-go/ /home/user/arb-avm-go/
 COPY --chown=user arb-util/ /home/user/arb-util/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
+COPY --chown=user arb-validator-core/ /home/user/arb-validator-core/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
