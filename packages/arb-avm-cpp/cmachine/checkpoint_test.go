@@ -83,17 +83,13 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error("Failed to checkpoint machine")
 	}
 
-	mach2, err := checkpointStorage.GetInitialMachine()
+	loadedMach, err := checkpointStorage.GetMachine(mach.Hash())
 	if err != nil {
 		t.Error(err)
 	}
 
-	if !mach2.RestoreCheckpoint(checkpointStorage, mach.Hash()) {
-		t.Error("Failed to restore machine")
-	}
-
-	if mach.Hash() != mach2.Hash() {
-		t.Error("Restored machine with wrong hash", mach.Hash(), mach2.Hash())
+	if mach.Hash() != loadedMach.Hash() {
+		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
