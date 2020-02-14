@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "arb-provider-truffle": "^0.3.0",
-    "arb-provider-web3": "^0.3.0",
+    "arb-provider-web3": "^0.4.3",
     "bootstrap": "^4.4.1",
     "jquery": "^3.4.1",
     "web3": "~1.2.6"
