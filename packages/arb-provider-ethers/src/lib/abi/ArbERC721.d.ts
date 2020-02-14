@@ -8,20 +8,52 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbERC721Interface extends Interface {
     functions: {
+        supportsInterface: TypedFunctionDescription<{
+            encode([interfaceId]: [Arrayish]): string;
+        }>;
+
+        getApproved: TypedFunctionDescription<{
+            encode([tokenId]: [BigNumberish]): string;
+        }>;
+
         approve: TypedFunctionDescription<{
             encode([to, tokenId]: [string, BigNumberish]): string;
         }>;
 
+        totalSupply: TypedFunctionDescription<{ encode([]: []): string }>;
+
         transferFrom: TypedFunctionDescription<{
             encode([from, to, tokenId]: [string, string, BigNumberish]): string;
+        }>;
+
+        tokenOfOwnerByIndex: TypedFunctionDescription<{
+            encode([owner, index]: [string, BigNumberish]): string;
         }>;
 
         safeTransferFrom: TypedFunctionDescription<{
             encode([from, to, tokenId]: [string, string, BigNumberish]): string;
         }>;
 
+        tokenByIndex: TypedFunctionDescription<{
+            encode([index]: [BigNumberish]): string;
+        }>;
+
+        ownerOf: TypedFunctionDescription<{
+            encode([tokenId]: [BigNumberish]): string;
+        }>;
+
+        balanceOf: TypedFunctionDescription<{ encode([owner]: [string]): string }>;
+
         setApprovalForAll: TypedFunctionDescription<{
             encode([to, approved]: [string, boolean]): string;
+        }>;
+
+        isApprovedForAll: TypedFunctionDescription<{
+            encode([owner, operator]: [string, string]): string;
+        }>;
+
+        tokensOfOwner: TypedFunctionDescription<{
+            encode([owner]: [string]): string;
         }>;
 
         adminMint: TypedFunctionDescription<{
@@ -66,19 +98,9 @@ export class ArbERC721 extends Contract {
 
         getApproved(tokenId: BigNumberish): Promise<string>;
 
-        tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>;
-
-        tokenByIndex(index: BigNumberish): Promise<BigNumber>;
-
-        ownerOf(tokenId: BigNumberish): Promise<string>;
-
-        balanceOf(owner: string): Promise<BigNumber>;
-
-        isApprovedForAll(owner: string, operator: string): Promise<boolean>;
-
-        tokensOfOwner(owner: string): Promise<(BigNumber)[]>;
-
         approve(to: string, tokenId: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        totalSupply(): Promise<BigNumber>;
 
         transferFrom(
             from: string,
@@ -87,6 +109,8 @@ export class ArbERC721 extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>;
+
         safeTransferFrom(
             from: string,
             to: string,
@@ -94,11 +118,21 @@ export class ArbERC721 extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        tokenByIndex(index: BigNumberish): Promise<BigNumber>;
+
+        ownerOf(tokenId: BigNumberish): Promise<string>;
+
+        balanceOf(owner: string): Promise<BigNumber>;
+
         setApprovalForAll(
             to: string,
             approved: boolean,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
+
+        isApprovedForAll(owner: string, operator: string): Promise<boolean>;
+
+        tokensOfOwner(owner: string): Promise<BigNumber[]>;
 
         adminMint(
             account: string,
@@ -111,9 +145,47 @@ export class ArbERC721 extends Contract {
             tokenId: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
-
-        totalSupply(): Promise<BigNumber>;
     };
+
+    supportsInterface(interfaceId: Arrayish): Promise<boolean>;
+
+    getApproved(tokenId: BigNumberish): Promise<string>;
+
+    approve(to: string, tokenId: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    totalSupply(): Promise<BigNumber>;
+
+    transferFrom(
+        from: string,
+        to: string,
+        tokenId: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>;
+
+    safeTransferFrom(
+        from: string,
+        to: string,
+        tokenId: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    tokenByIndex(index: BigNumberish): Promise<BigNumber>;
+
+    ownerOf(tokenId: BigNumberish): Promise<string>;
+
+    balanceOf(owner: string): Promise<BigNumber>;
+
+    setApprovalForAll(to: string, approved: boolean, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    isApprovedForAll(owner: string, operator: string): Promise<boolean>;
+
+    tokensOfOwner(owner: string): Promise<BigNumber[]>;
+
+    adminMint(account: string, tokenId: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdraw(account: string, tokenId: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
     filters: {
         Transfer(from: string | null, to: string | null, tokenId: BigNumberish | null): EventFilter;
@@ -124,13 +196,31 @@ export class ArbERC721 extends Contract {
     };
 
     estimate: {
+        supportsInterface(interfaceId: Arrayish): Promise<BigNumber>;
+
+        getApproved(tokenId: BigNumberish): Promise<BigNumber>;
+
         approve(to: string, tokenId: BigNumberish): Promise<BigNumber>;
+
+        totalSupply(): Promise<BigNumber>;
 
         transferFrom(from: string, to: string, tokenId: BigNumberish): Promise<BigNumber>;
 
+        tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>;
+
         safeTransferFrom(from: string, to: string, tokenId: BigNumberish): Promise<BigNumber>;
 
+        tokenByIndex(index: BigNumberish): Promise<BigNumber>;
+
+        ownerOf(tokenId: BigNumberish): Promise<BigNumber>;
+
+        balanceOf(owner: string): Promise<BigNumber>;
+
         setApprovalForAll(to: string, approved: boolean): Promise<BigNumber>;
+
+        isApprovedForAll(owner: string, operator: string): Promise<BigNumber>;
+
+        tokensOfOwner(owner: string): Promise<BigNumber>;
 
         adminMint(account: string, tokenId: BigNumberish): Promise<BigNumber>;
 

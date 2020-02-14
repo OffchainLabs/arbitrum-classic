@@ -26,13 +26,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
 func setupTestValidateProof(t *testing.T) (*Connection, error) {
@@ -47,6 +49,9 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ethclint, err := ethclient.Dial(ethURL)
+	if err != nil {
+		t.Fatal(err)
 	var client arbbridge.ArbAuthClient
 	if test.UseGoEth() {
 		client, err = gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
@@ -59,6 +64,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 			t.Fatal(err)
 		}
 	}
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	osp, err := client.DeployOneStepProof(context.Background())
 	if err != nil {
 		t.Fatal(err)

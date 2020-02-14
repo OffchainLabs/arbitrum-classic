@@ -23,10 +23,10 @@ import (
 )
 
 func TestChallenges(t *testing.T) {
+	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 	if test.UseGoEth() {
 		gobridge.StartGoEth(test.GetEthUrl())
 	}
-	t.Run("Pending Top Challenge", testPendingTopChallenge)
 	t.Run("Messages Challenge", testMessagesChallenge)
 	t.Run("Execution Challenge", testExecutionChallenge)
 }

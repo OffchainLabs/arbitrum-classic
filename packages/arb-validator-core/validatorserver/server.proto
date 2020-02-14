@@ -1,0 +1,88 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+package validatorserver;
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver";
+
+message LogInfo {
+    string address = 1;
+    string blockHash = 2;
+    string blockNumber = 3;
+    string data = 4;
+    string logIndex = 5;
+    repeated string topics = 6;
+    string transactionIndex = 7;
+    string transactionHash = 8;
+}
+
+message FindLogsArgs {
+    string fromHeight = 1;
+    string toHeight = 2;
+    string address = 3;
+    repeated string topics = 4;
+}
+
+message FindLogsReply {
+    repeated LogInfo logs = 4;
+}
+
+message GetMessageResultArgs {
+    string txHash = 1;
+}
+
+message GetMessageResultReply {
+    bool found = 1;
+    string rawVal = 2;
+    string logPreHash = 3;
+    string logPostHash = 4;
+    repeated string logValHashes = 5;
+    string onChainTxHash = 6;
+}
+
+message GetAssertionCountArgs {
+
+}
+
+message GetAssertionCountReply {
+    int32 assertionCount = 1;
+}
+
+message GetVMInfoArgs {
+
+}
+
+message GetVMInfoReply {
+    string vmID = 1;
+}
+
+message CallMessageArgs {
+    string contractAddress = 1;
+    string sender = 2;
+    string data = 3;
+}
+
+message CallMessageReply {
+    string rawVal = 1;
+}
+
+service RollupValidator {
+    rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
+    rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
+    rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
+    rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
+    rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
+}

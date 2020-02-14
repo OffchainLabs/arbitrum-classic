@@ -23,6 +23,8 @@ from arbitrum import messagestack
 from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn, EVMInvalidSequence
 from arbitrum.evm import contract_templates
 
+CALL_TX_TYPE = 5
+
 
 def make_msg_val(message, blocknum=0):
     return [blocknum, 0, message]
@@ -135,7 +137,11 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [4, address, arbinfo_abi.call_getBalance(address_string)]
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
                     )  # type  # sender
                 )
             ),
@@ -173,7 +179,11 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [4, address, arbinfo_abi.call_getBalance(address_string)]
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
                     )  # type  # sender
                 )
             ),
@@ -234,7 +244,10 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([4, address, arbsys_abi.call_timeUpperBound()]), 34
+                    value.Tuple(
+                        [CALL_TX_TYPE, address, arbsys_abi.call_timeUpperBound()]
+                    ),
+                    34,
                 )
             ),
         )
@@ -355,7 +368,11 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [4, address, erc721_abi.call_tokensOfOwner(address_string)]
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            erc721_abi.call_tokensOfOwner(address_string),
+                        ]
                     )  # type  # sender
                 )
             ),
@@ -439,7 +456,7 @@ class TestEVM(TestCase):
                 make_msg_val(
                     value.Tuple(
                         [
-                            4,
+                            CALL_TX_TYPE,
                             address,
                             arbsys_abi.call_getTransactionCount(address_string),
                         ]
@@ -467,7 +484,7 @@ class TestEVM(TestCase):
                 make_msg_val(
                     value.Tuple(
                         [
-                            4,
+                            CALL_TX_TYPE,
                             address,
                             arbsys_abi.call_getTransactionCount(address_string),
                         ]

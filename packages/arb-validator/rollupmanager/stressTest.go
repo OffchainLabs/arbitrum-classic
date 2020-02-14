@@ -22,8 +22,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type ArbClientStressTest struct {
@@ -37,7 +37,7 @@ func NewStressTestClient(client arbbridge.ArbClient, reorgInterval time.Duration
 
 var reorgError = errors.New("reorg occured")
 
-func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
 	if err != nil {
 		return nil, err

@@ -72,6 +72,30 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     }
 }
 
+CMachine* getMachine(const CCheckpointStorage* storage_ptr,
+                     const void* machine_hash) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+
+    auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
+    auto hash = deserializeUint256t(machine_hash_ptr);
+    std::vector<unsigned char> machine_vector;
+    marshal_uint256_t(hash, machine_vector);
+
+    auto initial_state = storage->getInitialVmValues();
+
+    if (initial_state.valid_state) {
+        MachineState machine_state(initial_state.code, initial_state.staticVal,
+                                   storage->pool);
+        auto machine = new Machine();
+        machine->initializeMachine(machine_state);
+        machine->restoreCheckpoint(*storage, machine_vector);
+
+        return machine;
+    } else {
+        return nullptr;
+    }
+}
+
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);

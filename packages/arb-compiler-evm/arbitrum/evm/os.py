@@ -739,6 +739,36 @@ def process_tx_message(vm):
     )
 
 
+@modifies_stack([message.typ], [value.IntType(), tx_call_data.typ])
+def process_contract_tx_message(vm):
+    # msg
+    vm.dup0()
+    message.get("sender")(vm)
+    # sender msg
+    vm.dup0()
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.get(vm)
+    accounts.fetch_and_increment_seq(vm)
+    vm.pop()
+    vm.swap1()
+    # sender account msg
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.set_val(vm)
+    # accounts msg
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+    # msg
+    vm.dup0()
+    message.get("message")(vm)
+    vm.cast(tx_message.typ)
+    process_valid_tx_message(vm)
+    vm.swap1()
+    message.get("sender")(vm)
+
+
 @modifies_stack([tx_message.typ], [tx_call_data.typ])
 def process_valid_tx_message(vm):
     # msg
