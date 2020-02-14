@@ -475,19 +475,9 @@ func (rcp *RollupCheckpointerImpl) GetValue(h common.Hash) value.Value {
 }
 
 func (rcp *RollupCheckpointerImpl) GetMachine(h common.Hash) machine.Machine {
-	ret, err := rcp.st.GetInitialMachine()
+	ret, err := rcp.st.GetMachine(h)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if ret.Hash() == h {
-		return ret
-	}
-	restored := ret.RestoreCheckpoint(rcp.st, h)
-	if !restored {
-		log.Fatalln("Failed to restore machine", h, "from checkpoint")
-	}
-	if ret.Hash() != h {
-		log.Fatalln("Restore machine", h, "from checkpoint with wrong hash", ret.Hash())
 	}
 	return ret
 }

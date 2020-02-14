@@ -460,19 +460,9 @@ func (cp *IndexedCheckpointer) GetMachine(h common.Hash) machine.Machine {
 }
 
 func (cp *IndexedCheckpointer) getMachine_locked(h common.Hash) machine.Machine {
-	ret, err := cp.db.GetInitialMachine()
+	ret, err := cp.db.GetMachine(h)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if ret.Hash() == h {
-		return ret
-	}
-	restored := ret.RestoreCheckpoint(cp.db, h)
-	if !restored {
-		log.Fatalln("Failed to restore machine", h, "from checkpoint")
-	}
-	if ret.Hash() != h {
-		log.Fatalln("Restore machine", h, "from checkpoint with wrong hash", ret.Hash())
 	}
 	return ret
 }

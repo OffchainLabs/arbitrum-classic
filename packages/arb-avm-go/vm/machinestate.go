@@ -52,10 +52,6 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	panic("implement me")
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	panic("implement me")
-}
-
 func Equal(x, y *Machine) (bool, string) {
 	if ok, err := x.stack.Equal(y.stack); !ok {
 		tmp := "stack error: "
