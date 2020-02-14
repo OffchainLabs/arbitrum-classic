@@ -57,6 +57,7 @@ function makeTransaction(tx) {
 function fillCompact(values, result, keys, keepNull) {
   keys.forEach(function(key) {
     var value = values[key];
+    // is this loose comparison a problem?
     if (value == null) {
       if (!keepNull) {
         return;
@@ -661,8 +662,19 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
     case "eth_getTransactionReceipt":
       provider.getTransactionReceipt(params[0]).then(function(receipt) {
         if (receipt != null) {
+          // TODO formatReceipt nulls out logIndex
           receipt = formatReceipt(receipt);
+          receipt.logs = receipt.logs.map((log, logIndex) => {
+            if (log.logIndex === undefined || log.logIndex === null) {
+              return { ...log, logIndex: log.transactionLogIndex || logIndex };
+            } else {
+              return log;
+            }
+          });
+
+          // logIndex appears to disappear when returned
         }
+
         respond(receipt);
       });
       break;
