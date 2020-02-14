@@ -29,8 +29,7 @@
         "ethers": "^4.0.44",
         "jayson": "^3.2.0",
         "node-fetch": "^2.6.0",
-        "promise-poller": "^1.9.1",
-        "solidity-bytes-utils": "^0.0.8"
+        "promise-poller": "^1.9.1"
     },
     "devDependencies": {
         "@types/jest": "^25.1.1",
