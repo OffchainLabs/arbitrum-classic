@@ -193,12 +193,3 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	}
 	return h1
 }
-
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	//h1 := m.cppmachine.RestoreCheckpoint(storage, machineHash)
-	h2 := m.gomachine.RestoreCheckpoint(storage, machineHash)
-	//if h1 != h2 {
-	//	log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
-	//}
-	return h2
-}
