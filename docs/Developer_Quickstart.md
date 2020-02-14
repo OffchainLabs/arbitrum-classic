@@ -13,8 +13,8 @@ Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels an
 
 The following documention describes how to use Arbitrum Rollup.
 
-**Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
-read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
+**Want to learn more? Check out the [open source code](https://github.com/offchainlabs/arbitrum). Join the team on [Discord](https://discord.gg/ZpZuw7p). 
+Read about [how Arbitrum Rollup works](https://medium.com/offchainlabs/how-arbitrum-rollup-works-39788e1ed73f)!**
 
 Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment an Arbitrum Rollup chain on the local testnet.
 
