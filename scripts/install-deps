@@ -16,7 +16,13 @@ pip3 install -r requirements-dev.txt --user
 pre-commit install
 
 # Install conan
-virtualenv --no-site-packages vconan
+VIRTUALENV_MAJOR_VERSION=$(pip3 show virtualenv | grep Version | sed 's/.*: //' | sed -n 's/\..*//p')
+if (($VIRTUALENV_MAJOR_VERSION < 20))
+then
+    virtualenv --no-site-packages vconan
+else
+    virtualenv vconan
+fi
 . vconan/bin/activate
 pip3 install --upgrade conan
 # conan nonstd-lite
