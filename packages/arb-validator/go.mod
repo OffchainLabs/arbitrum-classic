@@ -9,10 +9,10 @@ require (
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/rpc v1.2.0
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.2
-	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.2
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.4.2
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.4.2
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.3
+	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.3
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.4.3
+	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.4.3
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )
