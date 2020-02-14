@@ -201,20 +201,6 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return success == 1
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	cCheckpointStorage, ok := storage.(*CheckpointStorage)
-
-	if ok {
-		machineHashC := C.CBytes(machineHash.Bytes())
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, machineHashC)
-		C.free(machineHashC)
-
-		return success == 1
-	} else {
-		return false
-	}
-}
-
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)

@@ -33,5 +33,4 @@ type Machine interface {
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
-	RestoreCheckpoint(storage CheckpointStorage, machineHash common.Hash) bool
 }
