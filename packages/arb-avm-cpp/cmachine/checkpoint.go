@@ -71,6 +71,18 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 	cMachine := C.getInitialMachine(checkpoint.c)
 
 	if cMachine == nil {
+		return nil, fmt.Errorf("error getting initial machine from checkpointstorage")
+	}
+
+	ret := &Machine{cMachine}
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
+}
+
+func (checkpoint *CheckpointStorage) GetMachine(machineHash common.Hash) (machine.Machine, error) {
+	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]))
+
+	if cMachine == nil {
 		return nil, fmt.Errorf("error getting machine from checkpointstorage")
 	}
 
