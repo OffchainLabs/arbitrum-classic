@@ -160,7 +160,3 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return m.machine.Checkpoint(storage)
 }
-
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	return m.machine.RestoreCheckpoint(storage, machineHash)
-}
