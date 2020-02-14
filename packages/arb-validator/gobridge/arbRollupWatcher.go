@@ -64,16 +64,6 @@ func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWa
 //}
 
 func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	// copy events
-	//vm.client.GoEthClient.Lock()
-	//var blockEvents []arbbridge.Event
-	//for i, b := range vm.client.GoEthClient.rollups[vm.address].events[blockId] {
-	//	blockEvents[i] = b
-	//}
-	//return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
-
-	// delete events
-	// return events
 	return vm.client.GoEthClient.rollups[vm.address].events[blockId], nil
 }
 
@@ -88,7 +78,7 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 }
 
 func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return common.Address{}, nil
+	return vm.client.GoEthClient.globalInbox, nil
 }
 
 func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {

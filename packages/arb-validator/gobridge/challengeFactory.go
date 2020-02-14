@@ -44,37 +44,11 @@ func (con *challengeFactory) CreateChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {
-	//con.auth.Context = ctx
-	//tx, err := con.contract.CreateChallenge(
-	//	con.auth,
-	//	asserter.ToEthAddress(),
-	//	challenger.ToEthAddress(),
-	//	challengePeriod.Val,
-	//	challengeHash,
-	//	challengeType,
-	//)
-	//if err != nil {
-	//	return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
-	//}
-	//
-	//receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	//
-	//if len(receipt.Logs) != 1 {
-	//	return common.Address{}, errors2.New("Wrong receipt count")
-	//}
-	//
-	//return common.NewAddressFromEth(receipt.Logs[0].Address), nil
-	// create challenge
-	// return address of new challenge contract
 	challenge := con.client.GoEthClient.getNextAddress()
 	con.client.GoEthClient.challenges[challenge] = &challengeData{
 		challengePeriodTicks: challengePeriod,
 		asserter:             asserter,
 		challenger:           challenger,
-		challengeHash:        challengeHash,
 		challengeType:        challengeType,
 	}
 	return con.client.GoEthClient.getNextAddress(), nil

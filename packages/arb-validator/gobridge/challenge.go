@@ -18,31 +18,34 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
 var initiatedChallengeID ethcommon.Hash
 var timedOutAsserterID ethcommon.Hash
 var timedOutChallengerID ethcommon.Hash
 
+const (
+	noChallenge    = 0
+	asserterTurn   = 1
+	challengerTurn = 2
+)
+
 type challenge struct {
-	client *GoArbAuthClient
-	//auth   *bind.TransactOpts
+	client          *GoArbAuthClient
+	challengeData   *challengeData
 	contractAddress common.Address
-	state           int
-	deadlineTicks   common.TimeTicks
 }
 
 func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, error) {
-	//challengeContract, err := executionchallenge.NewChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	//}
-	//ch := client.GoEthClient.challenges[address]
-	//addr := client.GoEthClient.getNextAddress()
-	chal := challenge{client: client, contractAddress: address}
-	//client.GoEthClient.challenges[addr] =
+	chal := challenge{
+		client:          client,
+		contractAddress: address,
+		challengeData:   client.GoEthClient.challenges[address],
+	}
 
 	return &chal, nil
 }
@@ -50,12 +53,27 @@ func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, 
 func (c *challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
-	//c.auth.Context = ctx
-	//tx, err := c.Challenge.TimeoutChallenge(c.auth)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
+
+	if common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
+		return errors.New("Deadline hasn't expired")
+	}
+	if c.challengeData.state == asserterTurn {
+		c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+			Event: arbbridge.AsserterTimeoutEvent{
+				ChainInfo: arbbridge.ChainInfo{
+					BlockId: c.client.GoEthClient.getCurrentBlock(),
+				},
+			},
+		})
+	} else {
+		c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+			Event: arbbridge.ChallengerTimeoutEvent{
+				ChainInfo: arbbridge.ChainInfo{
+					BlockId: c.client.GoEthClient.getCurrentBlock(),
+				},
+			},
+		})
+	}
 	return nil
 }
 
@@ -65,10 +83,6 @@ type challengeWatcher struct {
 }
 
 func newChallengeWatcher(address common.Address, client *GoArbClient) (*challengeWatcher, error) {
-	//challengeContract, err := executionchallenge.NewChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	//}
 
 	return &challengeWatcher{client: client, Challenge: address}, nil
 }
@@ -80,28 +94,3 @@ func (c *challengeWatcher) topics() []ethcommon.Hash {
 		timedOutChallengerID,
 	}
 }
-
-//func (c *challengeWatcher) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
-//	if log.Topics[0] == initiatedChallengeID {
-//		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.InitiateChallengeEvent{
-//			Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
-//		}, nil
-//	} else if log.Topics[0] == timedOutAsserterID {
-//		_, err := c.Challenge.ParseAsserterTimedOut(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.AsserterTimeoutEvent{}, nil
-//	} else if log.Topics[0] == timedOutChallengerID {
-//		_, err := c.Challenge.ParseChallengerTimedOut(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.ChallengerTimeoutEvent{}, nil
-//	}
-//	return nil, nil
-//}

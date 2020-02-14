@@ -96,10 +96,8 @@ type challengeData struct {
 	challengerDataHash   common.Hash
 	state                int
 	challengePeriodTicks common.TimeTicks
-	deadlineTicks        common.TimeTicks
 	asserter             common.Address
 	challenger           common.Address
-	challengeHash        common.Hash
 	challengeType        *big.Int
 }
 
@@ -115,6 +113,15 @@ type execChallengeData struct {
 	challengeData
 }
 
+//type goEvent struct {
+//	challenge *challengeData
+//	arbbridge.Event
+//}
+
+type goMaybeEvent struct {
+	challenge *challengeData
+	event     arbbridge.MaybeEvent
+}
 type void struct{}
 
 var Void void
@@ -123,15 +130,16 @@ var Void void
 type goEthdata struct {
 	blockMutex             sync.Mutex
 	msgMutex               sync.Mutex
+	globalInbox            common.Address
 	Vm                     map[common.Address]*VmData
 	channels               map[common.Address]*channelData
 	rollups                map[common.Address]*rollupData    // contract address to rollup
 	challenges             map[common.Address]*challengeData // contract address to rollup
 	challengeWatchersMutex sync.Mutex
-	challengeWatchers      map[*challengeData]map[*structures.BlockId][]arbbridge.Event
+	challengeWatcherEvents map[*challengeData]map[*structures.BlockId][]arbbridge.Event
 	arbFactory             common.Address // eth address to factory address
 	nextAddress            common.Address // unique 'address'
-	nextMsgs               map[*structures.BlockId][]arbbridge.MaybeEvent
+	nextMsgs               map[*structures.BlockId][]goMaybeEvent
 	BlockNumber            uint64
 	pending                map[common.Address]*PendingInbox
 	NextBlock              *structures.BlockId
@@ -160,9 +168,14 @@ func init() {
 	GoEth = make(map[string]*goEthdata)
 }
 
+func StartGoEth(ethURL string) {
+	getGoEth(ethURL)
+}
+
 func getGoEth(ethURL string) *goEthdata {
 	// once for each ethURL, set up data
 	onceMutex.Lock()
+	defer onceMutex.Unlock()
 	tmpOnce, ok := once[ethURL]
 	if !ok {
 		once = make(map[string]*sync.Once)
@@ -177,7 +190,7 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.channels = make(map[common.Address]*channelData)
 		mEthData.rollups = make(map[common.Address]*rollupData)
 		mEthData.challenges = make(map[common.Address]*challengeData)
-		mEthData.challengeWatchers = make(map[*challengeData]map[*structures.BlockId][]arbbridge.Event)
+		mEthData.challengeWatcherEvents = make(map[*challengeData]map[*structures.BlockId][]arbbridge.Event)
 		mEthData.arbFactory = mEthData.getNextAddress()
 		mEthData.pending = make(map[common.Address]*PendingInbox)
 		mEthData.blockHashes = make(map[common.Hash]*structures.BlockId)
@@ -189,7 +202,7 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.LastMinedBlock.HeaderHash = blockHash
 		mEthData.NextBlock = new(structures.BlockId)
 		mEthData.NextBlock.Height = common.NewTimeBlocks(big.NewInt(1))
-		mEthData.nextMsgs = make(map[*structures.BlockId][]arbbridge.MaybeEvent)
+		mEthData.nextMsgs = make(map[*structures.BlockId][]goMaybeEvent)
 		mEthData.blockHashes[blockHash] = mEthData.LastMinedBlock
 		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
 		mEthData.parentHashes[*mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
@@ -199,7 +212,7 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
 		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
-		onceMutex.Unlock()
+		//onceMutex.Unlock()
 		go func() {
 			for {
 				select {
@@ -260,21 +273,13 @@ func (m *goEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
 	m.chanMgr <- oc
 }
 
-func (m *goEthdata) pubMsg(msg arbbridge.MaybeEvent) {
+func (m *goEthdata) pubMsg(challenge *challengeData, msg arbbridge.MaybeEvent) {
 	m.msgMutex.Lock()
 	defer m.msgMutex.Unlock()
-	//fmt.Println("publishing event", msg)
-	//if msg.Event.GetChainInfo().BlockId == m.NextBlock {
-	m.nextMsgs[msg.Event.GetChainInfo().BlockId] = append(m.nextMsgs[msg.Event.GetChainInfo().BlockId], msg)
-	//} else {
-	//	for _, ru := range m.rollups {
-	//		ru.events[msg.Event.GetChainInfo().BlockId] = append(ru.events[msg.Event.GetChainInfo().BlockId], msg.Event)
-	//	}
-	//	for _, watcher := range m.challengeWatchers {
-	//		watcher[msg.Event.GetChainInfo().BlockId] = append(watcher[msg.Event.GetChainInfo().BlockId], msg.Event)
-	//	}
-	//	m.pubchan <- msg
-	//}
+	m.nextMsgs[msg.Event.GetChainInfo().BlockId] = append(m.nextMsgs[msg.Event.GetChainInfo().BlockId], goMaybeEvent{
+		challenge: challenge,
+		event:     msg,
+	})
 }
 
 func mine(m *goEthdata, t time.Time) {
@@ -289,14 +294,18 @@ func mine(m *goEthdata, t time.Time) {
 	m.msgMutex.Lock()
 	for _, event := range m.nextMsgs[m.NextBlock] {
 		for _, ru := range m.rollups {
-			ru.events[m.NextBlock] = append(ru.events[m.NextBlock], event.Event)
+			ru.events[m.NextBlock] = append(ru.events[m.NextBlock], event.event.Event)
 		}
 		m.challengeWatchersMutex.Lock()
-		for _, watcher := range m.challengeWatchers {
-			watcher[m.NextBlock] = append(watcher[m.NextBlock], event.Event)
+		for challenge, watcher := range m.challengeWatcherEvents {
+			// if this is a challenge specific event and it is not for this challenge ignore it
+			if event.challenge != nil && event.challenge != challenge {
+				continue
+			}
+			watcher[m.NextBlock] = append(watcher[m.NextBlock], event.event.Event)
 		}
 		m.challengeWatchersMutex.Unlock()
-		m.pubchan <- event
+		m.pubchan <- event.event
 	}
 	m.msgMutex.Unlock()
 	fmt.Println("mined block number", m.NextBlock)
@@ -311,7 +320,7 @@ func mine(m *goEthdata, t time.Time) {
 
 	m.blockMutex.Unlock()
 	fmt.Println("publishing NewTimeEvent block - ", blockEvent.BlockId)
-	m.pubMsg(arbbridge.MaybeEvent{
+	m.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: blockEvent,
 	})
 }

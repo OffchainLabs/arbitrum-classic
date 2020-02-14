@@ -18,11 +18,11 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 )
@@ -31,7 +31,6 @@ var continuedChallengeID ethcommon.Hash
 
 type bisectionChallenge struct {
 	*challenge
-	//challengeState
 }
 
 func newBisectionChallenge(address common.Address, client *GoArbAuthClient) (*bisectionChallenge, error) {
@@ -42,7 +41,6 @@ func newBisectionChallenge(address common.Address, client *GoArbAuthClient) (*bi
 	vm := &bisectionChallenge{
 		challenge: challenge,
 	}
-	//err = vm.setupContracts()
 	return vm, nil
 }
 
@@ -52,21 +50,13 @@ func (c *bisectionChallenge) chooseSegment(
 	segments []common.Hash,
 ) error {
 	fmt.Println("in bisectionChallenge - chooseSegment")
-	//tree := NewMerkleTree(segments)
-	//c.auth.Context = ctx
-	//tx, err := c.bisectionChallenge.ChooseSegment(
-	//	c.auth,
-	//	big.NewInt(int64(segmentToChallenge)),
-	//	tree.GetProofFlat(int(segmentToChallenge)),
-	//	tree.GetRoot(),
-	//	tree.GetNode(int(segmentToChallenge)),
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "ChooseSegment")
+	tree := structures.NewMerkleTree(segments)
 
-	//require(_bisectionRoot == challengeState, CON_PREV);
+	if !tree.GetRoot().Equals(c.challengeData.challengerDataHash) {
+		return errors.New("Incorrect previous state")
+	}
+
+	// TODO: figure out merkle verify proof
 	//require(
 	//	MerkleLib.verifyProof(
 	//		_proof,
@@ -77,20 +67,15 @@ func (c *bisectionChallenge) chooseSegment(
 	//CON_PROOF
 	//);
 	//
-	//challengeState = _bisectionHash;
-	//
-	//challengerResponded();
-	//emit Continued(_segmentToChallenge, deadlineTicks);
-	c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash = segments[segmentToChallenge]
-	fmt.Println("segmentToChallenge = ", segmentToChallenge)
-	fmt.Println("segments[segmentToChallenge] = ", segments[segmentToChallenge])
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.challengerResponded()
+	c.challengeData.challengerDataHash = segments[segmentToChallenge]
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ContinueChallengeEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
 			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
-			Deadline:     c.client.GoEthClient.challenges[c.contractAddress].deadline,
+			Deadline:     c.challengeData.deadline,
 		},
 	})
 
@@ -99,7 +84,6 @@ func (c *bisectionChallenge) chooseSegment(
 
 type bisectionChallengeWatcher struct {
 	*challengeWatcher
-	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
 func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (*bisectionChallengeWatcher, error) {
@@ -107,13 +91,8 @@ func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (
 	if err != nil {
 		return nil, err
 	}
-	//bisectionContract, err := executionchallenge.newBisectionChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	//}
 	vm := &bisectionChallengeWatcher{
-		challengeWatcher:   challenge,
-		BisectionChallenge: nil,
+		challengeWatcher: challenge,
 	}
 	return vm, err
 }
@@ -125,31 +104,21 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.challengeWatcher.topics()...)
 }
 
-func commitToSegment(challengeData *challengeData, hashes [][32]byte) {
+func (c *challenge) commitToSegment(hashes [][32]byte) {
 	tree := structures.NewMerkleTree(hashSliceToHashes(hashes))
-	challengeData.challengerDataHash = tree.GetRoot()
+	c.challengeData.challengerDataHash = tree.GetRoot()
 }
 
-//.GoEthClient.challenges[c.contractAddress]
-func asserterResponded(client *GoArbClient) {
-	//challengeData.deadline.
-	//currentTicks := common.TicksFromBlockNum(client.GoEthClient.getCurrentBlock().Height)
-	//deadlineTicks := currentTicks.Add(ch)
+func (c *challenge) asserterResponded() {
+	c.challengeData.state = challengerTurn
+	currentTicks := common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height)
+	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
 
 }
 
-//
-//func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
-//	if log.Topics[0] == continuedChallengeID {
-//		contChal, err := c.BisectionChallenge.ParseContinued(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.ContinueChallengeEvent{
-//			SegmentIndex: contChal.SegmentIndex,
-//			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
-//		}, nil
-//	} else {
-//		return c.challengeWatcher.parseChallengeEvent(log)
-//	}
-//}
+func (c *challenge) challengerResponded() {
+	c.challengeData.state = asserterTurn
+	currentTicks := common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height)
+	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
+
+}

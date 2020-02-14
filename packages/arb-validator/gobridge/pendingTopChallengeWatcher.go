@@ -18,8 +18,10 @@ package gobridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"fmt"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -42,24 +44,37 @@ func init() {
 
 type pendingTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
-	contract *pendingtopchallenge.PendingTopChallenge
-	client   *GoArbClient
-	address  common.Address
+	client        *GoArbClient
+	challengeInfo *challengeData
+	address       common.Address
 }
 
 func newPendingTopChallengeWatcher(address common.Address, client *GoArbClient) (*pendingTopChallengeWatcher, error) {
+	fmt.Println("in newPendingTopChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
+	chalData := client.GoEthClient.challenges[address]
+	client.GoEthClient.challengeWatchersMutex.Lock()
+	if _, ok := client.GoEthClient.challengeWatcherEvents[chalData]; !ok {
+		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+	}
+	client.GoEthClient.challengeWatchersMutex.Unlock()
 	//pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
 	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to pendingTopChallenge")
+	//	return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
 	//}
+	//tops := []ethcommon.Hash{
+	//	pendingTopBisectedID,
+	//	pendingTopOneStepProofCompletedID,
+	//}
+	//tops = append(tops, bisectionChallenge.topics()...)
+
 	return &pendingTopChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
-		contract:                  nil,
 		client:                    client,
+		challengeInfo:             chalData,
 		address:                   address,
 	}, nil
 }
@@ -82,109 +97,32 @@ func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *str
 	//	}
 	//	events = append(events, event)
 	//}
-	//return events, nil
-	return nil, nil
+	c.client.GoEthClient.challengeWatchersMutex.Lock()
+	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
+	c.client.GoEthClient.challengeWatchersMutex.Unlock()
+	return cw, nil
 }
 
-func (c *pendingTopChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		pendingTopBisectedID,
-		pendingTopOneStepProofCompletedID,
-	}
-	return append(tops, c.bisectionChallengeWatcher.topics()...)
-}
-
-func (c *pendingTopChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.MaybeEvent, error) {
-	headers := make(chan arbbridge.MaybeEvent)
-	c.client.GoEthClient.registerOutChan(headers)
-	//headers := make(chan *types.Header)
-	//headersSub, err := c.client.SubscribeNewHead(ctx, headers)
-	//if err != nil {
-	//	return err
-	//}
-
-	//filter := ethereum.FilterQuery{
-	//	Addresses: []ethcommon.Address{c.address},
-	//	Topics:    [][]ethcommon.Hash{c.topics()},
-	//}
-
-	//logChan := make(chan types.Log, 1024)
-	//logErrChan := make(chan error, 10)
-
-	//if err := getLogs(ctx, c.client, filter, big.NewInt(0), logChan, logErrChan); err != nil {
-	//	return err
-	//}
-
-	go func() {
-		//defer headersSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				break
-				//case evmLog, ok := <-logChan:
-				//	if !ok {
-				//		errChan <- errors.New("logChan terminated early")
-				//		return
-				//	}
-				//	if err := c.processEvents(ctx, evmLog, outChan); err != nil {
-				//		errChan <- err
-				//		return
-				//	}
-				//case err := <-logErrChan:
-				//	errChan <- err
-				//	return
-				//	//case err := <-headersSub.Err():
-				//	//	errChan <- err
-				//	return
-			}
-		}
-	}()
-	return headers, nil
-}
-
-//func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-//	event, err := func() (arbbridge.Event, error) {
-//		if log.Topics[0] == pendingTopBisectedID {
-//			eventVal, err := c.contract.ParseBisected(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.PendingTopBisectionEvent{
-//				//ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
-//				ChainHashes: nil,
-//				TotalLength: eventVal.TotalLength,
-//				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
-//			}, nil
-//		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-//			_, err := c.contract.ParseOneStepProofCompleted(log)
-//			if err != nil {
-//				return nil, err
-//			}
-//			return arbbridge.OneStepProofEvent{}, nil
-//		} else {
-//			event, err := c.bisectionChallengeWatcher.parseBisectionEvent(log)
-//			if event != nil || err != nil {
-//				return event, err
-//			}
+//func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+//	if log.Topics[0] == pendingTopBisectedID {
+//		eventVal, err := c.contract.ParseBisected(log)
+//		if err != nil {
+//			return nil, err
 //		}
-//		return nil, errors2.New("unknown arbitrum event type")
-//	}()
-//
-//	if err != nil {
-//		return err
+//		return arbbridge.PendingTopBisectionEvent{
+//			ChainInfo:   chainInfo,
+//			ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
+//			TotalLength: eventVal.TotalLength,
+//			Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
+//		}, nil
+//	} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
+//		_, err := c.contract.ParseOneStepProofCompleted(log)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return arbbridge.OneStepProofEvent{
+//			ChainInfo: chainInfo,
+//		}, nil
 //	}
-//
-//	//header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-//	//if err != nil {
-//	//	return err
-//	//}
-//	outChan <- arbbridge.Notification{
-//		//BlockHeader: common.Hash{},
-//		//BlockHeight: nil,
-//		//VMID:        common.NewAddressFromEth(c.address),
-//		Event:  event,
-//		TxHash: log.TxHash,
-//	}
-//	return nil
+//	return c.bisectionChallengeWatcher.parseBisectionEvent(chainInfo, log)
 //}

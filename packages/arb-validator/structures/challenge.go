@@ -79,6 +79,13 @@ func ChallengeDataHash(challenge common.Hash, challengePeriod *big.Int) common.H
 	)
 }
 
+func AddMessageToPending(pending common.Hash, message common.Hash) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(pending),
+		hashing.Bytes32(message),
+	)
+}
+
 func ExecutionDataHash(
 	numSteps uint64,
 	preconditionHash common.Hash,

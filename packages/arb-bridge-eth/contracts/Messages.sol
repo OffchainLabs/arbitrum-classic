@@ -296,19 +296,4 @@ library Messages {
 
         return  Value.newTuple(ercTokenMsg).hash().hash;
     }
-}        Value.Data[] memory msgValues = new Value.Data[](2);
-         msgValues[0] = Value.newInt(uint256(to));
-         msgValues[1] = Value.newInt(value);
-
-         Value.Data[] memory msgType = new Value.Data[](3);
-         msgType[0] = Value.newInt(ETH_DEPOSIT);
-         msgType[1] = Value.newInt(uint256(from));
-         msgType[2] = Value.newTuple(msgValues);
-
-         Value.Data[] memory ethMsg = new Value.Data[](3);
-         ethMsg[0] = Value.newInt(blockNumber);
-         ethMsg[1] = Value.newInt(messageNum);
-         ethMsg[2] = Value.newTuple(msgType);
-
-         return Value.newTuple(ethMsg).hash().hash;
-
+}

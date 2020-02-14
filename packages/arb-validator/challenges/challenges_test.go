@@ -16,9 +16,16 @@
 
 package challenges
 
-import "testing"
+import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/gobridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
+	"testing"
+)
 
 func TestChallenges(t *testing.T) {
+	if test.UseGoEth() {
+		gobridge.StartGoEth(test.GetEthUrl())
+	}
 	t.Run("Pending Top Challenge", testPendingTopChallenge)
 	t.Run("Messages Challenge", testMessagesChallenge)
 	t.Run("Execution Challenge", testExecutionChallenge)

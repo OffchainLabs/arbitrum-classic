@@ -18,7 +18,6 @@ package gobridge
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
@@ -32,10 +31,6 @@ type ChallengeTester struct {
 }
 
 func NewChallengeTester(client *GoArbAuthClient) (*ChallengeTester, error) {
-	//vmCreatorContract, err := challengetester.DeployChallengeTester(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
-	//}
 	return &ChallengeTester{client.GoEthClient.getNextAddress(), client}, nil
 }
 
@@ -48,36 +43,14 @@ func (con *ChallengeTester) StartChallenge(
 	challengeType *big.Int,
 ) (common.Address, *structures.BlockId, error) {
 	eth := con.client.GoEthClient
-	//con.auth.Context = ctx
-	//tx, err := con.contract.StartChallenge(
-	//	con.auth,
-	//	factory.ToEthAddress(),
-	//	asserter.ToEthAddress(),
-	//	challenger.ToEthAddress(),
-	//	challengePeriod.Val,
-	//	challengeHash,
-	//	challengeType,
-	//)
-	//if err != nil {
-	//	return common.Address{}, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
-	//}
-	//
-	//receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	//
-	//if len(receipt.Logs) != 1 {
-	//	return common.Address{}, errors2.New("Wrong receipt count")
-	//}
 
 	// create clone
 	newAddr := eth.getNextAddress()
-	fmt.Println("in StartChallenge - challengerDataHash = ", challengeHash)
-	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod, challengerDataHash: challengeHash}
+	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod, challengerDataHash: challengeHash, challengePeriodTicks: challengePeriod}
 
 	//initializeBisection
 	eth.challenges[newAddr].deadline = common.TicksFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
+	eth.challenges[newAddr].state = asserterTurn
 	// emit InitiatedChallenge
 	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
@@ -85,8 +58,7 @@ func (con *ChallengeTester) StartChallenge(
 		},
 		Deadline: eth.challenges[newAddr].deadline,
 	}
-	fmt.Println("challengeTester - publishing InitiateChallengeEvent")
-	eth.pubMsg(arbbridge.MaybeEvent{
+	eth.pubMsg(eth.challenges[newAddr], arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
 	//return clone address

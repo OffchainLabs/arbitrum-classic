@@ -49,6 +49,7 @@ type messagesChallengeWatcher struct {
 }
 
 func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*messagesChallengeWatcher, error) {
+	fmt.Println("in newMessagesChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,9 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 	//}
 	chalData := client.GoEthClient.challenges[address]
 	client.GoEthClient.challengeWatchersMutex.Lock()
-	client.GoEthClient.challengeWatchers[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+	if _, ok := client.GoEthClient.challengeWatcherEvents[chalData]; !ok {
+		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+	}
 	client.GoEthClient.challengeWatchersMutex.Unlock()
 
 	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, challengeInfo: chalData, client: client}, nil
@@ -86,7 +89,7 @@ func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *struc
 	//}
 	//return events, nil
 	c.client.GoEthClient.challengeWatchersMutex.Lock()
-	cw := c.client.GoEthClient.challengeWatchers[c.challengeInfo][blockId]
+	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
 	c.client.GoEthClient.challengeWatchersMutex.Unlock()
 	return cw, nil
 }

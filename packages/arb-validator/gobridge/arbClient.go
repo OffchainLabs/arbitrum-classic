@@ -132,11 +132,6 @@ func (c *GoArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, 
 }
 
 func (c *GoArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
-	//if height == nil {panic("nill height")}
-	//fmt.Println("blockNumbers", c.GoEthClient.blockNumbers)
-	//fmt.Println("height", height)
-	//fmt.Println("height.AsInt().Uint64()", height.AsInt().Uint64())
-	//fmt.Println("c.GoEthClient.blockNumbers[height.AsInt().Uint64()]", c.GoEthClient.blockNumbers[height])
 	block, err := c.GoEthClient.getBlockFromHeight(height)
 	if err != nil {
 		errstr := fmt.Sprintln("block height", height, " not found")
@@ -200,25 +195,12 @@ func (c *GoArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridg
 }
 
 func (c *GoArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c)
+	return newPendingTopChallenge(address, c)
 }
 
 func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (arbbridge.ChallengeTester, error) {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	//testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client, challengeFactory.ToEthAddress())
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err := waitForReceipt(
-	//	ctx,
-	//	c.client,
-	//	c.auth.auth.From,
-	//	tx,
-	//	"DeployChallengeTester",
-	//); err != nil {
-	//	return nil, err
-	//}
 	tester, err := NewChallengeTester(c)
 	if err != nil {
 		return nil, err
@@ -229,22 +211,5 @@ func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFact
 func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	//ospAddress, tx, _, err := executionchallenge.DeployOneStepProof(c.auth.auth, c.client)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err := waitForReceipt(
-	//	ctx,
-	//	c.client,
-	//	c.auth.auth.From,
-	//	tx,
-	//	"DeployOneStepProof",
-	//); err != nil {
-	//	return nil, err
-	//}
-	//osp, err := c.NewOneStepProof(common.NewAddressFromEth(ospAddress))
-	//if err != nil {
-	//	return nil, err
-	//}
 	return nil, nil
 }

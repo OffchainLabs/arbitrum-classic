@@ -75,11 +75,10 @@ func testChallenge(
 		return err
 	}
 
-	//usegobridge := false
-	usegobridge := true
 	var client1 arbbridge.ArbAuthClient
 	var client2 arbbridge.ArbAuthClient
-	if usegobridge {
+	if test.UseGoEth() {
+		fmt.Println("in testChallenge UseGoEth")
 		c, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth1.From)})
 		if err != nil {
 			return err
@@ -102,16 +101,19 @@ func testChallenge(
 		}
 		client2 = c2
 	}
+	fmt.Println("in testChallenge calling NewArbFactoryWatcher")
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("in testChallenge calling ChallengeFactoryAddress")
 	challengeFactoryAddress, err := factory.ChallengeFactoryAddress()
 	if err != nil {
 		return errors2.Wrap(err, "Error getting challenge factory address")
 	}
 
+	fmt.Println("in testChallenge calling DeployChallengeTest")
 	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
@@ -129,6 +131,7 @@ func testChallenge(
 	if err != nil {
 		return errors2.Wrap(err, "Error starting challenge")
 	}
+	fmt.Println("in testHelper.go - challenge started")
 
 	asserterEndChan := make(chan ChallengeState)
 	asserterErrChan := make(chan error)
@@ -141,10 +144,12 @@ func testChallenge(
 		for {
 			endState, err := asserterFunc(challengeAddress, client1, cBlockId)
 			if err == nil {
+				fmt.Println("asserter ended - end state", endState)
 				asserterEndChan <- endState
 				return
 			}
 			if tryCount > 20 {
+				fmt.Println("asserter ended - error")
 				asserterErrChan <- err
 				return
 			}
@@ -165,18 +170,20 @@ func testChallenge(
 		for {
 			endState, err := challengerFunc(challengeAddress, client2, cBlockId)
 			if err == nil {
-				asserterEndChan <- endState
+				fmt.Println("challenger ended - end state", endState)
+				challengerEndChan <- endState
 				return
 			}
 			if tryCount > 20 {
-				asserterErrChan <- err
+				fmt.Println("challenger ended - error")
+				challengerErrChan <- err
 				return
 			}
 			tryCount += 1
 			log.Println("Restarting challenger", err)
 			cBlockId, err = client1.BlockIdForHeight(context.Background(), cBlockId.Height)
 			if err != nil {
-				asserterErrChan <- err
+				challengerErrChan <- err
 				return
 			}
 		}
@@ -189,6 +196,7 @@ func testChallenge(
 			if challengeState != ChallengeAsserterWon {
 				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
 			}
+			fmt.Println("Asserter challenge ended - doneCount", doneCount)
 			doneCount++
 			if doneCount == 2 {
 				return nil
@@ -197,8 +205,10 @@ func testChallenge(
 			if challengeState != ChallengeAsserterWon {
 				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
 			}
+			fmt.Println("Challenger challenge ended - doneCount", doneCount)
 			doneCount++
 			if doneCount == 2 {
+				fmt.Println("doneCount == 2")
 				return nil
 			}
 		case err := <-asserterErrChan:

@@ -53,4 +53,5 @@ type ArbAuthClient interface {
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewPendingTopChallenge(address common.Address) (PendingTopChallenge, error)
 	DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (ChallengeTester, error)
+	DeployOneStepProof(ctx context.Context) (OneStepProof, error)
 }

@@ -51,11 +51,6 @@ func newMessagesChallenge(address common.Address, client *GoArbAuthClient) (*mes
 	//return &messagesChallenge{bisectionChallenge: bisectionChallenge}, nil
 }
 
-func (vm *messagesChallenge) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	fmt.Println("in messagesChallenge GetEvents")
-	return nil, nil
-}
-
 func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
@@ -74,7 +69,82 @@ func (c *messagesChallenge) Bisect(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "Bisect")
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+
+	bisectionCount := len(chainHashes) - 1
+	fmt.Println("bisectionCount", bisectionCount)
+	fmt.Println("len(segmentHashes)", len(segmentHashes))
+	if bisectionCount+1 != len(segmentHashes) {
+		return errors.New("Incorrect previous state")
+	}
+	//	uint256 bisectionCount = _chainHashes.length - 1;
+	//	require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
+	//
+	//	requireMatchesPrevState(
+	//		ChallengeUtils.messagesHash(
+	//			_chainHashes[0],
+	//			_chainHashes[bisectionCount],
+	//			_segmentHashes[0],
+	//			_segmentHashes[bisectionCount],
+	//			_chainLength
+	//	)
+	//);
+
+	fmt.Println("chainHashes[0]", chainHashes[0])
+	fmt.Println("chainHashes[bisectionCount]", chainHashes[bisectionCount])
+	fmt.Println("segmentHashes[0]", segmentHashes[0])
+	fmt.Println("segmentHashes[bisectionCount]", segmentHashes[bisectionCount])
+	fmt.Println("chainLength", chainLength)
+	msgHash := structures.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(msgHash) {
+		return errors.New("Incorrect previous state")
+	}
+
+	//
+	//	bytes32[] memory hashes = new bytes32[](bisectionCount);
+	//	hashes[0] = ChallengeUtils.messagesHash(
+	//		_chainHashes[0],
+	//		_chainHashes[1],
+	//		_segmentHashes[0],
+	//		_segmentHashes[1],
+	//		firstSegmentSize(_chainLength, bisectionCount)
+	//	);
+	//	for (uint256 i = 1; i < bisectionCount; i++) {
+	//		hashes[i] = ChallengeUtils.messagesHash(
+	//			_chainHashes[i],
+	//			_chainHashes[i + 1],
+	//			_segmentHashes[i],
+	//			_segmentHashes[i + 1],
+	//			otherSegmentSize(_chainLength, bisectionCount)
+	//		);
+	//	}
+
+	hashes := make([][32]byte, 0, bisectionCount)
+	hashes = append(hashes, structures.MessageChallengeDataHash(
+		chainHashes[0],
+		chainHashes[1],
+		segmentHashes[0],
+		segmentHashes[1],
+		new(big.Int).Add(new(big.Int).Div(chainLength, big.NewInt(int64(bisectionCount))), new(big.Int).Mod(chainLength, big.NewInt(int64(bisectionCount)))),
+	))
+	for i := 1; i < bisectionCount; i++ {
+		hashes = append(hashes, structures.MessageChallengeDataHash(
+			chainHashes[i],
+			chainHashes[i+1],
+			segmentHashes[i],
+			segmentHashes[i+1],
+			new(big.Int).Div(chainLength, big.NewInt(int64(bisectionCount)))))
+	}
+
+	c.commitToSegment(hashes)
+	c.asserterResponded()
+	//	emit Bisected(
+	//		_chainHashes,
+	//		_segmentHashes,
+	//		_chainLength,
+	//		deadlineTicks
+	//	);
+
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.MessagesBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -135,7 +205,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		return errors.New("Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -154,7 +224,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -205,7 +275,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		return errors.New("Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -224,7 +294,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -272,7 +342,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		return errors.New("Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
@@ -291,7 +361,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),

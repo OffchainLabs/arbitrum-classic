@@ -19,6 +19,8 @@ package proofmachine
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/gobridge"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -45,9 +47,17 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
-	if err != nil {
-		t.Fatal(err)
+	var client arbbridge.ArbAuthClient
+	if test.UseGoEth() {
+		client, err = gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		client, err = ethbridge.NewEthAuthClient(ethURL, auth)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	osp, err := client.DeployOneStepProof(context.Background())
 	if err != nil {

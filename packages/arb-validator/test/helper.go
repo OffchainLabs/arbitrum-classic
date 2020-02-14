@@ -45,6 +45,11 @@ func GetEthUrl() string {
 	}
 }
 
+func UseGoEth() bool {
+	//return true
+	return false
+}
+
 func SetupAuth(hexKey string) (*bind.TransactOpts, error) {
 	privateKey, err := crypto.HexToECDSA(hexKey)
 	if err != nil {
