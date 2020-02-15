@@ -23,6 +23,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type IERC20 interface {
+	Approve(ctx context.Context, spender common.Address, amount *big.Int) error
+}
+
 type IERC20Watcher interface {
 	BalanceOf(ctx context.Context, account common.Address) (*big.Int, error)
+	Allowance(ctx context.Context, owner, spender common.Address) (*big.Int, error)
 }

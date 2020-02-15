@@ -225,3 +225,7 @@ func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbri
 func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
 	return newInboxTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
+
+func (c *EthArbAuthClient) NewIERC20(address common.Address) (arbbridge.IERC20, error) {
+	return newIERC20(address.ToEthAddress(), c.client, c.auth)
+}

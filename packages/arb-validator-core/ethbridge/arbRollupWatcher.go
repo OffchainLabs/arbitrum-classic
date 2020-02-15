@@ -298,7 +298,7 @@ func (vm *ethRollupWatcher) GetParams(
 		return invalid, err
 	}
 
-	stakeToken, err := vm.ArbRollup.GetStakeToken(nil)
+	stakeToken, err := vm.ArbRollup.GetStakeToken(callOpts)
 	if err != nil {
 		return invalid, err
 	}

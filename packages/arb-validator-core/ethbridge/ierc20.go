@@ -21,6 +21,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/ierc20"
 
 	errors2 "github.com/pkg/errors"
@@ -29,6 +31,38 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+type IERC20 struct {
+	IERC20 *ierc20.IERC20
+	client *ethclient.Client
+	auth   *TransactAuth
+}
+
+func newIERC20(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*IERC20, error) {
+	ierc20Contract, err := ierc20.NewIERC20(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to IERC20")
+	}
+	return &IERC20{ierc20Contract, client, auth}, nil
+}
+
+func (con *IERC20) Approve(ctx context.Context, spender common.Address, amount *big.Int) error {
+	con.auth.Lock()
+	defer con.auth.Unlock()
+	tx, err := con.IERC20.Approve(
+		con.auth.getAuth(ctx),
+		spender.ToEthAddress(),
+		amount,
+	)
+	if err != nil {
+		return err
+	}
+	return con.waitForReceipt(ctx, tx, "Approve")
+}
+
+func (con *IERC20) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+	return waitForReceipt(ctx, con.client, con.auth.auth.From, tx, methodName)
+}
 
 type IERC20Watcher struct {
 	IERC20 *ierc20.IERC20
@@ -45,4 +79,8 @@ func newIERC20Watcher(address ethcommon.Address, client ethutils.EthClient) (*IE
 
 func (con *IERC20Watcher) BalanceOf(ctx context.Context, account common.Address) (*big.Int, error) {
 	return con.IERC20.BalanceOf(&bind.CallOpts{Context: ctx}, account.ToEthAddress())
+}
+
+func (con *IERC20Watcher) Allowance(ctx context.Context, owner, spender common.Address) (*big.Int, error) {
+	return con.IERC20.Allowance(&bind.CallOpts{Context: ctx}, owner.ToEthAddress(), spender.ToEthAddress())
 }

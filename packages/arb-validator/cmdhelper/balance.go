@@ -27,16 +27,35 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-func WaitForBalance(ctx context.Context, client arbbridge.ArbClient, tokenAddress common.Address, userAddress common.Address) error {
+func WaitForBalance(ctx context.Context, client arbbridge.ArbAuthClient, tokenAddress common.Address, userAddress common.Address) error {
 
 	emptyAddress := common.Address{}
 	if tokenAddress == emptyAddress {
-		log.Println("Waiting for account", userAddress, "to receive ETH")
-		if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, userAddress); err != nil {
+		balance, err := client.GetBalance(ctx, userAddress)
+		if err != nil {
 			return err
 		}
+		if balance.Cmp(big.NewInt(0)) > 0 {
+			return nil
+		}
+		log.Println("Waiting for account", userAddress, "to receive ETH")
+		timer := time.NewTicker(time.Second * 5)
+		for {
+			select {
+			case <-ctx.Done():
+				return errors.New("timed out waiting for balance")
+			case <-timer.C:
+				balance, err := client.GetBalance(ctx, userAddress)
+				if err != nil {
+					return err
+				}
+				if balance.Cmp(big.NewInt(0)) > 0 {
+					return nil
+				}
+			}
+		}
 	} else {
-		log.Println("Waiting for account", userAddress, "to receive ERC-20 token from contract", tokenAddress)
+
 		erc20, err := client.NewIERC20Watcher(tokenAddress)
 		if err != nil {
 			return err
@@ -48,7 +67,7 @@ func WaitForBalance(ctx context.Context, client arbbridge.ArbClient, tokenAddres
 		if balance.Cmp(big.NewInt(0)) > 0 {
 			return nil
 		}
-		log.Println("Waiting for account", userAddress, "to receive funds")
+		log.Println("Waiting for account", userAddress, "to receive ERC-20 token from contract", tokenAddress)
 		timer := time.NewTicker(time.Second * 5)
 		for {
 			select {

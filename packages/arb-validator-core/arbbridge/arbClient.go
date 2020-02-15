@@ -18,10 +18,7 @@ package arbbridge
 
 import (
 	"context"
-	"errors"
-	"log"
 	"math/big"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -61,55 +58,5 @@ type ArbAuthClient interface {
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
-}
-
-func WaitForNonZeroBalance(ctx context.Context, client ArbClient, account common.Address) error {
-	balance, err := client.GetBalance(ctx, account)
-	if err != nil {
-		return err
-	}
-	if balance.Cmp(big.NewInt(0)) > 0 {
-		return nil
-	}
-	timer := time.NewTicker(time.Second * 5)
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.New("timed out waiting for balance")
-		case <-timer.C:
-			balance, err := client.GetBalance(ctx, account)
-			if err != nil {
-				return err
-			}
-			if balance.Cmp(big.NewInt(0)) > 0 {
-				return nil
-			}
-		}
-	}
-}
-
-func WaitForNonZeroERC20Balance(ctx context.Context, client ArbClient, account common.Address) error {
-	balance, err := client.GetBalance(ctx, account)
-	if err != nil {
-		return err
-	}
-	if balance.Cmp(big.NewInt(0)) > 0 {
-		return nil
-	}
-	log.Println("Waiting for account", account, "to receive funds")
-	timer := time.NewTicker(time.Second * 5)
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.New("timed out waiting for balance")
-		case <-timer.C:
-			balance, err := client.GetBalance(ctx, account)
-			if err != nil {
-				return err
-			}
-			if balance.Cmp(big.NewInt(0)) > 0 {
-				return nil
-			}
-		}
-	}
+	NewIERC20(address common.Address) (IERC20, error)
 }

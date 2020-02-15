@@ -96,8 +96,7 @@ func createRollupChain() error {
 	// Rollup creation
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	stakeTokenAddress := common.HexToAddress(*tokenAddressString)
-	if err := cmdhelper.WaitForBalance(context.Background(), client, stakeTokenAddress, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := cmdhelper.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
@@ -108,7 +107,7 @@ func createRollupChain() error {
 
 	params := rollup.DefaultChainParams()
 	if *tokenAddressString != "" {
-		params = params.WithStakeToken(stakeTokenAddress)
+		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
 	}
 
 	if *stakeAmountString != "" {
@@ -123,7 +122,7 @@ func createRollupChain() error {
 	address, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		rollup.DefaultChainParams(),
+		params,
 		common.Address{},
 	)
 	if err != nil {
