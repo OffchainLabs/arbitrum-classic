@@ -25,6 +25,7 @@ interface IArbRollup {
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
         uint128 _stakeRequirement,
+        address _stakeToken,
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress,

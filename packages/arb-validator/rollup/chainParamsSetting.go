@@ -27,6 +27,7 @@ func DefaultChainParams() valprotocol.ChainParams {
 	gracePeriodInBlocks := int64(30)
 	return valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10 * 1000 * 1000 * 1000 * 1000 * 1000), // 0.01 Eth
+		StakeToken:              common.Address{},                                  // stake in ETH
 		GracePeriod:             common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(gracePeriodInBlocks))),
 		MaxExecutionSteps:       10000000000,
 		ArbGasSpeedLimitPerTick: 80000000,

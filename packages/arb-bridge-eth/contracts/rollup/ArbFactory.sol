@@ -45,6 +45,7 @@ contract ArbFactory is CloneFactory {
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
         uint128 _stakeRequirement,
+        address _stakeToken,
         address payable _owner,
         bytes calldata _extraConfig
     ) external {
@@ -55,6 +56,7 @@ contract ArbFactory is CloneFactory {
             _arbGasSpeedLimitPerTick,
             _maxExecutionSteps,
             _stakeRequirement,
+            _stakeToken,
             _owner,
             challengeFactoryAddress,
             globalInboxAddress,

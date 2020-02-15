@@ -58,6 +58,7 @@ func main() {
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddWalletFlags(createCmd)
+	tokenAddressString := createCmd.String("staketoken", "", "staketoken=TokenAddress")
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -99,6 +100,11 @@ func createRollupChain() error {
 	factory, err := client.NewArbFactory(factoryAddress)
 	if err != nil {
 		return err
+	}
+
+	params := rollup.DefaultChainParams()
+	if *tokenAddressString != "" {
+		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
 	}
 
 	address, _, err := factory.CreateRollup(

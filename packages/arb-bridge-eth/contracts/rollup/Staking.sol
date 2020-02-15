@@ -24,6 +24,8 @@ import "../libraries/RollupTime.sol";
 import "../challenge/ChallengeUtils.sol";
 import "../challenge/IChallengeFactory.sol";
 
+import "../interfaces/IERC20.sol";
+
 contract Staking {
     // VM already initialized"
     string private constant INIT_TWICE = "INIT_TWICE";
@@ -36,6 +38,7 @@ contract Staking {
     // must supply stake value
     string private constant STK_AMT = "STK_AMT";
     // Staker already exists
+    string private constant TRANSFER_FAILED = "TRANSFER_FAILED";
     string private constant ALRDY_STAKED = "ALRDY_STAKED";
 
     // Challenge can only be resolved by spawned contract
@@ -77,9 +80,11 @@ contract Staking {
     }
 
     uint128 private stakeRequirement;
+    address private stakeToken;
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
     mapping(address => bool) private challenges;
+    mapping(address => uint256) withdrawnStakes;
 
     event RollupStakeCreated(address staker, bytes32 nodeHash);
 
@@ -100,8 +105,24 @@ contract Staking {
         return stakeRequirement;
     }
 
+    function getStakeToken() external view returns(address) {
+        return stakeToken;
+    }
+
     function isStaked(address _stakerAddress) external view returns (bool) {
         return stakers[_stakerAddress].location != 0x00;
+    }
+
+    function getWithdrawnStake(address payable _staker) external {
+        uint256 amount = withdrawnStakes[_staker];
+        if (amount == 0) {
+            return;
+        }
+        if (stakeToken == address(0)) {
+            _staker.transfer(amount);
+        } else {
+            require(IERC20(stakeToken).transfer(_staker, amount), TRANSFER_FAILED);
+        }
     }
 
     /**
@@ -117,7 +138,7 @@ contract Staking {
         delete challenges[msg.sender];
 
         Staker storage winningStaker = getValidStaker(address(winner));
-        winner.transfer(stakeRequirement / 2);
+        withdrawnStakes[winner] += stakeRequirement / 2;
         winningStaker.inChallenge = false;
         deleteStaker(loser);
 
@@ -231,7 +252,13 @@ contract Staking {
         );
     }
 
-    function init(uint128 _stakeRequirement, address _challengeFactoryAddress) internal {
+    function init(
+        uint128 _stakeRequirement,
+        address _stakeToken,
+        address _challengeFactoryAddress
+    )
+        internal
+    {
         require(address(challengeFactory) == address(0), INIT_TWICE);
         require(_challengeFactoryAddress != address(0), INIT_NONZERO);
 
@@ -239,6 +266,7 @@ contract Staking {
 
         // VM parameters
         stakeRequirement = _stakeRequirement;
+        stakeToken = _stakeToken;
     }
 
     function getStakerLocation(address _stakerAddress) internal view returns (bytes32) {
@@ -248,7 +276,13 @@ contract Staking {
     }
 
     function createStake(bytes32 location) internal {
-        require(msg.value == stakeRequirement, STK_AMT);
+        if (stakeToken == address(0)) {
+            require(msg.value == stakeRequirement, STK_AMT);
+        } else {
+            require(msg.value == 0, STK_AMT);
+            require(IERC20(stakeToken).transferFrom(msg.sender, address(this), stakeRequirement), TRANSFER_FAILED);
+        }
+
         require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
         stakers[msg.sender] = Staker(location, uint128(block.number), false);
         stakerCount++;
@@ -263,7 +297,7 @@ contract Staking {
 
     function refundStaker(address payable _stakerAddress) internal {
         deleteStaker(_stakerAddress);
-        _stakerAddress.transfer(stakeRequirement);
+        withdrawnStakes[_stakerAddress] += stakeRequirement;
 
         emit RollupStakeRefunded(address(_stakerAddress));
     }

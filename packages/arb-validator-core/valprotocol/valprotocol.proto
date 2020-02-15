@@ -19,9 +19,10 @@ message ExecutionAssertionStubBuf {
 
 message ChainParamsBuf {
     common.BigIntegerBuf stakeRequirement = 1;
-    common.TimeTicksBuf gracePeriod = 2;
-    uint64 maxExecutionSteps = 3;
-    uint64 ArbGasSpeedLimitPerTick = 4;
+    common.AddressBuf stakeToken = 2;
+    common.TimeTicksBuf gracePeriod = 3;
+    uint64 maxExecutionSteps = 4;
+    uint64 ArbGasSpeedLimitPerTick = 5;
 }
 
 message VMProtoDataBuf {

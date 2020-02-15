@@ -36,6 +36,7 @@ func initMsg() message.Init {
 	return message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
+			StakeToken:              common.Address{},
 			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
 			MaxExecutionSteps:       0,
 			ArbGasSpeedLimitPerTick: 0,

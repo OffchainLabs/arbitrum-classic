@@ -12,6 +12,8 @@ import {
 
 interface GlobalInboxInterface extends Interface {
   functions: {
+    FAILED_TRANSFER: TypedFunctionDescription<{ encode([]: []): string }>
+
     deployL2ContractPair: TypedFunctionDescription<{
       encode([chain, maxGas, gasPriceBid, payment, contractData]: [
         string,
@@ -174,6 +176,10 @@ export class GlobalInbox extends Contract {
   interface: GlobalInboxInterface
 
   functions: {
+    FAILED_TRANSFER(overrides?: TransactionOverrides): Promise<string>
+
+    'FAILED_TRANSFER()'(overrides?: TransactionOverrides): Promise<string>
+
     deployL2ContractPair(
       chain: string,
       maxGas: BigNumberish,
@@ -434,6 +440,10 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
   }
+
+  FAILED_TRANSFER(overrides?: TransactionOverrides): Promise<string>
+
+  'FAILED_TRANSFER()'(overrides?: TransactionOverrides): Promise<string>
 
   deployL2ContractPair(
     chain: string,
@@ -724,6 +734,10 @@ export class GlobalInbox extends Contract {
   }
 
   estimate: {
+    FAILED_TRANSFER(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'FAILED_TRANSFER()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
     deployL2ContractPair(
       chain: string,
       maxGas: BigNumberish,

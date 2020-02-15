@@ -77,6 +77,7 @@ func (con *arbFactory) CreateRollup(
 		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
 		params.MaxExecutionSteps,
 		params.StakeRequirement,
+		params.StakeToken.ToEthAddress(),
 		owner.ToEthAddress(),
 		[]byte{},
 	)
