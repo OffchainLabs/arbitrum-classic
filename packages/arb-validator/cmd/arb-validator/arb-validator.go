@@ -110,7 +110,7 @@ func createRollupChain() error {
 		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
 	}
 
-	if *stakeAmountString == "" {
+	if *stakeAmountString != "" {
 		stakeAmount, success := new(big.Int).SetString(*stakeAmountString, 10)
 		if success {
 			params = params.WithStakeRequirement(stakeAmount)
