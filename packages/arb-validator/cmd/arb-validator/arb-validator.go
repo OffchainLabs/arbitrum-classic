@@ -18,9 +18,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -59,13 +61,14 @@ func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddWalletFlags(createCmd)
 	tokenAddressString := createCmd.String("staketoken", "", "staketoken=TokenAddress")
+	stakeAmountString := createCmd.String("stakeamount", "", "stakeamount=Amount")
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if createCmd.NArg() != 3 {
-		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress>", utils.WalletArgsString)
+		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -105,6 +108,15 @@ func createRollupChain() error {
 	params := rollup.DefaultChainParams()
 	if *tokenAddressString != "" {
 		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
+	}
+
+	if *stakeAmountString == "" {
+		stakeAmount, success := new(big.Int).SetString(*stakeAmountString, 10)
+		if success {
+			params = params.WithStakeRequirement(stakeAmount)
+		} else {
+			return errors.New("Invalid stake amount: expected an integer")
+		}
 	}
 
 	address, _, err := factory.CreateRollup(
