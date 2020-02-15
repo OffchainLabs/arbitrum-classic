@@ -13,7 +13,7 @@ pip3 install -r requirements.txt --user
 pip3 install -r requirements-dev.txt --user
 
 # Setup pre-commit
-pre-commit install
+python3 -m pre_commit install
 
 # Install conan
 VIRTUALENV_MAJOR_VERSION=$(pip3 show virtualenv | grep Version | sed 's/.*: //' | sed -n 's/\..*//p')
