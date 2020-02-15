@@ -115,7 +115,7 @@ func createRollupChain() error {
 		if success {
 			params = params.WithStakeRequirement(stakeAmount)
 		} else {
-			return errors.New("Invalid stake amount: expected an integer")
+			return errors.New("invalid stake amount: expected an integer")
 		}
 	}
 
