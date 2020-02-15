@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.4.3",
+    "version": "0.4.4",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
@@ -25,7 +25,6 @@
         "update-abi": "./scripts/update-abi && yarn format"
     },
     "dependencies": {
-        "@types/node-fetch": "^2.5.4",
         "ethers": "^4.0.44",
         "jayson": "^3.2.0",
         "node-fetch": "^2.6.0",
