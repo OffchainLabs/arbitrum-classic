@@ -16,6 +16,7 @@
 /* eslint-env node, jest */
 'use strict';
 
+import * as fs from 'fs';
 import * as ethers from 'ethers';
 
 const utils = ethers.utils;
@@ -52,19 +53,19 @@ describe('Constructors', function() {
 
     test('CodePointValue', function() {
         const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash);
-        expect(cpv.insnNum).toBe(0);
+        expect(cpv.insnNum.toNumber()).toBe(0);
         expect(cpv.op.opcode).toBe(0x60);
         expect(cpv.nextHash).toBe(nullHash);
 
         // Test BasicOp hash value
         const bopv = new arb.CodePointValue(99, new arb.BasicOp(0x60), EMPTY_TUPLE_HASH);
-        const preCalc = '0xb9cffde57db229ede25012536613c9a9f9a7cde0e5f23381350737b6818852da';
+        const preCalc = '0xef59170d416c131f1ef621a562ed682b0787a88eada69ed5edc7aa1af0c851f0';
         expect(bopv.hash()).toBe(preCalc);
 
         // Test ImmOp hash value
         const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)));
         const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH);
-        const preCalc2 = '0x9b6304f1c0d7299152b70c5097dcb370ed46668b1f09146586a333f507594619';
+        const preCalc2 = '0x9f46e8670118b306db7b474dce1fd5dfb8b5d3d6458ded807192f8635e42f356';
         expect(immv.hash()).toBe(preCalc2);
     });
 
@@ -182,14 +183,14 @@ describe('Marshaling', function() {
     });
 
     test('marshal and unmarshal CodePointValue', function() {
-        const pc = 0;
+        const pc = ethers.utils.bigNumberify(0);
         const op = new arb.BasicOp(arb.OpCode.Halt);
         const nextHash = '0x' + ZEROS_32B;
         const basicTCV = new arb.CodePointValue(pc, op, nextHash);
         const marshaledBytes = arb.marshal(basicTCV);
         expect(marshaledBytes.length).toBe(M_CODE_POINT_SIZE);
         const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue;
-        expect(revValue.insnNum).toEqual(pc);
+        expect(revValue.insnNum.toString()).toEqual(pc.toString());
         expect(revValue.op.opcode).toBe(op.opcode);
         expect(revValue.nextHash).toEqual(nextHash);
         expect(revValue.toString()).toEqual(basicTCV.toString());

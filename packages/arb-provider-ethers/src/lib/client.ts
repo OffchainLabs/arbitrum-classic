@@ -86,9 +86,29 @@ class EthBridgeMessage {
                 return new TokenTransferMessage(this.message);
             case 3:
                 return new TokenTransferMessage(this.message);
+            case 4:
+                return new ContractTxMessage(this.message);
+            case 5:
+                return new TxCall(this.message);
             default:
                 throw 'Invalid arb message type';
         }
+    }
+}
+
+export class TxCall {
+    public to: string;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.data = ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
     }
 }
 
@@ -105,6 +125,24 @@ export class TxMessage {
         this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum;
         this.amount = (value.get(2) as ArbValue.IntValue).bignum;
         this.data = ArbValue.bytestackToBytes(value.get(3) as ArbValue.TupleValue);
+    }
+
+    getDest(): string {
+        return this.to;
+    }
+}
+
+export class ContractTxMessage {
+    public to: string;
+    public amount: ethers.utils.BigNumber;
+    public data: Uint8Array;
+
+    constructor(value: ArbValue.TupleValue) {
+        this.to = ethers.utils.getAddress(
+            ethers.utils.hexZeroPad((value.get(0) as ArbValue.IntValue).bignum.toHexString(), 20),
+        );
+        this.amount = (value.get(1) as ArbValue.IntValue).bignum;
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
     }
 
     getDest(): string {
@@ -141,7 +179,7 @@ class TokenTransferMessage {
     }
 }
 
-export type ArbMessage = TxMessage | EthTransferMessage | TokenTransferMessage;
+export type ArbMessage = TxMessage | EthTransferMessage | TokenTransferMessage | TxCall;
 
 export type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | EVMInvalid;
 
@@ -371,17 +409,6 @@ export class ArbClient {
     }
 
     public sendMessage(
-        to: string,
-        sequenceNum: ethers.utils.BigNumberish,
-        value: ethers.utils.BigNumberish,
-        data: string,
-        sig: string,
-        pubkey: string,
-    ): Promise<string> {
-        return this.sendRawMessage(to, sequenceNum, value, data, sig, pubkey);
-    }
-
-    public sendRawMessage(
         to: string,
         sequenceNum: ethers.utils.BigNumberish,
         value: ethers.utils.BigNumberish,

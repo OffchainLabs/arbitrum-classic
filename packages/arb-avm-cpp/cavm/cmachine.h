@@ -71,16 +71,14 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStart,
                                      void* timeboundEnd,
-                                     void* inbox);
+                                     void* inbox,
+                                     uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 
 void machinePrint(CMachine* m);
 
 int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
-int restoreMachine(CMachine* m,
-                   CCheckpointStorage* storage,
-                   const void* machine_hash);
 
 #ifdef __cplusplus
 }

@@ -59,21 +59,6 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
     return result.status.ok();
 }
 
-int restoreMachine(CMachine* m,
-                   CCheckpointStorage* storage,
-                   const void* machine_hash) {
-    auto machine = static_cast<Machine*>(m);
-
-    auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
-    auto hash = deserializeUint256t(machine_hash_ptr);
-
-    std::vector<unsigned char> hash_vector;
-    marshal_uint256_t(hash, hash_vector);
-
-    return machine->restoreCheckpoint(
-        *(static_cast<CheckpointStorage*>(storage)), hash_vector);
-}
-
 void machineHash(CMachine* m, void* ret) {
     assert(m);
     uint256_t retHash = static_cast<Machine*>(m)->hash();
@@ -163,7 +148,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStartData,
                                      void* timeboundEndData,
-                                     void* inbox) {
+                                     void* inbox,
+                                     uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
@@ -175,7 +161,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
     auto messages = deserialize_value(inboxData, mach->getPool());
 
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd,
-                                    nonstd::get<Tuple>(std::move(messages)));
+                                    nonstd::get<Tuple>(std::move(messages)),
+                                    std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
         marshal_value(outMsg, outMsgData);

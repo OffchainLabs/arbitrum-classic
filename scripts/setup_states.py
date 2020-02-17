@@ -18,11 +18,13 @@ import argparse
 import json
 import os
 import shutil
+import datetime
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from eth_account import Account
+import eth_keyfile
 
-from support.run import run
+datetime.datetime.utcnow().isoformat()
 
 NAME = "setup_states"
 DESCRIPTION = ""
@@ -36,21 +38,8 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 def setup_validator_states_docker(
     contract, n_validators, image_name, is_geth, sudo=False
 ):
-    ethaddrs = "bridge_eth_addresses.json"
-
-    layer = run(
-        "docker create %s" % image_name, capture_stdout=True, quiet=True, sudo=sudo
-    ).strip()
-    if layer == "":
-        print("Docker image %s does not exist" % image_name)
-        return
-    run(
-        "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
-        sudo=sudo,
-    )
-    run("docker rm %s" % layer, quiet=True, sudo=sudo)
-
-    addresses = setup_validator_states_folder(contract, n_validators, ethaddrs)
+    setup_validator_states_folder(contract, n_validators)
+    addresses = setup_validator_states_wallets(n_validators)
 
     web3 = Web3(Web3.HTTPProvider("http://localhost:7545"))
 
@@ -59,31 +48,22 @@ def setup_validator_states_docker(
 
     setup_validator_funds(web3, "0x81183C9C61bdf79DB7330BBcda47Be30c0a85064", addresses)
 
-    os.remove(ethaddrs)
-
 
 def setup_validator_funds(web3, source_address, addresses):
     hashes = []
     for dest in addresses:
         tx_hash = web3.eth.sendTransaction(
-            {"to": dest, "from": source_address, "value": 100000000000000000000}
+            {"to": dest, "from": source_address, "value": 5000000000000000000}
         )
         hashes.append(tx_hash)
     for tx_hash in hashes:
         web3.eth.waitForTransactionReceipt(tx_hash)
 
 
-def setup_validator_states_folder(contract, n_validators, ethaddrs):
-    ARB_VALIDATOR = os.path.join(ROOT_DIR, "packages", "arb-validator")
-
+def setup_validator_states_folder(contract, n_validators):
     # Check for validator_states in cwd
     if os.path.isdir(VALIDATOR_STATES):
         exit("Error: " + VALIDATOR_STATES + " exists in the current working directory")
-
-    # Extract keys from acct_keys
-    accounts = [Account.create() for _ in range(n_validators)]
-    addresses = [account.address for account in accounts]
-    privates = [account.key.hex()[2:] for account in accounts]
 
     # Create VALIDATOR_STATES
     os.mkdir(VALIDATOR_STATES)
@@ -92,17 +72,30 @@ def setup_validator_states_folder(contract, n_validators, ethaddrs):
         os.mkdir(state)
         # contract.ao
         shutil.copyfile(contract, os.path.join(state, "contract.ao"))
-        # bridge_eth_addresses.json
-        shutil.copyfile(ethaddrs, os.path.join(state, "bridge_eth_addresses.json"))
-        # server.crt and server.key
-        shutil.copy(os.path.join(ARB_VALIDATOR, "server.crt"), state)
-        shutil.copy(os.path.join(ARB_VALIDATOR, "server.key"), state)
-        # validator_addresses.txt
-        with open(os.path.join(state, "validator_addresses.txt"), "w") as f:
-            f.write("\n".join(addresses))
-        # private_key.txt
-        with open(os.path.join(state, "private_key.txt"), "w") as f:
-            f.write(privates[i])
+
+
+def setup_validator_configs(config, n_validators):
+    for i in range(n_validators):
+        state = os.path.join(VALIDATOR_STATES, VALIDATOR_STATE % i)
+        with open(os.path.join(state, "config.json"), "w") as outfile:
+            json.dump(config, outfile)
+
+
+def setup_validator_states_wallets(n_validators):
+    # Extract keys from acct_keys
+    accounts = [Account.create() for _ in range(n_validators)]
+    addresses = [account.address for account in accounts]
+
+    for i in range(n_validators):
+        # private key
+        state = os.path.join(VALIDATOR_STATES, VALIDATOR_STATE % i)
+        wallet_dir = os.path.join(state, "wallets")
+        os.mkdir(wallet_dir)
+        keyfile_json = eth_keyfile.create_keyfile_json(
+            accounts[i].key, b"pass", kdf="scrypt"
+        )
+        with open(os.path.join(wallet_dir, addresses[i]), "w") as outfile:
+            json.dump(keyfile_json, outfile)
     return addresses
 
 

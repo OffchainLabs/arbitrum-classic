@@ -25,16 +25,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 func DefendExecutionClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 	startLogIndex uint,
 	precondition *valprotocol.Precondition,
 	startMachine machine.Machine,
@@ -74,7 +73,7 @@ func ChallengeExecutionClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 	startLogIndex uint,
 	startPrecondition *valprotocol.Precondition,
 	startMachine machine.Machine,
@@ -131,7 +130,12 @@ func defendExecution(
 					return 0, err
 				}
 				pre := defender.GetPrecondition()
-				assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+				assertion, _ := defender.GetMachineState().ExecuteAssertion(
+					1,
+					pre.TimeBounds,
+					pre.BeforeInbox.(value.TupleValue),
+					0,
+				)
 				err = contract.OneStepProof(
 					ctx,
 					defender.GetPrecondition(),
@@ -195,16 +199,21 @@ func defendExecution(
 			// Replayed from existing event
 			totalSteps := uint64(0)
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
-				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
+				totalSteps += valprotocol.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
 			}
 
 			mach := defender.initState
 			pre := defender.precondition
 			// Update mach, precondition, deadline
-			assertion, _ := mach.ExecuteAssertion(totalSteps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(
+				totalSteps,
+				pre.TimeBounds,
+				pre.BeforeInbox.(value.TupleValue),
+				0,
+			)
 			pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 
-			steps := structures.CalculateBisectionStepCount(contEv.SegmentIndex.Uint64(), uint64(len(ev.Assertions)), ev.TotalSteps)
+			steps := valprotocol.CalculateBisectionStepCount(contEv.SegmentIndex.Uint64(), uint64(len(ev.Assertions)), ev.TotalSteps)
 			defender = NewAssertionDefender(pre, steps, mach)
 		}
 	}
@@ -262,9 +271,14 @@ func challengeExecution(
 				cMach := mach.Clone()
 				challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
 				for i := 0; i < len(ev.Assertions); i++ {
-					stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(ev.Assertions)), ev.TotalSteps)
+					stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(ev.Assertions)), ev.TotalSteps)
 					m = cMach.Clone()
-					assertion, _ := cMach.ExecuteAssertion(stepCount, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+					assertion, _ := cMach.ExecuteAssertion(
+						stepCount,
+						pre.TimeBounds,
+						pre.BeforeInbox.(value.TupleValue),
+						0,
+					)
 					pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 				}
 				err = nil
@@ -300,9 +314,14 @@ func challengeExecution(
 			// Replayed from existing event
 			totalSteps := uint64(0)
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
-				totalSteps += structures.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
+				totalSteps += valprotocol.CalculateBisectionStepCount(i, uint64(len(ev.Assertions)), ev.TotalSteps)
 			}
-			assertion, _ := mach.ExecuteAssertion(totalSteps, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
+			assertion, _ := mach.ExecuteAssertion(
+				totalSteps,
+				startPrecondition.TimeBounds,
+				startPrecondition.BeforeInbox.(value.TupleValue),
+				0,
+			)
 			precondition = precondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 		}
 		deadline = contEv.Deadline

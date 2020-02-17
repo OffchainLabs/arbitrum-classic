@@ -20,7 +20,9 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/gorilla/handlers"
@@ -29,14 +31,13 @@ import (
 	"github.com/gorilla/rpc/json"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --tstypes_out=../../arb-provider-ethers/src/lib --go_out=paths=source_relative,plugins=grpc:. *.proto"
 // Server provides an interface for interacting with a a running coordinator
 type RPCServer struct {
 	*Server
 }
 
 func LaunchRPC(man *rollupmanager.Manager, port string) error {
-	server, err := NewRPCServer(man, 20000000)
+	server, err := NewRPCServer(man, time.Second*60)
 	if err != nil {
 		return err
 	}
@@ -60,13 +61,13 @@ func LaunchRPC(man *rollupmanager.Manager, port string) error {
 }
 
 // NewServer returns a new instance of the Server class
-func NewRPCServer(man *rollupmanager.Manager, maxCallSteps uint64) (*RPCServer, error) {
-	server, err := NewServer(man, maxCallSteps)
+func NewRPCServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*RPCServer, error) {
+	server, err := NewServer(man, maxCallTime)
 	return &RPCServer{server}, err
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
-func (m *RPCServer) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsReply) error {
+func (m *RPCServer) FindLogs(r *http.Request, args *validatorserver.FindLogsArgs, reply *validatorserver.FindLogsReply) error {
 	ret, err := m.Server.FindLogs(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
@@ -75,7 +76,7 @@ func (m *RPCServer) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLog
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
-func (m *RPCServer) GetMessageResult(r *http.Request, args *GetMessageResultArgs, reply *GetMessageResultReply) error {
+func (m *RPCServer) GetMessageResult(r *http.Request, args *validatorserver.GetMessageResultArgs, reply *validatorserver.GetMessageResultReply) error {
 	ret, err := m.Server.GetMessageResult(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
@@ -84,7 +85,7 @@ func (m *RPCServer) GetMessageResult(r *http.Request, args *GetMessageResultArgs
 }
 
 // GetAssertionCount returns the total number of finalized assertions
-func (m *RPCServer) GetAssertionCount(r *http.Request, args *GetAssertionCountArgs, reply *GetAssertionCountReply) error {
+func (m *RPCServer) GetAssertionCount(r *http.Request, args *validatorserver.GetAssertionCountArgs, reply *validatorserver.GetAssertionCountReply) error {
 	ret, err := m.Server.GetAssertionCount(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
@@ -93,7 +94,7 @@ func (m *RPCServer) GetAssertionCount(r *http.Request, args *GetAssertionCountAr
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *RPCServer) GetVMInfo(r *http.Request, args *GetVMInfoArgs, reply *GetVMInfoReply) error {
+func (m *RPCServer) GetVMInfo(r *http.Request, args *validatorserver.GetVMInfoArgs, reply *validatorserver.GetVMInfoReply) error {
 	ret, err := m.Server.GetVMInfo(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
@@ -102,7 +103,7 @@ func (m *RPCServer) GetVMInfo(r *http.Request, args *GetVMInfoArgs, reply *GetVM
 }
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *RPCServer) CallMessage(r *http.Request, args *CallMessageArgs, reply *CallMessageReply) error {
+func (m *RPCServer) CallMessage(r *http.Request, args *validatorserver.CallMessageArgs, reply *validatorserver.CallMessageReply) error {
 	ret, err := m.Server.CallMessage(context.Background(), args)
 	if ret != nil {
 		*reply = *ret

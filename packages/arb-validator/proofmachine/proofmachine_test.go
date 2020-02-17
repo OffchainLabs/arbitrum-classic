@@ -24,13 +24,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
 func setupTestValidateProof(t *testing.T) (*Connection, error) {
@@ -45,10 +47,11 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	ethclint, err := ethclient.Dial(ethURL)
 	if err != nil {
 		t.Fatal(err)
 	}
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	osp, err := client.DeployOneStepProof(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +77,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	cont := true
 
 	for cont {
-		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
+		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple(), 0)
 		if mach.CurrentStatus() == machine.ErrorStop {
 			t.Fatal("Machine in error state")
 		}

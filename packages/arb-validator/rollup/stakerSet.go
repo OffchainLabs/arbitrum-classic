@@ -80,8 +80,8 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	}
 }
 
-func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
-	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
+func (buf *StakerBuf) Unmarshal(chain *NodeGraph) *Staker {
+	// chain.nodeFromHash must have already been unmarshaled
 	locArr := buf.Location.Unmarshal()
 	if buf.ChallengeAddr != nil {
 		return &Staker{
@@ -110,7 +110,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 }
 
 func (s *Staker) DebugString(prefix string) string {
-	ret := prefix + "depth:" + strconv.FormatUint(s.location.depth, 10) + " addr:" + s.address.ShortString() + " loc:" + s.location.hash.ShortString()
+	ret := prefix + "depth:" + strconv.FormatUint(s.location.depth, 10) + " addr:" + s.address.ShortString() + " created:" + s.creationTime.String() + " loc:" + s.location.hash.ShortString()
 	if !s.challenge.IsZero() {
 		ret = ret + " chal:" + s.challenge.ShortString()
 	}

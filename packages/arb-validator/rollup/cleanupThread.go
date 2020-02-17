@@ -23,22 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type pruneParams struct {
-	leafHash     common.Hash
-	ancestorHash common.Hash
-	leafProof    []common.Hash
-	ancProof     []common.Hash
-}
-
-func (pp pruneParams) Clone() pruneParams {
-	return pruneParams{
-		leafHash:     pp.leafHash,
-		ancestorHash: pp.ancestorHash,
-		leafProof:    append(make([]common.Hash, 0), pp.leafProof...),
-		ancProof:     append(make([]common.Hash, 0), pp.ancProof...),
-	}
-}
-
 type recoverStakeOldParams struct {
 	addr  common.Address
 	proof []common.Hash
@@ -53,7 +37,7 @@ type recoverStakeMootedParams struct {
 
 func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(time.Second * 5)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
 		for {
 			select {
@@ -65,7 +49,7 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
+				prunesToDo := chain.nodeGraph.generateNodePruneInfo(chain.nodeGraph.stakers)
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()
 

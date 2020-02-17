@@ -242,6 +242,45 @@ contract MessagesChallenge is BisectionChallenge {
         );
     }
 
+    function oneStepProofContractTransactionMessage(
+        bytes32 _lowerHashA,
+        bytes32 _lowerHashB,
+        address _to,
+        address _from,
+        uint256 _value,
+        bytes memory _data,
+        uint256 _blockNumber,
+        uint256 _messageNum
+    )
+        public
+        asserterAction
+    {
+
+        bytes32 messageHash = Messages.contractTransactionHash(
+            _to,
+            _from,
+            _value,
+            _data,
+            _blockNumber,
+            _messageNum
+        );
+        bytes32 arbMessageHash = Messages.contractTransactionMessageHash(
+            _to,
+            _from,
+            _value,
+            _data,
+            _blockNumber,
+            _messageNum
+        );
+
+        oneStepProof(
+            _lowerHashA,
+            _lowerHashB,
+            messageHash,
+            arbMessageHash
+        );
+    }
+
     function oneStepProof(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
@@ -253,9 +292,9 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
-                Protocol.addMessageToPending(_lowerHashA, _valueHashA),
+                Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
                 _lowerHashB,
-                Protocol.addMessageToInbox(_lowerHashB, _valueHashB),
+                Protocol.addMessageToVMInbox(_lowerHashB, _valueHashB),
                 1
             )
         );

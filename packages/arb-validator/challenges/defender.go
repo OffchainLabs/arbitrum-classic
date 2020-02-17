@@ -21,8 +21,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type AssertionDefender struct {
@@ -58,10 +57,15 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 
 	pre := ad.precondition
 	for i := uint64(0); i < slices; i++ {
-		steps := structures.CalculateBisectionStepCount(i, slices, nsteps)
+		steps := valprotocol.CalculateBisectionStepCount(i, slices, nsteps)
 		initState := m.Clone()
 
-		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+		assertion, numSteps := m.ExecuteAssertion(
+			steps,
+			pre.TimeBounds,
+			pre.BeforeInbox.(value.TupleValue),
+			0,
+		)
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
@@ -86,12 +90,13 @@ func ChooseAssertionToChallenge(
 ) (uint16, machine.Machine, error) {
 	assertionCount := uint64(len(assertions))
 	for i := range assertions {
-		steps := structures.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
+		steps := valprotocol.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
 			pre.TimeBounds,
 			pre.BeforeInbox.(value.TupleValue),
+			0,
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
 		if uint64(numSteps) != steps || !stub.Equals(assertions[i]) {

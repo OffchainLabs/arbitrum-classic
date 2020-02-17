@@ -13,20 +13,21 @@
 # limitations under the License.
 
 import eth_utils
-from pyevmasm import instruction_tables, assemble_hex, assemble_one, disassemble_one
-import random
+from pyevmasm import instruction_tables, assemble_hex, assemble_one
 from unittest import TestCase
 
 from arbitrum import run_vm_once, value
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 from arbitrum import messagestack
-from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn
+from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn, EVMInvalidSequence
 from arbitrum.evm import contract_templates
 
+CALL_TX_TYPE = 5
 
-def make_msg_val(message):
-    return [0, 0, message]
+
+def make_msg_val(message, blocknum=0):
+    return [blocknum, 0, message]
 
 
 def run_until_block(vm, test):
@@ -42,11 +43,30 @@ def run_until_block(vm, test):
             test.fail("VM unintentionally halted")
 
 
-def make_evm_ext_code(op, address):
+def make_evm_clone_code(address):
     instruction_table = instruction_tables["byzantium"]
     return [
-        assemble_one("PUSH20 " + address),
-        op,
+        assemble_one("PUSH32 " + "0x474ED9C0" + "00" * 8 + address[2:]),  # length
+        assemble_one("PUSH1 0x00"),
+        instruction_table["MSTORE"],
+        assemble_one("PUSH1 0x20"),
+        assemble_one("PUSH1 0x40"),
+        assemble_one("PUSH1 0x24"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH20 " + contract_templates.ARBSYS_ADDRESS_STRING),
+        assemble_one("PUSH1 0x20"),
+        instruction_table["CALL"],
+        assemble_one("PUSH1 0x20"),
+        assemble_one("PUSH1 0x40"),
+        instruction_table["RETURN"],
+    ]
+
+
+def make_simple_code():
+    instruction_table = instruction_tables["byzantium"]
+    return [
+        assemble_one("PUSH20 0x10"),
         assemble_one("PUSH1 0x00"),
         instruction_table["MSTORE"],
         assemble_one("PUSH1 0x20"),
@@ -55,37 +75,14 @@ def make_evm_ext_code(op, address):
     ]
 
 
-def make_evm_codecopy_code(offset, length, address):
-    return_data_size = ((length + 31) // 32) * 32 + 64
-    instruction_table = instruction_tables["byzantium"]
-    return [
-        assemble_one(
-            "PUSH32 0x" + length.to_bytes(32, byteorder="big").hex()
-        ),  # length
-        assemble_one(
-            "PUSH32 0x" + offset.to_bytes(32, byteorder="big").hex()
-        ),  # offset
-        assemble_one("PUSH32 0x40"),  # destOffset
-        assemble_one("PUSH20 " + address),
-        instruction_table["EXTCODECOPY"],
-        assemble_one("PUSH32 0x20"),
-        assemble_one("PUSH1 0x00"),
-        instruction_table["MSTORE"],
-        assemble_one("PUSH32 0x" + length.to_bytes(32, byteorder="big").hex()),
-        assemble_one("PUSH1 0x20"),
-        instruction_table["MSTORE"],
-        assemble_one(
-            "PUSH32 0x" + return_data_size.to_bytes(32, byteorder="big").hex()
-        ),
-        assemble_one("PUSH1 0x00"),
-        instruction_table["RETURN"],
-    ]
-
-
-def make_contract(evm_code, return_type):
+def make_contract(evm_code, return_type, address=None):
+    if not address:
+        contract_address = "0x895521964D724c8362A36608AAf09A3D7d0A0445"
+    else:
+        contract_address = address
     return ContractABI(
         {
-            "address": "0x895521964D724c8362A36608AAf09A3D7d0A0445",
+            "address": contract_address,
             "abi": [
                 {
                     "constant": False,
@@ -104,25 +101,6 @@ def make_contract(evm_code, return_type):
     )
 
 
-def create_many_contracts(contract_a):
-    contracts = [contract_a]
-    for _ in range(10):
-        contracts.append(
-            ContractABI(
-                {
-                    "address": eth_utils.to_checksum_address(
-                        random.getrandbits(8 * 20).to_bytes(20, byteorder="big").hex()
-                    ),
-                    "abi": [],
-                    "name": "TestContract",
-                    "code": "0x00",
-                    "storage": {},
-                }
-            )
-        )
-    return contracts
-
-
 address_string = "0x2c1b4360234d8e65a9e162ef82d70bee71324512"
 address = eth_utils.to_int(hexstr=address_string)
 
@@ -132,206 +110,6 @@ dest_address = eth_utils.to_int(hexstr=dest_address_string)
 
 class TestEVM(TestCase):
     _multiprocess_can_split_ = True
-
-    def test_codesize_contract(self):
-        instruction_table = instruction_tables["byzantium"]
-        evm_code = make_evm_ext_code(
-            instruction_table["EXTCODESIZE"],
-            "0x895521964D724c8362A36608AAf09A3D7d0A0445",
-        )
-        code_size = len(evm_code) + sum(op.operand_size for op in evm_code)
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, False, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(parsed_out.output_values[0], code_size)
-
-    def test_codesize_empty(self):
-        instruction_table = instruction_tables["byzantium"]
-        evm_code = make_evm_ext_code(instruction_table["EXTCODESIZE"], "0x9999")
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(parsed_out.output_values[0], 0)
-
-    def test_codehash_contract(self):
-        evm_code = make_evm_ext_code(
-            disassemble_one(bytes.fromhex("3f")),
-            "0x895521964D724c8362A36608AAf09A3D7d0A0445",
-        )
-        hex_code = assemble_hex(evm_code)
-        code_hash = int.from_bytes(
-            eth_utils.crypto.keccak(hexstr=hex_code), byteorder="big"
-        )
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(parsed_out.output_values[0], code_hash)
-
-    def test_codehash_empty(self):
-        evm_code = make_evm_ext_code(disassemble_one(bytes.fromhex("3f")), "0x9999")
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(parsed_out.output_values[0], 0)
-
-    def test_codecopy_contract(self):
-        offset = 30
-        length = 80
-        evm_code = make_evm_codecopy_code(
-            offset, length, "0x895521964D724c8362A36608AAf09A3D7d0A0445"
-        )
-        hex_code = assemble_hex(evm_code)
-        contract_a = make_contract(evm_code, "bytes")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(
-            parsed_out.output_values[0].hex(),
-            hex_code[2 + offset * 2 : 2 + offset * 2 + length * 2],
-        )
-
-    def test_codecopy_empty(self):
-        offset = 30
-        length = 80
-        evm_code = make_evm_codecopy_code(offset, length, "0x9999")
-        contract_a = make_contract(evm_code, "bytes")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        vm.env.messages = messagestack.addMessage(
-            value.Tuple([]),
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 0)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMReturn)
-        self.assertEqual(parsed_out.output_values[0].hex(), "0" * (length * 2))
-
-    def test_balance_succeed(self):
-        instruction_table = instruction_tables["byzantium"]
-        evm_code = make_evm_ext_code(
-            instruction_table["BALANCE"], "0x895521964D724c8362A36608AAf09A3D7d0A0445"
-        )
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
-        inbox = value.Tuple([])
-        inbox = messagestack.addMessage(
-            inbox,
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [1, 2345, value.Tuple([2345, 100000])]
-                    )  # type  # sender
-                )
-            ),
-        )
-        inbox = messagestack.addMessage(
-            inbox,
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
-                        [0, 2345, contract_a.testMethod(4, 62244)]  # type  # sender
-                    )
-                )
-            ),
-        )
-        vm.env.messages = inbox
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 2)
-        parsed_out0 = output_handler(vm.logs[0])
-        parsed_out1 = output_handler(vm.logs[1])
-        self.assertIsInstance(parsed_out0, EVMStop)
-        self.assertIsInstance(parsed_out1, EVMReturn)
-        self.assertEqual(parsed_out1.output_values[0], 62244)
 
     def test_eth(self):
         contract_a = make_contract("", "uint256")
@@ -359,20 +137,10 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, arbinfo_abi.getBalance(6, 0, address_string)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        inbox = messagestack.addMessage(
-            inbox,
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
                         [
-                            0,
+                            CALL_TX_TYPE,
                             address,
-                            arbsys_abi.withdrawEth(8, 0, dest_address_string, 150000),
+                            arbinfo_abi.call_getBalance(address_string),
                         ]
                     )  # type  # sender
                 )
@@ -386,7 +154,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            arbsys_abi.withdrawEth(10, 0, dest_address_string, 50000),
+                            arbsys_abi.withdrawEth(0, 0, dest_address_string, 150000),
                         ]
                     )  # type  # sender
                 )
@@ -397,11 +165,30 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, arbinfo_abi.getBalance(12, 0, address_string)]
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(1, 0, dest_address_string, 50000),
+                        ]
                     )  # type  # sender
                 )
             ),
         )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+
         vm.env.messages = inbox
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 5)
@@ -410,6 +197,7 @@ class TestEVM(TestCase):
         parsed_out2 = output_handler(vm.logs[2])
         parsed_out3 = output_handler(vm.logs[3])
         parsed_out4 = output_handler(vm.logs[4])
+
         self.assertIsInstance(parsed_out0, EVMStop)
         self.assertIsInstance(parsed_out1, EVMReturn)
         self.assertIsInstance(parsed_out2, EVMRevert)
@@ -424,6 +212,60 @@ class TestEVM(TestCase):
             vm.sent_messages[0],
             value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
         )
+
+    def test_time(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.timeUpperBound(0, 0)]), 0
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.currentMessageTime(1, 0)]), 37
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [CALL_TX_TYPE, address, arbsys_abi.call_timeUpperBound()]
+                    ),
+                    34,
+                )
+            ),
+        )
+
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+
+        self.assertIsInstance(parsed_out0, EVMReturn)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+        self.assertIsInstance(parsed_out2, EVMReturn)
+
+        self.assertEqual(parsed_out0.output_values[0], 100000000)
+        self.assertEqual(parsed_out1.output_values[0], 37)
+        self.assertEqual(parsed_out2.output_values[0], 100000000)
 
     def test_erc20(self):
         contract_a = make_contract("", "uint256")
@@ -454,7 +296,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc20_abi.withdraw(6, 0, dest_address_string, 150000),
+                            erc20_abi.withdraw(0, 0, dest_address_string, 150000),
                         ]
                     )  # type  # sender
                 )
@@ -468,7 +310,7 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc20_abi.withdraw(8, 0, dest_address_string, 50000),
+                            erc20_abi.withdraw(1, 0, dest_address_string, 50000),
                         ]
                     )  # type  # sender
                 )
@@ -526,20 +368,10 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [0, address, erc721_abi.tokensOfOwner(6, 0, address_string)]
-                    )  # type  # sender
-                )
-            ),
-        )
-        inbox = messagestack.addMessage(
-            inbox,
-            value.Tuple(
-                make_msg_val(
-                    value.Tuple(
                         [
-                            0,
+                            CALL_TX_TYPE,
                             address,
-                            erc721_abi.withdraw(8, 0, dest_address_string, 50000),
+                            erc721_abi.call_tokensOfOwner(address_string),
                         ]
                     )  # type  # sender
                 )
@@ -553,7 +385,21 @@ class TestEVM(TestCase):
                         [
                             0,
                             address,
-                            erc721_abi.withdraw(10, 0, dest_address_string, 100000),
+                            erc721_abi.withdraw(0, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            erc721_abi.withdraw(1, 0, dest_address_string, 100000),
                         ]
                     )  # type  # sender
                 )
@@ -583,4 +429,233 @@ class TestEVM(TestCase):
             value.Tuple(
                 [3, address, value.Tuple([erc721_abi.address, dest_address, 100000])]
             ),
+        )
+
+    def test_seq(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        output_handler = create_output_handler([contract_a])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([address, 100000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbsys_abi.call_getTransactionCount(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(0, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbsys_abi.call_getTransactionCount(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(5, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.withdrawEth(1, 0, dest_address_string, 50000),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 6)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        parsed_out3 = output_handler(vm.logs[3])
+        parsed_out4 = output_handler(vm.logs[4])
+        parsed_out5 = output_handler(vm.logs[5])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+        self.assertIsInstance(parsed_out2, EVMStop)
+        self.assertIsInstance(parsed_out3, EVMReturn)
+        self.assertIsInstance(parsed_out4, EVMInvalidSequence)
+        self.assertIsInstance(parsed_out5, EVMStop)
+
+        self.assertEqual(parsed_out1.output_values[0], 0)
+        self.assertEqual(parsed_out3.output_values[0], 1)
+
+        self.assertEqual(len(vm.sent_messages), 2)
+        self.assertEqual(
+            vm.sent_messages[0],
+            value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
+        )
+        self.assertEqual(
+            vm.sent_messages[1],
+            value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
+        )
+
+    def test_clone(self):
+        evm_code = make_simple_code()
+        contract_a = make_contract(evm_code, "uint256")
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler([contract_a, arbsys_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, contract_a.testMethod(0, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            arbsys_abi.cloneContract(1, 0, contract_a.address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 2)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        self.assertIsInstance(parsed_out0, EVMReturn)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+
+        correct_value = parsed_out0.output_values[0]
+        created_contract_address = parsed_out1.output_values[0]
+        created_contract = make_contract(evm_code, "uint256", created_contract_address)
+        fake_contract = make_contract(
+            evm_code, "uint256", "0x3c1b4360234d8e65a9e162ef82d70bee71324512"
+        )
+        output_handler = create_output_handler(
+            [contract_a, arbsys_abi, created_contract, fake_contract]
+        )
+
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, fake_contract.testMethod(2, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, created_contract.testMethod(3, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 4)
+        parsed_out2 = output_handler(vm.logs[2])
+        parsed_out3 = output_handler(vm.logs[3])
+        self.assertIsInstance(parsed_out2, EVMStop)
+        self.assertIsInstance(parsed_out3, EVMReturn)
+        self.assertEqual(parsed_out3.output_values[0], correct_value)
+
+    def test_clone_from_contract(self):
+        evm_code = make_simple_code()
+        contract_a = make_contract(evm_code, "uint256")
+        evm_code2 = make_evm_clone_code(contract_a.address_string)
+        contract_b = make_contract(
+            evm_code2, "address", "0x0b55929f4095f677C9Ec1F4810C3E59CCD6D33C7"
+        )
+
+        vm = create_evm_vm([contract_a, contract_b], False, False)
+        output_handler = create_output_handler([contract_a, contract_b])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, contract_b.testMethod(0, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 1)
+        parsed_out0 = output_handler(vm.logs[0])
+        self.assertIsInstance(parsed_out0, EVMReturn)
+        self.assertEqual(
+            parsed_out0.output_values[0], "0x76b4d51dcf8e85892588d43581540feb1c2d77ba"
         )

@@ -48,19 +48,23 @@ tx_message = std.Struct(
     ],
 )
 
+call_message = std.Struct(
+    "call_message", [("to", value.IntType()), ("data", value.ValueType())]
+)
+
 tx_call_data = std.Struct(
     "tx_call_data",
     [
         ("dest", value.IntType()),
         ("value", value.IntType()),
-        ("data", value.ValueType()),
+        ("data", std.sized_byterange.typ),
     ],
 )
 
 local_exec_state = std.Struct(
     "local_exec_state",
     [
-        ("data", value.ValueType()),
+        ("data", std.sized_byterange.typ),
         ("caller", value.IntType()),
         ("value", value.IntType()),
     ],

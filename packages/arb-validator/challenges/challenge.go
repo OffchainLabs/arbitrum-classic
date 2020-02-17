@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type ChallengeState uint8
@@ -79,7 +79,7 @@ func getNextEventWithTimeout(
 	contract arbbridge.Challenge,
 	client arbbridge.ArbClient,
 ) (arbbridge.Event, ChallengeState, error) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 	for {
 		select {
 		case <-ctx.Done():
@@ -89,7 +89,7 @@ func getNextEventWithTimeout(
 			if err != nil {
 				return nil, 0, err
 			}
-			if common.TimeFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
+			if common.TicksFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return nil, 0, err

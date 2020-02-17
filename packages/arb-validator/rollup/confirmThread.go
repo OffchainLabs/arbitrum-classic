@@ -25,7 +25,7 @@ import (
 
 func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		defer ticker.Stop()
 		for {
 			select {
@@ -37,15 +37,10 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				confValid, confInvalid := chain.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(chain.latestBlockId.Height))
-				if confValid != nil {
+				confOpp := chain.nodeGraph.generateNextConfProof(common.TicksFromBlockNum(chain.latestBlockId.Height))
+				if confOpp != nil {
 					for _, listener := range chain.listeners {
-						listener.ValidNodeConfirmable(ctx, chain, confValid)
-					}
-				}
-				if confInvalid != nil {
-					for _, listener := range chain.listeners {
-						listener.InvalidNodeConfirmable(ctx, chain, confInvalid)
+						listener.ConfirmableNodes(ctx, chain, confOpp)
 					}
 				}
 				chain.RUnlock()

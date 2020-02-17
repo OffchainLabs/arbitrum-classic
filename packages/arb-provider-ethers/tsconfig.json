@@ -5,6 +5,7 @@
         "declaration": true,
         "outDir": "./dist",
         "strict": true,
+        "allowJs": true,
 
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -15,5 +16,5 @@
         "resolveJsonModule": true,
         "esModuleInterop": true
     },
-    "include": ["src/**/*.ts"]
+    "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
 }

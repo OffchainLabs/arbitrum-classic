@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"time"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -133,6 +134,7 @@ func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
+	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	startTime := timeBounds.Start.AsInt()
 	endTime := timeBounds.End.AsInt()
@@ -167,6 +169,7 @@ func (m *Machine) ExecuteAssertion(
 		startTimeDataC,
 		endTimeDataC,
 		msgDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 	C.free(startTimeDataC)
 	C.free(endTimeDataC)
@@ -196,20 +199,6 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
 
 	return success == 1
-}
-
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	cCheckpointStorage, ok := storage.(*CheckpointStorage)
-
-	if ok {
-		machineHashC := C.CBytes(machineHash.Bytes())
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, machineHashC)
-		C.free(machineHashC)
-
-		return success == 1
-	} else {
-		return false
-	}
 }
 
 func bytesArrayToVals(data []byte, valCount int) []value.Value {

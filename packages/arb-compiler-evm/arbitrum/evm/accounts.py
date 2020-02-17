@@ -131,3 +131,76 @@ def clone_contract(vm):
     vm.swap2()
     vm.swap1()
     account_store.set_val(vm)
+
+
+@modifies_stack(
+    [account_store.typ, value.IntType(), value.IntType()],
+    [value.IntType(), value.IntType(), account_store.typ],
+)
+def process_nonce(vm):
+    # accounts address nonce
+    vm.dup1()
+    vm.dup1()
+    account_store.get(vm)
+    # account accounts address nonce
+    vm.swap2()
+    vm.auxpush()
+    vm.auxpush()
+    # account nonce [accounts address]
+    vm.dup0()
+    vm.auxpush()
+    account_state.get("nextSeqNum")(vm)
+    # expected_nonce nonce [account accounts address]
+    vm.dup1()
+    vm.eq()
+    # valid_nonce nonce [account accounts address]
+    vm.ifelse(
+        lambda vm: [
+            vm.push(1),
+            vm.add(),
+            vm.auxpop(),
+            account_state.set_val("nextSeqNum")(vm),
+            # updated_account [accounts address]
+            vm.auxpop(),
+            vm.auxpop(),
+            vm.swap1(),
+            account_store.set_val(vm),
+            vm.push(0),
+            vm.push(1),
+        ],
+        lambda vm: [
+            # nonce [account accounts address]
+            vm.auxpop(),
+            vm.pop(),
+            vm.auxpop(),
+            vm.auxpop(),
+            vm.pop(),
+            vm.swap1(),
+            # nonce accounts
+            vm.push(0),
+        ],
+    )
+
+
+@modifies_stack([account_state.typ], [value.IntType(), account_state.typ])
+def fetch_and_increment_seq(vm):
+    # account
+    vm.dup0()
+    account_state.get("nextSeqNum")(vm)
+    vm.dup0()
+    vm.auxpush()
+    vm.push(1)
+    vm.add()
+    vm.swap1()
+    account_state.set_val("nextSeqNum")(vm)
+    vm.auxpop()
+    # seq account
+
+
+@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+def generate_contract_address(vm):
+    std.tup.make(2)(vm)
+    vm.hash()
+    vm.push(96)
+    vm.swap1()
+    std.bitwise.shift_right(vm)

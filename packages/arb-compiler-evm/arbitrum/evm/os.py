@@ -20,11 +20,11 @@ from ..vm import VM
 from .. import value
 from .types import ethbridge_message, message
 from .types import tx_message, tx_call_data, local_exec_state
-from .types import token_transfer_message, eth_transfer_message
+from .types import token_transfer_message, eth_transfer_message, call_message
 from . import call_frame
 from . import tokens
 from . import accounts
-from .accounts import account_store, account_state
+from .accounts import account_store, account_state, fetch_and_increment_seq
 
 # Blockchain Simulator
 # inbox - global
@@ -53,7 +53,6 @@ chain_state = Struct(
         ("accounts", account_store.typ),
         ("inbox", std.inboxctx.typ),
         ("call_frame", call_frame.typ),
-        ("sender_seq", std.keyvalue_int_int.typ),
         ("global_exec_state", global_exec_state.typ),
         "scratch",
     ],
@@ -96,6 +95,9 @@ def update_execution_state(vm):
 
     vm.swap1()
     vm.swap2()
+    std.arith.max(vm)
+    vm.gettime()
+    vm.tgetn(0)
     std.arith.max(vm)
     vm.swap1()
     # msg block_number
@@ -198,11 +200,9 @@ def create_initial_evm_state(contracts):
         std.keyvalue.set_val(vm)
 
     std.inboxctx.new(vm)
-    std.keyvalue_int_int.new(vm)
     vm.push(make_global_exec_state())
     chain_state.new(vm)
     chain_state.set_val("global_exec_state")(vm)
-    chain_state.set_val("sender_seq")(vm)
     chain_state.set_val("inbox")(vm)
     chain_state.set_val("accounts")(vm)
     return vm.stack.items[0]
@@ -382,14 +382,14 @@ def message_data_copy(vm):
     evm_copy_to_memory(vm, message_data_raw)
 
 
-@modifies_stack(0, 1)
+@modifies_stack(0, [value.IntType()])
 def message_value(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
     local_exec_state.get("value")(vm)
 
 
-@modifies_stack(0, 1)
+@modifies_stack(0, [value.IntType()])
 def message_caller(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("local_exec_state")(vm)
@@ -645,69 +645,6 @@ def evm_log4(vm):
     add_log(vm)
 
 
-# [sequence_num, sender] -> # [approved]
-@modifies_stack([value.IntType()] * 2, [value.IntType()])
-def check_message_sequence(vm):
-    vm.dup1()
-    get_chain_state(vm)
-    chain_state.get("sender_seq")(vm)
-    std.keyvalue_int_int.get(vm)
-    # [current_seq, seq, sender]
-    vm.swap1()
-    vm.push(2)
-    vm.dup1()
-    vm.mod()
-    # [seq % 2, seq, current_seq, sender]
-    vm.swap1()
-    vm.push(2)
-    vm.swap1()
-    vm.div()
-    # [seq / 2, seq % 2, current_seq, sender]
-    vm.swap2()
-    vm.swap1()
-    # [seq % 2, current_seq, seq / 2, sender]
-    vm.ifelse(
-        lambda vm: [
-            # sequence must be incremented
-            # [current_seq, seq / 2, sender]
-            vm.push(1),
-            vm.add(),
-            vm.dup1(),
-            vm.eq()
-            # [seq / 2 == current_seq + 1, seq / 2, sender]
-        ],
-        lambda vm: [
-            # sequence must be greater
-            # [current_seq, seq / 2, sender]
-            vm.dup1(),
-            vm.gt()
-            # [seq / 2 > current_seq, seq / 2, sender]
-        ],
-    )
-
-    # [seq_should_update, seq / 2, sender]
-    vm.ifelse(
-        lambda vm: [
-            # [seq / 2, sender]
-            get_chain_state(vm),
-            chain_state.get("sender_seq")(vm),
-            std.keyvalue_int_int.set_val(vm),
-            get_chain_state(vm),
-            chain_state.set_val("sender_seq")(vm),
-            set_chain_state(vm),
-            vm.push(1),
-        ],
-        lambda vm: [
-            std.sized_byterange.new(vm),
-            vm.push(4),
-            log_func_result(vm),
-            vm.pop(),
-            vm.pop(),
-            vm.push(0),
-        ],
-    )
-
-
 @modifies_stack(0, [message.typ])
 def get_next_message(vm):
     get_chain_state(vm)
@@ -766,10 +703,20 @@ def process_tx_message(vm):
     vm.cast(tx_message.typ)
     tx_message.get("sequence_num")(vm)
     # sequence_num sender message
-    check_message_sequence(vm)
-    # valid_seq msg
+    vm.swap1()
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    accounts.process_nonce(vm)
+    # valid nonce[if invalid] accounts message
+    vm.swap2()
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+    # nonce[if invalid] valid message
+    vm.swap1()
     vm.ifelse(
         lambda vm: [
+            vm.pop(),
             vm.dup0(),
             message.get("message")(vm),
             vm.cast(tx_message.typ),
@@ -779,8 +726,47 @@ def process_tx_message(vm):
             std.tup.make(2)(vm),
             # sender tx_call_data
         ],
-        lambda vm: [vm.pop(), vm.push(value.Tuple([]))],
+        lambda vm: [
+            vm.swap1(),
+            vm.pop(),
+            vm.push(0),
+            std.sized_byterange.new(vm),
+            std.sized_byterange.set_val(vm),
+            vm.push(4),
+            log_func_result(vm),
+            vm.push(value.Tuple([])),
+        ],
     )
+
+
+@modifies_stack([message.typ], [value.IntType(), tx_call_data.typ])
+def process_contract_tx_message(vm):
+    # msg
+    vm.dup0()
+    message.get("sender")(vm)
+    # sender msg
+    vm.dup0()
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.get(vm)
+    accounts.fetch_and_increment_seq(vm)
+    vm.pop()
+    vm.swap1()
+    # sender account msg
+    get_chain_state(vm)
+    chain_state.get("accounts")(vm)
+    account_store.set_val(vm)
+    # accounts msg
+    get_chain_state(vm)
+    chain_state.set_val("accounts")(vm)
+    set_chain_state(vm)
+    # msg
+    vm.dup0()
+    message.get("message")(vm)
+    vm.cast(tx_message.typ)
+    process_valid_tx_message(vm)
+    vm.swap1()
+    message.get("sender")(vm)
 
 
 @modifies_stack([tx_message.typ], [tx_call_data.typ])
@@ -803,6 +789,33 @@ def process_valid_tx_message(vm):
     tx_call_data.set_val("data")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("value")(vm)
+
+
+@modifies_stack([message.typ], [value.IntType(), tx_call_data.typ])
+def process_call_message(vm):
+    # message
+    vm.dup0()
+    message.get("sender")(vm)
+    vm.swap1()
+    message.get("message")(vm)
+    vm.cast(call_message.typ)
+    # msg sender
+    vm.dup0()
+    call_message.get("to")(vm)
+    # to message sender
+    vm.swap1()
+    call_message.get("data")(vm)
+    # data dest sender
+    vm.cast(std.bytestack.typ)
+    std.sized_byterange.from_bytestack(vm)
+    vm.push(0)
+    vm.push(tx_call_data.make())
+    vm.cast(tx_call_data.typ)
+    tx_call_data.set_val("value")(vm)
+    tx_call_data.set_val("data")(vm)
+    tx_call_data.set_val("dest")(vm)
+    vm.swap1()
+    # sender tx_call_data
 
 
 @modifies_stack([message.typ], [])
@@ -1041,9 +1054,63 @@ def evm_call_to_tx_call_data(vm):
     # [length, ba]
     vm.swap1()
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
     # [sized byte array, tup]
     vm.push(tx_call_data.make())
     vm.cast(tx_call_data.typ)
     tx_call_data.set_val("data")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("value")(vm)
+
+
+@modifies_stack([value.IntType()], [value.IntType()])
+def create_clone_contract(vm):
+    vm.auxpush()
+    get_call_frame(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    # account
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("message")(vm)
+    message.get("sender")(vm)
+    vm.eq()
+    # is_external account
+    vm.ifelse(
+        lambda vm: [
+            # This is called externally so no need to increment sequence num
+            vm.dup0(),
+            account_state.get("nextSeqNum")(vm),
+        ],
+        lambda vm: [
+            # This is called by a contract so increment num
+            fetch_and_increment_seq(vm)
+        ],
+    )
+    # seq updated_account_state
+    vm.swap1()
+    get_call_frame(vm)
+    call_frame.call_frame.set_val("account_state")(vm)
+    # call_frame seq
+    vm.swap1()
+    vm.dup1()
+    call_frame.call_frame.get("contractID")(vm)
+    # address seq call_frame
+    accounts.generate_contract_address(vm)
+    # new_address call_frame
+    vm.dup0()
+    vm.auxpop()
+    vm.swap1()
+    vm.auxpush()
+    # current_address new_address call_frame
+    vm.dup2()
+    call_frame.call_frame.get("accounts")(vm)
+    accounts.clone_contract(vm)
+    # accounts call_frame
+    vm.swap1()
+    call_frame.call_frame.set_val("accounts")(vm)
+    set_call_frame(vm)
+    vm.auxpop()
+    # new_address

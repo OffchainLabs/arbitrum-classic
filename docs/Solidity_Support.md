@@ -4,25 +4,55 @@ title: Solidity Support
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Solidity_Support.md
 ---
 
-Arbitrum provides the ability to take arbitrary solidity contracts and run them offchain in a trustless layer 2 context. To accomplish this, Arbitrum compiles the contracts to a customized virtual machine architecture, optimized for offchain execution.
+Arbitrum Rollup allows you to deploy a set of Solidity contracts as a trustless layer 2 sidechain. To accomplish this, Arbitrum compiles the contracts to run on a customized virtual machine architecture, optimized for off-chain execution.
+
+# Compilation
+
+A set of solidity contracts can be compiled into an Arbitrum executable file, which can be used to launch an Arbitrum Chain.
+
+Currently the only supported deployment mechanism for Arbitrum is through a truffle plugin. Add the following block to your `truffle-config.js` file to add an Arbitrum deployment configuration to your project.
+
+```js
+arbitrum: {
+  provider: function() {
+    if (typeof this.provider.prov == "undefined") {
+      this.provider.prov = ArbProvider.provider(
+        __dirname,
+        "build/contracts",
+        {
+          mnemonic: mnemonic
+        }
+      );
+    }
+    return this.provider.prov;
+  },
+  network_id: "*"
+}
+```
+
+After configuring truffle, compile your contracts into an Arbitrum executable file using:
+
+`truffle migrate --network arbitrum`
+
+Running that command will produce a compiled Arbitrum VM binary, `contract.ao`.
 
 # Restrictions
 
 Although we support most solidity code, there are a number of restrictions that currently exist.
 
--   No support for general calls to external contracts
-    -   In the future, we'll provide mechanisms for Arbitrum contracts to interoperate with standard Ethereum contracts. However this is quite difficult when operating offchain.
-    -   We do support deploying multiple Solidity contracts as a single unit (VM) in Arbitrum. If you're using truffle, you can deploy multiple contracts to Arbitrum and they will all be able to call each other naturally.
--   No support for a running Arbitrum contract dynamically creating new contracts
-    -   Currently we don't support spawning new contracts from your deployed Arbitrum contract. This support will be added in the future.
+-   Unsupported Solidity Features:
+
+    -   `blockhash(uint blockNumber) returns (bytes32)`
+    -   `block.coinbase`
+    -   `block.difficulty`
+    -   `block.gaslimit`
+    -   `block.timestamp`
+    -   `gasleft() returns (uint256)`
+    -   `now`
+    -   General contract creation
 
 # Workarounds
 
--   Address support
-    -   Arbitrum API functions use 32 byte addresses instead of 20 bytes addresses. To convert a normal Ethereum address into input for an on-chain Arbitrum API call, use `bytes32(bytes20(address))`
--   Token Support
-    -   Arbitrum VMs support sending and receiving Eth, ERC20, and ERC721 tokens through the on-chain EthBridge contract. Tokens can be deposited into an Arbitrum wallet through the [`ArbBalanceTracker`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/ArbBalanceTracker.sol) contract by calling `depositEth`, `depositERC20`, or `depositERC721` respectively. Then tokens can be sent to an Arbitrum contract using the [`VMTracker`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/VMTracker.sol) `sendMessage` function.
-    -   Tokens can be sent from an Arbitrum contract by use of the [`ArbSys`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-compiler-evm/ArbSys.sol) interface. For example use
-        `ArbSys(address(0x01)).sendERC20( bytes32(bytes20(address)), tokenAddress, amount );`
-        to send tokens from the Arbitrum contract to a particular Ethereum address.
-    -   When Eth and tokens are sent to a non-Arbitrum contract address, they are placed into the `ArbBalanceTracker` wallet f. A call to the `ArbBalanceTracker` is necessary to withdraw them back to your standard Ethereum wallet.
+-   Contract cloning
+    -   Despite the fact that we don't support standard contract creation, we do support the cloning of already deployed contracts (producing a similar result as [EIP-1167](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1167.md)).
+    -   Cloning an existing contract is done through `ArbSys(100).cloneContract(contractAddress)`

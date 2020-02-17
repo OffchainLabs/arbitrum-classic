@@ -16,11 +16,16 @@
 
 const ArbRollup = artifacts.require("ArbRollup");
 const ChallengeFactory = artifacts.require("ChallengeFactory");
-const GlobalPendingInbox = artifacts.require("GlobalPendingInbox");
+const GlobalInbox = artifacts.require("GlobalInbox");
 
-const { expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
+const {
+  expectEvent,
+  expectRevert,
+  time
+} = require("@openzeppelin/test-helpers");
 
-function pendingTopHash(lowerHash, topHash, chainLength) {
+function inboxTopHash(lowerHash, topHash, chainLength) {
+  console.log("inboxTopHash", lowerHash, topHash, chainLength);
   return web3.utils.soliditySha3(
     { t: "bytes32", v: lowerHash },
     { t: "bytes32", v: topHash },
@@ -28,14 +33,9 @@ function pendingTopHash(lowerHash, topHash, chainLength) {
   );
 }
 
-function invalidPendingTopHash(
-  lowerHash,
-  topHash,
-  chainLength,
-  challengePeriod
-) {
+function invalidInboxTopHash(lowerHash, topHash, chainLength, challengePeriod) {
   return web3.utils.soliditySha3(
-    { t: "bytes32", v: pendingTopHash(lowerHash, topHash, chainLength) },
+    { t: "bytes32", v: inboxTopHash(lowerHash, topHash, chainLength) },
     { t: "uint256", v: challengePeriod }
   );
 }
@@ -143,17 +143,17 @@ async function makeEmptyAssertion(
 }
 
 class VMProtoData {
-  constructor(machineHash, pendingTop, pendingCount) {
+  constructor(machineHash, inboxTop, inboxCount) {
     this.machineHash = machineHash;
-    this.pendingTop = pendingTop;
-    this.pendingCount = pendingCount;
+    this.inboxTop = inboxTop;
+    this.inboxCount = inboxCount;
   }
 
   hash() {
     return web3.utils.soliditySha3(
       { t: "bytes32", v: this.machineHash },
-      { t: "bytes32", v: this.pendingTop },
-      { t: "uint256", v: this.pendingCount }
+      { t: "bytes32", v: this.inboxTop },
+      { t: "uint256", v: this.inboxCount }
     );
   }
 }
@@ -177,8 +177,8 @@ class ExecutionAssertion {
 }
 
 class AssertionClaim {
-  constructor(afterPendingTop, importedMessageSlice, executionAssertion) {
-    this.afterPendingTop = afterPendingTop;
+  constructor(afterInboxTop, importedMessageSlice, executionAssertion) {
+    this.afterInboxTop = afterInboxTop;
     this.importedMessageSlice = importedMessageSlice;
     this.executionAssertion = executionAssertion;
   }
@@ -187,8 +187,8 @@ class AssertionClaim {
 class Assertion {
   constructor(
     blockNumber,
-    pendingValue,
-    pendingCount,
+    inboxValue,
+    inboxCount,
     prevPrevNode,
     prevProtoData,
     prevDeadline,
@@ -197,9 +197,9 @@ class Assertion {
     params,
     claims
   ) {
-    this.blockNumber = blockNumber;
-    this.pendingValue = pendingValue;
-    this.pendingCount = pendingCount;
+    this.blockNumber = new web3.utils.BN(blockNumber);
+    this.inboxValue = inboxValue;
+    this.inboxCount = inboxCount;
 
     this.prevPrevNode = prevPrevNode;
     this.prevProtoData = prevProtoData;
@@ -221,28 +221,36 @@ class Assertion {
   }
 
   deadline() {
-    return 13000 * this.blockNumber + grace_period_ticks;
+    let deadlineTicks = this.blockNumber
+      .mul(new web3.utils.BN(1000))
+      .add(grace_period_ticks);
+    if (deadlineTicks.lt(this.prevDeadline)) {
+      deadlineTicks = this.prevDeadline;
+    }
+    // Should be numArbGas / arbGasSpeedLimitPerTick, but numArbGas is 0 in the test
+    return deadlineTicks.add(new web3.utils.BN(0));
   }
 
-  invalidPendingTopHashInner() {
+  invalidInboxTopHashInner() {
     return childNodeInnerHash(
       this.deadline(),
-      invalidPendingTopHash(
-        this.claims.afterPendingTop,
-        this.pendingValue,
-        this.pendingCount -
-          (this.prevPrevNode.pendingCount + this.params.importedMessageCount),
-        grace_period_ticks + 13000
+      invalidInboxTopHash(
+        this.claims.afterInboxTop,
+        this.inboxValue,
+        this.inboxCount.sub(
+          this.prevProtoData.inboxCount.add(this.params.importedMessageCount)
+        ),
+        grace_period_ticks.add(new web3.utils.BN(1000))
       ),
       0,
       this.prevProtoData.hash()
     );
   }
 
-  invalidPendingTopHash() {
+  invalidInboxTopHash() {
     return childNodeShortHash(
       this.prevNodeHash(),
-      this.invalidPendingTopHashInner()
+      this.invalidInboxTopHashInner()
     );
   }
 
@@ -250,12 +258,12 @@ class Assertion {
     return childNodeInnerHash(
       this.deadline(),
       invalidMessagesHash(
-        this.prevProtoData.pendingTop,
-        this.claims.afterPendingTop,
+        this.prevProtoData.inboxTop,
+        this.claims.afterInboxTop,
         empty_tuple_hash,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
-        grace_period_ticks + 13000
+        grace_period_ticks.add(new web3.utils.BN(1000))
       ),
       1,
       this.prevProtoData.hash()
@@ -272,8 +280,8 @@ class Assertion {
   updatedProtoData() {
     return new VMProtoData(
       this.claims.executionAssertion.afterState,
-      this.claims.afterPendingTop,
-      this.prevProtoData.pendingCount + this.params.importedMessageCount
+      this.claims.afterInboxTop,
+      this.prevProtoData.inboxCount.add(this.params.importedMessageCount)
     );
   }
 
@@ -311,16 +319,16 @@ async function makeAssertion(
   let receipt = await arb_rollup.makeAssertion(
     [
       prevProtoData.machineHash,
-      prevProtoData.pendingTop,
+      prevProtoData.inboxTop,
       prevPrevNode,
       prevDataHash,
-      claims.afterPendingTop,
+      claims.afterInboxTop,
       claims.importedMessageSlice,
       claims.executionAssertion.afterState,
       claims.executionAssertion.outMessagesAcc,
       claims.executionAssertion.outLogsAcc
     ],
-    prevProtoData.pendingCount,
+    prevProtoData.inboxCount,
     prevDeadline,
     prevChildType,
     params.numSteps,
@@ -335,8 +343,8 @@ async function makeAssertion(
     receipt: receipt,
     assertion: new Assertion(
       receipt.receipt.blockNumber,
-      receipt.logs[0].args.pendingValue,
-      0,
+      receipt.logs[0].args.fields[1],
+      receipt.logs[0].args.inboxCount,
       prevPrevNode,
       prevProtoData,
       prevDeadline,
@@ -351,7 +359,7 @@ async function makeAssertion(
 let initial_vm_state = "0x99";
 let stakeRequirement = 10;
 let max_execution_steps = 50000;
-let grace_period_ticks = 10000;
+let grace_period_ticks = new web3.utils.BN(1000);
 
 var arb_rollup;
 var assertionInfo;
@@ -359,13 +367,14 @@ var assertionInfo;
 contract("ArbRollup", accounts => {
   it("should initialize", async () => {
     let challenge_factory = await ChallengeFactory.deployed();
-    let global_inbox = await GlobalPendingInbox.deployed();
+    let global_inbox = await GlobalInbox.deployed();
     arb_rollup = await ArbRollup.new();
     await arb_rollup.init(
       initial_vm_state, // vmState
       grace_period_ticks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
       max_execution_steps, // maxExecutionSteps
+      20, // maxTimeBoundsWidth
       stakeRequirement, // stakeRequirement
       accounts[0], // owner
       challenge_factory.address,
@@ -424,7 +433,7 @@ contract("ArbRollup", accounts => {
     );
   });
 
-  it("should fail if reading past lastest pending", async () => {
+  it("should fail if reading past lastest inbox message", async () => {
     let current_block = await web3.eth.getBlock("latest");
     await expectRevert(
       makeEmptyAssertion(initial_vm_state, 0, current_block.number, 10, true),
@@ -447,11 +456,15 @@ contract("ArbRollup", accounts => {
       "latest confirmed should be leaf before asserting"
     );
     let current_block = await web3.eth.getBlock("latest");
-    let prevProtoData = new VMProtoData(initial_vm_state, empty_tuple_hash, 0);
+    let prevProtoData = new VMProtoData(
+      initial_vm_state,
+      empty_tuple_hash,
+      new web3.utils.BN(0)
+    );
     let params = new AssertionParams(
       0,
       [current_block.number, current_block.number + 10],
-      0
+      new web3.utils.BN(0)
     );
     let claims = new AssertionClaim(
       "0x00",
@@ -476,8 +489,8 @@ contract("ArbRollup", accounts => {
       "original_node confirmed should be removed as leaf"
     );
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
-      "invalid pending top should be leaf"
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
+      "invalid inbox top should be leaf"
     );
     assert.isTrue(
       await arb_rollup.isValidLeaf(assertionInfo.invalidMessagesHash()),
@@ -493,15 +506,23 @@ contract("ArbRollup", accounts => {
   });
 
   it("should confirm an assertion", async () => {
-    let receipt = await arb_rollup.confirmValid(
-      assertionInfo.deadline(),
+    await time.advanceBlock();
+    await time.advanceBlock();
+    await time.advanceBlock();
+    let receipt = await arb_rollup.confirm(
+      assertionInfo.prevProtoData.hash(),
+      [3],
+      [assertionInfo.deadline()],
+      [],
+      [assertionInfo.claims.executionAssertion.outLogsAcc],
+      [assertionInfo.updatedProtoData().hash()],
+      [0],
       "0x",
-      assertionInfo.claims.executionAssertion.outLogsAcc,
-      assertionInfo.updatedProtoData().hash(),
       [accounts[0]],
       [],
       [0, 0]
     );
+
     await expectEvent(receipt, "RollupConfirmed");
 
     assert.equal(
@@ -512,7 +533,7 @@ contract("ArbRollup", accounts => {
 
     assert.isTrue(
       await arb_rollup.isValidLeaf(assertionInfo.validHash()),
-      "invalid pending top should be leaf"
+      "invalid inbox top should be leaf"
     );
 
     console.log("confirmValid gas used:", receipt.receipt.gasUsed);
@@ -520,17 +541,19 @@ contract("ArbRollup", accounts => {
 
   it("should prune a leaf", async () => {
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       "invalid messages should be leaf"
     );
-    let receipt = await arb_rollup.pruneLeaf(
-      original_node,
-      [assertionInfo.invalidPendingTopHashInner()],
-      [assertionInfo.validHashInner()]
+    let receipt = await arb_rollup.pruneLeaves(
+      [original_node],
+      [assertionInfo.invalidInboxTopHashInner()],
+      [1],
+      [assertionInfo.validHashInner()],
+      [1]
     );
     await expectEvent(receipt, "RollupPruned");
     assert.isFalse(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidPendingTopHash()),
+      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       "invalid messages should be leaf"
     );
     console.log("pruneLeaf gas used:", receipt.receipt.gasUsed);
@@ -541,7 +564,7 @@ contract("ArbRollup", accounts => {
     let params = new AssertionParams(
       0,
       [current_block.number, current_block.number + 10],
-      0
+      new web3.utils.BN(0)
     );
     let claims = new AssertionClaim(
       "0x00",

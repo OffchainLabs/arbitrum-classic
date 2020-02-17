@@ -26,12 +26,12 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -39,10 +39,10 @@ func DefendMessagesClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 	startLogIndex uint,
-	pendingInbox *structures.MessageStack,
-	beforePending common.Hash,
+	inbox *structures.MessageStack,
+	beforeInbox common.Hash,
 	messageCount *big.Int,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
@@ -63,8 +63,8 @@ func DefendMessagesClaim(
 		eventChan,
 		contract,
 		client,
-		pendingInbox,
-		beforePending,
+		inbox,
+		beforeInbox,
 		messageCount.Uint64(),
 		bisectionCount,
 	)
@@ -74,10 +74,10 @@ func ChallengeMessagesClaim(
 	ctx context.Context,
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 	startLogIndex uint,
-	pendingInbox *structures.MessageStack,
-	beforePending common.Hash,
+	inbox *structures.MessageStack,
+	beforeInbox common.Hash,
 	messageCount *big.Int,
 	challengeEverything bool,
 ) (ChallengeState, error) {
@@ -98,8 +98,8 @@ func ChallengeMessagesClaim(
 		eventChan,
 		contract,
 		client,
-		pendingInbox,
-		beforePending,
+		inbox,
+		beforeInbox,
 		messageCount.Uint64(),
 		challengeEverything,
 	)
@@ -110,8 +110,8 @@ func defendMessages(
 	eventChan <-chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
-	pendingInbox *structures.MessageStack,
-	beforePending common.Hash,
+	inbox *structures.MessageStack,
+	beforeInbox common.Hash,
 	messageCount uint64,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
@@ -124,15 +124,15 @@ func defendMessages(
 		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", event)
 	}
 
-	inbox, err := pendingInbox.GenerateInbox(beforePending, messageCount)
+	vmInbox, err := inbox.GenerateVMInbox(beforeInbox, messageCount)
 	if err != nil {
 		return 0, err
 	}
 
-	log.Println("Pending inbox", pendingInbox)
-	log.Println("Full inbox", inbox)
+	log.Println("Inbox", inbox)
+	log.Println("VM inbox", vmInbox)
 
-	startPending := beforePending
+	startInbox := beforeInbox
 	startMessages := value.NewEmptyTuple().Hash()
 	inboxStartCount := uint64(0)
 
@@ -141,25 +141,27 @@ func defendMessages(
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
-				msg, err := pendingInbox.GenerateOneStepProof(startPending)
+				msg, err := inbox.GenerateOneStepProof(startInbox)
 				if err != nil {
 					return 0, err
 				}
 
-				log.Println("OneStepProofEthMessage", startPending, startMessages)
+				log.Println("OneStepProofEthMessage", startInbox, startMessages)
 
-				log.Println("pending after", hashing.SoliditySHA3(hashing.Bytes32(startPending), hashing.Bytes32(msg.CommitmentHash())))
-				log.Println("inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
+				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
+				log.Println("vm inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
 
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
-					err = contract.OneStepProofTransactionMessage(ctx, startPending, startMessages, msg)
+					err = contract.OneStepProofTransactionMessage(ctx, startInbox, startMessages, msg)
 				case message.DeliveredEth:
-					err = contract.OneStepProofEthMessage(ctx, startPending, startMessages, msg)
+					err = contract.OneStepProofEthMessage(ctx, startInbox, startMessages, msg)
 				case message.DeliveredERC20:
-					err = contract.OneStepProofERC20Message(ctx, startPending, startMessages, msg)
+					err = contract.OneStepProofERC20Message(ctx, startInbox, startMessages, msg)
 				case message.DeliveredERC721:
-					err = contract.OneStepProofERC721Message(ctx, startPending, startMessages, msg)
+					err = contract.OneStepProofERC721Message(ctx, startInbox, startMessages, msg)
+				case message.DeliveredContractTransaction:
+					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, startMessages, msg)
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")
@@ -179,8 +181,8 @@ func defendMessages(
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
-			chainHashes, err := pendingInbox.GenerateBisection(startPending, bisectionCount, messageCount)
-			inboxHashes, err := inbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
+			chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
+			inboxHashes, err := vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
 			}
@@ -218,7 +220,7 @@ func defendMessages(
 		if !ok {
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
-		startPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
+		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
 		startMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
@@ -231,8 +233,8 @@ func challengeMessages(
 	eventChan <-chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
-	pendingInbox *structures.MessageStack,
-	beforePending common.Hash,
+	inbox *structures.MessageStack,
+	beforeInbox common.Hash,
 	messageCount uint64,
 	challengeEverything bool,
 ) (ChallengeState, error) {
@@ -245,7 +247,7 @@ func challengeMessages(
 		return 0, fmt.Errorf("MessagesChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
-	inbox, err := pendingInbox.GenerateInbox(beforePending, messageCount)
+	vmInbox, err := inbox.GenerateVMInbox(beforeInbox, messageCount)
 	if err != nil {
 		return 0, err
 	}
@@ -276,26 +278,26 @@ func challengeMessages(
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
-			pendingSegments, err := pendingInbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
+			inboxSegments, err := inbox.GenerateBisection(ev.ChainHashes[0], uint64(len(ev.ChainHashes))-1, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}
 
-			inboxSegments, err := inbox.GenerateBisection(startInbox, uint64(len(ev.SegmentHashes))-1, ev.TotalLength.Uint64())
+			vmInboxSegments, err := vmInbox.GenerateBisection(startInbox, uint64(len(ev.SegmentHashes))-1, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}
 
 			segmentToChallenge, found := func() (uint64, bool) {
-				// If any pending inbox segment is wrong, we can easily win
-				for i := uint64(1); i < uint64(len(pendingSegments)); i++ {
-					if pendingSegments[i] != ev.ChainHashes[i] {
+				// If any inbox segment is wrong, we can easily win
+				for i := uint64(1); i < uint64(len(inboxSegments)); i++ {
+					if inboxSegments[i] != ev.ChainHashes[i] {
 						return i - 1, true
 					}
 				}
 
-				for i := uint64(1); i < uint64(len(inboxSegments)); i++ {
-					if inboxSegments[i] != ev.SegmentHashes[i] {
+				for i := uint64(1); i < uint64(len(vmInboxSegments)); i++ {
+					if vmInboxSegments[i] != ev.SegmentHashes[i] {
 						return i - 1, true
 					}
 				}

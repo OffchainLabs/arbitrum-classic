@@ -9,14 +9,20 @@
 # Exit on error
 set -e
 
-pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt
+pip3 install -r requirements.txt --user
+pip3 install -r requirements-dev.txt --user
 
 # Setup pre-commit
-pre-commit install
+python3 -m pre_commit install
 
 # Install conan
-virtualenv --no-site-packages vconan
+VIRTUALENV_MAJOR_VERSION=$(pip3 show virtualenv | grep Version | sed 's/.*: //' | sed -n 's/\..*//p')
+if (($VIRTUALENV_MAJOR_VERSION < 20))
+then
+    python3 -m virtualenv --no-site-packages vconan
+else
+    python3 -m virtualenv vconan
+fi
 . vconan/bin/activate
 pip3 install --upgrade conan
 # conan nonstd-lite
@@ -27,6 +33,6 @@ deactivate
 
 # Install arb-compiler-evm
 cd packages/arb-compiler-evm
-pip3 install -r requirements.txt
-python3 setup.py develop # TODO: may need sudo or --user here!
+pip3 install -r requirements.txt --user
+sudo python3 setup.py develop # TODO: may need sudo or --user here!
 cd ../..

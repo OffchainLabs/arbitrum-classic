@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -66,10 +67,15 @@ func TestCheckpointMachine(t *testing.T) {
 
 	t.Log("Initial machine hash", mach.Hash())
 
-	_, numSteps := mach.ExecuteAssertion(1000, &protocol.TimeBoundsBlocks{
-		Start: common.NewTimeBlocks(big.NewInt(100)),
-		End:   common.NewTimeBlocks(big.NewInt(120)),
-	}, value.NewEmptyTuple())
+	_, numSteps := mach.ExecuteAssertion(
+		1000,
+		&protocol.TimeBoundsBlocks{
+			Start: common.NewTimeBlocks(big.NewInt(100)),
+			End:   common.NewTimeBlocks(big.NewInt(120)),
+		},
+		value.NewEmptyTuple(),
+		time.Hour,
+	)
 
 	t.Log("Ran machine for", numSteps, "steps")
 
@@ -77,17 +83,13 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error("Failed to checkpoint machine")
 	}
 
-	mach2, err := checkpointStorage.GetInitialMachine()
+	loadedMach, err := checkpointStorage.GetMachine(mach.Hash())
 	if err != nil {
 		t.Error(err)
 	}
 
-	if !mach2.RestoreCheckpoint(checkpointStorage, mach.Hash()) {
-		t.Error("Failed to restore machine")
-	}
-
-	if mach.Hash() != mach2.Hash() {
-		t.Error("Restored machine with wrong hash", mach.Hash(), mach2.Hash())
+	if mach.Hash() != loadedMach.Hash() {
+		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {

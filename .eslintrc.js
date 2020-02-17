@@ -15,7 +15,8 @@ module.exports = {
   },
   rules: {
     "prettier/prettier": "error",
-    "no-unused-vars": "warn"
+    "no-unused-vars": "warn",
+    "prefer-const": [2, { destructuring: "all" }]
   },
   overrides: [
     {
@@ -24,7 +25,6 @@ module.exports = {
       extends: [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
-        "prettier/@typescript-eslint",
         "plugin:prettier/recommended"
       ],
       plugins: ["@typescript-eslint", "prettier"],
