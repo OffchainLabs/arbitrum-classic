@@ -34,7 +34,6 @@ function provider(outputFolder, buildLocation, options, should_compile) {
   const outputLocationAO = path.resolve(outputFolder, filenameAO);
   const stack = callsite();
   const rootPath = path.dirname(stack[1].getFileName());
-  console.log("here right here!: ", rootPath);
   if (!buildLocation) {
     buildLocation = path.resolve(rootPath, "build/contracts");
   }
@@ -42,7 +41,6 @@ function provider(outputFolder, buildLocation, options, should_compile) {
   const arbProvider = ganache.provider(options);
 
   const contractCode = {};
-  console.log("rpint here: ");
 
   let storageTrackFuncGen = function(address_string) {
     return function(err, code) {
@@ -59,8 +57,6 @@ function provider(outputFolder, buildLocation, options, should_compile) {
       );
     }
   });
-
-  console.log("elsewhere: ");
 
   const storage = {};
   const netID = arbProvider.options.network_id;
@@ -80,7 +76,6 @@ function provider(outputFolder, buildLocation, options, should_compile) {
     const contracts = [];
     const files = fs.readdirSync(buildLocation, {});
     for (let filePath of files) {
-      console.log("files here!: ", filePath);
       const contract = JSON.parse(
         fs.readFileSync(path.resolve(buildLocation, filePath))
       );

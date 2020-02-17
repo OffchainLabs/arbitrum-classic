@@ -11,6 +11,7 @@ export class GlobalPendingInboxFactory extends ContractFactory {
     constructor(signer?: Signer) {
         super(_abi, _bytecode, signer);
     }
+
     deploy(): Promise<GlobalPendingInbox> {
         return super.deploy() as Promise<GlobalPendingInbox>;
     }

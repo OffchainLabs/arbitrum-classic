@@ -11,6 +11,7 @@ export class ArbRollupFactory extends ContractFactory {
     constructor(signer?: Signer) {
         super(_abi, _bytecode, signer);
     }
+
     deploy(): Promise<ArbRollup> {
         return super.deploy() as Promise<ArbRollup>;
     }

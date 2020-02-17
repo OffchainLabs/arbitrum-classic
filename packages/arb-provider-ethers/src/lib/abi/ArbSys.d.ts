@@ -49,6 +49,12 @@ export class ArbSys extends Contract {
         withdrawEth(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
     };
 
+    withdrawERC20(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdrawERC721(dest: string, id: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdrawEth(dest: string, amount: BigNumberish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
     filters: {};
 
     estimate: {

@@ -1,15 +1,15 @@
 pragma solidity 0.5.15;
 
 import '../IAugur.sol';
-import '../libraries/token/IERC20.sol';
-import '../libraries/token/IERC1155.sol';
-import '../libraries/math/SafeMathUint256.sol';
-import '../reporting/IUniverse.sol';
-import '../reporting/IMarket.sol';
+// import '../libraries/token/IERC20.sol';
+// import '../libraries/token/IERC1155.sol';
+// import '../libraries/math/SafeMathUint256.sol';
+// import '../reporting/IUniverse.sol';
+// import '../reporting/IMarket.sol';
 import './IAugurTrading.sol';
 import '../reporting/IShareToken.sol';
 import './IOrders.sol';
-import './Order.sol';
+// import './Order.sol';
 import './IProfitLoss.sol';
 import '../libraries/ContractExists.sol';
 import '../external/IDaiVat.sol';
@@ -72,9 +72,9 @@ contract AugurTrading is IAugurTrading {
     }
 
     function registerContract(bytes32 _key, address _address) public onlyUploader returns (bool) {
-        require(registry[_key] == address(0), "Augur.registerContract: key has already been used in registry");
+        // require(registry[_key] == address(0), "Augur.registerContract: key has already been used in registry");
         require(_address.exists());
-        registry[_key] = _address;
+        registry[_key] = _address; 
         return true;
     }
 
@@ -169,14 +169,14 @@ contract AugurTrading is IAugurTrading {
     function logOrderFilled(IUniverse _universe, address _creator, address _filler, uint256 _price, uint256 _fees, uint256 _amountFilled, bytes32 _orderId, bytes32 _tradeGroupId) public returns (bool) {
         require(msg.sender == registry["FillOrder"]);
         IOrders _orders = IOrders(registry["Orders"]);
-        (Order.Types _orderType, address[] memory _addressData, uint256[] memory _uint256Data) = _orders.getOrderDataForLogs(_orderId);
-        _addressData[0] = _creator;
-        _addressData[1] = _filler;
-        _uint256Data[0] = _price;
-        _uint256Data[5] = _fees;
-        _uint256Data[6] = _amountFilled;
-        _uint256Data[7] = augur.getTimestamp();
-        emit OrderEvent(address(_universe), address(_orders.getMarket(_orderId)), OrderEventType.Fill, uint8(_orderType), _orderId, _tradeGroupId, _addressData, _uint256Data);
+        // (Order.Types _orderType, address[] memory _addressData, uint256[] memory _uint256Data) = _orders.getOrderDataForLogs(_orderId);
+        // _addressData[0] = _creator;
+        // _addressData[1] = _filler;
+        // _uint256Data[0] = _price;
+        // _uint256Data[5] = _fees;
+        // _uint256Data[6] = _amountFilled;
+        // _uint256Data[7] = augur.getTimestamp();
+        // emit OrderEvent(address(_universe), address(_orders.getMarket(_orderId)), OrderEventType.Fill, uint8(_orderType), _orderId, _tradeGroupId, _addressData, _uint256Data);
         return true;
     }
 

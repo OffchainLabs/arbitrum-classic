@@ -8,6 +8,30 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface GlobalPendingInboxInterface extends Interface {
     functions: {
+        getERC20Balance: TypedFunctionDescription<{
+            encode([_tokenContract, _owner]: [string, string]): string;
+        }>;
+
+        getERC721Tokens: TypedFunctionDescription<{
+            encode([_erc721, _owner]: [string, string]): string;
+        }>;
+
+        getEthBalance: TypedFunctionDescription<{
+            encode([_owner]: [string]): string;
+        }>;
+
+        hasERC721: TypedFunctionDescription<{
+            encode([_erc721, _owner, _tokenId]: [string, string, BigNumberish]): string;
+        }>;
+
+        ownedERC20s: TypedFunctionDescription<{
+            encode([_owner]: [string]): string;
+        }>;
+
+        ownedERC721s: TypedFunctionDescription<{
+            encode([_owner]: [string]): string;
+        }>;
+
         withdrawERC20: TypedFunctionDescription<{
             encode([_tokenContract]: [string]): string;
         }>;
@@ -120,15 +144,15 @@ export class GlobalPendingInbox extends Contract {
     functions: {
         getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
 
-        getERC721Tokens(_erc721: string, _owner: string): Promise<(BigNumber)[]>;
+        getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>;
 
         getEthBalance(_owner: string): Promise<BigNumber>;
 
         hasERC721(_erc721: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
 
-        ownedERC20s(_owner: string): Promise<(string)[]>;
+        ownedERC20s(_owner: string): Promise<string[]>;
 
-        ownedERC721s(_owner: string): Promise<(string)[]>;
+        ownedERC721s(_owner: string): Promise<string[]>;
 
         withdrawERC20(_tokenContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -182,6 +206,69 @@ export class GlobalPendingInbox extends Contract {
         ): Promise<ContractTransaction>;
     };
 
+    getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
+
+    getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>;
+
+    getEthBalance(_owner: string): Promise<BigNumber>;
+
+    hasERC721(_erc721: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
+
+    ownedERC20s(_owner: string): Promise<string[]>;
+
+    ownedERC721s(_owner: string): Promise<string[]>;
+
+    withdrawERC20(_tokenContract: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    withdrawERC721(
+        _erc721: string,
+        _tokenId: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    forwardTransactionMessage(
+        _chain: string,
+        _to: string,
+        _seqNumber: BigNumberish,
+        _value: BigNumberish,
+        _data: Arrayish,
+        _signature: Arrayish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    sendTransactionMessage(
+        _chain: string,
+        _to: string,
+        _seqNumber: BigNumberish,
+        _value: BigNumberish,
+        _data: Arrayish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    depositEthMessage(_chain: string, _to: string, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+    depositERC20Message(
+        _chain: string,
+        _to: string,
+        _erc20: string,
+        _value: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
+    depositERC721Message(
+        _chain: string,
+        _to: string,
+        _erc721: string,
+        _id: BigNumberish,
+        overrides?: TransactionOverrides,
+    ): Promise<ContractTransaction>;
+
     filters: {
         ERC20DepositMessageDelivered(
             chain: string | null,
@@ -220,6 +307,18 @@ export class GlobalPendingInbox extends Contract {
     };
 
     estimate: {
+        getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>;
+
+        getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber>;
+
+        getEthBalance(_owner: string): Promise<BigNumber>;
+
+        hasERC721(_erc721: string, _owner: string, _tokenId: BigNumberish): Promise<BigNumber>;
+
+        ownedERC20s(_owner: string): Promise<BigNumber>;
+
+        ownedERC721s(_owner: string): Promise<BigNumber>;
+
         withdrawERC20(_tokenContract: string): Promise<BigNumber>;
 
         withdrawERC721(_erc721: string, _tokenId: BigNumberish): Promise<BigNumber>;

@@ -138,14 +138,14 @@ def run_loop_start(vm):
 
 def generate_evm_code(raw_code, storage):
     contracts = {}
-    fileOpcode = open("OpCode.txt", "x")
-    fileBytecode = open("ByteCode.txt", "x")
+    # fileOpcode = open("OpCode.txt", "x")
+    # fileBytecode = open("ByteCode.txt", "x")
     for contract in raw_code:
         # print("beginning: "+ str(contract) + " -----------------------------------------------------")
         contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
-        if str(contract) == "64707234405428958084383300355972023766899045319":
-            fileBytecode.write(str(raw_code[contract]))
-            fileOpcode.write(str(contracts[contract]))
+        # if str(contract) == "64707234405428958084383300355972023766899045319":
+        #     fileBytecode.write(str(raw_code[contract]))
+        #     fileOpcode.write(str(contracts[contract]))
         # print(raw_code[contract])
         # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         # print(contracts[contract])
@@ -294,10 +294,10 @@ EVM_STATIC_OPS = {
     "RETURNDATACOPY": os.return_data_copy,
     # 40s: Block Information
     "BLOCKHASH": lambda vm: not_supported_op("BLOCKHASH"),
-    "COINBASE": lambda vm: not_supported_op("COINBASE"),
+    "COINBASE": lambda vm: not_supported_op("COINBASE"),  # bad
     "TIMESTAMP": lambda vm: not_supported_op("TIMESTAMP"),
     "NUMBER": os.get_block_number,
-    "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),
+    "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),  # bad
     "GASLIMIT": lambda vm: vm.push(10000000000),
     # 50s: Stack, Memory, Storage and Flow Operations
     "POP": lambda vm: vm.pop(),

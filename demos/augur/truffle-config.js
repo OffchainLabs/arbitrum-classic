@@ -38,7 +38,7 @@ module.exports = {
           enabled: true,
           runs: 200,
           details: {
-            yul: true,
+            // yul: true,
             deduplicate: true,
             cse: true,
             constantOptimizer: true
