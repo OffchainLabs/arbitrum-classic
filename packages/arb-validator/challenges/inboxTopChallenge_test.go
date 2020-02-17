@@ -18,7 +18,7 @@ package challenges
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"math/big"
 	"testing"
 
@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -91,7 +90,7 @@ func testInboxTopChallenge(t *testing.T) {
 		challengeHash,
 		"ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39",
 		"979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76",
-		func(challengeAddress common.Address, client arbbridge.ArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client arbbridge.ArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendInboxTopClaim(
 				context.Background(),
 				client,

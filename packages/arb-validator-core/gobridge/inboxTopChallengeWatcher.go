@@ -19,28 +19,10 @@ package gobridge
 import (
 	"context"
 	"fmt"
-	"strings"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 )
-
-var pendingTopBisectedID ethcommon.Hash
-var pendingTopOneStepProofCompletedID ethcommon.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(pendingtopchallenge.PendingTopChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	pendingTopBisectedID = parsed.Events["Bisected"].ID()
-	pendingTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type pendingTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
@@ -49,8 +31,8 @@ type pendingTopChallengeWatcher struct {
 	address       common.Address
 }
 
-func newPendingTopChallengeWatcher(address common.Address, client *GoArbClient) (*pendingTopChallengeWatcher, error) {
-	fmt.Println("in newPendingTopChallengeWatcher")
+func newInboxTopChallengeWatcher(address common.Address, client *GoArbClient) (*pendingTopChallengeWatcher, error) {
+	fmt.Println("in newInboxTopChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -58,7 +40,7 @@ func newPendingTopChallengeWatcher(address common.Address, client *GoArbClient) 
 	chalData := client.GoEthClient.challenges[address]
 	client.GoEthClient.challengeWatchersMutex.Lock()
 	if _, ok := client.GoEthClient.challengeWatcherEvents[chalData]; !ok {
-		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*common.BlockId][]arbbridge.Event)
 	}
 	client.GoEthClient.challengeWatchersMutex.Unlock()
 	//pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
@@ -79,7 +61,7 @@ func newPendingTopChallengeWatcher(address common.Address, client *GoArbClient) 
 	}, nil
 }
 
-func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	//bh := blockId.HeaderHash.ToEthHash()
 	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 	//	BlockHash: &bh,

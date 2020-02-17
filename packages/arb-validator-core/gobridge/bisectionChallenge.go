@@ -22,8 +22,8 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 )
 
@@ -50,7 +50,7 @@ func (c *bisectionChallenge) chooseSegment(
 	segments []common.Hash,
 ) error {
 	fmt.Println("in bisectionChallenge - chooseSegment")
-	tree := structures.NewMerkleTree(segments)
+	tree := valprotocol.NewMerkleTree(segments)
 
 	if !tree.GetRoot().Equals(c.challengeData.challengerDataHash) {
 		return errors.New("Incorrect previous state")
@@ -105,7 +105,7 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 }
 
 func (c *challenge) commitToSegment(hashes [][32]byte) {
-	tree := structures.NewMerkleTree(hashSliceToHashes(hashes))
+	tree := valprotocol.NewMerkleTree(hashSliceToHashes(hashes))
 	c.challengeData.challengerDataHash = tree.GetRoot()
 }
 

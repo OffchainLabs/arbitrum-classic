@@ -22,14 +22,13 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type messagesChallenge struct {
@@ -94,7 +93,7 @@ func (c *messagesChallenge) Bisect(
 	fmt.Println("segmentHashes[0]", segmentHashes[0])
 	fmt.Println("segmentHashes[bisectionCount]", segmentHashes[bisectionCount])
 	fmt.Println("chainLength", chainLength)
-	msgHash := structures.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
+	msgHash := valprotocol.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(msgHash) {
 		return errors.New("Incorrect previous state")
 	}
@@ -119,7 +118,7 @@ func (c *messagesChallenge) Bisect(
 	//	}
 
 	hashes := make([][32]byte, 0, bisectionCount)
-	hashes = append(hashes, structures.MessageChallengeDataHash(
+	hashes = append(hashes, valprotocol.MessageChallengeDataHash(
 		chainHashes[0],
 		chainHashes[1],
 		segmentHashes[0],
@@ -127,7 +126,7 @@ func (c *messagesChallenge) Bisect(
 		new(big.Int).Add(new(big.Int).Div(chainLength, big.NewInt(int64(bisectionCount))), new(big.Int).Mod(chainLength, big.NewInt(int64(bisectionCount)))),
 	))
 	for i := 1; i < bisectionCount; i++ {
-		hashes = append(hashes, structures.MessageChallengeDataHash(
+		hashes = append(hashes, valprotocol.MessageChallengeDataHash(
 			chainHashes[i],
 			chainHashes[i+1],
 			segmentHashes[i],
@@ -191,7 +190,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		value.NewHashOnlyValue(lowerHashB, 32),
 		value.NewHashOnlyValue(ethMsgHash, 32),
 	})
-	matchHash := structures.MessageChallengeDataHash(
+	matchHash := valprotocol.MessageChallengeDataHash(
 		lowerHashA,
 		hashing.SoliditySHA3(
 			hashing.Bytes32(lowerHashA),
@@ -261,7 +260,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		value.NewHashOnlyValue(lowerHashB, 32),
 		value.NewHashOnlyValue(ethMsgHash, 32),
 	})
-	matchHash := structures.MessageChallengeDataHash(
+	matchHash := valprotocol.MessageChallengeDataHash(
 		lowerHashA,
 		hashing.SoliditySHA3(
 			hashing.Bytes32(lowerHashA),
@@ -328,7 +327,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		value.NewHashOnlyValue(lowerHashB, 32),
 		value.NewHashOnlyValue(ethMsgHash, 32),
 	})
-	matchHash := structures.MessageChallengeDataHash(
+	matchHash := valprotocol.MessageChallengeDataHash(
 		lowerHashA,
 		hashing.SoliditySHA3(
 			hashing.Bytes32(lowerHashA),
@@ -374,6 +373,32 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	return nil
 }
 
+func (c *messagesChallenge) OneStepProofContractTransactionMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredContractTransaction,
+) error {
+	//c.auth.Lock()
+	//defer c.auth.Unlock()
+	//tx, err := c.contract.OneStepProofContractTransactionMessage(
+	//	c.auth.getAuth(ctx),
+	//	lowerHashA,
+	//	lowerHashB,
+	//	msg.To.ToEthAddress(),
+	//	msg.From.ToEthAddress(),
+	//	msg.Value,
+	//	msg.Data,
+	//	msg.BlockNum.AsInt(),
+	//	msg.MessageNum,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//return c.waitForReceipt(ctx, tx, "OneStepProofContractTransactionMessage")
+	return nil
+}
+
 func (c *messagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
@@ -385,10 +410,10 @@ func (c *messagesChallenge) ChooseSegment(
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {
-		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength.Uint64())
+		stepCount := valprotocol.CalculateBisectionStepCount(i, bisectionCount, chainLength.Uint64())
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.MessageChallengeDataHash(
+			valprotocol.MessageChallengeDataHash(
 				chainHashes[i],
 				chainHashes[i+1],
 				segmentHashes[i],

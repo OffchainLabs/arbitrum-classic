@@ -18,7 +18,6 @@ package arbbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,5 +31,5 @@ type ChallengeTester interface {
 		challengePeriod common.TimeTicks,
 		challengeHash common.Hash,
 		challengeType *big.Int,
-	) (common.Address, *structures.BlockId, error)
+	) (common.Address, *common.BlockId, error)
 }

@@ -21,8 +21,9 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	rand2 "math/rand"
@@ -41,7 +42,7 @@ const (
 
 type VmData struct {
 	machineHash       [32]byte
-	pendingHash       [32]byte // Lock pending and confirm asserts together
+	pendingHash       [32]byte // Lock inbox and confirm asserts together
 	inbox             [32]byte
 	asserter          common.Address
 	escrowRequired    big.Int
@@ -73,16 +74,17 @@ type channelData struct {
 }
 
 type rollupData struct {
+	initVMHash              common.Hash
+	VMstate                 machine.Status
 	state                   EthState
-	vmState                 common.Hash
 	gracePeriod             common.TimeTicks
 	maxSteps                uint64
 	maxTimeBoundsWidth      uint64
 	arbGasSpeedLimitPerTick uint64
 	escrowRequired          *big.Int
 	owner                   common.Address
-	events                  map[*structures.BlockId][]arbbridge.Event
-	creation                *structures.BlockId
+	events                  map[*common.BlockId][]arbbridge.Event
+	creation                *common.BlockId
 	stakers                 map[common.Address]*staker
 	leaves                  map[common.Hash]bool
 	lastConfirmed           common.Hash
@@ -113,10 +115,19 @@ type execChallengeData struct {
 	challengeData
 }
 
-//type goEvent struct {
-//	challenge *challengeData
-//	arbbridge.Event
-//}
+type staker struct {
+	location           common.Hash
+	creationTimeBlocks *common.TimeBlocks
+	inChallenge        bool
+	balance            *big.Int
+}
+
+type nodeGraph struct {
+	stakeRequirement *big.Int
+	stakers          map[common.Address]*staker
+	leaves           map[common.Hash]bool
+	lastConfirmed    common.Hash
+}
 
 type goMaybeEvent struct {
 	challenge *challengeData
@@ -136,18 +147,18 @@ type goEthdata struct {
 	rollups                map[common.Address]*rollupData    // contract address to rollup
 	challenges             map[common.Address]*challengeData // contract address to rollup
 	challengeWatchersMutex sync.Mutex
-	challengeWatcherEvents map[*challengeData]map[*structures.BlockId][]arbbridge.Event
+	challengeWatcherEvents map[*challengeData]map[*common.BlockId][]arbbridge.Event
 	arbFactory             common.Address // eth address to factory address
 	nextAddress            common.Address // unique 'address'
-	nextMsgs               map[*structures.BlockId][]goMaybeEvent
+	nextMsgs               map[*common.BlockId][]goMaybeEvent
 	BlockNumber            uint64
-	pending                map[common.Address]*PendingInbox
-	NextBlock              *structures.BlockId
-	LastMinedBlock         *structures.BlockId
+	inbox                  map[common.Address]*structures.Inbox
+	NextBlock              *common.BlockId
+	LastMinedBlock         *common.BlockId
 	//LatestHeight *big.Int
-	blockNumbers map[uint64]*structures.BlockId      // block height to blockId
-	blockHashes  map[common.Hash]*structures.BlockId // block hash to blockId
-	parentHashes map[structures.BlockId]common.Hash  // blokcId to block hash
+	blockNumbers map[uint64]*common.BlockId      // block height to blockId
+	blockHashes  map[common.Hash]*common.BlockId // block hash to blockId
+	parentHashes map[common.BlockId]common.Hash  // blokcId to block hash
 	//headerNumber map[*big.Int]common.Hash
 	//headerhash   map[common.Hash]*big.Int
 
@@ -190,19 +201,19 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.channels = make(map[common.Address]*channelData)
 		mEthData.rollups = make(map[common.Address]*rollupData)
 		mEthData.challenges = make(map[common.Address]*challengeData)
-		mEthData.challengeWatcherEvents = make(map[*challengeData]map[*structures.BlockId][]arbbridge.Event)
+		mEthData.challengeWatcherEvents = make(map[*challengeData]map[*common.BlockId][]arbbridge.Event)
 		mEthData.arbFactory = mEthData.getNextAddress()
-		mEthData.pending = make(map[common.Address]*PendingInbox)
-		mEthData.blockHashes = make(map[common.Hash]*structures.BlockId)
-		mEthData.blockNumbers = make(map[uint64]*structures.BlockId)
-		mEthData.parentHashes = make(map[structures.BlockId]common.Hash)
+		mEthData.inbox = make(map[common.Address]*structures.Inbox)
+		mEthData.blockHashes = make(map[common.Hash]*common.BlockId)
+		mEthData.blockNumbers = make(map[uint64]*common.BlockId)
+		mEthData.parentHashes = make(map[common.BlockId]common.Hash)
 		//init header number to 0 at startup
-		mEthData.LastMinedBlock = new(structures.BlockId)
+		mEthData.LastMinedBlock = new(common.BlockId)
 		mEthData.LastMinedBlock.Height = common.NewTimeBlocks(big.NewInt(0))
 		mEthData.LastMinedBlock.HeaderHash = blockHash
-		mEthData.NextBlock = new(structures.BlockId)
+		mEthData.NextBlock = new(common.BlockId)
 		mEthData.NextBlock.Height = common.NewTimeBlocks(big.NewInt(1))
-		mEthData.nextMsgs = make(map[*structures.BlockId][]goMaybeEvent)
+		mEthData.nextMsgs = make(map[*common.BlockId][]goMaybeEvent)
 		mEthData.blockHashes[blockHash] = mEthData.LastMinedBlock
 		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
 		mEthData.parentHashes[*mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
@@ -242,21 +253,21 @@ func (m *goEthdata) getNextAddress() common.Address {
 	return addr
 }
 
-func (m *goEthdata) getCurrentBlock() *structures.BlockId {
+func (m *goEthdata) getCurrentBlock() *common.BlockId {
 	m.blockMutex.Lock()
 	defer m.blockMutex.Unlock()
 
 	return m.NextBlock
 }
 
-func (m *goEthdata) getLastBlock() *structures.BlockId {
+func (m *goEthdata) getLastBlock() *common.BlockId {
 	m.blockMutex.Lock()
 	defer m.blockMutex.Unlock()
 
 	return m.LastMinedBlock
 }
 
-func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*structures.BlockId, error) {
+func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*common.BlockId, error) {
 	m.blockMutex.Lock()
 	defer m.blockMutex.Unlock()
 
@@ -309,7 +320,7 @@ func mine(m *goEthdata, t time.Time) {
 	}
 	m.msgMutex.Unlock()
 	fmt.Println("mined block number", m.NextBlock)
-	newBlock := new(structures.BlockId)
+	newBlock := new(common.BlockId)
 	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))
 	m.NextBlock = newBlock
 	blockEvent := arbbridge.NewTimeEvent{
@@ -350,10 +361,10 @@ func emitFinalizedUnanimousAssertion(vm common.Address, unanHash [32]byte) {
 	//}
 }
 func pullPendingMessages(address common.Address) [32]byte {
-	//bytes32 messages = pending[msg.sender];
-	//pending[msg.sender] = ArbValue.hashEmptyTuple();
-	//messages := MockEthData.pending[address]
-	//MockEthData.pending[address] = value.NewEmptyTuple().Hash()
+	//bytes32 messages = inbox[msg.sender];
+	//inbox[msg.sender] = ArbValue.hashEmptyTuple();
+	//messages := MockEthData.inbox[address]
+	//MockEthData.inbox[address] = value.NewEmptyTuple().Hash()
 	//return messages
 	return *new([32]byte)
 }
@@ -379,7 +390,7 @@ func sendUnpaidMessage(src common.Address, dest common.Address, tokType [21]byte
 	//            _sender,
 	//            _data
 	//        );
-	//        if (pending[_destination] != 0) {
+	//        if (inbox[_destination] != 0) {
 	//            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
 	//            bytes32 txHash = keccak256(
 	//                abi.encodePacked(
@@ -402,9 +413,9 @@ func sendUnpaidMessage(src common.Address, dest common.Address, tokType [21]byte
 	//            values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
 	//            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
 	//
-	//            pending[_destination] = ArbValue.hashTupleValue([
+	//            inbox[_destination] = ArbValue.hashTupleValue([
 	//                ArbValue.newIntValue(0),
-	//                ArbValue.newHashOnlyValue(pending[_destination]),
+	//                ArbValue.newHashOnlyValue(inbox[_destination]),
 	//                ArbValue.newHashOnlyValue(messageHash)
 	//            ]);
 	//        }

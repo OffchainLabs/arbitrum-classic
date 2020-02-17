@@ -18,8 +18,7 @@ package gobridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -41,7 +40,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, *structures.BlockId, error) {
+) (common.Address, *common.BlockId, error) {
 	eth := con.client.GoEthClient
 
 	// create clone

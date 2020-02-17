@@ -19,18 +19,19 @@ package gobridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type ethRollupWatcher struct {
-	client *GoArbClient
+	inboxAddress common.Address
+	client       *GoArbClient
 
-	address common.Address
+	rollupAddress common.Address
 }
 
 func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWatcher, error) {
-	vm := &ethRollupWatcher{client: client, address: address}
+	vm := &ethRollupWatcher{client: client, rollupAddress: address}
 	//err := vm.setupContracts()
 	return vm, nil
 	//arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
@@ -63,24 +64,34 @@ func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWa
 //	return nil
 //}
 
-func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
-	return vm.client.GoEthClient.rollups[vm.address].events[blockId], nil
+func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+	return vm.client.GoEthClient.rollups[vm.rollupAddress].events[blockId], nil
 }
 
-func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
-	return structures.ChainParams{
-		StakeRequirement:        vm.client.GoEthClient.rollups[vm.address].escrowRequired,
-		GracePeriod:             vm.client.GoEthClient.rollups[vm.address].gracePeriod,
-		MaxExecutionSteps:       vm.client.GoEthClient.rollups[vm.address].maxSteps,
-		ArbGasSpeedLimitPerTick: vm.client.GoEthClient.rollups[vm.address].arbGasSpeedLimitPerTick,
-		MaxTimeBoundsWidth:      vm.client.GoEthClient.rollups[vm.address].maxTimeBoundsWidth,
+func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
+	return valprotocol.ChainParams{
+		StakeRequirement:        vm.client.GoEthClient.rollups[vm.rollupAddress].escrowRequired,
+		GracePeriod:             vm.client.GoEthClient.rollups[vm.rollupAddress].gracePeriod,
+		MaxExecutionSteps:       vm.client.GoEthClient.rollups[vm.rollupAddress].maxSteps,
+		ArbGasSpeedLimitPerTick: vm.client.GoEthClient.rollups[vm.rollupAddress].arbGasSpeedLimitPerTick,
+		MaxTimeBoundsWidth:      vm.client.GoEthClient.rollups[vm.rollupAddress].maxTimeBoundsWidth,
 	}, nil
+}
+
+// TODO: need to fill in
+func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
+	return con.client.GoEthClient.rollups[con.rollupAddress].creation, con.client.GoEthClient.rollups[con.rollupAddress].initVMHash, nil
+	//return nil, common.Hash{}, nil
+}
+
+func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
+	return string("1"), nil
 }
 
 func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	return vm.client.GoEthClient.globalInbox, nil
 }
 
-func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*structures.BlockId, error) {
-	return vm.client.GoEthClient.rollups[vm.address].creation, nil
+func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
+	return vm.client.GoEthClient.rollups[vm.rollupAddress].creation, nil
 }

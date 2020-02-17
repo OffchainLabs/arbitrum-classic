@@ -19,27 +19,23 @@ package gobridge
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 var messagesBisectedID ethcommon.Hash
 var messagesOneStepProofCompletedID ethcommon.Hash
 
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	messagesBisectedID = parsed.Events["Bisected"].ID()
-	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
+//
+//func init() {
+//	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
+//	if err != nil {
+//		panic(err)
+//	}
+//	messagesBisectedID = parsed.Events["Bisected"].ID()
+//	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+//}
 
 type messagesChallengeWatcher struct {
 	*bisectionChallengeWatcher
@@ -61,14 +57,14 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 	chalData := client.GoEthClient.challenges[address]
 	client.GoEthClient.challengeWatchersMutex.Lock()
 	if _, ok := client.GoEthClient.challengeWatcherEvents[chalData]; !ok {
-		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*structures.BlockId][]arbbridge.Event)
+		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*common.BlockId][]arbbridge.Event)
 	}
 	client.GoEthClient.challengeWatchersMutex.Unlock()
 
 	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, challengeInfo: chalData, client: client}, nil
 }
 
-func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *structures.BlockId) ([]arbbridge.Event, error) {
+func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	fmt.Println("in messagesChallengeWatcher GetEvents")
 	//bh := blockId.HeaderHash.ToEthHash()
 	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{

@@ -56,6 +56,8 @@ type ArbAuthClient interface {
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
+	DeployOneStepProof(ctx context.Context) (OneStepProof, error)
+	DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (ChallengeTester, error)
 }
 
 func WaitForBalance(ctx context.Context, client ArbClient, account common.Address, amount *big.Int) error {

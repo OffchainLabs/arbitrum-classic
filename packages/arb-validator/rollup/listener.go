@@ -172,6 +172,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 		lis.Lock()
 		lis.broadcastAssertions[prepared.leafHash] = prepared.params
 		lis.Unlock()
+		log.Printf("%v is making an assertion\n", stakingAddress)
 		go func() {
 			err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {

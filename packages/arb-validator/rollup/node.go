@@ -127,6 +127,7 @@ func NewNodeFromPrev(
 	} else {
 		deadlineTicks = prev.deadline.Add(checkTime)
 	}
+
 	ret := &Node{
 		prev:            prev,
 		deadline:        deadlineTicks,
@@ -159,12 +160,12 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind valprotocol.ChildType) *No
 
 func (node *Node) ExecutionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
-	preHash := structures.ExecutionPreconditionHash(
-		vmProtoData.MachineHash,
-		node.disputable.AssertionParams.TimeBounds,
-		node.disputable.AssertionClaim.ImportedMessagesSlice,
-	)
-	return preHash
+	pre := &valprotocol.Precondition{
+		BeforeHash:  vmProtoData.MachineHash,
+		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
+		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice, 0),
+	}
+	return pre.Hash()
 }
 
 func (node *Node) NodeDataHash(params valprotocol.ChainParams) common.Hash {
@@ -227,11 +228,16 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
-	hash, innerHash := structures.NodeHash(prevHashArr,
-		node.vmProtoData.Hash(),
-		node.deadline,
-		nodeDataHash,
-		node.linkType)
+	innerHash := hashing.SoliditySHA3(
+		hashing.Bytes32(node.vmProtoData.Hash()),
+		hashing.TimeTicks(node.deadline),
+		hashing.Bytes32(nodeDataHash),
+		hashing.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
+	)
+	hash := hashing.SoliditySHA3(
+		hashing.Bytes32(prevHashArr),
+		hashing.Bytes32(innerHash),
+	)
 	node.nodeDataHash = nodeDataHash
 	node.innerHash = innerHash
 	node.hash = hash

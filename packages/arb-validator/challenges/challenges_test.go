@@ -17,16 +17,16 @@
 package challenges
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/gobridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/gobridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"testing"
 )
 
 func TestChallenges(t *testing.T) {
-	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 	if test.UseGoEth() {
 		gobridge.StartGoEth(test.GetEthUrl())
 	}
+	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 	t.Run("Messages Challenge", testMessagesChallenge)
 	t.Run("Execution Challenge", testExecutionChallenge)
 }

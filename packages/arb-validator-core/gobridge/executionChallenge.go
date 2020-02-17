@@ -23,9 +23,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type ExecutionChallenge struct {
@@ -74,7 +73,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 
 	bisectionCount := len(machineHashes) - 1
 
-	preconditionHash := structures.ExecutionPreconditionHash(machineHashes[0], precondition.TimeBounds, precondition.BeforeInbox.Hash())
+	preconditionHash := valprotocol.ExecutionPreconditionHash(machineHashes[0], precondition.TimeBounds, precondition.BeforeInbox.Hash())
 
 	assertionHash := generateAssertionHash(
 		machineHashes[bisectionCount],
@@ -86,7 +85,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		logAccs[bisectionCount],
 	)
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(structures.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
 		return errors.New("Incorrect previous state")
 	}
 
@@ -101,7 +100,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	)
 
 	hashes := make([][32]byte, 0, bisectionCount)
-	hashes = append(hashes, structures.ExecutionDataHash(
+	hashes = append(hashes, valprotocol.ExecutionDataHash(
 		totalSteps/uint64(bisectionCount)+totalSteps%uint64(bisectionCount),
 		preconditionHash,
 		assertionHash,
@@ -120,9 +119,9 @@ func (c *ExecutionChallenge) BisectAssertion(
 			logAccs[i],
 			logAccs[i+1],
 		)
-		hashes = append(hashes, structures.ExecutionDataHash(
+		hashes = append(hashes, valprotocol.ExecutionDataHash(
 			totalSteps/uint64(bisectionCount),
-			structures.ExecutionPreconditionHash(machineHashes[i], precondition.TimeBounds, precondition.BeforeInbox.Hash()),
+			valprotocol.ExecutionPreconditionHash(machineHashes[i], precondition.TimeBounds, precondition.BeforeInbox.Hash()),
 			assertionHash))
 	}
 
@@ -158,10 +157,10 @@ func (c *ExecutionChallenge) OneStepProof(
 ) error {
 	fmt.Println("in ExecutionChallenge OneStepProof")
 
-	structures.ExecutionPreconditionHash(precondition.BeforeHash, precondition.TimeBounds, precondition.BeforeInbox.Hash())
+	valprotocol.ExecutionPreconditionHash(precondition.BeforeHash, precondition.TimeBounds, precondition.BeforeInbox.Hash())
 	precondition.Hash()
 
-	matchHash := structures.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
+	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
 		return errors.New("Incorrect previous state")
 	}
@@ -219,10 +218,10 @@ func (c *ExecutionChallenge) ChooseSegment(
 	fmt.Println("in ExecutionChallenge ChooseSegment")
 	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
-		stepCount := structures.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
+		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
+			valprotocol.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
 	return c.bisectionChallenge.chooseSegment(

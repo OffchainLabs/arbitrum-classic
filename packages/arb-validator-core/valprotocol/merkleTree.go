@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package valprotocol
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

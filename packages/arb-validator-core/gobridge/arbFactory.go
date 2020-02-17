@@ -4,15 +4,16 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 )
 
 type ArbFactory struct {
-	contract common.Address
-	client   *GoArbClient
+	rollupAddress common.Address
+	client        *GoArbClient
 }
 
 func newArbFactory(address common.Address, client *GoArbClient) (*ArbFactory, error) {
@@ -22,10 +23,10 @@ func newArbFactory(address common.Address, client *GoArbClient) (*ArbFactory, er
 func (con *ArbFactory) CreateRollup(
 	ctx context.Context,
 	vmState common.Hash,
-	params structures.ChainParams,
+	params valprotocol.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
-	events := make(map[*structures.BlockId][]arbbridge.Event)
+	events := make(map[*common.BlockId][]arbbridge.Event)
 	addr := con.client.GoEthClient.getNextAddress()
 	vmProto := hashing.SoliditySHA3(
 		hashing.Bytes32(vmState),
@@ -43,8 +44,10 @@ func (con *ArbFactory) CreateRollup(
 		hashing.Bytes32(innerHash),
 	)
 
-	con.client.GoEthClient.rollups[addr] = &rollupData{state: Uninitialized,
-		vmState:                 vmState,
+	con.client.GoEthClient.rollups[addr] = &rollupData{
+		initVMHash:              vmState,
+		VMstate:                 machine.Extensive,
+		state:                   Uninitialized,
 		gracePeriod:             params.GracePeriod,
 		maxSteps:                params.MaxExecutionSteps,
 		maxTimeBoundsWidth:      params.MaxTimeBoundsWidth,
@@ -68,8 +71,8 @@ func (con *ArbFactory) CreateRollup(
 }
 
 type arbFactoryWatcher struct {
-	contract common.Address
-	client   *GoArbClient
+	rollupAddress common.Address
+	client        *GoArbClient
 }
 
 func newArbFactoryWatcher(address common.Address, client *GoArbClient) (*arbFactoryWatcher, error) {
@@ -80,10 +83,10 @@ func newArbFactoryWatcher(address common.Address, client *GoArbClient) (*arbFact
 	return &arbFactoryWatcher{address, client}, nil
 }
 
-func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
-	return con.contract, nil
+func (con *arbFactoryWatcher) GlobalInboxAddress() (common.Address, error) {
+	return con.rollupAddress, nil
 }
 
 func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
-	return con.contract, nil
+	return con.rollupAddress, nil
 }

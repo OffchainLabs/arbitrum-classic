@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/gobridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -36,11 +35,13 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/gobridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-type ChallengeFunc func(common.Address, *arbbridge.ArbAuthClient, *common.BlockId) (ChallengeState, error)
+type ChallengeFunc func(common.Address, arbbridge.ArbAuthClient, *common.BlockId) (ChallengeState, error)
 
 func testChallenge(
 	challengeType valprotocol.ChildType,
@@ -77,19 +78,6 @@ func testChallenge(
 		return err
 	}
 
-	ethclint1, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
-	}
-
-	ethclint2, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
-	}
-
-	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
-	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
-
 	var client1 arbbridge.ArbAuthClient
 	var client2 arbbridge.ArbAuthClient
 	if test.UseGoEth() {
@@ -105,16 +93,18 @@ func testChallenge(
 		}
 		client2 = c2
 	} else {
-		c, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+		ethclint1, err := ethclient.Dial(ethURL)
 		if err != nil {
 			return err
 		}
-		client1 = c
-		c2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+
+		ethclint2, err := ethclient.Dial(ethURL)
 		if err != nil {
 			return err
 		}
-		client2 = c2
+
+		client1 = ethbridge.NewEthAuthClient(ethclint1, auth1)
+		client2 = ethbridge.NewEthAuthClient(ethclint2, auth2)
 	}
 	fmt.Println("in testChallenge calling NewArbFactoryWatcher")
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())

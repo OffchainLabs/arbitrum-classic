@@ -192,7 +192,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						startTime := prepared.params.TimeBounds.Start
 						endTime := prepared.params.TimeBounds.End
-						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(1)))
+						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
 						if chain.latestBlockId.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(ctx, chain, prepared.Clone())

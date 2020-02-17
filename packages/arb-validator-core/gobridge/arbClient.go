@@ -20,14 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"log"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
 var reorgError = errors.New("reorg occured")
@@ -45,7 +44,7 @@ func NewEthClient(ethURL string) (*GoArbClient, error) {
 	return &client, nil
 }
 
-func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *structures.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
 
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId}
@@ -54,7 +53,7 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *s
 		defer close(blockIdChan)
 
 		for {
-			var nextBlock *structures.BlockId
+			var nextBlock *common.BlockId
 			fetchErrorCount := 0
 			for {
 				if prevBlockId == nil {
@@ -119,19 +118,25 @@ func (c *GoArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbr
 	return newMessagesChallengeWatcher(address, c)
 }
 
-func (c *GoArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
-	return newPendingTopChallengeWatcher(address, c)
+func (c *GoArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
+	return newInboxTopChallengeWatcher(address, c)
 }
 
 func (c *GoArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
 	return newOneStepProof(address, c)
 }
 
-func (c *GoArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+func (c *GoArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	bal := big.NewInt(0)
+	return bal, nil
+	//return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
+}
+
+func (c *GoArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
 	return c.GoEthClient.LastMinedBlock, nil
 }
 
-func (c *GoArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+func (c *GoArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
 	block, err := c.GoEthClient.getBlockFromHeight(height)
 	if err != nil {
 		errstr := fmt.Sprintln("block height", height, " not found")
@@ -178,8 +183,8 @@ func (c *GoArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup
 	return newRollup(address, c)
 }
 
-func (c *GoArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return newPendingInbox(address, c.GoArbClient)
+func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+	return newGlobalInbox(address, c.GoArbClient)
 }
 
 func (c *GoArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
@@ -194,8 +199,8 @@ func (c *GoArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridg
 	return newMessagesChallenge(address, c)
 }
 
-func (c *GoArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return newPendingTopChallenge(address, c)
+func (c *GoArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
+	return newInboxTopChallenge(address, c)
 }
 
 func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (arbbridge.ChallengeTester, error) {

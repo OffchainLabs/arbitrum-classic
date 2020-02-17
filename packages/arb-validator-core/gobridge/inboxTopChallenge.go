@@ -20,33 +20,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type pendingTopChallenge struct {
+type inboxTopChallenge struct {
 	*bisectionChallenge
 	//contract *pendingtopchallenge.PendingTopChallenge
 }
 
-func newPendingTopChallenge(address common.Address, client *GoArbAuthClient) (*pendingTopChallenge, error) {
+func newInboxTopChallenge(address common.Address, client *GoArbAuthClient) (*inboxTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
-	return &pendingTopChallenge{bisectionChallenge: bisectionChallenge}, nil
+	return &inboxTopChallenge{bisectionChallenge: bisectionChallenge}, nil
 }
 
-func (c *pendingTopChallenge) Bisect(
+func (c *inboxTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 
-	fmt.Println("in (c *pendingTopChallenge) Bisect")
+	fmt.Println("in (c *inboxTopChallenge) Bisect")
 
 	bisectionCount := len(chainHashes) - 1
 
@@ -54,7 +54,7 @@ func (c *pendingTopChallenge) Bisect(
 	fmt.Println("chainHashes[0]", chainHashes[0])
 	fmt.Println("chainHashes[bisectionCount]", chainHashes[bisectionCount])
 	fmt.Println("chainLength", chainLength)
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(structures.PendingTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
+	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
 		return errors.New("Incorrect previous state")
 	}
 
@@ -63,13 +63,13 @@ func (c *pendingTopChallenge) Bisect(
 	}
 
 	hashes := make([][32]byte, 0, bisectionCount)
-	hashes = append(hashes, structures.PendingTopChallengeDataHash(
+	hashes = append(hashes, valprotocol.InboxTopChallengeDataHash(
 		chainHashes[0],
 		chainHashes[1],
 		new(big.Int).Add(new(big.Int).Div(chainLength, big.NewInt(int64(bisectionCount))), new(big.Int).Mod(chainLength, big.NewInt(int64(bisectionCount)))),
 	))
 	for i := 1; i < bisectionCount; i++ {
-		hashes = append(hashes, structures.PendingTopChallengeDataHash(
+		hashes = append(hashes, valprotocol.InboxTopChallengeDataHash(
 			chainHashes[i],
 			chainHashes[i+1],
 			new(big.Int).Div(chainLength, big.NewInt(int64(bisectionCount)))))
@@ -79,7 +79,7 @@ func (c *pendingTopChallenge) Bisect(
 	c.asserterResponded()
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
-		Event: arbbridge.PendingTopBisectionEvent{
+		Event: arbbridge.InboxTopBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.GoEthClient.getCurrentBlock(),
 			},
@@ -91,12 +91,12 @@ func (c *pendingTopChallenge) Bisect(
 	return nil
 }
 
-func (c *pendingTopChallenge) OneStepProof(
+func (c *inboxTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	value common.Hash,
 ) error {
-	fmt.Println("in (c *pendingTopChallenge) OneStepProof")
+	fmt.Println("in (c *inboxTopChallenge) OneStepProof")
 	//c.auth.Lock()
 	//defer c.auth.Unlock()
 	//tx, err := c.contract.OneStepProof(
@@ -110,10 +110,10 @@ func (c *pendingTopChallenge) OneStepProof(
 	//return c.waitForReceipt(ctx, tx, "OneStepProof")
 	//return keccak256(
 	//	abi.encodePacked(
-	//		pending,
+	//		inbox,
 	//		message
 	//)
-	matchHash := structures.PendingTopChallengeDataHash(lowerHashA, structures.AddMessageToPending(lowerHashA, value), big.NewInt(1))
+	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
 		return errors.New("Incorrect previous state")
 	}
@@ -130,7 +130,7 @@ func (c *pendingTopChallenge) OneStepProof(
 	return nil
 }
 
-func (c *pendingTopChallenge) ChooseSegment(
+func (c *inboxTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
@@ -139,8 +139,8 @@ func (c *pendingTopChallenge) ChooseSegment(
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {
-		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
-		fmt.Println("PendingTopChallengeDataHash", structures.PendingTopChallengeDataHash(
+		stepCount := valprotocol.CalculateBisectionStepCount(i, bisectionCount, chainLength)
+		fmt.Println("PendingTopChallengeDataHash", valprotocol.InboxTopChallengeDataHash(
 			chainHashes[i],
 			chainHashes[i+1],
 			new(big.Int).SetUint64(uint64(stepCount)),
@@ -151,7 +151,7 @@ func (c *pendingTopChallenge) ChooseSegment(
 
 		bisectionHashes = append(
 			bisectionHashes,
-			structures.PendingTopChallengeDataHash(
+			valprotocol.InboxTopChallengeDataHash(
 				chainHashes[i],
 				chainHashes[i+1],
 				new(big.Int).SetUint64(uint64(stepCount)),
