@@ -17,7 +17,6 @@
 package gobridge
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -248,8 +247,8 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	leaf := calculatePath(from, leafProof)
 	//require(isValidLeaf(leaf), PRUNE_LEAF);
 	if !vm.rollup.leaves[leaf] {
-		fmt.Println("MoveStake - invalid leaf")
-		return errors.New("MoveStake - invalid leaf")
+		fmt.Println("PruneLeaf - invalid leaf")
+		return errors.New("PruneLeaf - invalid leaf")
 	}
 	//require(
 	//	leafProof[0] != latestConfirmedProof[0] &&
@@ -277,32 +276,13 @@ func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof 
 }
 
 func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PruneParams) error {
-
-	fromNodes := make([]common.Hash, 0, len(opps))
-	leafProofs := make([]common.Hash, 0, len(opps))
-	leafProofLengths := make([]*big.Int, 0, len(opps))
-	confProofs := make([]common.Hash, 0, len(opps))
-	confProofLengths := make([]*big.Int, 0, len(opps))
 	for _, opp := range opps {
-		fromNodes = append(fromNodes, opp.AncestorHash)
-		leafProofs = append(leafProofs, opp.LeafProof...)
-		leafProofLengths = append(leafProofLengths, big.NewInt(int64(len(opp.LeafProof))))
-		confProofs = append(confProofs, opp.AncProof...)
-		confProofLengths = append(confProofLengths, big.NewInt(int64(len(opp.AncProof))))
+		err := vm.PruneLeaf(ctx, opp.AncestorHash, opp.LeafProof, opp.AncProof)
+		if err != nil {
+			return err
+		}
 	}
 
-	//tx, err := vm.ArbRollup.PruneLeaves(
-	//	vm.auth.getAuth(ctx),
-	//	hashSliceToRaw(fromNodes),
-	//	hashSliceToRaw(leafProofs),
-	//	leafProofLengths,
-	//	hashSliceToRaw(confProofs),
-	//	confProofLengths,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return vm.waitForReceipt(ctx, tx, "PruneLeaf")
 	return nil
 }
 
@@ -346,26 +326,18 @@ func (vm *arbRollup) MakeAssertion(
 	}
 	if (vm.Client.GoEthClient.inbox[vm.rollup.contractAddress]) != nil {
 		inbox := vm.Client.GoEthClient.inbox[vm.rollup.contractAddress]
-		if assertionParams.ImportedMessageCount.Cmp(inbox.TopCount().Sub(inbox.TopCount(), beforeState.InboxCount)) > 0 {
+		if assertionParams.ImportedMessageCount.Cmp(inbox.count.Sub(inbox.count, beforeState.InboxCount)) > 0 {
 			return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")
 		}
 	}
 
 	currentTicks := common.TicksFromBlockNum(vm.Client.GoEthClient.getCurrentBlock().Height)
-	fmt.Println("current ticks = ", currentTicks)
 	deadlineTicks := currentTicks.Add(vm.params.GracePeriod)
 	if deadlineTicks.Cmp(prevDeadline) < 0 {
 		return errors.New("Node is not passed deadline")
 	}
-	fmt.Println("grace period = ", vm.params.GracePeriod)
-	fmt.Println("deadlineTicks = ", deadlineTicks)
-
-	fmt.Println("vm.params.StakeRequirement = ", vm.params.StakeRequirement)
-	fmt.Println("vm.params.ArbGasSpeedLimitPerTick = ", vm.params.ArbGasSpeedLimitPerTick)
-	checkTimeTicks := vm.params.StakeRequirement.Div(vm.params.StakeRequirement, big.NewInt(int64(vm.params.ArbGasSpeedLimitPerTick)))
-	deadlineTicks = deadlineTicks.Add(common.TicksFromSeconds(checkTimeTicks.Int64()))
-	fmt.Println("checkTimeTicks = ", checkTimeTicks)
-	fmt.Println("deadlineTicks = ", deadlineTicks)
+	checkTimeTicks := assertionClaim.AssertionStub.NumGas / vm.params.ArbGasSpeedLimitPerTick
+	deadlineTicks = deadlineTicks.Add(common.TicksFromSeconds(int64(checkTimeTicks)))
 
 	protoStateHash := hashing.SoliditySHA3(
 		hashing.Bytes32(assertionClaim.AssertionStub.AfterHash),
@@ -384,8 +356,8 @@ func (vm *arbRollup) MakeAssertion(
 		pendingTopCount = big.NewInt(0)
 		pendingTopHash = value.NewEmptyTuple().Hash()
 	} else {
-		pendingTopCount = globalInboxPending.TopCount()
-		pendingTopHash = globalInboxPending.GetTopHash()
+		pendingTopCount = globalInboxPending.count
+		pendingTopHash = globalInboxPending.value
 	}
 	left := new(big.Int).Add(beforeState.InboxCount, assertionParams.ImportedMessageCount)
 	left = left.Sub(pendingTopCount, left)
@@ -468,7 +440,6 @@ func (vm *arbRollup) MakeAssertion(
 	if calculatePath(vm.rollup.stakers[vm.Client.auth.From].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
 	}
-	fmt.Println("location - valid - ", valid)
 	vm.rollup.stakers[vm.Client.auth.From].location = valid
 	vm.rollup.nextConfirmed = valid
 	stakeMovedEvent := arbbridge.StakeMovedEvent{
@@ -485,51 +456,51 @@ func (vm *arbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *arbRollup) ConfirmValid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	outMsgs []value.Value,
-	logsAccHash common.Hash,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	vm.mux.Lock()
-	defer vm.mux.Unlock()
-
-	var lastMsgHash common.Hash
-	if outMsgs != nil && len(outMsgs) > 0 {
-		lastMsgHash = outMsgs[len(outMsgs)-1].Hash()
-	}
-
-	vm.confirmNode(
-		deadline,
-		hashing.SoliditySHA3(
-			hashing.Bytes32(lastMsgHash),
-			hashing.Bytes32(logsAccHash),
-		),
-		valprotocol.ValidChildType,
-		protoHash,
-		stakerAddresses,
-		stakerProofs,
-		stakerProofOffsets,
-	)
-
-	//globalInbox.sendMessages(_messages); ???
-
-	ConfirmedAssertionEvent := arbbridge.ConfirmedAssertionEvent{
-		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
-		},
-		//LogsAccHash: logsAccHash,
-	}
-	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: ConfirmedAssertionEvent,
-	})
-
-	return nil
-}
+//func (vm *arbRollup) ConfirmValid(
+//	ctx context.Context,
+//	deadline common.TimeTicks,
+//	outMsgs []value.Value,
+//	logsAccHash common.Hash,
+//	protoHash common.Hash,
+//	stakerAddresses []common.Address,
+//	stakerProofs []common.Hash,
+//	stakerProofOffsets []*big.Int,
+//) error {
+//	vm.mux.Lock()
+//	defer vm.mux.Unlock()
+//
+//	var lastMsgHash common.Hash
+//	if outMsgs != nil && len(outMsgs) > 0 {
+//		lastMsgHash = outMsgs[len(outMsgs)-1].Hash()
+//	}
+//
+//	vm.confirmNode(
+//		deadline,
+//		hashing.SoliditySHA3(
+//			hashing.Bytes32(lastMsgHash),
+//			hashing.Bytes32(logsAccHash),
+//		),
+//		valprotocol.ValidChildType,
+//		protoHash,
+//		stakerAddresses,
+//		stakerProofs,
+//		stakerProofOffsets,
+//	)
+//
+//	//globalInbox.sendMessages(_messages); ???
+//
+//	ConfirmedAssertionEvent := arbbridge.ConfirmedAssertionEvent{
+//		ChainInfo: arbbridge.ChainInfo{
+//			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
+//		},
+//		//LogsAccHash: logsAccHash,
+//	}
+//	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+//		Event: ConfirmedAssertionEvent,
+//	})
+//
+//	return nil
+//}
 
 func (vm *arbRollup) confirmNode(
 	//ctx context.Context,
@@ -538,8 +509,7 @@ func (vm *arbRollup) confirmNode(
 	branch valprotocol.ChildType,
 	protoHash common.Hash,
 	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
+	stakerProofs [][]common.Hash,
 ) error {
 
 	if common.TicksFromBlockNum(vm.Client.GoEthClient.LastMinedBlock.Height).Cmp(deadline) == -1 {
@@ -580,77 +550,100 @@ func (vm *arbRollup) confirmNode(
 	return nil
 }
 
-func (vm *arbRollup) ConfirmInvalid(
-	ctx context.Context,
-	deadline common.TimeTicks,
-	challengeNodeData common.Hash,
-	branch valprotocol.ChildType,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs []common.Hash,
-	stakerProofOffsets []*big.Int,
-) error {
-	vm.mux.Lock()
-	defer vm.mux.Unlock()
-	fmt.Println("   ----  in ConfirmInvalid")
-	if branch >= VALID_CHILD_TYPE {
-		return errors.New("Type is not invalid")
-	}
-
-	vm.confirmNode(
-		deadline,
-		challengeNodeData,
-		branch,
-		protoHash,
-		stakerAddresses,
-		stakerProofs,
-		stakerProofOffsets,
-	)
-
-	return nil
-}
+//func (vm *arbRollup) ConfirmInvalid(
+//	ctx context.Context,
+//	deadline common.TimeTicks,
+//	challengeNodeData common.Hash,
+//	branch valprotocol.ChildType,
+//	protoHash common.Hash,
+//	stakerAddresses []common.Address,
+//	stakerProofs []common.Hash,
+//	stakerProofOffsets []*big.Int,
+//) error {
+//	vm.mux.Lock()
+//	defer vm.mux.Unlock()
+//	fmt.Println("   ----  in ConfirmInvalid")
+//	if branch >= VALID_CHILD_TYPE {
+//		return errors.New("Type is not invalid")
+//	}
+//
+//	vm.confirmNode(
+//		deadline,
+//		challengeNodeData,
+//		branch,
+//		protoHash,
+//		stakerAddresses,
+//		stakerProofs,
+//		stakerProofOffsets,
+//	)
+//
+//	return nil
+//}
 
 func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	nodeOpps := opp.Nodes
+	nodeCount := len(opp.Nodes)
 	//initalProtoStateHash := nodeOpps[0].StateHash()
-	branchesNums := make([]*big.Int, 0, len(nodeOpps))
-	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
-	challengeNodeData := make([]common.Hash, 0)
-	logsAcc := make([]common.Hash, 0)
-	vmProtoStateHashes := make([]common.Hash, 0)
+	//branchesNums := make([]*big.Int, 0, len(nodeOpps))
+	//deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
+	//challengeNodeData := make([]common.Hash, 0)
+	//logsAcc := make([]common.Hash, 0)
+	//vmProtoStateHashes := make([]common.Hash, 0)
 
-	messagesLengths := make([]*big.Int, 0)
-	var messageData bytes.Buffer
-	prevLen := 0
+	//messagesLengths := make([]*big.Int, 0)
+	//var messageData bytes.Buffer
+	//prevLen := 0
+	lastMsg := common.Hash{}
+	var lastLogHash common.Hash
 
 	for _, opp := range nodeOpps {
-		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
-		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
+		//branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
+		//deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
 
 		switch opp := opp.(type) {
 		case valprotocol.ConfirmValidOpportunity:
-			logsAcc = append(logsAcc, opp.LogsAcc)
-			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
-
-			for _, msg := range opp.Messages {
-				_ = value.MarshalValue(msg, &messageData)
+			//logsAcc = append(logsAcc, opp.LogsAcc)
+			lastLogHash = opp.LogsAcc
+			if len(opp.Messages) > 0 {
+				lastMsg = opp.Messages[len(opp.Messages)-1].Hash()
 			}
-			messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
-			prevLen = messageData.Len()
-		case valprotocol.ConfirmInvalidOpportunity:
-			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
+			//	vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
+			//
+			//	for _, msg := range opp.Messages {
+			//		_ = value.MarshalValue(msg, &messageData)
+			//		lastMsg = msg.Hash()
+			//	}
+			//	messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
+			//	prevLen = messageData.Len()
+			//case valprotocol.ConfirmInvalidOpportunity:
+			//	challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
 		}
 	}
 
 	//messages := messageData.Bytes()
 
-	combinedProofs := make([]common.Hash, 0)
-	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
-	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
-	for _, proof := range opp.StakerProofs {
-		combinedProofs = append(combinedProofs, proof...)
-		stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
-	}
+	//combinedProofs := make([]common.Hash, 0)
+	//stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
+	//stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
+	//for _, proof := range opp.StakerProofs {
+	//	combinedProofs = append(combinedProofs, proof...)
+	//	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
+	//}
+
+	protoHash := hashing.SoliditySHA3(
+		hashing.Bytes32(lastMsg),
+		hashing.Bytes32(lastLogHash),
+	)
+	//fmt.Println("***********confirm node*************")
+	//fmt.Println("protoHash lastMsg", lastMsg)
+	//fmt.Println("protoHash lastLogHash", lastLogHash)
+	//fmt.Println("protostatehash", vmProtoStateHashes[0])
+	//fmt.Println("deadlineTicks", opp.Nodes[0].Deadline())
+	//fmt.Println("protodata", protoHash)
+	//fmt.Println("child type", VALID_CHILD_TYPE)
+
+	vm.confirmNode(opp.Nodes[nodeCount-1].Deadline(), protoHash, VALID_CHILD_TYPE, opp.Nodes[nodeCount-1].StateHash(), opp.StakerAddresses, opp.StakerProofs)
+
 	//vm.auth.Lock()
 	//defer vm.auth.Unlock()
 	//
@@ -688,6 +681,41 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	//	)
 	//}
 	//return vm.waitForReceipt(ctx, tx, "Confirm")
+	//deadline,
+	//	hashing.SoliditySHA3(
+	//		hashing.Bytes32(lastMsgHash),
+	//		hashing.Bytes32(logsAccHash),
+	//	),
+	//	valprotocol.ValidChildType,
+	//	protoHash,
+	//	stakerAddresses,
+	//	stakerProofs,
+	//	stakerProofOffsets,
+	//to, _ := valprotocol.NodeHash(vm.rollup.lastConfirmed,
+	//	protoHash,
+	//	deadline,
+	//	nodeDataHash,
+	//	branch,
+	//)
+	//ConfirmedEvent := arbbridge.ConfirmedEvent{
+	//	ChainInfo: arbbridge.ChainInfo{
+	//		BlockId: vm.Client.GoEthClient.getCurrentBlock(),
+	//	},
+	//	NodeHash: challengeNodeData[0],
+	//}
+	//vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+	//	Event: ConfirmedEvent,
+	//})
+
+	ConfirmedAssertionEvent := arbbridge.ConfirmedAssertionEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
+		},
+		//LogsAccHash: logsAccHash,
+	}
+	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+		Event: ConfirmedAssertionEvent,
+	})
 	return nil
 }
 

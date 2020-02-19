@@ -223,6 +223,7 @@ github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo
 github.com/offchainlabs/arbitrum v0.4.2 h1:xdXES534LHsL3+HwBHsp6AnxyXlrIz+y9Dg5ekcITBM=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.1/go.mod h1:RkUD5VdhtjR5rMG1w6EX/0yBgixJlaBMJmnhkUJPLAE=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.2/go.mod h1:+vKVinN/PWzvLy1LVhUZlib7nONo69+w2gxBFt6ntpk=
+github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.3/go.mod h1:24jS0EX+Q1VHLwOJ0IscEg1Ad30n9ovgsAiuJqFeRg8=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.1 h1:b3iUnf1v+ppJiOfNX4yxxqfWKMQPZR5yoh8urCTFX88=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=

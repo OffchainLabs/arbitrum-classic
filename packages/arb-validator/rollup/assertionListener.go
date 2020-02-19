@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
@@ -67,6 +68,7 @@ func (al *AssertionListener) OldStakes(context.Context, *ChainObserver, []recove
 func (al *AssertionListener) AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash) {
 }
 func (al *AssertionListener) AdvancedKnownAssertion(ctx context.Context, chain *ChainObserver, assertion *protocol.ExecutionAssertion, txHash common.Hash) {
+	fmt.Println("*****************---------------***************posting FinalizedAssertion - ", assertion)
 	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,
 		OnChainTxHash: txHash,

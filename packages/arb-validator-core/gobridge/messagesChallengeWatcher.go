@@ -27,21 +27,10 @@ import (
 var messagesBisectedID ethcommon.Hash
 var messagesOneStepProofCompletedID ethcommon.Hash
 
-//
-//func init() {
-//	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
-//	if err != nil {
-//		panic(err)
-//	}
-//	messagesBisectedID = parsed.Events["Bisected"].ID()
-//	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-//}
-
 type messagesChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	challengeInfo *challengeData
 	client        *GoArbClient
-	//address  ethcommon.Address
 }
 
 func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*messagesChallengeWatcher, error) {

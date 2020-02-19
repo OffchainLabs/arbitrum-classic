@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -141,6 +142,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.Unlock()
 				chain.RLock()
 				if newOpinion == valprotocol.ValidChildType {
+					fmt.Println("****************************************newOpinion == valprotocol.ValidChildType")
 					for _, lis := range chain.listeners {
 						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
 					}

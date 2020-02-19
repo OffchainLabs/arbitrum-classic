@@ -20,6 +20,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/gobridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"log"
 	"math"
 	"math/big"
@@ -95,7 +97,7 @@ func GetKeystore(validatorFolder string, pass *string, flags *flag.FlagSet) (*bi
 	return auth, nil
 }
 
-func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error)) error {
+func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error), addr string) error {
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
@@ -116,7 +118,12 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 
 	validatorFolder := validateCmd.Arg(0)
 	ethURL := validateCmd.Arg(1)
-	addressString := validateCmd.Arg(2)
+	var addressString string
+	if addr == "" {
+		addressString = validateCmd.Arg(2)
+	} else {
+		addressString = addr
+	}
 	address := common.HexToAddress(addressString)
 
 	auth, err := GetKeystore(validatorFolder, passphrase, validateCmd)
@@ -129,11 +136,21 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
-	ethclint, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
+	var client arbbridge.ArbAuthClient
+	if test.UseGoEth() {
+		fmt.Println("using goBridge")
+		c, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+		if err != nil {
+			log.Fatal(err)
+		}
+		client = c
+	} else {
+		ethclint, err := ethclient.Dial(ethURL)
+		if err != nil {
+			return err
+		}
+		client = ethbridge.NewEthAuthClient(ethclint, auth)
 	}
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
 	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
 		return err

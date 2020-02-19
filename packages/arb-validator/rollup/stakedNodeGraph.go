@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"sort"
 
@@ -117,6 +118,7 @@ func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash comm
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
 	newLocation, ok := chain.nodeFromHash[nodeHash]
 	if !ok {
+		fmt.Println(chain.nodeFromHash)
 		log.Fatalf("Moved staker %v to nonexistant node %v", stakerAddr, nodeHash)
 	}
 	staker.location = newLocation

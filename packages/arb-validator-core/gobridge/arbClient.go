@@ -127,9 +127,9 @@ func (c *GoArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStep
 }
 
 func (c *GoArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
-	bal := big.NewInt(0)
-	return bal, nil
-	//return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
+	//bal := big.NewInt(0)
+	//return bal, nil
+	return c.GoEthClient.balances[account], nil
 }
 
 func (c *GoArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
@@ -165,6 +165,7 @@ func NewEthAuthClient(ethURL string, auth *TransOpts) (*GoArbAuthClient, error) 
 	if err != nil {
 		return nil, err
 	}
+	client.GoEthClient.balances[auth.From] = big.NewInt(1000) // give client a default balance of 1000
 	return &GoArbAuthClient{
 		GoArbClient: client,
 		auth:        auth,

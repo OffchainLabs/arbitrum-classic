@@ -46,8 +46,8 @@ func GetEthUrl() string {
 }
 
 func UseGoEth() bool {
-	return true
-	//return false
+	//return true
+	return false
 }
 
 func SetupAuth(hexKey string) (*bind.TransactOpts, error) {

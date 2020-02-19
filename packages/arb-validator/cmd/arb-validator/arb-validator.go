@@ -21,6 +21,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/gobridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"log"
 	"math"
 	"math/big"
@@ -48,28 +50,36 @@ func main() {
 	flag.Parse()
 	switch os.Args[1] {
 	case "create":
-		if err := createRollupChain(); err != nil {
+		if _, err := createRollupChain(); err != nil {
 			log.Fatal(err)
 		}
 	case "validate":
-		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager); err != nil {
+		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager, ""); err != nil {
+			log.Fatal(err)
+		}
+	case "both":
+		addr, err := createRollupChain()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager, addr); err != nil {
 			log.Fatal(err)
 		}
 	default:
 	}
 }
 
-func createRollupChain() error {
+func createRollupChain() (string, error) {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	passphrase := createCmd.String("password", "", "password=pass")
 	gasPrice := createCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if createCmd.NArg() != 3 {
-		return errors.New("usage: arb-validator create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
+		return "", errors.New("usage: arb-validator create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -81,33 +91,43 @@ func createRollupChain() error {
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
 	if err != nil {
-		return errors2.Wrap(err, "loader error")
+		return "", errors2.Wrap(err, "loader error")
 	}
 
 	auth, err := cmdhelper.GetKeystore(validatorFolder, passphrase, createCmd)
 	if err != nil {
-		return err
+		return "", err
 	}
 	gasPriceAsFloat := 1e9 * (*gasPrice)
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
-	ethclint, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
+	var client arbbridge.ArbAuthClient
+	if test.UseGoEth() {
+		fmt.Println("using goBridge")
+		c, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+		if err != nil {
+			log.Fatal(err)
+		}
+		client = c
+	} else {
+		ethclint, err := ethclient.Dial(ethURL)
+		if err != nil {
+			return "", err
+		}
+
+		// Rollup creation
+		client = ethbridge.NewEthAuthClient(ethclint, auth)
 	}
 
-	// Rollup creation
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
-
 	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
-		return err
+		return "", err
 	}
 
 	factory, err := client.NewArbFactory(factoryAddress)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	address, err := factory.CreateRollup(
@@ -117,10 +137,10 @@ func createRollupChain() error {
 		common.Address{},
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 	fmt.Println(address.Hex())
-	return nil
+	return address.Hex(), nil
 }
 
 func createManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {

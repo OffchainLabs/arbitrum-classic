@@ -46,6 +46,7 @@ func (con *OneStepProof) ValidateProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
+	// execution one step proof
 	fmt.Println("in OneStepProof - ValidateProof")
 	//return con.contract.ValidateProof(
 	//	auth,

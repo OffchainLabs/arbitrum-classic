@@ -243,6 +243,13 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 		hashing.Bytes32(prevHashArr),
 		hashing.Bytes32(innerHash),
 	)
+	fmt.Println("in setHash")
+	fmt.Println("node.vmProtoData.Hash()", node.vmProtoData.Hash())
+	fmt.Println("node.deadline", node.deadline)
+	fmt.Println("nodeDataHash", nodeDataHash)
+	fmt.Println("new(big.Int).SetUint64(uint64(node.linkType))", new(big.Int).SetUint64(uint64(node.linkType)))
+	fmt.Println("prevHashArr", prevHashArr)
+	fmt.Println("innerHash", innerHash)
 	node.nodeDataHash = nodeDataHash
 	node.innerHash = innerHash
 	node.hash = hash

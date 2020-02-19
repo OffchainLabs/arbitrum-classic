@@ -44,7 +44,7 @@ func main() {
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
-		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createEvilManager); err != nil {
+		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createEvilManager, ""); err != nil {
 			log.Fatal(err)
 		}
 	default:

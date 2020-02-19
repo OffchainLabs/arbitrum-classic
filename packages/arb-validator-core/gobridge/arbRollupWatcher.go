@@ -89,7 +89,7 @@ func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 }
 
 func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return vm.client.GoEthClient.globalInbox, nil
+	return vm.client.GoEthClient.getNextAddress(), nil
 }
 
 func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
