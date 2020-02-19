@@ -184,13 +184,13 @@ export class CodePointValue {
 
 export class HashOnlyValue {
     public hashVal: string;
-    public size: number;
+    public size: ethers.utils.BigNumber;
 
     // hash: 32 byte hash
     // size: 8 byte integer
-    constructor(hash: string, size: number) {
+    constructor(hash: string, size: ethers.utils.BigNumberish) {
         this.hashVal = hash;
-        this.size = size;
+        this.size = ethers.utils.bigNumberify(size);
     }
 
     public typeCode(): ValueType {
