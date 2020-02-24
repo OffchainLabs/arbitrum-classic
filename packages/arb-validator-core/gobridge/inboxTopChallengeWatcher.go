@@ -43,15 +43,6 @@ func newInboxTopChallengeWatcher(address common.Address, client *GoArbClient) (*
 		client.GoEthClient.challengeWatcherEvents[chalData] = make(map[*common.BlockId][]arbbridge.Event)
 	}
 	client.GoEthClient.challengeWatchersMutex.Unlock()
-	//pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
-	//}
-	//tops := []ethcommon.Hash{
-	//	pendingTopBisectedID,
-	//	pendingTopOneStepProofCompletedID,
-	//}
-	//tops = append(tops, bisectionChallenge.topics()...)
 
 	return &pendingTopChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,
@@ -62,49 +53,8 @@ func newInboxTopChallengeWatcher(address common.Address, client *GoArbClient) (*
 }
 
 func (c *pendingTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
-	//bh := blockId.HeaderHash.ToEthHash()
-	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
-	//	BlockHash: &bh,
-	//	Addresses: []ethcommon.Address{c.address},
-	//	Topics:    c.topics,
-	//})
-	//if err != nil {
-	//	return nil, err
-	//}
-	//events := make([]arbbridge.Event, 0, len(logs))
-	//for _, evmLog := range logs {
-	//	event, err := c.parsePendingTopEvent(getLogChainInfo(evmLog), evmLog)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	events = append(events, event)
-	//}
 	c.client.GoEthClient.challengeWatchersMutex.Lock()
 	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
 	c.client.GoEthClient.challengeWatchersMutex.Unlock()
 	return cw, nil
 }
-
-//func (c *pendingTopChallengeWatcher) parsePendingTopEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
-//	if log.Topics[0] == pendingTopBisectedID {
-//		eventVal, err := c.contract.ParseBisected(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.PendingTopBisectionEvent{
-//			ChainInfo:   chainInfo,
-//			ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
-//			TotalLength: eventVal.TotalLength,
-//			Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
-//		}, nil
-//	} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-//		_, err := c.contract.ParseOneStepProofCompleted(log)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return arbbridge.OneStepProofEvent{
-//			ChainInfo: chainInfo,
-//		}, nil
-//	}
-//	return c.bisectionChallengeWatcher.parseBisectionEvent(chainInfo, log)
-//}

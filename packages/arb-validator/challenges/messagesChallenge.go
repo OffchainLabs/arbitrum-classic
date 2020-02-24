@@ -147,7 +147,7 @@ func defendMessages(
 				}
 
 				log.Println("OneStepProofEthMessage", startInbox, startMessages)
-
+				log.Println("msg", msg)
 				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
 				log.Println("vm inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
 

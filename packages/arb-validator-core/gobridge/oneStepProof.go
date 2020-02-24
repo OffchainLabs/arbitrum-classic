@@ -47,6 +47,8 @@ func (con *OneStepProof) ValidateProof(
 	proof []byte,
 ) (*big.Int, error) {
 	// execution one step proof
+	// for now always return true
+
 	fmt.Println("in OneStepProof - ValidateProof")
 	//return con.contract.ValidateProof(
 	//	auth,

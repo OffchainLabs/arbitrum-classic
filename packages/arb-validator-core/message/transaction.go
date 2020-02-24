@@ -156,6 +156,14 @@ func (m DeliveredTransaction) DeliveredHeight() *common.TimeBlocks {
 }
 
 func (m DeliveredTransaction) CommitmentHash() common.Hash {
+	fmt.Println("m.Type()", m.Type())
+	fmt.Println("m.Chain", m.Chain)
+	fmt.Println("m.To", m.To)
+	fmt.Println("m.From", m.From)
+	fmt.Println("m.SequenceNum", m.SequenceNum)
+	fmt.Println("m.Value", m.Value)
+	fmt.Println("m.Data", m.Data)
+	fmt.Println("m.BlockNum.AsInt()", m.BlockNum.AsInt())
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),
 		hashing.Address(m.Chain),

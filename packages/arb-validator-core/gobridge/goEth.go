@@ -139,6 +139,14 @@ type inbox struct {
 	count *big.Int
 }
 
+func (ib *inbox) addMessageToInbox(msg common.Hash) {
+	ib.value = hashing.SoliditySHA3(
+		hashing.Bytes32(ib.value),
+		hashing.Bytes32(msg),
+	)
+	ib.count = new(big.Int).Add(ib.count, big.NewInt(1))
+}
+
 type void struct{}
 
 var Void void
@@ -165,6 +173,7 @@ type goEthdata struct {
 	blockNumbers map[uint64]*common.BlockId      // block height to blockId
 	blockHashes  map[common.Hash]*common.BlockId // block hash to blockId
 	parentHashes map[common.BlockId]common.Hash  // blokcId to block hash
+	ethWallet    map[common.Address]*big.Int
 	//headerNumber map[*big.Int]common.Hash
 	//headerhash   map[common.Hash]*big.Int
 
@@ -228,6 +237,7 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
 		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
 		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
+		mEthData.ethWallet = make(map[common.Address]*big.Int)
 		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
 		//onceMutex.Unlock()

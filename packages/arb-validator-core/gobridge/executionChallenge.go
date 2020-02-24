@@ -86,7 +86,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	)
 
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
-		return errors.New("Incorrect previous state")
+		return errors.New("BisectAssertion Incorrect previous state")
 	}
 
 	assertionHash = generateAssertionHash(
@@ -162,7 +162,7 @@ func (c *ExecutionChallenge) OneStepProof(
 
 	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("OneStepProof Incorrect previous state")
 	}
 
 	// TODO: executionChallenge one step proof validation

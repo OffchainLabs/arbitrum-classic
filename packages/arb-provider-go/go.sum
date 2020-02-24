@@ -159,8 +159,11 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.2/go.mod h1:bo9yoq8nvhceuUsx0+L4eB5T9pGchh18CAZIOeS++1A=
+github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.3/go.mod h1:9wGI64QEbz5buwgIY069qTsEuLoV2CKNrfk07fuhnwE=
 github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.2/go.mod h1:YBX+5T2x1aj4xcLwYHiYY6uBeVT8uCdLrblYj2ovyTk=
+github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.3/go.mod h1:bN5C5jyNV3lrLoyib2Nfw0BlJ6dWPPgCWHFuDPUQy7M=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.2/go.mod h1:+vKVinN/PWzvLy1LVhUZlib7nONo69+w2gxBFt6ntpk=
+github.com/offchainlabs/arbitrum/packages/arb-validator v0.4.3/go.mod h1:24jS0EX+Q1VHLwOJ0IscEg1Ad30n9ovgsAiuJqFeRg8=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.1 h1:b3iUnf1v+ppJiOfNX4yxxqfWKMQPZR5yoh8urCTFX88=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=

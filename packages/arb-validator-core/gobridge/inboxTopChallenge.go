@@ -29,7 +29,6 @@ import (
 
 type inboxTopChallenge struct {
 	*bisectionChallenge
-	//contract *pendingtopchallenge.PendingTopChallenge
 }
 
 func newInboxTopChallenge(address common.Address, client *GoArbAuthClient) (*inboxTopChallenge, error) {
@@ -50,12 +49,8 @@ func (c *inboxTopChallenge) Bisect(
 
 	bisectionCount := len(chainHashes) - 1
 
-	fmt.Println("c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash", c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash)
-	fmt.Println("chainHashes[0]", chainHashes[0])
-	fmt.Println("chainHashes[bisectionCount]", chainHashes[bisectionCount])
-	fmt.Println("chainLength", chainLength)
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
-		return errors.New("Incorrect previous state")
+		return errors.New("Bisect Incorrect previous state")
 	}
 
 	if chainLength.Cmp(big.NewInt(1)) < 1 {
@@ -97,25 +92,10 @@ func (c *inboxTopChallenge) OneStepProof(
 	value common.Hash,
 ) error {
 	fmt.Println("in (c *inboxTopChallenge) OneStepProof")
-	//c.auth.Lock()
-	//defer c.auth.Unlock()
-	//tx, err := c.contract.OneStepProof(
-	//	c.auth.getAuth(ctx),
-	//	lowerHashA,
-	//	value,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "OneStepProof")
-	//return keccak256(
-	//	abi.encodePacked(
-	//		inbox,
-	//		message
-	//)
+
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("OneStepProof Incorrect previous state")
 	}
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
@@ -140,14 +120,6 @@ func (c *inboxTopChallenge) ChooseSegment(
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {
 		stepCount := valprotocol.CalculateBisectionStepCount(i, bisectionCount, chainLength)
-		fmt.Println("PendingTopChallengeDataHash", valprotocol.InboxTopChallengeDataHash(
-			chainHashes[i],
-			chainHashes[i+1],
-			new(big.Int).SetUint64(uint64(stepCount)),
-		))
-		fmt.Println("chainHashes[i]", chainHashes[i])
-		fmt.Println("chainHashes[i+1]", chainHashes[i+1])
-		fmt.Println("stepCount", stepCount)
 
 		bisectionHashes = append(
 			bisectionHashes,

@@ -17,6 +17,8 @@
 package test
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/gobridge"
 	"net"
 	"time"
 
@@ -46,8 +48,8 @@ func GetEthUrl() string {
 }
 
 func UseGoEth() bool {
-	//return true
-	return false
+	return true
+	//return false
 }
 
 func SetupAuth(hexKey string) (*bind.TransactOpts, error) {
@@ -57,4 +59,15 @@ func SetupAuth(hexKey string) (*bind.TransactOpts, error) {
 	}
 
 	return bind.NewKeyedTransactor(privateKey), nil
+}
+
+func GoSetupAuth(hexKey string) (*gobridge.TransOpts, error) {
+	privateKey, err := crypto.HexToECDSA(hexKey)
+	if err != nil {
+		return nil, err
+	}
+	keyAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	return &gobridge.TransOpts{
+		From: common.NewAddressFromEth(keyAddr),
+	}, nil
 }

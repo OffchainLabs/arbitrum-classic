@@ -53,7 +53,7 @@ func (c *bisectionChallenge) chooseSegment(
 	tree := valprotocol.NewMerkleTree(segments)
 
 	if !tree.GetRoot().Equals(c.challengeData.challengerDataHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("chooseSegment Incorrect previous state")
 	}
 
 	// TODO: figure out merkle verify proof

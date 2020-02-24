@@ -39,10 +39,7 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 	if err != nil {
 		return nil, err
 	}
-	//messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
-	//}
+
 	chalData := client.GoEthClient.challenges[address]
 	client.GoEthClient.challengeWatchersMutex.Lock()
 	if _, ok := client.GoEthClient.challengeWatcherEvents[chalData]; !ok {
@@ -55,24 +52,7 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 
 func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	fmt.Println("in messagesChallengeWatcher GetEvents")
-	//bh := blockId.HeaderHash.ToEthHash()
-	//logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
-	//	BlockHash: &bh,
-	//	Addresses: []ethcommon.Address{c.address},
-	//	Topics:    c.topics,
-	//})
-	//if err != nil {
-	//	return nil, err
-	//}
-	//events := make([]arbbridge.Event, 0, len(logs))
-	//for _, evmLog := range logs {
-	//	event, err := c.parseMessagesEvent(getLogChainInfo(evmLog), evmLog)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	events = append(events, event)
-	//}
-	//return events, nil
+
 	c.client.GoEthClient.challengeWatchersMutex.Lock()
 	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
 	c.client.GoEthClient.challengeWatchersMutex.Unlock()

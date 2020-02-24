@@ -185,7 +185,7 @@ func (c *GoArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup
 }
 
 func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
-	return newGlobalInbox(address, c.GoArbClient)
+	return newGlobalInbox(address, c)
 }
 
 func (c *GoArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
@@ -217,5 +217,6 @@ func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFact
 func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	return nil, nil
+	osp, err := newOneStepProof(c.Address(), c)
+	return osp, err
 }

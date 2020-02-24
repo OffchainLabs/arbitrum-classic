@@ -43,11 +43,6 @@ func newMessagesChallenge(address common.Address, client *GoArbAuthClient) (*mes
 	}
 	vm := &messagesChallenge{bisectionChallenge: bisectionChallenge}
 	return vm, err
-	//messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
-	//}
-	//return &messagesChallenge{bisectionChallenge: bisectionChallenge}, nil
 }
 
 func (c *messagesChallenge) Bisect(
@@ -57,65 +52,18 @@ func (c *messagesChallenge) Bisect(
 	chainLength *big.Int,
 ) error {
 	fmt.Println("in messagesChallenge Bisect")
-	//c.auth.Context = ctx
-	//tx, err := c.challenge.Bisect(
-	//	c.auth,
-	//	chainHashes,
-	//	segmentHashes,
-	//	chainLength,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "Bisect")
 
 	bisectionCount := len(chainHashes) - 1
 	fmt.Println("bisectionCount", bisectionCount)
 	fmt.Println("len(segmentHashes)", len(segmentHashes))
 	if bisectionCount+1 != len(segmentHashes) {
-		return errors.New("Incorrect previous state")
+		return errors.New("Bisect Incorrect previous state - bisection count")
 	}
-	//	uint256 bisectionCount = _chainHashes.length - 1;
-	//	require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
-	//
-	//	requireMatchesPrevState(
-	//		ChallengeUtils.messagesHash(
-	//			_chainHashes[0],
-	//			_chainHashes[bisectionCount],
-	//			_segmentHashes[0],
-	//			_segmentHashes[bisectionCount],
-	//			_chainLength
-	//	)
-	//);
 
-	fmt.Println("chainHashes[0]", chainHashes[0])
-	fmt.Println("chainHashes[bisectionCount]", chainHashes[bisectionCount])
-	fmt.Println("segmentHashes[0]", segmentHashes[0])
-	fmt.Println("segmentHashes[bisectionCount]", segmentHashes[bisectionCount])
-	fmt.Println("chainLength", chainLength)
 	msgHash := valprotocol.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(msgHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("Bisect Incorrect previous state msgHash")
 	}
-
-	//
-	//	bytes32[] memory hashes = new bytes32[](bisectionCount);
-	//	hashes[0] = ChallengeUtils.messagesHash(
-	//		_chainHashes[0],
-	//		_chainHashes[1],
-	//		_segmentHashes[0],
-	//		_segmentHashes[1],
-	//		firstSegmentSize(_chainLength, bisectionCount)
-	//	);
-	//	for (uint256 i = 1; i < bisectionCount; i++) {
-	//		hashes[i] = ChallengeUtils.messagesHash(
-	//			_chainHashes[i],
-	//			_chainHashes[i + 1],
-	//			_segmentHashes[i],
-	//			_segmentHashes[i + 1],
-	//			otherSegmentSize(_chainLength, bisectionCount)
-	//		);
-	//	}
 
 	hashes := make([][32]byte, 0, bisectionCount)
 	hashes = append(hashes, valprotocol.MessageChallengeDataHash(
@@ -136,12 +84,6 @@ func (c *messagesChallenge) Bisect(
 
 	c.commitToSegment(hashes)
 	c.asserterResponded()
-	//	emit Bisected(
-	//		_chainHashes,
-	//		_segmentHashes,
-	//		_chainLength,
-	//		deadlineTicks
-	//	);
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.MessagesBisectionEvent{
@@ -165,6 +107,28 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	msg message.DeliveredTransaction,
 ) error {
 	fmt.Println("in messagesChallenge OneStepProofTransactionMessage")
+	messageHash := msg.CommitmentHash()
+	arbMessageHash := message.DeliveredValue(msg).Hash()
+
+	// oneStepProof
+	if !c.challenge.challengeData.challengerDataHash.Equals(hashing.SoliditySHA3(
+		lowerHashA,
+		lowerHashB,
+		messageHash,
+		arbMessageHash,
+	)) {
+		return errors.New("OneStepProofTransactionMessage Incorrect previous state")
+	}
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		Event: arbbridge.OneStepProofEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+		},
+	})
+	// TODO: challenge resolution
+	// resolveChallengeAsserterWon
+
 	return nil
 }
 
@@ -201,7 +165,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	)
 
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("OneStepProofEthMessage Incorrect previous state")
 	}
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
@@ -233,8 +197,6 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			ChallengeContract: c.contractAddress,
 		},
 	})
-
-	//		selfdestruct(msg.sender);
 
 	return nil
 }
@@ -271,7 +233,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	)
 
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("OneStepProofERC20Message Incorrect previous state")
 	}
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
@@ -338,7 +300,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	)
 
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
-		return errors.New("Incorrect previous state")
+		return errors.New("OneStepProofERC721Message Incorrect previous state")
 	}
 
 	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
@@ -379,23 +341,33 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredContractTransaction,
 ) error {
-	//c.auth.Lock()
-	//defer c.auth.Unlock()
-	//tx, err := c.contract.OneStepProofContractTransactionMessage(
-	//	c.auth.getAuth(ctx),
-	//	lowerHashA,
-	//	lowerHashB,
-	//	msg.To.ToEthAddress(),
-	//	msg.From.ToEthAddress(),
-	//	msg.Value,
-	//	msg.Data,
-	//	msg.BlockNum.AsInt(),
-	//	msg.MessageNum,
-	//)
-	//if err != nil {
-	//	return err
-	//}
-	//return c.waitForReceipt(ctx, tx, "OneStepProofContractTransactionMessage")
+	messageHash := msg.CommitmentHash()
+	txHash := msg.ReceiptHash()
+	msgType := msg.AsValue()
+	arbMessageHash, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(new(big.Int).Set(msg.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).SetBytes(txHash[:])),
+		msgType,
+	})
+
+	if !c.challenge.challengeData.challengerDataHash.Equals(hashing.SoliditySHA3(
+		lowerHashA,
+		lowerHashB,
+		messageHash,
+		arbMessageHash,
+	)) {
+		return errors.New("OneStepProofContractTransactionMessage Incorrect previous state")
+	}
+	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		Event: arbbridge.OneStepProofEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.GoEthClient.getCurrentBlock(),
+			},
+		},
+	})
+	// TODO: challenge resolution
+	// resolveChallengeAsserterWon
+
 	return nil
 }
 
