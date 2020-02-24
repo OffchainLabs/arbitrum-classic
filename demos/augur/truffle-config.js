@@ -34,16 +34,16 @@ module.exports = {
       docker: true, // Use "0.5.3" you've installed locally with docker (default: false)
       settings: {
         // See the solidity docs for advice about optimization and evmVersion
-        optimizer: {
-          enabled: true,
-          runs: 200,
-          details: {
-            // yul: true,
-            deduplicate: true,
-            cse: true,
-            constantOptimizer: true
-          }
-        }
+        // optimizer: {
+        //   enabled: true,
+        //   runs: 200,
+        //   details: {
+        //     yul: true,
+        //     deduplicate: true,
+        //     cse: true,
+        //     constantOptimizer: true
+        //   }
+        // }
       }
     }
   }

@@ -168,6 +168,7 @@ contract AugurTrading is IAugurTrading {
 
     function logOrderFilled(IUniverse _universe, address _creator, address _filler, uint256 _price, uint256 _fees, uint256 _amountFilled, bytes32 _orderId, bytes32 _tradeGroupId) public returns (bool) {
         require(msg.sender == registry["FillOrder"]);
+        
         IOrders _orders = IOrders(registry["Orders"]);
         // (Order.Types _orderType, address[] memory _addressData, uint256[] memory _uint256Data) = _orders.getOrderDataForLogs(_orderId);
         // _addressData[0] = _creator;
