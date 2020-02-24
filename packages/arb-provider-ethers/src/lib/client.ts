@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-env node */
+/* eslint-env browser */
 'use strict';
 
 import * as ArbValue from './value';
 
 import * as ethers from 'ethers';
 
-const fetch = require('node-fetch'); // eslint-disable-line @typescript-eslint/no-var-requires
+// TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser'); // eslint-disable-line @typescript-eslint/no-var-requires
 
 export enum EVMCode {
