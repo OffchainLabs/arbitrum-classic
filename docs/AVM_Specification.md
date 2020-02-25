@@ -97,9 +97,10 @@ An extensive state of a VM contains the following:
 -   Aux Stack: a Stack that provides auxiliary storage;
 -   Register: a mutable storage cell that can hold a single Value;
 -   Static: an immutable Value that is initialized when the VM is created;
+-   ArbGas Remaining: an Integer holding the amount of ArbGas that can be consumed before an Error is generated;
 -   Error Codepoint: a Codepoint that is meant to be used in response to an Error.
 
-When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, and Error Codepoint are initialized to None, None, None, and the Codepoint (0, 0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.
+When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, ArbGas Remaining, and Error Codepoint are initialized to None, None, None, MaxUint256, and the Codepoint (0, 0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.
 
 ## Hashing a VM State
 
@@ -107,7 +108,7 @@ If a VM is in the Halted state, its state hash is the Integer 0.
 
 If a VM is in the ErrorStop state, its state hash is the Integer 1.
 
-If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, and the hash of the Error Codepoint, hashing the result using Keccak-256.
+If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, the 32-byte big-endian representation of ArbGas Remaining, and the hash of the Error Codepoint, hashing the result using Keccak-256.
 
 ## The Runtime Environment
 
@@ -148,7 +149,10 @@ Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (A
 
 The ArbGas costs of instructions might change in the future.
 
-There is no charge for ArbGas and there is no limit on the amount of ArbGas that a VM can use. The purpose of ArbGas is to allow clients and validators to monitor and control how much computational work a VM is requiring. For example, it is likely that features will be added to allow validators to limit the amount of ArbGas that any one call to a VM or contract can consume.
+When an instruction is about to be executed, if the ArbGas cost of that instruction is G:
+* If ArbGas Remaining is zero, the instruction executes normally and ArbGas Remaining stays at zero.
+* If 0 < ArbGas Remaining <= G, ArbGas Remaining is set to zero and an Error is raised. The instruction is not executed.
+* If ArbGas Remaining < G, ArbGas Remaining is reduced by G and the instruction is executed.
 
 ## Instructions
 
