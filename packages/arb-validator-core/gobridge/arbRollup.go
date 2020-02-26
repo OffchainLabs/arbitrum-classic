@@ -62,6 +62,7 @@ func newRollup(contractAddress common.Address, client *GoArbAuthClient) (*arbRol
 }
 
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
+	fmt.Println("************PlaceStake")
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
 	location := calculatePath(vm.rollup.lastConfirmed, proof1)
@@ -212,6 +213,7 @@ func (vm *arbRollup) RecoverStakePassedDeadline(
 }
 
 func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error {
+	fmt.Println("************MoveStake")
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
 	//bytes32 stakerLocation = getStakerLocation(msg.sender);
@@ -433,6 +435,8 @@ func (vm *arbRollup) MakeAssertion(
 	if calculatePath(vm.rollup.stakers[vm.Client.auth.From].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
 	}
+	fmt.Println("staker", vm.Client.auth.From)
+	fmt.Println("moved to", valid)
 	vm.rollup.stakers[vm.Client.auth.From].location = valid
 	vm.rollup.nextConfirmed = valid
 	stakeMovedEvent := arbbridge.StakeMovedEvent{
@@ -449,107 +453,140 @@ func (vm *arbRollup) MakeAssertion(
 	return nil
 }
 
-func (vm *arbRollup) confirmNode(
-	//ctx context.Context,
-	deadline common.TimeTicks,
-	nodeDataHash common.Hash,
-	branch valprotocol.ChildType,
-	protoHash common.Hash,
-	stakerAddresses []common.Address,
-	stakerProofs [][]common.Hash,
-) error {
+//func (vm *arbRollup) confirmNode(
+//	//ctx context.Context,
+//	deadline common.TimeTicks,
+//	nodeDataHash common.Hash,
+//	branch valprotocol.ChildType,
+//	protoHash common.Hash,
+//	stakerAddresses []common.Address,
+//	stakerProofs [][]common.Hash,
+//) error {
+//	fmt.Println("in confirmNode")
+//	if common.TicksFromBlockNum(vm.Client.GoEthClient.LastMinedBlock.Height).Cmp(deadline) == -1 {
+//		panic("Node is not passed deadline")
+//		return errors.New("Node is not passed deadline")
+//	}
+//
+//	to, _ := valprotocol.NodeHash(vm.rollup.lastConfirmed,
+//		protoHash,
+//		deadline,
+//		nodeDataHash,
+//		branch,
+//	)
+//
+//	// TODO: add staker check
+//	//uint activeCount = checkAlignedStakers(
+//	//to,
+//	//deadlineTicks,
+//	//stakerAddresses,
+//	//stakerProofs,
+//	//stakerProofOffsets
+//	//);
+//	//require(activeCount > 0, CONF_HAS_STAKER);
+//	//vm.rollup.stakers[vm.Client.auth.From]
+//	activeCount := 0
+//	for i, staker := range stakerAddresses {
+//		fmt.Println("in confirmNode - checking staker", staker)
+//		if !calculatePath(nodeDataHash, stakerProofs[i]).Equals(vm.rollup.stakers[staker].location){
+//			fmt.Println("nodeDataHash",nodeDataHash)
+//			fmt.Println("stakerProofs[i]",stakerProofs[i])
+//			fmt.Println("vm.rollup.stakers[staker].location",vm.rollup.stakers[staker].location)
+//			fmt.Println("i",i)
+//			fmt.Println("in confirmNode - one staker disagrees")
+//			return errors.New("at least one active staker disagrees")
+//		}
+//		activeCount++
+//	}
+//
+//	if activeCount == 0 {
+//		fmt.Println("in confirmNode activeCount == 0")
+//		return errors.New("There must be at least one staker")
+//	}
+//	vm.rollup.lastConfirmed = to
+//
+//	ConfirmedEvent := arbbridge.ConfirmedEvent{
+//		ChainInfo: arbbridge.ChainInfo{
+//			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
+//		},
+//		NodeHash: to,
+//	}
+//	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+//		Event: ConfirmedEvent,
+//	})
+//
+//	fmt.Println("  ---  in ConfirmNode")
+//	return nil
+//}
 
-	if common.TicksFromBlockNum(vm.Client.GoEthClient.LastMinedBlock.Height).Cmp(deadline) == -1 {
+func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
+	nodeOpps := opp.Nodes
+	nodeCount := len(nodeOpps)
+	lastMsg := common.Hash{}
+	initalProtoStateHash := nodeOpps[0].StateHash()
+	var lastLogHash common.Hash
+	var nodeDataHash common.Hash
+	validNum := 0
+	invalidNum := 0
+	confNode := opp.CurrentLatestConfirmed
+	for _, opp := range nodeOpps {
+		var linkType valprotocol.ChildType
+		switch opp := opp.(type) {
+		case valprotocol.ConfirmValidOpportunity:
+			{
+				linkType = VALID_CHILD_TYPE
+				//logsAcc = append(logsAcc, opp.LogsAcc)
+				lastLogHash = opp.LogsAcc
+				if len(opp.Messages) > 0 {
+					lastMsg = opp.Messages[len(opp.Messages)-1].Hash()
+				}
+				nodeDataHash = hashing.SoliditySHA3(
+					hashing.Bytes32(lastMsg),
+					hashing.Bytes32(lastLogHash),
+				)
+				validNum++
+			}
+		case valprotocol.ConfirmInvalidOpportunity:
+			linkType = valprotocol.MaxInvalidChildType
+			nodeDataHash = opp.ChallengeNodeData
+			invalidNum++
+		}
+		confNode, _ = valprotocol.NodeHash(
+			confNode,
+			initalProtoStateHash,
+			opp.Deadline(),
+			nodeDataHash,
+			linkType,
+		)
+	}
+
+	if common.TicksFromBlockNum(vm.Client.GoEthClient.LastMinedBlock.Height).Cmp(opp.Nodes[nodeCount-1].Deadline()) == -1 {
 		panic("Node is not passed deadline")
 		return errors.New("Node is not passed deadline")
 	}
 
-	to, _ := valprotocol.NodeHash(vm.rollup.lastConfirmed,
-		protoHash,
-		deadline,
-		nodeDataHash,
-		branch,
-	)
+	activeCount := 0
+	for i, staker := range opp.StakerAddresses {
+		if !calculatePath(confNode, opp.StakerProofs[i]).Equals(vm.rollup.stakers[staker].location) {
+			return errors.New("at least one active staker disagrees")
+		}
+		activeCount++
+	}
 
-	// TODO: add staker check
-	//uint activeCount = checkAlignedStakers(
-	//to,
-	//deadlineTicks,
-	//stakerAddresses,
-	//stakerProofs,
-	//stakerProofOffsets
-	//);
-	//require(activeCount > 0, CONF_HAS_STAKER);
-
-	vm.rollup.lastConfirmed = to
+	if activeCount == 0 {
+		return errors.New("There must be at least one staker")
+	}
+	vm.rollup.lastConfirmed = confNode
 
 	ConfirmedEvent := arbbridge.ConfirmedEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
 		},
-		NodeHash: to,
+		NodeHash: confNode,
 	}
 	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: ConfirmedEvent,
 	})
-
-	fmt.Println("  ---  in ConfirmNode")
-	return nil
-}
-
-func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
-	nodeOpps := opp.Nodes
-	nodeCount := len(opp.Nodes)
-	lastMsg := common.Hash{}
-	var lastLogHash common.Hash
-
-	for _, opp := range nodeOpps {
-		//branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
-		//deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
-
-		switch opp := opp.(type) {
-		case valprotocol.ConfirmValidOpportunity:
-			//logsAcc = append(logsAcc, opp.LogsAcc)
-			lastLogHash = opp.LogsAcc
-			if len(opp.Messages) > 0 {
-				lastMsg = opp.Messages[len(opp.Messages)-1].Hash()
-			}
-			//	vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
-			//
-			//	for _, msg := range opp.Messages {
-			//		_ = value.MarshalValue(msg, &messageData)
-			//		lastMsg = msg.Hash()
-			//	}
-			//	messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
-			//	prevLen = messageData.Len()
-			//case valprotocol.ConfirmInvalidOpportunity:
-			//	challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
-		}
-	}
-
-	//messages := messageData.Bytes()
-
-	//combinedProofs := make([]common.Hash, 0)
-	//stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
-	//stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
-	//for _, proof := range opp.StakerProofs {
-	//	combinedProofs = append(combinedProofs, proof...)
-	//	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
-	//}
-
-	protoHash := hashing.SoliditySHA3(
-		hashing.Bytes32(lastMsg),
-		hashing.Bytes32(lastLogHash),
-	)
-	//fmt.Println("***********confirm node*************")
-	//fmt.Println("protoHash lastMsg", lastMsg)
-	//fmt.Println("protoHash lastLogHash", lastLogHash)
-	//fmt.Println("protostatehash", vmProtoStateHashes[0])
-	//fmt.Println("deadlineTicks", opp.Nodes[0].Deadline())
-	//fmt.Println("protodata", protoHash)
-	//fmt.Println("child type", VALID_CHILD_TYPE)
-
-	vm.confirmNode(opp.Nodes[nodeCount-1].Deadline(), protoHash, VALID_CHILD_TYPE, opp.Nodes[nodeCount-1].StateHash(), opp.StakerAddresses, opp.StakerProofs)
 
 	ConfirmedAssertionEvent := arbbridge.ConfirmedAssertionEvent{
 		ChainInfo: arbbridge.ChainInfo{

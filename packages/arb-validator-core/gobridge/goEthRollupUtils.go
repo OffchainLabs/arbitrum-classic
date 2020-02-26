@@ -25,7 +25,9 @@ import (
 
 func calculatePath(from common.Hash, proof []common.Hash) common.Hash {
 	node := from
+	fmt.Println("*******************in calculatePath")
 	if len(proof) > 0 {
+		fmt.Println("proof len = ", len(proof))
 		for _, val := range proof {
 			//node = keccak256(abi.encodePacked(node, proof[i]));
 			node = hashing.SoliditySHA3(hashing.Bytes32(node), hashing.Bytes32(val))

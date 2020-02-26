@@ -127,8 +127,6 @@ func (c *GoArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStep
 }
 
 func (c *GoArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
-	//bal := big.NewInt(0)
-	//return bal, nil
 	return c.GoEthClient.balances[account], nil
 }
 
