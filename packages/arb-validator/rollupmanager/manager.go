@@ -18,6 +18,7 @@ package rollupmanager
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"log"
 	"math/big"
 	"sync"
@@ -56,6 +57,10 @@ func CreateManager(
 	aoFilePath string,
 	dbPath string,
 ) (*Manager, error) {
+	forceFreshStart := false
+	if test.UseGoEth() {
+		forceFreshStart = true
+	}
 	return CreateManagerAdvanced(
 		context.Background(),
 		rollupAddr,
@@ -66,7 +71,7 @@ func CreateManager(
 			aoFilePath,
 			dbPath,
 			big.NewInt(defaultMaxReorgDepth),
-			true,
+			forceFreshStart,
 		),
 	)
 }
