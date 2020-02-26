@@ -17,7 +17,6 @@
 package valprotocol
 
 import (
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
@@ -102,11 +101,6 @@ func NodeHash(prevHash common.Hash,
 	deadline common.TimeTicks,
 	nodeDataHash common.Hash,
 	linkType ChildType) (common.Hash, common.Hash) {
-	fmt.Println("NodeHash params:")
-	fmt.Println("protoHash", protoHash)
-	fmt.Println("deadline", deadline)
-	fmt.Println("nodeDataHash", nodeDataHash)
-	fmt.Println("linkType", linkType)
 	innerHash := hashing.SoliditySHA3(
 		hashing.Bytes32(protoHash),
 		hashing.TimeTicks(deadline),

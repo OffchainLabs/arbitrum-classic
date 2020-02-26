@@ -17,7 +17,6 @@
 package gobridge
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
@@ -31,7 +30,6 @@ type messageTester struct {
 }
 
 func NewMessageTester(client *GoArbAuthClient) (*messageTester, error) {
-	fmt.Println("in messageTester newMessageTester")
 	tester := client.GoEthClient.getNextAddress()
 
 	return &messageTester{client: client, tester: tester}, nil

@@ -18,7 +18,6 @@ package arbbridge
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -54,19 +53,15 @@ func HandleBlockchainEvents(
 				log.Println("error in challenge", err)
 				return
 			}
-			fmt.Println("events:", events)
 
-			fmt.Println("HandleBlockchainEvents: startBlockId", startBlockId, "blockId:", blockId)
 			if blockId.Height.Cmp(startBlockId.Height) == 0 {
 				for _, event := range events {
 					if event.GetChainInfo().LogIndex >= startLogIndex {
-						fmt.Printf("sending event type %T to eventChan \n", event)
 						eventChan <- event
 					}
 				}
 			} else {
 				for _, event := range events {
-					fmt.Printf("sending event type %T to eventChan\n", event)
 					eventChan <- event
 				}
 			}

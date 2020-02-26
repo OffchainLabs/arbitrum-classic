@@ -29,10 +29,6 @@ type challengeFactory struct {
 }
 
 func newChallengeFactory(address common.Address, client *GoArbAuthClient, auth *TransOpts) (*challengeFactory, error) {
-	//vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
-	//}
 	return &challengeFactory{address, client, auth}, nil
 }
 

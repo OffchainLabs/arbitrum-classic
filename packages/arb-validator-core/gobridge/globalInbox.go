@@ -238,6 +238,8 @@ func (con *globalInbox) GetTokenBalance(
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
+
+	// TODO: fill in
 	//return con.GlobalPendingInbox.GetTokenBalance(
 	//	auth,
 	//	tokenContract,

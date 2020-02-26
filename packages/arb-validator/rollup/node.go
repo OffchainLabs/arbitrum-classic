@@ -172,7 +172,6 @@ func (node *Node) NodeDataHash(params valprotocol.ChainParams) common.Hash {
 	if node.disputable == nil {
 		return common.Hash{}
 	}
-
 	if node.linkType == valprotocol.ValidChildType {
 		return hashing.SoliditySHA3(
 			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),

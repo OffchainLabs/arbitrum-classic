@@ -18,10 +18,8 @@ package gobridge
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 )
 
 type pendingTopChallengeWatcher struct {
@@ -32,7 +30,6 @@ type pendingTopChallengeWatcher struct {
 }
 
 func newInboxTopChallengeWatcher(address common.Address, client *GoArbClient) (*pendingTopChallengeWatcher, error) {
-	fmt.Println("in newInboxTopChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

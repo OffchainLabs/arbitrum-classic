@@ -63,10 +63,6 @@ func (con *ArbFactory) CreateRollup(
 	}
 	con.client.GoEthClient.rollups[addr].leaves[initialNode] = true
 
-	//event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
 	return addr, nil
 }
 
@@ -76,10 +72,6 @@ type arbFactoryWatcher struct {
 }
 
 func newArbFactoryWatcher(address common.Address, client *GoArbClient) (*arbFactoryWatcher, error) {
-	//vmCreatorContract, err := arbfactory.newArbFactory(address, client)
-	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
-	//}
 	return &arbFactoryWatcher{address, client}, nil
 }
 

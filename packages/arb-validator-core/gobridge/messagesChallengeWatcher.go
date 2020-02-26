@@ -18,14 +18,9 @@ package gobridge
 
 import (
 	"context"
-	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
-
-var messagesBisectedID ethcommon.Hash
-var messagesOneStepProofCompletedID ethcommon.Hash
 
 type messagesChallengeWatcher struct {
 	*bisectionChallengeWatcher
@@ -34,7 +29,6 @@ type messagesChallengeWatcher struct {
 }
 
 func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*messagesChallengeWatcher, error) {
-	fmt.Println("in newMessagesChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -51,18 +45,8 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 }
 
 func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
-	fmt.Println("in messagesChallengeWatcher GetEvents")
-
 	c.client.GoEthClient.challengeWatchersMutex.Lock()
 	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
 	c.client.GoEthClient.challengeWatchersMutex.Unlock()
 	return cw, nil
-}
-
-func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		messagesBisectedID,
-		messagesOneStepProofCompletedID,
-	}
-	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }

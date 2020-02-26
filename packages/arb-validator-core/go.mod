@@ -12,3 +12,5 @@ require (
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
+
+replace github.com/offchainlabs/arbitrum/packages/arb-validator => ../arb-validator

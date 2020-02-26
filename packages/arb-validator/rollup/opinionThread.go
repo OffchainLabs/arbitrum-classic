@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"time"

@@ -18,8 +18,10 @@ package gobridge
 
 import (
 	"errors"
-	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
+	"log"
+
+	//"fmt"
+	//ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -209,7 +211,7 @@ func getGoEth(ethURL string) *goEthdata {
 		tmpOnce = once[ethURL]
 	}
 	tmpOnce.Do(func() {
-		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
+		blockHash := hashing.SoliditySHA3(hashing.Uint256(big.NewInt(rand2.Int63())))
 		mEthData := new(goEthdata)
 		GoEth[ethURL] = mEthData
 		mEthData.Vm = make(map[common.Address]*VmData)
@@ -232,8 +234,8 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.nextMsgs = make(map[*common.BlockId][]goMaybeEvent)
 		mEthData.blockHashes[blockHash] = mEthData.LastMinedBlock
 		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
-		mEthData.parentHashes[*mEthData.LastMinedBlock] = common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(0)))
-		mEthData.nextAddress = common.NewAddressFromEth(ethcommon.BigToAddress(big.NewInt(1)))
+		mEthData.parentHashes[*mEthData.LastMinedBlock] = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(0)))
+		mEthData.nextAddress = common.BigIntToAddress(big.NewInt(1))
 		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
 		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
 		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
@@ -266,7 +268,7 @@ func (m *goEthdata) getNextAddress() common.Address {
 	addr := m.nextAddress
 	addrInt := new(big.Int)
 	addrInt.SetBytes(addr[:])
-	m.nextAddress = common.NewAddressFromEth(ethcommon.BigToAddress(addrInt.Add(addrInt, big.NewInt(1))))
+	m.nextAddress = common.BigIntToAddress(addrInt.Add(addrInt, big.NewInt(1)))
 	return addr
 }
 
@@ -297,7 +299,6 @@ func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*common.Block
 }
 
 func (m *goEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
-	fmt.Println("registering outchan")
 	m.chanMgr <- oc
 }
 
@@ -312,7 +313,7 @@ func (m *goEthdata) pubMsg(challenge *challengeData, msg arbbridge.MaybeEvent) {
 
 func mine(m *goEthdata, t time.Time) {
 	m.blockMutex.Lock()
-	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
+	blockHash := hashing.SoliditySHA3(hashing.Uint256(big.NewInt(rand2.Int63())))
 	m.NextBlock.HeaderHash = blockHash
 	lastBlock := m.LastMinedBlock
 	m.blockNumbers[m.NextBlock.Height.AsInt().Uint64()] = m.NextBlock
@@ -336,7 +337,7 @@ func mine(m *goEthdata, t time.Time) {
 		m.pubchan <- event.event
 	}
 	m.msgMutex.Unlock()
-	fmt.Println("mined block number", m.NextBlock)
+	log.Println("mined block number", m.NextBlock)
 	newBlock := new(common.BlockId)
 	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))
 	m.NextBlock = newBlock
@@ -347,7 +348,6 @@ func mine(m *goEthdata, t time.Time) {
 	}
 
 	m.blockMutex.Unlock()
-	fmt.Println("publishing NewTimeEvent block - ", blockEvent.BlockId)
 	m.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: blockEvent,
 	})
@@ -368,92 +368,3 @@ func (m *goEthdata) deliverMessage(address common.Address, msgHash common.Hash) 
 	m.inbox[address].value = hash
 	m.inbox[address].count = new(big.Int).Add(m.inbox[address].count, big.NewInt(1))
 }
-
-// TODO have to figure out all this data
-//func emitFinalizedUnanimousAssertion(vm common.Address, unanHash [32]byte) {
-//	//raw := types.Log{
-//	//	Address:     vm,
-//	//	Topics:      nil,
-//	//	Data:        nil,
-//	//	BlockNumber: MockEthData.BlockNumber,
-//	//	TxHash:      common.Hash{},
-//	//	TxIndex:     0,
-//	//	BlockHash:   common.Hash{},
-//	//	Index:       0,
-//	//	Removed:     false,
-//	//}
-//	//for _, unanAss := range MockEthData.FinUnanAssList {
-//	//	unanAss <- &channellauncher.ArbChannelFinalizedUnanimousAssertion{unanHash, raw}
-//	//}
-//}
-//func pullPendingMessages(address common.Address) [32]byte {
-//	//bytes32 messages = inbox[msg.sender];
-//	//inbox[msg.sender] = ArbValue.hashEmptyTuple();
-//	//messages := MockEthData.inbox[address]
-//	//MockEthData.inbox[address] = value.NewEmptyTuple().Hash()
-//	//return messages
-//	return *new([32]byte)
-//}
-//
-//func sendUnpaidMessage(src common.Address, dest common.Address, tokType [21]byte, amount *big.Int, data []byte) error {
-//
-//	//srcBt := MockEthData.balanceTrackers[src]
-//	//err := srcBt.Spend(tokType, amount)
-//	//if err != nil {
-//	//	return err
-//	//}
-//	//destBt := MockEthData.balanceTrackers[dest]
-//	//destBt.Add(tokType, amount)
-//
-//	// create message to send
-//	// send message
-//
-//	return nil
-//	//        _deliverMessage(
-//	//            _destination,
-//	//            _tokenType,
-//	//            _value,
-//	//            _sender,
-//	//            _data
-//	//        );
-//	//        if (inbox[_destination] != 0) {
-//	//            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
-//	//            bytes32 txHash = keccak256(
-//	//                abi.encodePacked(
-//	//                    _destination,
-//	//                    dataHash,
-//	//                    _value,
-//	//                    _tokenType
-//	//                )
-//	//            );
-//	//            ArbValue.Value[] memory dataValues = new ArbValue.Value[](4);
-//	//            dataValues[0] = ArbValue.newHashOnlyValue(dataHash);
-//	//            dataValues[1] = ArbValue.newIntValue(block.timestamp);
-//	//            dataValues[2] = ArbValue.newIntValue(block.number);
-//	//            dataValues[3] = ArbValue.newIntValue(uint(txHash));
-//	//
-//	//            ArbValue.Value[] memory values = new ArbValue.Value[](4);
-//	//            values[0] = ArbValue.newTupleValue(dataValues);
-//	//            values[1] = ArbValue.newIntValue(uint256(_sender));
-//	//            values[2] = ArbValue.newIntValue(_value);
-//	//            values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
-//	//            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
-//	//
-//	//            inbox[_destination] = ArbValue.hashTupleValue([
-//	//                ArbValue.newIntValue(0),
-//	//                ArbValue.newHashOnlyValue(inbox[_destination]),
-//	//                ArbValue.newHashOnlyValue(messageHash)
-//	//            ]);
-//	//        }
-//	//
-//	//        emit IGlobalPendingInbox.MessageDelivered(
-//	//            _destination,
-//	//            _sender,
-//	//            _tokenType,
-//	//            _value,
-//	//            _data
-//	//        );
-//	//}
-//
-//}
-//

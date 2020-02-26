@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

@@ -19,7 +19,6 @@ package gobridge
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -62,7 +61,6 @@ func newRollup(contractAddress common.Address, client *GoArbAuthClient) (*arbRol
 }
 
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
-	fmt.Println("************PlaceStake")
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
 	location := calculatePath(vm.rollup.lastConfirmed, proof1)
@@ -149,7 +147,6 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error {
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
-	//require(proof.length > 0, RECVOLD_LENGTH);
 	if len(proof) <= 0 {
 		return errors.New("proof must be non-zero length")
 	}
@@ -213,14 +210,9 @@ func (vm *arbRollup) RecoverStakePassedDeadline(
 }
 
 func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error {
-	fmt.Println("************MoveStake")
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
-	//bytes32 stakerLocation = getStakerLocation(msg.sender);
-	//bytes32 newLocation = RollupUtils.calculatePath(stakerLocation, proof1);
-	//bytes32 leaf = RollupUtils.calculatePath(newLocation, proof2);
-	//require(isValidLeaf(leaf), MOVE_LEAF);
-	//updateStakerLocation(msg.sender, newLocation);
+
 	location := vm.rollup.stakers[vm.Client.auth.From].location
 	newLocation := calculatePath(location, proof1)
 	leaf := calculatePath(newLocation, proof2)
@@ -244,20 +236,16 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 func (vm *arbRollup) PruneLeaf(ctx context.Context, from common.Hash, leafProof []common.Hash, ancProof []common.Hash) error {
 	vm.mux.Lock()
 	defer vm.mux.Unlock()
-	fmt.Println("**********in PruneLeaf")
 	leaf := calculatePath(from, leafProof)
 	if !vm.rollup.leaves[leaf] {
-		fmt.Println("PruneLeaf - invalid leaf")
 		return errors.New("PruneLeaf - invalid leaf")
 	}
 	if leafProof[0] == ancProof[0] ||
 		calculatePath(from, ancProof) != vm.rollup.lastConfirmed {
 		return errors.New("prune conflict")
 	}
-	//delete leaves[leaf];
 	delete(vm.rollup.leaves, leaf)
-	//
-	//emit RollupPruned(leaf);
+
 	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: arbbridge.PrunedEvent{
 			ChainInfo: arbbridge.ChainInfo{
@@ -435,8 +423,6 @@ func (vm *arbRollup) MakeAssertion(
 	if calculatePath(vm.rollup.stakers[vm.Client.auth.From].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
 	}
-	fmt.Println("staker", vm.Client.auth.From)
-	fmt.Println("moved to", valid)
 	vm.rollup.stakers[vm.Client.auth.From].location = valid
 	vm.rollup.nextConfirmed = valid
 	stakeMovedEvent := arbbridge.StakeMovedEvent{
@@ -452,72 +438,6 @@ func (vm *arbRollup) MakeAssertion(
 
 	return nil
 }
-
-//func (vm *arbRollup) confirmNode(
-//	//ctx context.Context,
-//	deadline common.TimeTicks,
-//	nodeDataHash common.Hash,
-//	branch valprotocol.ChildType,
-//	protoHash common.Hash,
-//	stakerAddresses []common.Address,
-//	stakerProofs [][]common.Hash,
-//) error {
-//	fmt.Println("in confirmNode")
-//	if common.TicksFromBlockNum(vm.Client.GoEthClient.LastMinedBlock.Height).Cmp(deadline) == -1 {
-//		panic("Node is not passed deadline")
-//		return errors.New("Node is not passed deadline")
-//	}
-//
-//	to, _ := valprotocol.NodeHash(vm.rollup.lastConfirmed,
-//		protoHash,
-//		deadline,
-//		nodeDataHash,
-//		branch,
-//	)
-//
-//	// TODO: add staker check
-//	//uint activeCount = checkAlignedStakers(
-//	//to,
-//	//deadlineTicks,
-//	//stakerAddresses,
-//	//stakerProofs,
-//	//stakerProofOffsets
-//	//);
-//	//require(activeCount > 0, CONF_HAS_STAKER);
-//	//vm.rollup.stakers[vm.Client.auth.From]
-//	activeCount := 0
-//	for i, staker := range stakerAddresses {
-//		fmt.Println("in confirmNode - checking staker", staker)
-//		if !calculatePath(nodeDataHash, stakerProofs[i]).Equals(vm.rollup.stakers[staker].location){
-//			fmt.Println("nodeDataHash",nodeDataHash)
-//			fmt.Println("stakerProofs[i]",stakerProofs[i])
-//			fmt.Println("vm.rollup.stakers[staker].location",vm.rollup.stakers[staker].location)
-//			fmt.Println("i",i)
-//			fmt.Println("in confirmNode - one staker disagrees")
-//			return errors.New("at least one active staker disagrees")
-//		}
-//		activeCount++
-//	}
-//
-//	if activeCount == 0 {
-//		fmt.Println("in confirmNode activeCount == 0")
-//		return errors.New("There must be at least one staker")
-//	}
-//	vm.rollup.lastConfirmed = to
-//
-//	ConfirmedEvent := arbbridge.ConfirmedEvent{
-//		ChainInfo: arbbridge.ChainInfo{
-//			BlockId: vm.Client.GoEthClient.getCurrentBlock(),
-//		},
-//		NodeHash: to,
-//	}
-//	vm.Client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
-//		Event: ConfirmedEvent,
-//	})
-//
-//	fmt.Println("  ---  in ConfirmNode")
-//	return nil
-//}
 
 func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	nodeOpps := opp.Nodes
@@ -615,9 +535,7 @@ func (vm *arbRollup) StartChallenge(
 	challengerDataHash common.Hash,
 	challengerPeriodTicks common.TimeTicks,
 ) error {
-
 	eth := vm.Client.GoEthClient
-	fmt.Println("*************starting challenge")
 	asserter, ok := vm.rollup.stakers[asserterAddress]
 	if !ok {
 		return errors.New("unknown asserter")
@@ -667,29 +585,7 @@ func (vm *arbRollup) StartChallenge(
 
 	asserter.inChallenge = true
 	challenger.inChallenge = true
-	//	address newChallengeAddr = challengeFactory.createChallenge(
-	//		asserterAddress,
-	//		challengerAddress,
-	//		challengerPeriodTicks,
-	//		challengerDataHash,
-	//		stakerNodeTypes[1]
-	//	);
-	switch asserterPosition {
-	case valprotocol.InvalidInboxTopChildType:
-		{
 
-		}
-	case valprotocol.InvalidMessagesChildType:
-		{
-
-		}
-	case valprotocol.InvalidExecutionChildType:
-		{
-
-		}
-	default:
-		return errors.New("invalid position type")
-	}
 	// generate address
 	newAddr := eth.getNextAddress()
 	eth.challenges[newAddr] = &challengeData{deadline: common.TimeTicks{disputableDeadline}, challengerDataHash: challengerDataHash}
@@ -704,23 +600,10 @@ func (vm *arbRollup) StartChallenge(
 		},
 		Deadline: eth.challenges[newAddr].deadline,
 	}
-	fmt.Println("publishing InitiateChallengeEvent")
 	eth.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
-	fmt.Println("after publishing InitiateChallengeEvent")
 
-	//
-	//	challenges[newChallengeAddr] = true;
-	// save challenge
-	//
-	//	emit RollupChallengeStarted(
-	//		asserterAddress,
-	//		challengerAddress,
-	//		stakerNodeTypes[1],
-	//		newChallengeAddr
-	//	);
-	// publish challenge address
 	ChallengeStartedEvent := arbbridge.ChallengeStartedEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: eth.getCurrentBlock(),
@@ -730,11 +613,9 @@ func (vm *arbRollup) StartChallenge(
 		ChallengeType:     asserterPosition,
 		ChallengeContract: newAddr,
 	}
-	fmt.Println("publishing ChallengeStartedEvent")
 	eth.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: ChallengeStartedEvent,
 	})
-	//}
 	return nil
 }
 

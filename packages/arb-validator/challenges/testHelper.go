@@ -106,25 +106,21 @@ func testChallenge(
 		client1 = ethbridge.NewEthAuthClient(ethclint1, auth1)
 		client2 = ethbridge.NewEthAuthClient(ethclint2, auth2)
 	}
-	fmt.Println("in testChallenge calling NewArbFactoryWatcher")
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("in testChallenge calling ChallengeFactoryAddress")
 	challengeFactoryAddress, err := factory.ChallengeFactoryAddress()
 	if err != nil {
 		return errors2.Wrap(err, "Error getting challenge factory address")
 	}
 
-	fmt.Println("in testChallenge calling DeployChallengeTest")
 	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
 	}
 
-	fmt.Println("in testHelper.go - starting challenge")
 	challengeAddress, blockId, err := tester.StartChallenge(
 		context.Background(),
 		client1.Address(),
@@ -136,7 +132,6 @@ func testChallenge(
 	if err != nil {
 		return errors2.Wrap(err, "Error starting challenge")
 	}
-	fmt.Println("in testHelper.go - challenge started")
 
 	asserterEndChan := make(chan ChallengeState)
 	asserterErrChan := make(chan error)
@@ -149,12 +144,10 @@ func testChallenge(
 		for {
 			endState, err := asserterFunc(challengeAddress, client1, cBlockId)
 			if err == nil {
-				fmt.Println("asserter ended - end state", endState)
 				asserterEndChan <- endState
 				return
 			}
 			if tryCount > 20 {
-				fmt.Println("asserter ended - error")
 				asserterErrChan <- err
 				return
 			}
@@ -175,12 +168,10 @@ func testChallenge(
 		for {
 			endState, err := challengerFunc(challengeAddress, client2, cBlockId)
 			if err == nil {
-				fmt.Println("challenger ended - end state", endState)
 				challengerEndChan <- endState
 				return
 			}
 			if tryCount > 20 {
-				fmt.Println("challenger ended - error")
 				challengerErrChan <- err
 				return
 			}
@@ -201,7 +192,6 @@ func testChallenge(
 			if challengeState != ChallengeAsserterWon {
 				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
 			}
-			fmt.Println("Asserter challenge ended - doneCount", doneCount)
 			doneCount++
 			if doneCount == 2 {
 				return nil
@@ -210,10 +200,8 @@ func testChallenge(
 			if challengeState != ChallengeAsserterWon {
 				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
 			}
-			fmt.Println("Challenger challenge ended - doneCount", doneCount)
 			doneCount++
 			if doneCount == 2 {
-				fmt.Println("doneCount == 2")
 				return nil
 			}
 		case err := <-asserterErrChan:

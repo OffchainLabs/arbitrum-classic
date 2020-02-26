@@ -19,6 +19,7 @@ package common
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"math/big"
 )
 
 type Address [20]byte
@@ -71,4 +72,8 @@ func (a *AddressBuf) Unmarshal() Address {
 
 func HexToAddress(hex string) Address {
 	return NewAddressFromEth(ethcommon.HexToAddress(hex))
+}
+
+func BigIntToAddress(num *big.Int) Address {
+	return NewAddressFromEth(ethcommon.BigToAddress(num))
 }

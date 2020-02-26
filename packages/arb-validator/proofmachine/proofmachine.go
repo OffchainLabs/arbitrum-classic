@@ -122,7 +122,7 @@ func (m *Machine) ExecuteAssertion(
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
 			precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
-			fmt.Println("m.ethConn.osp", m.ethConn.osp)
+
 			res, err := m.ethConn.osp.ValidateProof(context.Background(), precond, valprotocol.NewExecutionAssertionStubFromAssertion(a1), proof)
 			if err != nil {
 				log.Println("Machine ended with error:")

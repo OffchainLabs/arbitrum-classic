@@ -18,7 +18,6 @@ package gobridge
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
@@ -30,7 +29,6 @@ type executionChallengeWatcher struct {
 }
 
 func newExecutionChallengeWatcher(address common.Address, client *GoArbClient) (*executionChallengeWatcher, error) {
-	fmt.Println("in newExecutionChallengeWatcher")
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

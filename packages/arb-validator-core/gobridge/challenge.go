@@ -19,15 +19,9 @@ package gobridge
 import (
 	"context"
 	"errors"
-	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
-
-var initiatedChallengeID ethcommon.Hash
-var timedOutAsserterID ethcommon.Hash
-var timedOutChallengerID ethcommon.Hash
 
 const (
 	noChallenge    = 0
@@ -58,7 +52,6 @@ func (c *challenge) TimeoutChallenge(
 	if common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
 		return errors.New("Deadline hasn't expired")
 	}
-	fmt.Println("TimeoutChallenge - c.challengeData.state = ", c.challengeData.state)
 	if c.challengeData.state == asserterTurn {
 		c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 			Event: arbbridge.AsserterTimeoutEvent{
@@ -85,14 +78,5 @@ type challengeWatcher struct {
 }
 
 func newChallengeWatcher(address common.Address, client *GoArbClient) (*challengeWatcher, error) {
-
 	return &challengeWatcher{client: client, Challenge: address}, nil
-}
-
-func (c *challengeWatcher) topics() []ethcommon.Hash {
-	return []ethcommon.Hash{
-		initiatedChallengeID,
-		timedOutAsserterID,
-		timedOutChallengerID,
-	}
 }

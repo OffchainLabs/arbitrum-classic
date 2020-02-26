@@ -19,7 +19,6 @@ package gobridge
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -32,7 +31,6 @@ type ExecutionChallenge struct {
 }
 
 func NewExecutionChallenge(address common.Address, client *GoArbAuthClient) (*ExecutionChallenge, error) {
-	fmt.Println("in NewExecutionChallenge")
 	bisectionChallenge, err := newBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
@@ -48,7 +46,6 @@ func (c *ExecutionChallenge) BisectAssertion(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
-	fmt.Println("in ExecutionChallenge BisectAssertion")
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
 	didInboxInsns := make([]bool, 0, len(assertions))
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
@@ -155,8 +152,6 @@ func (c *ExecutionChallenge) OneStepProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
-	fmt.Println("in ExecutionChallenge OneStepProof")
-
 	valprotocol.ExecutionPreconditionHash(precondition.BeforeHash, precondition.TimeBounds, precondition.BeforeInbox.Hash())
 	precondition.Hash()
 
@@ -215,7 +210,6 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
-	fmt.Println("in ExecutionChallenge ChooseSegment")
 	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
 		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)

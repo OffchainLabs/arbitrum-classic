@@ -19,7 +19,6 @@ package gobridge
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -36,7 +35,6 @@ type messagesChallenge struct {
 }
 
 func newMessagesChallenge(address common.Address, client *GoArbAuthClient) (*messagesChallenge, error) {
-	fmt.Println("in messagesChallenge newMessagesChallenge")
 	bisectionChallenge, err := newBisectionChallenge(address, client) //, auth??
 	if err != nil {
 		return nil, err
@@ -51,11 +49,8 @@ func (c *messagesChallenge) Bisect(
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
-	fmt.Println("in messagesChallenge Bisect")
 
 	bisectionCount := len(chainHashes) - 1
-	fmt.Println("bisectionCount", bisectionCount)
-	fmt.Println("len(segmentHashes)", len(segmentHashes))
 	if bisectionCount+1 != len(segmentHashes) {
 		return errors.New("Bisect Incorrect previous state - bisection count")
 	}
@@ -106,7 +101,6 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredTransaction,
 ) error {
-	fmt.Println("in messagesChallenge OneStepProofTransactionMessage")
 	messageHash := msg.CommitmentHash()
 	arbMessageHash := message.DeliveredValue(msg).Hash()
 
@@ -138,8 +132,6 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredEth,
 ) error {
-	fmt.Println("in messagesChallenge OneStepProofEthMessage")
-
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -207,7 +199,6 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	lowerHashB common.Hash,
 	msg message.DeliveredERC20,
 ) error {
-	fmt.Println("in messagesChallenge OneStepProofERC20Message")
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -274,7 +265,6 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	lowerHashB common.Hash,
 	msg message.DeliveredERC721,
 ) error {
-	fmt.Println("in messagesChallenge OneStepProofERC721Message")
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -378,7 +368,6 @@ func (c *messagesChallenge) ChooseSegment(
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
-	fmt.Println("in messagesChallenge ChooseSegment")
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {

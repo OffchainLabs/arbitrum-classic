@@ -20,14 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 )
-
-var continuedChallengeID ethcommon.Hash
 
 type bisectionChallenge struct {
 	*challenge
@@ -95,13 +92,6 @@ func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (
 		challengeWatcher: challenge,
 	}
 	return vm, err
-}
-
-func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		continuedChallengeID,
-	}
-	return append(tops, c.challengeWatcher.topics()...)
 }
 
 func (c *challenge) commitToSegment(hashes [][32]byte) {

@@ -19,7 +19,6 @@ package gobridge
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
@@ -44,8 +43,6 @@ func (c *inboxTopChallenge) Bisect(
 	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
-
-	fmt.Println("in (c *inboxTopChallenge) Bisect")
 
 	bisectionCount := len(chainHashes) - 1
 
@@ -91,8 +88,6 @@ func (c *inboxTopChallenge) OneStepProof(
 	lowerHashA common.Hash,
 	value common.Hash,
 ) error {
-	fmt.Println("in (c *inboxTopChallenge) OneStepProof")
-
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
 	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
