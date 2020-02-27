@@ -1,4 +1,5 @@
 # Custom and then Node, Go, Cpp, Python
+*.icloud
 .DS_Store
 .idea
 .vscode
