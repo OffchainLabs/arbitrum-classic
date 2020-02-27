@@ -29,7 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-var reorgError = errors.New("reorg occured")
+var errReorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
@@ -44,13 +44,13 @@ func NewEthClient(ethURL string) (*GoArbClient, error) {
 	return &client, nil
 }
 
-func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
-	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
+func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+	blockIDChan := make(chan arbbridge.MaybeBlockId, 100)
 
-	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId}
-	prevBlockId := startBlockId
+	blockIDChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
+	prevBlockId := startBlockID
 	go func() {
-		defer close(blockIdChan)
+		defer close(blockIDChan)
 
 		for {
 			var nextBlock *common.BlockId
@@ -81,7 +81,7 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *c
 
 				if fetchErrorCount >= maxFetchAttempts {
 					err := fmt.Sprint("Next header not found after ", fetchErrorCount, " attempts")
-					blockIdChan <- arbbridge.MaybeBlockId{Err: errors.New(err)}
+					blockIDChan <- arbbridge.MaybeBlockId{Err: errors.New(err)}
 					return
 				}
 
@@ -90,16 +90,16 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *c
 			}
 
 			if c.GoEthClient.parentHashes[*nextBlock] != prevBlockId.HeaderHash {
-				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
 				return
 			}
 
 			prevBlockId = nextBlock
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+			blockIDChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
 		}
 	}()
 
-	return blockIdChan, nil
+	return blockIDChan, nil
 }
 
 func (c *GoArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {

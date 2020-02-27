@@ -249,7 +249,7 @@ func getGoEth(ethURL string) *goEthdata {
 				case ch := <-mEthData.chanMgr: // register outchan
 					mEthData.outchans[ch] = Void
 				case msg := <-mEthData.pubchan: // publish to outchans
-					for ch, _ := range mEthData.outchans {
+					for ch := range mEthData.outchans {
 						ch <- msg
 					}
 				}

@@ -44,9 +44,9 @@ func newMessagesChallengeWatcher(address common.Address, client *GoArbClient) (*
 	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, challengeInfo: chalData, client: client}, nil
 }
 
-func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (c *messagesChallengeWatcher) GetEvents(ctx context.Context, blockID *common.BlockId) ([]arbbridge.Event, error) {
 	c.client.GoEthClient.challengeWatchersMutex.Lock()
-	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockId]
+	cw := c.client.GoEthClient.challengeWatcherEvents[c.challengeInfo][blockID]
 	c.client.GoEthClient.challengeWatchersMutex.Unlock()
 	return cw, nil
 }
