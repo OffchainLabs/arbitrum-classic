@@ -25,6 +25,7 @@ struct MachineStateKeys {
     std::vector<unsigned char> datastack_key;
     std::vector<unsigned char> auxstack_key;
     std::vector<unsigned char> pc_key;
+    std::vector<unsigned char> arbGas_key;
     std::vector<unsigned char> err_pc_key;
     unsigned char status_char;
 };

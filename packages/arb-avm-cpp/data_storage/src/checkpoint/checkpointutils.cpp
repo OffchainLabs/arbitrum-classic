@@ -174,10 +174,11 @@ MachineStateKeys extractStateKeys(
     auto datastack = extractHashKey(current_iter);
     auto auxstack = extractHashKey(current_iter);
     auto pc = extractHashKey(current_iter);
+    auto arbGas = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return MachineStateKeys{register_val, datastack, auxstack,
-                            pc,           err_pc,    status};
+    return MachineStateKeys{register_val, datastack, auxstack, pc,
+                            err_pc,       arbGas,    status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
@@ -199,6 +200,10 @@ std::vector<unsigned char> serializeStateKeys(
 
     state_data_vector.insert(state_data_vector.end(), state_data.pc_key.begin(),
                              state_data.pc_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.arbGas_key.begin(),
+                             state_data.arbGas_key.end());
 
     state_data_vector.insert(state_data_vector.end(),
                              state_data.err_pc_key.begin(),

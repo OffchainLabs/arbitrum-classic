@@ -60,6 +60,7 @@ struct MachineState {
     value registerVal;
     Datastack stack;
     Datastack auxstack;
+    uint256_t arbGasRemaining;
     Status state = Status::Extensive;
     uint64_t pc = 0;
     CodePoint errpc;

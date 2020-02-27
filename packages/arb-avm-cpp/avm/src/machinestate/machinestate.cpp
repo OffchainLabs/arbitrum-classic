@@ -52,6 +52,9 @@ bool MachineState::initialize_machinestate(
     if (initial_state.valid_state) {
         code = initial_state.code;
         staticVal = initial_state.staticVal;
+        arbGasRemaining = uint256_t(
+            "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            "f");
 
         errpc = getErrCodePoint();
         pc = 0;
@@ -68,7 +71,7 @@ uint256_t MachineState::hash() const {
     if (state == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 6> data;
+    std::array<unsigned char, 32 * 7> data;
     auto oit = data.begin();
     {
         auto val = ::hash(code[pc]);
@@ -111,6 +114,14 @@ uint256_t MachineState::hash() const {
         oit += 32;
     }
     {
+        auto val = ::hash(arbGasRemaining);
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
         auto val = ::hash(errpc);
         std::array<uint64_t, 4> hashInts;
         to_big_endian(val, hashInts.begin());
@@ -120,7 +131,7 @@ uint256_t MachineState::hash() const {
     }
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(data.data(), 32 * 6, hashData.data());
+    evm::Keccak_256(data.data(), 32 * 7, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
@@ -141,6 +152,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     uint256_t_to_buf(auxStackProof.first, buf);
     uint256_t_to_buf(::hash(registerVal), buf);
     uint256_t_to_buf(::hash(staticVal), buf);
+    marshal_uint256_t(arbGasRemaining, buf);
     uint256_t_to_buf(::hash(errpc), buf);
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
@@ -157,6 +169,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
 
     auto register_val_results = stateSaver.saveValue(registerVal);
+    auto arbGasRemaining_results = stateSaver.saveValue(arbGasRemaining);
     auto err_code_point = stateSaver.saveValue(errpc);
     auto pc_results = stateSaver.saveValue(code[pc]);
 
@@ -167,11 +180,15 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         register_val_results.status.ok() && pc_results.status.ok() &&
-        err_code_point.status.ok()) {
-        auto machine_state_data = MachineStateKeys{
-            register_val_results.storage_key, datastack_results.storage_key,
-            auxstack_results.storage_key,     pc_results.storage_key,
-            err_code_point.storage_key,       status_str};
+        arbGasRemaining_results.status.ok() && err_code_point.status.ok()) {
+        auto machine_state_data =
+            MachineStateKeys{register_val_results.storage_key,
+                             datastack_results.storage_key,
+                             auxstack_results.storage_key,
+                             pc_results.storage_key,
+                             arbGasRemaining_results.storage_key,
+                             err_code_point.storage_key,
+                             status_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -206,6 +223,10 @@ bool MachineState::restoreCheckpoint(
 
         auto pc_results = stateFetcher.getCodePoint(state_data.pc_key);
         pc = pc_results.data.pc;
+
+        auto arbGasRemaining_results =
+            stateFetcher.getUint256_t(state_data.arbGas_key);
+        arbGasRemaining = arbGasRemaining_results.data;
 
         auto err_pc_results = stateFetcher.getCodePoint(state_data.err_pc_key);
         errpc = err_pc_results.data;

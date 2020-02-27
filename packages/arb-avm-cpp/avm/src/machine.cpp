@@ -32,6 +32,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
     os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
     os << "staticHash " << to_hex_str(hash(val.staticVal)) << "\n";
+    os << "arbGasRemaining " << val.arbGasRemaining << "\n";
     os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
     return os;
 }
@@ -94,7 +95,10 @@ BlockReason Machine::runOne() {
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint
-    if (!isValidOpcode(instruction.op.opcode)) {
+    if (!isValidOpcode(instruction.op.opcode) ||
+        ((machine_state.arbGasRemaining > 0) &&
+         (machine_state.arbGasRemaining <=
+          InstructionArbGasCost.at(instruction.op.opcode)))) {
         machine_state.state = Status::Error;
         machine_state.context.numSteps++;
         if (!isErrorCodePoint(machine_state.errpc)) {
@@ -120,8 +124,9 @@ BlockReason Machine::runOne() {
         // if not blocked, increment step count and gas count
         if (nonstd::get_if<NotBlocked>(&blockReason)) {
             machine_state.context.numSteps++;
-            machine_state.context.numGas +=
-                InstructionArbGasCost.at(instruction.op.opcode);
+            auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
+            machine_state.context.numGas += gasUsed;
+            machine_state.arbGasRemaining -= gasUsed;
         } else {
             if (instruction.op.immediate) {
                 machine_state.stack.popClear();

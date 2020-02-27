@@ -913,6 +913,94 @@ library OneStepProof {
         return true;
     }
 
+    // Memory insns
+    function executeMnewInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        if (!val1.isInt()) {
+            return false;
+        } 
+        uint iv256 = val1.intVal;
+        require(iv256 < (1<<32));
+        uint64 iv64 = uint64(iv256);       
+        machine.addDataStackHashValue(Value.HashOnly(hashOfEmptyMem(iv64)));
+        return true;
+    }
+
+    function executeMgetInsn(
+        Machine.Data memory machine, 
+        Value.Data memory val1, 
+        Value.Data memory val2, 
+        bytes memory proof, 
+        uint offset
+    ) 
+        internal
+        pure
+        returns(bool, uint)  // success, offset
+    {
+        if (!val1.isInt()) {
+            return (false, offset);
+        }
+        uint index = val1.intVal;
+        bytes32 memHash = Value.hash(val2).hash;
+        bool success;
+        uint size;
+        (success, offset, size) = Value.deserializeInt(proof, offset);
+        if (!success){
+            return (false, offset);
+        }
+        Value.HashOnly memory returnHash;
+        (success, offset, returnHash) = Value.deserializeHashOnly(proof, offset);
+        bytes32 resultHash = returnHash.hash;
+        if (!success){
+            return (false, offset);
+        }
+        for (uint chunkSize=1; chunkSize<size; chunkSize=chunkSize*2) {
+            Value.HashOnly memory h;
+            (success, offset, h) = Value.deserializeHashOnly(proof, offset);
+            if ((index & chunkSize) == 0) {
+                resultHash = keccak256(abi.encodePacked(
+                    resultHash, 
+                    h.hash
+                ));
+            } else {
+                resultHash = keccak256(abi.encodePacked(
+                    h.hash, 
+                    resultHash
+                ));
+            }
+        }
+        machine.addDataStackHashValue(returnHash);
+        return (resultHash==memHash, offset);
+    }
+
+    function hashOfEmptyMem(uint64 size) 
+        internal
+        pure
+        returns(bytes32)
+    {
+        uint64 chunkSize = 1;
+        bytes32 h = Value.hashEmptyTuple();
+        h = keccak256(abi.encodePacked(h, h));
+        while (2*chunkSize < size) {
+            h = keccak256(abi.encodePacked(h, h));
+            chunkSize = 2*chunkSize;
+        }
+
+        return keccak256(
+            abi.encodePacked(
+                uint8(12),
+                size,
+                h
+            )
+        );
+    }
+
     // Logging
 
     function executeBreakpointInsn(Machine.Data memory) internal pure returns (bool) {
@@ -1021,6 +1109,8 @@ library OneStepProof {
     uint8 constant internal OP_TGET = 0x50;
     uint8 constant internal OP_TSET = 0x51;
     uint8 constant internal OP_TLEN = 0x52;
+    uint8 constant internal OP_MNEW = 0x53;
+    uint8 constant internal OP_MGET = 0x54;
 
     // Logging opertations
     uint8 constant internal OP_BREAKPOINT = 0x60;
@@ -1128,6 +1218,10 @@ library OneStepProof {
             return (3, 1);
         } else if (opCode == OP_TLEN) {
             return (1, 1);
+        } else if (opCode == OP_MNEW) {
+            return (1, 1);
+        } else if (opCode == OP_MGET) {
+            return (2, 1);
         } else if (opCode == OP_BREAKPOINT) {
             return (0, 0);
         } else if (opCode == OP_LOG) {
@@ -1249,6 +1343,10 @@ library OneStepProof {
             return 40;
         } else if (opCode == OP_TLEN) {
             return 2;
+        } else if (opCode == OP_MNEW) {
+            return 40;
+        } else if (opCode == OP_MGET) {
+            return 100;
         } else if (opCode == OP_BREAKPOINT) {
             return 100;
         } else if (opCode == OP_LOG) {
@@ -1352,180 +1450,192 @@ library OneStepProof {
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
         require((_data.didInboxInsn && opCode==OP_INBOX) || (!_data.didInboxInsn && opCode!=OP_INBOX),
             "Invalid didInboxInsn claim");
-        if (opCode == OP_ADD) {
-            correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_MUL) {
-            correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SUB) {
-            correct = executeSubInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_DIV) {
-            correct = executeDivInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SDIV) {
-            correct = executeSdivInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_MOD) {
-            correct = executeModInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SMOD) {
-            correct = executeSmodInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_ADDMOD) {
-            correct = executeAddmodInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_MULMOD) {
-            correct = executeMulmodInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_EXP) {
-            correct = executeExpInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_LT) {
-            correct = executeLtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_GT) {
-            correct = executeGtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SLT) {
-            correct = executeSltInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SGT) {
-            correct = executeSgtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_EQ) {
-            correct = executeEqInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_ISZERO) {
-            correct = executeIszeroInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_AND) {
-            correct = executeAndInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_OR) {
-            correct = executeOrInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_XOR) {
-            correct = executeXorInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_NOT) {
-            correct = executeNotInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_BYTE) {
-            correct = executeByteInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SIGNEXTEND) {
-            correct = executeSignextendInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SHA3) {
-            correct = executeSha3Insn(endMachine, stackVals[0]);
-        } else if (opCode == OP_TYPE) {
-            correct = executeTypeInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_ETHHASH2) {
-            correct = executeEthhash2Insn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_POP) {
-            correct = executePopInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_SPUSH) {
-            correct = executeSpushInsn(endMachine);
-        } else if (opCode == OP_RPUSH) {
-            correct = executeRpushInsn(endMachine);
-        } else if (opCode == OP_RSET) {
-            correct = executeRsetInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_JUMP) {
-            correct = executeJumpInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_CJUMP) {
-            correct = executeCjumpInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_STACKEMPTY) {
-            correct = executeStackemptyInsn(endMachine);
-        } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
-        } else if (opCode == OP_AUXPUSH) {
-            correct = executeAuxpushInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_AUXPOP) {
-            Value.Data memory auxVal;
-            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof of auxpop had bad aux value");
-            startMachine.addAuxStackValue(auxVal);
-            endMachine.addDataStackValue(auxVal);
-        } else if (opCode == OP_AUXSTACKEMPTY) {
-            correct = executeAuxstackemptyInsn(endMachine);
-        } else if (opCode == OP_NOP) {
-        } else if (opCode == OP_ERRPUSH) {
-            correct = executeErrpushInsn(endMachine);
-        } else if (opCode == OP_ERRSET) {
-            correct = executeErrsetInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_DUP0) {
-            correct = executeDup0Insn(endMachine, stackVals[0]);
-        } else if (opCode == OP_DUP1) {
-            correct = executeDup1Insn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_DUP2) {
-            correct = executeDup2Insn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_SWAP1) {
-            correct = executeSwap1Insn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SWAP2) {
-            correct = executeSwap2Insn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_TGET) {
-            correct = executeTgetInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_TSET) {
-            correct = executeTsetInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_TLEN) {
-            correct = executeTlenInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_BREAKPOINT) {
-            correct = executeBreakpointInsn(endMachine);
-        } else if (opCode == OP_LOG) {
-            (correct, messageHash) = executeLogInsn(endMachine, stackVals[0]);
-            if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstLog,
-                            messageHash
-                        )
-                    ) == _data.lastLog,
-                    "Logged value doesn't match output log"
-                );
-                require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
-            } else {
-                messageHash = 0;
-            }
-
-        } else if (opCode == OP_SEND) {
-            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
-            if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstMessage,
-                            messageHash
-                        )
-                    ) == _data.lastMessage,
-                    "sent message doesn't match output message"
-                );
-
-                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-            } else {
-                messageHash = 0;
-            }
-        } else if (opCode == OP_GETTIME) {
-            Value.Data[] memory contents = new Value.Data[](2);
-            contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
-            contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
-            endMachine.addDataStackValue(Value.newTuple(contents));
-        } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
-        } else if (opCode == OP_ERROR) {
+        if (startMachine.arbGasRemaining == 0) {
+            endMachine.arbGasRemaining = 0;
+        } else if (startMachine.arbGasRemaining <= opGasCost(opCode)) {
+            endMachine.arbGasRemaining = 0;
             correct = false;
-        } else if (opCode == OP_STOP) {
-            endMachine.setHalt();
-        }
+        } else {
+            endMachine.arbGasRemaining = startMachine.arbGasRemaining - opGasCost(opCode);
+            if (opCode == OP_ADD) {
+                correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_MUL) {
+                correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SUB) {
+                correct = executeSubInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_DIV) {
+                correct = executeDivInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SDIV) {
+                correct = executeSdivInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_MOD) {
+                correct = executeModInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SMOD) {
+                correct = executeSmodInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_ADDMOD) {
+                correct = executeAddmodInsn(
+                    endMachine,
+                    stackVals[0],
+                    stackVals[1],
+                    stackVals[2]
+                );
+            } else if (opCode == OP_MULMOD) {
+                correct = executeMulmodInsn(
+                    endMachine,
+                    stackVals[0],
+                    stackVals[1],
+                    stackVals[2]
+                );
+            } else if (opCode == OP_EXP) {
+                correct = executeExpInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_LT) {
+                correct = executeLtInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_GT) {
+                correct = executeGtInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SLT) {
+                correct = executeSltInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SGT) {
+                correct = executeSgtInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_EQ) {
+                correct = executeEqInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_ISZERO) {
+                correct = executeIszeroInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_AND) {
+                correct = executeAndInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_OR) {
+                correct = executeOrInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_XOR) {
+                correct = executeXorInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_NOT) {
+                correct = executeNotInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_BYTE) {
+                correct = executeByteInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SIGNEXTEND) {
+                correct = executeSignextendInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SHA3) {
+                correct = executeSha3Insn(endMachine, stackVals[0]);
+            } else if (opCode == OP_TYPE) {
+                correct = executeTypeInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_ETHHASH2) {
+                correct = executeEthhash2Insn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_POP) {
+                correct = executePopInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_SPUSH) {
+                correct = executeSpushInsn(endMachine);
+            } else if (opCode == OP_RPUSH) {
+                correct = executeRpushInsn(endMachine);
+            } else if (opCode == OP_RSET) {
+                correct = executeRsetInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_JUMP) {
+                correct = executeJumpInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_CJUMP) {
+                correct = executeCjumpInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_STACKEMPTY) {
+                correct = executeStackemptyInsn(endMachine);
+            } else if (opCode == OP_PCPUSH) {
+                correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
+            } else if (opCode == OP_AUXPUSH) {
+                correct = executeAuxpushInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_AUXPOP) {
+                Value.Data memory auxVal;
+                (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
+                require(valid, "Proof of auxpop had bad aux value");
+                startMachine.addAuxStackValue(auxVal);
+                endMachine.addDataStackValue(auxVal);
+            } else if (opCode == OP_AUXSTACKEMPTY) {
+                correct = executeAuxstackemptyInsn(endMachine);
+            } else if (opCode == OP_NOP) {
+            } else if (opCode == OP_ERRPUSH) {
+                correct = executeErrpushInsn(endMachine);
+            } else if (opCode == OP_ERRSET) {
+                correct = executeErrsetInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_DUP0) {
+                correct = executeDup0Insn(endMachine, stackVals[0]);
+            } else if (opCode == OP_DUP1) {
+                correct = executeDup1Insn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_DUP2) {
+                correct = executeDup2Insn(
+                    endMachine,
+                    stackVals[0],
+                    stackVals[1],
+                    stackVals[2]
+                );
+            } else if (opCode == OP_SWAP1) {
+                correct = executeSwap1Insn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_SWAP2) {
+                correct = executeSwap2Insn(
+                    endMachine,
+                    stackVals[0],
+                    stackVals[1],
+                    stackVals[2]
+                );
+            } else if (opCode == OP_TGET) {
+                correct = executeTgetInsn(endMachine, stackVals[0], stackVals[1]);
+            } else if (opCode == OP_TSET) {
+                correct = executeTsetInsn(
+                    endMachine,
+                    stackVals[0],
+                    stackVals[1],
+                    stackVals[2]
+                );
+            } else if (opCode == OP_TLEN) {
+                correct = executeTlenInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_MNEW) {
+                correct = executeMnewInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_MGET) {
+                (correct, offset) = executeMgetInsn(endMachine, stackVals[0], stackVals[1], _data.proof, offset);
+            } else if (opCode == OP_BREAKPOINT) {
+                correct = executeBreakpointInsn(endMachine);
+            } else if (opCode == OP_LOG) {
+                (correct, messageHash) = executeLogInsn(endMachine, stackVals[0]);
+                if (correct) {
+                    require(
+                        keccak256(
+                            abi.encodePacked(
+                                _data.firstLog,
+                                messageHash
+                            )
+                        ) == _data.lastLog,
+                        "Logged value doesn't match output log"
+                    );
+                    require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+                } else {
+                    messageHash = 0;
+                }
 
-        if (messageHash == 0) {
-            require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
-            require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            } else if (opCode == OP_SEND) {
+                (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
+                if (correct) {
+                    require(
+                        keccak256(
+                            abi.encodePacked(
+                                _data.firstMessage,
+                                messageHash
+                            )
+                        ) == _data.lastMessage,
+                        "sent message doesn't match output message"
+                    );
+
+                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                } else {
+                    messageHash = 0;
+                }
+            } else if (opCode == OP_GETTIME) {
+                Value.Data[] memory contents = new Value.Data[](2);
+                contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
+                contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
+                endMachine.addDataStackValue(Value.newTuple(contents));
+            } else if (opCode == OP_INBOX) {
+                correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
+            } else if (opCode == OP_ERROR) {
+                correct = false;
+            } else if (opCode == OP_STOP) {
+                endMachine.setHalt();
+            }
+
+            if (messageHash == 0) {
+                require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            }
         }
 
         if (!correct) {

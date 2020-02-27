@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ library Machine {
         Value.HashOnly auxStackHash;
         Value.HashOnly registerHash;
         Value.HashOnly staticHash;
+        uint256        arbGasRemaining;
         Value.HashOnly errHandler;
         uint256 status;
     }
@@ -68,6 +69,8 @@ library Machine {
                 DebugPrint.bytes32string(machine.registerHash.hash),
                 ", \n",
                 DebugPrint.bytes32string(machine.staticHash.hash),
+                ", \n",
+                DebugPrint.uint2str(machine.arbGasRemaining),
                 ", \n",
                 DebugPrint.bytes32string(machine.errHandler.hash),
                 ")\n"
@@ -116,6 +119,7 @@ library Machine {
         bytes32 auxStackHash,
         bytes32 registerHash,
         bytes32 staticHash,
+        uint256 arbGasRemaining,
         bytes32 errHandlerHash
     )
         internal
@@ -129,6 +133,7 @@ library Machine {
                 Value.HashOnly(auxStackHash),
                 Value.HashOnly(registerHash),
                 Value.HashOnly(staticHash),
+                arbGasRemaining,
                 Value.HashOnly(errHandlerHash),
                 MACHINE_EXTENSIVE
             )
@@ -148,6 +153,7 @@ library Machine {
                     machine.auxStackHash.hash,
                     machine.registerHash.hash,
                     machine.staticHash.hash,
+                    machine.arbGasRemaining,
                     machine.errHandler.hash
                 )
             );
@@ -162,6 +168,7 @@ library Machine {
             machine.auxStackHash,
             machine.registerHash,
             machine.staticHash,
+            machine.arbGasRemaining,
             machine.errHandler,
             machine.status
         );
@@ -199,6 +206,10 @@ library Machine {
             return (false, offset, m);
         }
         (valid, offset, m.staticHash) = Value.deserializeHashOnly(data, offset);
+        if (!valid) {
+            return (false, offset, m);
+        }
+        (valid, offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
         if (!valid) {
             return (false, offset, m);
         }

@@ -558,6 +558,7 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
                                  Datastack auxstack,
                                  Status state,
                                  CodePoint pc,
+                                 uint256_t arbGas,
                                  CodePoint err_pc,
                                  BlockReason blockReason) {
     TuplePool pool;
@@ -567,14 +568,18 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
 
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto pc_results = stateSaver.saveValue(pc);
+    auto arbGas_results = stateSaver.saveValue(arbGas);
     auto err_pc_results = stateSaver.saveValue(err_pc);
 
     auto status_str = (unsigned char)state;
 
-    return MachineStateKeys{
-        register_val_results.storage_key, datastack_results.storage_key,
-        auxstack_results.storage_key,     pc_results.storage_key,
-        err_pc_results.storage_key,       status_str};
+    return MachineStateKeys{register_val_results.storage_key,
+                            datastack_results.storage_key,
+                            auxstack_results.storage_key,
+                            pc_results.storage_key,
+                            arbGas_results.storage_key,
+                            err_pc_results.storage_key,
+                            status_str};
 }
 
 MachineStateKeys getStateValues(MachineStateSaver& saver) {
@@ -593,14 +598,15 @@ MachineStateKeys getStateValues(MachineStateSaver& saver) {
     aux_stack.push(code_point);
 
     CodePoint pc_codepoint(0, Operation(), 0);
+    uint256_t arbGasRemaining = uint256_t(777);
     CodePoint err_pc_codepoint(0, Operation(), 0);
     Status state = Status::Extensive;
 
     auto inbox_blocked = InboxBlocked(0);
 
-    auto saved_data =
-        makeStorageData(saver, register_val, data_stack, aux_stack, state,
-                        pc_codepoint, err_pc_codepoint, inbox_blocked);
+    auto saved_data = makeStorageData(
+        saver, register_val, data_stack, aux_stack, state, pc_codepoint,
+        arbGasRemaining, err_pc_codepoint, inbox_blocked);
 
     return saved_data;
 }
@@ -614,8 +620,9 @@ MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     Status state = Status::Extensive;
     CodePoint code_point(0, Operation(), 0);
 
-    auto data = makeStorageData(saver, Tuple(), Datastack(), Datastack(), state,
-                                code_point, code_point, NotBlocked());
+    auto data =
+        makeStorageData(saver, Tuple(), Datastack(), Datastack(), state,
+                        code_point, uint256_t(0), code_point, NotBlocked());
 
     return data;
 }

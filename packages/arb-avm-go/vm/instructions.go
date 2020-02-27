@@ -113,6 +113,9 @@ var Instructions = []Instruction(nil)
 func init() {
 	Instructions = make([]Instruction, code.MaxOpcode)
 	for _, ins := range allInsns {
+		if int64(ins.gas) < 0 {
+			panic("instruction gas use overflows int64")
+		}
 		Instructions[ins.code] = ins
 	}
 }
@@ -140,12 +143,16 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 			return StackMods{}, 0, errors.New("invalid opcode")
 		}
 
+		gasUsed, err := m.AdjustArbGasRemaining(int64(Instructions[op.GetOp()].gas))
+		if err != nil {
+			return StackMods{}, uint64(gasUsed), err
+		}
 		if immediate, ok := op.(value.ImmediateOperation); ok {
 			m.stack.Push(immediate.Val)
 		}
 
 		mods, err := Instructions[op.GetOp()].impl(m)
-		return mods, Instructions[op.GetOp()].gas, err
+		return mods, uint64(gasUsed), err
 	}()
 
 	if err == nil {

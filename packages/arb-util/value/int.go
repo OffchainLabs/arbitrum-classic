@@ -47,6 +47,10 @@ func NewIntValue(x *big.Int) IntValue {
 	return IntValue{x}
 }
 
+func MaxUintValue() IntValue {
+	return NewIntValue(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1)))
+}
+
 func NewInt64Value(x int64) IntValue {
 	return IntValue{big.NewInt(x)}
 }

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
@@ -33,14 +34,15 @@ import (
 
 type Machine struct {
 	// implements Machinestate
-	stack      stack.Stack
-	auxstack   stack.Stack
-	register   *MachineValue
-	static     *MachineValue
-	pc         *MachinePC
-	errHandler value.CodePointValue
-	context    Context
-	status     machine.Status
+	stack           stack.Stack
+	auxstack        stack.Stack
+	register        *MachineValue
+	static          *MachineValue
+	pc              *MachinePC
+	arbGasRemaining value.IntValue
+	errHandler      value.CodePointValue
+	context         Context
+	status          machine.Status
 
 	sizeLimit     int64
 	sizeException bool
@@ -101,6 +103,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		register,
 		static,
 		pc,
+		value.MaxUintValue(),
 		errHandler,
 		&NoContext{},
 		machine.Extensive,
@@ -154,6 +157,27 @@ func (m *Machine) GetStartTime() value.IntValue {
 
 func (m *Machine) GetEndTime() value.IntValue {
 	return m.context.GetEndTime()
+}
+
+type OutOfArbGasError struct{}
+
+func (o OutOfArbGasError) Error() string {
+	return "ran out of ArbGas"
+}
+
+func (m *Machine) AdjustArbGasRemaining(charge int64) (int64, error) {
+	if m.arbGasRemaining.Equal(value.IntegerZero) {
+		return charge, nil
+	} else if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) <= 0 {
+		return m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
+	} else {
+		m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(charge)))
+		return charge, nil
+	}
+}
+
+func (m *Machine) GetArbGasRemaining() value.IntValue {
+	return m.arbGasRemaining
 }
 
 func (m *Machine) IncrPC() {
@@ -308,6 +332,7 @@ func (m *Machine) Hash() common.Hash {
 			hashing.Bytes32(m.auxstack.StateValue().Hash()),
 			hashing.Bytes32(m.register.StateValue().Hash()),
 			hashing.Bytes32(m.static.StateValue().Hash()),
+			hashing.Bytes32(m.arbGasRemaining.Hash()),
 			hashing.Bytes32(m.errHandler.Hash()),
 		)
 	case machine.ErrorStop:
@@ -331,6 +356,7 @@ func (m *Machine) PrintState() {
 	fmt.Println("auxStackHash", auxStackHash)
 	fmt.Println("registerHash", registerHash)
 	fmt.Println("staticHash", staticHash)
+	fmt.Println("arbGasRemaining", m.arbGasRemaining)
 	fmt.Println("errHandlerHash", errHandlerHash)
 }
 
@@ -380,6 +406,9 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	if _, err := wr.Write(staticHash[:]); err != nil {
 		return err
 	}
+	if err := m.arbGasRemaining.Marshal(wr); err != nil {
+		return err
+	}
 	if _, err := wr.Write(errHandlerHash[:]); err != nil {
 		return err
 	}
@@ -411,6 +440,7 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.register.Clone(),
 		m.static.Clone(),
 		newPcPointer,
+		m.arbGasRemaining,
 		m.errHandler,
 		&NoContext{},
 		m.status,
