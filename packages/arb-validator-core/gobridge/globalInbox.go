@@ -238,12 +238,5 @@ func (con *globalInbox) GetTokenBalance(
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-
-	// TODO: fill in
-	//return con.GlobalPendingInbox.GetTokenBalance(
-	//	auth,
-	//	tokenContract,
-	//	user,
-	//)
-	return big.NewInt(0), nil
+	return con.client.GoEthClient.ethWallet[con.address], nil
 }

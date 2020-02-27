@@ -35,32 +35,32 @@ func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWa
 	return vm, nil
 }
 
-func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
-	return vm.client.GoEthClient.rollups[vm.rollupAddress].events[blockId], nil
+func (rw *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+	return rw.client.GoEthClient.rollups[rw.rollupAddress].events[blockId], nil
 }
 
-func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
+func (rw *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
 	return valprotocol.ChainParams{
-		StakeRequirement:        vm.client.GoEthClient.rollups[vm.rollupAddress].escrowRequired,
-		GracePeriod:             vm.client.GoEthClient.rollups[vm.rollupAddress].gracePeriod,
-		MaxExecutionSteps:       vm.client.GoEthClient.rollups[vm.rollupAddress].maxSteps,
-		ArbGasSpeedLimitPerTick: vm.client.GoEthClient.rollups[vm.rollupAddress].arbGasSpeedLimitPerTick,
-		MaxTimeBoundsWidth:      vm.client.GoEthClient.rollups[vm.rollupAddress].maxTimeBoundsWidth,
+		StakeRequirement:        rw.client.GoEthClient.rollups[rw.rollupAddress].escrowRequired,
+		GracePeriod:             rw.client.GoEthClient.rollups[rw.rollupAddress].gracePeriod,
+		MaxExecutionSteps:       rw.client.GoEthClient.rollups[rw.rollupAddress].maxSteps,
+		ArbGasSpeedLimitPerTick: rw.client.GoEthClient.rollups[rw.rollupAddress].arbGasSpeedLimitPerTick,
+		MaxTimeBoundsWidth:      rw.client.GoEthClient.rollups[rw.rollupAddress].maxTimeBoundsWidth,
 	}, nil
 }
 
-func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
-	return con.client.GoEthClient.rollups[con.rollupAddress].creation, con.client.GoEthClient.rollups[con.rollupAddress].initVMHash, nil
+func (rw *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
+	return rw.client.GoEthClient.rollups[rw.rollupAddress].creation, rw.client.GoEthClient.rollups[rw.rollupAddress].initVMHash, nil
 }
 
-func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
+func (rw *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 	return string("1"), nil
 }
 
-func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return vm.client.GoEthClient.getNextAddress(), nil
+func (rw *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+	return rw.client.GoEthClient.getNextAddress(), nil
 }
 
-func (vm *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
-	return vm.client.GoEthClient.rollups[vm.rollupAddress].creation, nil
+func (rw *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
+	return rw.client.GoEthClient.rollups[rw.rollupAddress].creation, nil
 }

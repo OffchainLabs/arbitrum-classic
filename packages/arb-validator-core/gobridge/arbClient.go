@@ -48,7 +48,7 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 	blockIDChan := make(chan arbbridge.MaybeBlockId, 100)
 
 	blockIDChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
-	prevBlockId := startBlockID
+	prevBlockID := startBlockID
 	go func() {
 		defer close(blockIDChan)
 
@@ -56,10 +56,10 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 			var nextBlock *common.BlockId
 			fetchErrorCount := 0
 			for {
-				if prevBlockId == nil {
-					fmt.Println("prevBlockId nil")
+				if prevBlockID == nil {
+					fmt.Println("prevBlockID nil")
 				}
-				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
+				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockID.Height.AsInt(), big.NewInt(1)))
 				n, notFound := c.GoEthClient.getBlockFromHeight(nextHeight)
 				if notFound == nil {
 					// Got next header
@@ -89,13 +89,13 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 				time.Sleep(headerRetryDelay)
 			}
 
-			if c.GoEthClient.parentHashes[*nextBlock] != prevBlockId.HeaderHash {
+			if c.GoEthClient.parentHashes[*nextBlock] != prevBlockID.HeaderHash {
 				blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
 				return
 			}
 
-			prevBlockId = nextBlock
-			blockIDChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+			prevBlockID = nextBlock
+			blockIDChan <- arbbridge.MaybeBlockId{BlockId: prevBlockID}
 		}
 	}()
 

@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 	"strings"
 
@@ -31,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var continuedChallengeID ethcommon.Hash
@@ -72,7 +72,7 @@ func (c *bisectionChallenge) chooseSegment(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tree := structures.NewMerkleTree(segments)
+	tree := valprotocol.NewMerkleTree(segments)
 	tx, err := c.BisectionChallenge.ChooseSegment(
 		c.auth.getAuth(ctx),
 		big.NewInt(int64(segmentToChallenge)),
