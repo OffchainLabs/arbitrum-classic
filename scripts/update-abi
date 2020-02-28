@@ -20,15 +20,15 @@ abigen --sol=GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 
-\cp arbfactory.go ../../arb-validator/ethbridge/arbfactory/
-\cp arbrollup.go ../../arb-validator/ethbridge/rollup/
-\cp challengefactory.go ../../arb-validator/ethbridge/challengefactory/
-\cp inboxtopchallenge.go ../../arb-validator/ethbridge/inboxtopchallenge/
-\cp messageschallenge.go ../../arb-validator/ethbridge/messageschallenge/
-\cp executionchallenge.go ../../arb-validator/ethbridge/executionchallenge/
-\cp globalinbox.go ../../arb-validator/ethbridge/globalinbox/
-\cp challengetester.go ../../arb-validator/ethbridge/challengetester/
-\cp messagetester.go ../../arb-validator/ethbridge/messagetester/
+\cp arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
+\cp arbrollup.go ../../arb-validator-core/ethbridge/rollup/
+\cp challengefactory.go ../../arb-validator-core/ethbridge/challengefactory/
+\cp inboxtopchallenge.go ../../arb-validator-core/ethbridge/inboxtopchallenge/
+\cp messageschallenge.go ../../arb-validator-core/ethbridge/messageschallenge/
+\cp executionchallenge.go ../../arb-validator-core/ethbridge/executionchallenge/
+\cp globalinbox.go ../../arb-validator-core/ethbridge/globalinbox/
+\cp challengetester.go ../../arb-validator-core/ethbridge/challengetester/
+\cp messagetester.go ../../arb-validator-core/ethbridge/messagetester/
 rm -rf @openzeppelin bytes
 rm -f arbfactory.go arbrollup.go
 rm -f challengefactory.go
