@@ -114,9 +114,9 @@ uint256_t MachineState::hash() const {
         oit += 32;
     }
     {
-        auto val = ::hash(arbGasRemaining);
+        // auto val = ::hash(arbGasRemaining);
         std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
+        to_big_endian(arbGasRemaining, hashInts.begin());
         std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
                   reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
         oit += 32;

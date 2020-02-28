@@ -143,7 +143,7 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 			return StackMods{}, 0, errors.New("invalid opcode")
 		}
 
-		gasUsed, err := m.AdjustArbGasRemaining(int64(Instructions[op.GetOp()].gas))
+		gasUsed, err := m.CheckArbGasCapacity(int64(Instructions[op.GetOp()].gas))
 		if err != nil {
 			return StackMods{}, uint64(gasUsed), err
 		}
@@ -156,16 +156,22 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}()
 
 	if err == nil {
+		m.UseArbGas(gas)
 		m.context.NotifyStep(gas)
 		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
+		if op.GetOp() == code.BREAKPOINT {
+			m.UseArbGas(gas)
+			m.context.NotifyStep(gas)
+		}
 		if _, ok := op.(value.ImmediateOperation); ok {
 			PopStackBox(m, mods)
 		}
 		return mods, blocked.reason
 	}
+	m.UseArbGas(gas)
 	m.context.NotifyStep(gas)
 
 	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)

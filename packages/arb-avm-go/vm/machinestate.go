@@ -165,15 +165,18 @@ func (o OutOfArbGasError) Error() string {
 	return "ran out of ArbGas"
 }
 
-func (m *Machine) AdjustArbGasRemaining(charge int64) (int64, error) {
+func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
 	if m.arbGasRemaining.Equal(value.IntegerZero) {
 		return charge, nil
 	} else if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) <= 0 {
 		return m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
 	} else {
-		m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(charge)))
 		return charge, nil
 	}
+}
+
+func (m *Machine) UseArbGas(charge uint64) {
+	m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(int64(charge))))
 }
 
 func (m *Machine) GetArbGasRemaining() value.IntValue {
@@ -332,7 +335,7 @@ func (m *Machine) Hash() common.Hash {
 			hashing.Bytes32(m.auxstack.StateValue().Hash()),
 			hashing.Bytes32(m.register.StateValue().Hash()),
 			hashing.Bytes32(m.static.StateValue().Hash()),
-			hashing.Bytes32(m.arbGasRemaining.Hash()),
+			hashing.Uint256(m.arbGasRemaining.BigInt()),
 			hashing.Bytes32(m.errHandler.Hash()),
 		)
 	case machine.ErrorStop:
