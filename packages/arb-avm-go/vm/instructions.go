@@ -90,7 +90,7 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.TSET, insnTset, 40},
 	{code.TLEN, insnTlen, 2},
 
-	{code.BREAKPOINT, insnBreakpoint, 100},
+	{code.BREAKPOINT, insnBreakpoint, 0},
 	{code.LOG, insnLog, 100},
 
 	{code.SEND, insnSend, 100},
@@ -162,10 +162,6 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
-		if op.GetOp() == code.BREAKPOINT {
-			m.UseArbGas(gas)
-			m.context.NotifyStep(gas)
-		}
 		if _, ok := op.(value.ImmediateOperation); ok {
 			PopStackBox(m, mods)
 		}
