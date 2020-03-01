@@ -150,9 +150,8 @@ Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (A
 The ArbGas costs of instructions might change in the future.
 
 When an instruction is about to be executed, if the ArbGas cost of that instruction is G:
-* If ArbGas Remaining is zero, the instruction executes normally and ArbGas Remaining stays at zero.
-* If 0 < ArbGas Remaining <= G, ArbGas Remaining is set to zero and an Error is raised. The instruction is not executed.
-* If ArbGas Remaining < G, ArbGas Remaining is reduced by G and the instruction is executed.
+* If 0 <= ArbGas Remaining <= G, ArbGas Remaining is set to MaxUint256 and an Error is raised. The instruction is not executed.
+* If ArbGas Remaining > G, ArbGas Remaining is reduced by G and the instruction is executed.
 
 ## Instructions
 
@@ -233,6 +232,7 @@ The instructions are as follows:
 | 0x70 | send | Pop a Value (A) off the Data Stack. Tell the Runtime Environment to publish A as an outgoing message of this VM. | 100 |
 | 0x71 | gettime | Push a 2-tuple [mintime, maxtime] onto the Data Stack, where mintime and maxtime are (Integer) lower and upper bounds on the current time, as supplied by the Runtime Environment. | 40 |
 | 0x72 | inbox | Pop a Value (A) off of the Data Stack. Block until either (a) the VM's inbox is non-empty, or (b) the lower bound on current time (as would be returned by the gettime instruction) is greater than or equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack, and set the inbox to None. | 40 |
-| 0x73 | setgas | Pop a Value (A) off of the Data Stack. If A is an Integer, write A to the ArbGasRemaining register. Otherwise, raise an Error. | 0 | 
-| 0x74 | error | Raise an Error. | 5 |
-| 0x75 | halt | Enter the Halted state. | 10 |
+| 0x73 | error | Raise an Error. | 5 |
+| 0x74 | halt | Enter the Halted state. | 10 |
+| 0x75 | setgas | Pop a Value (A) off of the Data Stack. If A is an Integer, write A to the ArbGasRemaining register. Otherwise, raise an Error. | 0 |
+| 0x76 | pushgas | Push the current value of ArbGasRemaining onto the Data Stack. | 1 |
