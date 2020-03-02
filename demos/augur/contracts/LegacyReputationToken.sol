@@ -13,7 +13,7 @@ contract LegacyReputationToken is OldLegacyReputationToken {
     function faucet(uint256 _amount) public returns (bool) {
         require(_amount < 2 ** 128);
         mint(msg.sender, _amount);
-        emit FundedAccount(address(this), msg.sender, _amount, block.timestamp);
+        // emit FundedAccount(address(this), msg.sender, _amount, block.timestamp);
         return true;
     }
 
@@ -26,3 +26,4 @@ contract LegacyReputationToken is OldLegacyReputationToken {
     function onTokenTransfer(address, address, uint256) internal {
     }
 }
+

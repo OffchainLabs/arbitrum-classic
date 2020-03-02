@@ -4,5 +4,9 @@ import './libraries/ITyped.sol';
 
 
 contract ITime is ITyped {
-    function getTimestamp() external view returns (uint256);
+    function withinTime() external view returns (bool);
+    function pastTime() external view returns (bool);
+    function timeLowerBound() external view returns(uint256);
+    function timeUpperBound() external view returns(uint256);
+    function getMessageInputTime() external view returns(uint256);
 }

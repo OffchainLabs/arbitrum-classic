@@ -2,6 +2,7 @@ pragma solidity 0.5.15;
 
 import './IAffiliateValidator.sol';
 import './AffiliateValidator.sol';
+import "../ArbSys.sol";
 
 /**
  * @title Affiliates
@@ -17,14 +18,27 @@ contract Affiliates {
     // Mapping of valid Affiliate Validators
     mapping (address => bool) public affiliateValidators;
 
+    address public validatorTemplate;
+
+    function initializeValidatorFactory(address template) public {
+        require(validatorTemplate == address(0));
+        require(template != address(0));
+        validatorTemplate = template;
+    }
+
     /**
      * @notice Create a new Affiliate Validator contract to be used in markets
      * @return AffiliateValidator
      */
     function createAffiliateValidator() public returns (AffiliateValidator) {
-        AffiliateValidator _affiliateValidator = new AffiliateValidator();
+        require(validatorTemplate != address(0));
+
+        address payable validatorAddress = address(uint160(ArbSys(100).cloneContract(validatorTemplate)));
+        AffiliateValidator _affiliateValidator = AffiliateValidator(validatorAddress);
+
         _affiliateValidator.transferOwnership(msg.sender);
         affiliateValidators[address(_affiliateValidator)] = true;
+        
         return _affiliateValidator;
     }
 

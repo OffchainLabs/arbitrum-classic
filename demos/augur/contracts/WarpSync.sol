@@ -1,6 +1,7 @@
 pragma solidity 0.5.15;
 
 import './IWarpSync.sol';
+import './ITime.sol';
 import './reporting/IUniverse.sol';
 import './reporting/IMarket.sol';
 import './reporting/IV2ReputationToken.sol';
@@ -21,6 +22,7 @@ contract WarpSync is IWarpSync, Initializable {
     }
 
     IAugur public augur;
+    ITime public time;
     mapping(address => address) public markets;
     mapping(address => Data) public data;
 
@@ -38,7 +40,7 @@ contract WarpSync is IWarpSync, Initializable {
     function initialize(IAugur _augur) public beforeInitialized returns (bool) {
         endInitialization();
         augur = _augur;
-        lastSweepTime = block.timestamp;
+        lastSweepTime = time.timeLowerBound();
         return true;
     }
 
@@ -78,7 +80,7 @@ contract WarpSync is IWarpSync, Initializable {
         }
 
         // In order to periodically sweep interest we do so here which will result in a sweep at least on recurring basis where the sweeper is compensated.
-        uint256 _timestamp = block.timestamp;
+        uint256 _timestamp = time.timeUpperBound();
         if (lastSweepTime - _timestamp >= MIN_TIME_BETWEEN_INTEREST_SWEEPS) {
             _universe.sweepInterest();
             lastSweepTime = _timestamp;

@@ -12,6 +12,7 @@ import '../reporting/IMarket.sol';
 import '../reporting/Reporting.sol';
 import '../reporting/IDisputeCrowdsourcer.sol';
 import '../libraries/math/SafeMathUint256.sol';
+import '../ITime.sol';
 
 
 contract OldLegacyReputationToken is DelegationTarget, ITyped, Initializable, VariableSupplyToken, IReputationToken {
@@ -29,6 +30,7 @@ contract OldLegacyReputationToken is DelegationTarget, ITyped, Initializable, Va
     // Auto migration related state
     bool private isMigratingFromLegacy;
     uint256 private targetSupply;
+    ITime public time;
 
     /**
      * @dev modifier to allow actions only when the contract IS paused
@@ -250,6 +252,6 @@ contract OldLegacyReputationToken is DelegationTarget, ITyped, Initializable, Va
     }
 
     function getTimestamp() public view returns (uint256) {
-        return block.timestamp;
+        return time.timeLowerBound();
     }
 }
