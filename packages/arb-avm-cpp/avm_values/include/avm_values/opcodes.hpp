@@ -86,6 +86,8 @@ enum class OpCode : uint8_t {
     INBOX,
     ERROR,
     HALT,
+    SETGAS,
+    PUSHGAS,
     DEBUG,
     DEFAULT
 };
@@ -98,7 +100,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::HALT);
+           (op >= OpCode::SEND && op <= OpCode::PUSHGAS);
 }
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -164,6 +166,8 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
+    {OpCode::SETGAS, "setgas"},
+    {OpCode::PUSHGAS, "pushgas"},
     {OpCode::DEBUG, "debug"}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
@@ -229,6 +233,8 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::INBOX, {false}},
     {OpCode::ERROR, {}},
     {OpCode::HALT, {}},
+    {OpCode::SETGAS, {true}},
+    {OpCode::PUSHGAS, {}},
     {OpCode::DEBUG, {}}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
@@ -294,6 +300,8 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::INBOX, {}},
     {OpCode::ERROR, {}},
     {OpCode::HALT, {}},
+    {OpCode::SETGAS, {}},
+    {OpCode::PUSHGAS, {}},
     {OpCode::DEBUG, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
@@ -358,6 +366,8 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},
+    {OpCode::SETGAS, 0},
+    {OpCode::PUSHGAS, 1},
     {OpCode::DEBUG, 1}};
 
 #endif /* opcodes_hpp */

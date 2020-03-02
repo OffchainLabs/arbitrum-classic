@@ -102,6 +102,8 @@ const (
 	INBOX
 	ERROR
 	HALT
+	SETGAS
+	PUSHGAS
 	DEBUG
 )
 
@@ -169,6 +171,8 @@ var InstructionNames = map[value.Opcode]string{
 	INBOX:   "inbox",
 	ERROR:   "error",
 	HALT:    "halt",
+	SETGAS:  "setgas",
+	PUSHGAS: "pushgas",
 	DEBUG:   "debug",
 }
 
@@ -235,6 +239,8 @@ var InstructionStackPops = map[value.Opcode][]byte{
 	INBOX:   {0},
 	ERROR:   {},
 	HALT:    {},
+	SETGAS:  {1},
+	PUSHGAS: {},
 	DEBUG:   {},
 }
 
@@ -301,5 +307,7 @@ var InstructionAuxStackPops = map[value.Opcode][]byte{
 	INBOX:   {},
 	ERROR:   {},
 	HALT:    {},
+	SETGAS:  {},
+	PUSHGAS: {},
 	DEBUG:   {},
 }

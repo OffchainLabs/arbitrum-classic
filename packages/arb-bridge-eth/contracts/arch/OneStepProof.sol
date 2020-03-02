@@ -1051,6 +1051,32 @@ library OneStepProof {
         return true;
     }
 
+    function executeSetgasInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        if (! val1.isInt()) {
+            return false;
+        }
+        machine.arbGasRemaining = val1.intVal;
+        return true;
+    }
+
+    function executePushgasInsn(
+        Machine.Data memory machine
+    )
+        internal
+        pure
+        returns (bool) 
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;   
+    }
+
     // Stop and arithmetic ops
     uint8 constant internal OP_ADD = 0x01;
     uint8 constant internal OP_MUL = 0x02;
@@ -1122,6 +1148,8 @@ library OneStepProof {
     uint8 constant internal OP_INBOX = 0x72;
     uint8 constant internal OP_ERROR = 0x73;
     uint8 constant internal OP_STOP = 0x74;
+    uint8 constant internal OP_SETGAS = 0x75;
+    uint8 constant internal OP_PUSHGAS = 0x76;
 
     function opInfo(uint opCode) internal pure returns (uint, uint) {
         if (opCode == OP_ADD) {
@@ -1236,6 +1264,10 @@ library OneStepProof {
             return (0, 0);
         } else if (opCode == OP_STOP) {
             return (0, 0);
+        } else if (opCode == OP_SETGAS) {
+            return (1, 0);
+        } else if (opCode == OP_PUSHGAS) {
+            return (0, 1);
         } else {
             require(false, "Invalid opcode");
         }
@@ -1361,6 +1393,10 @@ library OneStepProof {
             return 5;
         } else if (opCode == OP_STOP) {
             return 10;
+        } else if (opCode == OP_SETGAS) {
+            return 0;
+        } else if (opCode == OP_PUSHGAS) {
+            return 1;
         } else {
             require(false, "Invalid opcode");
         }
@@ -1451,10 +1487,8 @@ library OneStepProof {
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
         require((_data.didInboxInsn && opCode==OP_INBOX) || (!_data.didInboxInsn && opCode!=OP_INBOX),
             "Invalid didInboxInsn claim");
-        if (startMachine.arbGasRemaining == 0) {
-            endMachine.arbGasRemaining = 0;
-        } else if (startMachine.arbGasRemaining <= opGasCost(opCode)) {
-            endMachine.arbGasRemaining = 0;
+        if (startMachine.arbGasRemaining <= opGasCost(opCode)) {
+            endMachine.arbGasRemaining = ((1<<128)+1)*((1<<128)-1); // = MaxUint256
             correct = false;
         } else {
             endMachine.arbGasRemaining = startMachine.arbGasRemaining - opGasCost(opCode);
@@ -1631,6 +1665,10 @@ library OneStepProof {
                 correct = false;
             } else if (opCode == OP_STOP) {
                 endMachine.setHalt();
+            } else if (opCode == OP_SETGAS) {
+                correct = executeSetgasInsn(endMachine, stackVals[0]);
+            } else if (opCode == OP_PUSHGAS) {
+                correct = executePushgasInsn(endMachine);
             }
 
             if (messageHash == 0) {

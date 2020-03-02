@@ -166,9 +166,7 @@ func (o OutOfArbGasError) Error() string {
 }
 
 func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
-	if m.arbGasRemaining.Equal(value.IntegerZero) {
-		return charge, nil
-	} else if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) <= 0 {
+	if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) <= 0 {
 		return m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
 	} else {
 		return charge, nil
@@ -177,10 +175,17 @@ func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
 
 func (m *Machine) UseArbGas(charge uint64) {
 	m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(int64(charge))))
+	if m.arbGasRemaining.Equal(value.IntegerZero) {
+		m.arbGasRemaining = value.MaxUintValue()
+	}
 }
 
 func (m *Machine) GetArbGasRemaining() value.IntValue {
 	return m.arbGasRemaining
+}
+
+func (m *Machine) SetArbGasRemaining(gas value.IntValue) {
+	m.arbGasRemaining = gas
 }
 
 func (m *Machine) IncrPC() {

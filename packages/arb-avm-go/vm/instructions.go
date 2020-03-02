@@ -99,6 +99,8 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.ERROR, insnError, 5},
 	{code.HALT, insnHalt, 10},
 	{code.DEBUG, insnDebug, 100},
+	{code.SETGAS, insnSetgas, 0},
+	{code.PUSHGAS, insnPushgas, 1},
 }
 
 var (
@@ -709,6 +711,24 @@ func insnRset(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 	state.Register().Set(x)
+	state.IncrPC()
+	return mods, nil
+}
+
+func insnSetgas(state *Machine) (StackMods, error) {
+	mods := NewStackMods(1, 0)
+	gas, mods, err := PopStackInt(state, mods)
+	if err != nil {
+		return mods, err
+	}
+	state.SetArbGasRemaining(gas)
+	state.IncrPC()
+	return mods, nil
+}
+
+func insnPushgas(state *Machine) (StackMods, error) {
+	mods := NewStackMods(0, 1)
+	mods = PushStackInt(state, mods, state.arbGasRemaining)
 	state.IncrPC()
 	return mods, nil
 }

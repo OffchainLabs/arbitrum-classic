@@ -470,6 +470,10 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HALT:
             state = Status::Halted;
             break;
+        case OpCode::SETGAS:
+            machineoperation::setgas(*this);
+        case OpCode::PUSHGAS:
+            machineoperation::pushgas(*this);
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
                       << ">" << std::hex << static_cast<int>(opcode);
