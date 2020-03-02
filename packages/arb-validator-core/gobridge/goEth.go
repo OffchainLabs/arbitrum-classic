@@ -167,24 +167,13 @@ type goEthdata struct {
 	arbFactory             common.Address // eth address to factory address
 	nextAddress            common.Address // unique 'address'
 	nextMsgs               map[*common.BlockId][]goMaybeEvent
-	BlockNumber            uint64
 	inbox                  map[common.Address]*inbox
 	NextBlock              *common.BlockId
 	LastMinedBlock         *common.BlockId
-	//LatestHeight *big.Int
-	blockNumbers map[uint64]*common.BlockId      // block height to blockId
-	blockHashes  map[common.Hash]*common.BlockId // block hash to blockId
-	parentHashes map[common.BlockId]common.Hash  // blokcId to block hash
-	ethWallet    map[common.Address]*big.Int
-	//headerNumber map[*big.Int]common.Hash
-	//headerhash   map[common.Hash]*big.Int
-
-	// need to hold list of out chans to publish to
-	outchans map[chan arbbridge.MaybeEvent]void
-	chanMgr  chan chan arbbridge.MaybeEvent
-	pubchan  chan arbbridge.MaybeEvent
-	//ChannelWallet map[common.Address]protocol.TokenTracker
-	//create channel manager for adding, removing and publishing to list of outchans
+	blockNumbers           map[uint64]*common.BlockId      // block height to blockId
+	blockHashes            map[common.Hash]*common.BlockId // block hash to blockId
+	parentHashes           map[common.BlockId]common.Hash  // blokcId to block hash
+	ethWallet              map[common.Address]*big.Int
 }
 
 var GoEth map[string]*goEthdata
@@ -236,25 +225,7 @@ func getGoEth(ethURL string) *goEthdata {
 		mEthData.blockNumbers[mEthData.LastMinedBlock.Height.AsInt().Uint64()] = mEthData.LastMinedBlock
 		mEthData.parentHashes[*mEthData.LastMinedBlock] = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(0)))
 		mEthData.nextAddress = common.BigIntToAddress(big.NewInt(1))
-		mEthData.outchans = make(map[chan arbbridge.MaybeEvent]void)
-		mEthData.chanMgr = make(chan chan arbbridge.MaybeEvent)
-		mEthData.pubchan = make(chan arbbridge.MaybeEvent)
 		mEthData.ethWallet = make(map[common.Address]*big.Int)
-		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
-		//mEthData
-		//onceMutex.Unlock()
-		go func() {
-			for {
-				select {
-				case ch := <-mEthData.chanMgr: // register outchan
-					mEthData.outchans[ch] = Void
-				case msg := <-mEthData.pubchan: // publish to outchans
-					for ch := range mEthData.outchans {
-						ch <- msg
-					}
-				}
-			}
-		}()
 		go func() {
 			for x := range time.Tick(2 * time.Second) {
 				mine(mEthData, x)
@@ -298,10 +269,6 @@ func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*common.Block
 	return b, nil
 }
 
-func (m *goEthdata) registerOutChan(oc chan arbbridge.MaybeEvent) {
-	m.chanMgr <- oc
-}
-
 func (m *goEthdata) pubMsg(challenge *challengeData, msg arbbridge.MaybeEvent) {
 	m.msgMutex.Lock()
 	defer m.msgMutex.Unlock()
@@ -334,7 +301,6 @@ func mine(m *goEthdata, t time.Time) {
 			watcher[m.NextBlock] = append(watcher[m.NextBlock], event.event.Event)
 		}
 		m.challengeWatchersMutex.Unlock()
-		m.pubchan <- event.event
 	}
 	m.msgMutex.Unlock()
 	log.Println("mined block number", m.NextBlock)
@@ -342,7 +308,7 @@ func mine(m *goEthdata, t time.Time) {
 	newBlock.Height = common.NewTimeBlocks(new(big.Int).Add(m.LastMinedBlock.Height.AsInt(), big.NewInt(1)))
 	m.NextBlock = newBlock
 	blockEvent := arbbridge.NewTimeEvent{
-		arbbridge.ChainInfo{
+		ChainInfo: arbbridge.ChainInfo{
 			BlockId: m.LastMinedBlock,
 		},
 	}

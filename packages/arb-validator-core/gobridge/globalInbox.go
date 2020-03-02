@@ -51,7 +51,7 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 		hashing.Uint256(seqNumber),
 		hashing.Uint256(amount),
 		data,
-		hashing.TimeBlocks(con.client.GoEthClient.LastMinedBlock.Height),
+		hashing.TimeBlocks(con.client.GoEthClient.getCurrentBlock().Height),
 	)
 
 	con.client.GoEthClient.deliverMessage(vmAddress, msgHash)
@@ -64,7 +64,7 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 			Value:       amount,
 			Data:        data,
 		},
-		BlockNum: con.client.GoEthClient.LastMinedBlock.Height,
+		BlockNum: con.client.GoEthClient.getCurrentBlock().Height,
 	}
 
 	con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
