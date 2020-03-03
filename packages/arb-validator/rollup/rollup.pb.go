@@ -5,11 +5,12 @@ package rollup
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	valprotocol "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	structures "github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	valprotocol "github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

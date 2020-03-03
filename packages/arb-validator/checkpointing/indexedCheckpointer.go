@@ -19,17 +19,18 @@ package checkpointing
 import (
 	"context"
 	"errors"
-	"github.com/golang/protobuf/proto"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type IndexedCheckpointer struct {
@@ -411,13 +412,15 @@ func (cp *IndexedCheckpointer) deleteCheckpointForId(id *common.BlockId) error {
 		return err
 	}
 	_ = cp.db.DeleteData(key) // ignore error
-	for _, hbuf := range ckp.Manifest.Values {
-		h := hbuf.Unmarshal()
-		_ = cp.db.DeleteValue(h) // ignore error
-	}
-	for _, hbuf := range ckp.Manifest.Machines {
-		h := hbuf.Unmarshal()
-		_ = cp.db.DeleteCheckpoint(h) // ignore error
+	if ckp.Manifest != nil {
+		for _, hbuf := range ckp.Manifest.Values {
+			h := hbuf.Unmarshal()
+			_ = cp.db.DeleteValue(h) // ignore error
+		}
+		for _, hbuf := range ckp.Manifest.Machines {
+			h := hbuf.Unmarshal()
+			_ = cp.db.DeleteCheckpoint(h) // ignore error
+		}
 	}
 	return nil
 }
@@ -457,19 +460,9 @@ func (cp *IndexedCheckpointer) GetMachine(h common.Hash) machine.Machine {
 }
 
 func (cp *IndexedCheckpointer) getMachine_locked(h common.Hash) machine.Machine {
-	ret, err := cp.db.GetInitialMachine()
+	ret, err := cp.db.GetMachine(h)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if ret.Hash() == h {
-		return ret
-	}
-	restored := ret.RestoreCheckpoint(cp.db, h)
-	if !restored {
-		log.Fatalln("Failed to restore machine", h, "from checkpoint")
-	}
-	if ret.Hash() != h {
-		log.Fatalln("Restore machine", h, "from checkpoint with wrong hash", ret.Hash())
 	}
 	return ret
 }

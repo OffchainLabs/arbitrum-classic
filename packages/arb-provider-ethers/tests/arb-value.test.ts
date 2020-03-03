@@ -72,7 +72,7 @@ describe('Constructors', function() {
     test('HashOnlyValue', function() {
         const hov = new arb.HashOnlyValue(nullHash, 0);
         expect(hov.hash()).toBe(nullHash);
-        expect(hov.size).toBe(0);
+        expect(hov.size).toStrictEqual(ethers.constants.Zero);
         expect(hov.typeCode()).toBe(2);
     });
 });

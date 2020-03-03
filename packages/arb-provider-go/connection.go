@@ -10,23 +10,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 )
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -39,16 +35,8 @@ type ArbConnection struct {
 	sequenceNum *big.Int
 }
 
-func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
-	privateKey, err := crypto.ToECDSA(privateKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	auth := bind.NewKeyedTransactor(privateKey)
-	client, err := ethbridge.NewEthAuthClient(ethUrl, auth)
-	if err != nil {
-		return nil, err
-	}
+func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {
@@ -232,7 +220,28 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	return nil, _nyiError("FilterLogs")
+	var ret []types.Log
+	address, topics := _extractAddrTopics(query)
+	logInfos, err := conn.proxy.FindLogs(0, math.MaxInt32, address[:], topics)
+	if err != nil {
+		return nil, err
+	}
+	for _, logInfo := range logInfos {
+		outs, err := _decodeLogInfo(logInfo)
+		if err != nil {
+			return nil, err
+		}
+		ok := true
+		for i, targetTopic := range topics {
+			if targetTopic != outs.Topics[i] {
+				ok = false
+			}
+		}
+		if ok {
+			ret = append(ret, *outs)
+		}
+	}
+	return ret, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning
@@ -250,12 +259,13 @@ const subscriptionPollingInterval = 5 * time.Second
 type subscription struct {
 	proxy            ValidatorProxy
 	firstBlockUnseen uint64
-	active           bool
 	logChan          chan<- types.Log
 	errChan          chan error
 	address          common.Address
 	topics           [][32]byte
 	unsubOnce        *sync.Once
+	closeChan        chan interface{}
+	wg               sync.WaitGroup
 }
 
 func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics [][32]byte) {
@@ -274,7 +284,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	return
 }
 
-func _decodeLogInfo(ins *rollupvalidator.LogInfo) (*types.Log, error) {
+func _decodeLogInfo(ins *validatorserver.LogInfo) (*types.Log, error) {
 	outs := &types.Log{}
 	addr, err := hexutil.Decode(ins.Address)
 	if err != nil {
@@ -335,44 +345,50 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 	sub := &subscription{
 		conn.proxy,
 		0,
-		true,
 		ch,
 		make(chan error, 1),
 		address,
 		topics,
 		&sync.Once{},
+		make(chan interface{}),
+		sync.WaitGroup{},
 	}
+	sub.wg.Add(1)
 	go func() {
+		defer sub.wg.Done()
 		defer sub.Unsubscribe()
+		ticker := time.NewTicker(subscriptionPollingInterval)
+		defer ticker.Stop()
 		for {
-			time.Sleep(subscriptionPollingInterval)
-			if !sub.active {
+			select {
+			case <- sub.closeChan:
 				return
-			}
-			logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
-			if err != nil {
-				sub.errChan <- err
-				return
-			}
-			for _, logInfo := range logInfos {
-				outs, err := _decodeLogInfo(logInfo)
+			case <- ticker.C:
+				logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
 				if err != nil {
 					sub.errChan <- err
 					return
 				}
-				ok := true
-				for i, targetTopic := range topics {
-					if targetTopic != outs.Topics[i] {
+				for _, logInfo := range logInfos {
+					outs, err := _decodeLogInfo(logInfo)
+					if err != nil {
+						sub.errChan <- err
+						return
+					}
+					ok := true
+					for i, targetTopic := range topics {
+						if targetTopic != outs.Topics[i] {
+							ok = false
+						}
+					}
+					if outs.BlockNumber < sub.firstBlockUnseen {
 						ok = false
 					}
-				}
-				if outs.BlockNumber < sub.firstBlockUnseen {
-					ok = false
-				}
-				if ok {
-					sub.logChan <- *outs
-					if sub.firstBlockUnseen <= outs.BlockNumber {
-						sub.firstBlockUnseen = outs.BlockNumber + 1
+					if ok {
+						sub.logChan <- *outs
+						if sub.firstBlockUnseen <= outs.BlockNumber {
+							sub.firstBlockUnseen = outs.BlockNumber + 1
+						}
 					}
 				}
 			}
@@ -385,7 +401,8 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 // and closes the error channel.
 func (sub *subscription) Unsubscribe() {
 	sub.unsubOnce.Do(func() {
-		sub.active = false
+		close(sub.closeChan)
+		sub.wg.Wait()
 		close(sub.errChan)
 	})
 }

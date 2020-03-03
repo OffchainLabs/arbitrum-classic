@@ -66,5 +66,7 @@ func (rt TimeTicks) Equals(rt2 TimeTicks) bool {
 }
 
 func (rt TimeTicks) String() string {
-	return rt.Val.String()
+	rawString := rt.Val.String()
+	rsLen := len(rawString)
+	return rawString[:rsLen-3] + "." + rawString[rsLen-3:]
 }

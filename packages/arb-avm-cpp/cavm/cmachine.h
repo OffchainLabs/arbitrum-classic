@@ -79,9 +79,6 @@ ByteSlice machineMarshallForProof(CMachine* m);
 void machinePrint(CMachine* m);
 
 int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
-int restoreMachine(CMachine* m,
-                   CCheckpointStorage* storage,
-                   const void* machine_hash);
 
 #ifdef __cplusplus
 }

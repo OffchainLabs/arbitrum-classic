@@ -21,7 +21,7 @@ import (
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.

@@ -55,7 +55,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     string public constant VERSION = "1";
 
-    address owner;
+    address payable owner;
 
     mapping(address => address) incomingCallProxies;
     mapping(address => address) public supportedContracts;
@@ -247,17 +247,10 @@ contract ArbRollup is NodeGraph, Staking {
         _;
     }
 
-
-/*    function activateVM() external onlyOwner {
-        if (vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
-    }
-
     function ownerShutdown() external onlyOwner {
-        _shutdown();
+        selfdestruct(msg.sender);
     }
-    */
+
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);

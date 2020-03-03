@@ -24,10 +24,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 func testExecutionChallenge(t *testing.T) {
@@ -47,7 +46,7 @@ func testExecutionChallenge(t *testing.T) {
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
 	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
 
-	challengeHash := structures.ExecutionDataHash(
+	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,
 		precondition.Hash(),
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),

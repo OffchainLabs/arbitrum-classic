@@ -9,6 +9,7 @@ type CheckpointStorage interface {
 	DeleteCheckpoint(machineHash common.Hash) bool
 	CloseCheckpointStorage() bool
 	GetInitialMachine() (Machine, error)
+	GetMachine(machineHash common.Hash) (Machine, error)
 	SaveValue(val value.Value) bool
 	GetValue(hashValue common.Hash) value.Value
 	DeleteValue(hashValue common.Hash) bool
