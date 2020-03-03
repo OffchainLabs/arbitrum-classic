@@ -1675,7 +1675,7 @@ library OneStepProof {
                 require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
                 require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
             }
-            endMachine.arbGasRemaining = startMachine.arbGasRemaining - opGasCost(opCode);
+            endMachine.arbGasRemaining = endMachine.arbGasRemaining - opGasCost(opCode);
 
         }
 
@@ -1696,9 +1696,7 @@ library OneStepProof {
         //     _data.afterHash == endMachine.hash(),
         //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
         //     
-        require(_data.afterHash == endMachine.hash(), DebugPrint.uint2str(endMachine.arbGasRemaining));
-
-        //require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
+        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;
     }
