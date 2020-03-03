@@ -159,32 +159,34 @@ func (m *Machine) GetEndTime() value.IntValue {
 	return m.context.GetEndTime()
 }
 
-type OutOfArbGasError struct{}
+type OutOfArbGasError struct{} // thrown if there is insufficient ArbGas remaining to execute an instruction
 
 func (o OutOfArbGasError) Error() string {
 	return "ran out of ArbGas"
 }
 
 func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
+	// Return the amount of ArbGas actually used by an instruction, where <charge> is the default for the instruction
+	// Return an OutOfArbGasError if there is insufficient ArbGas remaining
 	if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) < 0 {
-		return m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
-	} else {
-		return charge, nil
+		return 1 + m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
 	}
+	return charge, nil
 }
 
 func (m *Machine) UseArbGas(charge uint64) {
+	// Deduct the ArbGas for an instruction from the current balance
 	m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(int64(charge))))
-	if m.arbGasRemaining.Equal(value.IntegerZero) {
+	if m.arbGasRemaining.Cmp(value.IntegerZero) < 0 {
 		m.arbGasRemaining = value.MaxUintValue()
 	}
 }
 
-func (m *Machine) GetArbGasRemaining() value.IntValue {
+func (m *Machine) GetArbGasRemaining() value.IntValue { // set the arbGasRemaining register
 	return m.arbGasRemaining
 }
 
-func (m *Machine) SetArbGasRemaining(gas value.IntValue) {
+func (m *Machine) SetArbGasRemaining(gas value.IntValue) { // get value of the arbGasRemaining register
 	m.arbGasRemaining = gas
 }
 
