@@ -225,7 +225,7 @@ The instructions are as follows:
 | 0x52 | tlen | Pop a value (A) off the Data Stack. If A is a Tuple, push the length of A (i.e. the number of slots in A) onto the Data Stack. Otherwise, raise an Error. | 2 |
 | &nbsp; | | &nbsp; |
 | 60s: Logging Operations | | &nbsp; |
-| 0x60 | breakpoint | In an AVM emulator, return control to the Runtime Environment. | 0 |
+| 0x60 | breakpoint | In an AVM emulator, return control to the Runtime Environment. | 100 |
 | 0x61 | log | Pop a Value (A) off the Data Stack, and convey A to the Runtime Environment as a log event. | 100 |
 | &nbsp; | | &nbsp; |
 | 70s: System operations | | &nbsp; |
