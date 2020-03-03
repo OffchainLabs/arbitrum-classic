@@ -22,13 +22,14 @@ import '../IAugur.sol';
 import '../CashSender.sol';
 import '../IRepExchange.sol';
 import '../factories/IRepExchangeFactory.sol';
+import '../libraries/Initializable.sol';
 
 
 /**
  * @title Universe
  * @notice A Universe encapsulates a whole instance of Augur. In the event of a fork in a Universe it will split into child Universes which each represent a different version of the truth with respect to how the forking market should resolve.
  */
-contract Universe is IUniverse, CashSender {
+contract Universe is Initializable, IUniverse, CashSender {
     using SafeMathUint256 for uint256;
 
     uint256 public creationTime;
@@ -81,7 +82,8 @@ contract Universe is IUniverse, CashSender {
 
     uint256 constant public RAY = 10 ** 27;
 
-    constructor(IAugur _augur, IUniverse _parentUniverse, bytes32 _parentPayoutDistributionHash, uint256[] memory _payoutNumerators) public {
+    function initializeUniverse(IAugur _augur, IUniverse _parentUniverse, bytes32 _parentPayoutDistributionHash, uint256[] memory _payoutNumerators) public beforeInitialized {
+        endInitialization();
         augur = _augur;
         creationTime = _augur.getTimestamp();
         parentUniverse = _parentUniverse;

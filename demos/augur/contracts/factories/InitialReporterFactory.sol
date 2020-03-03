@@ -14,8 +14,11 @@ import '../IAugur.sol';
 contract InitialReporterFactory is CloneFactory {
     function createInitialReporter(IAugur _augur, address _designatedReporter) public returns (IInitialReporter) {
         IMarket _market = IMarket(msg.sender);
-        IInitialReporter _initialReporter = IInitialReporter(createClone(_augur.lookup("InitialReporter")));
+
+        address newContractAddress = createNewContract();
+        IInitialReporter _initialReporter = IInitialReporter(newContractAddress);
         _initialReporter.initialize(_augur, _market, _designatedReporter);
+        
         return _initialReporter;
     }
 }

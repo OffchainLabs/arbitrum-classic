@@ -13,8 +13,8 @@ import '../IRepExchange.sol';
  */
 contract RepExchangeFactory is CloneFactory {
     function createRepExchange(IAugur _augur, address _repTokenAddress) public returns (ISimpleDex) {
-        address _exchange = createClone(_augur.lookup("RepExchange"));
-        IRepExchange(_exchange).initialize(address(_augur), _repTokenAddress);
-        return ISimpleDex(_exchange);
+    	address newContractAddress = createNewContract();
+        IRepExchange(newContractAddress).initialize(address(_augur), _repTokenAddress);
+        return ISimpleDex(newContractAddress);
     }
 }

@@ -36,7 +36,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
         cash = ICash(_augur.lookup("Cash"));
 
         initializeCashSender(_augur.lookup("DaiVat"), address(cash));
-        require(cash != ICash(0));
+        // require(cash != ICash(0));
     }
 
     /**
@@ -67,7 +67,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
     }
 
     function initializeMarket(IMarket _market, uint256 _numOutcomes, uint256 _numTicks) public {
-        require (augur.isKnownUniverse(IUniverse(msg.sender)));
+        // require (augur.isKnownUniverse(IUniverse(msg.sender)));
         markets[address(_market)].numOutcomes = _numOutcomes;
         markets[address(_market)].numTicks = _numTicks;
     }
@@ -98,7 +98,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
         uint256 _numOutcomes = markets[address(_market)].numOutcomes;
         uint256 _numTicks = markets[address(_market)].numTicks;
 
-        require(_numOutcomes != 0, "Invalid Market provided");
+        // require(_numOutcomes != 0, "Invalid Market provided");
 
         IUniverse _universe = _market.getUniverse();
 
@@ -137,8 +137,8 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
     function buyCompleteSetsForTrade(IMarket _market, uint256 _amount, uint256 _longOutcome, address _longRecipient, address _shortRecipient) external returns (bool) {
         uint256 _numOutcomes = markets[address(_market)].numOutcomes;
 
-        require(_numOutcomes != 0, "Invalid Market provided");
-        require(_longOutcome < _numOutcomes);
+        // require(_numOutcomes != 0, "Invalid Market provided");
+        // require(_longOutcome < _numOutcomes);
 
         IUniverse _universe = _market.getUniverse();
 
@@ -202,7 +202,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
      * @return (uint256 _creatorFee, uint256 _reportingFee) The fees taken for the market creator and reporting respectively
      */
     function sellCompleteSets(IMarket _market, address _holder, address _recipient, uint256 _amount, bytes32 _fingerprint) external returns (uint256 _creatorFee, uint256 _reportingFee) {
-        require(_holder == msg.sender || isApprovedForAll(_holder, msg.sender) == true, "ERC1155: need operator approval to sell complete sets");
+        // require(_holder == msg.sender || isApprovedForAll(_holder, msg.sender) == true, "ERC1155: need operator approval to sell complete sets");
         
         (uint256 _payout, uint256 _creatorFee, uint256 _reportingFee) = burnCompleteSets(_market, _holder, _amount, _holder, _fingerprint);
 
@@ -225,8 +225,8 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
      * @return (uint256 _creatorFee, uint256 _reportingFee) The fees taken for the market creator and reporting respectively
      */
     function sellCompleteSetsForTrade(IMarket _market, uint256 _outcome, uint256 _amount, address _shortParticipant, address _longParticipant, address _shortRecipient, address _longRecipient, uint256 _price, address _sourceAccount, bytes32 _fingerprint) external returns (uint256 _creatorFee, uint256 _reportingFee) {
-        require(isApprovedForAll(_shortParticipant, msg.sender) == true, "ERC1155: need operator approval to burn short account shares");
-        require(isApprovedForAll(_longParticipant, msg.sender) == true, "ERC1155: need operator approval to burn long account shares");
+        // require(isApprovedForAll(_shortParticipant, msg.sender) == true, "ERC1155: need operator approval to burn short account shares");
+        // require(isApprovedForAll(_longParticipant, msg.sender) == true, "ERC1155: need operator approval to burn long account shares");
 
         _internalTransferFrom(_shortParticipant, _longParticipant, getTokenId(_market, _outcome), _amount, bytes(""), false);
 
@@ -247,7 +247,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
         uint256 _numOutcomes = markets[address(_market)].numOutcomes;
         uint256 _numTicks = markets[address(_market)].numTicks;
 
-        require(_numOutcomes != 0, "Invalid Market provided");
+        // require(_numOutcomes != 0, "Invalid Market provided");
 
         // solium-disable indentation
         {
@@ -300,7 +300,7 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
     }
 
     function claimTradingProceedsInternal(IMarket _market, address _shareHolder, bytes32 _fingerprint) internal returns (uint256[] memory _outcomeFees) {
-        require(augur.isKnownMarket(_market));
+        // require(augur.isKnownMarket(_market));
         if (!_market.isFinalized()) {
             _market.finalize();
         }

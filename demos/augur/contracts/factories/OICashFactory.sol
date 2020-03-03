@@ -15,8 +15,11 @@ import '../IAugur.sol';
 contract OICashFactory is CloneFactory {
     function createOICash(IAugur _augur) public returns (IOICash) {
         IUniverse _universe = IUniverse(msg.sender);
-        IOICash _openInterestCash = IOICash(createClone(_augur.lookup("OICash")));
+
+        address newContractAddress = createNewContract();
+        IOICash _openInterestCash = IOICash(newContractAddress);
         _openInterestCash.initialize(_augur, _universe);
+
         return _openInterestCash;
     }
 }

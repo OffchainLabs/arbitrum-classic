@@ -2,12 +2,14 @@ pragma solidity 0.5.15;
 
 import "./BaseSimpleDex.sol";
 import "./reporting/IV2ReputationToken.sol";
+import './ITime.sol';
 
 
 contract RepExchange is BaseSimpleDex {
 
     uint256 public lastUpdateTimestamp;
     uint256 public price;
+    ITime public time;
 
     uint256 constant public period = 3 days; // TODO: revisit if this is an appropriate period
 
@@ -15,7 +17,7 @@ contract RepExchange is BaseSimpleDex {
 
     function initialize(address _augurAddress, address _token) public beforeInitialized {
         initializeInternal(_augurAddress, _token);
-        lastUpdateTimestamp = block.timestamp;
+        lastUpdateTimestamp =time.timeLowerBound();
         IV2ReputationToken _repToken = IV2ReputationToken(_token);
         IUniverse _parentUniverse = _repToken.parentUniverse();
         if (_parentUniverse == IUniverse(0)) {
@@ -56,7 +58,7 @@ contract RepExchange is BaseSimpleDex {
     }
 
     function onUpdate(uint256 _blocksElapsed, uint256 _priceCumulativeIncrease) internal {
-        uint256 _blockTimestamp = block.timestamp;
+        uint256 _blockTimestamp = time.timeLowerBound();
 
         uint256 _price = _priceCumulativeIncrease.mul(10**18) / _blocksElapsed / 10**18;
         require(_price > 0, "Price should not be 0");

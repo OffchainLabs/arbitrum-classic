@@ -11,13 +11,14 @@ import './IDisputeWindow.sol';
 import './IDisputeCrowdsourcer.sol';
 import '../libraries/math/SafeMathUint256.sol';
 import '../utility/IRepSymbol.sol';
+import '../libraries/Initializable.sol';
 
 
 /**
  * @title Reputation Token
  * @notice The Reputation Token for a particular universe
  */
-contract ReputationToken is VariableSupplyToken, IV2ReputationToken {
+contract ReputationToken is Initializable, VariableSupplyToken, IV2ReputationToken {
     using SafeMathUint256 for uint256;
 
     string constant public name = "Reputation";
@@ -28,7 +29,8 @@ contract ReputationToken is VariableSupplyToken, IV2ReputationToken {
     IAugur public augur;
     address public warpSync;
 
-    constructor(IAugur _augur, IUniverse _universe, IUniverse _parentUniverse) public {
+    function initializeRepToken(IAugur _augur, IUniverse _universe, IUniverse _parentUniverse) public beforeInitialized {
+        endInitialization();
         augur = _augur;
         universe = _universe;
         parentUniverse = _parentUniverse;
@@ -37,6 +39,7 @@ contract ReputationToken is VariableSupplyToken, IV2ReputationToken {
         require(warpSync != address(0));
         require(legacyRepToken != IERC20(0));
     }
+
 
     function symbol() public view returns (string memory) {
         return IRepSymbol(augur.lookup("RepSymbol")).getRepSymbol(address(augur), address(universe));

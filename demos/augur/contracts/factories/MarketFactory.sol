@@ -25,7 +25,9 @@ contract MarketFactory is CloneFactory, IMarketFactory {
     uint256 private constant MAX_OUTCOMES = 7; // Does not Include Invalid
 
     function createMarket(IAugur _augur, uint256 _endTime, uint256 _feePerCashInAttoCash, IAffiliateValidator _affiliateValidator, uint256 _affiliateFeeDivisor, address _designatedReporterAddress, address _sender, uint256 _numOutcomes, uint256 _numTicks) public returns (IMarket _market) {
-        _market = IMarket(createClone(_augur.lookup("Market")));
+        address newContractAddress = createNewContract();
+        _market = IMarket(newContractAddress);
+        
         IUniverse _universe = IUniverse(msg.sender);
         require(_augur.isKnownUniverse(_universe), "MarketFactory: Universe specified is unrecognized by Augur");
         IReputationToken _reputationToken = _universe.getReputationToken();

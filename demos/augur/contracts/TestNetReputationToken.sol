@@ -8,7 +8,8 @@ import './reporting/IUniverse.sol';
 contract TestNetReputationToken is ReputationToken {
     uint256 private constant DEFAULT_FAUCET_AMOUNT = 47 ether;
 
-    constructor(IAugur _augur, IUniverse _universe, IUniverse _parentUniverse) ReputationToken(_augur, _universe, _parentUniverse) public {
+    function initialize(IAugur _augur, IUniverse _universe, IUniverse _parentUniverse) public {
+        initializeRepToken(_augur, _universe, _parentUniverse);
     }
 
     function faucet(uint256 _amount) public returns (bool) {
