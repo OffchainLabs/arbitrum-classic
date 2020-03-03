@@ -95,10 +95,19 @@ BlockReason Machine::runOne() {
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint
-    if (!isValidOpcode(instruction.op.opcode) ||
-        ((machine_state.arbGasRemaining > 0) &&
-         (machine_state.arbGasRemaining <=
-          InstructionArbGasCost.at(instruction.op.opcode)))) {
+    if (!isValidOpcode(instruction.op.opcode)) {
+        machine_state.state = Status::Error;
+        machine_state.context.numSteps++;
+        if (!isErrorCodePoint(machine_state.errpc)) {
+            machine_state.pc = machine_state.errpc.pc;
+            machine_state.state = Status::Extensive;
+        }
+        return NotBlocked();
+    } else if (machine_state.arbGasRemaining <
+               InstructionArbGasCost.at(instruction.op.opcode)) {
+        machine_state.arbGasRemaining = uint256_t(
+            "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            "f");
         machine_state.state = Status::Error;
         machine_state.context.numSteps++;
         if (!isErrorCodePoint(machine_state.errpc)) {

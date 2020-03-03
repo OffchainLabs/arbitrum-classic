@@ -166,7 +166,7 @@ func (o OutOfArbGasError) Error() string {
 }
 
 func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
-	if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) <= 0 {
+	if m.arbGasRemaining.BigInt().Cmp(big.NewInt(charge)) < 0 {
 		return m.arbGasRemaining.BigInt().Int64(), &OutOfArbGasError{}
 	} else {
 		return charge, nil

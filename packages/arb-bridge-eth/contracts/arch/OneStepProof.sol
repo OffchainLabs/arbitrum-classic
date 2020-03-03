@@ -1488,7 +1488,7 @@ library OneStepProof {
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
         require((_data.didInboxInsn && opCode==OP_INBOX) || (!_data.didInboxInsn && opCode!=OP_INBOX),
             "Invalid didInboxInsn claim");
-        if (startMachine.arbGasRemaining <= opGasCost(opCode)) {
+        if (startMachine.arbGasRemaining < opGasCost(opCode)) {
             endMachine.arbGasRemaining = ((1<<128)+1)*((1<<128)-1); // = MaxUint256
             correct = false;
         } else {
