@@ -70,9 +70,10 @@ contract Executor is EtherPaymentFallback {
         returns (address newContract)
     {
         // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            newContract := create(0, add(data, 0x20), mload(data))
-        }
+        require(false, "not implemented");
+        // assembly {
+        //     newContract := create(0, add(data, 0x20), mload(data))
+        // }
     }
 }
 

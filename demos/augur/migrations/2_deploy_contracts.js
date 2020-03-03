@@ -2,6 +2,10 @@ var Augur = artifacts.require("./Augur.sol");
 var AugurTrading = artifacts.require("./AugurTrading.sol");
 var WarpSync = artifacts.require("./WarpSync.sol");
 var EthExchange = artifacts.require("./EthExchange.sol");
+
+var GnosisSafe = artifacts.require("./GnosisSafe.sol");
+var ProxyFactory = artifacts.require("./ProxyFactory.sol");
+
 var GnosisSafeRegistry = artifacts.require("./GnosisSafeRegistry.sol");
 var RepExchange = artifacts.require("./RepExchange.sol");
 var Universe = artifacts.require("./reporting/Universe.sol");
@@ -64,51 +68,68 @@ var UniverseFactory = artifacts.require("./factories/UniverseFactory.sol");
 //--optimize-off
 
 module.exports = async function(deployer) {
-  // await deployer.deploy(Augur);
-  // await deployer.deploy(AugurTrading, Augur.address);
-  // await deployer.deploy(GnosisSafeRegistry);
-  // await deployer.deploy(WarpSync);
-  // await deployer.deploy(RepExchange);
-  // await deployer.deploy(CreateOrder);
-  // await deployer.deploy(Order);
-  // await deployer.deploy(ProfitLoss);
-  // await deployer.deploy(SimulateTrade);
-  // await deployer.deploy(LegacyReputationToken);
-  // await deployer.deploy(BuyParticipationTokens);
-  // await deployer.deploy(Formulas);
-  // await deployer.deploy(HotLoading);
-  // await deployer.deploy(RedeemStake);
-  // await deployer.deploy(RepSymbol);
-  // await deployer.deploy(ShareToken);
-  // await deployer.deploy(AffiliateValidator);
-  // let afiliates = await deployer.deploy(Affiliates);
-  // afiliates.initializeValidatorFactory(AffiliateValidator.address);
-  // await deployer.deploy(InitialReporter);
-  // await deployer.deploy(OICash);
-  // await deployer.deploy(Market);
-  // let initialReporterFactory = await deployer.deploy(InitialReporterFactory);
-  // initialReporterFactory.initializeFactory(InitialReporter.address);
-  // let marketFactory = await deployer.deploy(MarketFactory);
-  // marketFactory.initializeFactory(Market.address);
-  // let _OICashFactory = await deployer.deploy(OICashFactory);
-  // _OICashFactory.initializeFactory(OICash.address);
-  // let _repExchangeFactory = await deployer.deploy(RepExchangeFactory);
-  // _repExchangeFactory.initializeFactory(RepExchange.address);
-  // await deployer.deploy(ReputationToken);
-  // let _reputationTokenFactory = await deployer.deploy(ReputationTokenFactory);
-  // _reputationTokenFactory.initializeFactory(ReputationToken.address);
-  // await deployer.deploy(TestNetReputationToken);
-  // let _testNetReputationTokenFactory = await deployer.deploy(TestNetReputationTokenFactory);
-  // _testNetReputationTokenFactory.initializeFactory(TestNetReputationToken.address);
-  // await deployer.deploy(Universe);
-  // let _universeFactory = await deployer.deploy(UniverseFactory);
-  // _universeFactory.initializeFactory(Universe.address);
-  // await deployer.deploy(DisputeWindow);
-  // let disputeWindowFactory = await deployer.deploy(DisputeWindowFactory);
-  // disputeWindowFactory.initializeFactory(DisputeWindow.address);
-  // await deployer.deploy(DisputeCrowdsourcer);
-  // let disputeCSFactory = await deployer.deploy(DisputeCrowdsourcerFactory);
-  // disputeCSFactory.initializeFactory(DisputeCrowdsourcer.address);
+  let auagur = await deployer.deploy(Augur);
+  await deployer.deploy(AugurTrading, Augur.address);
+  await deployer.deploy(GnosisSafe);
+  // await deployer.deploy(ProxyFactory);
+  await deployer.deploy(GnosisSafeRegistry);
+  await deployer.deploy(WarpSync);
+  await deployer.deploy(CreateOrder);
+  await deployer.deploy(Order);
+  await deployer.deploy(ProfitLoss);
+  await deployer.deploy(SimulateTrade);
+  await deployer.deploy(LegacyReputationToken);
+  await deployer.deploy(BuyParticipationTokens);
+  await deployer.deploy(Formulas);
+  await deployer.deploy(HotLoading);
+  await deployer.deploy(RedeemStake);
+  await deployer.deploy(RepSymbol);
+  await deployer.deploy(ShareToken);
+
+  await deployer.deploy(AffiliateValidator);
+  let afiliates = await deployer.deploy(Affiliates);
+  afiliates.initializeValidatorFactory(AffiliateValidator.address);
+
+  await deployer.deploy(InitialReporter);
+  let initialReporterFactory = await deployer.deploy(InitialReporterFactory);
+  initialReporterFactory.initializeFactory(InitialReporter.address);
+
+  await deployer.deploy(Market);
+  let marketFactory = await deployer.deploy(MarketFactory);
+  marketFactory.initializeFactory(Market.address);
+
+  await deployer.deploy(OICash);
+  let _OICashFactory = await deployer.deploy(OICashFactory);
+  _OICashFactory.initializeFactory(OICash.address);
+
+  await deployer.deploy(RepExchange);
+  let _repExchangeFactory = await deployer.deploy(RepExchangeFactory);
+  _repExchangeFactory.initializeFactory(RepExchange.address);
+
+  await deployer.deploy(ReputationToken);
+  let _reputationTokenFactory = await deployer.deploy(ReputationTokenFactory);
+  _reputationTokenFactory.initializeFactory(ReputationToken.address);
+
+  await deployer.deploy(TestNetReputationToken);
+  let _testNetReputationTokenFactory = await deployer.deploy(
+    TestNetReputationTokenFactory
+  );
+  _testNetReputationTokenFactory.initializeFactory(
+    TestNetReputationToken.address
+  );
+
+  await deployer.deploy(Universe);
+  let _universeFactory = await deployer.deploy(UniverseFactory);
+  _universeFactory.initializeFactory(Universe.address);
+
+  await deployer.deploy(DisputeWindow);
+  let disputeWindowFactory = await deployer.deploy(DisputeWindowFactory);
+  disputeWindowFactory.initializeFactory(DisputeWindow.address);
+
+  await deployer.deploy(DisputeCrowdsourcer);
+  let disputeCSFactory = await deployer.deploy(DisputeCrowdsourcerFactory);
+  disputeCSFactory.initializeFactory(DisputeCrowdsourcer.address);
+
   // await deployer.deploy(ZeroXTrade);
   // Exception: Can't resolve AVMLabel(jumpdest_784030224795475933405737832577560929931042096197_13374), got AVMLabel(jumpdest_784030224795475933405737832577560929931042096197_13374)
   // await deployer.deploy(Trade); //

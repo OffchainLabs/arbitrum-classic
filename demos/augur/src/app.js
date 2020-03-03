@@ -47,43 +47,144 @@ class App {
   async initContracts() {
     var network = await this.provider.getNetwork();
 
-    const augur = require("../build/contracts/Augur.json");
-    const augurTrading = require("../build/contracts/AugurTrading.json");
+    var contract_map = {};
+
+    contract_map["Augur"] = require("../build/contracts/Augur.json");
+    contract_map[
+      "AugurTrading"
+    ] = require("../build/contracts/AugurTrading.json");
+    contract_map["GnosisSafe"] = require("../build/contracts/GnosisSafe.json");
+    contract_map[
+      "GnosisSafeRegistry"
+    ] = require("../build/contracts/GnosisSafeRegistry.json");
+    contract_map["WarpSync"] = require("../build/contracts/WarpSync.json");
+    contract_map[
+      "CreateOrder"
+    ] = require("../build/contracts/CreateOrder.json");
+    contract_map["ProfitLoss"] = require("../build/contracts/ProfitLoss.json");
+    contract_map[
+      "SimulateTrade"
+    ] = require("../build/contracts/SimulateTrade.json");
+    contract_map[
+      "LegacyReputationToken"
+    ] = require("../build/contracts/LegacyReputationToken.json");
+    contract_map[
+      "BuyParticipationTokens"
+    ] = require("../build/contracts/BuyParticipationTokens.json");
+    contract_map["ormulas"] = require("../build/contracts/Formulas.json");
+    contract_map["HotLoading"] = require("../build/contracts/HotLoading.json");
+    contract_map[
+      "RedeemStake"
+    ] = require("../build/contracts/RedeemStake.json");
+    contract_map["RepSymbol"] = require("../build/contracts/RepSymbol.json");
+    contract_map["ShareToken"] = require("../build/contracts/ShareToken.json");
+    contract_map[
+      "AffiliateValidator"
+    ] = require("../build/contracts/AffiliateValidator.json");
+    contract_map["Affiliates"] = require("../build/contracts/Affiliates.json");
+    contract_map[
+      "InitialReporter"
+    ] = require("../build/contracts/InitialReporter.json");
+    contract_map[
+      "InitialReporterFactory"
+    ] = require("../build/contracts/InitialReporterFactory.json");
+    contract_map["Market"] = require("../build/contracts/Market.json");
+    contract_map[
+      "MarketFactory"
+    ] = require("../build/contracts/MarketFactory.json");
+    contract_map["OICash"] = require("../build/contracts/OICash.json");
+    contract_map[
+      "OICashFactory"
+    ] = require("../build/contracts/OICashFactory.json");
+    contract_map[
+      "RepExchange"
+    ] = require("../build/contracts/RepExchange.json");
+    contract_map[
+      "RepExchangeFactory"
+    ] = require("../build/contracts/RepExchangeFactory.json");
+    contract_map[
+      "ReputationToken"
+    ] = require("../build/contracts/ReputationToken.json");
+    contract_map[
+      "ReputationTokenFactory"
+    ] = require("../build/contracts/ReputationTokenFactory.json");
+    contract_map[
+      "TestNetReputationToken"
+    ] = require("../build/contracts/TestNetReputationToken.json");
+    contract_map[
+      "TestNetReputationTokenFactory"
+    ] = require("../build/contracts/TestNetReputationTokenFactory.json");
+    contract_map["Universe"] = require("../build/contracts/Universe.json");
+    contract_map[
+      "UniverseFactory"
+    ] = require("../build/contracts/UniverseFactory.json");
+    contract_map[
+      "DisputeWindow"
+    ] = require("../build/contracts/DisputeWindow.json");
+    contract_map[
+      "DisputeWindowFactory"
+    ] = require("../build/contracts/DisputeWindowFactory.json");
+    contract_map[
+      "DisputeCrowdsourcer"
+    ] = require("../build/contracts/DisputeCrowdsourcer.json");
+    contract_map[
+      "DisputeCrowdsourcerFactory"
+    ] = require("../build/contracts/DisputeCrowdsourcerFactory.json");
 
     // let chainId = network.chainId.toString();
     const chainId = "123456789";
-
     console.log("chainId: " + chainId);
 
     const wallet = this.provider.getSigner(0);
     this.walletAddress = await wallet.getAddress();
 
-    if (chainId in augur.networks) {
-      const augurAddress = augur.networks[chainId].address;
-      const augurTradingAddress = augurTrading.networks[chainId].address;
-      console.log("augurAddress: " + augurAddress);
-      console.log("augurTradingAddress: " + augurTradingAddress);
-      // let testTokenAddress = testToken.networks[chainId].address;
-
-      const augurContractRaw = new ethers.Contract(
-        augurAddress,
-        augur.abi,
-        this.provider
+    for (var contract in contract_map) {
+      this.contracts[contract] = this.connectContract(
+        contract,
+        contract_map[contract],
+        chainId
       );
 
-      const augurTradingContractRaw = new ethers.Contract(
-        augurTradingAddress,
-        augurTrading.abi,
-        this.provider
-      );
-
-      this.contracts.Augur = augurContractRaw.connect(wallet);
-      this.contracts.AugurTrading = augurTradingContractRaw.connect(wallet);
-
-      this.setupHooks();
+      if (contract != "Augur" && contract != "AugurTrading") {
+        console.log("connect: " + contract);
+        this.registerToAugur(
+          contract,
+          contract_map[contract].networks[chainId].address
+        );
+      }
     }
 
+    this.setupHooks();
+
     return this.render();
+  }
+
+  connectContract(contract, contractJson, chainId) {
+    const contractAddress = contractJson.networks[chainId].address;
+    console.log("contract Address: " + contractAddress);
+
+    const contractRaw = new ethers.Contract(
+      contractAddress,
+      contractJson.abi,
+      this.provider
+    );
+
+    const wallet = this.provider.getSigner(0);
+
+    return contractRaw.connect(wallet);
+  }
+
+  async registerToAugur(contract, contractAddress) {
+    let tx;
+    try {
+      tx = await this.contracts.Augur.registerContract(
+        contract,
+        contractAddress
+      );
+    } catch (e) {
+      return this.handleFailure(e);
+    }
+    console.log(tx);
   }
 
   setupHooks() {
