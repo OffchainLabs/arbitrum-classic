@@ -509,6 +509,17 @@ def test_arbgas(vm):
 
     vm.pushgas()
 
+    vm.push(2)
+    vm.dup0()
+    vm.push(arb.ast.AVMLabel("out_of_arbgas_error"))
+    vm.errset()
+    vm.push(1)
+    vm.add()
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("out_of_arbgas_error"))
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
     vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
