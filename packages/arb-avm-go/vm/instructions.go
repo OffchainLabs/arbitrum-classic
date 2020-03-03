@@ -90,7 +90,7 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.TSET, insnTset, 40},
 	{code.TLEN, insnTlen, 2},
 
-	{code.BREAKPOINT, insnBreakpoint, 0},
+	{code.BREAKPOINT, insnBreakpoint, 100},
 	{code.LOG, insnLog, 100},
 
 	{code.SEND, insnSend, 100},
