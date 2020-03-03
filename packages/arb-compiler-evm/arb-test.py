@@ -504,11 +504,10 @@ def test_arbgas(vm):
     vm.push(arb.ast.AVMLabel("base_error_handler"))
     vm.errset()
 
-    # vm.pushgas()
     vm.push(1000000000000)
     vm.setgas()
 
-    # vm.pushgas()
+    vm.pushgas()
 
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
