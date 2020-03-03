@@ -100,6 +100,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 
 func TestValidateProof(t *testing.T) {
 	testMachines := []string{
+		"opcodetestarbgas.ao",
 		"opcodetestmath.ao",
 		"opcodetestlogic.ao",
 		"opcodetesthash.ao",

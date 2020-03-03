@@ -83,6 +83,7 @@ class BasicVM:
         self.aux_stack = Stack()
         self.register = value.Tuple([])
         self.static = value.Tuple([])
+        self.arbGasRemaining = (1 << 256) - 1
         self.err_handler = None
         self.atomic_count = 0
 
@@ -154,6 +155,13 @@ class BasicVM:
             pc = err_handler.pc
 
         self.err_handler = pc
+
+    def setgas(self):
+        gas = self.stack.pop()
+        self.arbGasRemaining = gas
+
+    def pushgas(self):
+        self.stack.push(self.arbGasRemaining)
 
     def error(self):
         raise Exception("Error opcode called")

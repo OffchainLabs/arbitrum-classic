@@ -18,6 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./Value.sol";
 import "./Machine.sol";
+import "../libraries/DebugPrint.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -1491,7 +1492,6 @@ library OneStepProof {
             endMachine.arbGasRemaining = ((1<<128)+1)*((1<<128)-1); // = MaxUint256
             correct = false;
         } else {
-            endMachine.arbGasRemaining = startMachine.arbGasRemaining - opGasCost(opCode);
             if (opCode == OP_ADD) {
                 correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
             } else if (opCode == OP_MUL) {
@@ -1675,6 +1675,8 @@ library OneStepProof {
                 require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
                 require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
             }
+            endMachine.arbGasRemaining = startMachine.arbGasRemaining - opGasCost(opCode);
+
         }
 
         if (!correct) {
@@ -1693,9 +1695,10 @@ library OneStepProof {
         // require(
         //     _data.afterHash == endMachine.hash(),
         //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
-        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
+        //     
+        require(_data.afterHash == endMachine.hash(), DebugPrint.uint2str(endMachine.arbGasRemaining));
+
+        //require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;
     }

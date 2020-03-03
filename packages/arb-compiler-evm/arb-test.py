@@ -500,6 +500,23 @@ def test_tuple(vm):
     vm.error()
 
 
+def test_arbgas(vm):
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+
+    # vm.pushgas()
+    vm.push(1000000000000)
+    vm.setgas()
+
+    # vm.pushgas()
+
+    vm.halt()
+    vm.set_label(arb.ast.AVMLabel("base_error_handler"))
+    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.errset()
+    vm.error()
+
+
 code = arb.compile_block(test_arithmetic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
@@ -547,4 +564,11 @@ vm.static = 4
 print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
+    arb.marshall.marshall_vm(vm, f)
+code = arb.compile_block(test_arbgas)
+vm = arb.compile_program(arb.ast.BlockStatement([]), code)
+vm.static = 4
+print("arbgas ", len(vm.code), " codepoints")
+# print(vm.code)
+with open("../arb-validator/proofmachine/opcodetestarbgas.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)

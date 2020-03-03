@@ -98,9 +98,9 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.INBOX, insnInbox, 40},
 	{code.ERROR, insnError, 5},
 	{code.HALT, insnHalt, 10},
-	{code.DEBUG, insnDebug, 100},
 	{code.SETGAS, insnSetgas, 0},
 	{code.PUSHGAS, insnPushgas, 1},
+	{code.DEBUG, insnDebug, 100},
 }
 
 var (
@@ -729,6 +729,7 @@ func insnSetgas(state *Machine) (StackMods, error) {
 func insnPushgas(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
 	mods = PushStackInt(state, mods, state.arbGasRemaining)
+	log.Println("gas remaining=", state.arbGasRemaining)
 	state.IncrPC()
 	return mods, nil
 }
