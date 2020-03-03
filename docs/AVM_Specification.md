@@ -150,8 +150,8 @@ Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (A
 The ArbGas costs of instructions might change in the future.
 
 When an instruction is about to be executed, if the ArbGas cost of that instruction is G:
-* If 0 <= ArbGas Remaining <= G, ArbGas Remaining is set to MaxUint256 and an Error is raised. The instruction is not executed.
-* If ArbGas Remaining > G, ArbGas Remaining is reduced by G and the instruction is executed.
+* If ArbGas Remaining < G, ArbGas Remaining is set to MaxUint256 and an Error is raised. The instruction is not executed.
+* Otherwise, ArbGas Remaining is reduced by G and the instruction is executed.
 
 ## Instructions
 
