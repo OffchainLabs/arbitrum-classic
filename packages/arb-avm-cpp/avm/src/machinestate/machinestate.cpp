@@ -31,6 +31,10 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
+uint256_t defaultArbGasRemaining = uint256_t(
+    "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    "f");
+
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()), context({0, 0}, Tuple()) {}
 
@@ -40,6 +44,7 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
     : pool(std::move(pool_)), context({0, 0}, Tuple()) {
     code = code_;
     staticVal = static_val_;
+    arbGasRemaining = defaultArbGasRemaining;
 
     errpc = getErrCodePoint();
     pc = 0;
@@ -52,9 +57,7 @@ bool MachineState::initialize_machinestate(
     if (initial_state.valid_state) {
         code = initial_state.code;
         staticVal = initial_state.staticVal;
-        arbGasRemaining = uint256_t(
-            "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-            "f");
+        arbGasRemaining = defaultArbGasRemaining;
 
         errpc = getErrCodePoint();
         pc = 0;

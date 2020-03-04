@@ -104,6 +104,8 @@ TEST_CASE("Checkpoint State") {
         auto hash1 = machine.hash();
         auto hash2 = machine2->hash();
 
+        REQUIRE(hash1 == hash2);
+
         machine.checkpoint(storage);
 
         std::vector<unsigned char> hash_vector;
@@ -114,8 +116,7 @@ TEST_CASE("Checkpoint State") {
 
         auto hash3 = machine3.hash();
 
-        REQUIRE(hash1 == hash2);
-        REQUIRE(hash3 == hash2);
+        REQUIRE(hash3 == hash1);
     }
     boost::filesystem::remove_all(save_path);
 }

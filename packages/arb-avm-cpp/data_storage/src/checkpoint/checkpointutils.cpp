@@ -178,7 +178,7 @@ MachineStateKeys extractStateKeys(
     auto err_pc = extractHashKey(current_iter);
 
     return MachineStateKeys{register_val, datastack, auxstack, pc,
-                            err_pc,       arbGas,    status};
+                            arbGas,       err_pc,    status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
