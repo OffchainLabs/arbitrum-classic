@@ -358,7 +358,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::TSET, 40},
     {OpCode::TLEN, 2},
 
-    {OpCode::BREAKPOINT, 0},
+    {OpCode::BREAKPOINT, 100},
     {OpCode::LOG, 100},
 
     {OpCode::SEND, 100},

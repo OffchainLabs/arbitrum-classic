@@ -47,7 +47,7 @@ func NewIntValue(x *big.Int) IntValue {
 	return IntValue{x}
 }
 
-func MaxUintValue() IntValue {
+func MaxUintValue() IntValue { // return the maximum Uint that fits into 256 bits
 	return NewIntValue(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1)))
 }
 
