@@ -20,6 +20,7 @@ import (
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	//"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -28,19 +29,39 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type inbox struct {
+	value  common.Hash
+	count  *big.Int
+	client *GoArbAuthClient
+}
+
 type globalInbox struct {
-	inbox   *inbox
-	client  *GoArbAuthClient
-	address common.Address
+	inbox           map[common.Address]*inbox
+	contractAddress common.Address
+}
+
+func (ib *inbox) addMessageToInbox(msg common.Hash) {
+	ib.value = hashing.SoliditySHA3(
+		hashing.Bytes32(ib.value),
+		hashing.Bytes32(msg),
+	)
+	ib.count = new(big.Int).Add(ib.count, big.NewInt(1))
+}
+
+func deployGlobalInbox(m *goEthdata) {
+	m.globalInboxContract = &globalInbox{
+		inbox:           make(map[common.Address]*inbox),
+		contractAddress: m.getNextAddress(),
+	}
 }
 
 func newGlobalInbox(address common.Address, client *GoArbAuthClient) (*globalInbox, error) {
-	client.GoEthClient.inbox[address] = &inbox{common.Hash{}, big.NewInt(0)}
-	return &globalInbox{
-		inbox:   client.GoEthClient.inbox[address],
-		client:  client,
-		address: address,
-	}, nil
+	client.globalInboxContract.inbox[address] = &inbox{
+		value:  value.NewEmptyTuple().Hash(),
+		count:  big.NewInt(0),
+		client: client,
+	}
+	return client.globalInboxContract, nil
 }
 
 func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
@@ -51,26 +72,26 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 		hashing.Uint256(seqNumber),
 		hashing.Uint256(amount),
 		data,
-		hashing.TimeBlocks(con.client.GoEthClient.getCurrentBlock().Height),
+		hashing.TimeBlocks(con.inbox[vmAddress].client.getCurrentBlock().Height),
 	)
 
-	con.client.GoEthClient.deliverMessage(vmAddress, msgHash)
+	con.inbox[vmAddress].client.deliverMessage(vmAddress, msgHash)
 	msg := message.DeliveredTransaction{
 		Transaction: message.Transaction{
-			Chain:       con.address,
+			Chain:       con.contractAddress,
 			To:          contactAddress,
 			From:        vmAddress,
 			SequenceNum: seqNumber,
 			Value:       amount,
 			Data:        data,
 		},
-		BlockNum: con.client.GoEthClient.getCurrentBlock().Height,
+		BlockNum: con.inbox[vmAddress].client.getCurrentBlock().Height,
 	}
 
-	con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+	con.inbox[vmAddress].client.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: arbbridge.MessageDeliveredEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.client.GoEthClient.getCurrentBlock(),
+				BlockId: con.inbox[vmAddress].client.getCurrentBlock(),
 			},
 			Message: msg,
 		},
@@ -98,22 +119,18 @@ func (con *globalInbox) DeliverTransactionBatch(
 		messageLengths = append(messageLengths, big.NewInt(int64(len(tx.Data))))
 		data = append(data, tx.Data...)
 		signaturesFlat = append(signaturesFlat, signatures[i][:]...)
-		msgHash := transactionHash(
-			chain,
-			tx.To,
-			tx.From,
-			tx.SequenceNum,
-			tx.Value,
-			tx.Data,
-			con.client.GoEthClient.getCurrentBlock().Height,
-		)
+		deliveredTransaction := message.DeliveredTransaction{
+			Transaction: tx,
+			BlockNum:    con.inbox[chain].client.getCurrentBlock().Height,
+		}
+		msgHash := deliveredTransaction.CommitmentHash()
 
-		con.inbox.addMessageToInbox(msgHash)
+		con.inbox[chain].addMessageToInbox(msgHash)
 
-		con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+		con.inbox[chain].client.pubMsg(nil, arbbridge.MaybeEvent{
 			Event: arbbridge.MessageDeliveredEvent{
 				ChainInfo: arbbridge.ChainInfo{
-					BlockId: con.client.GoEthClient.getCurrentBlock(),
+					BlockId: con.inbox[chain].client.getCurrentBlock(),
 				},
 				Message: message.DeliveredTransaction{
 					Transaction: message.Transaction{
@@ -124,7 +141,7 @@ func (con *globalInbox) DeliverTransactionBatch(
 						Value:       tx.Value,
 						Data:        tx.Data,
 					},
-					BlockNum: con.client.GoEthClient.getCurrentBlock().Height,
+					BlockNum: con.inbox[chain].client.getCurrentBlock().Height,
 				},
 			},
 		})
@@ -139,11 +156,11 @@ func (con *globalInbox) DepositEthMessage(
 	value *big.Int,
 ) error {
 	// depositEth
-	if _, ok := con.client.GoEthClient.ethWallet[vmAddress]; ok {
-		con.client.GoEthClient.ethWallet[vmAddress] = new(big.Int).Add(con.client.GoEthClient.ethWallet[vmAddress], value)
+	if _, ok := con.inbox[vmAddress].client.ethWallet[vmAddress]; ok {
+		con.inbox[vmAddress].client.ethWallet[vmAddress] = new(big.Int).Add(con.inbox[vmAddress].client.ethWallet[vmAddress], value)
 	}
 	//deliverEthMessage
-	msgNum := new(big.Int).Add(con.inbox.count, big.NewInt(1))
+	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 
 	msg := message.DeliveredEth{
 		Eth: message.Eth{
@@ -151,17 +168,17 @@ func (con *globalInbox) DepositEthMessage(
 			From:  vmAddress,
 			Value: value,
 		},
-		BlockNum:   con.client.GoEthClient.LastMinedBlock.Height,
+		BlockNum:   con.inbox[vmAddress].client.getCurrentBlock().Height,
 		MessageNum: msgNum,
 	}
 	msgHash := msg.CommitmentHash()
 
-	con.inbox.addMessageToInbox(msgHash)
+	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+	con.inbox[vmAddress].client.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: arbbridge.MessageDeliveredEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.client.GoEthClient.getCurrentBlock(),
+				BlockId: con.inbox[vmAddress].client.getCurrentBlock(),
 			},
 			Message: msg,
 		},
@@ -176,7 +193,7 @@ func (con *globalInbox) DepositERC20Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-	msgNum := new(big.Int).Add(con.inbox.count, big.NewInt(1))
+	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 	msg := message.DeliveredERC20{
 		ERC20: message.ERC20{
 			To:           destination,
@@ -184,16 +201,16 @@ func (con *globalInbox) DepositERC20Message(
 			TokenAddress: tokenAddress,
 			Value:        value,
 		},
-		BlockNum:   con.client.GoEthClient.getCurrentBlock().Height,
+		BlockNum:   con.inbox[vmAddress].client.getCurrentBlock().Height,
 		MessageNum: msgNum,
 	}
 	msgHash := msg.CommitmentHash()
-	con.inbox.addMessageToInbox(msgHash)
+	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+	con.inbox[vmAddress].client.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: arbbridge.MessageDeliveredEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.client.GoEthClient.getCurrentBlock(),
+				BlockId: con.inbox[vmAddress].client.getCurrentBlock(),
 			},
 			Message: msg,
 		},
@@ -208,7 +225,7 @@ func (con *globalInbox) DepositERC721Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-	msgNum := new(big.Int).Add(con.inbox.count, big.NewInt(1))
+	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 	msg := message.DeliveredERC721{
 		ERC721: message.ERC721{
 			To:           tokenAddress,
@@ -216,16 +233,16 @@ func (con *globalInbox) DepositERC721Message(
 			TokenAddress: destination,
 			Id:           value,
 		},
-		BlockNum:   con.client.GoEthClient.getCurrentBlock().Height,
+		BlockNum:   con.inbox[vmAddress].client.getCurrentBlock().Height,
 		MessageNum: msgNum,
 	}
 	msgHash := msg.CommitmentHash()
-	con.inbox.addMessageToInbox(msgHash)
+	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.client.GoEthClient.pubMsg(nil, arbbridge.MaybeEvent{
+	con.inbox[vmAddress].client.pubMsg(nil, arbbridge.MaybeEvent{
 		Event: arbbridge.MessageDeliveredEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.client.GoEthClient.getCurrentBlock(),
+				BlockId: con.inbox[vmAddress].client.getCurrentBlock(),
 			},
 			Message: msg,
 		},
@@ -238,5 +255,14 @@ func (con *globalInbox) GetTokenBalance(
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	return con.client.GoEthClient.ethWallet[con.address], nil
+	return con.inbox[con.contractAddress].client.ethWallet[user], nil
+}
+
+func (m *goEthdata) deliverMessage(address common.Address, msgHash common.Hash) {
+	hash := hashing.SoliditySHA3(
+		hashing.Bytes32(m.globalInboxContract.inbox[address].value),
+		hashing.Bytes32(msgHash),
+	)
+	m.globalInboxContract.inbox[address].value = hash
+	m.globalInboxContract.inbox[address].count = new(big.Int).Add(m.globalInboxContract.inbox[address].count, big.NewInt(1))
 }

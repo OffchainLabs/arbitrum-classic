@@ -97,7 +97,21 @@ func GetKeystore(validatorFolder string, pass *string, flags *flag.FlagSet) (*bi
 	return auth, nil
 }
 
-func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error), addr string) error {
+func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error)) error {
+	// Check number of args
+
+	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
+	if validateCmd.NArg() != 3 {
+		return fmt.Errorf("usage: %v validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>", execName)
+	}
+
+	addressString := validateCmd.Arg(2)
+	address := common.HexToAddress(addressString)
+
+	return ValidateRollupChainAddr(execName, managerCreationFunc, address)
+}
+
+func ValidateRollupChainAddr(execName string, managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error), address common.Address) error {
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
@@ -118,18 +132,22 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 
 	validatorFolder := validateCmd.Arg(0)
 	ethURL := validateCmd.Arg(1)
-	var addressString string
-	if addr == "" {
-		addressString = validateCmd.Arg(2)
-	} else {
-		addressString = addr
-	}
-	address := common.HexToAddress(addressString)
-
 	auth, err := GetKeystore(validatorFolder, passphrase, validateCmd)
 	if err != nil {
 		return err
 	}
+	return ValidateRollupChainInt(managerCreationFunc, address, auth, gasPrice, ethURL, validatorFolder, rpcEnable)
+}
+
+func ValidateRollupChainInt(
+	managerCreationFunc func(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error),
+	address common.Address,
+	auth *bind.TransactOpts,
+	gasPrice *float64,
+	ethURL string,
+	validatorFolder string,
+	rpcEnable *bool,
+) error {
 
 	// Rollup creation
 	gasPriceAsFloat := 1e9 * (*gasPrice)
@@ -139,17 +157,17 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 	var client arbbridge.ArbAuthClient
 	if test.UseGoEth() {
 		fmt.Println("using goBridge")
-		c, err := gobridge.NewEthAuthClient(ethURL, &gobridge.TransOpts{From: common.NewAddressFromEth(auth.From)})
+		c, err := gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
 		if err != nil {
 			log.Fatal(err)
 		}
 		client = c
 	} else {
-		ethclint, err := ethclient.Dial(ethURL)
+		ethclient, err := ethclient.Dial(ethURL)
 		if err != nil {
 			return err
 		}
-		client = ethbridge.NewEthAuthClient(ethclint, auth)
+		client = ethbridge.NewEthAuthClient(ethclient, auth)
 	}
 
 	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {

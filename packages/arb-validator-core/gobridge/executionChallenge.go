@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -82,7 +81,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		logAccs[bisectionCount],
 	)
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
+	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
 		return errors.New("BisectAssertion Incorrect previous state")
 	}
 
@@ -125,25 +124,18 @@ func (c *ExecutionChallenge) BisectAssertion(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ExecutionBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			Assertions: assertions,
 			TotalSteps: totalSteps,
-			Deadline:   c.client.GoEthClient.challenges[c.contractAddress].deadline,
+			Deadline:   c.client.challenges[c.contractAddress].deadline,
 		},
 	})
 
 	return nil
-}
-func hashSliceToHashes(slice [][32]byte) []common.Hash {
-	ret := make([]common.Hash, 0, len(slice))
-	for _, a := range slice {
-		ret = append(ret, a)
-	}
-	return ret
 }
 
 func (c *ExecutionChallenge) OneStepProof(
@@ -156,7 +148,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	precondition.Hash()
 
 	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
@@ -179,10 +171,10 @@ func (c *ExecutionChallenge) OneStepProof(
 
 	//	require(correctProof == 0, OSP_PROOF);
 	//	emit OneStepProofCompleted();
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})
@@ -234,13 +226,14 @@ func generateAssertionHash(
 	firstLogHash [32]byte,
 	lastLogHash [32]byte,
 ) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(machineHash),
-		hashing.Bool(everDidInboxInsn),
-		hashing.Uint64(numGas),
-		hashing.Bytes32(firstMsgHash),
-		hashing.Bytes32(lastMsgHash),
-		hashing.Bytes32(firstLogHash),
-		hashing.Bytes32(lastLogHash),
-	)
+	stub := valprotocol.ExecutionAssertionStub{
+		machineHash,
+		everDidInboxInsn,
+		numGas,
+		firstMsgHash,
+		lastMsgHash,
+		firstLogHash,
+		lastLogHash,
+	}
+	return stub.Hash()
 }

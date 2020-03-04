@@ -56,7 +56,7 @@ func (c *messagesChallenge) Bisect(
 	}
 
 	msgHash := valprotocol.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(msgHash) {
+	if !c.challengeData.challengerDataHash.Equals(msgHash) {
 		return errors.New("Bisect Incorrect previous state msgHash")
 	}
 
@@ -80,21 +80,22 @@ func (c *messagesChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.MessagesBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			ChainHashes:   chainHashes,
 			SegmentHashes: segmentHashes,
 			TotalLength:   chainLength,
-			Deadline:      c.client.GoEthClient.challenges[c.contractAddress].deadline,
+			Deadline:      c.client.challenges[c.contractAddress].deadline,
 		},
 	})
 
 	return nil
 }
 
+//ctx, startInbox, startMessages, msg
 func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
@@ -105,18 +106,21 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	arbMessageHash := message.DeliveredValue(msg).Hash()
 
 	// oneStepProof
-	if !c.challenge.challengeData.challengerDataHash.Equals(hashing.SoliditySHA3(
+	msgChalDataHash := valprotocol.MessageChallengeDataHash(
 		lowerHashA,
+		valprotocol.AddMessageToPending(lowerHashA, messageHash),
 		lowerHashB,
-		messageHash,
-		arbMessageHash,
-	)) {
+		valprotocol.AddMessageToPending(lowerHashB, arbMessageHash),
+		big.NewInt(1),
+	)
+
+	if !c.challenge.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofTransactionMessage Incorrect previous state")
 	}
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})
@@ -156,14 +160,14 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		big.NewInt(1),
 	)
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofEthMessage Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})
@@ -173,16 +177,16 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	//			require(challenges[msg.sender], RES_CHAL_SENDER);
 	//			delete challenges[msg.sender];
 	//
-	//			Staker storage winningStaker = getValidStaker(address(winner));
+	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
 	//			winner.transfer(stakeRequirement / 2);
 	//			winningStaker.inChallenge = false;
 	//			deleteStaker(loser);
 	//
-	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			Winner:            msg.From,
 			Loser:             msg.To,
@@ -223,14 +227,14 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		big.NewInt(1),
 	)
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofERC20Message Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})
@@ -240,16 +244,16 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	//			require(challenges[msg.sender], RES_CHAL_SENDER);
 	//			delete challenges[msg.sender];
 	//
-	//			Staker storage winningStaker = getValidStaker(address(winner));
+	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
 	//			winner.transfer(stakeRequirement / 2);
 	//			winningStaker.inChallenge = false;
 	//			deleteStaker(loser);
 	//
-	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			Winner:            msg.From,
 			Loser:             msg.To,
@@ -289,14 +293,14 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		big.NewInt(1),
 	)
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofERC721Message Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})
@@ -306,16 +310,16 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	//			require(challenges[msg.sender], RES_CHAL_SENDER);
 	//			delete challenges[msg.sender];
 	//
-	//			Staker storage winningStaker = getValidStaker(address(winner));
+	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
 	//			winner.transfer(stakeRequirement / 2);
 	//			winningStaker.inChallenge = false;
 	//			deleteStaker(loser);
 	//
-	//			emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			Winner:            msg.From,
 			Loser:             msg.To,
@@ -339,19 +343,21 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		value.NewIntValue(new(big.Int).SetBytes(txHash[:])),
 		msgType,
 	})
-
-	if !c.challenge.challengeData.challengerDataHash.Equals(hashing.SoliditySHA3(
+	msgChalDataHash := valprotocol.MessageChallengeDataHash(
 		lowerHashA,
+		valprotocol.AddMessageToPending(lowerHashA, messageHash),
 		lowerHashB,
-		messageHash,
-		arbMessageHash,
-	)) {
+		valprotocol.AddMessageToPending(lowerHashB, arbMessageHash.Hash()),
+		big.NewInt(1),
+	)
+
+	if !c.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofContractTransactionMessage Incorrect previous state")
 	}
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})

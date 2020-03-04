@@ -25,32 +25,28 @@ import (
 
 type ethRollupWatcher struct {
 	inboxAddress common.Address
-	client       *GoArbClient
+	client       *goEthdata
 
 	rollupAddress common.Address
 }
 
-func newRollupWatcher(address common.Address, client *GoArbClient) (*ethRollupWatcher, error) {
-	vm := &ethRollupWatcher{client: client, rollupAddress: address}
+func newRollupWatcher(address common.Address, client *goEthdata) (*ethRollupWatcher, error) {
+	vm := &ethRollupWatcher{
+		client:        client,
+		rollupAddress: address}
 	return vm, nil
 }
 
 func (rw *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
-	return rw.client.GoEthClient.rollups[rw.rollupAddress].events[blockId], nil
+	return rw.client.arbFactoryContract.rollups[rw.rollupAddress].events[blockId], nil
 }
 
 func (rw *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
-	return valprotocol.ChainParams{
-		StakeRequirement:        rw.client.GoEthClient.rollups[rw.rollupAddress].escrowRequired,
-		GracePeriod:             rw.client.GoEthClient.rollups[rw.rollupAddress].gracePeriod,
-		MaxExecutionSteps:       rw.client.GoEthClient.rollups[rw.rollupAddress].maxSteps,
-		ArbGasSpeedLimitPerTick: rw.client.GoEthClient.rollups[rw.rollupAddress].arbGasSpeedLimitPerTick,
-		MaxTimeBoundsWidth:      rw.client.GoEthClient.rollups[rw.rollupAddress].maxTimeBoundsWidth,
-	}, nil
+	return rw.client.arbFactoryContract.rollups[rw.rollupAddress].chainParams, nil
 }
 
 func (rw *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
-	return rw.client.GoEthClient.rollups[rw.rollupAddress].creation, rw.client.GoEthClient.rollups[rw.rollupAddress].initVMHash, nil
+	return rw.client.arbFactoryContract.rollups[rw.rollupAddress].creation, rw.client.arbFactoryContract.rollups[rw.rollupAddress].initVMHash, nil
 }
 
 func (rw *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
@@ -58,9 +54,5 @@ func (rw *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 }
 
 func (rw *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return rw.client.GoEthClient.getNextAddress(), nil
-}
-
-func (rw *ethRollupWatcher) GetCreationHeight(ctx context.Context) (*common.BlockId, error) {
-	return rw.client.GoEthClient.rollups[rw.rollupAddress].creation, nil
+	return rw.inboxAddress, nil
 }

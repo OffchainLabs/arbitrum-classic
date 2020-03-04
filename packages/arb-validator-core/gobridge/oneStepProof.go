@@ -21,15 +21,14 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type OneStepProof struct {
-	client arbbridge.ArbClient
+	client *goEthdata
 }
 
-func newOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneStepProof, error) {
+func newOneStepProof(address common.Address, client *goEthdata) (*OneStepProof, error) {
 	return &OneStepProof{client}, nil
 }
 

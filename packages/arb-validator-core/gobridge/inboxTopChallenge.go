@@ -46,7 +46,7 @@ func (c *inboxTopChallenge) Bisect(
 
 	bisectionCount := len(chainHashes) - 1
 
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
+	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
 		return errors.New("Bisect Incorrect previous state")
 	}
 
@@ -70,14 +70,14 @@ func (c *inboxTopChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.InboxTopBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			ChainHashes: chainHashes,
 			TotalLength: chainLength,
-			Deadline:    c.client.GoEthClient.challenges[c.contractAddress].deadline,
+			Deadline:    c.client.challenges[c.contractAddress].deadline,
 		},
 	})
 	return nil
@@ -89,14 +89,14 @@ func (c *inboxTopChallenge) OneStepProof(
 	value common.Hash,
 ) error {
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
-	if !c.client.GoEthClient.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 		},
 	})

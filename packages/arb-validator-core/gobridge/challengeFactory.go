@@ -25,11 +25,10 @@ import (
 type challengeFactory struct {
 	contract common.Address
 	client   *GoArbAuthClient
-	auth     *TransOpts
 }
 
-func newChallengeFactory(address common.Address, client *GoArbAuthClient, auth *TransOpts) (*challengeFactory, error) {
-	return &challengeFactory{address, client, auth}, nil
+func newChallengeFactory(address common.Address, client *GoArbAuthClient) (*challengeFactory, error) {
+	return &challengeFactory{address, client}, nil
 }
 
 func (con *challengeFactory) CreateChallenge(
@@ -40,12 +39,12 @@ func (con *challengeFactory) CreateChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {
-	challenge := con.client.GoEthClient.getNextAddress()
-	con.client.GoEthClient.challenges[challenge] = &challengeData{
+	challenge := con.client.getNextAddress()
+	con.client.challenges[challenge] = &challengeData{
 		challengePeriodTicks: challengePeriod,
 		asserter:             asserter,
 		challenger:           challenger,
 		challengeType:        challengeType,
 	}
-	return con.client.GoEthClient.getNextAddress(), nil
+	return challenge, nil
 }

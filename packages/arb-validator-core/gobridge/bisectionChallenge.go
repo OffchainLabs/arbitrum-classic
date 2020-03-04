@@ -66,10 +66,10 @@ func (c *bisectionChallenge) chooseSegment(
 	//
 	c.challengerResponded()
 	c.challengeData.challengerDataHash = segments[segmentToChallenge]
-	c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 		Event: arbbridge.ContinueChallengeEvent{
 			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.GoEthClient.getCurrentBlock(),
+				BlockId: c.client.getCurrentBlock(),
 			},
 			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
 			Deadline:     c.challengeData.deadline,
@@ -83,7 +83,7 @@ type bisectionChallengeWatcher struct {
 	*challengeWatcher
 }
 
-func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (*bisectionChallengeWatcher, error) {
+func newBisectionChallengeWatcher(address common.Address, client *goEthdata) (*bisectionChallengeWatcher, error) {
 	challenge, err := newChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -94,21 +94,10 @@ func newBisectionChallengeWatcher(address common.Address, client *GoArbClient) (
 	return vm, err
 }
 
-func (c *challenge) commitToSegment(hashes [][32]byte) {
-	tree := valprotocol.NewMerkleTree(hashSliceToHashes(hashes))
-	c.challengeData.challengerDataHash = tree.GetRoot()
-}
-
-func (c *challenge) asserterResponded() {
-	c.challengeData.state = challengerTurn
-	currentTicks := common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height)
-	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
-
-}
-
-func (c *challenge) challengerResponded() {
-	c.challengeData.state = asserterTurn
-	currentTicks := common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height)
-	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
-
+func hashSliceToHashes(slice [][32]byte) []common.Hash {
+	ret := make([]common.Hash, 0, len(slice))
+	for _, a := range slice {
+		ret = append(ret, a)
+	}
+	return ret
 }

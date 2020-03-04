@@ -21,6 +21,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 const (
@@ -39,7 +40,7 @@ func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, 
 	chal := challenge{
 		client:          client,
 		contractAddress: address,
-		challengeData:   client.GoEthClient.challenges[address],
+		challengeData:   client.challenges[address],
 	}
 
 	return &chal, nil
@@ -49,22 +50,22 @@ func (c *challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
 
-	if common.TicksFromBlockNum(c.client.GoEthClient.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
+	if common.TicksFromBlockNum(c.client.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
 		return errors.New("Deadline hasn't expired")
 	}
 	if c.challengeData.state == asserterTurn {
-		c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 			Event: arbbridge.AsserterTimeoutEvent{
 				ChainInfo: arbbridge.ChainInfo{
-					BlockId: c.client.GoEthClient.getCurrentBlock(),
+					BlockId: c.client.getCurrentBlock(),
 				},
 			},
 		})
 	} else {
-		c.client.GoEthClient.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
 			Event: arbbridge.ChallengerTimeoutEvent{
 				ChainInfo: arbbridge.ChainInfo{
-					BlockId: c.client.GoEthClient.getCurrentBlock(),
+					BlockId: c.client.getCurrentBlock(),
 				},
 			},
 		})
@@ -72,11 +73,30 @@ func (c *challenge) TimeoutChallenge(
 	return nil
 }
 
+func (c *challenge) commitToSegment(hashes [][32]byte) {
+	tree := valprotocol.NewMerkleTree(hashSliceToHashes(hashes))
+	c.challengeData.challengerDataHash = tree.GetRoot()
+}
+
+func (c *challenge) asserterResponded() {
+	c.challengeData.state = challengerTurn
+	currentTicks := common.TicksFromBlockNum(c.client.getCurrentBlock().Height)
+	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
+
+}
+
+func (c *challenge) challengerResponded() {
+	c.challengeData.state = asserterTurn
+	currentTicks := common.TicksFromBlockNum(c.client.getCurrentBlock().Height)
+	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
+
+}
+
 type challengeWatcher struct {
-	client    *GoArbClient
+	client    *goEthdata
 	Challenge common.Address
 }
 
-func newChallengeWatcher(address common.Address, client *GoArbClient) (*challengeWatcher, error) {
+func newChallengeWatcher(address common.Address, client *goEthdata) (*challengeWatcher, error) {
 	return &challengeWatcher{client: client, Challenge: address}, nil
 }

@@ -30,7 +30,7 @@ type ChallengeTester struct {
 }
 
 func NewChallengeTester(client *GoArbAuthClient) (*ChallengeTester, error) {
-	return &ChallengeTester{client.GoEthClient.getNextAddress(), client}, nil
+	return &ChallengeTester{client.getNextAddress(), client}, nil
 }
 
 func (con *ChallengeTester) StartChallenge(
@@ -41,7 +41,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, *common.BlockId, error) {
-	eth := con.client.GoEthClient
+	eth := con.client
 
 	// create clone
 	newAddr := eth.getNextAddress()
@@ -60,6 +60,6 @@ func (con *ChallengeTester) StartChallenge(
 	eth.pubMsg(eth.challenges[newAddr], arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
-	//return clone address
+	//return clone contractAddress
 	return newAddr, eth.getLastBlock(), nil
 }

@@ -3,75 +3,48 @@ package gobridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"math/big"
 )
 
-type ArbFactory struct {
-	rollupAddress common.Address
-	client        *GoArbClient
+type arbFactory struct {
+	rollupContractAddress common.Address
+	client                *GoArbAuthClient
+	rollups               map[common.Address]*rollupData // contract instance to rollupData
 }
 
-func newArbFactory(address common.Address, client *GoArbClient) (*ArbFactory, error) {
-	return &ArbFactory{client.GoEthClient.arbFactory, client}, nil
+func deployRollupFactory(m *goEthdata) {
+	m.arbFactoryContract = &arbFactory{
+		rollupContractAddress: m.getNextAddress(),
+		client:                nil,
+		rollups:               make(map[common.Address]*rollupData),
+	}
 }
 
-func (con *ArbFactory) CreateRollup(
+func newArbFactory(address common.Address, client *GoArbAuthClient) (*arbFactory, error) {
+	client.arbFactoryContract.client = client
+	return client.arbFactoryContract, nil
+}
+
+func (con *arbFactory) CreateRollup(
 	ctx context.Context,
 	vmState common.Hash,
 	params valprotocol.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
-	events := make(map[*common.BlockId][]arbbridge.Event)
-	addr := con.client.GoEthClient.getNextAddress()
-	vmProto := hashing.SoliditySHA3(
-		hashing.Bytes32(vmState),
-		hashing.Bytes32(value.NewEmptyTuple().Hash()),
-		hashing.Uint256(big.NewInt(0)),
-	)
-	innerHash := hashing.SoliditySHA3(
-		hashing.Bytes32(vmProto),
-		hashing.Uint256(big.NewInt(0)),
-		hashing.Uint256(big.NewInt(0)),
-		hashing.Uint256(big.NewInt(0)),
-	)
-	initialNode := hashing.SoliditySHA3(
-		hashing.Uint256(big.NewInt(0)),
-		hashing.Bytes32(innerHash),
-	)
+	addr := con.client.getNextAddress()
 
-	con.client.GoEthClient.rollups[addr] = &rollupData{
-		initVMHash:              vmState,
-		VMstate:                 machine.Extensive,
-		state:                   Uninitialized,
-		gracePeriod:             params.GracePeriod,
-		maxSteps:                params.MaxExecutionSteps,
-		maxTimeBoundsWidth:      params.MaxTimeBoundsWidth,
-		arbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
-		escrowRequired:          params.StakeRequirement,
-		owner:                   owner,
-		events:                  events,
-		creation:                con.client.GoEthClient.getCurrentBlock(),
-		stakers:                 make(map[common.Address]*staker),
-		leaves:                  make(map[common.Hash]bool),
-		lastConfirmed:           initialNode,
-		contractAddress:         addr,
-	}
-	con.client.GoEthClient.rollups[addr].leaves[initialNode] = true
+	newGlobalInbox(addr, con.client)
+	newRollup(con, addr, vmState, params, owner)
 
 	return addr, nil
 }
 
 type arbFactoryWatcher struct {
 	rollupAddress common.Address
-	client        *GoArbClient
+	client        *goEthdata
 }
 
-func newArbFactoryWatcher(address common.Address, client *GoArbClient) (*arbFactoryWatcher, error) {
+func newArbFactoryWatcher(address common.Address, client *goEthdata) (*arbFactoryWatcher, error) {
 	return &arbFactoryWatcher{address, client}, nil
 }
 

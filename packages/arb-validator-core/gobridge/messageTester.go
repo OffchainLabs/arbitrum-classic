@@ -30,7 +30,7 @@ type messageTester struct {
 }
 
 func NewMessageTester(client *GoArbAuthClient) (*messageTester, error) {
-	tester := client.GoEthClient.getNextAddress()
+	tester := client.getNextAddress()
 
 	return &messageTester{client: client, tester: tester}, nil
 }

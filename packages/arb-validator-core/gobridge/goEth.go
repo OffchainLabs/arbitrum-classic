@@ -20,11 +20,8 @@ import (
 	"errors"
 	"log"
 
-	//"fmt"
-	//ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"math/big"
@@ -41,20 +38,6 @@ const (
 	PendingDisputable
 	PendingUnanimous
 )
-
-type VmData struct {
-	machineHash       [32]byte
-	pendingHash       [32]byte // Lock inbox and confirm asserts together
-	inbox             [32]byte
-	asserter          common.Address
-	escrowRequired    big.Int
-	deadline          uint64
-	sequenceNum       uint64
-	gracePeriod       uint32
-	maxExecutionSteps uint32
-	State             EthState
-	inChallenge       bool
-}
 
 type channelData struct {
 	state                  EthState
@@ -75,25 +58,6 @@ type channelData struct {
 	ValidatorBalances      map[common.Address]*big.Int
 }
 
-type rollupData struct {
-	initVMHash              common.Hash
-	VMstate                 machine.Status
-	state                   EthState
-	gracePeriod             common.TimeTicks
-	maxSteps                uint64
-	maxTimeBoundsWidth      uint64
-	arbGasSpeedLimitPerTick uint64
-	escrowRequired          *big.Int
-	owner                   common.Address
-	events                  map[*common.BlockId][]arbbridge.Event
-	creation                *common.BlockId
-	stakers                 map[common.Address]*staker
-	leaves                  map[common.Hash]bool
-	lastConfirmed           common.Hash
-	contractAddress         common.Address
-	nextConfirmed           common.Hash
-}
-
 type challengeData struct {
 	sync.Mutex
 	deadline             common.TimeTicks
@@ -105,18 +69,6 @@ type challengeData struct {
 	challengeType        *big.Int
 }
 
-type pendingTopChallengeData struct {
-	challengeData
-}
-
-type messagesChallengeData struct {
-	challengeData
-}
-
-type execChallengeData struct {
-	challengeData
-}
-
 type staker struct {
 	location           common.Hash
 	creationTimeBlocks *common.TimeBlocks
@@ -124,56 +76,30 @@ type staker struct {
 	balance            *big.Int
 }
 
-type nodeGraph struct {
-	stakeRequirement *big.Int
-	stakers          map[common.Address]*staker
-	leaves           map[common.Hash]bool
-	lastConfirmed    common.Hash
-}
-
 type goMaybeEvent struct {
 	challenge *challengeData
 	event     arbbridge.MaybeEvent
 }
 
-type inbox struct {
-	value common.Hash
-	count *big.Int
-}
-
-func (ib *inbox) addMessageToInbox(msg common.Hash) {
-	ib.value = hashing.SoliditySHA3(
-		hashing.Bytes32(ib.value),
-		hashing.Bytes32(msg),
-	)
-	ib.count = new(big.Int).Add(ib.count, big.NewInt(1))
-}
-
-type void struct{}
-
-var Void void
-
 // goEthData one per 'URL'
 type goEthdata struct {
-	blockMutex             sync.Mutex
-	msgMutex               sync.Mutex
-	Vm                     map[common.Address]*VmData
-	channels               map[common.Address]*channelData
-	rollups                map[common.Address]*rollupData // contract address to rollup
-	challenges             map[common.Address]*challengeData
-	balances               map[common.Address]*big.Int
-	challengeWatchersMutex sync.Mutex
-	challengeWatcherEvents map[*challengeData]map[*common.BlockId][]arbbridge.Event
-	arbFactory             common.Address // eth address to factory address
-	nextAddress            common.Address // unique 'address'
-	nextMsgs               map[*common.BlockId][]goMaybeEvent
-	inbox                  map[common.Address]*inbox
-	NextBlock              *common.BlockId
-	LastMinedBlock         *common.BlockId
-	blockNumbers           map[uint64]*common.BlockId      // block height to blockId
-	blockHashes            map[common.Hash]*common.BlockId // block hash to blockId
-	parentHashes           map[common.BlockId]common.Hash  // blokcId to block hash
-	ethWallet              map[common.Address]*big.Int
+	blockMutex               sync.Mutex
+	msgMutex                 sync.Mutex
+	challenges               map[common.Address]*challengeData
+	balances                 map[common.Address]*big.Int
+	challengeWatchersMutex   sync.Mutex
+	challengeWatcherEvents   map[*challengeData]map[*common.BlockId][]arbbridge.Event
+	nextAddress              common.Address // unique 'contractAddress'
+	nextMsgs                 map[*common.BlockId][]goMaybeEvent
+	arbFactoryContract       *arbFactory
+	globalInboxContract      *globalInbox
+	challengeFactoryContract common.Address
+	NextBlock                *common.BlockId
+	LastMinedBlock           *common.BlockId
+	blockNumbers             map[uint64]*common.BlockId      // block height to blockId
+	blockHashes              map[common.Hash]*common.BlockId // block hash to blockId
+	parentHashes             map[common.BlockId]common.Hash  // blokcId to block hash
+	ethWallet                map[common.Address]*big.Int
 }
 
 var GoEth map[string]*goEthdata
@@ -203,14 +129,9 @@ func getGoEth(ethURL string) *goEthdata {
 		blockHash := hashing.SoliditySHA3(hashing.Uint256(big.NewInt(rand2.Int63())))
 		mEthData := new(goEthdata)
 		GoEth[ethURL] = mEthData
-		mEthData.Vm = make(map[common.Address]*VmData)
-		mEthData.channels = make(map[common.Address]*channelData)
-		mEthData.rollups = make(map[common.Address]*rollupData)
 		mEthData.challenges = make(map[common.Address]*challengeData)
 		mEthData.balances = make(map[common.Address]*big.Int)
 		mEthData.challengeWatcherEvents = make(map[*challengeData]map[*common.BlockId][]arbbridge.Event)
-		mEthData.arbFactory = mEthData.getNextAddress()
-		mEthData.inbox = make(map[common.Address]*inbox)
 		mEthData.blockHashes = make(map[common.Hash]*common.BlockId)
 		mEthData.blockNumbers = make(map[uint64]*common.BlockId)
 		mEthData.parentHashes = make(map[common.BlockId]common.Hash)
@@ -231,8 +152,15 @@ func getGoEth(ethURL string) *goEthdata {
 				mine(mEthData, x)
 			}
 		}()
+		deployGlobalInbox(mEthData)
+		deployRollupFactory(mEthData)
+		deployChallengeFactory(mEthData)
 	})
 	return GoEth[ethURL]
+}
+
+func deployChallengeFactory(m *goEthdata) {
+	m.challengeFactoryContract = m.getNextAddress()
 }
 
 func (m *goEthdata) getNextAddress() common.Address {
@@ -289,7 +217,7 @@ func mine(m *goEthdata, t time.Time) {
 	m.LastMinedBlock = m.NextBlock
 	m.msgMutex.Lock()
 	for _, event := range m.nextMsgs[m.NextBlock] {
-		for _, ru := range m.rollups {
+		for _, ru := range m.arbFactoryContract.rollups {
 			ru.events[m.NextBlock] = append(ru.events[m.NextBlock], event.event.Event)
 		}
 		m.challengeWatchersMutex.Lock()
@@ -324,13 +252,4 @@ func addToken(source common.Address, data value.Value, destination common.Addres
 		return
 	}
 
-}
-
-func (m *goEthdata) deliverMessage(address common.Address, msgHash common.Hash) {
-	hash := hashing.SoliditySHA3(
-		hashing.Bytes32(m.inbox[address].value),
-		hashing.Bytes32(msgHash),
-	)
-	m.inbox[address].value = hash
-	m.inbox[address].count = new(big.Int).Add(m.inbox[address].count, big.NewInt(1))
 }

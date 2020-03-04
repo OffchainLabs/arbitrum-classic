@@ -33,18 +33,11 @@ var errReorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-type GoArbClient struct {
-	GoEthClient *goEthdata
+func NewEthClient(ethURL string) *goEthdata {
+	return getGoEth(ethURL)
 }
 
-func NewEthClient(ethURL string) (*GoArbClient, error) {
-	// call to goEth.go - getGoEth(ethURL)
-	client := GoArbClient{getGoEth(ethURL)}
-
-	return &client, nil
-}
-
-func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIDChan := make(chan arbbridge.MaybeBlockId, 100)
 
 	blockIDChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
@@ -60,7 +53,7 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 					fmt.Println("prevBlockID nil")
 				}
 				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockID.Height.AsInt(), big.NewInt(1)))
-				n, notFound := c.GoEthClient.getBlockFromHeight(nextHeight)
+				n, notFound := c.getBlockFromHeight(nextHeight)
 				if notFound == nil {
 					// Got next header
 					nextBlock = n
@@ -89,7 +82,7 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 				time.Sleep(headerRetryDelay)
 			}
 
-			if c.GoEthClient.parentHashes[*nextBlock] != prevBlockID.HeaderHash {
+			if c.parentHashes[*nextBlock] != prevBlockID.HeaderHash {
 				blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
 				return
 			}
@@ -102,40 +95,40 @@ func (c *GoArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockID *c
 	return blockIDChan, nil
 }
 
-func (c *GoArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
+func (c *goEthdata) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
 	return newArbFactoryWatcher(address, c)
 }
 
-func (c *GoArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
+func (c *goEthdata) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
 	return newRollupWatcher(address, c)
 }
 
-func (c *GoArbClient) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
+func (c *goEthdata) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
 	return newExecutionChallengeWatcher(address, c)
 }
 
-func (c *GoArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
+func (c *goEthdata) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
 	return newMessagesChallengeWatcher(address, c)
 }
 
-func (c *GoArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
+func (c *goEthdata) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
 	return newInboxTopChallengeWatcher(address, c)
 }
 
-func (c *GoArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
+func (c *goEthdata) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
 	return newOneStepProof(address, c)
 }
 
-func (c *GoArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
-	return c.GoEthClient.balances[account], nil
+func (c *goEthdata) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	return c.balances[account], nil
 }
 
-func (c *GoArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
-	return c.GoEthClient.LastMinedBlock, nil
+func (c *goEthdata) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
+	return c.LastMinedBlock, nil
 }
 
-func (c *GoArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
-	block, err := c.GoEthClient.getBlockFromHeight(height)
+func (c *goEthdata) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
+	block, err := c.getBlockFromHeight(height)
 	if err != nil {
 		errstr := fmt.Sprintln("block height", height, " not found")
 		return nil, errors.New(errstr)
@@ -145,41 +138,34 @@ func (c *GoArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeB
 
 type TransOpts struct {
 	sync.Mutex
-	From  common.Address // Ethereum account to send the transaction from
-	Nonce *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
-
-	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
-	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
-	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
+	From common.Address
 }
 
 type GoArbAuthClient struct {
-	*GoArbClient
-	auth *TransOpts
+	*goEthdata
+	fromAddr common.Address
 }
 
-func NewEthAuthClient(ethURL string, auth *TransOpts) (*GoArbAuthClient, error) {
-	client, err := NewEthClient(ethURL)
-	if err != nil {
-		return nil, err
-	}
-	client.GoEthClient.balances[auth.From] = big.NewInt(1000) // give client a default balance of 1000
+func NewEthAuthClient(ethURL string, fromAddr common.Address) (*GoArbAuthClient, error) {
+	client := NewEthClient(ethURL)
+
+	client.balances[fromAddr] = big.NewInt(1000) // give client a default balance of 1000
 	return &GoArbAuthClient{
-		GoArbClient: client,
-		auth:        auth,
+		goEthdata: client,
+		fromAddr:  fromAddr,
 	}, nil
 }
 
 func (c *GoArbAuthClient) Address() common.Address {
-	return c.auth.From
+	return c.fromAddr
 }
 
 func (c *GoArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return newArbFactory(address, c.GoArbClient)
+	return newArbFactory(address, c)
 }
 
 func (c *GoArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return newRollup(address, c)
+	return newRollupContract(address, c)
 }
 
 func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
@@ -187,7 +173,7 @@ func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.Glob
 }
 
 func (c *GoArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
-	return newChallengeFactory(address, c, c.auth)
+	return newChallengeFactory(address, c)
 }
 
 func (c *GoArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
@@ -203,8 +189,8 @@ func (c *GoArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridg
 }
 
 func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (arbbridge.ChallengeTester, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
+	//c.auth.Lock()
+	//defer c.auth.Unlock()
 	tester, err := NewChallengeTester(c)
 	if err != nil {
 		return nil, err
@@ -213,8 +199,8 @@ func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFact
 }
 
 func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-	osp, err := newOneStepProof(c.Address(), c)
+	//c.auth.Lock()
+	//defer c.auth.Unlock()
+	osp, err := newOneStepProof(c.Address(), c.goEthdata)
 	return osp, err
 }
