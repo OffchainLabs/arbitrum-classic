@@ -177,7 +177,7 @@ func (m *Machine) CheckArbGasCapacity(charge int64) (int64, error) {
 func (m *Machine) UseArbGas(charge uint64) {
 	// Deduct the ArbGas for an instruction from the current balance
 	m.arbGasRemaining = value.NewIntValue(new(big.Int).Sub(m.arbGasRemaining.BigInt(), big.NewInt(int64(charge))))
-	if m.arbGasRemaining.Cmp(value.IntegerZero) < 0 {
+	if m.arbGasRemaining.BigInt().Cmp(value.IntegerZero.BigInt()) < 0 {
 		m.arbGasRemaining = value.MaxUintValue()
 	}
 }
