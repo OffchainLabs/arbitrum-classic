@@ -57,7 +57,6 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 }
 
 func (m *Machine) Hash() common.Hash {
-	log.Println("Calling hash")
 	h1 := m.cppmachine.Hash()
 	h2 := m.gomachine.Hash()
 	if h1 != h2 {

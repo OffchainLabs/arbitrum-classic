@@ -914,94 +914,6 @@ library OneStepProof {
         return true;
     }
 
-    // Memory insns
-    function executeMnewInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt()) {
-            return false;
-        } 
-        uint iv256 = val1.intVal;
-        require(iv256 < (1<<32));
-        uint64 iv64 = uint64(iv256);       
-        machine.addDataStackHashValue(Value.HashOnly(hashOfEmptyMem(iv64)));
-        return true;
-    }
-
-    function executeMgetInsn(
-        Machine.Data memory machine, 
-        Value.Data memory val1, 
-        Value.Data memory val2, 
-        bytes memory proof, 
-        uint offset
-    ) 
-        internal
-        pure
-        returns(bool, uint)  // success, offset
-    {
-        if (!val1.isInt()) {
-            return (false, offset);
-        }
-        uint index = val1.intVal;
-        bytes32 memHash = Value.hash(val2).hash;
-        bool success;
-        uint size;
-        (success, offset, size) = Value.deserializeInt(proof, offset);
-        if (!success){
-            return (false, offset);
-        }
-        Value.HashOnly memory returnHash;
-        (success, offset, returnHash) = Value.deserializeHashOnly(proof, offset);
-        bytes32 resultHash = returnHash.hash;
-        if (!success){
-            return (false, offset);
-        }
-        for (uint chunkSize=1; chunkSize<size; chunkSize=chunkSize*2) {
-            Value.HashOnly memory h;
-            (success, offset, h) = Value.deserializeHashOnly(proof, offset);
-            if ((index & chunkSize) == 0) {
-                resultHash = keccak256(abi.encodePacked(
-                    resultHash, 
-                    h.hash
-                ));
-            } else {
-                resultHash = keccak256(abi.encodePacked(
-                    h.hash, 
-                    resultHash
-                ));
-            }
-        }
-        machine.addDataStackHashValue(returnHash);
-        return (resultHash==memHash, offset);
-    }
-
-    function hashOfEmptyMem(uint64 size) 
-        internal
-        pure
-        returns(bytes32)
-    {
-        uint64 chunkSize = 1;
-        bytes32 h = Value.hashEmptyTuple();
-        h = keccak256(abi.encodePacked(h, h));
-        while (2*chunkSize < size) {
-            h = keccak256(abi.encodePacked(h, h));
-            chunkSize = 2*chunkSize;
-        }
-
-        return keccak256(
-            abi.encodePacked(
-                uint8(12),
-                size,
-                h
-            )
-        );
-    }
-
     // Logging
 
     function executeBreakpointInsn(Machine.Data memory) internal pure returns (bool) {
@@ -1136,8 +1048,6 @@ library OneStepProof {
     uint8 constant internal OP_TGET = 0x50;
     uint8 constant internal OP_TSET = 0x51;
     uint8 constant internal OP_TLEN = 0x52;
-    uint8 constant internal OP_MNEW = 0x53;
-    uint8 constant internal OP_MGET = 0x54;
 
     // Logging opertations
     uint8 constant internal OP_BREAKPOINT = 0x60;
@@ -1247,10 +1157,6 @@ library OneStepProof {
             return (3, 1);
         } else if (opCode == OP_TLEN) {
             return (1, 1);
-        } else if (opCode == OP_MNEW) {
-            return (1, 1);
-        } else if (opCode == OP_MGET) {
-            return (2, 1);
         } else if (opCode == OP_BREAKPOINT) {
             return (0, 0);
         } else if (opCode == OP_LOG) {
@@ -1376,10 +1282,6 @@ library OneStepProof {
             return 40;
         } else if (opCode == OP_TLEN) {
             return 2;
-        } else if (opCode == OP_MNEW) {
-            return 40;
-        } else if (opCode == OP_MGET) {
-            return 100;
         } else if (opCode == OP_BREAKPOINT) {
             return 100;
         } else if (opCode == OP_LOG) {
@@ -1614,10 +1516,6 @@ library OneStepProof {
                 );
             } else if (opCode == OP_TLEN) {
                 correct = executeTlenInsn(endMachine, stackVals[0]);
-            } else if (opCode == OP_MNEW) {
-                correct = executeMnewInsn(endMachine, stackVals[0]);
-            } else if (opCode == OP_MGET) {
-                (correct, offset) = executeMgetInsn(endMachine, stackVals[0], stackVals[1], _data.proof, offset);
             } else if (opCode == OP_BREAKPOINT) {
                 correct = executeBreakpointInsn(endMachine);
             } else if (opCode == OP_LOG) {
