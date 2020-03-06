@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"math/big"
 )
 
 const (
@@ -30,6 +31,16 @@ const (
 	challengerTurn = 2
 )
 
+type challengeData struct {
+	deadline             common.TimeTicks
+	challengerDataHash   common.Hash
+	state                int
+	challengePeriodTicks common.TimeTicks
+	asserter             common.Address
+	challenger           common.Address
+	challengeType        *big.Int
+}
+
 type challenge struct {
 	client          *GoArbAuthClient
 	challengeData   *challengeData
@@ -37,24 +48,20 @@ type challenge struct {
 }
 
 func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, error) {
-	chal := challenge{
-		client:          client,
-		contractAddress: address,
-		challengeData:   client.challenges[address],
-	}
-
-	return &chal, nil
+	return client.challenges[address], nil
 }
 
 func (c *challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 
 	if common.TicksFromBlockNum(c.client.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
 		return errors.New("Deadline hasn't expired")
 	}
 	if c.challengeData.state == asserterTurn {
-		c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		c.client.pubMsg(c, arbbridge.MaybeEvent{
 			Event: arbbridge.AsserterTimeoutEvent{
 				ChainInfo: arbbridge.ChainInfo{
 					BlockId: c.client.getCurrentBlock(),
@@ -62,7 +69,7 @@ func (c *challenge) TimeoutChallenge(
 			},
 		})
 	} else {
-		c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+		c.client.pubMsg(c, arbbridge.MaybeEvent{
 			Event: arbbridge.ChallengerTimeoutEvent{
 				ChainInfo: arbbridge.ChainInfo{
 					BlockId: c.client.getCurrentBlock(),
@@ -93,10 +100,23 @@ func (c *challenge) challengerResponded() {
 }
 
 type challengeWatcher struct {
-	client    *goEthdata
+	client *goEthdata
+	*challenge
 	Challenge common.Address
 }
 
 func newChallengeWatcher(address common.Address, client *goEthdata) (*challengeWatcher, error) {
-	return &challengeWatcher{client: client, Challenge: address}, nil
+	chalData := client.challenges[address]
+	if _, ok := client.challengeWatcherEvents[chalData]; !ok {
+		client.challengeWatcherEvents[chalData] = make(map[*common.BlockId][]arbbridge.Event)
+	}
+
+	return &challengeWatcher{challenge: chalData, client: client}, nil
+}
+
+func (c *challengeWatcher) GetEvents(ctx context.Context, blockID *common.BlockId) ([]arbbridge.Event, error) {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
+	cw := c.client.challengeWatcherEvents[c.challenge][blockID]
+	return cw, nil
 }

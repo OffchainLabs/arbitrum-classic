@@ -105,12 +105,7 @@ func createRollupChain() (common.Address, error) {
 
 	var client arbbridge.ArbAuthClient
 	if test.UseGoEth() {
-		//fmt.Println("using goBridge")
-		c, err := gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
-		if err != nil {
-			log.Fatal(err)
-		}
-		client = c
+		client = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
 	} else {
 		ethclint, err := ethclient.Dial(ethURL)
 		if err != nil {

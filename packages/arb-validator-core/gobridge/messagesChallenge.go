@@ -49,6 +49,8 @@ func (c *messagesChallenge) Bisect(
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 
 	bisectionCount := len(chainHashes) - 1
 	if bisectionCount+1 != len(segmentHashes) {
@@ -80,7 +82,7 @@ func (c *messagesChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.MessagesBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -88,7 +90,7 @@ func (c *messagesChallenge) Bisect(
 			ChainHashes:   chainHashes,
 			SegmentHashes: segmentHashes,
 			TotalLength:   chainLength,
-			Deadline:      c.client.challenges[c.contractAddress].deadline,
+			Deadline:      c.client.challenges[c.contractAddress].challengeData.deadline,
 		},
 	})
 
@@ -102,6 +104,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredTransaction,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	messageHash := msg.CommitmentHash()
 	arbMessageHash := message.DeliveredValue(msg).Hash()
 
@@ -117,7 +121,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	if !c.challenge.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofTransactionMessage Incorrect previous state")
 	}
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -136,6 +140,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredEth,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -164,7 +170,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		return errors.New("OneStepProofEthMessage Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -183,7 +189,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -203,6 +209,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	lowerHashB common.Hash,
 	msg message.DeliveredERC20,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -231,7 +239,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		return errors.New("OneStepProofERC20Message Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -250,7 +258,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -269,6 +277,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	lowerHashB common.Hash,
 	msg message.DeliveredERC721,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	messageHash := msg.CommitmentHash()
 
 	msgType := msg.AsValue()
@@ -297,7 +307,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		return errors.New("OneStepProofERC721Message Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -316,7 +326,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	//			deleteStaker(loser);
 	//
 	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.ChallengeCompletedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -335,6 +345,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	lowerHashB common.Hash,
 	msg message.DeliveredContractTransaction,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	messageHash := msg.CommitmentHash()
 	txHash := msg.ReceiptHash()
 	msgType := msg.AsValue()
@@ -354,7 +366,7 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	if !c.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofContractTransactionMessage Incorrect previous state")
 	}
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -374,6 +386,8 @@ func (c *messagesChallenge) ChooseSegment(
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {

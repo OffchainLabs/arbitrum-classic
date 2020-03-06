@@ -49,7 +49,7 @@ func (c *bisectionChallenge) chooseSegment(
 	fmt.Println("in bisectionChallenge - chooseSegment")
 	tree := valprotocol.NewMerkleTree(segments)
 
-	if !tree.GetRoot().Equals(c.challengeData.challengerDataHash) {
+	if !tree.GetRoot().Equals(c.challenge.challengeData.challengerDataHash) {
 		return errors.New("chooseSegment Incorrect previous state")
 	}
 
@@ -65,33 +65,18 @@ func (c *bisectionChallenge) chooseSegment(
 	//);
 	//
 	c.challengerResponded()
-	c.challengeData.challengerDataHash = segments[segmentToChallenge]
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.challenge.challengeData.challengerDataHash = segments[segmentToChallenge]
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.ContinueChallengeEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
 			},
 			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
-			Deadline:     c.challengeData.deadline,
+			Deadline:     c.challenge.challengeData.deadline,
 		},
 	})
 
 	return nil
-}
-
-type bisectionChallengeWatcher struct {
-	*challengeWatcher
-}
-
-func newBisectionChallengeWatcher(address common.Address, client *goEthdata) (*bisectionChallengeWatcher, error) {
-	challenge, err := newChallengeWatcher(address, client)
-	if err != nil {
-		return nil, err
-	}
-	vm := &bisectionChallengeWatcher{
-		challengeWatcher: challenge,
-	}
-	return vm, err
 }
 
 func hashSliceToHashes(slice [][32]byte) []common.Hash {

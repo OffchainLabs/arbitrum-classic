@@ -43,10 +43,13 @@ func (c *inboxTopChallenge) Bisect(
 	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 
 	bisectionCount := len(chainHashes) - 1
 
-	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
+	//if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
+	if !c.challengeData.challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
 		return errors.New("Bisect Incorrect previous state")
 	}
 
@@ -70,14 +73,14 @@ func (c *inboxTopChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.InboxTopBisectionEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
 			},
 			ChainHashes: chainHashes,
 			TotalLength: chainLength,
-			Deadline:    c.client.challenges[c.contractAddress].deadline,
+			Deadline:    c.client.challenges[c.contractAddress].challengeData.deadline,
 		},
 	})
 	return nil
@@ -88,12 +91,14 @@ func (c *inboxTopChallenge) OneStepProof(
 	lowerHashA common.Hash,
 	value common.Hash,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
-	if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(matchHash) {
+	if !c.client.challenges[c.contractAddress].challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challengeData, arbbridge.MaybeEvent{
+	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
 		Event: arbbridge.OneStepProofEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -111,6 +116,8 @@ func (c *inboxTopChallenge) ChooseSegment(
 	chainHashes []common.Hash,
 	chainLength uint64,
 ) error {
+	c.client.goEthMutex.Lock()
+	defer c.client.goEthMutex.Unlock()
 	bisectionCount := uint64(len(chainHashes) - 1)
 	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint64(0); i < bisectionCount; i++ {

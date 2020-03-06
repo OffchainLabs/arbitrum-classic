@@ -30,7 +30,8 @@ type ChallengeTester struct {
 }
 
 func NewChallengeTester(client *GoArbAuthClient) (*ChallengeTester, error) {
-	return &ChallengeTester{client.getNextAddress(), client}, nil
+	fact, _ := newChallengeFactory(client.getNextAddress(), client)
+	return &ChallengeTester{fact.challengeFactoryContract, client}, nil
 }
 
 func (con *ChallengeTester) StartChallenge(
@@ -42,24 +43,27 @@ func (con *ChallengeTester) StartChallenge(
 	challengeType *big.Int,
 ) (common.Address, *common.BlockId, error) {
 	eth := con.client
+	eth.goEthMutex.Lock()
+	defer eth.goEthMutex.Unlock()
 
 	// create clone
-	newAddr := eth.getNextAddress()
-	eth.challenges[newAddr] = &challengeData{deadline: challengePeriod, challengerDataHash: challengeHash, challengePeriodTicks: challengePeriod}
+	newAddr, _ := eth.challengeFactoryContract.createChallenge(
+		ctx,
+		asserter,
+		challenger,
+		challengePeriod,
+		challengeHash,
+		challengeType)
 
-	//initializeBisection
-	eth.challenges[newAddr].deadline = common.TicksFromBlockNum(eth.LastMinedBlock.Height).Add(challengePeriod)
-	eth.challenges[newAddr].state = asserterTurn
 	// emit InitiatedChallenge
 	InitiateChallengeEvent := arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: eth.getCurrentBlock(),
 		},
-		Deadline: eth.challenges[newAddr].deadline,
+		Deadline: eth.challenges[newAddr].challengeData.deadline,
 	}
 	eth.pubMsg(eth.challenges[newAddr], arbbridge.MaybeEvent{
 		Event: InitiateChallengeEvent,
 	})
-	//return clone contractAddress
 	return newAddr, eth.getLastBlock(), nil
 }

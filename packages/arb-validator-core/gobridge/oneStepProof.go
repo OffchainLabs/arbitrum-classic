@@ -38,6 +38,8 @@ func (con *OneStepProof) ValidateProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
+	con.client.goEthMutex.Lock()
+	defer con.client.goEthMutex.Unlock()
 	// execution one step proof
 	// for now always return true
 

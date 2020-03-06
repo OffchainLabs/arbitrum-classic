@@ -9,14 +9,13 @@ import (
 type arbFactory struct {
 	rollupContractAddress common.Address
 	client                *GoArbAuthClient
-	rollups               map[common.Address]*rollupData // contract instance to rollupData
 }
 
 func deployRollupFactory(m *goEthdata) {
+	m.rollups = make(map[common.Address]*arbRollup)
 	m.arbFactoryContract = &arbFactory{
 		rollupContractAddress: m.getNextAddress(),
 		client:                nil,
-		rollups:               make(map[common.Address]*rollupData),
 	}
 }
 
@@ -31,6 +30,8 @@ func (con *arbFactory) CreateRollup(
 	params valprotocol.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
+	con.client.goEthMutex.Lock()
+	defer con.client.goEthMutex.Unlock()
 	addr := con.client.getNextAddress()
 
 	newGlobalInbox(addr, con.client)
@@ -49,9 +50,13 @@ func newArbFactoryWatcher(address common.Address, client *goEthdata) (*arbFactor
 }
 
 func (con *arbFactoryWatcher) GlobalInboxAddress() (common.Address, error) {
+	con.client.goEthMutex.Lock()
+	defer con.client.goEthMutex.Unlock()
 	return con.rollupAddress, nil
 }
 
 func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
+	con.client.goEthMutex.Lock()
+	defer con.client.goEthMutex.Unlock()
 	return con.rollupAddress, nil
 }

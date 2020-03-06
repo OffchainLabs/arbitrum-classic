@@ -51,10 +51,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	}
 	var client arbbridge.ArbAuthClient
 	if test.UseGoEth() {
-		client, err = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
-		if err != nil {
-			t.Fatal(err)
-		}
+		client = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
 	} else {
 		ethclint, err := ethclient.Dial(ethURL)
 		if err != nil {

@@ -21,9 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"log"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,13 +31,16 @@ var errReorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-func NewEthClient(ethURL string) *goEthdata {
+func newEthClient(ethURL string) *goEthdata {
 	return getGoEth(ethURL)
 }
 
 func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIDChan := make(chan arbbridge.MaybeBlockId, 100)
 
+	if startBlockID == nil {
+		startBlockID = c.rootBlock
+	}
 	blockIDChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
 	prevBlockID := startBlockID
 	go func() {
@@ -47,16 +48,21 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 
 		for {
 			var nextBlock *common.BlockId
-			fetchErrorCount := 0
 			for {
-				if prevBlockID == nil {
-					fmt.Println("prevBlockID nil")
+				c.goEthMutex.Lock()
+				var headerHash common.Hash
+				nextBlock = nil
+				if prevBlockID.Height.Cmp(c.LastMinedBlock.Height) < 0 {
+					nextBlock = c.blockNumbers[prevBlockID.Height.AsInt().Uint64()+1]
+					headerHash = c.parentHashes[*nextBlock]
 				}
-				nextHeight := common.NewTimeBlocks(new(big.Int).Add(prevBlockID.Height.AsInt(), big.NewInt(1)))
-				n, notFound := c.getBlockFromHeight(nextHeight)
-				if notFound == nil {
-					// Got next header
-					nextBlock = n
+				c.goEthMutex.Unlock()
+
+				if nextBlock != nil {
+					if headerHash != prevBlockID.HeaderHash {
+						blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
+						return
+					}
 					break
 				}
 
@@ -67,26 +73,9 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 				default:
 				}
 
-				if notFound != nil {
-					log.Printf("Failed to fetch next header on attempt %v", fetchErrorCount)
-					fetchErrorCount++
-				}
-
-				if fetchErrorCount >= maxFetchAttempts {
-					err := fmt.Sprint("Next header not found after ", fetchErrorCount, " attempts")
-					blockIDChan <- arbbridge.MaybeBlockId{Err: errors.New(err)}
-					return
-				}
-
 				// Header was not found so wait before checking again
 				time.Sleep(headerRetryDelay)
 			}
-
-			if c.parentHashes[*nextBlock] != prevBlockID.HeaderHash {
-				blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
-				return
-			}
-
 			prevBlockID = nextBlock
 			blockIDChan <- arbbridge.MaybeBlockId{BlockId: prevBlockID}
 		}
@@ -96,38 +85,56 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 }
 
 func (c *goEthdata) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newArbFactoryWatcher(address, c)
 }
 
 func (c *goEthdata) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newRollupWatcher(address, c)
 }
 
 func (c *goEthdata) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
-	return newExecutionChallengeWatcher(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return newChallengeWatcher(address, c)
 }
 
 func (c *goEthdata) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
-	return newMessagesChallengeWatcher(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return newChallengeWatcher(address, c)
 }
 
 func (c *goEthdata) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
-	return newInboxTopChallengeWatcher(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return newChallengeWatcher(address, c)
 }
 
 func (c *goEthdata) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newOneStepProof(address, c)
 }
 
 func (c *goEthdata) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
-	return c.balances[account], nil
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return c.ethWallet[account], nil
 }
 
 func (c *goEthdata) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return c.LastMinedBlock, nil
 }
 
 func (c *goEthdata) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	block, err := c.getBlockFromHeight(height)
 	if err != nil {
 		errstr := fmt.Sprintln("block height", height, " not found")
@@ -137,7 +144,6 @@ func (c *goEthdata) BlockIdForHeight(ctx context.Context, height *common.TimeBlo
 }
 
 type TransOpts struct {
-	sync.Mutex
 	From common.Address
 }
 
@@ -146,51 +152,70 @@ type GoArbAuthClient struct {
 	fromAddr common.Address
 }
 
-func NewEthAuthClient(ethURL string, fromAddr common.Address) (*GoArbAuthClient, error) {
-	client := NewEthClient(ethURL)
+func NewEthAuthClient(ethURL string, fromAddr common.Address) *GoArbAuthClient {
+	client := newEthClient(ethURL)
+	client.goEthMutex.Lock()
+	defer client.goEthMutex.Unlock()
 
-	client.balances[fromAddr] = big.NewInt(1000) // give client a default balance of 1000
+	client.ethWallet[fromAddr] = big.NewInt(1000) // give client a default balance of 1000
 	return &GoArbAuthClient{
 		goEthdata: client,
 		fromAddr:  fromAddr,
-	}, nil
+	}
 }
 
 func (c *GoArbAuthClient) Address() common.Address {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return c.fromAddr
 }
 
 func (c *GoArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newArbFactory(address, c)
 }
 
 func (c *GoArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return newRollupContract(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return getRollupContract(address, c)
 }
 
 func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newGlobalInbox(address, c)
 }
 
 func (c *GoArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
-	return newChallengeFactory(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	//return newChallengeFactory(address, c)
+	return nil, nil
 }
 
 func (c *GoArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	return newExecutionChallenge(address, c)
 }
 
 func (c *GoArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newMessagesChallenge(address, c)
 }
 
 func (c *GoArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	return newInboxTopChallenge(address, c)
 }
 
 func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (arbbridge.ChallengeTester, error) {
-	//c.auth.Lock()
-	//defer c.auth.Unlock()
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
 	tester, err := NewChallengeTester(c)
 	if err != nil {
 		return nil, err
@@ -199,8 +224,8 @@ func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFact
 }
 
 func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
-	//c.auth.Lock()
-	//defer c.auth.Unlock()
-	osp, err := newOneStepProof(c.Address(), c.goEthdata)
+	c.goEthMutex.Lock()
+	defer c.goEthMutex.Unlock()
+	osp, err := newOneStepProof(c.fromAddr, c.goEthdata)
 	return osp, err
 }

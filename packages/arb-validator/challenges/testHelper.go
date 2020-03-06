@@ -82,16 +82,8 @@ func testChallenge(
 	var client2 arbbridge.ArbAuthClient
 	if test.UseGoEth() {
 		fmt.Println("in testChallenge UseGoEth")
-		c, err := gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth1.From))
-		if err != nil {
-			return err
-		}
-		client1 = c
-		c2, err := gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth2.From))
-		if err != nil {
-			return err
-		}
-		client2 = c2
+		client1 = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth1.From))
+		client2 = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth2.From))
 	} else {
 		ethclint1, err := ethclient.Dial(ethURL)
 		if err != nil {

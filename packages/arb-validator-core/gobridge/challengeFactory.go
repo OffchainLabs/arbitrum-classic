@@ -23,12 +23,46 @@ import (
 )
 
 type challengeFactory struct {
-	contract common.Address
-	client   *GoArbAuthClient
+	challengeFactoryContract common.Address
+	client                   *GoArbAuthClient
+}
+
+func deployChallengeFactory(m *goEthdata) {
+	m.challenges = make(map[common.Address]*challenge)
+	m.challengeFactoryContract = &challengeFactory{
+		challengeFactoryContract: m.getNextAddress(),
+		client:                   nil,
+	}
 }
 
 func newChallengeFactory(address common.Address, client *GoArbAuthClient) (*challengeFactory, error) {
-	return &challengeFactory{address, client}, nil
+	client.challengeFactoryContract.client = client
+	return client.challengeFactoryContract, nil
+}
+
+func (con *challengeFactory) createChallenge(
+	ctx context.Context,
+	asserter common.Address,
+	challenger common.Address,
+	challengePeriod common.TimeTicks,
+	challengeHash common.Hash,
+	challengeType *big.Int,
+) (common.Address, error) {
+	challengeAddr := con.client.getNextAddress()
+	con.client.challenges[challengeAddr] = &challenge{
+		client: con.client,
+		challengeData: &challengeData{
+			deadline:             common.TicksFromBlockNum(con.client.getCurrentBlock().Height).Add(challengePeriod),
+			challengerDataHash:   challengeHash,
+			state:                asserterTurn,
+			challengePeriodTicks: challengePeriod,
+			asserter:             asserter,
+			challenger:           challenger,
+			challengeType:        challengeType,
+		},
+		contractAddress: challengeAddr,
+	}
+	return challengeAddr, nil
 }
 
 func (con *challengeFactory) CreateChallenge(
@@ -39,12 +73,14 @@ func (con *challengeFactory) CreateChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {
-	challenge := con.client.getNextAddress()
-	con.client.challenges[challenge] = &challengeData{
-		challengePeriodTicks: challengePeriod,
-		asserter:             asserter,
-		challenger:           challenger,
-		challengeType:        challengeType,
-	}
-	return challenge, nil
+	con.client.goEthMutex.Lock()
+	defer con.client.goEthMutex.Unlock()
+	return con.createChallenge(
+		ctx,
+		asserter,
+		challenger,
+		challengePeriod,
+		challengeHash,
+		challengeType,
+	)
 }

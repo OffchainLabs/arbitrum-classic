@@ -101,6 +101,10 @@ func ValidateRollupChain(execName string, managerCreationFunc func(rollupAddress
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
+	err := validateCmd.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
 	if validateCmd.NArg() != 3 {
 		return fmt.Errorf("usage: %v validate [--password=pass] [--rpc] [--blocktime=NumSeconds] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <rollup_address>", execName)
 	}
@@ -157,11 +161,7 @@ func ValidateRollupChainInt(
 	var client arbbridge.ArbAuthClient
 	if test.UseGoEth() {
 		fmt.Println("using goBridge")
-		c, err := gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
-		if err != nil {
-			log.Fatal(err)
-		}
-		client = c
+		client = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth.From))
 	} else {
 		ethclient, err := ethclient.Dial(ethURL)
 		if err != nil {
