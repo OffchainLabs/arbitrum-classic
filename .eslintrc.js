@@ -40,6 +40,7 @@ module.exports = {
           { functions: true },
         ],
         '@typescript-eslint/member-delimiter-style': ['off'],
+        '@typescript-eslint/no-explicit-any': ['warn'],
       },
     },
   ],
