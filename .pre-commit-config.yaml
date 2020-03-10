@@ -1,46 +1,47 @@
 exclude: |
-    (?x)(
-        ^packages/arb-avm-cpp/external/keccak/|
-        ^packages/arb-bridge-eth/installed_contracts/
-    )
+  (?x)(
+      ^packages/arb-avm-cpp/external/keccak/|
+      ^packages/arb-bridge-eth/installed_contracts/
+  )
 repos:
-    - repo: https://github.com/psf/black
-      rev: stable
-      hooks:
-          - id: black
-            language_version: python3
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v1.2.3
-      hooks:
-          - id: flake8
-    - repo: git://github.com/doublify/pre-commit-clang-format
-      rev: master
-      hooks:
-          - id: clang-format
-    - repo: git://github.com/dnephin/pre-commit-golang
-      rev: master
-      hooks:
-          - id: go-fmt
-    - repo: https://github.com/prettier/prettier
-      rev: "" # Use the sha or tag you want to point at
-      hooks:
-          - id: prettier
-    - repo: https://github.com/pre-commit/mirrors-eslint
-      rev: "" # Use the sha / tag you want to point at
-      hooks:
-          - id: eslint
-            args: [--fix]
-            types: [text]
-            files: '\.(js|ts)$'
-            additional_dependencies:
-                - "eslint@6.2.0"
-                - "typescript"
-                - "prettier"
-                - "@typescript-eslint/parser@2.0.0"
-                - "@typescript-eslint/eslint-plugin@2.0.0"
-                - eslint-config-prettier@6.0.0
-                - eslint-plugin-prettier@3.1.0
-    - repo: https://github.com/syntaqx/git-hooks
-      rev: v0.0.16
-      hooks:
-          - id: circleci-config-validate
+  - repo: https://github.com/psf/black
+    rev: stable
+    hooks:
+      - id: black
+        language_version: python3
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.2.3
+    hooks:
+      - id: flake8
+  - repo: git://github.com/doublify/pre-commit-clang-format
+    rev: master
+    hooks:
+      - id: clang-format
+  - repo: git://github.com/dnephin/pre-commit-golang
+    rev: master
+    hooks:
+      - id: go-fmt
+  - repo: https://github.com/prettier/prettier
+    rev: '' # Use the sha or tag you want to point at
+    hooks:
+      - id: prettier
+        args: [--config=.prettierrc.js]
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: '' # Use the sha / tag you want to point at
+    hooks:
+      - id: eslint
+        args: [--fix]
+        types: [text]
+        files: '\.(js|ts)$'
+        additional_dependencies:
+          - 'eslint@6.2.0'
+          - 'typescript'
+          - 'prettier'
+          - '@typescript-eslint/parser@2.0.0'
+          - '@typescript-eslint/eslint-plugin@2.0.0'
+          - eslint-config-prettier@6.0.0
+          - eslint-plugin-prettier@3.1.0
+  - repo: https://github.com/syntaqx/git-hooks
+    rev: v0.0.16
+    hooks:
+      - id: circleci-config-validate

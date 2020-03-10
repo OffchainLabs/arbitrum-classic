@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
+'use strict'
 
-import * as ArbValue from './lib/value';
+import * as ArbValue from './lib/value'
 
-export { ArbRollupFactory } from './lib/abi/ArbRollupFactory';
-export { GlobalInboxFactory } from './lib/abi/GlobalInboxFactory';
-export { ArbFactoryFactory } from './lib/abi/ArbFactoryFactory';
+export { ArbRollupFactory } from './lib/abi/ArbRollupFactory'
+export { GlobalInboxFactory } from './lib/abi/GlobalInboxFactory'
+export { ArbFactoryFactory } from './lib/abi/ArbFactoryFactory'
 
-export { ArbValue };
-export { ArbProvider } from './lib/provider';
+export { ArbValue }
+export { ArbProvider } from './lib/provider'
