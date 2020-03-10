@@ -27,16 +27,11 @@ type challengeFactory struct {
 	client                   *GoArbAuthClient
 }
 
-func deployChallengeFactory(m *goEthdata) {
-	m.challenges = make(map[common.Address]*challenge)
-	m.challengeFactoryContract = &challengeFactory{
-		challengeFactoryContract: m.getNextAddress(),
-		client:                   nil,
-	}
-}
-
 func newChallengeFactory(address common.Address, client *GoArbAuthClient) (*challengeFactory, error) {
-	client.challengeFactoryContract.client = client
+	client.challengeFactoryContract = &challengeFactory{
+		challengeFactoryContract: client.getNextAddress(),
+		client:                   client,
+	}
 	return client.challengeFactoryContract, nil
 }
 

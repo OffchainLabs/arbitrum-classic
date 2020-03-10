@@ -66,14 +66,12 @@ func (c *bisectionChallenge) chooseSegment(
 	//
 	c.challengerResponded()
 	c.challenge.challengeData.challengerDataHash = segments[segmentToChallenge]
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.ContinueChallengeEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			SegmentIndex: big.NewInt(int64(segmentToChallenge)),
-			Deadline:     c.challenge.challengeData.deadline,
+	c.client.pubMsg(c.contractAddress, arbbridge.ContinueChallengeEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
+		SegmentIndex: big.NewInt(int64(segmentToChallenge)),
+		Deadline:     c.challenge.challengeData.deadline,
 	})
 
 	return nil

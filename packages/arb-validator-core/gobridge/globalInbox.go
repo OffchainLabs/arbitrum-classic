@@ -50,20 +50,21 @@ func (ib *inbox) addMessageToInbox(msg common.Hash) {
 	ib.count = new(big.Int).Add(ib.count, big.NewInt(1))
 }
 
-func deployGlobalInbox(m *goEthdata) {
-	m.globalInbox = &globalInbox{
-		ethData:         m,
+func newGlobalInbox(address common.Address, client *GoArbAuthClient) (*globalInbox, error) {
+	return &globalInbox{
+		inboxMutex:      sync.Mutex{},
+		ethData:         client.goEthdata,
 		inbox:           make(map[common.Address]*inbox),
-		contractAddress: m.getNextAddress(),
-	}
+		contractAddress: client.getNextAddress(),
+	}, nil
 }
 
-func newGlobalInbox(address common.Address, client *GoArbAuthClient) (*globalInbox, error) {
+func newInbox(address common.Address, client *GoArbAuthClient) (*inbox, error) {
 	client.globalInbox.inbox[address] = &inbox{
 		value: value.NewEmptyTuple().Hash(),
 		count: big.NewInt(0),
 	}
-	return client.globalInbox, nil
+	return client.globalInbox.inbox[address], nil
 }
 
 func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
@@ -92,13 +93,11 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 		BlockNum: con.ethData.getCurrentBlock().Height,
 	}
 
-	con.ethData.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.MessageDeliveredEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.ethData.getCurrentBlock(),
-			},
-			Message: msg,
+	con.ethData.pubMsg(con.contractAddress, arbbridge.MessageDeliveredEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: con.ethData.getCurrentBlock(),
 		},
+		Message: msg,
 	})
 
 	return nil
@@ -121,22 +120,20 @@ func (con *globalInbox) DeliverTransactionBatch(
 
 		con.inbox[chain].addMessageToInbox(msgHash)
 
-		con.ethData.pubMsg(nil, arbbridge.MaybeEvent{
-			Event: arbbridge.MessageDeliveredEvent{
-				ChainInfo: arbbridge.ChainInfo{
-					BlockId: con.ethData.getCurrentBlock(),
+		con.ethData.pubMsg(con.contractAddress, arbbridge.MessageDeliveredEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: con.ethData.getCurrentBlock(),
+			},
+			Message: message.DeliveredTransaction{
+				Transaction: message.Transaction{
+					Chain:       chain,
+					To:          tx.To,
+					From:        tx.From,
+					SequenceNum: tx.SequenceNum,
+					Value:       tx.Value,
+					Data:        tx.Data,
 				},
-				Message: message.DeliveredTransaction{
-					Transaction: message.Transaction{
-						Chain:       chain,
-						To:          tx.To,
-						From:        tx.From,
-						SequenceNum: tx.SequenceNum,
-						Value:       tx.Value,
-						Data:        tx.Data,
-					},
-					BlockNum: con.ethData.getCurrentBlock().Height,
-				},
+				BlockNum: con.ethData.getCurrentBlock().Height,
 			},
 		})
 	}
@@ -152,9 +149,8 @@ func (con *globalInbox) DepositEthMessage(
 	con.inboxMutex.Lock()
 	defer con.inboxMutex.Unlock()
 	// depositEth
-	if _, ok := con.ethData.ethWallet[vmAddress]; ok {
-		con.ethData.ethWallet[vmAddress] = new(big.Int).Add(con.ethData.ethWallet[vmAddress], value)
-	}
+	depositEth(con.ethData, vmAddress, destination, value)
+
 	//deliverEthMessage
 	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 
@@ -171,13 +167,11 @@ func (con *globalInbox) DepositEthMessage(
 
 	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.ethData.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.MessageDeliveredEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.ethData.getCurrentBlock(),
-			},
-			Message: msg,
+	con.ethData.pubMsg(con.contractAddress, arbbridge.MessageDeliveredEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: con.ethData.getCurrentBlock(),
 		},
+		Message: msg,
 	})
 	return nil
 }
@@ -191,6 +185,10 @@ func (con *globalInbox) DepositERC20Message(
 ) error {
 	con.inboxMutex.Lock()
 	defer con.inboxMutex.Unlock()
+	// deposit ERC20
+	depositERC20(con.ethData, destination, vmAddress, value)
+
+	// send message
 	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 	msg := message.DeliveredERC20{
 		ERC20: message.ERC20{
@@ -205,13 +203,11 @@ func (con *globalInbox) DepositERC20Message(
 	msgHash := msg.CommitmentHash()
 	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.ethData.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.MessageDeliveredEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.ethData.getCurrentBlock(),
-			},
-			Message: msg,
+	con.ethData.pubMsg(con.contractAddress, arbbridge.MessageDeliveredEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: con.ethData.getCurrentBlock(),
 		},
+		Message: msg,
 	})
 	return nil
 }
@@ -225,6 +221,10 @@ func (con *globalInbox) DepositERC721Message(
 ) error {
 	con.inboxMutex.Lock()
 	defer con.inboxMutex.Unlock()
+	// deposit ERC721
+	depositERC721(con.ethData, destination, vmAddress, value)
+
+	// send message
 	msgNum := new(big.Int).Add(con.inbox[vmAddress].count, big.NewInt(1))
 	msg := message.DeliveredERC721{
 		ERC721: message.ERC721{
@@ -239,13 +239,11 @@ func (con *globalInbox) DepositERC721Message(
 	msgHash := msg.CommitmentHash()
 	con.inbox[vmAddress].addMessageToInbox(msgHash)
 
-	con.ethData.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.MessageDeliveredEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: con.ethData.getCurrentBlock(),
-			},
-			Message: msg,
+	con.ethData.pubMsg(con.contractAddress, arbbridge.MessageDeliveredEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: con.ethData.getCurrentBlock(),
 		},
+		Message: msg,
 	})
 	return nil
 }
@@ -257,8 +255,8 @@ func (con *globalInbox) GetTokenBalance(
 ) (*big.Int, error) {
 	con.inboxMutex.Lock()
 	defer con.inboxMutex.Unlock()
-	//TODO: clean up token and ethWallet functionality
-	return con.ethData.ethWallet[user], nil
+	// getERC20Balance
+	return con.ethData.ftWallets[user].ftList[tokenContract], nil
 }
 
 func (m *goEthdata) deliverMessage(address common.Address, msgHash common.Hash) {

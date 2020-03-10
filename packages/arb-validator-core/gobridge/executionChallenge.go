@@ -83,7 +83,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		logAccs[bisectionCount],
 	)
 
-	if !c.client.challenges[c.contractAddress].challengeData.challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
+	if !c.challengeData.challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
 		return errors.New("BisectAssertion Incorrect previous state")
 	}
 
@@ -126,15 +126,13 @@ func (c *ExecutionChallenge) BisectAssertion(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.ExecutionBisectionEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			Assertions: assertions,
-			TotalSteps: totalSteps,
-			Deadline:   c.client.challenges[c.contractAddress].challengeData.deadline,
+	c.client.pubMsg(c.contractAddress, arbbridge.ExecutionBisectionEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
+		Assertions: assertions,
+		TotalSteps: totalSteps,
+		Deadline:   c.challengeData.deadline,
 	})
 
 	return nil
@@ -152,7 +150,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	precondition.Hash()
 
 	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
-	if !c.client.challenges[c.contractAddress].challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
@@ -174,27 +172,13 @@ func (c *ExecutionChallenge) OneStepProof(
 	// for now make OSP always valid
 
 	//	require(correctProof == 0, OSP_PROOF);
-	//	emit OneStepProofCompleted();
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-		},
-	})
 
-	//c.client.GoEthClient.pubMsg(arbbridge.MaybeEvent{
-	//	Event: arbbridge.ChallengeCompletedEvent{
-	//		ChainInfo: arbbridge.ChainInfo{
-	//			BlockId: c.client.GoEthClient.getCurrentBlock(),
-	//		},
-	//		Winner:            c.client.GoEthClient.challenges[c.contractAddress].asserter,
-	//		Loser:             c.client.GoEthClient.challenges[c.contractAddress].challenger,
-	//		ChallengeContract: c.contractAddress,
-	//	},
-	//})
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		}})
 
-	//	_asserterWin();
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 
 	return nil
 }

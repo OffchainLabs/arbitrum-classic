@@ -118,9 +118,7 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 		Staker:   vm.client.fromAddr,
 		NodeHash: location,
 	}
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: event,
-	})
+	vm.client.pubMsg(vm.contractAddress, event)
 	return nil
 }
 
@@ -131,6 +129,10 @@ func createStake(vm *arbRollup, stakeAmount *big.Int, location common.Hash) erro
 	if _, ok := vm.rollup.stakers[vm.client.fromAddr]; ok {
 		return errors.New("staker already exists")
 	}
+	err := transferEth(vm.client.goEthdata, vm.contractAddress, vm.client.fromAddr, stakeAmount)
+	if err != nil {
+		return err
+	}
 	vm.rollup.stakers[vm.client.fromAddr] = &staker{location, vm.client.getCurrentBlock().Height, false, stakeAmount}
 
 	return nil
@@ -138,15 +140,15 @@ func createStake(vm *arbRollup, stakeAmount *big.Int, location common.Hash) erro
 
 func refundStaker(vm *arbRollup, staker common.Address) {
 	delete(vm.rollup.stakers, staker)
-	vm.client.ethWallet[staker] = new(big.Int).Add(vm.client.ethWallet[staker], vm.rollup.chainParams.StakeRequirement)
+	transferEth(vm.client.goEthdata, staker, vm.contractAddress, vm.rollup.chainParams.StakeRequirement)
 
-	vm.client.rollups[vm.client.Address()].rollup.events[vm.client.getCurrentBlock()] = append(vm.client.rollups[vm.client.Address()].rollup.events[vm.client.getCurrentBlock()], arbbridge.StakeRefundedEvent{
-		ChainInfo: arbbridge.ChainInfo{
-			BlockId: vm.client.getCurrentBlock(),
-		},
-		Staker: staker,
-	})
-
+	vm.client.pubMsg(vm.contractAddress,
+		arbbridge.StakeRefundedEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: vm.client.getCurrentBlock(),
+			},
+			Staker: staker,
+		})
 }
 
 func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error {
@@ -166,14 +168,14 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	refundStaker(vm, vm.client.fromAddr)
 
 	//emit RollupStakeRefunded(contractAddress(_stakerAddress));
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.StakeRefundedEvent{
+	vm.client.pubMsg(vm.contractAddress,
+		arbbridge.StakeRefundedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: vm.client.getCurrentBlock(),
 			},
 			Staker: vm.client.fromAddr,
 		},
-	})
+	)
 
 	return nil
 }
@@ -247,14 +249,14 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	}
 	vm.rollup.stakers[vm.client.fromAddr].location = newLocation
 	//emit RollupStakeRefunded(contractAddress(_stakerAddress));
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.StakeRefundedEvent{
+	vm.client.pubMsg(vm.contractAddress,
+		arbbridge.StakeRefundedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: vm.client.getCurrentBlock(),
 			},
 			Staker: vm.client.fromAddr,
 		},
-	})
+	)
 
 	return nil
 }
@@ -270,14 +272,14 @@ func (vm *arbRollup) pruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	}
 	delete(vm.rollup.leaves, leaf)
 
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.PrunedEvent{
+	vm.client.pubMsg(vm.contractAddress,
+		arbbridge.PrunedEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: vm.client.getCurrentBlock(),
 			},
 			Leaf: leaf,
 		},
-	})
+	)
 
 	return nil
 }
@@ -446,9 +448,7 @@ func (vm *arbRollup) MakeAssertion(
 		MaxInboxTop:   beforeState.InboxTop,
 		MaxInboxCount: beforeState.InboxCount,
 	}
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: event,
-	})
+	vm.client.pubMsg(vm.contractAddress, event)
 
 	if calculatePath(vm.rollup.stakers[vm.client.fromAddr].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
@@ -462,9 +462,7 @@ func (vm *arbRollup) MakeAssertion(
 		Staker:   vm.client.fromAddr,
 		Location: valid,
 	}
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: stakeMovedEvent,
-	})
+	vm.client.pubMsg(vm.contractAddress, stakeMovedEvent)
 
 	return nil
 }
@@ -538,9 +536,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 		},
 		NodeHash: confNode,
 	}
-	vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: confirmedEvent,
-	})
+	vm.client.pubMsg(vm.contractAddress, confirmedEvent)
 
 	// Send all messages is a single batch
 	//globalInbox.sendMessages(data.messages);
@@ -557,46 +553,27 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			if err != nil {
 				return errors.New("invalid message")
 			}
-			err = transferEth(vm.client.goEthdata, ethMsg)
+			err = transferEth(vm.client.goEthdata, ethMsg.To, ethMsg.From, ethMsg.Value)
 		case message.ERC20Type:
-			//erc20Msg, err := message.UnmarshalERC20(msg)
-			//if err != nil {
-			//	return errors.New("invalid message")
-			//}
-			//err = transferEth(vm.client.goEthdata, ethMsg)
+			//transfer ERC20(msg.sender, to, erc20, value)
+			erc20Msg, err := message.UnmarshalERC20(msg)
+			if err != nil {
+				return errors.New("invalid message")
+			}
+			if !transferERC20(vm.client.goEthdata, erc20Msg) {
+				return errors.New("token transfer error")
+			}
+
 		case message.ERC721Type:
+			erc721Msg, err := message.UnmarshalERC721(msg)
+			if err != nil {
+				return errors.New("invalid message")
+			}
+			if !transferNFTToken(vm.client.goEthdata, erc721Msg) {
+				return errors.New("token transfer error")
+			}
 
 		}
-		//} else if (messageType == ERC20_DEPOSIT) {
-		//	(
-		//		bool valid,
-		//		uint256 offset,
-		//		address erc20,
-		//		address to,
-		//		uint256 value
-		//	) = Value.getERCTokenMsgData(_messages, startOffset);
-		//	if (!valid) {
-		//		return (false, startOffset);
-		//	}
-		//	transferERC20(msg.sender, to, erc20, value);
-		//	return (true, offset);
-		//} else if (messageType == ERC721_DEPOSIT) {
-		//	(
-		//		bool valid,
-		//		uint256 offset,
-		//		address erc721,
-		//		address to,
-		//		uint256 value
-		//	) = Value.getERCTokenMsgData(_messages, startOffset);
-		//	if (!valid) {
-		//		return (false, startOffset);
-		//	}
-		//	transferNFT(msg.sender, to, erc721, value);
-		//	return (true, offset);
-		//} else {
-		//	return (false, startOffset);
-		//}
-
 	}
 
 	if validNum > 0 {
@@ -605,19 +582,8 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 				BlockId: vm.client.getCurrentBlock(),
 			},
 		}
-		vm.client.pubMsg(nil, arbbridge.MaybeEvent{
-			Event: confirmedAssertionEvent,
-		})
+		vm.client.pubMsg(vm.contractAddress, confirmedAssertionEvent)
 	}
-	return nil
-}
-
-func transferEth(ethClient *goEthdata, ethMsg message.Eth) error {
-	if ethMsg.Value.Cmp(ethClient.ethWallet[ethMsg.From]) > 0 {
-		return errors.New("insufficient eth")
-	}
-	ethClient.ethWallet[ethMsg.From] = new(big.Int).Sub(ethClient.ethWallet[ethMsg.From], ethMsg.Value)
-	ethClient.ethWallet[ethMsg.To] = new(big.Int).Add(ethClient.ethWallet[ethMsg.To], ethMsg.Value)
 	return nil
 }
 
@@ -705,27 +671,23 @@ func (vm *arbRollup) StartChallenge(
 	//save data
 	// deadline = current + challenge period
 	//eth.challenges[newAddr].deadline = common.TicksFromBlockNum(eth.LastMinedBlock.Height).Add(challengerPeriodTicks)
-	eth.challenges[challengeAddress].challengeData.deadline = common.TicksFromBlockNum(eth.getCurrentBlock().Height).Add(challengerPeriodTicks)
+	//eth.challenges[challengeAddress].challengeData.deadline = common.TicksFromBlockNum(eth.getCurrentBlock().Height).Add(challengerPeriodTicks)
 	// emit InitiatedChallenge
-	eth.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.InitiateChallengeEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: eth.getCurrentBlock(),
-			},
-			Deadline: eth.challenges[challengeAddress].challengeData.deadline,
+	eth.pubMsg(vm.contractAddress, arbbridge.InitiateChallengeEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: eth.getCurrentBlock(),
 		},
+		Deadline: eth.challenges[challengeAddress].challengeData.deadline,
 	})
 
-	eth.pubMsg(nil, arbbridge.MaybeEvent{
-		Event: arbbridge.ChallengeStartedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: eth.getCurrentBlock(),
-			},
-			Asserter:          asserterAddress,
-			Challenger:        challengerAddress,
-			ChallengeType:     asserterPosition,
-			ChallengeContract: challengeAddress,
+	eth.pubMsg(vm.contractAddress, arbbridge.ChallengeStartedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: eth.getCurrentBlock(),
 		},
+		Asserter:          asserterAddress,
+		Challenger:        challengerAddress,
+		ChallengeType:     asserterPosition,
+		ChallengeContract: challengeAddress,
 	})
 	return nil
 }

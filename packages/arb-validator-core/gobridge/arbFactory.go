@@ -11,14 +11,6 @@ type arbFactory struct {
 	client                *GoArbAuthClient
 }
 
-func deployRollupFactory(m *goEthdata) {
-	m.rollups = make(map[common.Address]*arbRollup)
-	m.arbFactoryContract = &arbFactory{
-		rollupContractAddress: m.getNextAddress(),
-		client:                nil,
-	}
-}
-
 func newArbFactory(address common.Address, client *GoArbAuthClient) (*arbFactory, error) {
 	client.arbFactoryContract.client = client
 	return client.arbFactoryContract, nil
@@ -34,7 +26,7 @@ func (con *arbFactory) CreateRollup(
 	defer con.client.goEthMutex.Unlock()
 	addr := con.client.getNextAddress()
 
-	newGlobalInbox(addr, con.client)
+	newInbox(addr, con.client)
 	newRollup(con, addr, vmState, params, owner)
 
 	return addr, nil

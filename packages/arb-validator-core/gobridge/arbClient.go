@@ -36,15 +36,15 @@ func newEthClient(ethURL string) *goEthdata {
 }
 
 func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
-	blockIDChan := make(chan arbbridge.MaybeBlockId, 100)
+	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
 
 	if startBlockID == nil {
 		startBlockID = c.rootBlock
 	}
-	blockIDChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
+	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockID}
 	prevBlockID := startBlockID
 	go func() {
-		defer close(blockIDChan)
+		defer close(blockIdChan)
 
 		for {
 			var nextBlock *common.BlockId
@@ -60,7 +60,7 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 
 				if nextBlock != nil {
 					if headerHash != prevBlockID.HeaderHash {
-						blockIDChan <- arbbridge.MaybeBlockId{Err: errReorgError}
+						blockIdChan <- arbbridge.MaybeBlockId{Err: errReorgError}
 						return
 					}
 					break
@@ -77,11 +77,11 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 				time.Sleep(headerRetryDelay)
 			}
 			prevBlockID = nextBlock
-			blockIDChan <- arbbridge.MaybeBlockId{BlockId: prevBlockID}
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockID}
 		}
 	}()
 
-	return blockIDChan, nil
+	return blockIdChan, nil
 }
 
 func (c *goEthdata) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
@@ -191,8 +191,7 @@ func (c *GoArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.Glob
 func (c *GoArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
 	c.goEthMutex.Lock()
 	defer c.goEthMutex.Unlock()
-	//return newChallengeFactory(address, c)
-	return nil, nil
+	return newChallengeFactory(address, c)
 }
 
 func (c *GoArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
@@ -228,4 +227,28 @@ func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.One
 	defer c.goEthMutex.Unlock()
 	osp, err := newOneStepProof(c.fromAddr, c.goEthdata)
 	return osp, err
+}
+
+func deployRollupFactory(m *goEthdata) {
+	m.rollups = make(map[common.Address]*arbRollup)
+	m.arbFactoryContract = &arbFactory{
+		rollupContractAddress: m.getNextAddress(),
+		client:                nil,
+	}
+}
+
+func deployGlobalInbox(m *goEthdata) {
+	m.globalInbox = &globalInbox{
+		ethData:         m,
+		inbox:           make(map[common.Address]*inbox),
+		contractAddress: m.getNextAddress(),
+	}
+}
+
+func deployChallengeFactory(m *goEthdata) {
+	m.challenges = make(map[common.Address]*challenge)
+	m.challengeFactoryContract = &challengeFactory{
+		challengeFactoryContract: m.getNextAddress(),
+		client:                   nil,
+	}
 }

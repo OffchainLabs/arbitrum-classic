@@ -82,16 +82,14 @@ func (c *messagesChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.MessagesBisectionEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			ChainHashes:   chainHashes,
-			SegmentHashes: segmentHashes,
-			TotalLength:   chainLength,
-			Deadline:      c.client.challenges[c.contractAddress].challengeData.deadline,
+	c.client.pubMsg(c.contractAddress, arbbridge.MessagesBisectionEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
+		ChainHashes:   chainHashes,
+		SegmentHashes: segmentHashes,
+		TotalLength:   chainLength,
+		Deadline:      c.client.challenges[c.contractAddress].challengeData.deadline,
 	})
 
 	return nil
@@ -121,15 +119,12 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	if !c.challenge.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofTransactionMessage Incorrect previous state")
 	}
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	// TODO: challenge resolution
-	// resolveChallengeAsserterWon
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 
 	return nil
 }
@@ -170,35 +165,11 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		return errors.New("OneStepProofEthMessage Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-		},
-	})
-	// TODO: handle stake distribution
-	//	_asserterWin();
-	//		resolveChallengeAsserterWon();
-	//			require(challenges[msg.sender], RES_CHAL_SENDER);
-	//			delete challenges[msg.sender];
-	//
-	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
-	//			winner.transfer(stakeRequirement / 2);
-	//			winningStaker.inChallenge = false;
-	//			deleteStaker(loser);
-	//
-	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.ChallengeCompletedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			Winner:            msg.From,
-			Loser:             msg.To,
-			ChallengeContract: c.contractAddress,
-		},
-	})
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		}})
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 
 	return nil
 }
@@ -239,35 +210,11 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		return errors.New("OneStepProofERC20Message Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-		},
-	})
-	// TODO: handle stake distribution
-	//	_asserterWin();
-	//		resolveChallengeAsserterWon();
-	//			require(challenges[msg.sender], RES_CHAL_SENDER);
-	//			delete challenges[msg.sender];
-	//
-	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
-	//			winner.transfer(stakeRequirement / 2);
-	//			winningStaker.inChallenge = false;
-	//			deleteStaker(loser);
-	//
-	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.ChallengeCompletedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			Winner:            msg.From,
-			Loser:             msg.To,
-			ChallengeContract: c.contractAddress,
-		},
-	})
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		}})
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 	return nil
 }
 
@@ -307,35 +254,11 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		return errors.New("OneStepProofERC721Message Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-		},
-	})
-	// TODO: handle stake distribution
-	//	_asserterWin();
-	//		resolveChallengeAsserterWon();
-	//			require(challenges[msg.sender], RES_CHAL_SENDER);
-	//			delete challenges[msg.sender];
-	//
-	//			Staker storage winningStaker = getValidStaker(contractAddress(winner));
-	//			winner.transfer(stakeRequirement / 2);
-	//			winningStaker.inChallenge = false;
-	//			deleteStaker(loser);
-	//
-	//			emit RollupChallengeCompleted(msg.sender, contractAddress(winner), loser);
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.ChallengeCompletedEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			Winner:            msg.From,
-			Loser:             msg.To,
-			ChallengeContract: c.contractAddress,
-		},
-	})
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		}})
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 	return nil
 }
 
@@ -366,15 +289,11 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	if !c.challengeData.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofContractTransactionMessage Incorrect previous state")
 	}
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-		},
-	})
-	// TODO: challenge resolution
-	// resolveChallengeAsserterWon
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		}})
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 
 	return nil
 }

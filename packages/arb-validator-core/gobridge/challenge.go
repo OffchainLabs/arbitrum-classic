@@ -61,21 +61,17 @@ func (c *challenge) TimeoutChallenge(
 		return errors.New("Deadline hasn't expired")
 	}
 	if c.challengeData.state == asserterTurn {
-		c.client.pubMsg(c, arbbridge.MaybeEvent{
-			Event: arbbridge.AsserterTimeoutEvent{
-				ChainInfo: arbbridge.ChainInfo{
-					BlockId: c.client.getCurrentBlock(),
-				},
-			},
-		})
+		c.resolveChallenge(c.challengeData.challenger, c.challengeData.asserter)
+		c.client.pubMsg(c.contractAddress, arbbridge.AsserterTimeoutEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.getCurrentBlock(),
+			}})
 	} else {
-		c.client.pubMsg(c, arbbridge.MaybeEvent{
-			Event: arbbridge.ChallengerTimeoutEvent{
-				ChainInfo: arbbridge.ChainInfo{
-					BlockId: c.client.getCurrentBlock(),
-				},
-			},
-		})
+		c.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+		c.client.pubMsg(c.contractAddress, arbbridge.ChallengerTimeoutEvent{
+			ChainInfo: arbbridge.ChainInfo{
+				BlockId: c.client.getCurrentBlock(),
+			}})
 	}
 	return nil
 }
@@ -99,24 +95,39 @@ func (c *challenge) challengerResponded() {
 
 }
 
+func (c *challenge) resolveChallenge(winner common.Address, loser common.Address) {
+	rollup, ok := c.client.rollups[c.contractAddress]
+	if ok {
+		winningStaker := rollup.rollup.stakers[winner]
+		winningStaker.inChallenge = false
+		transferEth(c.client.goEthdata, winner, loser, rollup.rollup.chainParams.StakeRequirement)
+		delete(c.client.rollups[c.contractAddress].rollup.stakers, loser)
+	}
+	c.client.pubMsg(c.contractAddress, arbbridge.ChallengeCompletedEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
+		},
+		Winner:            winner,
+		Loser:             loser,
+		ChallengeContract: c.contractAddress,
+	})
+
+}
+
 type challengeWatcher struct {
 	client *goEthdata
 	*challenge
-	Challenge common.Address
 }
 
 func newChallengeWatcher(address common.Address, client *goEthdata) (*challengeWatcher, error) {
 	chalData := client.challenges[address]
-	if _, ok := client.challengeWatcherEvents[chalData]; !ok {
-		client.challengeWatcherEvents[chalData] = make(map[*common.BlockId][]arbbridge.Event)
-	}
 
 	return &challengeWatcher{challenge: chalData, client: client}, nil
 }
 
-func (c *challengeWatcher) GetEvents(ctx context.Context, blockID *common.BlockId) ([]arbbridge.Event, error) {
+func (c *challengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	c.client.goEthMutex.Lock()
 	defer c.client.goEthMutex.Unlock()
-	cw := c.client.challengeWatcherEvents[c.challenge][blockID]
-	return cw, nil
+
+	return c.client.blockMsgs[blockId].msgs[c.contractAddress], nil
 }

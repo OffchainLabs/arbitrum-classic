@@ -62,8 +62,6 @@ func (con *ChallengeTester) StartChallenge(
 		},
 		Deadline: eth.challenges[newAddr].challengeData.deadline,
 	}
-	eth.pubMsg(eth.challenges[newAddr], arbbridge.MaybeEvent{
-		Event: InitiateChallengeEvent,
-	})
+	eth.pubMsg(newAddr, InitiateChallengeEvent)
 	return newAddr, eth.getLastBlock(), nil
 }

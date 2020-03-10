@@ -73,15 +73,13 @@ func (c *inboxTopChallenge) Bisect(
 	c.commitToSegment(hashes)
 	c.asserterResponded()
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.InboxTopBisectionEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
-			ChainHashes: chainHashes,
-			TotalLength: chainLength,
-			Deadline:    c.client.challenges[c.contractAddress].challengeData.deadline,
+	c.client.pubMsg(c.contractAddress, arbbridge.InboxTopBisectionEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
+		ChainHashes: chainHashes,
+		TotalLength: chainLength,
+		Deadline:    c.challengeData.deadline,
 	})
 	return nil
 }
@@ -94,18 +92,16 @@ func (c *inboxTopChallenge) OneStepProof(
 	c.client.goEthMutex.Lock()
 	defer c.client.goEthMutex.Unlock()
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
-	if !c.client.challenges[c.contractAddress].challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengeData.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
-	c.client.pubMsg(c.challenge, arbbridge.MaybeEvent{
-		Event: arbbridge.OneStepProofEvent{
-			ChainInfo: arbbridge.ChainInfo{
-				BlockId: c.client.getCurrentBlock(),
-			},
+	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
+		ChainInfo: arbbridge.ChainInfo{
+			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	//_asserterWin()
+	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
 
 	return nil
 }
