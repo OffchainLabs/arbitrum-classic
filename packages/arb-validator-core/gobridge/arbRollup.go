@@ -47,8 +47,8 @@ type rollupData struct {
 }
 
 type arbRollup struct {
+	*rollupData
 	client          *GoArbAuthClient
-	rollup          *rollupData
 	contractAddress common.Address
 }
 
@@ -92,19 +92,19 @@ func newRollup(con *arbFactory,
 	}
 	con.client.rollups[address] = &arbRollup{
 		client:          con.client,
-		rollup:          ruData,
+		rollupData:      ruData,
 		contractAddress: address,
 	}
-	con.client.rollups[address].rollup.leaves[initialNode] = true
+	con.client.rollups[address].leaves[initialNode] = true
 
 }
 
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error {
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
-	location := calculatePath(vm.rollup.lastConfirmed, proof1)
+	location := calculatePath(vm.lastConfirmed, proof1)
 	leaf := calculatePath(location, proof2)
-	if !vm.rollup.leaves[leaf] {
+	if !vm.leaves[leaf] {
 		return errors.New("invalid path proof")
 	}
 	if err := createStake(vm, stakeAmount, location); err != nil {
@@ -123,24 +123,24 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 }
 
 func createStake(vm *arbRollup, stakeAmount *big.Int, location common.Hash) error {
-	if stakeAmount != vm.rollup.chainParams.StakeRequirement {
+	if stakeAmount != vm.chainParams.StakeRequirement {
 		return errors.New("invalid stake amount")
 	}
-	if _, ok := vm.rollup.stakers[vm.client.fromAddr]; ok {
+	if _, ok := vm.stakers[vm.client.fromAddr]; ok {
 		return errors.New("staker already exists")
 	}
 	err := transferEth(vm.client.goEthdata, vm.contractAddress, vm.client.fromAddr, stakeAmount)
 	if err != nil {
 		return err
 	}
-	vm.rollup.stakers[vm.client.fromAddr] = &staker{location, vm.client.getCurrentBlock().Height, false, stakeAmount}
+	vm.stakers[vm.client.fromAddr] = &staker{location, vm.client.getCurrentBlock().Height, false, stakeAmount}
 
 	return nil
 }
 
 func refundStaker(vm *arbRollup, staker common.Address) {
-	delete(vm.rollup.stakers, staker)
-	transferEth(vm.client.goEthdata, staker, vm.contractAddress, vm.rollup.chainParams.StakeRequirement)
+	delete(vm.stakers, staker)
+	transferEth(vm.client.goEthdata, staker, vm.contractAddress, vm.chainParams.StakeRequirement)
 
 	vm.client.pubMsg(vm.contractAddress,
 		arbbridge.StakeRefundedEvent{
@@ -155,12 +155,12 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
 
-	staker, ok := vm.rollup.stakers[vm.client.fromAddr]
+	staker, ok := vm.stakers[vm.client.fromAddr]
 	if !ok {
 		return errors.New("staker not found")
 	}
 
-	if calculatePath(staker.location, proof) != vm.rollup.lastConfirmed {
+	if calculatePath(staker.location, proof) != vm.lastConfirmed {
 		return errors.New("invalid path proof")
 	}
 
@@ -187,11 +187,11 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 		return errors.New("proof must be non-zero length")
 	}
 
-	st, ok := vm.rollup.stakers[staker]
+	st, ok := vm.stakers[staker]
 	if !ok {
 		return errors.New("staker not found")
 	}
-	if calculatePath(st.location, proof) != vm.rollup.lastConfirmed {
+	if calculatePath(st.location, proof) != vm.lastConfirmed {
 		return errors.New("invalid path proof")
 	}
 	refundStaker(vm, staker)
@@ -204,8 +204,8 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 	defer vm.client.goEthMutex.Unlock()
 
 	if latestConfirmedProof[0] == stakerProof[0] ||
-		calculatePath(nodeHash, latestConfirmedProof) == vm.rollup.lastConfirmed ||
-		calculatePath(nodeHash, stakerProof) != vm.rollup.stakers[vm.client.fromAddr].location {
+		calculatePath(nodeHash, latestConfirmedProof) == vm.lastConfirmed ||
+		calculatePath(nodeHash, stakerProof) != vm.stakers[vm.client.fromAddr].location {
 		return errors.New("Invalid conflict proof")
 	}
 	refundStaker(vm, staker)
@@ -224,8 +224,16 @@ func (vm *arbRollup) RecoverStakePassedDeadline(
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
 
-	leaf := calculatePath(vm.rollup.stakers[stakerAddress].location, proof)
-	if !vm.rollup.leaves[leaf] {
+	nextNode, _ := valprotocol.NodeHash(
+		vm.stakers[stakerAddress].location,
+		vmProtoStateHash,
+		common.TimeTicks{deadlineTicks},
+		disputableNodeHashVal,
+		valprotocol.ChildType(childType),
+	)
+
+	leaf := calculatePath(nextNode, proof)
+	if !vm.leaves[leaf] {
 		return errors.New("invalid leaf")
 	}
 
@@ -241,13 +249,13 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
 
-	location := vm.rollup.stakers[vm.client.fromAddr].location
+	location := vm.stakers[vm.client.fromAddr].location
 	newLocation := calculatePath(location, proof1)
 	leaf := calculatePath(newLocation, proof2)
-	if !vm.rollup.leaves[leaf] {
+	if !vm.leaves[leaf] {
 		return errors.New("MoveStake - invalid leaf")
 	}
-	vm.rollup.stakers[vm.client.fromAddr].location = newLocation
+	vm.stakers[vm.client.fromAddr].location = newLocation
 	//emit RollupStakeRefunded(contractAddress(_stakerAddress));
 	vm.client.pubMsg(vm.contractAddress,
 		arbbridge.StakeRefundedEvent{
@@ -263,14 +271,14 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 
 func (vm *arbRollup) pruneLeaf(ctx context.Context, from common.Hash, leafProof []common.Hash, ancProof []common.Hash) error {
 	leaf := calculatePath(from, leafProof)
-	if !vm.rollup.leaves[leaf] {
+	if !vm.leaves[leaf] {
 		return errors.New("pruneLeaf - invalid leaf")
 	}
 	if leafProof[0] == ancProof[0] ||
-		calculatePath(from, ancProof) != vm.rollup.lastConfirmed {
+		calculatePath(from, ancProof) != vm.lastConfirmed {
 		return errors.New("prune conflict")
 	}
-	delete(vm.rollup.leaves, leaf)
+	delete(vm.leaves, leaf)
 
 	vm.client.pubMsg(vm.contractAddress,
 		arbbridge.PrunedEvent{
@@ -320,13 +328,13 @@ func (vm *arbRollup) MakeAssertion(
 		prevDataHash,
 		prevChildType,
 	)
-	if !vm.rollup.leaves[prevLeaf] {
+	if !vm.leaves[prevLeaf] {
 		return errors.New("makeAssertion - invalid leaf")
 	}
-	if vm.rollup.VMstate == machine.ErrorStop || vm.rollup.VMstate == machine.Halt {
+	if vm.VMstate == machine.ErrorStop || vm.VMstate == machine.Halt {
 		return errors.New("Can only disputable assert if machine is not errored or halted")
 	}
-	if assertionParams.NumSteps > vm.rollup.chainParams.MaxExecutionSteps {
+	if assertionParams.NumSteps > vm.chainParams.MaxExecutionSteps {
 		return errors.New("makeAssertion - Tried to execute too many steps")
 	}
 	if assertionParams.TimeBounds.IsValidTime(vm.client.getCurrentBlock().Height) != nil {
@@ -347,11 +355,11 @@ func (vm *arbRollup) MakeAssertion(
 	}
 
 	currentTicks := common.TicksFromBlockNum(vm.client.getCurrentBlock().Height)
-	deadlineTicks := currentTicks.Add(vm.rollup.chainParams.GracePeriod)
+	deadlineTicks := currentTicks.Add(vm.chainParams.GracePeriod)
 	if deadlineTicks.Cmp(prevDeadline) < 0 {
 		return errors.New("Node is not passed deadline")
 	}
-	checkTimeTicks := assertionClaim.AssertionStub.NumGas / vm.rollup.chainParams.ArbGasSpeedLimitPerTick
+	checkTimeTicks := assertionClaim.AssertionStub.NumGas / vm.chainParams.ArbGasSpeedLimitPerTick
 	deadlineTicks = deadlineTicks.Add(common.TicksFromSeconds(int64(checkTimeTicks)))
 
 	protoStateHash := hashing.SoliditySHA3(
@@ -381,7 +389,7 @@ func (vm *arbRollup) MakeAssertion(
 		pendingTopHash,
 		left,
 	)
-	ticks := vm.rollup.chainParams.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
+	ticks := vm.chainParams.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 	invPendingProtoData := hashing.SoliditySHA3(
 		hashing.Bytes32(invPendingChallengeDataHash),
 		hashing.TimeTicks(ticks),
@@ -401,7 +409,7 @@ func (vm *arbRollup) MakeAssertion(
 	)
 	invMsgsProtoData := hashing.SoliditySHA3(
 		hashing.Bytes32(invMsgsChallengeDataHash),
-		hashing.TimeTicks(vm.rollup.chainParams.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))),
+		hashing.TimeTicks(vm.chainParams.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))),
 	)
 	invalidMessages, _ := valprotocol.NodeHash(prevLeaf,
 		protoHashBefore,
@@ -416,7 +424,7 @@ func (vm *arbRollup) MakeAssertion(
 	)
 	invExecProtoData := hashing.SoliditySHA3(
 		hashing.Bytes32(invExecChallengeDataHash),
-		hashing.TimeTicks(vm.rollup.chainParams.GracePeriod.Add(common.TimeTicks{new(big.Int).SetUint64(assertionClaim.AssertionStub.NumGas / vm.rollup.chainParams.ArbGasSpeedLimitPerTick)})),
+		hashing.TimeTicks(vm.chainParams.GracePeriod.Add(common.TimeTicks{new(big.Int).SetUint64(assertionClaim.AssertionStub.NumGas / vm.chainParams.ArbGasSpeedLimitPerTick)})),
 	)
 	invalidExecution, _ := valprotocol.NodeHash(prevLeaf,
 		protoHashBefore,
@@ -432,11 +440,11 @@ func (vm *arbRollup) MakeAssertion(
 		valprotocol.ValidChildType,
 	)
 
-	vm.rollup.leaves[invalidPending] = true
-	vm.rollup.leaves[invalidMessages] = true
-	vm.rollup.leaves[invalidExecution] = true
-	vm.rollup.leaves[valid] = true
-	delete(vm.rollup.leaves, prevLeaf)
+	vm.leaves[invalidPending] = true
+	vm.leaves[invalidMessages] = true
+	vm.leaves[invalidExecution] = true
+	vm.leaves[valid] = true
+	delete(vm.leaves, prevLeaf)
 
 	event := arbbridge.AssertedEvent{
 		ChainInfo: arbbridge.ChainInfo{
@@ -450,11 +458,11 @@ func (vm *arbRollup) MakeAssertion(
 	}
 	vm.client.pubMsg(vm.contractAddress, event)
 
-	if calculatePath(vm.rollup.stakers[vm.client.fromAddr].location, stakerProof) != prevLeaf {
+	if calculatePath(vm.stakers[vm.client.fromAddr].location, stakerProof) != prevLeaf {
 		return errors.New("invalid staker location proof")
 	}
-	vm.rollup.stakers[vm.client.fromAddr].location = valid
-	vm.rollup.nextConfirmed = valid
+	vm.stakers[vm.client.fromAddr].location = valid
+	vm.nextConfirmed = valid
 	stakeMovedEvent := arbbridge.StakeMovedEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: vm.client.getCurrentBlock(),
@@ -519,7 +527,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 
 	activeCount := 0
 	for i, staker := range opp.StakerAddresses {
-		if !calculatePath(confNode, opp.StakerProofs[i]).Equals(vm.rollup.stakers[staker].location) {
+		if !calculatePath(confNode, opp.StakerProofs[i]).Equals(vm.stakers[staker].location) {
 			return errors.New("at least one active staker disagrees")
 		}
 		activeCount++
@@ -528,7 +536,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	if activeCount == 0 {
 		return errors.New("There must be at least one staker")
 	}
-	vm.rollup.lastConfirmed = confNode
+	vm.lastConfirmed = confNode
 
 	confirmedEvent := arbbridge.ConfirmedEvent{
 		ChainInfo: arbbridge.ChainInfo{
@@ -606,11 +614,11 @@ func (vm *arbRollup) StartChallenge(
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
 	eth := vm.client
-	asserter, ok := vm.rollup.stakers[asserterAddress]
+	asserter, ok := vm.stakers[asserterAddress]
 	if !ok {
 		return errors.New("unknown asserter")
 	}
-	challenger, ok := vm.rollup.stakers[challengerAddress]
+	challenger, ok := vm.stakers[challengerAddress]
 	if !ok {
 		return errors.New("unknown challenger")
 	}
@@ -665,19 +673,13 @@ func (vm *arbRollup) StartChallenge(
 		challengerDataHash,
 		new(big.Int).SetUint64(uint64(challengerPosition)),
 	)
-	//newAddr := eth.getNextAddress()
-	//eth.challenges[newAddr] = &challengeData{deadline: common.TimeTicks{disputableDeadline}, challengerDataHash: challengerDataHash}
-	// initialize bisection
-	//save data
-	// deadline = current + challenge period
-	//eth.challenges[newAddr].deadline = common.TicksFromBlockNum(eth.LastMinedBlock.Height).Add(challengerPeriodTicks)
-	//eth.challenges[challengeAddress].challengeData.deadline = common.TicksFromBlockNum(eth.getCurrentBlock().Height).Add(challengerPeriodTicks)
-	// emit InitiatedChallenge
+	eth.challenges[challengeAddress].rollupAddr = vm.contractAddress
+
 	eth.pubMsg(vm.contractAddress, arbbridge.InitiateChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: eth.getCurrentBlock(),
 		},
-		Deadline: eth.challenges[challengeAddress].challengeData.deadline,
+		Deadline: eth.challenges[challengeAddress].deadline,
 	})
 
 	eth.pubMsg(vm.contractAddress, arbbridge.ChallengeStartedEvent{

@@ -83,7 +83,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		logAccs[bisectionCount],
 	)
 
-	if !c.challengeData.challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
+	if !c.challengerDataHash.Equals(valprotocol.ExecutionDataHash(totalSteps, preconditionHash, assertionHash)) {
 		return errors.New("BisectAssertion Incorrect previous state")
 	}
 
@@ -132,7 +132,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		},
 		Assertions: assertions,
 		TotalSteps: totalSteps,
-		Deadline:   c.challengeData.deadline,
+		Deadline:   c.deadline,
 	})
 
 	return nil
@@ -150,7 +150,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	precondition.Hash()
 
 	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
-	if !c.challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
@@ -178,7 +178,7 @@ func (c *ExecutionChallenge) OneStepProof(
 			BlockId: c.client.getCurrentBlock(),
 		}})
 
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 
 	return nil
 }

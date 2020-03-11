@@ -32,6 +32,12 @@ const (
 )
 
 type challengeData struct {
+}
+
+type challenge struct {
+	client               *GoArbAuthClient
+	rollupAddr           common.Address
+	contractAddress      common.Address
 	deadline             common.TimeTicks
 	challengerDataHash   common.Hash
 	state                int
@@ -39,12 +45,6 @@ type challengeData struct {
 	asserter             common.Address
 	challenger           common.Address
 	challengeType        *big.Int
-}
-
-type challenge struct {
-	client          *GoArbAuthClient
-	challengeData   *challengeData
-	contractAddress common.Address
 }
 
 func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, error) {
@@ -57,17 +57,17 @@ func (c *challenge) TimeoutChallenge(
 	c.client.goEthMutex.Lock()
 	defer c.client.goEthMutex.Unlock()
 
-	if common.TicksFromBlockNum(c.client.getCurrentBlock().Height).Cmp(c.challengeData.deadline) < 0 {
+	if common.TicksFromBlockNum(c.client.getCurrentBlock().Height).Cmp(c.deadline) < 0 {
 		return errors.New("Deadline hasn't expired")
 	}
-	if c.challengeData.state == asserterTurn {
-		c.resolveChallenge(c.challengeData.challenger, c.challengeData.asserter)
+	if c.state == asserterTurn {
+		c.resolveChallenge(c.challenger, c.asserter)
 		c.client.pubMsg(c.contractAddress, arbbridge.AsserterTimeoutEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
 			}})
 	} else {
-		c.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+		c.resolveChallenge(c.asserter, c.challenger)
 		c.client.pubMsg(c.contractAddress, arbbridge.ChallengerTimeoutEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -78,30 +78,31 @@ func (c *challenge) TimeoutChallenge(
 
 func (c *challenge) commitToSegment(hashes [][32]byte) {
 	tree := valprotocol.NewMerkleTree(hashSliceToHashes(hashes))
-	c.challengeData.challengerDataHash = tree.GetRoot()
+	c.challengerDataHash = tree.GetRoot()
 }
 
 func (c *challenge) asserterResponded() {
-	c.challengeData.state = challengerTurn
+	c.state = challengerTurn
 	currentTicks := common.TicksFromBlockNum(c.client.getCurrentBlock().Height)
-	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
+	c.deadline = currentTicks.Add(c.challengePeriodTicks)
 
 }
 
 func (c *challenge) challengerResponded() {
-	c.challengeData.state = asserterTurn
+	c.state = asserterTurn
 	currentTicks := common.TicksFromBlockNum(c.client.getCurrentBlock().Height)
-	c.challengeData.deadline = currentTicks.Add(c.challengeData.challengePeriodTicks)
+	c.deadline = currentTicks.Add(c.challengePeriodTicks)
 
 }
 
 func (c *challenge) resolveChallenge(winner common.Address, loser common.Address) {
-	rollup, ok := c.client.rollups[c.contractAddress]
+	rollup, ok := c.client.rollups[c.rollupAddr]
 	if ok {
-		winningStaker := rollup.rollup.stakers[winner]
+		winningStaker := rollup.stakers[winner]
 		winningStaker.inChallenge = false
-		transferEth(c.client.goEthdata, winner, loser, rollup.rollup.chainParams.StakeRequirement)
-		delete(c.client.rollups[c.contractAddress].rollup.stakers, loser)
+		half := new(big.Int).Div(c.client.ethWallet[winner], rollup.chainParams.StakeRequirement)
+		transferEth(c.client.goEthdata, winner, c.contractAddress, half)
+		delete(c.client.rollups[c.contractAddress].stakers, loser)
 	}
 	c.client.pubMsg(c.contractAddress, arbbridge.ChallengeCompletedEvent{
 		ChainInfo: arbbridge.ChainInfo{

@@ -21,8 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"sync"
-
 	//"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
@@ -36,7 +34,6 @@ type inbox struct {
 }
 
 type globalInbox struct {
-	inboxMutex      sync.Mutex
 	ethData         *goEthdata
 	inbox           map[common.Address]*inbox
 	contractAddress common.Address
@@ -52,7 +49,6 @@ func (ib *inbox) addMessageToInbox(msg common.Hash) {
 
 func newGlobalInbox(address common.Address, client *GoArbAuthClient) (*globalInbox, error) {
 	return &globalInbox{
-		inboxMutex:      sync.Mutex{},
 		ethData:         client.goEthdata,
 		inbox:           make(map[common.Address]*inbox),
 		contractAddress: client.getNextAddress(),
@@ -68,8 +64,8 @@ func newInbox(address common.Address, client *GoArbAuthClient) (*inbox, error) {
 }
 
 func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	msgHash := hashing.SoliditySHA3(
 		hashing.Uint8(0), // TRANSACTION_MSG
 		hashing.Address(vmAddress),
@@ -80,7 +76,7 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 		hashing.TimeBlocks(con.ethData.getCurrentBlock().Height),
 	)
 
-	con.ethData.deliverMessage(vmAddress, msgHash)
+	con.deliverMessage(vmAddress, msgHash)
 	msg := message.DeliveredTransaction{
 		Transaction: message.Transaction{
 			Chain:       con.contractAddress,
@@ -109,8 +105,8 @@ func (con *globalInbox) DeliverTransactionBatch(
 	transactions []message.Transaction,
 	signatures [][65]byte,
 ) error {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	for _, tx := range transactions {
 		deliveredTransaction := message.DeliveredTransaction{
 			Transaction: tx,
@@ -146,8 +142,8 @@ func (con *globalInbox) DepositEthMessage(
 	destination common.Address,
 	value *big.Int,
 ) error {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	// depositEth
 	depositEth(con.ethData, vmAddress, destination, value)
 
@@ -183,8 +179,8 @@ func (con *globalInbox) DepositERC20Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	// deposit ERC20
 	depositERC20(con.ethData, destination, vmAddress, value)
 
@@ -219,8 +215,8 @@ func (con *globalInbox) DepositERC721Message(
 	destination common.Address,
 	value *big.Int,
 ) error {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	// deposit ERC721
 	depositERC721(con.ethData, destination, vmAddress, value)
 
@@ -253,17 +249,17 @@ func (con *globalInbox) GetTokenBalance(
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	con.inboxMutex.Lock()
-	defer con.inboxMutex.Unlock()
+	con.ethData.goEthMutex.Lock()
+	defer con.ethData.goEthMutex.Unlock()
 	// getERC20Balance
 	return con.ethData.ftWallets[user].ftList[tokenContract], nil
 }
 
-func (m *goEthdata) deliverMessage(address common.Address, msgHash common.Hash) {
+func (con *globalInbox) deliverMessage(address common.Address, msgHash common.Hash) {
 	hash := hashing.SoliditySHA3(
-		hashing.Bytes32(m.globalInbox.inbox[address].value),
+		hashing.Bytes32(con.inbox[address].value),
 		hashing.Bytes32(msgHash),
 	)
-	m.globalInbox.inbox[address].value = hash
-	m.globalInbox.inbox[address].count = new(big.Int).Add(m.globalInbox.inbox[address].count, big.NewInt(1))
+	con.inbox[address].value = hash
+	con.inbox[address].count = new(big.Int).Add(con.inbox[address].count, big.NewInt(1))
 }

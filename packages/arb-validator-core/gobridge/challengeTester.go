@@ -60,7 +60,7 @@ func (con *ChallengeTester) StartChallenge(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: eth.getCurrentBlock(),
 		},
-		Deadline: eth.challenges[newAddr].challengeData.deadline,
+		Deadline: eth.challenges[newAddr].deadline,
 	}
 	eth.pubMsg(newAddr, InitiateChallengeEvent)
 	return newAddr, eth.getLastBlock(), nil

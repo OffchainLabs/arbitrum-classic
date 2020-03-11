@@ -58,7 +58,7 @@ func (c *messagesChallenge) Bisect(
 	}
 
 	msgHash := valprotocol.MessageChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], segmentHashes[0], segmentHashes[bisectionCount], chainLength)
-	if !c.challengeData.challengerDataHash.Equals(msgHash) {
+	if !c.challengerDataHash.Equals(msgHash) {
 		return errors.New("Bisect Incorrect previous state msgHash")
 	}
 
@@ -89,7 +89,7 @@ func (c *messagesChallenge) Bisect(
 		ChainHashes:   chainHashes,
 		SegmentHashes: segmentHashes,
 		TotalLength:   chainLength,
-		Deadline:      c.client.challenges[c.contractAddress].challengeData.deadline,
+		Deadline:      c.client.challenges[c.contractAddress].deadline,
 	})
 
 	return nil
@@ -116,7 +116,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 		big.NewInt(1),
 	)
 
-	if !c.challenge.challengeData.challengerDataHash.Equals(msgChalDataHash) {
+	if !c.challenge.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofTransactionMessage Incorrect previous state")
 	}
 	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
@@ -124,7 +124,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 
 	return nil
 }
@@ -161,7 +161,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		big.NewInt(1),
 	)
 
-	if !c.challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofEthMessage Incorrect previous state")
 	}
 
@@ -169,7 +169,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 
 	return nil
 }
@@ -206,7 +206,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		big.NewInt(1),
 	)
 
-	if !c.challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofERC20Message Incorrect previous state")
 	}
 
@@ -214,7 +214,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 	return nil
 }
 
@@ -250,7 +250,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		big.NewInt(1),
 	)
 
-	if !c.challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProofERC721Message Incorrect previous state")
 	}
 
@@ -258,7 +258,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 	return nil
 }
 
@@ -286,14 +286,14 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		big.NewInt(1),
 	)
 
-	if !c.challengeData.challengerDataHash.Equals(msgChalDataHash) {
+	if !c.challengerDataHash.Equals(msgChalDataHash) {
 		return errors.New("OneStepProofContractTransactionMessage Incorrect previous state")
 	}
 	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 
 	return nil
 }

@@ -157,7 +157,7 @@ func NewEthAuthClient(ethURL string, fromAddr common.Address) *GoArbAuthClient {
 	client.goEthMutex.Lock()
 	defer client.goEthMutex.Unlock()
 
-	client.ethWallet[fromAddr] = big.NewInt(1000) // give client a default balance of 1000
+	client.ethWallet[fromAddr] = big.NewInt(10 * 1000 * 1000 * 1000 * 1000 * 1000) // give client a default balance of 1000
 	return &GoArbAuthClient{
 		goEthdata: client,
 		fromAddr:  fromAddr,

@@ -45,17 +45,15 @@ func (con *challengeFactory) createChallenge(
 ) (common.Address, error) {
 	challengeAddr := con.client.getNextAddress()
 	con.client.challenges[challengeAddr] = &challenge{
-		client: con.client,
-		challengeData: &challengeData{
-			deadline:             common.TicksFromBlockNum(con.client.getCurrentBlock().Height).Add(challengePeriod),
-			challengerDataHash:   challengeHash,
-			state:                asserterTurn,
-			challengePeriodTicks: challengePeriod,
-			asserter:             asserter,
-			challenger:           challenger,
-			challengeType:        challengeType,
-		},
-		contractAddress: challengeAddr,
+		client:               con.client,
+		contractAddress:      challengeAddr,
+		deadline:             common.TicksFromBlockNum(con.client.getCurrentBlock().Height).Add(challengePeriod),
+		challengerDataHash:   challengeHash,
+		state:                asserterTurn,
+		challengePeriodTicks: challengePeriod,
+		asserter:             asserter,
+		challenger:           challenger,
+		challengeType:        challengeType,
 	}
 	return challengeAddr, nil
 }

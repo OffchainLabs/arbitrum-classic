@@ -49,7 +49,7 @@ func (c *bisectionChallenge) chooseSegment(
 	fmt.Println("in bisectionChallenge - chooseSegment")
 	tree := valprotocol.NewMerkleTree(segments)
 
-	if !tree.GetRoot().Equals(c.challenge.challengeData.challengerDataHash) {
+	if !tree.GetRoot().Equals(c.challenge.challengerDataHash) {
 		return errors.New("chooseSegment Incorrect previous state")
 	}
 
@@ -65,13 +65,13 @@ func (c *bisectionChallenge) chooseSegment(
 	//);
 	//
 	c.challengerResponded()
-	c.challenge.challengeData.challengerDataHash = segments[segmentToChallenge]
+	c.challenge.challengerDataHash = segments[segmentToChallenge]
 	c.client.pubMsg(c.contractAddress, arbbridge.ContinueChallengeEvent{
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		},
 		SegmentIndex: big.NewInt(int64(segmentToChallenge)),
-		Deadline:     c.challenge.challengeData.deadline,
+		Deadline:     c.challenge.deadline,
 	})
 
 	return nil

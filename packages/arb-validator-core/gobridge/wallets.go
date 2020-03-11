@@ -29,19 +29,28 @@ func depositEth(
 	destination common.Address,
 	value *big.Int,
 ) {
-	if _, ok := ethClient.ethWallet[vmAddress]; ok {
-		ethClient.ethWallet[vmAddress] = new(big.Int).Add(ethClient.ethWallet[vmAddress], value)
+	if balance, ok := ethClient.ethWallet[vmAddress]; ok {
+		ethClient.ethWallet[vmAddress] = new(big.Int).Add(balance, value)
 	} else {
 		ethClient.ethWallet[vmAddress] = value
 	}
 }
 
 func transferEth(ethClient *goEthdata, to common.Address, from common.Address, value *big.Int) error {
-	if value.Cmp(ethClient.ethWallet[from]) > 0 {
+	fromWallet, ok := ethClient.ethWallet[from]
+	if !ok {
+		return errors.New("unknown from wallet")
+	}
+	if value.Cmp(fromWallet) > 0 {
 		return errors.New("insufficient eth")
 	}
-	ethClient.ethWallet[from] = new(big.Int).Sub(ethClient.ethWallet[from], value)
-	ethClient.ethWallet[to] = new(big.Int).Add(ethClient.ethWallet[to], value)
+	ethClient.ethWallet[from] = new(big.Int).Sub(fromWallet, value)
+	toWallet, ok := ethClient.ethWallet[to]
+	if ok {
+		ethClient.ethWallet[to] = new(big.Int).Add(toWallet, value)
+	} else {
+		ethClient.ethWallet[to] = value
+	}
 	return nil
 }
 
@@ -115,7 +124,7 @@ func removeToken(
 }
 
 type userNFTWallet struct {
-	nftWalletList map[common.Address]map[common.Address]bool //map of contract address to (map of token ids to owned bool)
+	nftWalletList map[common.Address]map[*big.Int]bool //map of contract address to (map of token ids to owned bool)
 }
 
 func depositERC721(
@@ -148,13 +157,13 @@ func addNFTToken(
 	userWallet := ethClient.nftWallets[user]
 	tokens, ok := userWallet.nftWalletList[erc721]
 	if !ok {
-		userWallet.nftWalletList[erc721] = make(map[common.Address]bool)
+		userWallet.nftWalletList[erc721] = make(map[*big.Int]bool)
 		tokens = userWallet.nftWalletList[erc721]
 	}
-	if _, ok := tokens[common.BigIntToAddress(value)]; !ok {
+	if _, ok := tokens[value]; !ok {
 		return errors.New("can't add already owned token")
 	}
-	tokens[common.BigIntToAddress(value)] = true
+	tokens[value] = true
 	return nil
 }
 
@@ -171,10 +180,10 @@ func removeNFTToken(
 		return false
 	}
 
-	if tokens[common.BigIntToAddress(value)] {
+	if tokens[value] {
 		// Wallet does not own ERC721 tokens
 		return false
 	}
-	delete(tokens, common.BigIntToAddress(value))
+	delete(tokens, value)
 	return true
 }

@@ -49,7 +49,7 @@ func (c *inboxTopChallenge) Bisect(
 	bisectionCount := len(chainHashes) - 1
 
 	//if !c.client.challenges[c.contractAddress].challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
-	if !c.challengeData.challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
+	if !c.challengerDataHash.Equals(valprotocol.InboxTopChallengeDataHash(chainHashes[0], chainHashes[bisectionCount], chainLength)) {
 		return errors.New("Bisect Incorrect previous state")
 	}
 
@@ -79,7 +79,7 @@ func (c *inboxTopChallenge) Bisect(
 		},
 		ChainHashes: chainHashes,
 		TotalLength: chainLength,
-		Deadline:    c.challengeData.deadline,
+		Deadline:    c.deadline,
 	})
 	return nil
 }
@@ -92,7 +92,7 @@ func (c *inboxTopChallenge) OneStepProof(
 	c.client.goEthMutex.Lock()
 	defer c.client.goEthMutex.Unlock()
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
-	if !c.challengeData.challengerDataHash.Equals(matchHash) {
+	if !c.challengerDataHash.Equals(matchHash) {
 		return errors.New("OneStepProof Incorrect previous state")
 	}
 
@@ -101,7 +101,7 @@ func (c *inboxTopChallenge) OneStepProof(
 			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	c.challenge.resolveChallenge(c.challengeData.asserter, c.challengeData.challenger)
+	c.challenge.resolveChallenge(c.asserter, c.challenger)
 
 	return nil
 }

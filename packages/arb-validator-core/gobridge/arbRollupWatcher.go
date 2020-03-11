@@ -40,13 +40,6 @@ func newRollupWatcher(address common.Address, client *goEthdata) (*ethRollupWatc
 func (rw *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
 	rw.client.goEthMutex.Lock()
 	defer rw.client.goEthMutex.Unlock()
-	events := make([]arbbridge.Event, 0, len(rw.client.blockMsgs[blockId].msgs[rw.rollupAddress])+len(rw.client.blockMsgs[blockId].msgs[rw.client.ethAddress]))
-	for _, event := range rw.client.blockMsgs[blockId].msgs[rw.rollupAddress] {
-		events = append(events, event)
-	}
-	for _, event := range rw.client.blockMsgs[blockId].msgs[rw.client.ethAddress] {
-		events = append(events, event)
-	}
 
 	return rw.client.blockMsgs[blockId].msgs[rw.rollupAddress], nil
 }
@@ -54,13 +47,13 @@ func (rw *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 func (rw *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
 	rw.client.goEthMutex.Lock()
 	defer rw.client.goEthMutex.Unlock()
-	return rw.client.rollups[rw.rollupAddress].rollup.chainParams, nil
+	return rw.client.rollups[rw.rollupAddress].chainParams, nil
 }
 
 func (rw *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
 	rw.client.goEthMutex.Lock()
 	defer rw.client.goEthMutex.Unlock()
-	return rw.client.rollups[rw.rollupAddress].rollup.creation, rw.client.rollups[rw.rollupAddress].rollup.initVMHash, nil
+	return rw.client.rollups[rw.rollupAddress].creation, rw.client.rollups[rw.rollupAddress].initVMHash, nil
 }
 
 func (rw *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
