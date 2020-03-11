@@ -8,6 +8,7 @@ FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
 RUN apk update && apk add --no-cache boost-dev cmake g++ \
     git make musl-dev python3-dev && \
+    apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     pip3 install conan && \
     addgroup -g 1000 -S user && \
