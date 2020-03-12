@@ -58,37 +58,31 @@ const (
 //	ValidatorBalances      map[common.Address]*big.Int
 //}
 
-type staker struct {
-	location           common.Hash
-	creationTimeBlocks *common.TimeBlocks
-	inChallenge        bool
-	balance            *big.Int
-}
-
 type contractMsgs struct {
 	msgs map[common.Address][]arbbridge.Event
 }
 
 // goEthData one per 'URL'
 type goEthdata struct {
-	ethAddress               common.Address
-	goEthMutex               sync.Mutex
-	rollups                  map[common.Address]*arbRollup // contract instance to rollupData
-	challenges               map[common.Address]*challenge
-	nextAddress              common.Address // unique 'contractAddress'
-	blockMsgs                map[*common.BlockId]contractMsgs
-	arbFactoryContract       *arbFactory
-	globalInbox              *globalInbox
-	challengeFactoryContract *challengeFactory
-	rootBlock                *common.BlockId
-	NextBlock                *common.BlockId
-	LastMinedBlock           *common.BlockId
-	blockNumbers             map[uint64]*common.BlockId      // block height to blockId
-	blockHashes              map[common.Hash]*common.BlockId // block hash to blockId
-	parentHashes             map[common.BlockId]common.Hash  // blokcId to block hash
-	ethWallet                map[common.Address]*big.Int
-	ftWallets                map[common.Address]*userFTWallet
-	nftWallets               map[common.Address]*userNFTWallet
+	ethAddress         common.Address
+	goEthMutex         sync.Mutex
+	rollups            map[common.Address]*arbRollup // contract instance to rollupData
+	nextAddress        common.Address                // unique address
+	blockMsgs          map[*common.BlockId]contractMsgs
+	arbFactoryContract *arbFactory
+	globalInbox        *globalInbox
+	*challengeFactory
+	challengeTester *challengeTester
+	oneStepProof    *oneStepProof
+	rootBlock       *common.BlockId
+	NextBlock       *common.BlockId
+	LastMinedBlock  *common.BlockId
+	blockNumbers    map[uint64]*common.BlockId      // block height to blockId
+	blockHashes     map[common.Hash]*common.BlockId // block hash to blockId
+	parentHashes    map[common.BlockId]common.Hash  // blockId to block hash
+	ethWallet       map[common.Address]*big.Int
+	ftWallets       map[common.Address]*userFTWallet
+	nftWallets      map[common.Address]*userNFTWallet
 }
 
 var GoEth map[string]*goEthdata
@@ -154,6 +148,10 @@ func getGoEth(ethURL string) *goEthdata {
 	return GoEth[ethURL]
 }
 
+func (m *goEthdata) GetArbFactoryAddress() common.Address {
+	return m.arbFactoryContract.rollupContractAddress
+}
+
 func (m *goEthdata) getNextAddress() common.Address {
 	addr := m.nextAddress
 	addrInt := new(big.Int)
@@ -180,7 +178,11 @@ func (m *goEthdata) getBlockFromHeight(height *common.TimeBlocks) (*common.Block
 }
 
 func (m *goEthdata) pubMsg(addr common.Address, msg arbbridge.Event) {
-	m.blockMsgs[msg.GetChainInfo().BlockId].msgs[addr] = append(m.blockMsgs[msg.GetChainInfo().BlockId].msgs[addr], msg)
+	blockMsgs, ok := m.blockMsgs[msg.GetChainInfo().BlockId]
+	if !ok {
+		panic("pubMsg - invalid blockId")
+	}
+	blockMsgs.msgs[addr] = append(blockMsgs.msgs[addr], msg)
 }
 
 func mine(m *goEthdata, t time.Time) {

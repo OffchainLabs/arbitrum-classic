@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
@@ -49,21 +50,41 @@ func (c *bisectionChallenge) chooseSegment(
 	fmt.Println("in bisectionChallenge - chooseSegment")
 	tree := valprotocol.NewMerkleTree(segments)
 
-	if !tree.GetRoot().Equals(c.challenge.challengerDataHash) {
+	root := tree.GetRoot()
+	if !root.Equals(c.challenge.challengerDataHash) {
 		return errors.New("chooseSegment Incorrect previous state")
 	}
+	proof := tree.GetProofFlat(int(segmentToChallenge))
+	hash := tree.GetNode(int(segmentToChallenge))
+	index := uint(segmentToChallenge) + 1
+	h := hash
 
-	// TODO: figure out merkle verify proof
-	//require(
-	//	MerkleLib.verifyProof(
-	//		_proof,
-	//		_bisectionRoot,
-	//		_bisectionHash,
-	//		_segmentToChallenge + 1
-	//),
-	//CON_PROOF
-	//);
-	//
+	for j := 32; j <= len(proof); j += 32 {
+		el := proof[j-32 : j]
+
+		// calculate remaining elements in proof
+		remaining := uint((len(proof) - j + 32) / 32)
+
+		// we don't assume that the tree is padded to a power of 2
+		// if the index is odd then the proof will start with a hash at a higher
+		// layer, so we have to adjust the index to be the index at that layer
+		for remaining > 0 && index%2 == 1 && index > 1<<remaining {
+			index = uint(index)/2 + 1
+		}
+
+		if index%2 == 0 {
+			h = hashing.SoliditySHA3(el, hashing.Bytes32(h))
+			index = index / 2
+		} else {
+			h = hashing.SoliditySHA3(hashing.Bytes32(h), el)
+			index = uint(index)/2 + 1
+		}
+	}
+
+	if !h.Equals(root) {
+		return errors.New("Invalid assertion selected")
+	}
+
 	c.challengerResponded()
 	c.challenge.challengerDataHash = segments[segmentToChallenge]
 	c.client.pubMsg(c.contractAddress, arbbridge.ContinueChallengeEvent{

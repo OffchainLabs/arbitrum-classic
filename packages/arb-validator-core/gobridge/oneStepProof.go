@@ -18,21 +18,26 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-type OneStepProof struct {
-	client *goEthdata
+type oneStepProof struct {
+	oneStepProofContract common.Address
+	client               *goEthdata
 }
 
-func newOneStepProof(address common.Address, client *goEthdata) (*OneStepProof, error) {
-	return &OneStepProof{client}, nil
+func newOneStepProof(address common.Address, client *goEthdata) (*oneStepProof, error) {
+	if !address.Equals(client.oneStepProof.oneStepProofContract) {
+		return nil, errors.New("invalid oneStepProof address")
+	}
+	return client.oneStepProof, nil
 }
 
-func (con *OneStepProof) ValidateProof(
+func (con *oneStepProof) ValidateProof(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,

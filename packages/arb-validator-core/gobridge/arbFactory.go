@@ -50,5 +50,5 @@ func (con *arbFactoryWatcher) GlobalInboxAddress() (common.Address, error) {
 func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
 	con.client.goEthMutex.Lock()
 	defer con.client.goEthMutex.Unlock()
-	return con.rollupAddress, nil
+	return con.client.challengeFactoryContract, nil
 }

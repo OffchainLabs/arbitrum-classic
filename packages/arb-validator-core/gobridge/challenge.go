@@ -35,7 +35,7 @@ type challengeData struct {
 }
 
 type challenge struct {
-	client               *GoArbAuthClient
+	client               *goEthdata
 	rollupAddr           common.Address
 	contractAddress      common.Address
 	deadline             common.TimeTicks
@@ -48,7 +48,11 @@ type challenge struct {
 }
 
 func newChallenge(address common.Address, client *GoArbAuthClient) (*challenge, error) {
-	return client.challenges[address], nil
+	challenge, ok := client.challenges[address]
+	if !ok {
+		return nil, errors.New("invalid challenge address")
+	}
+	return challenge, nil
 }
 
 func (c *challenge) TimeoutChallenge(
@@ -61,13 +65,19 @@ func (c *challenge) TimeoutChallenge(
 		return errors.New("Deadline hasn't expired")
 	}
 	if c.state == asserterTurn {
-		c.resolveChallenge(c.challenger, c.asserter)
+		err := c.resolveChallenge(c.challenger, c.asserter)
+		if err != nil {
+			return err
+		}
 		c.client.pubMsg(c.contractAddress, arbbridge.AsserterTimeoutEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
 			}})
 	} else {
-		c.resolveChallenge(c.asserter, c.challenger)
+		err := c.resolveChallenge(c.asserter, c.challenger)
+		if err != nil {
+			return err
+		}
 		c.client.pubMsg(c.contractAddress, arbbridge.ChallengerTimeoutEvent{
 			ChainInfo: arbbridge.ChainInfo{
 				BlockId: c.client.getCurrentBlock(),
@@ -95,13 +105,16 @@ func (c *challenge) challengerResponded() {
 
 }
 
-func (c *challenge) resolveChallenge(winner common.Address, loser common.Address) {
+func (c *challenge) resolveChallenge(winner common.Address, loser common.Address) error {
 	rollup, ok := c.client.rollups[c.rollupAddr]
 	if ok {
 		winningStaker := rollup.stakers[winner]
 		winningStaker.inChallenge = false
-		half := new(big.Int).Div(c.client.ethWallet[winner], rollup.chainParams.StakeRequirement)
-		transferEth(c.client.goEthdata, winner, c.contractAddress, half)
+		half := new(big.Int).Div(rollup.chainParams.StakeRequirement, big.NewInt(2))
+		err := transferEth(c.client, winner, c.contractAddress, half)
+		if err != nil {
+			return err
+		}
 		delete(c.client.rollups[c.contractAddress].stakers, loser)
 	}
 	c.client.pubMsg(c.contractAddress, arbbridge.ChallengeCompletedEvent{
@@ -112,7 +125,7 @@ func (c *challenge) resolveChallenge(winner common.Address, loser common.Address
 		Loser:             loser,
 		ChallengeContract: c.contractAddress,
 	})
-
+	return nil
 }
 
 type challengeWatcher struct {
@@ -121,7 +134,7 @@ type challengeWatcher struct {
 }
 
 func newChallengeWatcher(address common.Address, client *goEthdata) (*challengeWatcher, error) {
-	chalData := client.challenges[address]
+	chalData := client.challengeFactory.challenges[address]
 
 	return &challengeWatcher{challenge: chalData, client: client}, nil
 }

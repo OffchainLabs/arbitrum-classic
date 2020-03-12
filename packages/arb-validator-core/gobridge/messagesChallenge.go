@@ -124,7 +124,10 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -169,7 +172,10 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -214,7 +220,11 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -258,7 +268,10 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -293,7 +306,10 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: c.client.getCurrentBlock(),
 		}})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

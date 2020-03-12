@@ -18,23 +18,27 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type ChallengeTester struct {
-	contract common.Address
-	client   *GoArbAuthClient
+type challengeTester struct {
+	contract         common.Address
+	challengeFactory *challengeFactory
+	client           *goEthdata
 }
 
-func NewChallengeTester(client *GoArbAuthClient) (*ChallengeTester, error) {
-	fact, _ := newChallengeFactory(client.getNextAddress(), client)
-	return &ChallengeTester{fact.challengeFactoryContract, client}, nil
+func NewChallengeTester(challengeTesterContract common.Address, client *GoArbAuthClient) (*challengeTester, error) {
+	if !challengeTesterContract.Equals(client.challengeTester.contract) {
+		return nil, errors.New("invalid challengeTesterContract")
+	}
+	return client.challengeTester, nil
 }
 
-func (con *ChallengeTester) StartChallenge(
+func (con *challengeTester) StartChallenge(
 	ctx context.Context,
 	asserter common.Address,
 	challenger common.Address,
@@ -47,7 +51,7 @@ func (con *ChallengeTester) StartChallenge(
 	defer eth.goEthMutex.Unlock()
 
 	// create clone
-	newAddr, _ := eth.challengeFactoryContract.createChallenge(
+	newAddr, _ := con.challengeFactory.createChallenge(
 		ctx,
 		asserter,
 		challenger,

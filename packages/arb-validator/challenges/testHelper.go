@@ -80,10 +80,12 @@ func testChallenge(
 
 	var client1 arbbridge.ArbAuthClient
 	var client2 arbbridge.ArbAuthClient
+	var arbFactoryAddress common.Address
 	if test.UseGoEth() {
 		fmt.Println("in testChallenge UseGoEth")
 		client1 = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth1.From))
 		client2 = gobridge.NewEthAuthClient(ethURL, common.NewAddressFromEth(auth2.From))
+		arbFactoryAddress = gobridge.GoEth[ethURL].GetArbFactoryAddress()
 	} else {
 		ethclint1, err := ethclient.Dial(ethURL)
 		if err != nil {
@@ -97,8 +99,9 @@ func testChallenge(
 
 		client1 = ethbridge.NewEthAuthClient(ethclint1, auth1)
 		client2 = ethbridge.NewEthAuthClient(ethclint2, auth2)
+		arbFactoryAddress = connectionInfo.ArbFactoryAddress()
 	}
-	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
+	factory, err := client1.NewArbFactoryWatcher(arbFactoryAddress)
 	if err != nil {
 		return err
 	}

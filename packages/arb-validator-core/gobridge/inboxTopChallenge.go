@@ -93,7 +93,7 @@ func (c *inboxTopChallenge) OneStepProof(
 	defer c.client.goEthMutex.Unlock()
 	matchHash := valprotocol.InboxTopChallengeDataHash(lowerHashA, valprotocol.AddMessageToPending(lowerHashA, value), big.NewInt(1))
 	if !c.challengerDataHash.Equals(matchHash) {
-		return errors.New("OneStepProof Incorrect previous state")
+		return errors.New("oneStepProof Incorrect previous state")
 	}
 
 	c.client.pubMsg(c.contractAddress, arbbridge.OneStepProofEvent{
@@ -101,7 +101,10 @@ func (c *inboxTopChallenge) OneStepProof(
 			BlockId: c.client.getCurrentBlock(),
 		},
 	})
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

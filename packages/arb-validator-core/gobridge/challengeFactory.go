@@ -18,21 +18,22 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
 type challengeFactory struct {
 	challengeFactoryContract common.Address
-	client                   *GoArbAuthClient
+	challenges               map[common.Address]*challenge
+	client                   *goEthdata
 }
 
 func newChallengeFactory(address common.Address, client *GoArbAuthClient) (*challengeFactory, error) {
-	client.challengeFactoryContract = &challengeFactory{
-		challengeFactoryContract: client.getNextAddress(),
-		client:                   client,
+	if client.challengeFactoryContract.Equals(address) {
+		return nil, errors.New("challengeFactory not found")
 	}
-	return client.challengeFactoryContract, nil
+	return client.challengeFactory, nil
 }
 
 func (con *challengeFactory) createChallenge(
@@ -44,7 +45,7 @@ func (con *challengeFactory) createChallenge(
 	challengeType *big.Int,
 ) (common.Address, error) {
 	challengeAddr := con.client.getNextAddress()
-	con.client.challenges[challengeAddr] = &challenge{
+	con.challenges[challengeAddr] = &challenge{
 		client:               con.client,
 		contractAddress:      challengeAddr,
 		deadline:             common.TicksFromBlockNum(con.client.getCurrentBlock().Height).Add(challengePeriod),

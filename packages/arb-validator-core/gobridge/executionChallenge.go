@@ -151,11 +151,11 @@ func (c *ExecutionChallenge) OneStepProof(
 
 	matchHash := valprotocol.ExecutionDataHash(1, precondition.Hash(), assertion.Hash())
 	if !c.challengerDataHash.Equals(matchHash) {
-		return errors.New("OneStepProof Incorrect previous state")
+		return errors.New("oneStepProof Incorrect previous state")
 	}
 
 	// TODO: executionChallenge one step proof validation
-	//	uint256 correctProof = OneStepProof.validateProof(
+	//	uint256 correctProof = oneStepProof.validateProof(
 	//		_beforeHash,
 	//		_timeBoundsBlocks,
 	//		_beforeInbox,
@@ -178,7 +178,10 @@ func (c *ExecutionChallenge) OneStepProof(
 			BlockId: c.client.getCurrentBlock(),
 		}})
 
-	c.challenge.resolveChallenge(c.asserter, c.challenger)
+	err := c.challenge.resolveChallenge(c.asserter, c.challenger)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

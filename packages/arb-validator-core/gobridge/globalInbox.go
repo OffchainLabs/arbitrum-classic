@@ -18,6 +18,7 @@ package gobridge
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -55,12 +56,11 @@ func newGlobalInbox(address common.Address, client *GoArbAuthClient) (*globalInb
 	}, nil
 }
 
-func newInbox(address common.Address, client *GoArbAuthClient) (*inbox, error) {
+func newInbox(address common.Address, client *GoArbAuthClient) {
 	client.globalInbox.inbox[address] = &inbox{
 		value: value.NewEmptyTuple().Hash(),
 		count: big.NewInt(0),
 	}
-	return client.globalInbox.inbox[address], nil
 }
 
 func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
@@ -76,7 +76,9 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 		hashing.TimeBlocks(con.ethData.getCurrentBlock().Height),
 	)
 
-	con.deliverMessage(vmAddress, msgHash)
+	if err := con.deliverMessage(vmAddress, msgHash); err != nil {
+		return err
+	}
 	msg := message.DeliveredTransaction{
 		Transaction: message.Transaction{
 			Chain:       con.contractAddress,
@@ -255,11 +257,16 @@ func (con *globalInbox) GetTokenBalance(
 	return con.ethData.ftWallets[user].ftList[tokenContract], nil
 }
 
-func (con *globalInbox) deliverMessage(address common.Address, msgHash common.Hash) {
+func (con *globalInbox) deliverMessage(address common.Address, msgHash common.Hash) error {
+	inbox, ok := con.inbox[address]
+	if !ok {
+		return errors.New("invalid address")
+	}
 	hash := hashing.SoliditySHA3(
-		hashing.Bytes32(con.inbox[address].value),
+		hashing.Bytes32(inbox.value),
 		hashing.Bytes32(msgHash),
 	)
-	con.inbox[address].value = hash
-	con.inbox[address].count = new(big.Int).Add(con.inbox[address].count, big.NewInt(1))
+	inbox.value = hash
+	inbox.count = new(big.Int).Add(inbox.count, big.NewInt(1))
+	return nil
 }

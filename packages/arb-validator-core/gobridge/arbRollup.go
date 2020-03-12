@@ -32,6 +32,13 @@ import (
 
 const VALID_CHILD_TYPE = 3
 
+type staker struct {
+	location           common.Hash
+	creationTimeBlocks *common.TimeBlocks
+	inChallenge        bool
+	stakeAmount        *big.Int
+}
+
 type rollupData struct {
 	initVMHash    common.Hash
 	VMstate       machine.Status
@@ -138,9 +145,11 @@ func createStake(vm *arbRollup, stakeAmount *big.Int, location common.Hash) erro
 	return nil
 }
 
-func refundStaker(vm *arbRollup, staker common.Address) {
+func refundStaker(vm *arbRollup, staker common.Address) error {
+	if err := transferEth(vm.client.goEthdata, staker, vm.contractAddress, vm.stakers[staker].stakeAmount); err != nil {
+		return err
+	}
 	delete(vm.stakers, staker)
-	transferEth(vm.client.goEthdata, staker, vm.contractAddress, vm.chainParams.StakeRequirement)
 
 	vm.client.pubMsg(vm.contractAddress,
 		arbbridge.StakeRefundedEvent{
@@ -149,6 +158,7 @@ func refundStaker(vm *arbRollup, staker common.Address) {
 			},
 			Staker: staker,
 		})
+	return nil
 }
 
 func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error {
@@ -165,7 +175,9 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	}
 
 	// refundStaker
-	refundStaker(vm, vm.client.fromAddr)
+	if err := refundStaker(vm, vm.client.fromAddr); err != nil {
+		return err
+	}
 
 	//emit RollupStakeRefunded(contractAddress(_stakerAddress));
 	vm.client.pubMsg(vm.contractAddress,
@@ -194,7 +206,9 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 	if calculatePath(st.location, proof) != vm.lastConfirmed {
 		return errors.New("invalid path proof")
 	}
-	refundStaker(vm, staker)
+	if err := refundStaker(vm, staker); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -208,7 +222,9 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 		calculatePath(nodeHash, stakerProof) != vm.stakers[vm.client.fromAddr].location {
 		return errors.New("Invalid conflict proof")
 	}
-	refundStaker(vm, staker)
+	if err := refundStaker(vm, staker); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -240,7 +256,9 @@ func (vm *arbRollup) RecoverStakePassedDeadline(
 	if common.TicksFromBlockNum(vm.client.getCurrentBlock().Height).Val.Cmp(deadlineTicks) < 0 {
 		return errors.New("Node is not passed deadline")
 	}
-	refundStaker(vm, stakerAddress)
+	if err := refundStaker(vm, stakerAddress); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -249,7 +267,11 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
 
-	location := vm.stakers[vm.client.fromAddr].location
+	staker, ok := vm.stakers[vm.client.fromAddr]
+	if !ok {
+		return errors.New("invalid staker address")
+	}
+	location := staker.location
 	newLocation := calculatePath(location, proof1)
 	leaf := calculatePath(newLocation, proof2)
 	if !vm.leaves[leaf] {
@@ -274,8 +296,7 @@ func (vm *arbRollup) pruneLeaf(ctx context.Context, from common.Hash, leafProof 
 	if !vm.leaves[leaf] {
 		return errors.New("pruneLeaf - invalid leaf")
 	}
-	if leafProof[0] == ancProof[0] ||
-		calculatePath(from, ancProof) != vm.lastConfirmed {
+	if leafProof[0] == ancProof[0] || calculatePath(from, ancProof) != vm.lastConfirmed {
 		return errors.New("prune conflict")
 	}
 	delete(vm.leaves, leaf)
@@ -343,14 +364,14 @@ func (vm *arbRollup) MakeAssertion(
 	if assertionParams.ImportedMessageCount.Cmp(big.NewInt(0)) != 0 && !assertionClaim.AssertionStub.DidInboxInsn {
 		return errors.New("makeAssertion - Imported messages without reading them")
 	}
-	if (vm.client.globalInbox.inbox[vm.contractAddress]) != nil {
-		inbox := vm.client.globalInbox.inbox[vm.contractAddress]
-		if assertionParams.ImportedMessageCount.Cmp(inbox.count.Sub(inbox.count, beforeState.InboxCount)) > 0 {
+	inboxPending, inboxExists := vm.client.globalInbox.inbox[vm.contractAddress]
+	if inboxExists { // valid inbox - check size
+		if assertionParams.ImportedMessageCount.Cmp(inboxPending.count.Sub(inboxPending.count, beforeState.InboxCount)) > 0 {
 			return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")
 		}
-	} else {
+	} else { //no inbox - verify assertion has no messages
 		if assertionParams.ImportedMessageCount.Cmp(big.NewInt(0)) != 0 {
-			return errors.New("makeAssertion - Tried to import more messages than exist in pending inbox")
+			return errors.New("makeAssertion - Tried to import more messages when none exist in pending inbox")
 		}
 	}
 
@@ -372,15 +393,15 @@ func (vm *arbRollup) MakeAssertion(
 		hashing.Bytes32(assertionClaim.AssertionStub.LastLogHash),
 	)
 
+	//build invalidPendingInbox node
 	var pendingTopCount *big.Int
 	var pendingTopHash common.Hash
-	globalInboxPending, ok := vm.client.globalInbox.inbox[vm.contractAddress]
-	if !ok {
+	if !inboxExists {
 		pendingTopCount = big.NewInt(0)
 		pendingTopHash = value.NewEmptyTuple().Hash()
 	} else {
-		pendingTopCount = globalInboxPending.count
-		pendingTopHash = globalInboxPending.value
+		pendingTopCount = inboxPending.count
+		pendingTopHash = inboxPending.value
 	}
 	left := new(big.Int).Add(beforeState.InboxCount, assertionParams.ImportedMessageCount)
 	left = left.Sub(pendingTopCount, left)
@@ -400,6 +421,7 @@ func (vm *arbRollup) MakeAssertion(
 		invPendingProtoData,
 		valprotocol.InvalidInboxTopChildType)
 
+	// build invalid messages node
 	invMsgsChallengeDataHash := valprotocol.MessageChallengeDataHash(
 		beforeState.InboxTop,
 		assertionClaim.AfterInboxTop,
@@ -417,6 +439,7 @@ func (vm *arbRollup) MakeAssertion(
 		invMsgsProtoData,
 		valprotocol.InvalidMessagesChildType)
 
+	// build invalidExecutions node
 	invExecChallengeDataHash := valprotocol.ExecutionDataHash(
 		assertionParams.NumSteps,
 		valprotocol.ExecutionPreconditionHash(beforeState.MachineHash, assertionParams.TimeBounds, assertionClaim.ImportedMessagesSlice),
@@ -433,6 +456,7 @@ func (vm *arbRollup) MakeAssertion(
 		valprotocol.InvalidExecutionChildType,
 	)
 
+	// build valid node
 	valid, _ := valprotocol.NodeHash(prevLeaf,
 		protoStateHash,
 		deadlineTicks,
@@ -478,6 +502,7 @@ func (vm *arbRollup) MakeAssertion(
 func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
+
 	nodeOpps := opp.Nodes
 	nodeCount := len(nodeOpps)
 	lastMsg := common.Hash{}
@@ -494,7 +519,6 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 		case valprotocol.ConfirmValidOpportunity:
 			{
 				linkType = VALID_CHILD_TYPE
-				//logsAcc = append(logsAcc, opp.LogsAcc)
 				lastLogHash = opp.LogsAcc
 				messages = opp.Messages
 				if len(opp.Messages) > 0 {
@@ -546,10 +570,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	}
 	vm.client.pubMsg(vm.contractAddress, confirmedEvent)
 
-	// Send all messages is a single batch
-	//globalInbox.sendMessages(data.messages);
 	for _, msg := range messages {
-		//sendMsg
 		msgTypeVal, _ := msg.(value.TupleValue).GetByInt64(0)
 		msgTypeInt, ok := msgTypeVal.(value.IntValue)
 		if !ok {
@@ -562,6 +583,9 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 				return errors.New("invalid message")
 			}
 			err = transferEth(vm.client.goEthdata, ethMsg.To, ethMsg.From, ethMsg.Value)
+			if err != nil {
+				return err
+			}
 		case message.ERC20Type:
 			//transfer ERC20(msg.sender, to, erc20, value)
 			erc20Msg, err := message.UnmarshalERC20(msg)
@@ -665,7 +689,7 @@ func (vm *arbRollup) StartChallenge(
 	challenger.inChallenge = true
 
 	// generate contractAddress
-	challengeAddress, _ := eth.challengeFactoryContract.CreateChallenge(
+	challengeAddress, _ := eth.challengeFactory.CreateChallenge(
 		ctx,
 		asserterAddress,
 		challengerAddress,
@@ -697,5 +721,10 @@ func (vm *arbRollup) StartChallenge(
 func (vm *arbRollup) IsStaked(address common.Address) (bool, error) {
 	vm.client.goEthMutex.Lock()
 	defer vm.client.goEthMutex.Unlock()
-	return false, nil
+	_, ok := vm.stakers[address]
+	if !ok {
+		return false, nil
+	}
+
+	return true, nil
 }

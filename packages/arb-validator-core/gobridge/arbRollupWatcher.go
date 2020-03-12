@@ -24,17 +24,15 @@ import (
 )
 
 type ethRollupWatcher struct {
-	inboxAddress common.Address
-	client       *goEthdata
-
+	client        *goEthdata
 	rollupAddress common.Address
 }
 
-func newRollupWatcher(address common.Address, client *goEthdata) (*ethRollupWatcher, error) {
+func newRollupWatcher(address common.Address, client *goEthdata) *ethRollupWatcher {
 	vm := &ethRollupWatcher{
 		client:        client,
 		rollupAddress: address}
-	return vm, nil
+	return vm
 }
 
 func (rw *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
@@ -65,5 +63,5 @@ func (rw *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 func (rw *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	rw.client.goEthMutex.Lock()
 	defer rw.client.goEthMutex.Unlock()
-	return rw.inboxAddress, nil
+	return rw.client.globalInbox.contractAddress, nil
 }

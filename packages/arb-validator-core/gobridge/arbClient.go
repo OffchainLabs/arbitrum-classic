@@ -27,9 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-var errReorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
-var maxFetchAttempts = 5
 
 func newEthClient(ethURL string) *goEthdata {
 	return getGoEth(ethURL)
@@ -50,19 +48,14 @@ func (c *goEthdata) SubscribeBlockHeaders(ctx context.Context, startBlockID *com
 			var nextBlock *common.BlockId
 			for {
 				c.goEthMutex.Lock()
-				var headerHash common.Hash
 				nextBlock = nil
 				if prevBlockID.Height.Cmp(c.LastMinedBlock.Height) < 0 {
 					nextBlock = c.blockNumbers[prevBlockID.Height.AsInt().Uint64()+1]
-					headerHash = c.parentHashes[*nextBlock]
 				}
 				c.goEthMutex.Unlock()
 
 				if nextBlock != nil {
-					if headerHash != prevBlockID.HeaderHash {
-						blockIdChan <- arbbridge.MaybeBlockId{Err: errReorgError}
-						return
-					}
+					// new block has been mined
 					break
 				}
 
@@ -93,7 +86,7 @@ func (c *goEthdata) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbF
 func (c *goEthdata) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
 	c.goEthMutex.Lock()
 	defer c.goEthMutex.Unlock()
-	return newRollupWatcher(address, c)
+	return newRollupWatcher(address, c), nil
 }
 
 func (c *goEthdata) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
@@ -157,7 +150,7 @@ func NewEthAuthClient(ethURL string, fromAddr common.Address) *GoArbAuthClient {
 	client.goEthMutex.Lock()
 	defer client.goEthMutex.Unlock()
 
-	client.ethWallet[fromAddr] = big.NewInt(10 * 1000 * 1000 * 1000 * 1000 * 1000) // give client a default balance of 1000
+	client.ethWallet[fromAddr] = big.NewInt(10 * 1000 * 1000 * 1000 * 1000 * 1000) // give client a default balance
 	return &GoArbAuthClient{
 		goEthdata: client,
 		fromAddr:  fromAddr,
@@ -215,17 +208,25 @@ func (c *GoArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridg
 func (c *GoArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (arbbridge.ChallengeTester, error) {
 	c.goEthMutex.Lock()
 	defer c.goEthMutex.Unlock()
-	tester, err := NewChallengeTester(c)
-	if err != nil {
-		return nil, err
+	if !challengeFactory.Equals(c.challengeFactoryContract) {
+		return nil, errors.New("invalid challengeFactory")
 	}
-	return tester, nil
+	c.challengeTester = &challengeTester{
+		contract:         c.getNextAddress(),
+		challengeFactory: c.challengeFactory,
+		client:           c.client,
+	}
+	return NewChallengeTester(c.challengeTester.contract, c)
 }
 
 func (c *GoArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
 	c.goEthMutex.Lock()
 	defer c.goEthMutex.Unlock()
-	osp, err := newOneStepProof(c.fromAddr, c.goEthdata)
+	c.oneStepProof = &oneStepProof{
+		oneStepProofContract: c.getNextAddress(),
+		client:               c.client,
+	}
+	osp, err := newOneStepProof(c.oneStepProof.oneStepProofContract, c.goEthdata)
 	return osp, err
 }
 
@@ -246,9 +247,9 @@ func deployGlobalInbox(m *goEthdata) {
 }
 
 func deployChallengeFactory(m *goEthdata) {
-	m.challenges = make(map[common.Address]*challenge)
-	m.challengeFactoryContract = &challengeFactory{
+	m.challengeFactory = &challengeFactory{
 		challengeFactoryContract: m.getNextAddress(),
-		client:                   nil,
+		client:                   m,
 	}
+	m.challengeFactory.challenges = make(map[common.Address]*challenge)
 }
