@@ -370,7 +370,9 @@ TEST_CASE("POP opcode is correct") {
 TEST_CASE("SPUSH opcode is correct") {
     SECTION("spush") {
         MachineState m;
-        m.staticVal = uint256_t(5);
+        CodeState code_state;
+        code_state.staticVal = uint256_t(5);
+        m.code = std::make_shared<const CodeState>(code_state);
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -455,7 +457,9 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         MachineState m;
-        m.code.push_back(CodePoint(0, OpCode::ADD, 0));
+        CodeState code_state;
+        code_state.code.emplace_back(0, OpCode::ADD, 0);
+        m.code = std::make_shared<const CodeState>(code_state);
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
@@ -639,6 +643,7 @@ TEST_CASE("TGET opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
+
 TEST_CASE("TGET index out of range") {
     SECTION("index ouf range") {
         MachineState m;

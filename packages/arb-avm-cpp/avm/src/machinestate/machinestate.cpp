@@ -24,6 +24,7 @@
 
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
+#include <boost/optional.hpp>
 
 void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
@@ -34,12 +35,10 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()), context({0, 0}, Tuple()) {}
 
-MachineState::MachineState(const std::vector<CodePoint>& code_,
-                           const value& static_val_,
+MachineState::MachineState(std::shared_ptr<CodeState> code_,
                            std::shared_ptr<TuplePool> pool_)
     : pool(std::move(pool_)), context({0, 0}, Tuple()) {
     code = code_;
-    staticVal = static_val_;
 
     errpc = getErrCodePoint();
     pc = 0;
@@ -50,8 +49,10 @@ bool MachineState::initialize_machinestate(
     auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
 
     if (initial_state.valid_state) {
-        code = initial_state.code;
-        staticVal = initial_state.staticVal;
+        CodeState code_state;
+        code_state.code = initial_state.code;
+        code_state.staticVal = initial_state.staticVal;
+        code = std::make_shared<const CodeState>(code_state);
 
         errpc = getErrCodePoint();
         pc = 0;
@@ -71,7 +72,7 @@ uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
     {
-        auto val = ::hash(code[pc]);
+        auto val = ::hash(code->code[pc]);
         std::array<uint64_t, 4> hashInts;
         to_big_endian(val, hashInts.begin());
         std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
@@ -103,7 +104,7 @@ uint256_t MachineState::hash() const {
         oit += 32;
     }
     {
-        auto val = ::hash(staticVal);
+        auto val = ::hash(code->staticVal);
         std::array<uint64_t, 4> hashInts;
         to_big_endian(val, hashInts.begin());
         std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
@@ -126,23 +127,23 @@ uint256_t MachineState::hash() const {
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
-    auto opcode = code[pc].op.opcode;
+    auto opcode = code->code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
     bool includeImmediateVal = false;
-    if (code[pc].op.immediate && !stackPops.empty()) {
+    if (code->code[pc].op.immediate && !stackPops.empty()) {
         includeImmediateVal = stackPops[0] == true;
         stackPops.erase(stackPops.begin());
     }
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
-    uint256_t_to_buf(code[pc].nextHash, buf);
+    uint256_t_to_buf(code->code[pc].nextHash, buf);
     uint256_t_to_buf(stackProof.first, buf);
     uint256_t_to_buf(auxStackProof.first, buf);
     uint256_t_to_buf(::hash(registerVal), buf);
-    uint256_t_to_buf(::hash(staticVal), buf);
+    uint256_t_to_buf(::hash(code->staticVal), buf);
     uint256_t_to_buf(::hash(errpc), buf);
-    code[pc].op.marshalForProof(buf, includeImmediateVal);
+    code->code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
@@ -158,7 +159,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto err_code_point = stateSaver.saveValue(errpc);
-    auto pc_results = stateSaver.saveValue(code[pc]);
+    auto pc_results = stateSaver.saveValue(code->code[pc]);
 
     auto status_str = static_cast<unsigned char>(state);
 
@@ -182,20 +183,31 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     }
 }
 
+boost::optional<MachineState> fromStorage(const CheckpointStorage& storage) {
+    auto state = storage.getInitialVmValues();
+
+    if (state.valid_state) {
+        CodeState code_state;
+        code_state.code = state.code;
+        code_state.staticVal = state.staticVal;
+        auto y = std::make_shared<CodeState>(code_state);
+        return MachineState(y, storage.pool);
+    } else {
+        return boost::none;
+    }
+}
+
 bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
     auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
-    auto initial_values = storage.getInitialVmValues();
-    if (!initial_values.valid_state) {
+    auto opt_state = fromStorage(storage);
+    if (!opt_state.has_value()) {
         return false;
     }
-
-    code = initial_values.code;
-    staticVal = initial_values.staticVal;
-    pool = storage.pool;
+    *this = opt_state.get();
 
     if (results.status.ok()) {
         auto state_data = results.data;
@@ -232,7 +244,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = code[pc];
+    auto& instruction = code->code[pc];
     if (instruction.op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();

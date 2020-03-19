@@ -94,9 +94,7 @@ TEST_CASE("Checkpoint State") {
         machine.initializeMachine(test_contract_path);
 
         CheckpointStorage storage(save_path, test_contract_path);
-        auto initial_machine = storage.getInitialVmValues();
-        MachineState machine_state(initial_machine.code,
-                                   initial_machine.staticVal, storage.pool);
+        MachineState machine_state = fromStorage(storage).get();
 
         auto machine2 = new Machine();
         machine2->initializeMachine(machine_state);

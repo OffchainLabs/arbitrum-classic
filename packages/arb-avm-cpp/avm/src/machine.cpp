@@ -27,11 +27,11 @@
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
-    os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
+    os << "codePointHash " << to_hex_str(hash(val.code->code[val.pc])) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
     os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash(val.staticVal)) << "\n";
+    os << "staticHash " << to_hex_str(hash(val.code->staticVal)) << "\n";
     os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
     return os;
 }
@@ -90,7 +90,7 @@ BlockReason Machine::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = machine_state.code[machine_state.pc];
+    auto& instruction = machine_state.code->code[machine_state.pc];
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint

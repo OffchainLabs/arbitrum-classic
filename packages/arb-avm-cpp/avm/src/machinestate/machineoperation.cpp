@@ -389,7 +389,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.staticVal;
+    value copiedStatic = m.code->staticVal;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -445,7 +445,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(m.code[m.pc]);
+    m.stack.push(m.code->code[m.pc]);
     ++m.pc;
 }
 

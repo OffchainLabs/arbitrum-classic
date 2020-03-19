@@ -22,6 +22,7 @@
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
 
+#include <boost/optional.hpp>
 #include <memory>
 #include <vector>
 
@@ -53,10 +54,15 @@ struct AssertionContext {
     }
 };
 
-struct MachineState {
-    std::shared_ptr<TuplePool> pool;
+class CodeState {
+   public:
     std::vector<CodePoint> code;
     value staticVal;
+};
+
+struct MachineState {
+    std::shared_ptr<TuplePool> pool;
+    std::shared_ptr<const CodeState> code;
     value registerVal;
     Datastack stack;
     Datastack auxstack;
@@ -66,8 +72,7 @@ struct MachineState {
     AssertionContext context;
 
     MachineState();
-    MachineState(const std::vector<CodePoint>& code_,
-                 const value& static_val_,
+    MachineState(std::shared_ptr<CodeState> code_,
                  std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);
 
@@ -79,5 +84,7 @@ struct MachineState {
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
 };
+
+boost::optional<MachineState> fromStorage(const CheckpointStorage&);
 
 #endif /* machinestate_hpp */

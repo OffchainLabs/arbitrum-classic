@@ -59,12 +59,11 @@ void destroyCheckpointStorage(CCheckpointStorage* storage) {
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto state = storage->getInitialVmValues();
+    auto opt_machine_state = fromStorage(*storage);
 
-    if (state.valid_state) {
-        MachineState machine_state(state.code, state.staticVal, storage->pool);
+    if (opt_machine_state.has_value()) {
         auto machine = new Machine();
-        machine->initializeMachine(machine_state);
+        machine->initializeMachine(opt_machine_state.get());
 
         return static_cast<void*>(machine);
     } else {
@@ -81,11 +80,10 @@ CMachine* getMachine(const CCheckpointStorage* storage_ptr,
     std::vector<unsigned char> machine_vector;
     marshal_uint256_t(hash, machine_vector);
 
-    auto initial_state = storage->getInitialVmValues();
+    boost::optional<MachineState> opt_machine_state = fromStorage(*storage);
 
-    if (initial_state.valid_state) {
-        MachineState machine_state(initial_state.code, initial_state.staticVal,
-                                   storage->pool);
+    if (opt_machine_state.has_value()) {
+        MachineState machine_state = opt_machine_state.get();
         auto machine = new Machine();
         machine->initializeMachine(machine_state);
         machine->restoreCheckpoint(*storage, machine_vector);
