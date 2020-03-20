@@ -83,6 +83,7 @@ struct MachineState {
     SaveResults checkpointState(CheckpointStorage& storage);
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
+    BlockReason runOne();
 };
 
 boost::optional<MachineState> fromStorage(const CheckpointStorage&);

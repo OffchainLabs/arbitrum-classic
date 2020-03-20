@@ -468,3 +468,72 @@ BlockReason MachineState::runOp(OpCode opcode) {
     }
     return NotBlocked{};
 }
+
+bool isErrorCodePoint(const CodePoint& cp) {
+    return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
+}
+
+BlockReason MachineState::runOne() {
+    if (state == Status::Error) {
+        return ErrorBlocked();
+    }
+
+    if (state == Status::Halted) {
+        return HaltBlocked();
+    }
+
+    auto& instruction = code->code[pc];
+
+    // if opcode is invalid, increment step count and return error or
+    // errorCodePoint
+    if (!isValidOpcode(instruction.op.opcode)) {
+        state = Status::Error;
+        context.numSteps++;
+        if (!isErrorCodePoint(errpc)) {
+            pc = errpc.pc;
+            state = Status::Extensive;
+        }
+        return NotBlocked();
+    } else {
+        if (instruction.op.immediate) {
+            auto imm = *instruction.op.immediate;
+            stack.push(std::move(imm));
+        }
+        // save stack size for stack cleanup in case of error
+        uint64_t startStackSize = stack.stacksize();
+        BlockReason blockReason = NotBlocked();
+        try {
+            blockReason = runOp(instruction.op.opcode);
+        } catch (const bad_pop_type& e) {
+            state = Status::Error;
+        } catch (const bad_tuple_index& e) {
+            state = Status::Error;
+        }
+        // if not blocked, increment step count and gas count
+        if (nonstd::get_if<NotBlocked>(&blockReason)) {
+            context.numSteps++;
+            context.numGas += InstructionArbGasCost.at(instruction.op.opcode);
+        } else {
+            if (instruction.op.immediate) {
+                stack.popClear();
+            }
+        }
+
+        if (state != Status::Error) {
+            return blockReason;
+        }
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        while (stack.stacksize() > 0 &&
+               startStackSize - stack.stacksize() < stackItems) {
+            stack.popClear();
+        }
+
+        if (!isErrorCodePoint(errpc)) {
+            pc = errpc.pc;
+            state = Status::Extensive;
+        }
+        return blockReason;
+    }
+}
