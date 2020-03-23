@@ -36,7 +36,7 @@ class Machine {
     MachineState machine_state;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    BlockReason runOne();
+    BlockReason runOne() { return machine_state.runOne(); }
 
    public:
     bool initializeMachine(const std::string& filename);

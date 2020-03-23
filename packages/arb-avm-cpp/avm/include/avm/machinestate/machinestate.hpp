@@ -86,6 +86,6 @@ struct MachineState {
     BlockReason runOne();
 };
 
-boost::optional<MachineState> fromStorage(const CheckpointStorage&);
+boost::optional<MachineState> machineFromStorage(const CheckpointStorage&);
 
 #endif /* machinestate_hpp */

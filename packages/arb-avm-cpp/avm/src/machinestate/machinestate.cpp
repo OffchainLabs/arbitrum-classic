@@ -183,7 +183,8 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     }
 }
 
-boost::optional<MachineState> fromStorage(const CheckpointStorage& storage) {
+boost::optional<MachineState> machineFromStorage(
+    const CheckpointStorage& storage) {
     auto state = storage.getInitialVmValues();
 
     if (state.valid_state) {
@@ -203,7 +204,7 @@ bool MachineState::restoreCheckpoint(
     auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
-    auto opt_state = fromStorage(storage);
+    auto opt_state = machineFromStorage(storage);
     if (!opt_state.has_value()) {
         return false;
     }

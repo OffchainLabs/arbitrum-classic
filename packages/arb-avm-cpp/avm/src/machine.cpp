@@ -77,10 +77,6 @@ Assertion Machine::run(uint64_t stepCount,
             machine_state.context.didInboxInsn};
 }
 
-BlockReason Machine::runOne() {
-    return machine_state.runOne();
-}
-
 SaveResults Machine::checkpoint(CheckpointStorage& storage) {
     return machine_state.checkpointState(storage);
 }
