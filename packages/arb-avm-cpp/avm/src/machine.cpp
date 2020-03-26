@@ -107,18 +107,20 @@ MachineState Machine::trustlessCall(uint64_t steps,
     copy_start = copyMachine.stack.stacksize();
     aux_copy_start = copyMachine.auxstack.stacksize();
     Operation current_op;
-    std::vector<TupleTree> original_stack_contents(copy_start, TupleTree());
-    std::vector<std::shared_ptr<TupleTree> > current_stack_contents;
-    std::vector<TupleTree> aux_stack_contents(aux_copy_start, TupleTree());
-    std::vector<std::shared_ptr<TupleTree> > current_aux_contents;
+    std::vector<std::shared_ptr<TupleTree>> original_stack_contents(
+        copy_start, std::make_shared<TupleTree>());
+    std::vector<std::shared_ptr<TupleTree>> current_stack_contents;
+    std::vector<std::shared_ptr<TupleTree>> aux_stack_contents(
+        aux_copy_start, std::make_shared<TupleTree>());
+    std::vector<std::shared_ptr<TupleTree>> current_aux_contents;
 
     current_stack_contents.reserve(original_stack_contents.size());
     for (auto& tree : original_stack_contents) {
-        current_stack_contents.push_back(std::make_shared<TupleTree>(tree));
+        current_stack_contents.push_back(tree);
     }
     current_aux_contents.reserve(aux_stack_contents.size());
     for (auto& tree : aux_stack_contents) {
-        current_aux_contents.push_back(std::make_shared<TupleTree>(tree));
+        current_aux_contents.push_back(tree);
     }
 
     for (uint64_t i = steps; i > 0; i--) {
@@ -143,6 +145,9 @@ MachineState Machine::trustlessCall(uint64_t steps,
                         current_stack_contents.back()
                             ->children[(uint64_t)*index];
                 }
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
+                }
                 break;
             case OpCode::TSET:
                 if (current_op.immediate) {
@@ -159,30 +164,44 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>(new_tuple);
                 }
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
+                }
                 break;
             case OpCode::TLEN:
                 if (!current_op.immediate) {
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
                 }
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
+                }
                 break;
             case OpCode::EQ:
-                // this may need to mark full recursive read
                 if (!current_op.immediate) {
                     current_stack_contents.pop_back();
                 }
                 current_stack_contents.back() = std::make_shared<TupleTree>();
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
+                }
                 break;
             case OpCode::HASH:
                 if (!current_op.immediate) {
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
                 }
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
+                }
                 break;
             case OpCode::TYPE:
                 if (!current_op.immediate) {
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
+                }
+                if (copy_start > current_stack_contents.size() - 1) {
+                    copy_start = current_stack_contents.size() - 1;
                 }
                 break;
             case OpCode::AUXPUSH:
@@ -210,17 +229,26 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.push_back(
                         current_stack_contents.back());
                 }
+                if (copy_start > current_stack_contents.size() - 2) {
+                    copy_start = current_stack_contents.size() - 2;
+                }
                 break;
             case OpCode::DUP1:
                 if (!current_op.immediate) {
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 1));
                 }
+                if (copy_start > current_stack_contents.size() - 3) {
+                    copy_start = current_stack_contents.size() - 3;
+                }
                 break;
             case OpCode::DUP2:
                 if (!current_op.immediate) {
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 2));
+                }
+                if (copy_start > current_stack_contents.size() - 4) {
+                    copy_start = current_stack_contents.size() - 4;
                 }
                 break;
             case OpCode::SWAP1:
@@ -231,6 +259,9 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
                 }
+                if (copy_start > current_stack_contents.size() - 2) {
+                    copy_start = current_stack_contents.size() - 2;
+                }
                 break;
             case OpCode::SWAP2:
                 if (!current_op.immediate) {
@@ -239,6 +270,9 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 } else {
                     *(current_stack_contents.end() - 1) =
                         std::make_shared<TupleTree>();
+                }
+                if (copy_start > current_stack_contents.size() - 3) {
+                    copy_start = current_stack_contents.size() - 3;
                 }
                 break;
             default:
@@ -260,15 +294,14 @@ MachineState Machine::trustlessCall(uint64_t steps,
     outputMachine.stack.values =
         std::vector<value>(machine_state.stack.values.begin() + copy_start,
                            machine_state.stack.values.end());
-    outputMachine.stack.hashes =
-        std::vector<uint256_t>(machine_state.stack.hashes.begin() + copy_start,
-                               machine_state.stack.hashes.end());
+    outputMachine.stack.hashes = std::vector<uint256_t>(
+        machine_state.stack.hashes.begin(), machine_state.stack.hashes.end());
     outputMachine.auxstack.values =
         std::vector<value>(machine_state.auxstack.values.begin() + copy_start,
                            machine_state.auxstack.values.end());
-    outputMachine.auxstack.hashes = std::vector<uint256_t>(
-        machine_state.auxstack.hashes.begin() + copy_start,
-        machine_state.auxstack.hashes.end());
+    outputMachine.auxstack.hashes =
+        std::vector<uint256_t>(machine_state.auxstack.hashes.begin(),
+                               machine_state.auxstack.hashes.end());
     return outputMachine;
 }
 
@@ -282,7 +315,7 @@ void Machine::glueIn(MachineState state,
     machine_state.stack.hashes.insert(machine_state.stack.hashes.end(),
                                       state.stack.hashes.begin(),
                                       state.stack.hashes.end());
-    machine_state.auxstack.values.resize(stack_start);
+    machine_state.auxstack.values.resize(aux_start);
     machine_state.auxstack.values.insert(machine_state.auxstack.values.end(),
                                          state.auxstack.values.begin(),
                                          state.auxstack.values.end());
