@@ -42,6 +42,8 @@ class Machine {
     bool initializeMachine(const std::string& filename);
     void initializeMachine(const MachineState& initial_state);
 
+    Datastack get_stack() { return this->machine_state.stack; }
+
     Assertion run(uint64_t stepCount,
                   uint256_t timeBoundStart,
                   uint256_t timeBoundEnd,
@@ -63,6 +65,10 @@ class Machine {
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
     DeleteResults deleteCheckpoint(CheckpointStorage& storage);
+    MachineState trustlessCall(uint64_t steps,
+                               uint64_t& copy_start,
+                               uint64_t& aux_copy_start);
+    void glueIn(MachineState state, uint64_t stack_start, uint64_t aux_start);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

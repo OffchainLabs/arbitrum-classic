@@ -94,7 +94,7 @@ TEST_CASE("Checkpoint State") {
         machine.initializeMachine(test_contract_path);
 
         CheckpointStorage storage(save_path, test_contract_path);
-        MachineState machine_state = fromStorage(storage).get();
+        MachineState machine_state = machineFromStorage(storage).get();
 
         auto machine2 = new Machine();
         machine2->initializeMachine(machine_state);
@@ -127,6 +127,31 @@ TEST_CASE("Delete machine checkpoint") {
         auto results = machine.checkpoint(storage);
 
         deleteCheckpoint(storage, machine, results.storage_key);
+    }
+    boost::filesystem::remove_all(save_path);
+}
+
+TEST_CASE("Trustless calls test") {
+    SECTION("default") {
+        Machine machine;
+        machine.initializeMachine(test_contract_path);
+
+        Machine trustless = machine;
+        uint64_t stack_start;
+        uint64_t aux_start;
+
+        for (int i = 0; i < 10; i++) {
+            auto output = trustless.trustlessCall(10, stack_start, aux_start);
+
+            machine.run(10, 0, 0, Tuple(), std::chrono::seconds(1000));
+
+            for (int j = 0; j < 10; j++) {
+                output.runOne();
+            }
+            trustless.glueIn(output, stack_start, aux_start);
+            REQUIRE(machine.get_stack().stacksize() ==
+                    trustless.get_stack().stacksize());
+        }
     }
     boost::filesystem::remove_all(save_path);
 }
