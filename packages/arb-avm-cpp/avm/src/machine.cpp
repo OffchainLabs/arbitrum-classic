@@ -107,11 +107,17 @@ MachineState Machine::trustlessCall(uint64_t steps,
     copy_start = copyMachine.stack.stacksize();
     aux_copy_start = copyMachine.auxstack.stacksize();
     Operation current_op;
-    std::vector<std::shared_ptr<TupleTree>> original_stack_contents(
-        copy_start, std::make_shared<TupleTree>());
+
+    std::vector<std::shared_ptr<TupleTree>> original_stack_contents(copy_start);
+    for (auto& tree : original_stack_contents) {
+        tree = std::make_shared<TupleTree>();
+    }
     std::vector<std::shared_ptr<TupleTree>> current_stack_contents;
-    std::vector<std::shared_ptr<TupleTree>> aux_stack_contents(
-        aux_copy_start, std::make_shared<TupleTree>());
+
+    std::vector<std::shared_ptr<TupleTree>> aux_stack_contents(aux_copy_start);
+    for (auto& tree : aux_stack_contents) {
+        tree = std::make_shared<TupleTree>();
+    }
     std::vector<std::shared_ptr<TupleTree>> current_aux_contents;
 
     current_stack_contents.reserve(original_stack_contents.size());
@@ -126,6 +132,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
     for (uint64_t i = steps; i > 0; i--) {
         current_op = copyMachine.code->code[copyMachine.pc].op;
         uint256_t* index;
+        uint64_t read_depth = 1;
         switch (current_op.opcode) {
             case OpCode::TGET:
                 if (current_op.immediate) {
@@ -145,9 +152,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                         current_stack_contents.back()
                             ->children[(uint64_t)*index];
                 }
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
+                read_depth = 1;
                 break;
             case OpCode::TSET:
                 if (current_op.immediate) {
@@ -164,45 +169,23 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>(new_tuple);
                 }
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
-                break;
-            case OpCode::TLEN:
-                if (!current_op.immediate) {
-                    current_stack_contents.back() =
-                        std::make_shared<TupleTree>();
-                }
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
+                read_depth = 1;
                 break;
             case OpCode::EQ:
                 if (!current_op.immediate) {
                     current_stack_contents.pop_back();
                 }
                 current_stack_contents.back() = std::make_shared<TupleTree>();
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
+                read_depth = 1;
                 break;
+            case OpCode::TLEN:
             case OpCode::HASH:
-                if (!current_op.immediate) {
-                    current_stack_contents.back() =
-                        std::make_shared<TupleTree>();
-                }
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
-                break;
             case OpCode::TYPE:
                 if (!current_op.immediate) {
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
                 }
-                if (copy_start > current_stack_contents.size() - 1) {
-                    copy_start = current_stack_contents.size() - 1;
-                }
+                read_depth = 1;
                 break;
             case OpCode::AUXPUSH:
                 if (!current_op.immediate) {
@@ -213,6 +196,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                         std::make_shared<TupleTree>());
                 }
                 current_stack_contents.pop_back();
+                read_depth = 0;
                 break;
             case OpCode::AUXPOP:
                 if (!current_op.immediate) {
@@ -222,6 +206,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.push_back(
                         std::make_shared<TupleTree>());
                 }
+                read_depth = 0;
                 current_aux_contents.pop_back();
                 break;
             case OpCode::DUP0:
@@ -229,27 +214,21 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.push_back(
                         current_stack_contents.back());
                 }
-                if (copy_start > current_stack_contents.size() - 2) {
-                    copy_start = current_stack_contents.size() - 2;
-                }
+                read_depth = 2;
                 break;
             case OpCode::DUP1:
                 if (!current_op.immediate) {
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 1));
                 }
-                if (copy_start > current_stack_contents.size() - 3) {
-                    copy_start = current_stack_contents.size() - 3;
-                }
+                read_depth = 3;
                 break;
             case OpCode::DUP2:
                 if (!current_op.immediate) {
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 2));
                 }
-                if (copy_start > current_stack_contents.size() - 4) {
-                    copy_start = current_stack_contents.size() - 4;
-                }
+                read_depth = 4;
                 break;
             case OpCode::SWAP1:
                 if (!current_op.immediate) {
@@ -259,9 +238,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
                 }
-                if (copy_start > current_stack_contents.size() - 2) {
-                    copy_start = current_stack_contents.size() - 2;
-                }
+                read_depth = 2;
                 break;
             case OpCode::SWAP2:
                 if (!current_op.immediate) {
@@ -271,9 +248,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     *(current_stack_contents.end() - 1) =
                         std::make_shared<TupleTree>();
                 }
-                if (copy_start > current_stack_contents.size() - 3) {
-                    copy_start = current_stack_contents.size() - 3;
-                }
+                read_depth = 3;
                 break;
             default:
                 break;
@@ -283,8 +258,8 @@ MachineState Machine::trustlessCall(uint64_t steps,
             current_stack_contents.resize(copyMachine.stack.stacksize(),
                                           std::make_shared<TupleTree>());
         }
-        if (copyMachine.stack.stacksize() < copy_start) {
-            copy_start = copyMachine.stack.stacksize();
+        if (copyMachine.stack.stacksize() - read_depth < copy_start) {
+            copy_start = copyMachine.stack.stacksize() - read_depth;
         }
         if (copyMachine.auxstack.stacksize() < aux_copy_start) {
             aux_copy_start = copyMachine.auxstack.stacksize();
