@@ -27,9 +27,14 @@ class TuplePool;
 class Tuple;
 struct Operation;
 struct CodePoint;
+struct HashOnly {
+    uint256_t value;
+};
+
+bool operator==(const HashOnly& left, const HashOnly& right);
 
 // Note: uint256_t is actually 48 bytes long
-using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
+using value = nonstd::variant<Tuple, uint256_t, CodePoint, HashOnly>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);

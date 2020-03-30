@@ -85,6 +85,18 @@ struct ValueSerializer {
         marshal_uint64_t(val.pc, value_vector);
         return value_vector;
     }
+
+    // This might need to be disambiguated from the uint256_t one
+    std::vector<unsigned char> operator()(const HashOnly& val) const {
+        std::vector<unsigned char> value_vector;
+        auto type_code = static_cast<unsigned char>(NUM);
+        value_vector.push_back(type_code);
+
+        value_vector.push_back(NUM);
+        marshal_uint256_t(val.value, value_vector);
+
+        return value_vector;
+    }
 };
 
 using iterator = std::vector<unsigned char>::const_iterator;

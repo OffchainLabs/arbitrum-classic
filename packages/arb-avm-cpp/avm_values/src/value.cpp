@@ -153,6 +153,10 @@ int get_tuple_size(char*& bufptr) {
     return valType - TUPLE;
 }
 
+uint256_t hash(const HashOnly& val) {
+    return val.value;
+}
+
 uint256_t hash(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }
@@ -176,6 +180,11 @@ struct ValuePrinter {
            << to_hex_str(val.nextHash) << ")";
         return &os;
     }
+
+    std::ostream* operator()(const HashOnly& val) const {
+        os << val.value;
+        return &os;
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
@@ -188,4 +197,8 @@ std::vector<unsigned char> GetHashKey(const value& val) {
     marshal_value(hash_key, hash_key_vector);
 
     return hash_key_vector;
+}
+
+bool operator==(const HashOnly& left, const HashOnly& right) {
+    return left.value == right.value;
 }

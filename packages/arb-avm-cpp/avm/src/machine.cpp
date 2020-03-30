@@ -94,7 +94,6 @@ DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     return ::deleteCheckpoint(storage, checkpoint_key);
 }
 
-// TODO: have a way to mark full recursive read
 struct TupleTree {
     std::shared_ptr<TupleTree> children[8] = {
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
