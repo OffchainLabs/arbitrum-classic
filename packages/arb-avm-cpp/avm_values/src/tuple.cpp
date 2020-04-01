@@ -23,7 +23,7 @@ Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
     tpl->data.push_back(std::move(val));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, TuplePool* pool)
@@ -31,7 +31,7 @@ Tuple::Tuple(value val1, value val2, TuplePool* pool)
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
@@ -40,7 +40,7 @@ Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
@@ -50,7 +50,7 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -66,7 +66,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -84,7 +84,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -104,7 +104,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -126,7 +126,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val7));
     tpl->data.push_back(std::move(val8));
     tpl->deferredHashing = true;
-    computeSize();
+    computeValueSize();
 }
 
 Tuple::Tuple(std::vector<value> values, TuplePool* pool)
@@ -137,7 +137,7 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool)
         }
 
         tpl->cachedHash = calculateHash();
-        computeSize();
+        computeValueSize();
     }
 }
 
@@ -162,19 +162,19 @@ value Tuple::clone_shallow() {
         }
     }
     if (tuple_size() > 0) {
-        computeSize();
+        computeValueSize();
     }
 
     return tup;
 }
 
 int Tuple::getSize() const {
-    return size;
+    return value_size;
 }
 
-void Tuple::computeSize() {
+void Tuple::computeValueSize() {
     for (uint64_t i = 0; i < tpl->data.size(); i++) {
-        size += ::getSize(tpl->data[i]);
+        value_size += ::getSize(tpl->data[i]);
     }
 }
 

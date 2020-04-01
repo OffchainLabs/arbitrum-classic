@@ -30,7 +30,7 @@ class Tuple {
    private:
     TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
-    int size = 0;
+    int value_size = 0;
 
     friend uint256_t hash(const Tuple&);
 
@@ -100,7 +100,7 @@ class Tuple {
     //        }
     //    }
 
-    void computeSize();
+    void computeValueSize();
 
     uint64_t tuple_size() const {
         if (tpl) {

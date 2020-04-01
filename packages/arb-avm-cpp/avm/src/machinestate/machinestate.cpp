@@ -124,31 +124,47 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-int getDataStackSize(Datastack stack) {
-    int size = 0;
+int getCodeSize(const std::vector<CodePoint>& code) {
+    int code_size = 0;
 
-    for (uint64_t i = 0; i < stack.values.size(); i++) {
-        size += getSize(stack.values[i]);
+    for (uint64_t i = 0; i < code.size(); i++) {
+        code_size += getSize(code[i]);
     }
 
-    size += stack.hashes.size();
-
-    return size;
+    return code_size;
 }
 
-bool MachineState::machineIsValidSize() const {
+int getDataStackSize(const Datastack& stack) {
+    int datastack_size = 0;
+
+    for (uint64_t i = 0; i < stack.values.size(); i++) {
+        datastack_size += getSize(stack.values[i]);
+    }
+
+    for (uint64_t i = 0; i < stack.hashes.size(); i++) {
+        datastack_size += getSize(stack.hashes[i]);
+    }
+
+    return datastack_size;
+}
+
+bool MachineState::verifyMachineValidity() {
     int machine_size = 0;
 
-    machine_size += code.size();
+    machine_size += getCodeSize(code);
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
-
     machine_size += getDataStackSize(stack);
     machine_size += getDataStackSize(auxstack);
-
     machine_size += getSize(errpc);
 
-    return machine_size <= machine_size_limit;
+    auto valid_machine = machine_size <= machine_size_limit;
+
+    if (!valid_machine) {
+        state = Status::Error;
+    }
+
+    return valid_machine;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -482,10 +498,10 @@ BlockReason MachineState::runOp(OpCode opcode) {
             state = Status::Error;
     }
 
-    auto valid_machine = machineIsValidSize();
+    auto valid_machine = verifyMachineValidity();
 
     if (!valid_machine) {
-        state = Status::Error;
+        std::cerr << "Machine size invalid : error state" << std::endl;
     }
 
     return NotBlocked{};

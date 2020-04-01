@@ -67,7 +67,7 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     }
 
     if (size > 0) {
-        tup.computeSize();
+        tup.computeValueSize();
     }
 
     return tup;
@@ -141,10 +141,8 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
         case NUM:
             return deserializeUint256t(bufptr);
         case CODEPT:
-            std::cout << "code point des" << std::endl;
             return deserializeCodePoint(bufptr, pool);
         default:
-            std::cout << "tuple des" << std::endl;
             if (valType >= TUPLE && valType <= TUPLE + 8) {
                 return deserializeTuple(bufptr, valType - TUPLE, pool);
             } else {
@@ -171,7 +169,7 @@ struct GetSize {
 
     int operator()(const uint256_t& val) const { return 1; }
 
-    int operator()(const CodePoint& val) const { return 1; }
+    int operator()(const CodePoint& val) const { return val.getSize(); }
 };
 
 int getSize(const value& val) {

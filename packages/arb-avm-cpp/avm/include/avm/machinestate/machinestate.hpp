@@ -72,7 +72,7 @@ struct MachineState {
                  const value& static_val_,
                  std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);
-    bool machineIsValidSize() const;
+    bool verifyMachineValidity();
     std::vector<unsigned char> marshalForProof();
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;

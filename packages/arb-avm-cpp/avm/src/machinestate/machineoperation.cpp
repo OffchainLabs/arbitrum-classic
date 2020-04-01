@@ -576,14 +576,12 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-const int size_limit = 10000;
-
 BlockReason send(MachineState& m) {
     m.stack.prepForMod(1);
 
     auto val_size = getSize(m.stack[0]);
 
-    if (val_size > size_limit) {
+    if (val_size > send_size_limit) {
         return ErrorBlocked();
     } else {
         m.context.outMessage.push_back(std::move(m.stack[0]));
