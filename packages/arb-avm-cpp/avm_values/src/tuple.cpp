@@ -23,6 +23,7 @@ Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
     tpl->data.push_back(std::move(val));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1, value val2, TuplePool* pool)
@@ -30,6 +31,7 @@ Tuple::Tuple(value val1, value val2, TuplePool* pool)
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
@@ -38,6 +40,7 @@ Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
@@ -47,6 +50,7 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1,
@@ -62,6 +66,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1,
@@ -79,6 +84,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1,
@@ -98,6 +104,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(value val1,
@@ -119,6 +126,7 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val7));
     tpl->data.push_back(std::move(val8));
     tpl->deferredHashing = true;
+    computeSize();
 }
 
 Tuple::Tuple(std::vector<value> values, TuplePool* pool)
@@ -129,6 +137,7 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool)
         }
 
         tpl->cachedHash = calculateHash();
+        computeSize();
     }
 }
 
@@ -152,14 +161,31 @@ value Tuple::clone_shallow() {
             tup.set_element(i, valHash);
         }
     }
+    if (tuple_size() > 0) {
+        computeSize();
+    }
+
     return tup;
 }
 
+int Tuple::getSize() const {
+    return size;
+}
+
+void Tuple::computeSize() {
+    for (uint64_t i = 0; i < tpl->data.size(); i++) {
+        size += ::getSize(tpl->data[i]);
+    }
+}
+
 uint256_t Tuple::calculateHash() const {
-    std::array<unsigned char, 1 + 8 * 32> tupData;
-    auto oit = tupData.begin();
+    std::array<unsigned char, 2 + 8 * 32> tupData;
+
     tupData[0] = TUPLE + tuple_size();
-    ++oit;
+    tupData[1] = getSize();
+    auto oit = tupData.begin();
+    oit += 2;
+
     for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash(get_element(i));
         std::array<uint64_t, 4> valHashInts;
@@ -171,15 +197,18 @@ uint256_t Tuple::calculateHash() const {
     }
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 1 + 32 * tuple_size(), hashData.data());
+    evm::Keccak_256(tupData.data(), 2 + 32 * tuple_size(), hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
 uint256_t zeroHash() {
-    std::array<unsigned char, 1> tupData;
+    std::array<unsigned char, 2> tupData;
+
     tupData[0] = TUPLE;
+    tupData[1] = 0;
+
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 1, hashData.data());
+    evm::Keccak_256(tupData.data(), 2, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 

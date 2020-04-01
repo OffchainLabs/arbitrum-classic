@@ -114,8 +114,8 @@ TEST_CASE("Checkpoint State") {
 
         auto hash3 = machine3.hash();
 
-        REQUIRE(hash1 == hash2);
         REQUIRE(hash3 == hash2);
+        REQUIRE(hash1 == hash2);
     }
     boost::filesystem::remove_all(save_path);
 }

@@ -61,10 +61,17 @@ CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
 
 Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     Tuple tup(&pool, size);
+
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
     }
+
+    if (size > 0) {
+        tup.computeSize();
+    }
+
     return tup;
+    //    return Tuple(values, &pool);
 }
 
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
@@ -134,8 +141,10 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
         case NUM:
             return deserializeUint256t(bufptr);
         case CODEPT:
+            std::cout << "code point des" << std::endl;
             return deserializeCodePoint(bufptr, pool);
         default:
+            std::cout << "tuple des" << std::endl;
             if (valType >= TUPLE && valType <= TUPLE + 8) {
                 return deserializeTuple(bufptr, valType - TUPLE, pool);
             } else {
@@ -155,6 +164,18 @@ int get_tuple_size(char*& bufptr) {
 
 uint256_t hash(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
+}
+
+struct GetSize {
+    int operator()(const Tuple& val) const { return val.getSize(); }
+
+    int operator()(const uint256_t& val) const { return 1; }
+
+    int operator()(const CodePoint& val) const { return 1; }
+};
+
+int getSize(const value& val) {
+    return nonstd::visit(GetSize{}, val);
 }
 
 struct ValuePrinter {

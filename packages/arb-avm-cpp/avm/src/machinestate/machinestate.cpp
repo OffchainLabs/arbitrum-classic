@@ -124,6 +124,33 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
+int getDataStackSize(Datastack stack) {
+    int size = 0;
+
+    for (uint64_t i = 0; i < stack.values.size(); i++) {
+        size += getSize(stack.values[i]);
+    }
+
+    size += stack.hashes.size();
+
+    return size;
+}
+
+bool MachineState::machineIsValidSize() const {
+    int machine_size = 0;
+
+    machine_size += code.size();
+    machine_size += getSize(staticVal);
+    machine_size += getSize(registerVal);
+
+    machine_size += getDataStackSize(stack);
+    machine_size += getDataStackSize(auxstack);
+
+    machine_size += getSize(errpc);
+
+    return machine_size <= machine_size_limit;
+}
+
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
     auto opcode = code[pc].op.opcode;
@@ -454,5 +481,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
                       << ">" << std::hex << static_cast<int>(opcode);
             state = Status::Error;
     }
+
+    auto valid_machine = machineIsValidSize();
+
+    if (!valid_machine) {
+        state = Status::Error;
+    }
+
     return NotBlocked{};
 }

@@ -30,12 +30,14 @@ class Tuple {
    private:
     TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
+    int size = 0;
 
     friend uint256_t hash(const Tuple&);
 
    public:
     Tuple() = default;
     uint256_t calculateHash() const;
+    int getSize() const;
 
     Tuple(TuplePool* pool, size_t size) {
         if (size > 0) {
@@ -97,6 +99,8 @@ class Tuple {
     //            tuplePool->returnResource(std::move(tpl));
     //        }
     //    }
+
+    void computeSize();
 
     uint64_t tuple_size() const {
         if (tpl) {

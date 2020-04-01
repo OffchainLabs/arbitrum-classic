@@ -576,12 +576,22 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
+const int size_limit = 10000;
+
 BlockReason send(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.outMessage.push_back(std::move(m.stack[0]));
-    m.stack.popClear();
-    ++m.pc;
-    return NotBlocked();
+
+    auto val_size = getSize(m.stack[0]);
+
+    if (val_size > size_limit) {
+        return ErrorBlocked();
+    } else {
+        m.context.outMessage.push_back(std::move(m.stack[0]));
+        m.stack.popClear();
+        ++m.pc;
+
+        return NotBlocked();
+    }
 }
 
 void getTime(MachineState& m) {

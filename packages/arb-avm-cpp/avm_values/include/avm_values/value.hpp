@@ -56,5 +56,6 @@ static T shrink(uint256_t i) {
 }
 
 std::vector<unsigned char> GetHashKey(const value& val);
+int getSize(const value& val);
 
 #endif /* value_hpp */

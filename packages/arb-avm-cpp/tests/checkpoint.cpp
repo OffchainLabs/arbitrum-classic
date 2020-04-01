@@ -147,6 +147,10 @@ TEST_CASE("Save and get value") {
         auto tuple = Tuple();
         auto hash_key = GetHashKey(tuple);
         auto tup_hash = tuple.calculateHash();
+        //        std::cout << "key: " << std::endl;
+        //        std::cout << tup_hash << std::endl;
+        //        std::cout << hash_key[hash_key.size()-1] << std::endl;
+        //        std::cout << "key end: " << std::endl;
 
         saveValue(saver, tuple, 1, true);
         getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
