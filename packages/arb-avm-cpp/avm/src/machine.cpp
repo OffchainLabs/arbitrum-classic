@@ -95,6 +95,7 @@ DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
 }
 
 struct TupleTree {
+    bool is_read = false;
     std::shared_ptr<TupleTree> children[8] = {
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 };
@@ -137,12 +138,14 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 if (current_op.immediate) {
                     index = nonstd::get_if<uint256_t>(&*current_op.immediate);
                 } else {
+                    current_stack_contents.back()->is_read = true;
                     index = nonstd::get_if<uint256_t>(&copyMachine.stack[0]);
                     current_stack_contents.pop_back();
                 }
                 if (index && *index < 8) {
                     if (current_stack_contents.back()
                             ->children[(uint64_t)*index] == nullptr) {
+                        // current_stack_contents.back()->is_read = true;
                         current_stack_contents.back()
                             ->children[(uint64_t)*index] =
                             std::make_shared<TupleTree>();
@@ -157,8 +160,17 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 if (current_op.immediate) {
                     index = nonstd::get_if<uint256_t>(&*current_op.immediate);
                 } else {
+                    current_stack_contents.back()->is_read = true;
                     index = nonstd::get_if<uint256_t>(&copyMachine.stack[0]);
                     current_stack_contents.pop_back();
+                }
+                current_stack_contents.back()->is_read = true;
+                (**(current_stack_contents.end() - 1)).is_read = true;
+                for (auto& subtree :
+                     (**(current_stack_contents.end() - 1)).children) {
+                    if (!subtree) {
+                        *subtree = TupleTree();
+                    }
                 }
                 if (index && *index < 8) {
                     TupleTree new_tuple = **(current_stack_contents.end() - 1);
@@ -210,6 +222,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 break;
             case OpCode::DUP0:
                 if (!current_op.immediate) {
+                    // current_stack_contents.back()->is_read = true;
                     current_stack_contents.push_back(
                         current_stack_contents.back());
                 }
@@ -217,6 +230,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 break;
             case OpCode::DUP1:
                 if (!current_op.immediate) {
+                    (*(current_stack_contents.end() - 1))->is_read = true;
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 1));
                 }
@@ -224,6 +238,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 break;
             case OpCode::DUP2:
                 if (!current_op.immediate) {
+                    (*(current_stack_contents.end() - 2))->is_read = true;
                     current_stack_contents.push_back(
                         *(current_stack_contents.end() - 2));
                 }
@@ -233,6 +248,8 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 if (!current_op.immediate) {
                     std::swap(current_stack_contents.back(),
                               *(current_stack_contents.end() - 1));
+                    current_stack_contents.back()->is_read = true;
+                    (*(current_stack_contents.end() - 1))->is_read = true;
                 } else {
                     current_stack_contents.back() =
                         std::make_shared<TupleTree>();
@@ -243,6 +260,8 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 if (!current_op.immediate) {
                     std::swap(current_stack_contents.back(),
                               *(current_stack_contents.end() - 2));
+                    current_stack_contents.back()->is_read = true;
+                    (*(current_stack_contents.end() - 2))->is_read = true;
                 } else {
                     *(current_stack_contents.end() - 1) =
                         std::make_shared<TupleTree>();
@@ -268,11 +287,27 @@ MachineState Machine::trustlessCall(uint64_t steps,
     outputMachine.stack.values =
         std::vector<value>(machine_state.stack.values.begin() + copy_start,
                            machine_state.stack.values.end());
+    for (uint64_t i = 0; i < outputMachine.stack.stacksize(); i++) {
+        if (original_stack_contents[i + copy_start]->is_read) {
+            uint256_t old_hash = ::hash(outputMachine.stack.values[i]);
+            outputMachine.stack.values[i] = HashOnly();
+            nonstd::get_if<HashOnly>(&outputMachine.stack.values[i])->value =
+                old_hash;
+        }
+    }
     outputMachine.stack.hashes = std::vector<uint256_t>(
         machine_state.stack.hashes.begin(), machine_state.stack.hashes.end());
     outputMachine.auxstack.values =
         std::vector<value>(machine_state.auxstack.values.begin() + copy_start,
                            machine_state.auxstack.values.end());
+    for (uint64_t i = 0; i < outputMachine.auxstack.stacksize(); i++) {
+        if (aux_stack_contents[i + copy_start]->is_read) {
+            uint256_t old_hash = ::hash(outputMachine.auxstack.values[i]);
+            outputMachine.auxstack.values[i] = HashOnly();
+            nonstd::get_if<HashOnly>(&outputMachine.auxstack.values[i])->value =
+                old_hash;
+        }
+    }
     outputMachine.auxstack.hashes =
         std::vector<uint256_t>(machine_state.auxstack.hashes.begin(),
                                machine_state.auxstack.hashes.end());

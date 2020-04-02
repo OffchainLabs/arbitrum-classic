@@ -140,7 +140,7 @@ TEST_CASE("Trustless calls test") {
         uint64_t stack_start;
         uint64_t aux_start;
         int run_times = 25;
-        int run_length = 10;
+        int run_length = 15;
 
         for (int i = 0; i < run_times; i++) {
             auto output =
