@@ -26,6 +26,8 @@ library OneStepProof {
     using Machine for Machine.Data;
     using Value for Value.Data;
 
+    uint256 constant send_size_limit = 10000;
+
     struct ValidateProofData {
         bytes32 beforeHash;
         uint128[2] timeBoundsBlocks;
@@ -1494,22 +1496,23 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
-            if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstMessage,
-                            messageHash
-                        )
-                    ) == _data.lastMessage,
-                    "sent message doesn't match output message"
-                );
-
-                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-            } else {
-                messageHash = 0;
-            }
+            if(stackVals[0].size <= send_size_limit){
+                (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
+                if (correct) {
+                    require(
+                        keccak256(
+                            abi.encodePacked(
+                                _data.firstMessage,
+                                messageHash
+                            )
+                        ) == _data.lastMessage,
+                        "sent message doesn't match output message"
+                    );
+                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                } else {
+                    messageHash = 0;
+                }
+            } 
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](2);
             contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);

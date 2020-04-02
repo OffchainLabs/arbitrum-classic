@@ -42,7 +42,7 @@ library Machine {
         return Value.HashOnly(Value.hashTuple([
             Value.newHashOnly(valHash.hash),
             Value.newHashOnly(stackVal.hash)
-        ]));
+        ], 2));
     }
 
     struct Data {

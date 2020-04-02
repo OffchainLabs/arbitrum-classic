@@ -105,7 +105,7 @@ library Protocol {
         return Value.hashTuple([
             Value.newHashOnly(vmInbox),
             Value.newHashOnly(message)
-        ]);
+        ], 2);
     }
 
     function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
