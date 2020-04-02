@@ -179,12 +179,18 @@ void Tuple::computeValueSize() {
 }
 
 uint256_t Tuple::calculateHash() const {
-    std::array<unsigned char, 2 + 8 * 32> tupData;
+    std::array<unsigned char, 1 + 9 * 32> tupData;
 
     tupData[0] = TUPLE + tuple_size();
-    tupData[1] = getSize();
+    auto size = getSize();
     auto oit = tupData.begin();
-    oit += 2;
+    ++oit;
+
+    std::array<uint64_t, 4> valHashInts1;
+    to_big_endian(size, valHashInts1.begin());
+    std::copy(reinterpret_cast<unsigned char*>(valHashInts1.data()),
+              reinterpret_cast<unsigned char*>(valHashInts1.data()) + 32, oit);
+    oit += 32;
 
     for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash(get_element(i));
@@ -197,18 +203,27 @@ uint256_t Tuple::calculateHash() const {
     }
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 2 + 32 * tuple_size(), hashData.data());
+    evm::Keccak_256(tupData.data(), 1 + 32 * (tuple_size() + 1),
+                    hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
 uint256_t zeroHash() {
-    std::array<unsigned char, 2> tupData;
+    std::array<unsigned char, 33> tupData;
 
     tupData[0] = TUPLE;
-    tupData[1] = 0;
+    auto oit = tupData.begin();
+    ++oit;
+
+    uint256_t size = 0;
+
+    std::array<uint64_t, 4> valHashInts;
+    to_big_endian(size, valHashInts.begin());
+    std::copy(reinterpret_cast<unsigned char*>(valHashInts.data()),
+              reinterpret_cast<unsigned char*>(valHashInts.data()) + 32, oit);
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 2, hashData.data());
+    evm::Keccak_256(tupData.data(), 33, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 

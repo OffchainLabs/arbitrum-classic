@@ -71,7 +71,6 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     }
 
     return tup;
-    //    return Tuple(values, &pool);
 }
 
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
