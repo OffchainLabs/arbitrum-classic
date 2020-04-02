@@ -238,6 +238,7 @@ func (tv TupleValue) internalHash() common.Hash {
 
 	return hashing.SoliditySHA3(
 		hashing.Uint8(tv.InternalTypeCode()),
+		hashing.Uint256(big.NewInt(tv.size)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
 }
