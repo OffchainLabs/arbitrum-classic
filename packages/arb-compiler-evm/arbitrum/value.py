@@ -341,7 +341,7 @@ class Tuple:
         return Tuple(new_tup)
 
     def get_size(self):
-        size = 0
+        size = 1
         for i in range(0, len(self.val)):
             current_val = self.val[i]
             if isinstance(current_val, int):
