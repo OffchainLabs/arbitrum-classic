@@ -102,10 +102,12 @@ library Protocol {
     }
 
     function addMessageToVMInbox(bytes32 vmInbox, bytes32 message) internal pure returns (bytes32) {
-        return Value.hashTuple([
-            Value.newHashOnly(vmInbox),
-            Value.newHashOnly(message)
-        ], 2);
+        Value.Data[] memory vals = new Value.Data[](2);
+        vals[0] = Value.newHashOnly(vmInbox);
+        vals[1] = Value.newHashOnly(message);
+        Value.Data memory tuple = Value.newTuple(vals);
+
+        return Value.hashTuple(tuple);
     }
 
     function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {

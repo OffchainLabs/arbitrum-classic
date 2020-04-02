@@ -93,11 +93,7 @@ library Messages {
 
         Value.Data memory tuple = Value.newTuple(msgType);
 
-        return Value.hashTuple([
-            Value.newInt(blockNumber),
-            Value.newInt(uint256(txHash)),
-            tuple
-        ], tuple.size);
+        return Value.hashTuple(tuple);
     }
 
     function ethHash(
@@ -293,11 +289,7 @@ library Messages {
 
         Value.Data memory tuple = Value.newTuple(msgType);
 
-        return Value.hashTuple([
-            Value.newInt(blockNumber),
-            Value.newInt(messageNum),
-            tuple
-        ], tuple.size);
+        return Value.hashTuple(tuple);
     }
 
     function tokenHash(

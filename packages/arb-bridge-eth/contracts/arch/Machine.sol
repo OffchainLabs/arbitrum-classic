@@ -36,13 +36,12 @@ library Machine {
         pure
         returns (Value.HashOnly memory)
     {
-        Value.HashOnly[] memory values = new Value.HashOnly[](2);
-        values[0] = valHash;
-        values[1] = stackVal;
-        return Value.HashOnly(Value.hashTuple([
-            Value.newHashOnly(valHash.hash),
-            Value.newHashOnly(stackVal.hash)
-        ], 2));
+        Value.Data[] memory vals = new Value.Data[](2);
+        vals[0] = Value.newHashOnly(valHash.hash);
+        vals[1] = Value.newHashOnly(stackVal.hash);
+        Value.Data memory tuple = Value.newTuple(vals);
+
+        return Value.HashOnly(Value.hashTuple(tuple));
     }
 
     struct Data {
