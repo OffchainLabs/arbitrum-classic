@@ -46,9 +46,7 @@ interface ArbERC721Interface extends Interface {
       encode([tokenId]: [BigNumberish]): string
     }>
 
-    balanceOf: TypedFunctionDescription<{
-      encode([owner]: [string]): string
-    }>
+    balanceOf: TypedFunctionDescription<{ encode([owner]: [string]): string }>
 
     setApprovalForAll: TypedFunctionDescription<{
       encode([to, approved]: [string, boolean]): string
