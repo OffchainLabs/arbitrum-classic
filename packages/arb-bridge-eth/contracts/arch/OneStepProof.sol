@@ -1496,24 +1496,22 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            // if(stackVals[0].size <= send_size_limit){
-            if(true){
-                (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
-                if (correct) {
-                    require(
-                        keccak256(
-                            abi.encodePacked(
-                                _data.firstMessage,
-                                messageHash
-                            )
-                        ) == _data.lastMessage,
-                        "sent message doesn't match output message"
-                    );
-                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-                } else {
-                    messageHash = 0;
-                }
-            } 
+            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
+            if (correct) {
+                require(
+                    keccak256(
+                        abi.encodePacked(
+                            _data.firstMessage,
+                            messageHash
+                        )
+                    ) == _data.lastMessage,
+                    "sent message doesn't match output message"
+                );
+                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            } else {
+                messageHash = 0;
+            }
+            
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](2);
             contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
