@@ -37,7 +37,13 @@ sudo apt install -y python3 python3-pip docker docker-compose
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
 > to give permissions "equivalent to the `root` user". See [the security warning](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
 
-### 2. Install yarn and truffle
+### 2. Install virtualenv
+
+```bash
+sudo pip3 install virtualenv
+```
+
+### 3. Install yarn and truffle
 
 ```bash
 touch ~/.bashrc
