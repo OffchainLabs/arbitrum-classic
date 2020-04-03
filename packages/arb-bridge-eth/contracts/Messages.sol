@@ -91,9 +91,11 @@ library Messages {
         msgType[1] = Value.newInt(uint256(from));
         msgType[2] = Value.newTuple(msgValues);
 
-        Value.Data memory tuple = Value.newTuple(msgType);
+        // Value.Data memory tuple = Value.newTuple(msgType);
 
-        return Value.hashTuple(tuple);
+        // return Value.hashTuple(tuple);
+
+        return Value.newTuple(msgType).hash().hash;
     }
 
     function ethHash(

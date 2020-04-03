@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /* eslint-env node */
-'use strict'
+'use strict';
 
 export interface Contract {
-  code: any
-  address: string
+    code: any;
+    address: string;
 }
