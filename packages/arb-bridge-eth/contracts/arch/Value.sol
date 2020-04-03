@@ -130,8 +130,8 @@ library Value {
     }
 
     function hashTuple(Data memory val) internal pure returns (bytes32) {
-        require(isTuple(val), "Must be Tuple type");
-        require(val.tupleVal.length <= 8, "Invalid tuple length");
+        // require(isTuple(val), "Must be Tuple type");
+        // require(val.tupleVal.length <= 8, "Invalid tuple length");
 
         bytes32[] memory hashes = new bytes32[](val.tupleVal.length);
         uint256 hashCount = hashes.length;
@@ -150,7 +150,7 @@ library Value {
     }
 
     function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
-        require(hashes.length <= 8, "Invalid tuple length");
+        // require(hashes.length <= 8, "Invalid tuple length");
         return keccak256(
             abi.encodePacked(
                 uint8(TUPLE_TYPECODE + hashes.length),

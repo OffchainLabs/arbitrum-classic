@@ -1496,7 +1496,8 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            if(stackVals[0].size <= send_size_limit){
+            // if(stackVals[0].size <= send_size_limit){
+            if(true){
                 (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
                 if (correct) {
                     require(
