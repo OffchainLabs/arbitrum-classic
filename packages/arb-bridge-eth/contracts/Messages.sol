@@ -91,11 +91,13 @@ library Messages {
         msgType[1] = Value.newInt(uint256(from));
         msgType[2] = Value.newTuple(msgValues);
 
-        // Value.Data memory tuple = Value.newTuple(msgType);
+        Value.Data[] memory tup_data = new Value.Data[](3);
+        tup_data[0] = Value.newInt(blockNumber);
+        tup_data[1] = Value.newInt(uint256(txHash));
+        tup_data[2] = Value.newTuple(msgType);
+        Value.Data memory tuple = Value.newTuple(tup_data);
 
-        // return Value.hashTuple(tuple);
-
-        return Value.newTuple(msgType).hash().hash;
+        return Value.hashTuple(tuple);
     }
 
     function ethHash(
@@ -289,7 +291,11 @@ library Messages {
         msgType[1] = Value.newInt(uint256(from));
         msgType[2] = Value.newTuple(msgValues);
 
-        Value.Data memory tuple = Value.newTuple(msgType);
+        Value.Data[] memory tup_data = new Value.Data[](3);
+        tup_data[0] = Value.newInt(blockNumber);
+        tup_data[1] = Value.newInt(messageNum);
+        tup_data[2] = Value.newTuple(msgType);
+        Value.Data memory tuple = Value.newTuple(tup_data);
 
         return Value.hashTuple(tuple);
     }
