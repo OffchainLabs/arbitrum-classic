@@ -130,8 +130,8 @@ library Value {
     }
 
     function hashTuple(Data memory val) internal pure returns (bytes32) {
-        // require(isTuple(val), "Must be Tuple type");
-        // require(val.tupleVal.length <= 8, "Invalid tuple length");
+        require(isTuple(val), "Must be Tuple type");
+        require(val.tupleVal.length <= 8, "Invalid tuple length");
 
         bytes32[] memory hashes = new bytes32[](val.tupleVal.length);
         uint256 hashCount = hashes.length;
@@ -150,7 +150,7 @@ library Value {
     }
 
     function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
-        // require(hashes.length <= 8, "Invalid tuple length");
+        require(hashes.length <= 8, "Invalid tuple length");
         return keccak256(
             abi.encodePacked(
                 uint8(TUPLE_TYPECODE + hashes.length),
@@ -224,6 +224,10 @@ library Value {
 
     function isValidTupleSize(uint256 size) internal pure returns (bool) {
         return size <= 8;
+    }
+
+    function newEmptyTuple() internal pure returns (Data memory) {
+        return Data(0, CodePoint(0, 0, false, 0),  new Data[](0), uint8(TUPLE_TYPECODE), uint256(1));
     }
 
     function newTuple(Data[] memory _val) internal pure returns (Data memory) {
@@ -626,40 +630,34 @@ library Value {
         );
     }
 
-    function bytesToBytestackHash(bytes memory data) internal pure returns (bytes32) {
+    function bytesToBytestackHash(bytes memory data) internal pure returns (Data memory) {
         uint dataLength = data.length;
         uint wholeChunkCount = dataLength / 32;
         uint chunkCount = (dataLength + 31) / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
-        bytes32 stackHash = hashEmptyTuple();
+        // bytes32 stackHash = hashEmptyTuple();
+        Data memory tuple = newEmptyTuple();
         Data[] memory vals = new Data[](2);
-        Data memory tuple;
 
         for (uint i = 0; i < wholeChunkCount; i++) {
-            vals[0] = newHashOnly(stackHash);
+            vals[0] = tuple;
             vals[1] = newInt(data.toUint(i * 32));
             tuple = newTuple(vals);
-
-            stackHash = hashTuple(tuple);
         }
 
         if (wholeChunkCount < chunkCount) {
             uint lastVal = data.toUint(dataLength - 32);
             lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
 
-            vals[0] = newHashOnly(stackHash);
+            vals[0] = tuple;
             vals[1] = newInt(lastVal);
             tuple = newTuple(vals);
-
-            stackHash = hashTuple(tuple);
         }
 
         vals[0] = newInt(dataLength);
-        vals[1] = newHashOnly(stackHash);
-        tuple = newTuple(vals);
-
-        return hashTuple(tuple);
+        vals[1] = tuple;
+        return newTuple(vals);
     }
 
     function bytestackToBytes(bytes memory data) internal pure returns (bytes memory) {

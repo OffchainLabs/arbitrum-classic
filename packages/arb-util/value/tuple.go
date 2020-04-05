@@ -32,7 +32,7 @@ const MaxTupleSize = 8
 var hashOfNone common.Hash
 
 func init() {
-	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple))
+	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple), hashing.Uint256(big.NewInt(1)))
 }
 
 type TupleValue struct {
@@ -238,7 +238,7 @@ func (tv TupleValue) internalHash() common.Hash {
 
 	return hashing.SoliditySHA3(
 		hashing.Uint8(tv.InternalTypeCode()),
-		hashing.Uint256(big.NewInt(tv.internalSize())),
+		hashing.Uint256(big.NewInt(tv.size)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
 }

@@ -79,12 +79,12 @@ library Messages {
                 data
             )
         );
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
+        // bytes32 dataHash = Value.bytesToBytestackHash(data);
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataHash);
+        msgValues[3] = Value.bytesToBytestackHash(data);
 
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(TRANSACTION_MSG);
@@ -280,11 +280,11 @@ library Messages {
         pure
         returns(bytes32)
     {
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
+        // bytes32 dataHash = Value.bytesToBytestackHash(data);
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataHash);
+        msgValues[3] = Value.bytesToBytestackHash(data);
 
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(CONTRACT_TRANSACTION_MSG);
