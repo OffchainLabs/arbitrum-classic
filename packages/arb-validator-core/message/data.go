@@ -104,18 +104,13 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	return buf.Bytes()[:intLength], nil
 }
 
-func BytesToByteStack(val []byte) value.HashOnlyValue {
+func BytesToByteStack(val []byte) value.TupleValue {
 	chunks := bytesToIntValues(val)
 	ret := value.NewEmptyTuple()
-	stack := value.NewHashOnlyValue(ret.Hash(), 1)
 
 	for _, chunk := range chunks {
-		ret = value.NewTuple2(stack, value.NewIntValue(chunk))
-		stack = value.NewHashOnlyValue(ret.Hash(), 1)
+		ret = value.NewTuple2(ret, value.NewIntValue(chunk))
 	}
 
-	ret = value.NewTuple2(value.NewInt64Value(int64(len(val))), stack)
-	stack = value.NewHashOnlyValue(ret.Hash(), 1)
-
-	return stack
+	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret)
 }

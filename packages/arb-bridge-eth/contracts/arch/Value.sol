@@ -254,6 +254,10 @@ library Value {
         return newTuple(values);
     }
 
+    function newHashOnly(bytes32 _val, uint256 size) internal pure returns (Data memory) {
+        return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
+    }
+
     function newHashOnly(bytes32 _val) internal pure returns (Data memory) {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, uint256(1));
     }
@@ -626,36 +630,43 @@ library Value {
         );
     }
 
-    function bytesToBytestackHash(bytes memory data) internal pure returns (bytes32) {
+    function bytesToBytestackHash(bytes memory data) internal pure returns (Data memory) {
         uint dataLength = data.length;
         uint wholeChunkCount = dataLength / 32;
         uint chunkCount = (dataLength + 31) / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
         bytes32 stackHash = hashEmptyTuple();
-        bytes32[] memory vals = new bytes32[](2);
+        uint256 size = 1;
 
         for (uint i = 0; i < wholeChunkCount; i++) {
+
+            bytes32[] memory vals = new bytes32[](2);
             vals[0] = stackHash;
             vals[1] = newInt(data.toUint(i * 32)).hash().hash;
+            size += 2;
 
-            stackHash = hashTuple(vals, 3);
+            stackHash = hashTuple(vals, size);
         }
 
         if (wholeChunkCount < chunkCount) {
             uint lastVal = data.toUint(dataLength - 32);
             lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
 
+            bytes32[] memory vals = new bytes32[](2);
             vals[0] = stackHash;
             vals[1] = newInt(lastVal).hash().hash;
+            size += 2;
 
-            stackHash = hashTuple(vals, 3);
+            stackHash = hashTuple(vals, size);
         }
 
+        bytes32[] memory vals = new bytes32[](2);
         vals[0] = newInt(dataLength).hash().hash;
         vals[1] = stackHash;
+        size += 2;
 
-        return hashTuple(vals, 3);
+        return newHashOnly(hashTuple(vals, size), size);
     }
 
     function bytestackToBytes(bytes memory data) internal pure returns (bytes memory) {
