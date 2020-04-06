@@ -226,10 +226,6 @@ library Value {
         return size <= 8;
     }
 
-    function newEmptyTuple() internal pure returns (Data memory) {
-        return Data(0, CodePoint(0, 0, false, 0),  new Data[](0), uint8(TUPLE_TYPECODE), uint256(1));
-    }
-
     function newTuple(Data[] memory _val) internal pure returns (Data memory) {
         require(isValidTupleSize(_val.length), "Tuple must have valid size");
         uint256 size = 1;
@@ -630,34 +626,36 @@ library Value {
         );
     }
 
-    function bytesToBytestackHash(bytes memory data) internal pure returns (Data memory) {
+    function bytesToBytestackHash(bytes memory data) internal pure returns (bytes32) {
         uint dataLength = data.length;
         uint wholeChunkCount = dataLength / 32;
         uint chunkCount = (dataLength + 31) / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
-        // bytes32 stackHash = hashEmptyTuple();
-        Data memory tuple = newEmptyTuple();
-        Data[] memory vals = new Data[](2);
+        bytes32 stackHash = hashEmptyTuple();
+        bytes32[] memory vals = new bytes32[](2);
 
         for (uint i = 0; i < wholeChunkCount; i++) {
-            vals[0] = tuple;
-            vals[1] = newInt(data.toUint(i * 32));
-            tuple = newTuple(vals);
+            vals[0] = stackHash;
+            vals[1] = newInt(data.toUint(i * 32)).hash().hash;
+
+            stackHash = hashTuple(vals, 3);
         }
 
         if (wholeChunkCount < chunkCount) {
             uint lastVal = data.toUint(dataLength - 32);
             lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
 
-            vals[0] = tuple;
-            vals[1] = newInt(lastVal);
-            tuple = newTuple(vals);
+            vals[0] = stackHash;
+            vals[1] = newInt(lastVal).hash().hash;
+
+            stackHash = hashTuple(vals, 3);
         }
 
-        vals[0] = newInt(dataLength);
-        vals[1] = tuple;
-        return newTuple(vals);
+        vals[0] = newInt(dataLength).hash().hash;
+        vals[1] = stackHash;
+
+        return hashTuple(vals, 3);
     }
 
     function bytestackToBytes(bytes memory data) internal pure returns (bytes memory) {
