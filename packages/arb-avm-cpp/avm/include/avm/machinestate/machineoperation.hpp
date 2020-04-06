@@ -21,7 +21,7 @@
 
 struct MachineState;
 
-const int send_size_limit = 10000;
+const int send_size_limit = 100000;
 
 namespace machineoperation {
 void add(MachineState& m);

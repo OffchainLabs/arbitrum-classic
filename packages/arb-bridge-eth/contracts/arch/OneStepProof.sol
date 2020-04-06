@@ -21,12 +21,11 @@ import "./Machine.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-
 library OneStepProof {
     using Machine for Machine.Data;
     using Value for Value.Data;
 
-    uint256 constant send_size_limit = 10000;
+    uint256 constant send_size_limit = 100000;
 
     struct ValidateProofData {
         bytes32 beforeHash;
@@ -1496,6 +1495,8 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
+            // what would the proof check be since the machine should go in an error state
+            // if the value is larger than the send limit
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
                 require(

@@ -53,7 +53,7 @@ struct AssertionContext {
     }
 };
 
-const int machine_size_limit = 10000;
+const int machine_size_limit = 100000;
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
