@@ -152,8 +152,7 @@ TEST_CASE("Trustless calls test") {
                 output.runOne();
             }
             trustless.glueIn(output, stack_start, aux_start);
-            REQUIRE(machine.get_stack().stacksize() ==
-                    trustless.get_stack().stacksize());
+            REQUIRE(machine.hash() == trustless.hash());
         }
     }
     boost::filesystem::remove_all(save_path);

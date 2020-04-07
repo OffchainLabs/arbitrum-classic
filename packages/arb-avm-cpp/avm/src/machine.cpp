@@ -106,6 +106,10 @@ MachineState Machine::trustlessCall(uint64_t steps,
     auto copyMachine = machine_state;
     copy_start = copyMachine.stack.stacksize();
     aux_copy_start = copyMachine.auxstack.stacksize();
+    std::shared_ptr<TupleTree> original_register_contents =
+        std::make_shared<TupleTree>(TupleTree());
+    std::shared_ptr<TupleTree> current_register_contents =
+        std::make_shared<TupleTree>(*original_register_contents);
     Operation current_op;
 
     std::vector<std::shared_ptr<TupleTree>> original_stack_contents(copy_start);
@@ -122,11 +126,11 @@ MachineState Machine::trustlessCall(uint64_t steps,
 
     current_stack_contents.reserve(original_stack_contents.size());
     for (auto& tree : original_stack_contents) {
-        current_stack_contents.push_back(tree);
+        current_stack_contents.push_back(std::make_shared<TupleTree>(*tree));
     }
     current_aux_contents.reserve(aux_stack_contents.size());
     for (auto& tree : aux_stack_contents) {
-        current_aux_contents.push_back(tree);
+        current_aux_contents.push_back(std::make_shared<TupleTree>(*tree));
     }
 
     for (uint64_t i = steps; i > 0; i--) {
@@ -246,8 +250,8 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 break;
             case OpCode::SWAP1:
                 if (!current_op.immediate) {
-                    std::swap(current_stack_contents.back(),
-                              *(current_stack_contents.end() - 1));
+                    current_stack_contents.back().swap(
+                        *(current_stack_contents.end() - 1));
                     current_stack_contents.back()->is_read = true;
                     (*(current_stack_contents.end() - 1))->is_read = true;
                 } else {
@@ -267,6 +271,8 @@ MachineState Machine::trustlessCall(uint64_t steps,
                         std::make_shared<TupleTree>();
                 }
                 read_depth = 3;
+                break;
+            case OpCode::RPUSH:
                 break;
             default:
                 break;
