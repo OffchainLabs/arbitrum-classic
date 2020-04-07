@@ -28,18 +28,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures.BlockId) (ChallengeState, error)
+type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.BlockId) (ChallengeState, error)
 
 func testChallenge(
-	challengeType structures.ChildType,
+	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
 	asserterKey, challengerKey string,
 	asserterFunc, challengerFunc ChallengeFunc,
@@ -73,14 +76,18 @@ func testChallenge(
 		return err
 	}
 
-	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	ethclint1, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
-	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+
+	ethclint2, err := ethclient.Dial(ethURL)
 	if err != nil {
 		return err
 	}
+
+	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
+	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
 	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {

@@ -85,30 +85,33 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory _messages) internal pure returns (bytes32) {
+    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32) {
         bool valid;
         bytes32 hashVal = 0x00;
         bytes32 msgHash;
-        uint256 messageLength = _messages.length;
-        for (uint256 offset = 0; offset < messageLength;) {
-            (valid, offset, msgHash) = Value.deserializeHashed(_messages, offset);
+        uint256 endOffset = startOffset + length;
+        require(endOffset <= messages.length, "invalid length");
+        uint256 offset;
+        for (offset = startOffset; offset < endOffset;) {
+            (valid, offset, msgHash) = Value.deserializeHashed(messages, offset);
             require(valid, "Invalid output message");
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
+        require(offset == startOffset + length, "value extended past length");
         return hashVal;
     }
 
-    function addMessageToInbox(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
+    function addMessageToVMInbox(bytes32 vmInbox, bytes32 message) internal pure returns (bytes32) {
         return Value.hashTuple([
-            Value.newHashOnly(pending),
+            Value.newHashOnly(vmInbox),
             Value.newHashOnly(message)
         ]);
     }
 
-    function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
+    function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                pending,
+                inbox,
                 message
             )
         );

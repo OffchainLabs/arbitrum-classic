@@ -21,10 +21,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -42,7 +44,7 @@ func testMessagesChallenge(t *testing.T) {
 			MessageNum: big.NewInt(i),
 		})
 	}
-	beforePending, err := messageStack.GetHashAtIndex(big.NewInt(2))
+	beforeInbox, err := messageStack.GetHashAtIndex(big.NewInt(2))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,31 +52,31 @@ func testMessagesChallenge(t *testing.T) {
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(messageCount))
-	afterPending, err := messageStack.GetHashAtIndex(startIndex)
+	afterInbox, err := messageStack.GetHashAtIndex(startIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inbox, err := messageStack.GenerateInbox(beforePending, messageCount)
+	inbox, err := messageStack.GenerateVMInbox(beforeInbox, messageCount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	importedMessages := inbox.Hash()
-	challengeHash := structures.MessageChallengeDataHash(
-		beforePending,
-		afterPending,
+	challengeHash := valprotocol.MessageChallengeDataHash(
+		beforeInbox,
+		afterInbox,
 		value.NewEmptyTuple().Hash(),
 		importedMessages,
 		big.NewInt(4),
 	)
 
 	if err := testChallenge(
-		structures.InvalidMessagesChildType,
+		valprotocol.InvalidMessagesChildType,
 		challengeHash,
 		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
 		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
 				client,
@@ -82,12 +84,12 @@ func testMessagesChallenge(t *testing.T) {
 				blockId,
 				0,
 				messageStack,
-				beforePending,
+				beforeInbox,
 				new(big.Int).SetUint64(messageCount),
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return ChallengeMessagesClaim(
 				context.Background(),
 				client,
@@ -95,7 +97,7 @@ func testMessagesChallenge(t *testing.T) {
 				blockId,
 				0,
 				messageStack,
-				beforePending,
+				beforeInbox,
 				new(big.Int).SetUint64(messageCount),
 				true,
 			)

@@ -27,8 +27,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type Machine struct {
@@ -159,8 +159,4 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return m.machine.Checkpoint(storage)
-}
-
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
-	return m.machine.RestoreCheckpoint(storage, machineHash)
 }

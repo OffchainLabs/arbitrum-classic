@@ -18,9 +18,10 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.
@@ -29,7 +30,7 @@ import (
 type WrongAssertionType int
 
 const (
-	WrongPendingTopAssertion    = 0
+	WrongInboxTopAssertion      = 0
 	WrongMessagesSliceAssertion = 1
 	WrongExecutionAssertion     = 2
 )
@@ -51,9 +52,9 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, o
 	badHash := common.Hash{}
 	badHash[5] = 37
 	switch lis.kind {
-	case WrongPendingTopAssertion:
-		assertion.claim.AfterPendingTop = badHash
-		log.Println("Prepared EVIL pending top assertion")
+	case WrongInboxTopAssertion:
+		assertion.claim.AfterInboxTop = badHash
+		log.Println("Prepared EVIL inbox top assertion")
 	case WrongMessagesSliceAssertion:
 		assertion.claim.ImportedMessagesSlice = badHash
 		log.Println("Prepared EVIL imported messages assertion")

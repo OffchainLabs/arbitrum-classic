@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./RollupUtils.sol";
 import "./VM.sol";
-import "../IGlobalPendingInbox.sol";
+import "../IGlobalInbox.sol";
 
 import "../challenge/ChallengeUtils.sol";
 import "../challenge/ChallengeType.sol";
@@ -43,10 +43,11 @@ contract NodeGraph is ChallengeType {
     string constant MAKE_TIME = "MAKE_TIME";
     // Imported messages without reading them
     string constant MAKE_MESSAGES = "MAKE_MESSAGES";
-    // Tried to import more messages than exist in pending inbox
+    // Tried to import more messages than exist in ethe inbox
     string constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
     string constant PRUNE_LEAF = "PRUNE_LEAF";
+    string constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
     string constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
 
     uint256 constant VALID_CHILD_TYPE = 3;
@@ -54,8 +55,8 @@ contract NodeGraph is ChallengeType {
 
     // Fields
     //  prevLeaf
-    //  pendingValue
-    //  afterPendingTop
+    //  inboxValue
+    //  afterInboxTop
     //  importedMessagesSlice
     //  afterVMHash
     //  messagesAccHash
@@ -63,7 +64,7 @@ contract NodeGraph is ChallengeType {
 
     event RollupAsserted(
         bytes32[7] fields,
-        uint256 pendingCount,
+        uint256 inboxCount,
         uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
@@ -77,15 +78,15 @@ contract NodeGraph is ChallengeType {
 
     event RollupCreated(bytes32 initVMHash);
 
-    IGlobalPendingInbox public globalInbox;
+    IGlobalInbox public globalInbox;
     VM.Params public vmParams;
     mapping (bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
 
     struct MakeAssertionData {
         bytes32 beforeVMHash;
-        bytes32 beforePendingTop;
-        uint256 beforePendingCount;
+        bytes32 beforeInboxTop;
+        uint256 beforeInboxCount;
 
         bytes32 prevPrevLeafHash;
         uint256 prevDeadlineTicks;
@@ -96,7 +97,7 @@ contract NodeGraph is ChallengeType {
         uint128[2] timeBoundsBlocks;
         uint256 importedMessageCount;
 
-        bytes32 afterPendingTop;
+        bytes32 afterInboxTop;
 
         bytes32 importedMessagesSlice;
 
@@ -107,23 +108,46 @@ contract NodeGraph is ChallengeType {
         bytes32 logsAccHash;
     }
 
-    function pruneLeaf(
-        bytes32 from,
-        bytes32[] calldata leafProof,
-        bytes32[] calldata latestConfirmedProof
+    function pruneLeaves(
+        bytes32[] memory fromNodes,
+        bytes32[] memory leafProofs,
+        uint256[] memory leafProofLengths,
+        bytes32[] memory latestConfProofs,
+        uint256[] memory latestConfirmedProofLengths
     )
-        external
+        public
     {
-        bytes32 leaf = RollupUtils.calculatePath(from, leafProof);
-        require(isValidLeaf(leaf), PRUNE_LEAF);
-        require(
-            leafProof[0] != latestConfirmedProof[0] &&
-            RollupUtils.calculatePath(from, latestConfirmedProof) == latestConfirmed(),
-            PRUNE_CONFLICT
-        );
-        delete leaves[leaf];
+        uint pruneCount = fromNodes.length;
 
-        emit RollupPruned(leaf);
+        require(
+            leafProofLengths.length == pruneCount &&
+            latestConfirmedProofLengths.length == pruneCount,
+            "input length mistmatch"
+        );
+        uint256 prevLeafOffset = 0;
+        uint256 prevConfOffset = 0;
+        for (uint256 i = 0; i < pruneCount; i++) {
+            bytes32 from = fromNodes[i];
+            require(leafProofLengths[i] > 0 && latestConfirmedProofLengths[i] > 0, PRUNE_PROOFLEN);
+            uint256 nextLeafOffset = prevLeafOffset + leafProofLengths[i];
+            uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLengths[i];
+
+            // If the function call was produced valid at any point, either all these checks will pass or all will fail
+            require(
+                leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset] &&
+                RollupUtils.calculatePathOffset(from, latestConfProofs, prevConfOffset, nextConfOffset) == latestConfirmed(),
+                PRUNE_CONFLICT
+            );
+
+            bytes32 leaf = RollupUtils.calculatePathOffset(from, leafProofs, prevLeafOffset, nextLeafOffset);
+            if (isValidLeaf(leaf)) {
+                delete leaves[leaf];
+                emit RollupPruned(leaf);
+            }
+
+            prevLeafOffset = nextLeafOffset;
+            prevConfOffset = nextConfOffset;
+        }
     }
 
     function latestConfirmed() public view returns (bytes32) {
@@ -144,7 +168,7 @@ contract NodeGraph is ChallengeType {
     )
         internal
     {
-        globalInbox = IGlobalPendingInbox(_globalInboxAddress);
+        globalInbox = IGlobalInbox(_globalInboxAddress);
 
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
@@ -174,8 +198,8 @@ contract NodeGraph is ChallengeType {
     function makeAssertion(MakeAssertionData memory data) internal returns(bytes32, bytes32) {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
-            data.beforePendingTop,
-            data.beforePendingCount
+            data.beforeInboxTop,
+            data.beforeInboxCount
         );
         bytes32 prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
@@ -191,8 +215,8 @@ contract NodeGraph is ChallengeType {
         require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
         require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
 
-        (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
-        require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
+        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
+        require(data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount), MAKE_MESSAGE_CNT);
 
         uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
         uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
@@ -202,12 +226,12 @@ contract NodeGraph is ChallengeType {
         }
         deadlineTicks += checkTimeTicks;
 
-        bytes32 invalidPending = generateInvalidPendingTopLeaf(
+        bytes32 invalidInbox = generateInvalidInboxTopLeaf(
             data,
             prevLeaf,
             deadlineTicks,
-            pendingValue,
-            pendingCount,
+            inboxValue,
+            inboxCount,
             vmProtoHashBefore,
             gracePeriodTicks
         );
@@ -232,13 +256,13 @@ contract NodeGraph is ChallengeType {
             deadlineTicks
         );
 
-        leaves[invalidPending] = true;
+        leaves[invalidInbox] = true;
         leaves[invalidMessages] = true;
         leaves[invalidExec] = true;
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, pendingValue, pendingCount);
+        emitAssertedEvent(data, prevLeaf, inboxValue, inboxCount);
         return (prevLeaf, validHash);
     }
 
@@ -247,18 +271,18 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue, uint256 pendingCount) private {
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 inboxValue, uint256 inboxCount) private {
         emit RollupAsserted(
             [
                 prevLeaf,
-                pendingValue,
-                data.afterPendingTop,
+                inboxValue,
+                data.afterInboxTop,
                 data.importedMessagesSlice,
                 data.afterVMHash,
                 data.messagesAccHash,
                 data.logsAccHash
             ],
-            pendingCount,
+            inboxCount,
             data.importedMessageCount,
             data.timeBoundsBlocks,
             data.numArbGas,
@@ -267,12 +291,12 @@ contract NodeGraph is ChallengeType {
         );
     }
 
-    function generateInvalidPendingTopLeaf(
+    function generateInvalidInboxTopLeaf(
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 pendingValue,
-        uint256 pendingCount,
+        bytes32 inboxValue,
+        uint256 inboxCount,
         bytes32 vmProtoHashBefore,
         uint256 gracePeriodTicks
     )
@@ -280,10 +304,10 @@ contract NodeGraph is ChallengeType {
         pure
         returns(bytes32)
     {
-        bytes32 challengeHash = ChallengeUtils.pendingTopHash(
-            data.afterPendingTop,
-            pendingValue,
-            pendingCount - (data.beforePendingCount + data.importedMessageCount)
+        bytes32 challengeHash = ChallengeUtils.inboxTopHash(
+            data.afterInboxTop,
+            inboxValue,
+            inboxCount - (data.beforeInboxCount + data.importedMessageCount)
         );
         return RollupUtils.childNodeHash(
             prevLeaf,
@@ -292,7 +316,7 @@ contract NodeGraph is ChallengeType {
                 challengeHash,
                 gracePeriodTicks + RollupTime.blocksToTicks(1)
             ),
-            INVALID_PENDING_TOP_TYPE,
+            INVALID_INBOX_TOP_TYPE,
             vmProtoHashBefore
         );
     }
@@ -309,8 +333,8 @@ contract NodeGraph is ChallengeType {
         returns(bytes32)
     {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
-            data.beforePendingTop,
-            data.afterPendingTop,
+            data.beforeInboxTop,
+            data.afterInboxTop,
             Value.hashEmptyTuple(),
             data.importedMessagesSlice,
             data.importedMessageCount
@@ -390,8 +414,8 @@ contract NodeGraph is ChallengeType {
             VALID_CHILD_TYPE,
             RollupUtils.protoStateHash(
                 data.afterVMHash,
-                data.afterPendingTop,
-                data.beforePendingCount + data.importedMessageCount
+                data.afterInboxTop,
+                data.beforeInboxCount + data.importedMessageCount
             )
         );
     }

@@ -1,6 +1,6 @@
 {
   "name": "arb-provider-web3",
-  "version": "0.3.1",
+  "version": "0.4.3",
   "description": "Arbitrum provider for web3",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -13,14 +13,14 @@
   "scripts": {
     "test": "jest --config jest.config.js",
     "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-    "lint": "eslint ."
+    "lint": "yarn run eslint ."
   },
   "bugs": {
     "url": "https://github.com/OffchainLabs/arbitrum/issues"
   },
   "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "arb-provider-ethers": "^0.3.2",
+    "arb-provider-ethers": "^0.4.3",
     "ethers": "^4.0.44",
     "ethers-providers": "^2.1.19",
     "ethers-utils": "^2.1.11"

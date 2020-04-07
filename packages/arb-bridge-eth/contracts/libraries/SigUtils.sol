@@ -110,4 +110,27 @@ library SigUtils {
             s
         );
     }
+
+    function recoverAddress(
+        bytes32 _messageHash,
+        bytes memory _signature,
+        uint256 _offset
+    )
+        internal
+        pure
+        returns (address)
+    {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
+        (v, r, s) = parseSignature(_signature, _offset);
+        return ecrecover(
+            prefixedHash,
+            v,
+            r,
+            s
+        );
+    }
 }

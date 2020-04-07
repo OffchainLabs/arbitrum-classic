@@ -35,6 +35,10 @@ func TicksFromSeconds(seconds int64) TimeTicks {
 	return TimeTicks{big.NewInt(int64(time.Duration(seconds*TicksPerBlock) * time.Second / _durationPerBlock))}
 }
 
+func (rt TimeTicks) Clone() TimeTicks {
+	return TimeTicks{Val: new(big.Int).Set(rt.Val)}
+}
+
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
 	return TimeTicks{new(big.Int).Add(rt.Val, rt2.Val)}
 }
@@ -45,10 +49,6 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 
 func (rt TimeTicks) Duration() time.Duration {
 	return time.Duration(rt.Val.Int64()) * _durationPerBlock / time.Duration(TicksPerBlock)
-}
-
-func (rt TimeTicks) Clone() TimeTicks {
-	return TimeTicks{new(big.Int).Set(rt.Val)}
 }
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
@@ -66,5 +66,7 @@ func (rt TimeTicks) Equals(rt2 TimeTicks) bool {
 }
 
 func (rt TimeTicks) String() string {
-	return rt.Val.String()
+	rawString := rt.Val.String()
+	rsLen := len(rawString)
+	return rawString[:rsLen-3] + "." + rawString[rsLen-3:]
 }

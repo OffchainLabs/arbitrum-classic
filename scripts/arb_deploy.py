@@ -53,15 +53,15 @@ services:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate --rpc state ws://dockerhost:%s %s
+        command: validate %s --rpc state %s %s
         ports:
             - '1235:1235'
             - '1236:1236'
 """
 
 
-def compose_header(state_abspath, ws_port, rollup_address):
-    return COMPOSE_HEADER % (state_abspath, ws_port, rollup_address)
+def compose_header(state_abspath, extra_flags, ws_port, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, extra_flags, ws_port, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -73,13 +73,21 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate state ws://dockerhost:%s %s
+        command: validate %s state %s %s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, ws_port, rollup_address):
-    return COMPOSE_VALIDATOR % (validator_id, state_abspath, ws_port, rollup_address)
+def compose_validator(
+    validator_id, state_abspath, extra_flags, ws_port, rollup_address
+):
+    return COMPOSE_VALIDATOR % (
+        validator_id,
+        state_abspath,
+        extra_flags,
+        ws_port,
+        rollup_address,
+    )
 
 
 ### ----------------------------------------------------------------------------
@@ -88,28 +96,54 @@ def compose_validator(validator_id, state_abspath, ws_port, rollup_address):
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(sudo_flag, build_flag, up_flag, validator_states_dir):
+def deploy(sudo_flag, build_flag, up_flag, validator_states_dir, password):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
-    with open(os.path.join(validator_states_dir, "config.json")) as json_file:
-        data = json.load(json_file)
-        rollup_address = data["rollup_address"]
-        n_validators = data["validator_count"]
-        ws_port = data["websocket_port"]
-
-    # Overwrite DOCKER_COMPOSE_FILENAME
     states_path = os.path.abspath(
         os.path.join(validator_states_dir, setup_states.VALIDATOR_STATE)
     )
-    compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
 
-    contents = compose_header(states_path % 0, ws_port, rollup_address) + "".join(
-        [
-            compose_validator(i, states_path % i, ws_port, rollup_address)
-            for i in range(1, n_validators)
-        ]
-    )
+    n_validators = 1
+    while True:
+        if not os.path.exists(states_path % n_validators):
+            break
+        n_validators += 1
+
+    # Overwrite DOCKER_COMPOSE_FILENAME
+
+    compose = os.path.abspath("./" + DOCKER_COMPOSE_FILENAME)
+    contents = ""
+    for i in range(0, n_validators):
+        with open(os.path.join(states_path % i, "config.json")) as json_file:
+            data = json.load(json_file)
+            rollup_address = data["rollup_address"]
+            extra_flags = ""
+            eth_url = (
+                data["eth_url"]
+                .replace("localhost", "dockerhost")
+                .replace("localhost", "dockerhost")
+            )
+
+            if not password and "password" in data:
+                extra_flags += " -password=" + data["password"]
+            elif password:
+                extra_flags += " -password=" + password
+            else:
+                raise Exception(
+                    "arb_deploy requires validator password through [--password=pass] parameter or in config.json file"
+                )
+            if "blocktime" in data:
+                extra_flags += " -blocktime=%s" % data["blocktime"]
+        if i == 0:
+            contents = compose_header(
+                states_path % 0, extra_flags, eth_url, rollup_address
+            )
+        else:
+            contents += compose_validator(
+                i, states_path % i, extra_flags, eth_url, rollup_address
+            )
+
     with open(compose, "w") as f:
         f.write(contents)
 
@@ -165,6 +199,8 @@ def main():
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
     parser.add_argument("dir", help="The validator states directory.")
+
+    parser.add_argument("-p", "--password", help="Password protecting validator keys.")
     # Optional
 
     parser.add_argument(
@@ -188,7 +224,7 @@ def main():
     args = parser.parse_args()
 
     # Deploy
-    deploy(args.sudo, args.build, args.up, args.dir)
+    deploy(args.sudo, args.build, args.up, args.dir, args.password)
 
 
 if __name__ == "__main__":

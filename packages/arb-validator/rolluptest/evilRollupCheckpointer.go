@@ -18,14 +18,14 @@ package rolluptest
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
 )
 
 type EvilRollupCheckpointerFactory struct {
@@ -40,7 +40,7 @@ func NewEvilRollupCheckpointerFactory(
 	forceFreshStart bool,
 ) checkpointing.RollupCheckpointerFactory {
 	return &EvilRollupCheckpointerFactory{
-		checkpointing.NewRollupCheckpointerImplFactory(
+		checkpointing.NewIndexedCheckpointerFactory(
 			rollupAddr,
 			arbitrumCodeFilePath,
 			databasePath,
@@ -51,19 +51,19 @@ func NewEvilRollupCheckpointerFactory(
 }
 
 type evilRollupCheckpointer struct {
-	cp *checkpointing.RollupCheckpointerImpl
+	cp checkpointing.RollupCheckpointer
 }
 
 func (e evilRollupCheckpointer) GetValue(h common.Hash) value.Value {
-	return e.cp.GetValue(h)
+	return e.cp.(checkpointing.RestoreContext).GetValue(h)
 }
 
 func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.GetMachine(h).(*cmachine.Machine))
+	return NewEvilMachine(e.cp.(checkpointing.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
-	return &evilRollupCheckpointer{fac.fac.New(ctx).(*checkpointing.RollupCheckpointerImpl)}
+	return &evilRollupCheckpointer{fac.fac.New(ctx).(checkpointing.RollupCheckpointer)}
 }
 
 func (e evilRollupCheckpointer) HasCheckpointedState() bool {
@@ -73,14 +73,27 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ArbClient,
-	contractAddr common.Address,
-	beOpinionated bool,
-) (content []byte, resCtx structures.RestoreContext, err error) {
-	content, resCtx, err = e.cp.RestoreLatestState(ctx, clnt, contractAddr, beOpinionated)
-	if err == nil {
-		resCtx = e
-	}
-	return
+	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
+) error {
+	return e.cp.RestoreLatestState(
+		ctx,
+		clnt,
+		func(contents []byte, resCtx checkpointing.RestoreContext) error {
+			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
+		},
+	)
+}
+
+type evilRestoreContext struct {
+	rc checkpointing.RestoreContext
+}
+
+func (erc *evilRestoreContext) GetValue(h common.Hash) value.Value {
+	return erc.rc.GetValue(h)
+}
+
+func (erc *evilRestoreContext) GetMachine(h common.Hash) machine.Machine {
+	return NewEvilMachine(erc.rc.GetMachine(h).(*cmachine.Machine))
 }
 
 func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -91,6 +104,6 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx checkpointing.CheckpointContext, closeWhenDone chan struct{}) {
 	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx, closeWhenDone)
 }

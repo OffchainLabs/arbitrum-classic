@@ -19,9 +19,11 @@ package rollup
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type FinalizedAssertion struct {
@@ -38,7 +40,10 @@ func (al *AssertionListener) StakeCreated(context.Context, *ChainObserver, arbbr
 func (al *AssertionListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
 }
 func (al *AssertionListener) StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent) {}
-func (al *AssertionListener) StartedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AssertionListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
+}
+func (al *AssertionListener) ResumedChallenge(context.Context, *ChainObserver, *Challenge) {
+
 }
 func (al *AssertionListener) CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent) {
 }
@@ -51,11 +56,10 @@ func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, a
 }
 
 func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
-func (al *AssertionListener) ValidNodeConfirmable(context.Context, *ChainObserver, *confirmValidOpportunity) {
+func (al *AssertionListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
 }
-func (al *AssertionListener) InvalidNodeConfirmable(context.Context, *ChainObserver, *confirmInvalidOpportunity) {
+func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
 }
-func (al *AssertionListener) PrunableLeafs(context.Context, *ChainObserver, []pruneParams) {}
 func (al *AssertionListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {
 }
 func (al *AssertionListener) OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams) {}

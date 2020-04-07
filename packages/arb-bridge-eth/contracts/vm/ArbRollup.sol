@@ -18,6 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./NodeGraph.sol";
 import "./Staking.sol";
+import "./ArbContractProxy.sol";
 
 
 contract ArbRollup is NodeGraph, Staking {
@@ -52,10 +53,15 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    address owner;
+    string public constant VERSION = "1";
+
+    address payable owner;
+
+    mapping(address => address) incomingCallProxies;
+    mapping(address => address) public supportedContracts;
 
     event ConfirmedAssertion(
-        bytes32 logsAccHash
+        bytes32[] logsAccHash
     );
 
     function init(
@@ -84,6 +90,20 @@ contract ArbRollup is NodeGraph, Staking {
             _challengeFactoryAddress
         );
         owner = _owner;
+    }
+
+    function forwardContractMessage(address _sender, bytes calldata _data) external payable {
+        address arbContractAddress = incomingCallProxies[msg.sender];
+        require(arbContractAddress != address(0), "Non interface contract can't send message");
+
+        globalInbox.forwardEthMessage.value(msg.value)(arbContractAddress, _sender);
+        globalInbox.forwardContractTransactionMessage(arbContractAddress, _sender, msg.value, _data);
+    }
+
+    function spawnCallProxy(address _arbContract) external {
+        ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
+        incomingCallProxies[address(proxy)] = _arbContract;
+        supportedContracts[_arbContract] = address(proxy);
     }
 
     function placeStake(
@@ -167,10 +187,10 @@ contract ArbRollup is NodeGraph, Staking {
 
     // fields
      // beforeVMHash
-     // beforePendingTop
+     // beforeInboxTop
      // prevPrevLeafHash
      // prevDataHash
-     // afterPendingTop
+     // afterInboxTop
      // importedMessagesSlice
      // afterVMHash
      // messagesAccHash
@@ -178,7 +198,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     function makeAssertion(
         bytes32[9] calldata _fields,
-        uint256 _beforePendingCount,
+        uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
@@ -194,7 +214,7 @@ contract ArbRollup is NodeGraph, Staking {
             MakeAssertionData(
                 _fields[0],
                 _fields[1],
-                _beforePendingCount,
+                _beforeInboxCount,
 
                 _fields[2],
                 _prevDeadlineTicks,
@@ -221,75 +241,16 @@ contract ArbRollup is NodeGraph, Staking {
         updateStakerLocation(msg.sender, newValid);
     }
 
-    function confirmValid(
-        uint256 deadlineTicks,
-        bytes calldata _messages,
-        bytes32 logsAcc,
-        bytes32 vmProtoStateHash,
-        address[] calldata stakerAddresses,
-        bytes32[] calldata stakerProofs,
-        uint256[] calldata stakerProofOffsets
-    )
-        external
-    {
-        _confirmNode(
-            deadlineTicks,
-            RollupUtils.validDataHash(
-                Protocol.generateLastMessageHash(_messages),
-                logsAcc
-            ),
-            VALID_CHILD_TYPE,
-            vmProtoStateHash,
-            stakerAddresses,
-            stakerProofs,
-            stakerProofOffsets
-        );
-
-        globalInbox.sendMessages(_messages);
-
-        emit ConfirmedAssertion(
-            logsAcc
-        );
-    }
-
-    function confirmInvalid(
-        uint256 deadlineTicks,
-        bytes32 challengeNodeData,
-        uint256 branch,
-        bytes32 vmProtoStateHash,
-        address[] calldata stakerAddresses,
-        bytes32[] calldata stakerProofs,
-        uint256[] calldata stakerProofOffsets
-    )
-        external
-    {
-        require(branch < VALID_CHILD_TYPE, CONF_INV_TYPE);
-        _confirmNode(
-            deadlineTicks,
-            challengeNodeData,
-            branch,
-            vmProtoStateHash,
-            stakerAddresses,
-            stakerProofs,
-            stakerProofOffsets
-        );
-    }
 
     modifier onlyOwner() {
         require(msg.sender == owner, ONLY_OWNER);
         _;
     }
 
-/*    function activateVM() external onlyOwner {
-        if (vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
+    function ownerShutdown() external onlyOwner {
+        selfdestruct(msg.sender);
     }
 
-    function ownerShutdown() external onlyOwner {
-        _shutdown();
-    }
-    */
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
@@ -297,35 +258,112 @@ contract ArbRollup is NodeGraph, Staking {
         refundStaker(stakerAddress);
     }
 
-    function _confirmNode(
-        uint256 deadlineTicks,
-        bytes32 nodeDataHash,
-        uint256 branch,
-        bytes32 vmProtoStateHash,
+    function confirm(
+        bytes32 initalProtoStateHash,
+        uint256[] memory branches,
+        uint256[] memory deadlineTicks,
+        bytes32[] memory challengeNodeData,
+        bytes32[] memory logsAcc,
+        bytes32[] memory vmProtoStateHashes,
+        uint256[] memory messagesLengths,
+        bytes memory messages,
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
         uint256[] memory stakerProofOffsets
     )
-        private
+        public
     {
-        bytes32 to = RollupUtils.childNodeHash(
-            latestConfirmed(),
+        return _confirm(ConfirmData(
+            initalProtoStateHash,
+            branches,
             deadlineTicks,
-            nodeDataHash,
-            branch,
-            vmProtoStateHash
-        );
-        require(RollupTime.blocksToTicks(block.number) >= deadlineTicks, CONF_TIME);
-        uint activeCount = checkAlignedStakers(
-            to,
-            deadlineTicks,
+            challengeNodeData,
+            logsAcc,
+            vmProtoStateHashes,
+            messagesLengths,
+            messages,
             stakerAddresses,
             stakerProofs,
             stakerProofOffsets
+        ));
+    }
+
+    struct ConfirmData {
+        bytes32 initalProtoStateHash;
+        uint256[] branches;
+        uint256[] deadlineTicks;
+        bytes32[] challengeNodeData;
+        bytes32[] logsAcc;
+        bytes32[] vmProtoStateHashes;
+        uint256[] messagesLengths;
+        bytes messages;
+        address[] stakerAddresses;
+        bytes32[] stakerProofs;
+        uint256[] stakerProofOffsets;
+    }
+
+    function _confirm(ConfirmData memory data) private {
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messagesLengths.length;
+        require(data.vmProtoStateHashes.length == validNodeCount);
+        require(data.logsAcc.length == validNodeCount);
+        require(data.deadlineTicks.length == nodeCount);
+        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+        uint256 validNum = 0;
+        uint256 invalidNum = 0;
+        uint256 messagesOffset = 0;
+        bytes32 confNode = latestConfirmed();
+        bytes32 vmProtoStateHash = data.initalProtoStateHash;
+        for (uint256 i = 0; i < nodeCount; i++) {
+            uint256 branchType = data.branches[i];
+            bytes32 nodeDataHash;
+            if (branchType == VALID_CHILD_TYPE) {
+                uint256 messageLength = data.messagesLengths[validNum];
+                nodeDataHash = RollupUtils.validDataHash(
+                    Protocol.generateLastMessageHash(
+                        data.messages,
+                        messagesOffset,
+                        messageLength
+                    ),
+                    data.logsAcc[validNum]
+                );
+                messagesOffset += messageLength;
+                vmProtoStateHash = data.vmProtoStateHashes[validNum];
+                validNum++;
+            } else {
+                nodeDataHash = data.challengeNodeData[invalidNum];
+                invalidNum++;
+            }
+            confNode = RollupUtils.childNodeHash(
+                confNode,
+                data.deadlineTicks[i],
+                nodeDataHash,
+                branchType,
+                vmProtoStateHash
+            );
+        }
+        require(messagesOffset == data.messages.length, "Didn't read all messages");
+        // If last node is after deadline, then all nodes are
+        require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[nodeCount - 1], CONF_TIME);
+        uint activeCount = checkAlignedStakers(
+            confNode,
+            data.deadlineTicks[nodeCount - 1],
+            data.stakerAddresses,
+            data.stakerProofs,
+            data.stakerProofOffsets
         );
         require(activeCount > 0, CONF_HAS_STAKER);
 
-        confirmNode(to);
+        confirmNode(confNode);
+
+        // Send all messages is a single batch
+        globalInbox.sendMessages(data.messages);
+
+        if (validNum > 0) {
+            emit ConfirmedAssertion(
+                data.logsAcc
+            );
+        }
     }
 
 }

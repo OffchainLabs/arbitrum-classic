@@ -1,53 +1,45 @@
 {
-    "name": "arb-provider-ethers",
-    "version": "0.3.2",
-    "description": "Arbitrum provider for ethers",
-    "author": "Offchain Labs, Inc.",
-    "license": "Apache-2.0",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/offchainlabs/arbitrum.git",
-        "directory": "packages/arb-provider-ethers"
-    },
-    "bugs": {
-        "url": "https://github.com/offchainlabs/arbitrum/issues"
-    },
-    "homepage": "https://offchainlabs.com",
-    "scripts": {
-        "prepare": "yarn build",
-        "prepublishOnly": "yarn lint && yarn format && yarn test",
-        "preversion": "yarn lint",
-        "build": "tsc && cp src/lib/abi/index.d.ts src/lib/abi/ArbRollup.d.ts src/lib/abi/GlobalPendingInbox.d.ts dist/lib/abi",
-        "test": "jest --config jest.config.js",
-        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-        "lint": "eslint src/**/*.ts tests/**/*.ts",
-        "update-abi": "./scripts/update-abi"
-    },
-    "dependencies": {
-        "@types/node-fetch": "^2.5.4",
-        "ethers": "^4.0.44",
-        "jayson": "^3.2.0",
-        "node-fetch": "^2.6.0",
-        "promise-poller": "^1.9.1",
-        "solidity-bytes-utils": "^0.0.8"
-    },
-    "devDependencies": {
-        "@types/jest": "^25.1.1",
-        "@typescript-eslint/eslint-plugin": "^2.19.0",
-        "@typescript-eslint/parser": "^2.19.0",
-        "eslint": "^6.8.0",
-        "eslint-config-prettier": "^6.10.0",
-        "eslint-plugin-prettier": "^3.1.2",
-        "jest": "^25.1.0",
-        "jest-junit": "^10.0.0",
-        "prettier": "^1.19.1",
-        "ts-jest": "^25.2.0",
-        "typechain": "^1.0.4",
-        "typescript": "^3.7.5"
-    },
-    "files": [
-        "dist/**/*"
-    ]
+  "name": "arb-provider-ethers",
+  "version": "0.4.5",
+  "description": "Arbitrum provider for ethers",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum.git",
+    "directory": "packages/arb-provider-ethers"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum/issues"
+  },
+  "homepage": "https://offchainlabs.com",
+  "scripts": {
+    "prepublishOnly": "yarn build && yarn format && yarn test",
+    "preversion": "yarn lint",
+    "build": "./scripts/builder",
+    "test": "jest --config jest.config.js",
+    "lint": "yarn run eslint src/**/*.ts tests/**/*.ts",
+    "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn lint --fix",
+    "update-abi": "./scripts/update-abi && yarn format"
+  },
+  "dependencies": {
+    "ethers": "^4.0.44",
+    "jayson": "^3.2.0",
+    "promise-poller": "^1.9.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.1.1",
+    "jest": "^25.1.0",
+    "jest-junit": "^10.0.0",
+    "prettier": "^1.19.1",
+    "ts-jest": "^25.2.0",
+    "typechain": "^1.0.4",
+    "typechain-target-ethers": "^1.0.3",
+    "typescript": "^3.7.5"
+  },
+  "files": [
+    "dist/**/*"
+  ]
 }

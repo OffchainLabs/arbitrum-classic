@@ -14,117 +14,117 @@
  * limitations under the License.
  */
 /* eslint-env node */
-"use strict";
+'use strict'
 
-const ganache = require("ganache-core");
-const path = require("path");
-const fs = require("fs");
-const callsite = require("callsite");
-const spawnSync = require("child_process").spawnSync;
+const ganache = require('ganache-core')
+const path = require('path')
+const fs = require('fs')
+const callsite = require('callsite')
+const spawnSync = require('child_process').spawnSync
 
-const filenameEVM = "compiled.json";
-const filenameAO = "contract.ao";
+const filenameEVM = 'compiled.json'
+const filenameAO = 'contract.ao'
 
 function provider(outputFolder, buildLocation, options, should_compile) {
   if (should_compile === undefined) {
-    should_compile = true;
+    should_compile = true
   }
 
-  const outputLocationEVM = path.resolve(outputFolder, filenameEVM);
-  const outputLocationAO = path.resolve(outputFolder, filenameAO);
-  const stack = callsite();
-  const rootPath = path.dirname(stack[1].getFileName());
+  const outputLocationEVM = path.resolve(outputFolder, filenameEVM)
+  const outputLocationAO = path.resolve(outputFolder, filenameAO)
+  const stack = callsite()
+  const rootPath = path.dirname(stack[1].getFileName())
   if (!buildLocation) {
-    buildLocation = path.resolve(rootPath, "build/contracts");
+    buildLocation = path.resolve(rootPath, 'build/contracts')
   }
-  options.allowUnlimitedContractSize = true;
-  options.network_id = 123456789;
-  const arbProvider = ganache.provider(options);
+  options.allowUnlimitedContractSize = true
+  options.network_id = 123456789
+  const arbProvider = ganache.provider(options)
 
-  const contractCode = {};
+  const contractCode = {}
 
-  let storageTrackFuncGen = function(address_string) {
+  const storageTrackFuncGen = function(address_string) {
     return function(err, code) {
-      contractCode[address_string] = code;
-    };
-  };
+      contractCode[address_string] = code
+    }
+  }
 
-  arbProvider.engine.on("block", function(block) {
-    for (let [address_string, value] of Object.entries(storage)) {
+  arbProvider.engine.on('block', function(block) {
+    for (const [address_string, value] of Object.entries(storage)) {
       arbProvider.engine.manager.eth_getCode(
         address_string,
-        "latest",
+        'latest',
         storageTrackFuncGen(address_string)
-      );
+      )
     }
-  });
+  })
 
-  const storage = {};
-  const netID = arbProvider.options.network_id;
+  const storage = {}
+  const netID = arbProvider.options.network_id
   arbProvider.engine.manager.waitForInitialization(function(err, state) {
-    state.blockchain.vm.on("step", function(info) {
-      let address_string = "0x" + info.address.toString("hex");
+    state.blockchain.vm.on('step', function(info) {
+      const address_string = '0x' + info.address.toString('hex')
       if (!(address_string in storage)) {
-        storage[address_string] = {};
+        storage[address_string] = {}
       }
-      if (info.opcode.name == "SSTORE") {
-        let args = info.stack.slice(-2).map(arg => "0x" + arg.toString("hex"));
-        storage[address_string][args[1]] = args[0];
+      if (info.opcode.name == 'SSTORE') {
+        const args = info.stack.slice(-2).map(arg => '0x' + arg.toString('hex'))
+        storage[address_string][args[1]] = args[0]
       }
-    });
-  });
-  process.on("exit", code => {
-    const contracts = [];
-    const files = fs.readdirSync(buildLocation, {});
-    for (let filePath of files) {
+    })
+  })
+  process.on('exit', code => {
+    const contracts = []
+    const files = fs.readdirSync(buildLocation, {})
+    for (const filePath of files) {
       const contract = JSON.parse(
         fs.readFileSync(path.resolve(buildLocation, filePath))
-      );
-      const networkInfo = contract.networks[netID];
+      )
+      const networkInfo = contract.networks[netID]
       if (networkInfo) {
-        const address = networkInfo.address;
+        const address = networkInfo.address
         contracts.push({
           name: contract.contractName,
           address: address,
           code: contractCode[address.toLowerCase()],
           storage: storage[address.toLowerCase()],
-          abi: contract.abi
-        });
+          abi: contract.abi,
+        })
       }
     }
     try {
-      fs.writeFileSync(outputLocationEVM, JSON.stringify(contracts, null, 2));
+      fs.writeFileSync(outputLocationEVM, JSON.stringify(contracts, null, 2))
     } catch (e) {
       console.log(
-        "Error writing output to file: " +
+        'Error writing output to file: ' +
           outputLocationEVM +
-          "\n" +
+          '\n' +
           e.name +
-          " " +
+          ' ' +
           e.message
-      );
-      throw e;
+      )
+      throw e
     }
 
     if (should_compile) {
-      console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
+      console.log('arbc-truffle ' + filenameEVM + ' ' + filenameAO)
       try {
         var compile = spawnSync(
-          "arbc-truffle",
+          'arbc-truffle',
           [outputLocationEVM, outputLocationAO],
-          { encoding: "utf-8" }
-        );
-        console.log(compile.stdout);
-        console.log(compile.stderr);
+          { encoding: 'utf-8' }
+        )
+        console.log(compile.stdout)
+        console.log(compile.stderr)
       } catch (e) {
-        console.log("Error arbc-truffle: " + e.name + " " + e.message);
-        throw e;
+        console.log('Error arbc-truffle: ' + e.name + ' ' + e.message)
+        throw e
       }
     }
-  });
-  return arbProvider;
+  })
+  return arbProvider
 }
 
 module.exports = {
-  provider
-};
+  provider,
+}

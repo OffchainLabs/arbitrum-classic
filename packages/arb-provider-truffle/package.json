@@ -13,7 +13,7 @@
   "scripts": {
     "test": "jest --config jest.config.js",
     "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-    "lint": "eslint ."
+    "lint": "yarn run eslint ."
   },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum/issues"

@@ -16,43 +16,4 @@ Arbitrum technologies are patent pending. This repository is offered under the A
 
 ## Quickstart
 
-Clone the monorepo to get started:
-
-```bash
-git clone -b master --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/arbitrum.git
-cd arbitrum
-yarn
-yarn install:deps
-yarn build
-
-# In one session
-yarn docker:build:geth
-yarn docker:geth
-
-# In another session
-cd demos/pet-shop
-truffle migrate --reset --compile-all --network arbitrum
-cd ../..
-./scripts/setup_rollup.py --geth demos/pet-shop/contract.ao 3
-
-./scripts/arb_deploy.py validator-states
-
-# In a third session:
-cd demos/pet-shop && yarn start
-```
-
-[Next](https://developer.offchainlabs.com/docs/Developer_Quickstart/#use-the-dapp), setup Metamask with a new
-account and the mnemonic:
-
-```
-jar deny prosper gasp flush glass core corn alarm treat leg smart
-```
-
-or use your existing account with the private key derived from the previous mnemonic:
-
-```
-0x41a9550a0ae23fd52f3b99acab194db2e4474262db64dfd46807bca9e061e211
-```
-
-You will also need to switch networks to `http://localhost:7545` to connect to the Ganache started by the `arb_deploy.py`
-script before adopting your pets.
+Follow [the guide](https://developer.offchainlabs.com/docs/Developer_Quickstart/) on our developer site to build a demo dapp on Arbitrum. 

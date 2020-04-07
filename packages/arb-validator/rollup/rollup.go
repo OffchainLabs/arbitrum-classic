@@ -32,9 +32,9 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
@@ -43,10 +43,10 @@ type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph           *StakedNodeGraph
 	rollupAddr          common.Address
-	pendingInbox        *structures.PendingInbox
+	inbox               *structures.Inbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockId       *structures.BlockId
+	latestBlockId       *common.BlockId
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
@@ -56,9 +56,9 @@ type ChainObserver struct {
 func NewChain(
 	rollupAddr common.Address,
 	checkpointer checkpointing.RollupCheckpointer,
-	vmParams structures.ChainParams,
+	vmParams valprotocol.ChainParams,
 	updateOpinion bool,
-	startBlockId *structures.BlockId,
+	startBlockId *common.BlockId,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -69,7 +69,7 @@ func NewChain(
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          rollupAddr,
-		pendingInbox:        structures.NewPendingInbox(),
+		inbox:               structures.NewInbox(),
 		knownValidNode:      nodeGraph.latestConfirmed,
 		calculatedValidNode: nodeGraph.latestConfirmed,
 		latestBlockId:       startBlockId,
@@ -87,6 +87,11 @@ func NewChain(
 }
 
 func (chain *ChainObserver) Start(ctx context.Context) {
+	chain.nodeGraph.challenges.forall(func(c *Challenge) {
+		for _, listener := range chain.listeners {
+			listener.ResumedChallenge(ctx, chain, c)
+		}
+	})
 	chain.startCleanupThread(ctx)
 	chain.startConfirmThread(ctx)
 
@@ -107,11 +112,11 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
-		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
+		Inbox:               chain.inbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      chain.knownValidNode.hash.MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.hash.MarshalToBuf(),
 		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
@@ -119,18 +124,18 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx checkpointing.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
 
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
-	restoreCtx structures.RestoreContext,
+	restoreCtx checkpointing.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
-	pendingInbox, err := m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)
+	inbox, err := m.Inbox.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +143,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
-		pendingInbox:        &structures.PendingInbox{pendingInbox},
+		inbox:               &structures.Inbox{inbox},
 		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
 		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
 		latestBlockId:       m.LatestBlockId.Unmarshal(),
@@ -183,11 +188,11 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	}
 }
 
-func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
+func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := structures.NewCheckpointContextImpl()
+	ckptCtx := checkpointing.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +200,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
 }
 
-func (chain *ChainObserver) CurrentBlockId() *structures.BlockId {
+func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
 	blockId := chain.latestBlockId
 	chain.RUnlock()
@@ -217,7 +222,7 @@ func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 }
 
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.pendingInbox.DeliverMessage(ev.Message)
+	chain.inbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, chain, ev)
 	}
@@ -259,19 +264,22 @@ func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMov
 func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
+	_, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
+	challenge := &Challenge{
+		blockId:      ev.BlockId,
+		logIndex:     ev.LogIndex,
+		asserter:     ev.Asserter,
+		challenger:   ev.Challenger,
+		contract:     ev.ChallengeContract,
+		conflictNode: challengerAncestor,
+	}
 
-	chain.nodeGraph.NewChallenge(
-		ev.ChallengeContract,
-		ev.Asserter,
-		ev.Challenger,
-		ev.ChallengeType,
-	)
+	chain.nodeGraph.NewChallenge(challenge)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ctx, chain, ev, challengerAncestor, asserterAncestor)
+		lis.StartedChallenge(ctx, chain, challenge)
 	}
 }
 
@@ -318,11 +326,11 @@ func (chain *ChainObserver) updateOldest() {
 }
 
 func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
-	disputableNode := structures.NewDisputableNode(
+	disputableNode := valprotocol.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
-		ev.MaxPendingTop,
-		ev.MaxPendingCount,
+		ev.MaxInboxTop,
+		ev.MaxInboxCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
@@ -339,12 +347,12 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 	return co.nodeGraph.Equals(co2.nodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
-		co.pendingInbox.Equals(co2.pendingInbox)
+		co.inbox.Equals(co2.inbox)
 }
 
 func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	inbox, _ := chain.pendingInbox.GenerateInbox(node.prev.vmProtoData.PendingTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
+	inbox, _ := chain.inbox.GenerateVMInbox(node.prev.vmProtoData.InboxTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,

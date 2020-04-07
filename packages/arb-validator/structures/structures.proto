@@ -17,41 +17,14 @@
 syntax = "proto3";
 package structures;
 import "common/common.proto";
-import "protocol/protocol.proto";
-import "valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
-message ChainParamsBuf {
-    common.BigIntegerBuf stakeRequirement = 1;
-    common.TimeTicksBuf gracePeriod = 2;
-    uint64 maxExecutionSteps = 3;
-    uint64 maxTimeBoundsWidth = 4;
-    uint64 ArbGasSpeedLimitPerTick = 5;
-}
-
-message VMProtoDataBuf {
-    common.HashBuf machineHash = 1;
-    common.HashBuf pendingTop = 2;
-    common.BigIntegerBuf pendingCount = 3;
-}
-
-message AssertionParamsBuf {
-    uint64 numSteps = 1;
-    protocol.TimeBoundsBlocksBuf timeBounds = 2;
-    common.BigIntegerBuf importedMessageCount = 3;
-}
-
-message AssertionClaimBuf {
-    common.HashBuf afterPendingTop = 1;
-    common.HashBuf importedMessagesSlice = 2;
-    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
-}
-
-message DisputableNodeBuf {
-    AssertionParamsBuf assertionParams = 1;
-    AssertionClaimBuf assertionClaim = 2;
-    common.HashBuf maxPendingTop = 3;
-    common.BigIntegerBuf maxPendingCount = 4;
+message ExecutionAssertionBuf {
+    common.HashBuf afterHash = 1;
+    bool   didInboxInsn = 2;
+    uint64 numGas = 3;
+    repeated common.HashBuf messages = 4;
+    repeated common.HashBuf logs = 5;
 }
 
 message InboxItemBuf {
@@ -59,34 +32,8 @@ message InboxItemBuf {
     common.HashBuf valHash = 2;
 }
 
-message PendingInboxBuf {
+message InboxBuf {
     common.BigIntegerBuf topCount = 1;
     repeated InboxItemBuf items = 2;
     common.HashBuf hashOfRest = 3;
 }
-
-message CheckpointManifest {
-    repeated common.HashBuf values = 1;
-    repeated common.HashBuf machines = 2;
-}
-
-message CheckpointMetadata {
-    uint64 formatVersion = 1;
-    BlockIdBuf oldest = 2;
-    BlockIdBuf newest = 3;
-}
-
-message CheckpointLinks {
-    BlockIdBuf next = 1;
-    BlockIdBuf prev = 2;
-}
-
-message BlockIdBuf {
-    common.TimeBlocksBuf height = 1;
-    common.HashBuf headerHash = 2;
-}
-
-message BlockIdBufList {
-    repeated BlockIdBuf bufs = 1;
-}
-

@@ -19,7 +19,7 @@ package challenges
 import "testing"
 
 func TestChallenges(t *testing.T) {
-	t.Run("Pending Top Challenge", testPendingTopChallenge)
+	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 	t.Run("Messages Challenge", testMessagesChallenge)
 	t.Run("Execution Challenge", testExecutionChallenge)
 }

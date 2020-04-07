@@ -24,10 +24,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 func testExecutionChallenge(t *testing.T) {
@@ -47,18 +46,18 @@ func testExecutionChallenge(t *testing.T) {
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
 	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
 
-	challengeHash := structures.ExecutionDataHash(
+	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,
 		precondition.Hash(),
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
 	)
 
 	if err := testChallenge(
-		structures.InvalidExecutionChildType,
+		valprotocol.InvalidExecutionChildType,
 		challengeHash,
 		"9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc",
 		"27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa",
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendExecutionClaim(
 				context.Background(),
 				client,
@@ -71,7 +70,7 @@ func testExecutionChallenge(t *testing.T) {
 				4,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return ChallengeExecutionClaim(
 				context.Background(),
 				client,
