@@ -1497,6 +1497,8 @@ library OneStepProof {
         } else if (opCode == OP_SEND) {
             // what would the proof check be since the machine should go in an error state
             // if the value is larger than the send limit
+            require(stackVals[0].size <= send_size_limit, "send data should be less than size limit");
+
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
                 require(
