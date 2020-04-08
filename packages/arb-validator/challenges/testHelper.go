@@ -173,7 +173,7 @@ func testChallenge(
 		select {
 		case challengeState := <-asserterEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("Asserter Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
@@ -181,7 +181,7 @@ func testChallenge(
 			}
 		case challengeState := <-challengerEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("Challenger Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {

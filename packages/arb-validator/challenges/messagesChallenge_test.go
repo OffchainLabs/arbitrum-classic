@@ -44,6 +44,7 @@ func testMessagesChallenge(t *testing.T) {
 			MessageNum: big.NewInt(i),
 		})
 	}
+
 	beforeInbox, err := messageStack.GetHashAtIndex(big.NewInt(2))
 	if err != nil {
 		t.Fatal(err)

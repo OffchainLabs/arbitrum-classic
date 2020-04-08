@@ -33,7 +33,7 @@ library Protocol {
         returns (bytes32)
     {
         Value.Data[] memory values = new Value.Data[](4);
-        values[0] = Value.newHashOnly(_data);
+        values[0] = Value.newHashOnly(_data, uint256(1));
         values[1] = Value.newInt(uint256(_destination));
         values[2] = Value.newInt(_value);
         values[3] = Value.newInt(uint256(bytes32(_tokenType)));
@@ -103,8 +103,8 @@ library Protocol {
 
     function addMessageToVMInbox(bytes32 vmInbox, bytes32 message) internal pure returns (bytes32) {
         Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = Value.newHashOnly(vmInbox);
-        vals[1] = Value.newHashOnly(message);
+        vals[0] = Value.newHashOnly(vmInbox, uint256(1));
+        vals[1] = Value.newHashOnly(message, uint256(1));
         Value.Data memory tuple = Value.newTuple(vals);
 
         return Value.hashTuple(tuple);

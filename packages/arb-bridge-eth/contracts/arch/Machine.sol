@@ -37,8 +37,8 @@ library Machine {
         returns (Value.HashOnly memory)
     {
         Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = Value.newHashOnly(valHash.hash);
-        vals[1] = Value.newHashOnly(stackVal.hash);
+        vals[0] = Value.newHashOnly(valHash.hash, uint256(1));
+        vals[1] = Value.newHashOnly(stackVal.hash, uint256(1));
         Value.Data memory tuple = Value.newTuple(vals);
 
         return Value.HashOnly(Value.hashTuple(tuple));

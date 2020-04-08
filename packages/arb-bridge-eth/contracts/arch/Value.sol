@@ -237,15 +237,6 @@ library Value {
         return Data(0, CodePoint(0, 0, false, 0), _val, uint8(TUPLE_TYPECODE + _val.length), size);
     }
 
-    function newTupleHashValues(HashOnly[] memory _val) internal pure returns (Data memory) {
-        Data[] memory values = new Data[](_val.length);
-        uint256 valCount = _val.length;
-        for (uint256 i = 0; i < valCount; i++) {
-            values[i] = newHashOnly(_val[i].hash);
-        }
-        return newTuple(values);
-    }
-
     function newRepeatedTuple(Data memory _val, uint8 _count) internal pure returns (Data memory) {
         Data[] memory values = new Data[](_count);
         for (uint256 i = 0; i < _count; i++) {
@@ -256,10 +247,6 @@ library Value {
 
     function newHashOnly(bytes32 _val, uint256 size) internal pure returns (Data memory) {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
-    }
-
-    function newHashOnly(bytes32 _val) internal pure returns (Data memory) {
-        return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, uint256(1));
     }
 
     function deserializeHashOnly(
@@ -411,7 +398,7 @@ library Value {
             return (valid, offset, newCodePoint(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
             (valid, offset, intVal) = deserializeInt(data, offset);
-            return (valid, offset, newHashOnly(bytes32(intVal)));
+            return (valid, offset, newHashOnly(bytes32(intVal), uint256(1)));
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;

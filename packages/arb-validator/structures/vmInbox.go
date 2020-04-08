@@ -39,8 +39,12 @@ func NewVMInbox() *VMInbox {
 }
 
 func (b *VMInbox) DeliverMessage(msg message.Message) {
-	b.value = value.NewTuple2(b.value, message.DeliveredValue(msg))
-	b.hashes = append(b.hashes, b.value.Hash())
+	currentHash := value.NewHashOnlyValue(b.Hash(), 1)
+	updatedHash := value.NewHashOnlyValue(message.DeliveredValue(msg).Hash(), 1)
+	tuple := value.NewTuple2(currentHash, updatedHash)
+
+	b.value = tuple
+	b.hashes = append(b.hashes, tuple.Hash())
 }
 
 func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]common.Hash, error) {
