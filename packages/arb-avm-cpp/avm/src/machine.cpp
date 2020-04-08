@@ -273,6 +273,12 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 read_depth = 3;
                 break;
             case OpCode::RPUSH:
+                current_register_contents->is_read = true;
+                current_stack_contents.push_back(current_register_contents);
+                break;
+            case OpCode::RSET:
+                current_stack_contents.back()->is_read = true;
+                current_register_contents = current_stack_contents.back();
                 break;
             default:
                 break;
