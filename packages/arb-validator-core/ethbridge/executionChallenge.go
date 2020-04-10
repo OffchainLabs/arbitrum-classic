@@ -73,6 +73,7 @@ func (c *executionChallenge) BisectAssertion(
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
 		precondition.BeforeInbox.Hash(),
+		big.NewInt(precondition.BeforeInbox.Size()),
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
 		didInboxInsns,

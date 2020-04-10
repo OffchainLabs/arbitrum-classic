@@ -116,7 +116,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
@@ -270,7 +270,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
-			ImportedMessagesSlice: inbox.Hash().Hash(),
+			ImportedMessagesSlice: inbox.Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
@@ -281,7 +281,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         beforeInboxTop,
-			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
+			ImportedMessagesSlice: value.NewHashOnlyValueFromValue(value.NewEmptyTuple()),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	}
@@ -303,7 +303,7 @@ func getNodeOpinion(
 	params *valprotocol.AssertionParams,
 	claim *valprotocol.AssertionClaim,
 	afterInboxTop *common.Hash,
-	calculatedMessagesSlice common.Hash,
+	calculatedMessagesSlice value.HashOnlyValue,
 	messagesVal value.TupleValue,
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {

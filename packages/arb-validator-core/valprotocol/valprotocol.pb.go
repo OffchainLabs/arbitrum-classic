@@ -9,6 +9,7 @@ import (
 	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	math "math"
+	"math/big"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -448,8 +449,9 @@ func (m *AssertionParamsBuf) GetImportedMessageCount() *common.BigIntegerBuf {
 }
 
 type AssertionClaimBuf struct {
-	AfterInboxTop         *common.HashBuf            `protobuf:"bytes,1,opt,name=afterInboxTop,proto3" json:"afterInboxTop,omitempty"`
-	ImportedMessagesSlice *common.HashBuf            `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
+	AfterInboxTop         *common.HashBuf `protobuf:"bytes,1,opt,name=afterInboxTop,proto3" json:"afterInboxTop,omitempty"`
+	ImportedMessagesSlice *common.HashBuf `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
+	ImportedMsgsValSize   *big.Int
 	AssertionStub         *ExecutionAssertionStubBuf `protobuf:"bytes,3,opt,name=assertionStub,proto3" json:"assertionStub,omitempty"`
 	XXX_NoUnkeyedLiteral  struct{}                   `json:"-"`
 	XXX_unrecognized      []byte                     `json:"-"`

@@ -163,7 +163,7 @@ func (node *Node) ExecutionPreconditionHash() common.Hash {
 	pre := &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice, 0),
+		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice.Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice.Size()),
 	}
 	return pre.Hash()
 }
@@ -204,7 +204,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			vmProtoData.InboxTop,
 			node.disputable.AssertionClaim.AfterInboxTop,
 			value.NewEmptyTuple().Hash(),
-			node.disputable.AssertionClaim.ImportedMessagesSlice,
+			node.disputable.AssertionClaim.ImportedMessagesSlice.Hash(),
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))

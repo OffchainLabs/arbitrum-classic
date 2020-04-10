@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"strings"
 
@@ -373,7 +374,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			},
 			Claim: &valprotocol.AssertionClaim{
 				AfterInboxTop:         eventVal.Fields[2],
-				ImportedMessagesSlice: eventVal.Fields[3],
+				ImportedMessagesSlice: value.NewHashOnlyValue(eventVal.Fields[3], eventVal.ImportedMessagesValueSize.Int64()),
 				AssertionStub: &valprotocol.ExecutionAssertionStub{
 					AfterHash:        eventVal.Fields[4],
 					DidInboxInsn:     eventVal.DidInboxInsn,

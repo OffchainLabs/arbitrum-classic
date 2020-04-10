@@ -198,6 +198,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     function makeAssertion(
         bytes32[9] calldata _fields,
+        uint256 _beforeInboxValueSize,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -210,7 +211,36 @@ contract ArbRollup is NodeGraph, Staking {
     )
         external
     {
-        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(
+        (bytes32 prevLeaf, bytes32 newValid) = assertionHelper(
+            _fields,
+            _beforeInboxValueSize,
+            _beforeInboxCount,
+            _prevDeadlineTicks,
+            _prevChildType,
+            _numSteps,
+            _timeBoundsBlocks,
+            _importedMessageCount,
+            _didInboxInsn,
+            _numArbGas);
+
+        bytes32 stakerLocation = getStakerLocation(msg.sender);
+        require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
+        updateStakerLocation(msg.sender, newValid);
+    }
+
+    function assertionHelper(
+        bytes32[9] memory _fields,
+        uint256 _beforeInboxValueSize,
+        uint256 _beforeInboxCount,
+        uint256 _prevDeadlineTicks,
+        uint32 _prevChildType,
+        uint64 _numSteps,
+        uint128[2] memory _timeBoundsBlocks,
+        uint256 _importedMessageCount,
+        bool _didInboxInsn,
+        uint64 _numArbGas) internal returns(bytes32, bytes32)
+    {
+        return makeAssertion(
             MakeAssertionData(
                 _fields[0],
                 _fields[1],
@@ -228,6 +258,7 @@ contract ArbRollup is NodeGraph, Staking {
                 _fields[4],
 
                 _fields[5],
+                _beforeInboxValueSize,
 
                 _fields[6],
                 _didInboxInsn,
@@ -236,9 +267,6 @@ contract ArbRollup is NodeGraph, Staking {
                 _fields[8]
             )
         );
-        bytes32 stakerLocation = getStakerLocation(msg.sender);
-        require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
-        updateStakerLocation(msg.sender, newValid);
     }
 
 

@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -97,7 +98,7 @@ func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *common.Bloc
 func (c *MessagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
-	segmentHashes []common.Hash,
+	segmentHashes []value.HashOnlyValue,
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
@@ -117,7 +118,7 @@ func (c *MessagesChallenge) Bisect(
 func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredTransaction,
 ) error {
 	return nil
@@ -126,7 +127,7 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 func (c *MessagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredEth,
 ) error {
 	return nil
@@ -135,7 +136,7 @@ func (c *MessagesChallenge) OneStepProofEthMessage(
 func (c *MessagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredERC20,
 ) error {
 	return nil
@@ -144,7 +145,7 @@ func (c *MessagesChallenge) OneStepProofERC20Message(
 func (c *MessagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredERC721,
 ) error {
 	return nil
@@ -153,7 +154,7 @@ func (c *MessagesChallenge) OneStepProofERC721Message(
 func (c *MessagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredContractTransaction,
 ) error {
 	return nil

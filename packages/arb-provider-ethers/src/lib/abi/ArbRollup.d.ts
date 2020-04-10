@@ -162,6 +162,7 @@ interface ArbRollupInterface extends Interface {
     makeAssertion: TypedFunctionDescription<{
       encode([
         _fields,
+        _beforeInboxValueSize,
         _beforeInboxCount,
         _prevDeadlineTicks,
         _prevChildType,
@@ -173,6 +174,7 @@ interface ArbRollupInterface extends Interface {
         _stakerProof,
       ]: [
         Arrayish[],
+        BigNumberish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
@@ -224,13 +226,14 @@ interface ArbRollupInterface extends Interface {
     RollupAsserted: TypedEventDescription<{
       encodeTopics([
         fields,
+        importedMessagesValueSize,
         inboxCount,
         importedMessageCount,
         timeBoundsBlocks,
         numArbGas,
         numSteps,
         didInboxInsn,
-      ]: [null, null, null, null, null, null, null]): string[]
+      ]: [null, null, null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -415,6 +418,7 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       _fields: Arrayish[],
+      _beforeInboxValueSize: BigNumberish,
       _beforeInboxCount: BigNumberish,
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
@@ -572,6 +576,7 @@ export class ArbRollup extends Contract {
 
   makeAssertion(
     _fields: Arrayish[],
+    _beforeInboxValueSize: BigNumberish,
     _beforeInboxCount: BigNumberish,
     _prevDeadlineTicks: BigNumberish,
     _prevChildType: BigNumberish,
@@ -606,6 +611,7 @@ export class ArbRollup extends Contract {
 
     RollupAsserted(
       fields: null,
+      importedMessagesValueSize: null,
       inboxCount: null,
       importedMessageCount: null,
       timeBoundsBlocks: null,
@@ -732,6 +738,7 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       _fields: Arrayish[],
+      _beforeInboxValueSize: BigNumberish,
       _beforeInboxCount: BigNumberish,
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,

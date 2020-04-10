@@ -64,6 +64,7 @@ contract NodeGraph is ChallengeType {
 
     event RollupAsserted(
         bytes32[7] fields,
+        uint256 importedMessagesValueSize,
         uint256 inboxCount,
         uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
@@ -100,6 +101,7 @@ contract NodeGraph is ChallengeType {
         bytes32 afterInboxTop;
 
         bytes32 importedMessagesSlice;
+        uint256 importedMessagesValueSize;
 
         bytes32 afterVMHash;
         bool didInboxInsn;
@@ -282,6 +284,7 @@ contract NodeGraph is ChallengeType {
                 data.messagesAccHash,
                 data.logsAccHash
             ],
+            data.importedMessagesValueSize,
             inboxCount,
             data.importedMessageCount,
             data.timeBoundsBlocks,
@@ -364,20 +367,16 @@ contract NodeGraph is ChallengeType {
         pure
         returns(bytes32)
     {
+        Value.Data memory importedMsgsVal = Value.newHashOnly(data.importedMessagesSlice, data.importedMessagesValueSize);
+
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
              data.beforeVMHash,
              data.timeBoundsBlocks,
-             data.importedMessagesSlice
+             importedMsgsVal
         );
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.didInboxInsn,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
+
+        bytes32 assertionHash = generateAssertionHash(data);
+
         bytes32 executionHash = ChallengeUtils.executionHash(
             data.numSteps,
             preconditionHash,
@@ -392,6 +391,18 @@ contract NodeGraph is ChallengeType {
             ),
             INVALID_EXECUTION_TYPE,
             vmProtoHashBefore
+        );
+    }
+
+    function generateAssertionHash(MakeAssertionData memory data) private pure returns (bytes32){
+        return Protocol.generateAssertionHash(
+            data.afterVMHash,
+            data.didInboxInsn,
+            data.numArbGas,
+            0x00,
+            data.messagesAccHash,
+            0x00,
+            data.logsAccHash
         );
     }
 
