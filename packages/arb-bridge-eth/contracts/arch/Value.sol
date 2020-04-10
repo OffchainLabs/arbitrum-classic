@@ -268,6 +268,39 @@ library Value {
         return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
     }
 
+    function deserializeHashValue(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            Data memory
+        )
+    {
+        Data memory hashValue;
+        uint256 size;
+        bool valid;
+
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 64) {
+            return (false, startOffset, hashValue);
+        }
+
+        bytes32 hashData = data.toBytes32(startOffset);
+        (valid, startOffset, size) = deserializeInt(data, startOffset + 32);
+
+        if(valid){
+            hashValue = newHashOnly(hashData, size);
+
+            return (true, startOffset, hashValue);
+        }else{
+            return (false, startOffset, hashValue);
+        }
+    }
+
     function deserializeInt(
         bytes memory data,
         uint256 startOffset
@@ -397,8 +430,7 @@ library Value {
             (valid, offset, cpVal) = deserializeCodePoint(data, offset);
             return (valid, offset, newCodePoint(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
-            (valid, offset, intVal) = deserializeInt(data, offset);
-            return (valid, offset, newHashOnly(bytes32(intVal), uint256(1)));
+            return deserializeHashValue(data, offset);
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;

@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
@@ -111,6 +112,7 @@ func (c *executionChallenge) OneStepProof(
 		c.auth.getAuth(ctx),
 		precondition.BeforeHash,
 		precondition.BeforeInbox.Hash(),
+		big.NewInt(precondition.BeforeInbox.Size()),
 		precondition.TimeBounds.AsIntArray(),
 		assertion.AfterHash,
 		assertion.DidInboxInsn,

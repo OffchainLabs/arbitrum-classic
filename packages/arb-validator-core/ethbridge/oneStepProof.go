@@ -55,6 +55,7 @@ func (con *oneStepProof) ValidateProof(
 		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
 		precondition.BeforeInbox.Hash(),
+		big.NewInt(precondition.BeforeInbox.Size()),
 		assertion.AfterHash,
 		assertion.DidInboxInsn,
 		assertion.FirstMessageHash,

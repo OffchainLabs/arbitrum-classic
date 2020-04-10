@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -30,42 +31,42 @@ type MessagesChallenge interface {
 	Bisect(
 		ctx context.Context,
 		chainHashes []common.Hash,
-		segmentHashes []common.Hash,
+		segmentHashes []value.HashOnlyValue,
 		chainLength *big.Int,
 	) error
 
 	OneStepProofTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashOnlyValue,
 		msg message.DeliveredTransaction,
 	) error
 
 	OneStepProofEthMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashOnlyValue,
 		msg message.DeliveredEth,
 	) error
 
 	OneStepProofERC20Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashOnlyValue,
 		msg message.DeliveredERC20,
 	) error
 
 	OneStepProofERC721Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashOnlyValue,
 		msg message.DeliveredERC721,
 	) error
 
 	OneStepProofContractTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashOnlyValue,
 		msg message.DeliveredContractTransaction,
 	) error
 

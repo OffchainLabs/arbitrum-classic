@@ -83,7 +83,7 @@ func (nv HashOnlyValue) Size() int64 {
 }
 
 func (nv HashOnlyValue) Equal(val Value) bool {
-	return nv.Hash() == val.Hash()
+	return nv.Hash() == val.Hash() && nv.Size() == val.Size()
 }
 
 func (nv HashOnlyValue) String() string {

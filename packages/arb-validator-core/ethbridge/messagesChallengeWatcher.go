@@ -109,6 +109,7 @@ func (c *messagesChallengeWatcher) parseMessagesEvent(chainInfo arbbridge.ChainI
 			ChainInfo:     chainInfo,
 			ChainHashes:   hashSliceToHashes(eventVal.ChainHashes),
 			SegmentHashes: hashSliceToHashes(eventVal.SegmentHashes),
+			SegmentSizes:  eventVal.SegmentSizes,
 			TotalLength:   eventVal.TotalLength,
 			Deadline:      common.TimeTicks{Val: eventVal.DeadlineTicks},
 		}, nil

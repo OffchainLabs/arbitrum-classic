@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -51,15 +52,17 @@ func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, a
 func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
-	segmentHashes []common.Hash,
+	segmentHashes []value.HashOnlyValue,
 	chainLength *big.Int,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	hashes, sizes := hashValueSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
-		hashSliceToRaw(segmentHashes),
+		hashes,
+		sizes,
 		chainLength,
 	)
 	if err != nil {
@@ -71,7 +74,7 @@ func (c *messagesChallenge) Bisect(
 func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredTransaction,
 ) error {
 	c.auth.Lock()
@@ -79,7 +82,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.Hash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.Chain.ToEthAddress(),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -97,7 +101,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredEth,
 ) error {
 	c.auth.Lock()
@@ -105,13 +109,16 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.Hash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
 		msg.BlockNum.AsInt(),
 		msg.MessageNum,
 	)
+
+	// why call doesnt also take in lower hash size
 	if err != nil {
 		return c.contract.OneStepProofEthMessageCall(
 			ctx,
@@ -119,7 +126,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB,
+			lowerHashB.Hash(),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
@@ -133,7 +140,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredERC20,
 ) error {
 	c.auth.Lock()
@@ -141,7 +148,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.Hash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -158,7 +166,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredERC721,
 ) error {
 	c.auth.Lock()
@@ -166,7 +174,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.Hash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -183,7 +192,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashOnlyValue,
 	msg message.DeliveredContractTransaction,
 ) error {
 	c.auth.Lock()
@@ -191,7 +200,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.Hash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,

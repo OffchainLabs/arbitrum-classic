@@ -19,19 +19,18 @@ package structures
 import (
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type VMInbox struct {
-	hashes []common.Hash
+	hashes []value.HashOnlyValue
 	value  value.TupleValue
 }
 
 func NewVMInbox() *VMInbox {
-	hashes := make([]common.Hash, 0)
-	hashes = append(hashes, value.NewEmptyTuple().Hash())
+	hashes := make([]value.HashOnlyValue, 0)
+	hashes = append(hashes, value.NewHashOnlyValue(value.NewEmptyTuple().Hash(), 1))
 	return &VMInbox{
 		hashes: hashes,
 		value:  value.NewEmptyTuple(),
@@ -39,15 +38,20 @@ func NewVMInbox() *VMInbox {
 }
 
 func (b *VMInbox) DeliverMessage(msg message.Message) {
-	currentHash := value.NewHashOnlyValue(b.Hash(), 1)
-	updatedHash := value.NewHashOnlyValue(message.DeliveredValue(msg).Hash(), 1)
-	tuple := value.NewTuple2(currentHash, updatedHash)
+	//currentHash := value.NewHashOnlyValue(b.Hash(), 1)
+	//updatedHash := value.NewHashOnlyValue(message.DeliveredValue(msg).Hash(), 1)
+	//tuple := value.NewTuple2(currentHash, updatedHash)
+	//
+	//b.value = tuple
+	//b.hashes = append(b.hashes, tuple.Hash())
+
+	tuple := value.NewTuple2(b.value, message.DeliveredValue(msg))
 
 	b.value = tuple
-	b.hashes = append(b.hashes, tuple.Hash())
+	b.hashes = append(b.hashes, value.NewHashOnlyValue(tuple.Hash(), tuple.Size()))
 }
 
-func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]common.Hash, error) {
+func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value.HashOnlyValue, error) {
 	if count > uint64(len(b.hashes)) {
 		return nil, fmt.Errorf("can't generate bisection of %v with only %v items", count, len(b.hashes))
 	}
@@ -55,7 +59,7 @@ func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]commo
 		segments = count
 	}
 	item := startIndex
-	inboxCuts := make([]common.Hash, 0, segments+1)
+	inboxCuts := make([]value.HashOnlyValue, 0, segments+1)
 	inboxCuts = append(inboxCuts, b.hashes[item])
 	otherSegmentSize := count / segments
 	item += count/segments + count%segments
@@ -75,6 +79,6 @@ func (b *VMInbox) AsValue() value.TupleValue {
 	return b.value
 }
 
-func (b *VMInbox) Hash() common.Hash {
+func (b *VMInbox) Hash() value.HashOnlyValue {
 	return b.hashes[len(b.hashes)-1]
 }

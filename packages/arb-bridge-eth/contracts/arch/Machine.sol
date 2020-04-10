@@ -29,28 +29,28 @@ library Machine {
     uint256 internal constant MACHINE_HALT = 2;
 
     function addStackVal(
-        Value.HashOnly memory stackVal,
-        Value.HashOnly memory valHash
+        Value.Data memory stackValHash,
+        Value.Data memory valHash
     )
         internal
         pure
-        returns (Value.HashOnly memory)
+        returns (Value.Data memory)
     {
         Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = Value.newHashOnly(valHash.hash, uint256(1));
-        vals[1] = Value.newHashOnly(stackVal.hash, uint256(1));
-        Value.Data memory tuple = Value.newTuple(vals);
+        vals[0] = stackValHash;
+        vals[1] = valHash;
+        return Value.newTuple(vals);
 
-        return Value.HashOnly(Value.hashTuple(tuple));
+        // return Value.HashOValue.hashTuple(tuple));
     }
 
     struct Data {
-        Value.HashOnly instructionStackHash;
-        Value.HashOnly dataStackHash;
-        Value.HashOnly auxStackHash;
-        Value.HashOnly registerHash;
-        Value.HashOnly staticHash;
-        Value.HashOnly errHandler;
+        Value.Data instructionStackHash;
+        Value.Data dataStackHash;
+        Value.Data auxStackHash;
+        Value.Data registerHash;
+        Value.Data staticHash;
+        Value.Data errHandler;
         uint256 status;
     }
 
@@ -58,17 +58,17 @@ library Machine {
         return string(
             abi.encodePacked(
                 "Machine(",
-                DebugPrint.bytes32string(machine.instructionStackHash.hash),
+                DebugPrint.bytes32string(Value.hash(machine.instructionStackHash).hash),
                 ", \n",
-                DebugPrint.bytes32string(machine.dataStackHash.hash),
+                DebugPrint.bytes32string(Value.hash(machine.dataStackHash).hash),
                 ", \n",
-                DebugPrint.bytes32string(machine.auxStackHash.hash),
+                DebugPrint.bytes32string(Value.hash(machine.auxStackHash).hash),
                 ", \n",
-                DebugPrint.bytes32string(machine.registerHash.hash),
+                DebugPrint.bytes32string(Value.hash(machine.registerHash).hash),
                 ", \n",
-                DebugPrint.bytes32string(machine.staticHash.hash),
+                DebugPrint.bytes32string(Value.hash(machine.staticHash).hash),
                 ", \n",
-                DebugPrint.bytes32string(machine.errHandler.hash),
+                DebugPrint.bytes32string(Value.hash(machine.errHandler).hash),
                 ")\n"
             )
         );
@@ -86,36 +86,36 @@ library Machine {
         machine.status = MACHINE_HALT;
     }
 
-    function addDataStackHashValue(Data memory machine, Value.HashOnly memory val) internal pure {
+    function addDataStackHashValue(Data memory machine, Value.Data memory val) internal pure {
         machine.dataStackHash = addStackVal(machine.dataStackHash, val);
     }
 
-    function addAuxStackHashValue(Data memory machine, Value.HashOnly memory val) internal pure {
+    function addAuxStackHashValue(Data memory machine, Value.Data memory val) internal pure {
         machine.auxStackHash = addStackVal(machine.auxStackHash, val);
     }
 
     function addDataStackValue(Data memory machine, Value.Data memory val) internal pure {
-        machine.dataStackHash = addStackVal(machine.dataStackHash, val.hash());
+        machine.dataStackHash = addStackVal(machine.dataStackHash, val);
     }
 
     function addAuxStackValue(Data memory machine, Value.Data memory val) internal pure {
-        machine.auxStackHash = addStackVal(machine.auxStackHash, val.hash());
+        machine.auxStackHash = addStackVal(machine.auxStackHash, val);
     }
 
     function addDataStackInt(Data memory machine, uint256 val) internal pure {
         machine.dataStackHash = addStackVal(
             machine.dataStackHash,
-            Value.newInt(val).hash()
+            Value.newInt(val)
         );
     }
 
     function machineHash(
-        bytes32 instructionStackHash,
-        bytes32 dataStackHash,
-        bytes32 auxStackHash,
-        bytes32 registerHash,
-        bytes32 staticHash,
-        bytes32 errHandlerHash
+        Value.Data memory instructionStackHash,
+        Value.Data memory dataStackHash,
+        Value.Data memory auxStackHash,
+        Value.Data memory registerHash,
+        Value.Data memory staticHash,
+        Value.Data memory errHandlerHash
     )
         internal
         pure
@@ -123,12 +123,12 @@ library Machine {
     {
         return hash(
             Data(
-                Value.HashOnly(instructionStackHash),
-                Value.HashOnly(dataStackHash),
-                Value.HashOnly(auxStackHash),
-                Value.HashOnly(registerHash),
-                Value.HashOnly(staticHash),
-                Value.HashOnly(errHandlerHash),
+                instructionStackHash,
+                dataStackHash,
+                auxStackHash,
+                registerHash,
+                staticHash,
+                errHandlerHash,
                 MACHINE_EXTENSIVE
             )
         );
@@ -142,12 +142,12 @@ library Machine {
         } else {
             return keccak256(
                 abi.encodePacked(
-                    machine.instructionStackHash.hash,
-                    machine.dataStackHash.hash,
-                    machine.auxStackHash.hash,
-                    machine.registerHash.hash,
-                    machine.staticHash.hash,
-                    machine.errHandler.hash
+                    Value.hash(machine.instructionStackHash).hash,
+                    Value.hash(machine.dataStackHash).hash,
+                    Value.hash(machine.auxStackHash).hash,
+                    Value.hash(machine.registerHash).hash,
+                    Value.hash(machine.staticHash).hash,
+                    Value.hash(machine.errHandler).hash
                 )
             );
         }
@@ -181,27 +181,27 @@ library Machine {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
         bool valid;
-        (valid, offset, m.instructionStackHash) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.instructionStackHash) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.dataStackHash) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.dataStackHash) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.auxStackHash) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.auxStackHash) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.registerHash) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.registerHash) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.staticHash) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.staticHash) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.errHandler) = Value.deserializeHashOnly(data, offset);
+        (valid, offset, m.errHandler) = Value.deserializeHashValue(data, offset);
         if (!valid) {
             return (false, offset, m);
         }

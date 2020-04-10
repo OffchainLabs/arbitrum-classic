@@ -85,6 +85,7 @@ contract ExecutionChallenge is BisectionChallenge {
     function oneStepProof(
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
+        uint256 _beforeInboxValueSize,
         uint128[2] memory _timeBoundsBlocks,
         bytes32 _afterHash,
         bool _didInboxInsns,
@@ -98,6 +99,49 @@ contract ExecutionChallenge is BisectionChallenge {
         public
         asserterAction
     {
+        setPreCondition(_beforeHash,
+                        _timeBoundsBlocks,
+                        _beforeInbox,
+                        _afterHash,
+                        _didInboxInsns,
+                        _gas,
+                        _firstMessage,
+                        _lastMessage,
+                        _firstLog,
+                        _lastLog);
+
+        uint256 correctProof = OneStepProof.validateProof(
+            _beforeHash,
+            _timeBoundsBlocks,
+            _beforeInbox,
+            _beforeInboxValueSize,
+            _afterHash,
+            _didInboxInsns,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog,
+            _gas,
+            _proof
+        );
+
+        require(correctProof == 0, OSP_PROOF);
+        emit OneStepProofCompleted();
+        _asserterWin();
+    }
+
+    function setPreCondition(
+        bytes32 _beforeHash,
+        uint128[2] memory _timeBoundsBlocks,
+        bytes32 _beforeInbox,
+        bytes32 _afterHash,
+        bool _didInboxInsns,
+        uint64  _gas,
+        bytes32 _firstMessage,
+        bytes32 _lastMessage,
+        bytes32 _firstLog,
+        bytes32 _lastLog) internal {
+
         bytes32 precondition = Protocol.generatePreconditionHash(
              _beforeHash,
              _timeBoundsBlocks,
@@ -118,25 +162,8 @@ contract ExecutionChallenge is BisectionChallenge {
                 )
             )
         );
-
-        uint256 correctProof = OneStepProof.validateProof(
-            _beforeHash,
-            _timeBoundsBlocks,
-            _beforeInbox,
-            _afterHash,
-            _didInboxInsns,
-            _firstMessage,
-            _lastMessage,
-            _firstLog,
-            _lastLog,
-            _gas,
-            _proof
-        );
-
-        require(correctProof == 0, OSP_PROOF);
-        emit OneStepProofCompleted();
-        _asserterWin();
     }
+    
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
         uint256 bisectionCount = _data.machineHashes.length - 1;

@@ -128,6 +128,7 @@ type MessagesBisectionEvent struct {
 	ChainInfo
 	ChainHashes   []common.Hash
 	SegmentHashes []common.Hash
+	SegmentSizes  []*big.Int
 	TotalLength   *big.Int
 	Deadline      common.TimeTicks
 }

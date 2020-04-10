@@ -63,7 +63,7 @@ func testMessagesChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	importedMessages := inbox.Hash()
+	importedMessages := inbox.Hash().Hash()
 	challengeHash := valprotocol.MessageChallengeDataHash(
 		beforeInbox,
 		afterInbox,

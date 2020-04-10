@@ -23,7 +23,7 @@ library Protocol {
     using Value for Value.Data;
 
     function generateMessageStubHash(
-        bytes32 _data,
+        Value.Data memory _dataHashValue,
         bytes21 _tokenType,
         uint256 _value,
         address _destination
@@ -33,7 +33,7 @@ library Protocol {
         returns (bytes32)
     {
         Value.Data[] memory values = new Value.Data[](4);
-        values[0] = Value.newHashOnly(_data, uint256(1));
+        values[0] = _dataHashValue;
         values[1] = Value.newInt(uint256(_destination));
         values[2] = Value.newInt(_value);
         values[3] = Value.newInt(uint256(bytes32(_tokenType)));
@@ -101,10 +101,10 @@ library Protocol {
         return hashVal;
     }
 
-    function addMessageToVMInbox(bytes32 vmInbox, bytes32 message) internal pure returns (bytes32) {
+    function addMessageToVMInboxHash(Value.Data memory vmInboxHashValue, Value.Data memory messageHashValue) internal pure returns (bytes32) {
         Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = Value.newHashOnly(vmInbox, uint256(1));
-        vals[1] = Value.newHashOnly(message, uint256(1));
+        vals[0] = vmInboxHashValue;
+        vals[1] = messageHashValue;
         Value.Data memory tuple = Value.newTuple(vals);
 
         return Value.hashTuple(tuple);

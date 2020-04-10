@@ -133,7 +133,8 @@ func defendMessages(
 	log.Println("VM inbox", vmInbox)
 
 	startInbox := beforeInbox
-	startMessages := value.NewEmptyTuple().Hash()
+	tuple := value.NewEmptyTuple()
+	startMessages := value.NewHashOnlyValue(tuple.Hash(), tuple.Size())
 	inboxStartCount := uint64(0)
 
 	for {
@@ -149,7 +150,7 @@ func defendMessages(
 				log.Println("OneStepProofEthMessage", startInbox, startMessages)
 
 				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
-				log.Println("vm inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
+				log.Println("vm inbox after", value.NewTuple2(startMessages, message.DeliveredValue(msg)).Hash())
 
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
@@ -221,7 +222,9 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		startMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
+		startHash := ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
+		startHashSize := ev.SegmentSizes[contEv.SegmentIndex.Uint64()]
+		startMessages = value.NewHashOnlyValue(startHash, startHashSize.Int64())
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
@@ -297,7 +300,11 @@ func challengeMessages(
 				}
 
 				for i := uint64(1); i < uint64(len(vmInboxSegments)); i++ {
-					if vmInboxSegments[i] != ev.SegmentHashes[i] {
+					segmentHash := ev.SegmentHashes[i]
+					segmentHashSize := ev.SegmentSizes[i]
+					segment := value.NewHashOnlyValue(segmentHash, segmentHashSize.Int64())
+
+					if vmInboxSegments[i] != segment {
 						return i - 1, true
 					}
 				}

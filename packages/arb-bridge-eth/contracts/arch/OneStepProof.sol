@@ -31,6 +31,7 @@ library OneStepProof {
         bytes32 beforeHash;
         uint128[2] timeBoundsBlocks;
         bytes32 beforeInbox;
+        uint256 beforeInboxValueSize;
         bytes32 afterHash;
         bool    didInboxInsn;
         bytes32 firstMessage;
@@ -45,6 +46,7 @@ library OneStepProof {
         bytes32 beforeHash,
         uint128[2] memory timeBoundsBlocks,
         bytes32 beforeInbox,
+        uint256 beforeInboxValueSize,
         bytes32 afterHash,
         bool    didInboxInsn,
         bytes32 firstMessage,
@@ -63,6 +65,7 @@ library OneStepProof {
                 beforeHash,
                 timeBoundsBlocks,
                 beforeInbox,
+                beforeInboxValueSize,
                 afterHash,
                 didInboxInsn,
                 firstMessage,
@@ -662,7 +665,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.registerHash = val1.hash();
+        machine.registerHash = val1;
         return true;
     }
 
@@ -674,7 +677,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.instructionStackHash = val1.hash();
+        machine.instructionStackHash = val1;
         return true;
     }
 
@@ -694,7 +697,7 @@ library OneStepProof {
             return false;
         }
         if (val2.intVal != 0) {
-            machine.instructionStackHash = val1.hash();
+            machine.instructionStackHash = val1;
         }
         return true;
     }
@@ -707,14 +710,14 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.dataStackHash.hash == Value.newNone().hash().hash)
+            Value.newBoolean(Value.hash(machine.dataStackHash).hash == Value.hashEmptyTuple())
         );
         return true;
     }
 
     function executePcpushInsn(
         Machine.Data memory machine,
-        Value.HashOnly memory pc
+        Value.Data memory pc
     )
         internal
         pure
@@ -744,7 +747,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.auxStackHash.hash == Value.newNone().hash().hash)
+            Value.newBoolean(Value.hash(machine.auxStackHash).hash == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -771,7 +774,7 @@ library OneStepProof {
         if (!val.isCodePoint()) {
             return false;
         }
-        machine.errHandler = val.hash();
+        machine.errHandler = val;
         return true;
     }
 
@@ -948,7 +951,7 @@ library OneStepProof {
     function executeInboxInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
-        Value.HashOnly memory beforeInbox,
+        Value.Data memory beforeInboxHash,
         uint lowerTimeBound
     )
         internal
@@ -958,9 +961,9 @@ library OneStepProof {
         if (! val1.isInt()) {
             return false;
         }
-        require(lowerTimeBound<val1.intVal && beforeInbox.hash==Value.hashEmptyTuple(),
+        require(lowerTimeBound<val1.intVal && Value.hash(beforeInboxHash).hash==Value.hashEmptyTuple(),
             "Inbox instruction was blocked");
-        machine.addDataStackHashValue(beforeInbox);
+        machine.addDataStackHashValue(beforeInboxHash);
         return true;
     }
 
@@ -1296,10 +1299,10 @@ library OneStepProof {
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointBasic(
+            startMachine.instructionStackHash = Value.newHashOnly(Value.hashCodePointBasic(
                 uint8(opCode),
-                startMachine.instructionStackHash.hash
-            ));
+                Value.hash(startMachine.instructionStackHash).hash
+            ), 1);
         } else {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
@@ -1311,11 +1314,11 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointImmediate(
+            startMachine.instructionStackHash = Value.newHashOnly(Value.hashCodePointImmediate(
                 uint8(opCode),
                 immediateVal.hash().hash,
-                startMachine.instructionStackHash.hash
-            ));
+                Value.hash(startMachine.instructionStackHash).hash
+            ), 1);
         }
 
         uint i = 0;
@@ -1521,7 +1524,7 @@ library OneStepProof {
             contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
+            correct = executeInboxInsn(endMachine, stackVals[0], Value.newHashOnly(_data.beforeInbox, _data.beforeInboxValueSize), _data.timeBoundsBlocks[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {
@@ -1534,7 +1537,7 @@ library OneStepProof {
         }
 
         if (!correct) {
-            if (endMachine.errHandler.hash == CODE_POINT_ERROR) {
+            if (Value.hash(endMachine.errHandler).hash == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
                 endMachine.instructionStackHash = endMachine.errHandler;

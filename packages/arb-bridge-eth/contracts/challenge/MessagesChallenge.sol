@@ -28,6 +28,7 @@ contract MessagesChallenge is BisectionChallenge {
     event Bisected(
         bytes32[] chainHashes,
         bytes32[] segmentHashes,
+        uint256[] segmentSizes,
         uint256 totalLength,
         uint256 deadlineTicks
     );
@@ -40,6 +41,7 @@ contract MessagesChallenge is BisectionChallenge {
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
+        uint256[] memory _segmentSzes,
         uint256 _chainLength
     )
         public
@@ -81,6 +83,7 @@ contract MessagesChallenge is BisectionChallenge {
         emit Bisected(
             _chainHashes,
             _segmentHashes,
+            _segmentSzes,
             _chainLength,
             deadlineTicks
         );
@@ -89,6 +92,7 @@ contract MessagesChallenge is BisectionChallenge {
     function oneStepProofTransactionMessage(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
+        uint256 _lowerHashBSize,
         address _chain,
         address _to,
         address _from,
@@ -110,7 +114,7 @@ contract MessagesChallenge is BisectionChallenge {
             _data,
             _blockNumber
         );
-        bytes32 arbMessageHash = Messages.transactionMessageHash(
+        Value.Data memory arbMessageHash = Messages.transactionMessage(
             _chain,
             _to,
             _from,
@@ -120,9 +124,11 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber
         );
 
+        Value.Data memory _lowerHashBValue = Value.newHashOnly(_lowerHashB, _lowerHashBSize);
+
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
             arbMessageHash
         );
@@ -131,6 +137,7 @@ contract MessagesChallenge is BisectionChallenge {
     function oneStepProofEthMessage(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
+        uint256 _lowerHashBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -148,7 +155,7 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber,
             _messageNum
         );
-        bytes32 arbMessageHash = Messages.ethMessageHash(
+        Value.Data memory arbMessage = Messages.ethMessageValue(
             _to,
             _from,
             _value,
@@ -156,17 +163,20 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
+        Value.Data memory _lowerHashBValue = Value.newHashOnly(_lowerHashB, _lowerHashBSize);
+
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage
         );
     }
 
     function oneStepProofERC20Message(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
+        uint256 _lowerHashBSize,
         address _to,
         address _from,
         address _erc20,
@@ -186,7 +196,7 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber,
             _messageNum
         );
-        bytes32 arbMessageHash = Messages.erc20MessageHash(
+        Value.Data memory arbMessage = Messages.erc20MessageValue(
             _to,
             _from,
             _erc20,
@@ -195,17 +205,20 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
+        Value.Data memory _lowerHashBValue = Value.newHashOnly(_lowerHashB, _lowerHashBSize);
+
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage
         );
     }
 
     function oneStepProofERC721Message(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
+        uint256 _lowerHashBSize,
         address _to,
         address _from,
         address _erc721,
@@ -225,7 +238,7 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber,
             _messageNum
         );
-        bytes32 arbMessageHash = Messages.erc721MessageHash(
+        Value.Data memory arbMessageHash = Messages.erc721MessageValue(
             _to,
             _from,
             _erc721,
@@ -234,9 +247,11 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
+        Value.Data memory _lowerHashBValue = Value.newHashOnly(_lowerHashB, _lowerHashBSize);
+
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
             arbMessageHash
         );
@@ -245,6 +260,7 @@ contract MessagesChallenge is BisectionChallenge {
     function oneStepProofContractTransactionMessage(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
+        uint256 _lowerHashBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -264,7 +280,8 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber,
             _messageNum
         );
-        bytes32 arbMessageHash = Messages.contractTransactionMessageHash(
+
+        Value.Data memory arbMessageHash = Messages.contractTransactionMessageValue(
             _to,
             _from,
             _value,
@@ -273,9 +290,11 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
+        Value.Data memory _lowerHashBValue = Value.newHashOnly(_lowerHashB, _lowerHashBSize);
+
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
             arbMessageHash
         );
@@ -283,9 +302,9 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProof(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
+        Value.Data memory _lowerHashBValue,
         bytes32 _valueHashA,
-        bytes32 _valueHashB
+        Value.Data memory _valueHashBValue
     )
         private
     {
@@ -293,8 +312,8 @@ contract MessagesChallenge is BisectionChallenge {
             ChallengeUtils.messagesHash(
                 _lowerHashA,
                 Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
-                _lowerHashB,
-                Protocol.addMessageToVMInbox(_lowerHashB, _valueHashB),
+                Value.hash(_lowerHashBValue).hash,
+                Protocol.addMessageToVMInboxHash(_lowerHashBValue, _valueHashBValue),
                 1
             )
         );

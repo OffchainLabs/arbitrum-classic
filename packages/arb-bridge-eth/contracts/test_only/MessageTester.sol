@@ -141,14 +141,14 @@ contract MessageTester {
         pure
         returns(bytes32)
     {
-        return Messages.erc20MessageHash(
+        return Value.hash(Messages.erc20MessageValue(
             to,
             from,
             erc20,
             value,
             blockNumber,
             messageNum
-        );
+        )).hash;
     }
 
     function erc721Hash(
@@ -185,13 +185,13 @@ contract MessageTester {
         pure
         returns(bytes32)
     {
-        return Messages.erc721MessageHash(
+        return Value.hash(Messages.erc721MessageValue(
             to,
             from,
             erc721,
             id,
             blockNumber,
             messageNum
-        );
+        )).hash;
     }
 }
