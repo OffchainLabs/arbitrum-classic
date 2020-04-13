@@ -550,6 +550,11 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
+void ecdsa(MachineState& m) {
+    secp256k1_ecdsa_recover(nullptr, nullptr, nullptr, nullptr);
+    //
+}
+
 BlockReason breakpoint(MachineState& m) {
     ++m.pc;
     return BreakpointBlocked{};

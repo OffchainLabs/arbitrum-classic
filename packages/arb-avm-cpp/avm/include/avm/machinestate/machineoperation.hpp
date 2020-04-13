@@ -68,6 +68,7 @@ void swap2(MachineState& m);
 void tget(MachineState& m);
 void tset(MachineState& m);
 void tlen(MachineState& m);
+void ecdsa(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);

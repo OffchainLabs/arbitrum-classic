@@ -19,6 +19,9 @@
 
 #include <catch2/catch.hpp>
 
+#include <boost/filesystem.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
     MachineState m;
     m.stack.push(arg1);
@@ -726,6 +729,16 @@ TEST_CASE("SEND opcode is correct") {
         m.runOp(OpCode::SEND);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.state == Status::Extensive);
+    }
+}
+
+TEST_CASE("ECDSA opcode is correct") {
+    SECTION("ecdsa") {
+        Machine m;
+        m.initializeMachine(
+            "/Users/robertgates/Documents/arbitrum/packages/arb-compiler-evm/"
+            "precompiles.ao");
+        m.run(100, 0, 0, Tuple(), std::chrono::seconds(100));
     }
 }
 

@@ -449,6 +449,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HALT:
             state = Status::Halted;
             break;
+            /*****************/
+            /*  Precompiles  */
+            /*****************/
+        case OpCode::ECDSA:
+            machineoperation::ecdsa(*this);
+            break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
                       << ">" << std::hex << static_cast<int>(opcode);

@@ -358,6 +358,9 @@ class BasicVM:
         res = keccak(encode_single_packed("(uint256,uint256)", [op1, op2]))
         self.stack.push(big_endian_to_int(res))
 
+    def ecdsa(self):
+        self.push(0x80)
+
     def gettime(self):
         self.stack.push(self.env.time_bounds)
 
