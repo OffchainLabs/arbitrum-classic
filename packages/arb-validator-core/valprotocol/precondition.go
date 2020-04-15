@@ -18,7 +18,6 @@ package valprotocol
 
 import (
 	"fmt"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -58,6 +57,7 @@ func (pre *Precondition) Hash() common.Hash {
 		hashing.TimeBlocks(pre.TimeBounds.Start),
 		hashing.TimeBlocks(pre.TimeBounds.End),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
+		//hashing.Uint256(big.NewInt(pre.BeforeInbox.Size())),
 	)
 }
 

@@ -82,7 +82,7 @@ class Datastack {
         }
     }
 
-    std::pair<uint256_t, std::vector<unsigned char>> marshalForProof(
+    std::pair<HashOnly, std::vector<unsigned char>> marshalForProof(
         const std::vector<bool>& stackInfo);
 
     value& peek() {
@@ -91,6 +91,15 @@ class Datastack {
         }
 
         return values.back();
+    }
+
+    int getTotalValuesSize() {
+        int total_size = 0;
+        for (uint64_t i = 0; i < values.size(); i++) {
+            total_size += ::getSize(values[i]);
+        }
+
+        return total_size;
     }
 
     uint64_t stacksize() { return values.size(); }

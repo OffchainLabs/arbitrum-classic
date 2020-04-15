@@ -122,20 +122,24 @@ func defendExecution(
 	defender := startDefender
 
 	for {
+		fmt.Println("defendExecution: ")
 		if defender.NumSteps() == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
 				proof, err := defender.SolidityOneStepProof()
 				if err != nil {
+					fmt.Println("fail SolidityOneStepProof")
 					return 0, err
 				}
 				pre := defender.GetPrecondition()
+				fmt.Println(defender)
 				assertion, _ := defender.GetMachineState().ExecuteAssertion(
 					1,
 					pre.TimeBounds,
 					pre.BeforeInbox.(value.TupleValue),
 					0,
 				)
+
 				err = contract.OneStepProof(
 					ctx,
 					defender.GetPrecondition(),
@@ -143,6 +147,7 @@ func defendExecution(
 					proof,
 				)
 				if err != nil {
+					fmt.Println("fail OneStepProof")
 					return 0, err
 				}
 				event, state, err = getNextEvent(eventChan)
@@ -164,8 +169,11 @@ func defendExecution(
 			defenders, assertions = defender.NBisect(uint64(bisectionCount))
 			err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 			if err != nil {
+				fmt.Println("fail BisectAssertion")
+				fmt.Println(err)
 				return 0, err
 			}
+			fmt.Println("BisectAssertion!!!!")
 			event, state, err = getNextEvent(eventChan)
 		}
 
@@ -241,6 +249,7 @@ func challengeExecution(
 	precondition := startPrecondition
 	deadline := ev.Deadline
 	for {
+		fmt.Println("challengeExecution: ")
 		event, state, err := getNextEventWithTimeout(
 			ctx,
 			eventChan,
@@ -248,6 +257,7 @@ func challengeExecution(
 			contract,
 			client,
 		)
+
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
@@ -260,6 +270,7 @@ func challengeExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
+
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		var preconditions []*valprotocol.Precondition
 		var m machine.Machine

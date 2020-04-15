@@ -32,10 +32,11 @@ uint256_t Datastack::hash() const {
     return hashes.back();
 }
 
-std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
+std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<bool>& stackInfo) {
     calculateAllHashes();
     Datastack c = *this;
+    //    auto total_size = getTotalValuesSize();
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
@@ -46,9 +47,15 @@ std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
             std::array<unsigned char, 32> tmpbuf;
             to_big_endian(::hash(val), tmpbuf.begin());
             buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+
+            auto size = getSize(val);
+            std::array<unsigned char, 32> tmpbuf2;
+            to_big_endian(size, tmpbuf2.begin());
+            buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
         }
     }
-    return std::make_pair(c.hash(), std::move(buf));
+    HashOnly hashOnly(c.hash(), 1);
+    return std::make_pair(hashOnly, std::move(buf));
 }
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val) {

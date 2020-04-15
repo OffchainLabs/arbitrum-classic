@@ -1147,7 +1147,7 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return (0, 0);
         } else {
-            require(false, "Invalid opcode");
+            require(false, "Invalid opcode: opInfo()");
         }
     }
 
@@ -1268,7 +1268,7 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return 10;
         } else {
-            require(false, "Invalid opcode");
+            require(false, "Invalid opcode: opGasCost()");
         }
     }
 
@@ -1290,6 +1290,10 @@ library OneStepProof {
         Machine.Data memory startMachine;
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
+
+
+        require (valid, "loadMachine(): invalid machine");
+        
         Machine.Data memory endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
         uint8 opCode = uint8(_data.proof[offset + 1]);

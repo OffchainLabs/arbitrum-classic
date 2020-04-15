@@ -18,6 +18,7 @@ package challenges
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -83,6 +84,7 @@ func testExecutionChallenge(t *testing.T) {
 			)
 		},
 	); err != nil {
+		fmt.Println("fail here end")
 		t.Fatal(err)
 	}
 }

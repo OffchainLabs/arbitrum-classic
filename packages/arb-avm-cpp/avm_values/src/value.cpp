@@ -115,6 +115,11 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
             std::array<unsigned char, 32> tmpbuf;
             to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
             buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+
+            auto size = getSize(itemval);
+            std::array<unsigned char, 32> tmpbuf2;
+            to_big_endian(size, tmpbuf2.begin());
+            buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
         }
     }
 }
@@ -130,6 +135,16 @@ void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
+}
+
+void HashOnly::ToBuff(std::vector<unsigned char>& buf) {
+    std::array<unsigned char, 32> tmpbuf;
+    to_big_endian(hash, tmpbuf.begin());
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+
+    std::array<unsigned char, 32> tmpbuf2;
+    to_big_endian(size, tmpbuf2.begin());
+    buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
 }
 
 value deserialize_value(const char*& bufptr, TuplePool& pool) {

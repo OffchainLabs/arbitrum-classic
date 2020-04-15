@@ -58,4 +58,16 @@ static T shrink(uint256_t i) {
 std::vector<unsigned char> GetHashKey(const value& val);
 int getSize(const value& val);
 
+class HashOnly {
+    uint256_t hash;
+    uint256_t size;
+
+   public:
+    HashOnly(uint256_t _hash, int _size) {
+        hash = _hash;
+        size = _size;
+    }
+    void ToBuff(std::vector<unsigned char>& buf);
+};
+
 #endif /* value_hpp */

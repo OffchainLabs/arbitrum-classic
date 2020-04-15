@@ -17,7 +17,6 @@
 package value
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -38,15 +37,18 @@ func NewHashOnlyValueFromValue(val Value) HashOnlyValue {
 }
 
 func NewHashOnlyValueFromReader(rd io.Reader) (HashOnlyValue, error) {
-	var size int64
-	err := binary.Read(rd, binary.LittleEndian, &size)
-	if err != nil {
-		return HashOnlyValue{}, err
-	}
 	var hash common.Hash
 	if _, err := io.ReadFull(rd, hash[:]); err != nil {
 		return HashOnlyValue{}, err
 	}
+
+	intVal, err2 := NewIntValueFromReader(rd)
+
+	if err2 != nil {
+		return HashOnlyValue{}, err2
+	}
+	size := intVal.val.Int64()
+
 	return HashOnlyValue{hash, size}, nil
 }
 
@@ -55,6 +57,9 @@ func (nv HashOnlyValue) Marshal(wr io.Writer) error {
 	//	return err
 	//}
 	_, err := wr.Write(nv.hash[:])
+	sizeVal := NewInt64Value(nv.Size())
+	sizeVal.Marshal(wr)
+
 	return err
 }
 

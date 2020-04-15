@@ -179,12 +179,22 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
-    uint256_t_to_buf(code[pc].nextHash, buf);
-    uint256_t_to_buf(stackProof.first, buf);
-    uint256_t_to_buf(auxStackProof.first, buf);
-    uint256_t_to_buf(::hash(registerVal), buf);
-    uint256_t_to_buf(::hash(staticVal), buf);
-    uint256_t_to_buf(::hash(errpc), buf);
+
+    HashOnly nextHash(code[pc].nextHash, 1);
+    nextHash.ToBuff(buf);
+
+    stackProof.first.ToBuff(buf);
+    auxStackProof.first.ToBuff(buf);
+
+    HashOnly registerValHash(::hash(registerVal), ::getSize(registerVal));
+    registerValHash.ToBuff(buf);
+
+    HashOnly staticValHash(::hash(staticVal), ::getSize(staticVal));
+    staticValHash.ToBuff(buf);
+
+    HashOnly errpcHash(::hash(errpc), ::getSize(errpc));
+    errpcHash.ToBuff(buf);
+
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());

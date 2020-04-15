@@ -347,6 +347,7 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 
 	stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
 	includeImmediateVal := false
+	fmt.Println(includeImmediateVal)
 	if _, ok := codePoint.Op.(value.ImmediateOperation); ok && len(stackPops) > 0 {
 		if stackPops[0] == 1 {
 			includeImmediateVal = true
@@ -356,33 +357,38 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	auxStackPops := code.InstructionAuxStackPops[codePoint.Op.GetOp()]
 
 	baseStackVal, stackVals := m.stack.SolidityProofValue(stackPops)
-	baseStackValHash := baseStackVal.Hash()
 	baseAuxStackVal, auxStackVals := m.auxstack.SolidityProofValue(auxStackPops)
-	baseAuxStackValHash := baseAuxStackVal.Hash()
-	registerHash := m.register.ProofValue().Hash()
-	staticHash := m.static.ProofValue().Hash()
-	errHandlerHash := m.errHandler.Hash()
+	registerHashValue := m.register.ProofValue()
+	staticHashValue := m.static.ProofValue()
+	errHandlerHashValue := value.NewHashOnlyValueFromValue(m.errHandler)
 
 	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
 
-	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
+	nextHashVal := value.NewHashOnlyValue(codePoint.NextHash, 1)
+	if err := nextHashVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-	if _, err := wr.Write(baseStackValHash[:]); err != nil {
+
+	if err := baseStackVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-	if _, err := wr.Write(baseAuxStackValHash[:]); err != nil {
+
+	if err := baseAuxStackVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-	if _, err := wr.Write(registerHash[:]); err != nil {
+
+	if err := registerHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
-	if _, err := wr.Write(staticHash[:]); err != nil {
+
+	if err := staticHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
-	if _, err := wr.Write(errHandlerHash[:]); err != nil {
+
+	if err := errHandlerHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
+
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}

@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -83,12 +84,14 @@ func (c *executionChallenge) BisectAssertion(
 		totalSteps,
 	)
 	if err != nil {
+		fmt.Println("error what")
 		return c.challenge.BisectAssertionCall(
 			ctx,
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
 			precondition.BeforeInbox.Hash(),
+			big.NewInt(precondition.BeforeInbox.Size()),
 			precondition.TimeBounds.AsIntArray(),
 			machineHashes,
 			didInboxInsns,
@@ -132,6 +135,7 @@ func (c *executionChallenge) OneStepProof(
 			c.contractAddress,
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
+			big.NewInt(precondition.BeforeInbox.Size()),
 			precondition.TimeBounds.AsIntArray(),
 			assertion.AfterHash,
 			assertion.DidInboxInsn,
