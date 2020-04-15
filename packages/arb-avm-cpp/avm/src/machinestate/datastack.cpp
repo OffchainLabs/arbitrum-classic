@@ -54,7 +54,7 @@ std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
             buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
         }
     }
-    HashOnly hashOnly(c.hash(), 1);
+    HashOnly hashOnly(c.hash(), c.getTotalValuesSize());
     return std::make_pair(hashOnly, std::move(buf));
 }
 

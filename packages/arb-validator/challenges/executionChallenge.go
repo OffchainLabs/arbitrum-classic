@@ -122,7 +122,6 @@ func defendExecution(
 	defender := startDefender
 
 	for {
-		fmt.Println("defendExecution: ")
 		if defender.NumSteps() == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
@@ -132,7 +131,6 @@ func defendExecution(
 					return 0, err
 				}
 				pre := defender.GetPrecondition()
-				fmt.Println(defender)
 				assertion, _ := defender.GetMachineState().ExecuteAssertion(
 					1,
 					pre.TimeBounds,
@@ -203,7 +201,9 @@ func defendExecution(
 		if timedOut {
 			// Freshly bisected assertion
 			defender = defenders[contEv.SegmentIndex.Uint64()]
+			fmt.Println("timeout out")
 		} else {
+			fmt.Println("replayed")
 			// Replayed from existing event
 			totalSteps := uint64(0)
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {
@@ -249,7 +249,6 @@ func challengeExecution(
 	precondition := startPrecondition
 	deadline := ev.Deadline
 	for {
-		fmt.Println("challengeExecution: ")
 		event, state, err := getNextEventWithTimeout(
 			ctx,
 			eventChan,

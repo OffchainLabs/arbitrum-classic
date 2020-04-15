@@ -1291,7 +1291,6 @@ library OneStepProof {
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
 
-
         require (valid, "loadMachine(): invalid machine");
         
         Machine.Data memory endMachine = startMachine.clone();
@@ -1320,7 +1319,7 @@ library OneStepProof {
 
             startMachine.instructionStackHash = Value.newHashOnly(Value.hashCodePointImmediate(
                 uint8(opCode),
-                immediateVal.hash().hash,
+                Value.hash(immediateVal).hash,
                 Value.hash(startMachine.instructionStackHash).hash
             ), 1);
         }
@@ -1355,6 +1354,7 @@ library OneStepProof {
         Machine.Data memory startMachine;
         Machine.Data memory endMachine;
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
+
         bool correct = true;
         bytes32 messageHash;
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");

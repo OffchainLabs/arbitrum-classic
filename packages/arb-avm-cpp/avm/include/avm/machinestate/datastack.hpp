@@ -94,7 +94,7 @@ class Datastack {
     }
 
     int getTotalValuesSize() {
-        int total_size = 0;
+        int total_size = 1;
         for (uint64_t i = 0; i < values.size(); i++) {
             total_size += ::getSize(values[i]);
         }

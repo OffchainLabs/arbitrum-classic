@@ -65,7 +65,12 @@ class HashOnly {
    public:
     HashOnly(uint256_t _hash, int _size) {
         hash = _hash;
-        size = _size;
+
+        if (_size < 1) {
+            size = 1;
+        } else {
+            size = _size;
+        }
     }
     void ToBuff(std::vector<unsigned char>& buf);
 };

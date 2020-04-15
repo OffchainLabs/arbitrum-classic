@@ -290,7 +290,8 @@ library Value {
         }
 
         bytes32 hashData = data.toBytes32(startOffset);
-        (valid, startOffset, size) = deserializeInt(data, startOffset + 32);
+        startOffset += 32;
+        (valid, startOffset, size) = deserializeInt(data, startOffset);
 
         if(valid){
             hashValue = newHashOnly(hashData, size);
