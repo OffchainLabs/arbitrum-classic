@@ -19,6 +19,7 @@
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/exceptions.hpp>
+#include <avm_values/hashonlyvalue.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/value.hpp>
 

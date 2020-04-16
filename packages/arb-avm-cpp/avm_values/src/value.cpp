@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/codepoint.hpp>
+#include <avm_values/hashonlyvalue.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
@@ -61,16 +62,18 @@ CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
 
 Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     Tuple tup(&pool, size);
-
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
     }
-
     if (size > 0) {
         tup.computeValueSize();
     }
 
     return tup;
+}
+
+void marshal_HashOnly(const HashOnly& val, std::vector<unsigned char>& buf) {
+    val.ToBuff(buf);
 }
 
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
@@ -95,6 +98,8 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
     } else if (nonstd::holds_alternative<CodePoint>(val)) {
         marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
+    } else if (nonstd::holds_alternative<HashOnly>(val)) {
+        marshal_HashOnly(nonstd::get<HashOnly>(val), buf);
     }
 }
 
@@ -137,13 +142,14 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
     marshal_uint256_t(val, buf);
 }
 
-void HashOnly::ToBuff(std::vector<unsigned char>& buf) {
+void marshalShallow(const HashOnly& val, std::vector<unsigned char>& buf) {
+    buf.push_back(HASH_ONLY);
     std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(hash, tmpbuf.begin());
+    to_big_endian(val.getHash(), tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 
     std::array<unsigned char, 32> tmpbuf2;
-    to_big_endian(size, tmpbuf2.begin());
+    to_big_endian(val.getSize(), tmpbuf2.begin());
     buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
 }
 
@@ -179,6 +185,8 @@ uint256_t hash(const value& value) {
 }
 
 struct GetSize {
+    int operator()(const HashOnly& val) const { return val.getSize(); }
+
     int operator()(const Tuple& val) const { return val.getSize(); }
 
     int operator()(const uint256_t& val) const { return 1; }
@@ -199,6 +207,11 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const uint256_t& val) const {
+        os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const HashOnly& val) const {
         os << val;
         return &os;
     }

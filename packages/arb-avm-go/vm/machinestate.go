@@ -273,6 +273,8 @@ func (m *Machine) ExecuteAssertion(
 	)
 	for assCtx.StepCount() < maxSteps {
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
+		fmt.Println("current instr")
+		fmt.Println(m.pc.GetCurrentInsn())
 		if blocked != nil {
 			break
 		}
@@ -347,7 +349,6 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 
 	stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
 	includeImmediateVal := false
-	fmt.Println(includeImmediateVal)
 	if _, ok := codePoint.Op.(value.ImmediateOperation); ok && len(stackPops) > 0 {
 		if stackPops[0] == 1 {
 			includeImmediateVal = true
@@ -368,27 +369,21 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	if err := nextHashVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := baseStackVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := baseAuxStackVal.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := registerHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := staticHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := errHandlerHashValue.MarshalForProof(wr); err != nil {
 		return err
 	}
-
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}

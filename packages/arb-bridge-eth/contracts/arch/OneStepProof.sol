@@ -1272,6 +1272,30 @@ library OneStepProof {
         }
     }
 
+        function GetM(
+        ValidateProofData memory _data
+    )
+        internal
+        pure
+        returns (
+            uint8
+        )
+    {
+        uint offset = 0;
+        bool valid;
+        Machine.Data memory startMachine;
+        startMachine.setExtensive();
+        (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
+
+        require (valid, "loadMachine(): invalid machine");
+        
+        Machine.Data memory endMachine = startMachine.clone();
+        uint8 immediate = uint8(_data.proof[offset]);
+
+        return immediate;
+    }
+
+
     function loadMachine(
         ValidateProofData memory _data
     )
@@ -1346,14 +1370,42 @@ library OneStepProof {
         )
     );
 
+           function conv(uint _i) internal pure returns (string memory _uintAsString) {
+    if (_i == 0) {
+        return "0";
+    }
+    uint j = _i;
+    uint len;
+    while (j != 0) {
+        len++;
+        j /= 10;
+    }
+    bytes memory bstr = new bytes(len);
+    uint k = len - 1;
+    while (_i != 0) {
+        bstr[k--] = byte(uint8(48 + _i % 10));
+        _i /= 10;
+    }
+    return string(bstr);
+}
+
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
+        uint8 immed;
         bool valid;
         uint offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
         Machine.Data memory endMachine;
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
+
+        // bytes memory bytesArray = new bytes(32);
+        // for (uint256 i; i < 32; i++) {
+        //     bytesArray[i] =  bytes32(uint256(opCode))[i];
+        // }
+
+        // string memory converted = conv(immed);
+        // require(_data.beforeHash == startMachine.hash(), string(bytesArray));
 
         bool correct = true;
         bytes32 messageHash;
@@ -1558,7 +1610,8 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
         //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
         // );
-        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
+        // conv(GetM(_data))
+        require(_data.afterHash == endMachine.hash(), endMachine.toString());
 
         return 0;
     }

@@ -36,7 +36,7 @@ class Datastack {
 
    public:
     std::vector<value> values;
-    mutable std::vector<uint256_t> hashes;
+    mutable std::vector<HashOnly> hashes;
 
     Datastack() {
         values.reserve(1000);

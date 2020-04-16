@@ -18,6 +18,7 @@ package testmachine
 
 import "C"
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"time"
@@ -165,7 +166,7 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
-	_, err1 := m.cppmachine.MarshalForProof()
+	h1, err1 := m.cppmachine.MarshalForProof()
 	h2, err2 := m.gomachine.MarshalForProof()
 
 	if err1 != nil {
@@ -175,14 +176,20 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	if err2 != nil {
 		return nil, err2
 	}
+	fmt.Println("========================")
+	m.cppmachine.PrintState()
+	m.gomachine.PrintState()
 
-	//if !bytes.Equal(h1, h2) {
-	//	m.cppmachine.PrintState()
-	//	m.gomachine.PrintState()
-	//	log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
-	//}
+	if !bytes.Equal(h1, h2) {
+		fmt.Println(h1)
+		fmt.Println("========================")
+		fmt.Println(h2)
+		m.cppmachine.PrintState()
+		m.gomachine.PrintState()
+		log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
+	}
 
-	return h2, nil
+	return h1, nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
