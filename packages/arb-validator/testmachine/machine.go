@@ -176,9 +176,6 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	if err2 != nil {
 		return nil, err2
 	}
-	fmt.Println("========================")
-	m.cppmachine.PrintState()
-	m.gomachine.PrintState()
 
 	if !bytes.Equal(h1, h2) {
 		fmt.Println(h1)

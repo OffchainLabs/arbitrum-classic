@@ -37,8 +37,8 @@ library Machine {
         returns (Value.Data memory)
     {
         Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = stackValHash;
-        vals[1] = valHash;
+        vals[0] = valHash;
+        vals[1] = stackValHash;
         return Value.newTuple(vals);
 
         // return Value.HashOValue.hashTuple(tuple));
