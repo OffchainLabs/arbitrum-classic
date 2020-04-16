@@ -309,10 +309,6 @@ func (f *Flat) addedValueAddHash(itemHash1 value.HashOnlyValue) {
 	} else {
 		prevItem = value.NewHashOnlyValueFromValue(value.NewEmptyTuple())
 	}
-	//ret := hashing.SoliditySHA3(
-	//	hashing.Uint8(value.TypeCodeTuple+2),
-	//	hashing.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
-	//)
 
 	tup := value.NewTuple2(itemHash1, prevItem)
 	f.hashes = append(f.hashes, value.NewHashOnlyValueFromValue(tup))

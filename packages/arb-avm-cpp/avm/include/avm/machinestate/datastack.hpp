@@ -94,12 +94,11 @@ class Datastack {
     }
 
     int getTotalValuesSize() {
-        int total_size = 1;
-        for (uint64_t i = 0; i < values.size(); i++) {
-            total_size += ::getSize(values[i]);
+        if (values.empty()) {
+            return 1;
         }
-
-        return total_size;
+        calculateAllHashes();
+        return hashes.back().getSize();
     }
 
     uint64_t stacksize() { return values.size(); }

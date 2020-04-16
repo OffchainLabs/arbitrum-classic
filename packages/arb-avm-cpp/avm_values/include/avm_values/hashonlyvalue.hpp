@@ -26,12 +26,12 @@ class HashOnly {
    public:
     HashOnly() = default;
     HashOnly(const uint256_t& _hash, int _size) {
-        hash = _hash;
         if (_size < 1) {
             size = 1;
         } else {
             size = _size;
         }
+        hash = _hash;
     }
     uint256_t getHash() const { return hash; }
     int getSize() const { return size; }

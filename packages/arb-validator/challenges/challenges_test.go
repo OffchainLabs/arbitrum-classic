@@ -21,6 +21,6 @@ import "testing"
 func TestChallenges(t *testing.T) {
 
 	t.Run("Execution Challenge", testExecutionChallenge)
-	//t.Run("Messages Challenge", testMessagesChallenge)
-	//t.Run("Inbox Top Challenge", testInboxTopChallenge)
+	t.Run("Messages Challenge", testMessagesChallenge)
+	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 }
