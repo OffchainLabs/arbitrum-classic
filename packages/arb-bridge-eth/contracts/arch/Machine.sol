@@ -39,9 +39,8 @@ library Machine {
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = valHash;
         vals[1] = stackValHash;
-        return Value.newTuple(vals);
-
-        // return Value.HashOValue.hashTuple(tuple));
+        Value.Data memory tuple = Value.newTuple(vals);
+        return Value.newHashOnly(Value.hash(tuple).hash, tuple.size);
     }
 
     struct Data {

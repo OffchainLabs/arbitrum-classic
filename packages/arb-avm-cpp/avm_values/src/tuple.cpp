@@ -173,6 +173,7 @@ int Tuple::getSize() const {
 }
 
 void Tuple::computeValueSize() {
+    value_size = 1;
     for (uint64_t i = 0; i < tpl->data.size(); i++) {
         value_size += ::getSize(tpl->data[i]);
     }

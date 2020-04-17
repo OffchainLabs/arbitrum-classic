@@ -897,8 +897,11 @@ library OneStepProof {
         if (val1.intVal >= val2.valLength()) {
             return false;
         }
-        val2.tupleVal[val1.intVal] = val3;
-        machine.addDataStackValue(val2);
+        // val2.tupleVal[val1.intVal] = val3;
+        Value.Data[] memory tuple_vals = val2.tupleVal;
+        tuple_vals[val1.intVal] = val3;
+
+        machine.addDataStackValue(Value.newTuple(tuple_vals));
         return true;
     }
 
@@ -1272,30 +1275,6 @@ library OneStepProof {
         }
     }
 
-        function GetM(
-        ValidateProofData memory _data
-    )
-        internal
-        pure
-        returns (
-            uint8
-        )
-    {
-        uint offset = 0;
-        bool valid;
-        Machine.Data memory startMachine;
-        startMachine.setExtensive();
-        (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
-
-        require (valid, "loadMachine(): invalid machine");
-        
-        Machine.Data memory endMachine = startMachine.clone();
-        uint8 immediate = uint8(_data.proof[offset]);
-
-        return immediate;
-    }
-
-
     function loadMachine(
         ValidateProofData memory _data
     )
@@ -1352,6 +1331,8 @@ library OneStepProof {
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
             require(valid, "Proof had bad stack value");
+
+            // stackVals[i] = Value.newHashOnly(Value.hash(stackVals[i]).hash, stackVals[i].size);
         }
         if (stackVals.length > 0) {
             for (i = 0; i < stackVals.length - immediate; i++) {
@@ -1371,23 +1352,46 @@ library OneStepProof {
     );
 
            function conv(uint _i) internal pure returns (string memory _uintAsString) {
-    if (_i == 0) {
-        return "0";
+            if (_i == 0) {
+                return "0";
+            }
+            uint j = _i;
+            uint len;
+            while (j != 0) {
+                len++;
+                j /= 10;
+            }
+            bytes memory bstr = new bytes(len);
+            uint k = len - 1;
+            while (_i != 0) {
+                bstr[k--] = byte(uint8(48 + _i % 10));
+                _i /= 10;
+            }
+            return string(bstr);
     }
-    uint j = _i;
-    uint len;
-    while (j != 0) {
-        len++;
-        j /= 10;
+
+    function GetM(
+        ValidateProofData memory _data
+    )
+        internal
+        pure
+        returns (
+            string memory _uintAsString
+        )
+    {
+        uint offset = 0;
+        bool valid;
+        Machine.Data memory startMachine;
+        startMachine.setExtensive();
+        (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
+
+        require (valid, "loadMachine(): invalid machine");
+        
+        Machine.Data memory endMachine = startMachine.clone();
+        uint8 immediate = uint8(_data.proof[offset]);
+
+        return conv(immediate);
     }
-    bytes memory bstr = new bytes(len);
-    uint k = len - 1;
-    while (_i != 0) {
-        bstr[k--] = byte(uint8(48 + _i % 10));
-        _i /= 10;
-    }
-    return string(bstr);
-}
 
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
@@ -1398,14 +1402,6 @@ library OneStepProof {
         Machine.Data memory startMachine;
         Machine.Data memory endMachine;
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
-
-        // bytes memory bytesArray = new bytes(32);
-        // for (uint256 i; i < 32; i++) {
-        //     bytesArray[i] =  bytes32(uint256(opCode))[i];
-        // }
-
-        // string memory converted = conv(immed);
-        // require(_data.beforeHash == startMachine.hash(), string(bytesArray));
 
         bool correct = true;
         bytes32 messageHash;
@@ -1600,18 +1596,19 @@ library OneStepProof {
             }
         }
 
-        // require(
-        //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
-        // );
-        require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
+        require(
+            _data.beforeHash == startMachine.hash(),
+            string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
+            " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
+        );
+        // require(_data.beforeHash == startMachine.hash(), startMachine.toString());
+        require(
+            _data.afterHash == endMachine.hash(),
+            string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+            " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        );
         // conv(GetM(_data))
-        require(_data.afterHash == endMachine.hash(), endMachine.toString());
+        // require(_data.afterHash == endMachine.hash(), endMachine.toString());
 
         return 0;
     }

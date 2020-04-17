@@ -593,9 +593,7 @@ BlockReason send(MachineState& m) {
 }
 
 void getTime(MachineState& m) {
-    Tuple tup(m.pool.get(), 2);
-    tup.set_element(0, m.context.timeBounds[0]);
-    tup.set_element(1, m.context.timeBounds[1]);
+    Tuple tup(m.context.timeBounds[0], m.context.timeBounds[1], m.pool.get());
     m.stack.push(std::move(tup));
     ++m.pc;
 }
