@@ -26,7 +26,7 @@
 
 uint256_t Datastack::hash() const {
     if (values.empty()) {
-        return ::hash(Tuple());
+        return HashOnly(::hash(Tuple()), 1).getHash();
     }
     calculateAllHashes();
     return hashes.back().getHash();
@@ -125,27 +125,6 @@ void Datastack::addHash() const {
     auto tup = Tuple(newVal, prev, &pool);
     auto newHashVal = HashOnly(::hash(tup), tup.getSize());
     hashes.emplace_back(newHashVal);
-
-    //    std::array<unsigned char, 1 + 2 * 32> tupData;
-    //    auto oit = tupData.begin();
-    //    tupData[0] = TUPLE + 2;
-    //    ++oit;
-    //    auto valHash = ::hash(values[hashes.size()]);
-    //    std::array<uint64_t, 4> valHashInts;
-    //    to_big_endian(valHash, valHashInts.begin());
-    //    std::copy(reinterpret_cast<unsigned char*>(valHashInts.data()),
-    //              reinterpret_cast<unsigned char*>(valHashInts.data()) + 32,
-    //              oit);
-    //    oit += 32;
-    //    std::array<uint64_t, 4> valHashInts2;
-    //    to_big_endian(prev, valHashInts2.begin());
-    //    std::copy(reinterpret_cast<unsigned char*>(valHashInts2.data()),
-    //              reinterpret_cast<unsigned char*>(valHashInts2.data()) + 32,
-    //              oit);
-    //    std::array<unsigned char, 32> hashData;
-    //    evm::Keccak_256(tupData.data(), 1 + 32 * 2, hashData.data());
-    //    hashes.emplace_back(from_big_endian(hashData.begin(),
-    //    hashData.end()));
 }
 
 void Datastack::calculateAllHashes() const {

@@ -125,6 +125,7 @@ class Tuple {
         tpl = tmp;
         //        }
         tpl->data[pos] = std::move(newval);
+        computeValueSize();
         tpl->deferredHashing = true;
     }
 
