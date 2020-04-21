@@ -249,25 +249,6 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
     }
 
-    function deserializeHashOnly(
-        bytes memory data,
-        uint256 startOffset
-    )
-        internal
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            HashOnly memory
-        )
-    {
-        uint256 totalLength = data.length;
-        if (totalLength < startOffset || totalLength - startOffset < 32) {
-            return (false, startOffset, HashOnly(0));
-        }
-        return (true, startOffset + 32, HashOnly(data.toBytes32(startOffset)));
-    }
-
     function deserializeHashValue(
         bytes memory data,
         uint256 startOffset
@@ -658,10 +639,10 @@ library Value {
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
         bytes32 stackHash = hashEmptyTuple();
         uint256 size = 1;
+        bytes32[] memory vals = new bytes32[](2);
 
         for (uint i = 0; i < wholeChunkCount; i++) {
 
-            bytes32[] memory vals = new bytes32[](2);
             vals[0] = stackHash;
             vals[1] = newInt(data.toUint(i * 32)).hash().hash;
             size += 2;
@@ -673,7 +654,6 @@ library Value {
             uint lastVal = data.toUint(dataLength - 32);
             lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
 
-            bytes32[] memory vals = new bytes32[](2);
             vals[0] = stackHash;
             vals[1] = newInt(lastVal).hash().hash;
             size += 2;
@@ -681,7 +661,6 @@ library Value {
             stackHash = hashTuple(vals, size);
         }
 
-        bytes32[] memory vals = new bytes32[](2);
         vals[0] = newInt(dataLength).hash().hash;
         vals[1] = stackHash;
         size += 2;

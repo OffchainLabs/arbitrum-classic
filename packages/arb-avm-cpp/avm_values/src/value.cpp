@@ -73,7 +73,7 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 }
 
 void marshal_HashOnly(const HashOnly& val, std::vector<unsigned char>& buf) {
-    val.ToBuff(buf);
+    val.marshal(buf);
 }
 
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
@@ -117,14 +117,9 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
             marshalShallow(itemval, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-
-            auto size = getSize(itemval);
-            std::array<unsigned char, 32> tmpbuf2;
-            to_big_endian(size, tmpbuf2.begin());
-            buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
+            HashOnly hval(::hash(val.get_element(i)),
+                          ::getSize(val.get_element(i)));
+            hval.marshal(buf);
         }
     }
 }
@@ -144,13 +139,7 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
 
 void marshalShallow(const HashOnly& val, std::vector<unsigned char>& buf) {
     buf.push_back(HASH_ONLY);
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val.getHash(), tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-
-    std::array<unsigned char, 32> tmpbuf2;
-    to_big_endian(val.getSize(), tmpbuf2.begin());
-    buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
+    val.marshal(buf);
 }
 
 value deserialize_value(const char*& bufptr, TuplePool& pool) {

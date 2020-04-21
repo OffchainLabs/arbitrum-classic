@@ -340,23 +340,6 @@ library Messages {
         );
     }
 
-    // function contractTransactionMessageHash(
-    //     address to,
-    //     address from,
-    //     uint256 value,
-    //     bytes memory data,
-    //     uint256 blockNumber,
-    //     uint256 messageNum
-    // )
-    //     internal
-    //     pure
-    //     returns(bytes32)
-    // {
-    //     Value.Data memory tuple = contractTransactionMessageValue(to, from, value, data, blockNumber, messageNum);
-
-    //     return Value.hashTuple(tuple);
-    // }
-
     function contractTransactionMessageValue(
         address to,
         address from,

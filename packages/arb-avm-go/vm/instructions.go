@@ -1026,7 +1026,7 @@ func insnLog(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
-var send_size_limit int64 = 100000
+var send_size_limit int64 = 10000
 
 func insnSend(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)

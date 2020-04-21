@@ -334,62 +334,6 @@ func (m *Machine) PrintState() {
 	fmt.Println("errHandlerHash", errHandlerHash)
 }
 
-func (m *Machine) PrintState2() {
-	codePoint := m.pc.GetPC()
-
-	stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
-	includeImmediateVal := false
-	if _, ok := codePoint.Op.(value.ImmediateOperation); ok && len(stackPops) > 0 {
-		if stackPops[0] == 1 {
-			includeImmediateVal = true
-		}
-		stackPops = stackPops[1:]
-	}
-	auxStackPops := code.InstructionAuxStackPops[codePoint.Op.GetOp()]
-
-	baseStackVal, stackVals := m.stack.SolidityProofValue(stackPops)
-	baseAuxStackVal, auxStackVals := m.auxstack.SolidityProofValue(auxStackPops)
-	registerHashValue := m.register.ProofValue()
-	staticHashValue := m.static.ProofValue()
-	errHandlerHashValue := value.NewHashOnlyValueFromValue(m.errHandler)
-
-	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
-
-	nextHashVal := value.NewHashOnlyValue(codePoint.NextHash, 1)
-	buf := new(bytes.Buffer)
-	nextHashVal.MarshalForProof(buf)
-	buf1 := new(bytes.Buffer)
-	baseStackVal.MarshalForProof(buf1)
-	fmt.Println(m.stack.Size())
-	buf2 := new(bytes.Buffer)
-	baseAuxStackVal.MarshalForProof(buf2)
-	buf3 := new(bytes.Buffer)
-	registerHashValue.MarshalForProof(buf3)
-	buf4 := new(bytes.Buffer)
-	staticHashValue.MarshalForProof(buf4)
-	buf5 := new(bytes.Buffer)
-	errHandlerHashValue.MarshalForProof(buf5)
-	buf6 := new(bytes.Buffer)
-	value.MarshalOperationProof(codePoint.Op, buf6, includeImmediateVal)
-	buf7 := new(bytes.Buffer)
-	for _, val := range stackVals {
-		value.MarshalValueForProof(val, buf7)
-	}
-	buf8 := new(bytes.Buffer)
-	for _, val := range auxStackVals {
-		value.MarshalValueForProof(val, buf8)
-	}
-	fmt.Println("codePointHash", buf.Bytes())
-	fmt.Println("stackHash", buf1.Bytes())
-	fmt.Println("auxStackHash", buf2.Bytes())
-	fmt.Println("registerHash", buf3.Bytes())
-	fmt.Println("staticHash", buf4.Bytes())
-	fmt.Println("errHandlerHash", buf5.Bytes())
-	fmt.Println("MarshalOperationProof", buf6.Bytes())
-	fmt.Println("stackVals-MarshalForProof", buf7.Bytes())
-	fmt.Println("auxStackVals-MarshalForProof", buf8.Bytes())
-}
-
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := m.marshalForProof(buf); err != nil {

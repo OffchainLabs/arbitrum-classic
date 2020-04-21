@@ -213,7 +213,6 @@ uint256_t Tuple::calculateHash() const {
 }
 
 uint256_t zeroHash() {
-    int val_length = 32;
     std::array<unsigned char, 33> tupData;
 
     tupData[0] = TUPLE;
@@ -225,11 +224,10 @@ uint256_t zeroHash() {
     std::array<uint64_t, 4> sizeValue;
     to_big_endian(size, sizeValue.begin());
     std::copy(reinterpret_cast<unsigned char*>(sizeValue.data()),
-              reinterpret_cast<unsigned char*>(sizeValue.data()) + val_length,
-              oit);
+              reinterpret_cast<unsigned char*>(sizeValue.data()) + 32, oit);
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), val_length + 1, hashData.data());
+    evm::Keccak_256(tupData.data(), 33, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
 

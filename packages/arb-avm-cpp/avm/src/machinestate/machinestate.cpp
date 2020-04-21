@@ -124,45 +124,18 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-int getCodeSize(const std::vector<CodePoint>& code) {
-    int code_size = 0;
-
-    for (uint64_t i = 0; i < code.size(); i++) {
-        code_size += getSize(code[i]);
-    }
-
-    return code_size;
-}
-
-int getDataStackSize(const Datastack& stack) {
-    int datastack_size = 0;
-
-    for (uint64_t i = 0; i < stack.values.size(); i++) {
-        datastack_size += getSize(stack.values[i]);
-    }
-
-    for (uint64_t i = 0; i < stack.hashes.size(); i++) {
-        datastack_size += getSize(stack.hashes[i]);
-    }
-
-    return datastack_size;
-}
-
 bool MachineState::verifyMachineValidity() {
     int machine_size = 0;
 
-    machine_size += getCodeSize(code);
+    machine_size += code.size();
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
-    machine_size += getDataStackSize(stack);
-    machine_size += getDataStackSize(auxstack);
+
     machine_size += getSize(errpc);
+    machine_size += stack.getTotalValueSize();
+    machine_size += auxstack.getTotalValueSize();
 
     auto valid_machine = machine_size <= machine_size_limit;
-
-    if (!valid_machine) {
-        state = Status::Error;
-    }
 
     return valid_machine;
 }
@@ -181,19 +154,19 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
 
     HashOnly nextHash(code[pc].nextHash, 1);
-    nextHash.ToBuff(buf);
+    nextHash.marshal(buf);
 
-    stackProof.first.ToBuff(buf);
-    auxStackProof.first.ToBuff(buf);
+    stackProof.first.marshal(buf);
+    auxStackProof.first.marshal(buf);
 
     HashOnly registerValHash(::hash(registerVal), ::getSize(registerVal));
-    registerValHash.ToBuff(buf);
+    registerValHash.marshal(buf);
 
     HashOnly staticValHash(::hash(staticVal), ::getSize(staticVal));
-    staticValHash.ToBuff(buf);
+    staticValHash.marshal(buf);
 
     HashOnly errpcHash(::hash(errpc), ::getSize(errpc));
-    errpcHash.ToBuff(buf);
+    errpcHash.marshal(buf);
 
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
@@ -511,6 +484,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
     auto valid_machine = verifyMachineValidity();
 
     if (!valid_machine) {
+        state = Status::Error;
         std::cerr << "Machine size invalid : error state" << std::endl;
     }
 

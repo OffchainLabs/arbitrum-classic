@@ -17,7 +17,7 @@
 #include <avm_values/hashonlyvalue.hpp>
 #include <bigint_utils.hpp>
 
-void HashOnly::ToBuff(std::vector<unsigned char>& buf) const {
+void HashOnly::marshal(std::vector<unsigned char>& buf) const {
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(hash, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());

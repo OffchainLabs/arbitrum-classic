@@ -26,7 +26,7 @@
 
 uint256_t Datastack::hash() const {
     if (values.empty()) {
-        return HashOnly(::hash(Tuple()), 1).getHash();
+        return ::hash(Tuple());
     }
     calculateAllHashes();
     return hashes.back().getHash();
@@ -36,7 +36,6 @@ std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<bool>& stackInfo) {
     calculateAllHashes();
     Datastack c = *this;
-    //    auto total_size = getTotalValuesSize();
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
@@ -54,7 +53,7 @@ std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
             buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
         }
     }
-    HashOnly hashOnly(c.hash(), c.getTotalValuesSize());
+    HashOnly hashOnly(c.hash(), c.getTotalValueSize());
     return std::make_pair(hashOnly, std::move(buf));
 }
 

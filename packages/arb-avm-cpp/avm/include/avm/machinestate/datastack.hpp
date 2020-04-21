@@ -93,7 +93,7 @@ class Datastack {
         return values.back();
     }
 
-    int getTotalValuesSize() {
+    int getTotalValueSize() {
         if (values.empty()) {
             return 1;
         }

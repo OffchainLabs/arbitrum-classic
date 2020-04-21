@@ -35,7 +35,7 @@ class HashOnly {
     }
     uint256_t getHash() const { return hash; }
     int getSize() const { return size; }
-    void ToBuff(std::vector<unsigned char>& buf) const;
+    void marshal(std::vector<unsigned char>& buf) const;
 };
 
 inline uint256_t hash(const HashOnly& hv) {
@@ -43,11 +43,11 @@ inline uint256_t hash(const HashOnly& hv) {
 }
 
 inline bool operator==(const HashOnly& val1, const HashOnly& val2) {
-    return val1.getHash() == val2.getHash() && val1.getSize() == val2.getSize();
+    return val1.getHash() == val2.getHash();
 }
 
 inline bool operator!=(const HashOnly& val1, const HashOnly& val2) {
-    return val1.getHash() != val2.getHash() || val1.getSize() != val2.getSize();
+    return val1.getHash() != val2.getHash();
 }
 
 std::ostream& operator<<(std::ostream& os, const HashOnly& val);
