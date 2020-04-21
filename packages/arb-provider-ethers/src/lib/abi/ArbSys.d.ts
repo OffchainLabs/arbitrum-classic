@@ -24,7 +24,9 @@ interface ArbSysInterface extends Interface {
       encode([dest, amount]: [string, BigNumberish]): string
     }>
 
-    currentMessageTime: TypedFunctionDescription<{ encode([]: []): string }>
+    currentMessageTime: TypedFunctionDescription<{
+      encode([]: []): string
+    }>
 
     timeUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
 
