@@ -18,6 +18,7 @@ package testmachine
 
 import "C"
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"time"
@@ -57,11 +58,11 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 
 func (m *Machine) Hash() common.Hash {
 	h1 := m.cppmachine.Hash()
-	//h2 := m.gomachine.Hash()
-	//if h1 != h2 {
-	//	log.Fatalln("Hash error at pc", m.gomachine.GetPC())
-	//}
-	return h1
+	h2 := m.gomachine.Hash()
+	if h1 != h2 {
+		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
+	}
+	return h2
 }
 
 func (m *Machine) PrintState() {
@@ -77,26 +78,26 @@ func (m *Machine) Clone() machine.Machine {
 
 func (m *Machine) CurrentStatus() machine.Status {
 	b1 := m.cppmachine.CurrentStatus()
-	//b2 := m.gomachine.CurrentStatus()
-	//if b1 != b2 {
-	//	log.Fatalln("CurrentStatus error at pc", m.gomachine.GetPC())
-	//}
-	return b1
+	b2 := m.gomachine.CurrentStatus()
+	if b1 != b2 {
+		log.Fatalln("CurrentStatus error at pc", m.gomachine.GetPC())
+	}
+	return b2
 }
 
 func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
 	b1 := m.cppmachine.IsBlocked(currentTime, newMessages)
-	//b2 := m.gomachine.IsBlocked(currentTime, newMessages)
-	//if b1 == nil || b2 == nil {
-	//	if b1 != nil || b2 != nil {
-	//		log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
-	//	}
-	//	return nil
-	//}
-	//if !b1.Equals(b2) {
-	//	log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
-	//}
-	return b1
+	b2 := m.gomachine.IsBlocked(currentTime, newMessages)
+	if b1 == nil || b2 == nil {
+		if b1 != nil || b2 != nil {
+			log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
+		}
+		return nil
+	}
+	if !b1.Equals(b2) {
+		log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
+	}
+	return b2
 }
 
 func (m *Machine) ExecuteAssertion(
@@ -116,40 +117,40 @@ func (m *Machine) ExecuteAssertion(
 		Logs:         nil,
 	}
 	totalSteps := uint64(0)
-	stepIncrease := uint64(500)
+	stepIncrease := uint64(50000)
 	for i := uint64(0); i < maxSteps; i += stepIncrease {
 		steps := stepIncrease
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
 		}
-		//pcStart := m.gomachine.GetPC()
+		pcStart := m.gomachine.GetPC()
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
-		//a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
-		//if ranSteps1 != ranSteps1 {
-		//	pcEnd := m.gomachine.GetPC()
-		//	log.Println("cpp num steps", ranSteps1, a1.NumGas)
-		//	log.Println("go num steps", ranSteps1, a1.NumGas)
-		//	log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a1)
-		//} else if !a1.Equals(a1) {
-		//	pcEnd := m.gomachine.GetPC()
-		//	m.cppmachine.PrintState()
-		//	m.gomachine.PrintState()
-		//	log.Println("cpp num steps, num gas", ranSteps1, a1.NumGas)
-		//	log.Println("go num steps, num gas", ranSteps1, a1.NumGas)
-		//	log.Println("pcstart", pcStart)
-		//	log.Println("pcend", pcEnd)
-		//	log.Fatalln("ExecuteAssertion error after running step", a1, a1)
-		//}
-		a.AfterHash = a1.AfterHash
-		totalSteps += ranSteps1
-		a.NumGas += a1.NumGas
-		a.Logs = append(a.Logs, a1.Logs...)
-		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
-		a.DidInboxInsn = a.DidInboxInsn || a1.DidInboxInsn
-		if a1.DidInboxInsn {
+		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+		if ranSteps1 != ranSteps2 {
+			pcEnd := m.gomachine.GetPC()
+			log.Println("cpp num steps", ranSteps1, a1.NumGas)
+			log.Println("go num steps", ranSteps2, a2.NumGas)
+			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
+		} else if !a1.Equals(a2) {
+			pcEnd := m.gomachine.GetPC()
+			m.cppmachine.PrintState()
+			m.gomachine.PrintState()
+			log.Println("cpp num steps, num gas", ranSteps1, a1.NumGas)
+			log.Println("go num steps, num gas", ranSteps2, a2.NumGas)
+			log.Println("pcstart", pcStart)
+			log.Println("pcend", pcEnd)
+			log.Fatalln("ExecuteAssertion error after running step", a1, a2)
+		}
+		a.AfterHash = a2.AfterHash
+		totalSteps += ranSteps2
+		a.NumGas += a2.NumGas
+		a.Logs = append(a.Logs, a2.Logs...)
+		a.OutMsgs = append(a.OutMsgs, a2.OutMsgs...)
+		a.DidInboxInsn = a.DidInboxInsn || a2.DidInboxInsn
+		if a2.DidInboxInsn {
 			inbox = value.NewEmptyTuple()
 		}
-		if ranSteps1 < steps {
+		if ranSteps2 < steps {
 			break
 		}
 		if hasTimeLimit {
@@ -166,31 +167,31 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
-	//h2, err2 := m.gomachine.MarshalForProof()
+	h2, err2 := m.gomachine.MarshalForProof()
 	h1, err1 := m.cppmachine.MarshalForProof()
 
 	if err1 != nil {
 		return nil, err1
 	}
 
-	//if err2 != nil {
-	//	return nil, err2
-	//}
+	if err2 != nil {
+		return nil, err2
+	}
 	//
-	//if !bytes.Equal(h1, h2) {
-	//	m.cppmachine.PrintState()
-	//	m.gomachine.PrintState()
-	//	log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
-	//}
+	if !bytes.Equal(h1, h2) {
+		m.cppmachine.PrintState()
+		m.gomachine.PrintState()
+		log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
+	}
 
-	return h1, nil
+	return h2, nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	h1 := m.cppmachine.Checkpoint(storage)
-	//h2 := m.gomachine.Checkpoint(storage)
-	//if h1 != h2 {
-	//	log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
-	//}
-	return h1
+	h2 := m.gomachine.Checkpoint(storage)
+	if h1 != h2 {
+		log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
+	}
+	return h2
 }
