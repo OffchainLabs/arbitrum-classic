@@ -753,7 +753,6 @@ uint256_t& assumeInt(value& val) {
 
 TEST_CASE("ECDSA opcode is correct") {
     SECTION("ecdsa") {
-        Machine m;
         MachineState s;
         s.initialize_machinestate(
             "/Users/robertgates/Documents/arbitrum/packages/arb-compiler-evm/"
@@ -773,7 +772,7 @@ TEST_CASE("ECDSA opcode is correct") {
         thing = reinterpret_cast<uint64_t*>(seckey + 24);
         *thing = rand();
         thing = reinterpret_cast<uint64_t*>(msg);
-        *thing = 0;  // rand();
+        *thing = 100;  // rand();
         thing = reinterpret_cast<uint64_t*>(msg + 8);
         *thing = 0;  // rand();
         thing = reinterpret_cast<uint64_t*>(msg + 16);
@@ -783,17 +782,20 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
         REQUIRE(secp256k1_ecdsa_sign_recoverable(
                     ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
-                    secp256k1_nonce_function_default, NULL) == 1);
+                    NULL, NULL) == 1);
         s.stack.push(value(pubkey.data[64]));
         uint256_t temp = 0;
         int counter = 0;
         for (auto& value : msg) {
-            temp << 32;
+            for (int i = 0; i < 32; i++) {
+                temp *= 2;
+            }
             temp += value;
             counter++;
             if (counter == 8) {
                 counter = 0;
                 s.stack.push(temp);
+                temp = 0;
             }
         }
         for (int i = 7; i >= 0; i--) {
@@ -801,9 +803,9 @@ TEST_CASE("ECDSA opcode is correct") {
             temp += *reinterpret_cast<uint64_t*>(sig.data + (8 - i) * 8);
             if (i % 4 == 3) {
                 s.stack.push(temp);
+                temp = 0;
             }
         }
-        m.initializeMachine(s);
         s.runOp(OpCode::ECDSA);
         REQUIRE(s.stack[0] == value(1));
         secp256k1_pubkey evaluated_key;

@@ -590,8 +590,12 @@ void ecdsa(MachineState& m) {
     bool result =
         secp256k1_ecdsa_recover(context, &pubkey, &signature,
                                 reinterpret_cast<unsigned char*>(message));
+    assumeInt(m.stack[0]) = 0;
+    assumeInt(m.stack[1]) = 0;
     for (int i = 7; i >= 0; i--) {
-        assumeInt(m.stack[i / 4]) << 64;
+        for (int j = 0; j < 64; j++) {
+            assumeInt(m.stack[i / 4]) *= 2;
+        }
         assumeInt(m.stack[i / 4]) +=
             *reinterpret_cast<uint64_t*>(pubkey.data + i * 8);
     }
