@@ -41,8 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
-
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
 	rollupAddress common.Address
@@ -52,7 +50,7 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
 	man.AddListener(assertionListener)
@@ -62,7 +60,7 @@ func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, 
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query

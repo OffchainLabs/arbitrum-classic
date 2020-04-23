@@ -14,6 +14,23 @@
  * limitations under the License.
  */
 
-package validatorserver
+syntax = "proto3";
+package txaggregator;
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txaggregator";
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator-core) -I. --tstypes_out=../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative,plugins=grpc:. *.proto"
+message SendTransactionArgs {
+    string to = 1;
+    string sequenceNum = 2;
+    string value = 3;
+    string data = 4;
+    string pubkey = 5;
+    string signature = 6;
+}
+
+message SendTransactionReply {
+    bool accepted = 1;
+}
+
+service TxAggregator {
+    rpc SendTransaction (SendTransactionArgs) returns (SendTransactionReply);
+}
