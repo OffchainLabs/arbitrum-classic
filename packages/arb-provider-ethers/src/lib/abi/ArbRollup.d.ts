@@ -221,6 +221,10 @@ interface ArbRollupInterface extends Interface {
       encodeTopics([logsAccHash]: [null]): string[]
     }>
 
+    ConfirmedValidAssertion: TypedEventDescription<{
+      encodeTopics([nodeHash]: [Arrayish | null]): string[]
+    }>
+
     RollupAsserted: TypedEventDescription<{
       encodeTopics([
         fields,
@@ -607,6 +611,8 @@ export class ArbRollup extends Contract {
 
   filters: {
     ConfirmedAssertion(logsAccHash: null): EventFilter
+
+    ConfirmedValidAssertion(nodeHash: Arrayish | null): EventFilter
 
     RollupAsserted(
       fields: null,

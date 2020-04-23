@@ -64,6 +64,10 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32[] logsAccHash
     );
 
+    event ConfirmedValidAssertion(
+        bytes32 indexed nodeHash
+    );
+
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
@@ -330,6 +334,8 @@ contract ArbRollup is NodeGraph, Staking {
                 messagesOffset += messageLength;
                 vmProtoStateHash = data.vmProtoStateHashes[validNum];
                 validNum++;
+
+                emit ConfirmedValidAssertion(nodeDataHash);
             } else {
                 nodeDataHash = data.challengeNodeData[invalidNum];
                 invalidNum++;
