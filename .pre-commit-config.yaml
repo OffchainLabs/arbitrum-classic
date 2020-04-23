@@ -33,7 +33,7 @@ repos:
         args: [--fix]
         types: [text]
         # ignore prettier config
-        files: '^(?!.*?\.prettier).*\.(js|ts)[[:>:]]'
+        files: '^(?!.*?\.prettier).*\.(jsx?|tsx?)[[:>:]]'
         additional_dependencies:
           - 'eslint@6.8.0'
           - 'typescript@3.8.3'
