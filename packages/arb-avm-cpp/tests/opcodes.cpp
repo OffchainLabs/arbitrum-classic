@@ -19,7 +19,10 @@
 
 #include <catch2/catch.hpp>
 
+#include <secp256k1_recovery.h>
 #include <boost/filesystem.hpp>
+#include <boost/range/adaptor/reversed.hpp>
+#include <cstdlib>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
@@ -732,13 +735,107 @@ TEST_CASE("SEND opcode is correct") {
     }
 }
 
+static void counting_illegal_callback_fn(const char* str, void* data) {
+    /* Dummy callback function that just counts. */
+    int32_t* p;
+    (void)str;
+    p = static_cast<int32_t*>(data);
+    (*p)++;
+}
+
+uint256_t& assumeInt(value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
 TEST_CASE("ECDSA opcode is correct") {
     SECTION("ecdsa") {
         Machine m;
-        m.initializeMachine(
+        MachineState s;
+        s.initialize_machinestate(
             "/Users/robertgates/Documents/arbitrum/packages/arb-compiler-evm/"
             "precompiles.ao");
-        m.run(100, 0, 0, Tuple(), std::chrono::seconds(100));
+        auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                            SECP256K1_CONTEXT_VERIFY);
+        secp256k1_ecdsa_recoverable_signature sig;
+        uint32_t msg[32];
+        unsigned char seckey[32];
+        secp256k1_pubkey pubkey;
+        uint64_t* thing = reinterpret_cast<uint64_t*>(seckey);
+        *thing = rand();
+        thing = reinterpret_cast<uint64_t*>(seckey + 8);
+        *thing = rand();
+        thing = reinterpret_cast<uint64_t*>(seckey + 16);
+        *thing = rand();
+        thing = reinterpret_cast<uint64_t*>(seckey + 24);
+        *thing = rand();
+        thing = reinterpret_cast<uint64_t*>(msg);
+        *thing = 0;  // rand();
+        thing = reinterpret_cast<uint64_t*>(msg + 8);
+        *thing = 0;  // rand();
+        thing = reinterpret_cast<uint64_t*>(msg + 16);
+        *thing = 0;  // rand();
+        thing = reinterpret_cast<uint64_t*>(msg + 24);
+        *thing = 0;  // rand();
+        REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
+        REQUIRE(secp256k1_ecdsa_sign_recoverable(
+                    ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
+                    secp256k1_nonce_function_default, NULL) == 1);
+        s.stack.push(value(pubkey.data[64]));
+        uint256_t temp = 0;
+        int counter = 0;
+        for (auto& value : msg) {
+            temp << 32;
+            temp += value;
+            counter++;
+            if (counter == 8) {
+                counter = 0;
+                s.stack.push(temp);
+            }
+        }
+        for (int i = 7; i >= 0; i--) {
+            temp << 64;
+            temp += *reinterpret_cast<uint64_t*>(sig.data + (8 - i) * 8);
+            if (i % 4 == 3) {
+                s.stack.push(temp);
+            }
+        }
+        m.initializeMachine(s);
+        s.runOp(OpCode::ECDSA);
+        REQUIRE(s.stack[0] == value(1));
+        secp256k1_pubkey evaluated_key;
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 56);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 48);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 64 &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 40);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 128 &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 32);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 192 &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 24);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 16);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 64 &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 8);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 128 &
+                                       std::numeric_limits<uint64_t>::max());
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data);
+        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 192 &
+                                       std::numeric_limits<uint64_t>::max());
+        bool identical_keys = true;
+        for (int i = 0; i < 64; i++) {
+            identical_keys &= evaluated_key.data[i] == pubkey.data[i];
+        }
+        REQUIRE(identical_keys);
     }
 }
 

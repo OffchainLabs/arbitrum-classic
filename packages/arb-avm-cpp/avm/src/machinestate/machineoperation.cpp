@@ -551,8 +551,51 @@ void tlen(MachineState& m) {
 }
 
 void ecdsa(MachineState& m) {
-    secp256k1_ecdsa_recover(nullptr, nullptr, nullptr, nullptr);
-    //
+    m.stack.prepForMod(7);
+    secp256k1_context* context =
+        secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    secp256k1_pubkey pubkey;
+    secp256k1_ecdsa_recoverable_signature signature;
+    auto* thing = reinterpret_cast<uint64_t*>(signature.data + 32);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 40);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 64 &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 48);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 128 &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 56);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 192 &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 8);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 64 &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 16);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 128 &
+                                   std::numeric_limits<uint64_t>::max());
+    thing = reinterpret_cast<uint64_t*>(signature.data + 24);
+    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 192 &
+                                   std::numeric_limits<uint64_t>::max());
+    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
+    uint32_t message[32];
+    for (int i = 0; i < 32; i++) {
+        message[i] = static_cast<uint32_t>(
+            assumeInt(m.stack[5 - (i / 8)]) >> (224 - 32 * (i % 8)) &
+            std::numeric_limits<uint32_t>::max());
+    }
+    bool result =
+        secp256k1_ecdsa_recover(context, &pubkey, &signature,
+                                reinterpret_cast<unsigned char*>(message));
+    for (int i = 7; i >= 0; i--) {
+        assumeInt(m.stack[i / 4]) << 64;
+        assumeInt(m.stack[i / 4]) +=
+            *reinterpret_cast<uint64_t*>(pubkey.data + i * 8);
+    }
+    m.stack.push(uint256_t(result));
 }
 
 BlockReason breakpoint(MachineState& m) {

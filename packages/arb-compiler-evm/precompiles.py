@@ -16,8 +16,7 @@ import arbitrum as arb
 
 
 def infiniteCounterLoop(vm):
-    vm.push(0)
-    vm.while_loop(lambda v: [v.push(1)], lambda v: [v.push(1), v.ecdsa()])
+    vm.ecdsa()
 
 
 def makeAoFile(func, filepath):
