@@ -772,18 +772,18 @@ TEST_CASE("ECDSA opcode is correct") {
         thing = reinterpret_cast<uint64_t*>(seckey + 24);
         *thing = rand();
         thing = reinterpret_cast<uint64_t*>(msg);
-        *thing = 100;  // rand();
+        *thing = rand();
         thing = reinterpret_cast<uint64_t*>(msg + 8);
-        *thing = 0;  // rand();
+        *thing = rand();
         thing = reinterpret_cast<uint64_t*>(msg + 16);
-        *thing = 0;  // rand();
+        *thing = rand();
         thing = reinterpret_cast<uint64_t*>(msg + 24);
-        *thing = 0;  // rand();
+        *thing = rand();
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
         REQUIRE(secp256k1_ecdsa_sign_recoverable(
                     ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
                     NULL, NULL) == 1);
-        s.stack.push(value(pubkey.data[64]));
+        s.stack.push(value(sig.data[64]));
         uint256_t temp = 0;
         int counter = 0;
         for (auto& value : msg) {
@@ -798,9 +798,11 @@ TEST_CASE("ECDSA opcode is correct") {
                 temp = 0;
             }
         }
-        for (int i = 7; i >= 0; i--) {
-            temp << 64;
-            temp += *reinterpret_cast<uint64_t*>(sig.data + (8 - i) * 8);
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 64; j++) {
+                temp *= 2;
+            }
+            temp += *reinterpret_cast<uint64_t*>(sig.data + i * 8);
             if (i % 4 == 3) {
                 s.stack.push(temp);
                 temp = 0;
@@ -810,29 +812,47 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(s.stack[0] == value(1));
         secp256k1_pubkey evaluated_key;
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 56);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[2]);
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 48);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 64 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[2]);
+        for (int i = 0; i < 64; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 40);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 128 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[2]);
+        for (int i = 0; i < 128; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 32);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[2]) >> 192 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[2]);
+        for (int i = 0; i < 192; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 24);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[1]);
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 16);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 64 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[1]);
+        for (int i = 0; i < 64; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 8);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 128 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[1]);
+        for (int i = 0; i < 128; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         thing = reinterpret_cast<uint64_t*>(evaluated_key.data);
-        *thing = static_cast<uint64_t>(assumeInt(s.stack[1]) >> 192 &
-                                       std::numeric_limits<uint64_t>::max());
+        temp = assumeInt(s.stack[1]);
+        for (int i = 0; i < 192; i++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
         bool identical_keys = true;
         for (int i = 0; i < 64; i++) {
             identical_keys &= evaluated_key.data[i] == pubkey.data[i];

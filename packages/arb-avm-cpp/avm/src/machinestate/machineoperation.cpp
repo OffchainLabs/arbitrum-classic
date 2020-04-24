@@ -552,34 +552,50 @@ void tlen(MachineState& m) {
 
 void ecdsa(MachineState& m) {
     m.stack.prepForMod(7);
-    secp256k1_context* context =
-        secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    secp256k1_context* context = secp256k1_context_create(
+        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
-    auto* thing = reinterpret_cast<uint64_t*>(signature.data + 32);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data + 40);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 64 &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data + 48);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 128 &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data + 56);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[1]) >> 192 &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data + 8);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 64 &
-                                   std::numeric_limits<uint64_t>::max());
+    uint256_t temp;
+    auto* thing = reinterpret_cast<uint64_t*>(signature.data + 24);
+    temp = assumeInt(m.stack[1]);
+    *thing = static_cast<uint64_t>(temp);
     thing = reinterpret_cast<uint64_t*>(signature.data + 16);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 128 &
-                                   std::numeric_limits<uint64_t>::max());
-    thing = reinterpret_cast<uint64_t*>(signature.data + 24);
-    *thing = static_cast<uint64_t>(assumeInt(m.stack[0]) >> 192 &
-                                   std::numeric_limits<uint64_t>::max());
+    temp = assumeInt(m.stack[1]);
+    for (int i = 0; i < 64; i++) {
+        temp /= 2;
+    }
+    *thing = static_cast<uint64_t>(temp);
+    thing = reinterpret_cast<uint64_t*>(signature.data + 8);
+    temp = assumeInt(m.stack[1]);
+    for (int i = 0; i < 128; i++) {
+        temp /= 2;
+    }
+    *thing = static_cast<uint64_t>(temp);
+    thing = reinterpret_cast<uint64_t*>(signature.data);
+    temp = assumeInt(m.stack[1]);
+    for (int i = 0; i < 192; i++) {
+        temp /= 2;
+    }
+    *thing = static_cast<uint64_t>(temp);
+    thing = reinterpret_cast<uint64_t*>(signature.data + 56);
+    temp = assumeInt(m.stack[0]);
+    *thing = static_cast<uint64_t>(temp);
+    thing = reinterpret_cast<uint64_t*>(signature.data + 48);
+    temp = assumeInt(m.stack[0]);
+    for (int i = 0; i < 64; i++) {
+        temp /= 2;
+    }
+    thing = reinterpret_cast<uint64_t*>(signature.data + 40);
+    temp = assumeInt(m.stack[0]);
+    for (int i = 0; i < 128; i++) {
+        temp /= 2;
+    }
+    thing = reinterpret_cast<uint64_t*>(signature.data + 32);
+    temp = assumeInt(m.stack[0]);
+    for (int i = 0; i < 192; i++) {
+        temp /= 2;
+    }
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
     uint32_t message[32];
     for (int i = 0; i < 32; i++) {
