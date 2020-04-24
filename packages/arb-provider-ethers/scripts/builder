@@ -5,7 +5,7 @@ tsc
 skip_list="index.d.ts|"
 for filepath in ./src/lib/abi/*.d.ts; do
     filename=$(basename -- "$filepath")
-    if [[ $skip_copy == *"$filename"* ]]
+    if [[ $skip_list == *"$filename"* ]]
     then
         echo "skipping copy of ${filename}"
     else
