@@ -811,43 +811,43 @@ TEST_CASE("ECDSA opcode is correct") {
         s.runOp(OpCode::ECDSA);
         REQUIRE(s.stack[0] == value(1));
         secp256k1_pubkey evaluated_key;
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 56);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 32);
         temp = assumeInt(s.stack[2]);
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 48);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 40);
         temp = assumeInt(s.stack[2]);
         for (int i = 0; i < 64; i++) {
             temp /= 2;
         }
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 40);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 48);
         temp = assumeInt(s.stack[2]);
         for (int i = 0; i < 128; i++) {
             temp /= 2;
         }
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 32);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 56);
         temp = assumeInt(s.stack[2]);
         for (int i = 0; i < 192; i++) {
             temp /= 2;
         }
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 24);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data);
         temp = assumeInt(s.stack[1]);
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 16);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 8);
         temp = assumeInt(s.stack[1]);
         for (int i = 0; i < 64; i++) {
             temp /= 2;
         }
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 8);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 16);
         temp = assumeInt(s.stack[1]);
         for (int i = 0; i < 128; i++) {
             temp /= 2;
         }
         *thing = static_cast<uint64_t>(temp);
-        thing = reinterpret_cast<uint64_t*>(evaluated_key.data);
+        thing = reinterpret_cast<uint64_t*>(evaluated_key.data + 24);
         temp = assumeInt(s.stack[1]);
         for (int i = 0; i < 192; i++) {
             temp /= 2;
