@@ -586,16 +586,19 @@ void ecdsa(MachineState& m) {
     for (int i = 0; i < 64; i++) {
         temp /= 2;
     }
+    *thing = static_cast<uint64_t>(temp);
     thing = reinterpret_cast<uint64_t*>(signature.data + 40);
     temp = assumeInt(m.stack[0]);
     for (int i = 0; i < 128; i++) {
         temp /= 2;
     }
+    *thing = static_cast<uint64_t>(temp);
     thing = reinterpret_cast<uint64_t*>(signature.data + 32);
     temp = assumeInt(m.stack[0]);
     for (int i = 0; i < 192; i++) {
         temp /= 2;
     }
+    *thing = static_cast<uint64_t>(temp);
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
     uint32_t message[32];
     for (int i = 0; i < 32; i++) {
