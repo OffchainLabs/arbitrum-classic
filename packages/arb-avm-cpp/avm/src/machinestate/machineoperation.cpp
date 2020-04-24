@@ -557,48 +557,14 @@ void ecdsa(MachineState& m) {
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
     uint256_t temp;
-    auto* thing = reinterpret_cast<uint64_t*>(signature.data + 24);
-    temp = assumeInt(m.stack[1]);
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 16);
-    temp = assumeInt(m.stack[1]);
-    for (int i = 0; i < 64; i++) {
-        temp /= 2;
+    for (int i = 0; i < 8; i++) {
+        auto* thing = reinterpret_cast<uint64_t*>(signature.data + 8 * i);
+        temp = assumeInt(m.stack[1 - i / 4]);
+        for (int j = 0; j < 192 - 64 * (i % 4); j++) {
+            temp /= 2;
+        }
+        *thing = static_cast<uint64_t>(temp);
     }
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 8);
-    temp = assumeInt(m.stack[1]);
-    for (int i = 0; i < 128; i++) {
-        temp /= 2;
-    }
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data);
-    temp = assumeInt(m.stack[1]);
-    for (int i = 0; i < 192; i++) {
-        temp /= 2;
-    }
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 56);
-    temp = assumeInt(m.stack[0]);
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 48);
-    temp = assumeInt(m.stack[0]);
-    for (int i = 0; i < 64; i++) {
-        temp /= 2;
-    }
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 40);
-    temp = assumeInt(m.stack[0]);
-    for (int i = 0; i < 128; i++) {
-        temp /= 2;
-    }
-    *thing = static_cast<uint64_t>(temp);
-    thing = reinterpret_cast<uint64_t*>(signature.data + 32);
-    temp = assumeInt(m.stack[0]);
-    for (int i = 0; i < 192; i++) {
-        temp /= 2;
-    }
-    *thing = static_cast<uint64_t>(temp);
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
     uint32_t message[32];
     for (int i = 0; i < 32; i++) {
