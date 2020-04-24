@@ -16,7 +16,7 @@
 /* eslint-env node, jest */
 'use strict'
 
-import * as fs from 'fs'
+// import * as fs from 'fs'
 import * as ethers from 'ethers'
 
 const utils = ethers.utils
@@ -27,32 +27,32 @@ import testCases from './test_cases.json'
 const bn = utils.bigNumberify
 const ZEROS_16B = '00000000000000000000000000000000'
 const ZEROS_32B = ZEROS_16B + ZEROS_16B
-const ONES_16B = 'ffffffffffffffffffffffffffffffff'
-const ONES_32B = ONES_16B + ONES_16B
+// const ONES_16B = 'ffffffffffffffffffffffffffffffff'
+// const ONES_32B = ONES_16B + ONES_16B
 const EMPTY_TUPLE_HASH =
   '0x69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287'
 
-describe('Constructors', function() {
+describe('Constructors', function () {
   const nullHash = '0x' + ZEROS_32B
 
-  test('BasicOp', function() {
+  test('BasicOp', function () {
     const bop = new arb.BasicOp(arb.OpCode.Halt)
     expect(bop.opcode).toBe(arb.OpCode.Halt)
   })
 
-  test('ImmOp', function() {
+  test('ImmOp', function () {
     const iop = new arb.ImmOp(0x19, new arb.IntValue(utils.bigNumberify(9)))
     expect(iop.opcode).toBe(0x19)
     expect((iop.value as arb.IntValue).bignum.toNumber()).toBe(9)
   })
 
-  test('IntValue', function() {
+  test('IntValue', function () {
     const iv = new arb.IntValue(utils.bigNumberify(0))
     expect(iv.bignum.toNumber()).toBe(0)
     expect(iv.typeCode()).toBe(0)
   })
 
-  test('CodePointValue', function() {
+  test('CodePointValue', function () {
     const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash)
     expect(cpv.insnNum.toNumber()).toBe(0)
     expect(cpv.op.opcode).toBe(0x60)
@@ -76,7 +76,7 @@ describe('Constructors', function() {
     expect(immv.hash()).toBe(preCalc2)
   })
 
-  test('HashOnlyValue', function() {
+  test('HashOnlyValue', function () {
     const hov = new arb.HashOnlyValue(nullHash, 0)
     expect(hov.hash()).toBe(nullHash)
     expect(hov.size).toStrictEqual(ethers.constants.Zero)
@@ -84,15 +84,15 @@ describe('Constructors', function() {
   })
 })
 
-describe('TupleValue', function() {
-  test('Empty', function() {
+describe('TupleValue', function () {
+  test('Empty', function () {
     const emptyTuple = new arb.TupleValue([])
     expect(emptyTuple.contents).toEqual([])
     expect(emptyTuple.typeCode()).toBe(3)
     expect(emptyTuple.hash()).toBe(EMPTY_TUPLE_HASH)
   })
 
-  test('Two Tuple', function() {
+  test('Two Tuple', function () {
     const twoTuple = new arb.TupleValue([
       new arb.IntValue(utils.bigNumberify(0)),
       new arb.IntValue(utils.bigNumberify(100)),
@@ -104,7 +104,7 @@ describe('TupleValue', function() {
     expect(twoTuple.typeCode()).toBe(3 + 2)
   })
 
-  test('Largest Tuple', function() {
+  test('Largest Tuple', function () {
     const mtsv = new arb.TupleValue(
       Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([]))
     )
@@ -119,13 +119,13 @@ describe('TupleValue', function() {
     expect(mtsv.hash()).toBe(p)
   })
 
-  test('Greater than MAX_TUPLE_SIZE', function() {
+  test('Greater than MAX_TUPLE_SIZE', function () {
     expect(() => new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE + 1))).toThrow(
       'Error TupleValue: illegal size ' + (arb.MAX_TUPLE_SIZE + 1)
     )
   })
 
-  test('get and set', function() {
+  test('get and set', function () {
     const emptyTuple = new arb.TupleValue(
       Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([]))
     )
@@ -157,8 +157,8 @@ describe('TupleValue', function() {
   })
 })
 
-describe('BigTuple', function() {
-  test('getBigTuple and setBigTuple', function() {
+describe('BigTuple', function () {
+  test('getBigTuple and setBigTuple', function () {
     const emptyBigTup = new arb.TupleValue([])
     expect(
       (arb.getBigTuple(emptyBigTup, 93) as arb.IntValue).bignum.toNumber()
@@ -181,8 +181,8 @@ const M_CODE_POINT_SIZE = 1 + 8 + 1 + 1 + 0 + 32 // Without val
 const M_HASH_ONLY_SIZE = 1 + 8 + 32
 const M_TUPLE_SIZE = 1 + 0 // Without other vals
 
-describe('Marshaling', function() {
-  test('marshal and unmarshal IntValue', function() {
+describe('Marshaling', function () {
+  test('marshal and unmarshal IntValue', function () {
     for (const i of [0, 1, 100, '0x9271342394932492394']) {
       const iv = new arb.IntValue(bn(i))
       const marshaledBytes = arb.marshal(iv)
@@ -204,7 +204,7 @@ describe('Marshaling', function() {
     expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(99))).toBe(true)
   })
 
-  test('marshal and unmarshal CodePointValue', function() {
+  test('marshal and unmarshal CodePointValue', function () {
     const pc = ethers.utils.bigNumberify(0)
     const op = new arb.BasicOp(arb.OpCode.Halt)
     const nextHash = '0x' + ZEROS_32B
@@ -232,7 +232,7 @@ describe('Marshaling', function() {
     expect(revImmValue.toString()).toEqual(immTCV.toString())
   })
 
-  test('marshal and unmarshal HashOnlyValue', function() {
+  test('marshal and unmarshal HashOnlyValue', function () {
     // HashOnlyValue should not be used
     const hv = new arb.HashOnlyValue('0x' + ZEROS_32B, 0)
     const marshaledBytes = arb.marshal(hv)
@@ -243,7 +243,7 @@ describe('Marshaling', function() {
     expect(hv.toString()).toEqual('HashOnlyValue(' + hv.hash() + ')')
   })
 
-  test('marshal and unmarshal TupleValue', function() {
+  test('marshal and unmarshal TupleValue', function () {
     // Empty Tuple
     const etv = new arb.TupleValue([])
     const etvm = arb.marshal(etv)
@@ -271,7 +271,7 @@ describe('Marshaling', function() {
     )
   })
 
-  test('illegal inputs', function() {
+  test('illegal inputs', function () {
     // Illegal Value
     expect(() => arb.unmarshal('0x99')).toThrow(
       'Error unmarshaling value no such TYPE: 99'
@@ -279,9 +279,7 @@ describe('Marshaling', function() {
 
     const [tyCodePoint, pc, erroneousOpTy] = [
       '0x01',
-      Array(8)
-        .fill('00')
-        .join(''),
+      Array(8).fill('00').join(''),
       'FF',
     ]
     expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).toThrow(
@@ -292,9 +290,7 @@ describe('Marshaling', function() {
     const ILLEGAL_OP_CODE = 'FF'
     const [tyCodePoint2, pc2, immop2] = [
       '0x01',
-      Array(8)
-        .fill('00')
-        .join(''),
+      Array(8).fill('00').join(''),
       '00',
     ]
     expect(() =>
@@ -307,8 +303,8 @@ describe('Marshaling', function() {
   })
 })
 
-describe('Integration', function() {
-  test('sizedByteRangeToBytes and hexToSizedByteRange', function() {
+describe('Integration', function () {
+  test('sizedByteRangeToBytes and hexToSizedByteRange', function () {
     // Create test value
     const myValue = new arb.TupleValue([
       new arb.TupleValue([]),
@@ -382,7 +378,7 @@ describe('Integration', function() {
     expect(ethers.utils.hexlify(messageReverse)).toBe(expectedMessageBytes)
   })
 
-  test('hexToBytestack and bytestackToBytes', function() {
+  test('hexToBytestack and bytestackToBytes', function () {
     // Create test value
     const messageBytes =
       '0x0b030b03030303030303005ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b0b0303030303030300781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c10b030303030303030032edc9a1000000000000000000000000000000000000000000000000000000000303030090e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180'
@@ -392,9 +388,9 @@ describe('Integration', function() {
   })
 })
 
-describe('test_cases.json', function() {
+describe('test_cases.json', function () {
   for (let i = 0; i < testCases.length; i++) {
-    it(testCases[i].name, function() {
+    it(testCases[i].name, function () {
       const expectedHash = testCases[i].hash
       const value = arb.unmarshal('0x' + testCases[i].value)
       const hash = value.hash().slice(2)

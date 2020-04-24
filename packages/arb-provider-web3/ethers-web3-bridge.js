@@ -42,7 +42,7 @@ function smallHexlify(value) {
 // Convert a Web3 Transaction into an ethers.js Transaction
 function makeTransaction(tx) {
   var result = {}
-  ;['data', 'from', 'gasPrice', 'to', 'value'].forEach(function(key) {
+  ;['data', 'from', 'gasPrice', 'to', 'value'].forEach(function (key) {
     if (tx[key] == null) {
       return
     }
@@ -55,7 +55,7 @@ function makeTransaction(tx) {
 }
 
 function fillCompact(values, result, keys, keepNull) {
-  keys.forEach(function(key) {
+  keys.forEach(function (key) {
     var value = values[key]
     // is this loose comparison a problem?
     if (value == null) {
@@ -71,7 +71,7 @@ function fillCompact(values, result, keys, keepNull) {
 }
 
 function fillCopy(values, result, keys, keepNull) {
-  keys.forEach(function(key) {
+  keys.forEach(function (key) {
     var value = values[key]
     if (value == null) {
       if (!keepNull) {
@@ -156,7 +156,7 @@ function formatReceipt(receipt) {
     ],
     true
   )
-  ;(receipt.logs || []).forEach(function(log) {
+  ;(receipt.logs || []).forEach(function (log) {
     result.logs.push(log)
 
     if (receipt.removed != null) {
@@ -181,14 +181,14 @@ function formatReceipt(receipt) {
 // Convert ethers.js Log into Web3 Log
 function formatLog(log) {
   var result = {}
-  ;['blockNumber', 'logIndex', 'transactionIndex'].forEach(function(key) {
+  ;['blockNumber', 'logIndex', 'transactionIndex'].forEach(function (key) {
     if (log[key] == null) {
       return
     }
     result[key] = smallHexlify(log[key])
   })
   ;['address', 'blockHash', 'data', 'topics', 'transactionHash'].forEach(
-    function(key) {
+    function (key) {
       if (log[key] == null) {
         return
       }
@@ -203,14 +203,14 @@ function FilterManager(provider) {
   utils.defineProperty(this, 'filters', {})
 
   var nextFilterId = 1
-  utils.defineProperty(this, '_getFilterId', function() {
+  utils.defineProperty(this, '_getFilterId', function () {
     return nextFilterId++
   })
 }
 
-FilterManager.prototype.addFilter = function(onblock, getLogs) {
+FilterManager.prototype.addFilter = function (onblock, getLogs) {
   if (!getLogs) {
-    getLogs = function() {
+    getLogs = function () {
       return Promise.resolve([])
     }
   }
@@ -221,16 +221,16 @@ FilterManager.prototype.addFilter = function(onblock, getLogs) {
   var self = this
 
   function emitBlock(blockNumber) {
-    seq = seq.then(function(result) {
-      return new Promise(function(resolve, reject) {
+    seq = seq.then(function (result) {
+      return new Promise(function (resolve, reject) {
         function check() {
           self.provider.getBlock(blockNumber).then(
-            function(block) {
-              onblock(block, result).then(function(result) {
+            function (block) {
+              onblock(block, result).then(function (result) {
                 resolve(result)
               })
             },
-            function(error) {
+            function (error) {
               // Does not exist yet; try again in a second
               setTimeout(check, 1000)
             }
@@ -242,7 +242,7 @@ FilterManager.prototype.addFilter = function(onblock, getLogs) {
   }
 
   this.filters[smallHexlify(filterId)] = {
-    getChanges: function() {
+    getChanges: function () {
       var result = seq
 
       // Reset the filter results
@@ -251,7 +251,7 @@ FilterManager.prototype.addFilter = function(onblock, getLogs) {
     },
     getLogs: getLogs,
     lastPoll: Date.now(),
-    uninstall: function() {
+    uninstall: function () {
       self.provider.removeListener('block', emitBlock)
       seq = null
     },
@@ -262,7 +262,7 @@ FilterManager.prototype.addFilter = function(onblock, getLogs) {
   return smallHexlify(filterId)
 }
 
-FilterManager.prototype.removeFilter = function(filterId) {
+FilterManager.prototype.removeFilter = function (filterId) {
   var filter = this.filters[smallHexlify(filterId)]
   if (!filter) {
     return false
@@ -271,7 +271,7 @@ FilterManager.prototype.removeFilter = function(filterId) {
   return true
 }
 
-FilterManager.prototype.getChanges = function(filterId) {
+FilterManager.prototype.getChanges = function (filterId) {
   var filter = this.filters[smallHexlify(filterId)]
   if (!filter) {
     Promise.resolve([])
@@ -279,7 +279,7 @@ FilterManager.prototype.getChanges = function(filterId) {
   return filter.getChanges()
 }
 
-FilterManager.prototype.getLogs = function(filterId) {
+FilterManager.prototype.getLogs = function (filterId) {
   var filter = this.filters[smallHexlify(filterId)]
   if (!filter) {
     return Promise.resolve([])
@@ -297,17 +297,17 @@ function ProviderBridge(provider, signer) {
   this._signer = signer || null
 
   var self = this
-  setInterval(function() {
+  setInterval(function () {
     if (!this._signer) {
       this._address = null
       return
     }
 
     this._signer.getAddress().then(
-      function(address) {
+      function (address) {
         this._address = address
       },
-      function(error) {
+      function (error) {
         this._address = null
       }
     )
@@ -324,26 +324,26 @@ function ProviderBridge(provider, signer) {
   utils.defineProperty(this, 'filterManager', new FilterManager(provider))
 }
 
-utils.defineProperty(ProviderBridge.prototype, '_drainQueue', function() {
+utils.defineProperty(ProviderBridge.prototype, '_drainQueue', function () {
   var self = this
-  this._queue.forEach(function(operation) {
-    setTimeout(function() {
+  this._queue.forEach(function (operation) {
+    setTimeout(function () {
       self._sendAsync(JSON.parse(operation.payload), operation.callback)
     }, 0)
   })
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'connectWeb3', function(web3) {
+utils.defineProperty(ProviderBridge.prototype, 'connectWeb3', function (web3) {
   this._web3 = web3
   this._drainQueue()
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'connectEthers', function(
+utils.defineProperty(ProviderBridge.prototype, 'connectEthers', function (
   provider,
   signer
 ) {
   if (!signer) {
-    var missingSigner = function() {
+    var missingSigner = function () {
       return Promise.reject('no signer connected')
     }
 
@@ -360,7 +360,7 @@ utils.defineProperty(ProviderBridge.prototype, 'connectEthers', function(
   this._drainQueue()
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'sendAsync', function(
+utils.defineProperty(ProviderBridge.prototype, 'sendAsync', function (
   payload,
   callback
 ) {
@@ -374,7 +374,7 @@ utils.defineProperty(ProviderBridge.prototype, 'sendAsync', function(
   this._sendAsync(payload, callback)
 })
 
-utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
+utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
   payload,
   callback
 ) {
@@ -387,17 +387,17 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
   if (Array.isArray(payload)) {
     var promises = []
-    payload.forEach(function(payload) {
+    payload.forEach(function (payload) {
       promises.push(
-        new Promise(function(resolve, reject) {
-          self.sendAsync(payload, function(error, result) {
+        new Promise(function (resolve, reject) {
+          self.sendAsync(payload, function (error, result) {
             resolve(error || result)
           })
         })
       )
     })
 
-    Promise.all(promises).then(function(result) {
+    Promise.all(promises).then(function (result) {
       callback(null, result)
     })
 
@@ -446,10 +446,10 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_accounts':
       signer.getAddress().then(
-        function(address) {
+        function (address) {
           respond([address.toLowerCase()])
         },
-        function(error) {
+        function (error) {
           respond([])
         }
       )
@@ -461,22 +461,22 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'personal_sign':
       signer.getAddress().then(
-        function(address) {
+        function (address) {
           if (utils.getAddress(params[1]) !== address) {
             respondError('invalid from address', Errors.InvalidParams)
             return
           }
 
           signer.signMessage(params[0]).then(
-            function(signature) {
+            function (signature) {
               respond(signature)
             },
-            function(error) {
+            function (error) {
               respondError('eth_sign error', Errors.InternalError)
             }
           )
         },
-        function(error) {
+        function (error) {
           respondError('no account', Errors.InvalidParams)
         }
       )
@@ -485,21 +485,21 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_sendTransaction':
       signer.getAddress().then(
-        function(address) {
+        function (address) {
           if (utils.getAddress(params[0].from) !== address) {
             respondError('invalid from address', Errors.InvalidParams)
           }
           signer.sendTransaction(params[0]).then(
-            function(tx) {
+            function (tx) {
               respond(tx.hash)
             },
-            function(error) {
+            function (error) {
               console.error('eth_sendTransaction error', error)
               respondError('eth_sendTransaction error', Errors.InternalError)
             }
           )
         },
-        function(error) {
+        function (error) {
           respondError('eth_sendTransaction error', Errors.InternalError)
         }
       )
@@ -516,7 +516,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     case 'net_peerCount':
     case 'net_version':
     case 'eth_protocolVersion':
-      setTimeout(function() {
+      setTimeout(function () {
         respond(self.send(payload).result)
       }, 0)
       break
@@ -524,13 +524,13 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     // Blockchain state
 
     case 'eth_blockNumber':
-      provider.getBlockNumber().then(function(blockNumber) {
+      provider.getBlockNumber().then(function (blockNumber) {
         respond(smallHexlify(blockNumber))
       })
       break
 
     case 'eth_gasPrice':
-      provider.getGasPrice().then(function(gasPrice) {
+      provider.getGasPrice().then(function (gasPrice) {
         respond(smallHexlify(gasPrice))
       })
       break
@@ -538,19 +538,19 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     // Accounts Actions
 
     case 'eth_getBalance':
-      provider.getBalance(params[0], params[1]).then(function(balance) {
+      provider.getBalance(params[0], params[1]).then(function (balance) {
         respond(smallHexlify(balance))
       })
       break
 
     case 'eth_getCode':
-      provider.getCode(params[0], params[1]).then(function(code) {
+      provider.getCode(params[0], params[1]).then(function (code) {
         respond(code)
       })
       break
 
     case 'eth_getTransactionCount':
-      provider.getTransactionCount(params[0], params[1]).then(function(nonce) {
+      provider.getTransactionCount(params[0], params[1]).then(function (nonce) {
         respond(smallHexlify(nonce))
       })
       break
@@ -559,10 +559,10 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_call':
       provider.call(makeTransaction(params[0]), params[1]).then(
-        function(data) {
+        function (data) {
           respond(data)
         },
-        function(error) {
+        function (error) {
           console.error('eth_call error', error)
           respondError('eth_call error', Errors.InternalError)
         }
@@ -572,7 +572,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     case 'eth_estimateGas':
       provider
         .estimateGas(makeTransaction(params[0]), params[1])
-        .then(function(data) {
+        .then(function (data) {
           respond(data)
         })
       break
@@ -580,7 +580,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     case 'eth_getStorageAt':
       provider
         .getStorageAt(params[0], params[1], params[2])
-        .then(function(data) {
+        .then(function (data) {
           respond(data)
         })
       break
@@ -589,7 +589,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_getBlockByHash':
     case 'eth_getBlockByNumber':
-      provider.getBlock(params[0]).then(function(block) {
+      provider.getBlock(params[0]).then(function (block) {
         var result = formatBlock(block)
 
         if (params[1]) {
@@ -598,14 +598,14 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
           var seq = Promise.resolve()
 
           if (block.transactions) {
-            block.transactions.forEach(function(hash) {
-              return provider.getTransaction(hash).then(function(tx) {
+            block.transactions.forEach(function (hash) {
+              return provider.getTransaction(hash).then(function (tx) {
                 result.transactions.push(tx)
               })
             })
           }
 
-          seq.then(function() {
+          seq.then(function () {
             respond(result)
           })
         } else {
@@ -619,7 +619,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_getBlockTransactionCountByHash':
     case 'eth_getBlockTransactionCountByNumber':
-      provider.getBlock(params[0]).then(function(block) {
+      provider.getBlock(params[0]).then(function (block) {
         respond(
           smallHexlify(block.transactions ? block.transactions.length : 0)
         )
@@ -627,7 +627,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
       break
 
     case 'eth_getTransactionByHash':
-      provider.getTransaction(params[0]).then(function(tx) {
+      provider.getTransaction(params[0]).then(function (tx) {
         if (tx != null) {
           tx = formatTransaction(tx)
         }
@@ -637,7 +637,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_getTransactionByBlockHashAndIndex':
     case 'eth_getTransactionByBlockNumberAndIndex':
-      provider.getBlock(params[0]).then(function(block) {
+      provider.getBlock(params[0]).then(function (block) {
         if (block == null) {
           block = {}
         }
@@ -646,7 +646,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
         }
         var hash = block.transactions[params[1]]
         if (hash) {
-          provider.getTransaction(hash).then(function(tx) {
+          provider.getTransaction(hash).then(function (tx) {
             if (tx != null) {
               tx = formatTransaction(tx)
             }
@@ -659,7 +659,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
       break
 
     case 'eth_getTransactionReceipt':
-      provider.getTransactionReceipt(params[0]).then(function(receipt) {
+      provider.getTransactionReceipt(params[0]).then(function (receipt) {
         if (receipt != null) {
           // TODO formatReceipt nulls out logIndex
           receipt = formatReceipt(receipt)
@@ -681,7 +681,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     // Blockchain Manipulation
 
     case 'eth_sendRawTransaction':
-      provider.sendTransaction(params[0]).then(function(hash) {
+      provider.sendTransaction(params[0]).then(function (hash) {
         respond(hash)
       })
       break
@@ -697,9 +697,9 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
     // Filters
 
     case 'eth_newFilter':
-      ;(function(filter) {
+      ;(function (filter) {
         function getLogs(filter) {
-          return provider.getLogs(filter).then(function(result) {
+          return provider.getLogs(filter).then(function (result) {
             for (var i = 0; i < result.length; i++) {
               result[i] = formatLog(result[i])
             }
@@ -709,7 +709,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
         respond(
           self.filterManager.addFilter(
-            function(block, result) {
+            function (block, result) {
               var blockFilter = {
                 fromBlock: block.number,
                 toBlock: block.number,
@@ -720,22 +720,22 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
               if (filter.topics) {
                 blockFilter.topics = filter.topics
               }
-              return provider.getLogs(blockFilter).then(function(logs) {
-                logs.forEach(function(log) {
+              return provider.getLogs(blockFilter).then(function (logs) {
+                logs.forEach(function (log) {
                   log.blockHash = block.hash
                   result.push(formatLog(log))
                 })
                 return result
               })
             },
-            function() {
-              return provider.getLogs(filter).then(function(logs) {
+            function () {
+              return provider.getLogs(filter).then(function (logs) {
                 var seq = Promise.resolve(logs)
-                logs.forEach(function(log) {
-                  seq = seq.then(function() {
+                logs.forEach(function (log) {
+                  seq = seq.then(function () {
                     return provider
                       .getBlock(log.blockNumber)
-                      .then(function(block) {
+                      .then(function (block) {
                         log.blockHash = block.hash
                         return logs
                       })
@@ -751,8 +751,8 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_newPendingTransactionFilter':
       respond(
-        this.filterManager.addFilter(function(block, result) {
-          ;(block.transactions || []).forEach(function(hash) {
+        this.filterManager.addFilter(function (block, result) {
+          ;(block.transactions || []).forEach(function (hash) {
             result.push(hash)
           })
           result.push(block.hash)
@@ -763,7 +763,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
 
     case 'eth_newBlockFilter':
       respond(
-        this.filterManager.addFilter(function(block, result) {
+        this.filterManager.addFilter(function (block, result) {
           result.push(block.hash)
           return Promise.resolve(result)
         })
@@ -775,13 +775,13 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
       break
 
     case 'eth_getFilterChanges':
-      this.filterManager.getChanges(params[0]).then(function(result) {
+      this.filterManager.getChanges(params[0]).then(function (result) {
         respond(result)
       })
       break
 
     case 'eth_getFilterLogs':
-      this.filterManager.getLogs(params[0]).then(function(result) {
+      this.filterManager.getLogs(params[0]).then(function (result) {
         respond(result)
       })
       break
@@ -791,7 +791,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(
   }
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'send', function(payload) {
+utils.defineProperty(ProviderBridge.prototype, 'send', function (payload) {
   if (this._web3) {
     return this._web3.send(payload)
   }

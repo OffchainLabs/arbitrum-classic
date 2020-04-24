@@ -43,13 +43,13 @@ function provider(outputFolder, buildLocation, options, should_compile) {
 
   const contractCode = {}
 
-  const storageTrackFuncGen = function(address_string) {
-    return function(err, code) {
+  const storageTrackFuncGen = function (address_string) {
+    return function (err, code) {
       contractCode[address_string] = code
     }
   }
 
-  arbProvider.engine.on('block', function(block) {
+  arbProvider.engine.on('block', function (block) {
     for (const [address_string, value] of Object.entries(storage)) {
       arbProvider.engine.manager.eth_getCode(
         address_string,
@@ -61,8 +61,8 @@ function provider(outputFolder, buildLocation, options, should_compile) {
 
   const storage = {}
   const netID = arbProvider.options.network_id
-  arbProvider.engine.manager.waitForInitialization(function(err, state) {
-    state.blockchain.vm.on('step', function(info) {
+  arbProvider.engine.manager.waitForInitialization(function (err, state) {
+    state.blockchain.vm.on('step', function (info) {
       const address_string = '0x' + info.address.toString('hex')
       if (!(address_string in storage)) {
         storage[address_string] = {}

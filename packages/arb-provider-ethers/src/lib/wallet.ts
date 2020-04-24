@@ -17,9 +17,7 @@
 'use strict'
 
 import { ArbClient } from './client'
-import { Contract } from './contract'
 import { ArbProvider } from './provider'
-import * as ArbValue from './value'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
 
@@ -136,17 +134,16 @@ export class ArbWallet extends ethers.Signer {
 
   public async depositERC721(
     to: string,
-    tokenAddress: string,
-    value: ethers.utils.BigNumberish
+    erc721: string,
+    tokenId: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const tokenValue = ethers.utils.bigNumberify(value)
     const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
       chain,
       to,
-      tokenAddress,
-      value
+      erc721,
+      tokenId
     )
     return this.provider._wrapTransaction(tx, tx.hash)
   }
@@ -155,7 +152,6 @@ export class ArbWallet extends ethers.Signer {
     to: string,
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const valueNum = ethers.utils.bigNumberify(value)
     const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositEthMessage(chain, to, { value })
@@ -168,7 +164,6 @@ export class ArbWallet extends ethers.Signer {
     data: string
   ): Promise<ethers.providers.TransactionResponse> {
     const vmId = await this.provider.getVmID()
-    const from = await this.getAddress()
     const valueNum = ethers.utils.bigNumberify(value)
     const globalInbox = await this.globalInboxConn()
     const seq = await this.generateSeq()

@@ -12,8 +12,8 @@
   },
   "scripts": {
     "test": "jest --config jest.config.js",
-    "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-    "lint": "yarn run eslint ."
+    "format": "prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
+    "lint": "eslint ."
   },
   "bugs": {
     "url": "https://github.com/OffchainLabs/arbitrum/issues"
@@ -26,11 +26,7 @@
     "ethers-utils": "^2.1.11"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.10.0",
-    "eslint-plugin-prettier": "^3.1.2",
     "jest": "^25.1.0",
-    "jest-junit": "^10.0.0",
-    "prettier": "^1.19.1"
+    "jest-junit": "^10.0.0"
   }
 }
