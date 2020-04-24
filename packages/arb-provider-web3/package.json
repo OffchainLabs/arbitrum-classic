@@ -1,6 +1,6 @@
 {
   "name": "arb-provider-web3",
-  "version": "0.4.3",
+  "version": "0.4.6",
   "description": "Arbitrum provider for web3",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -20,7 +20,7 @@
   },
   "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "arb-provider-ethers": "^0.4.3",
+    "arb-provider-ethers": "0.4.6",
     "ethers": "^4.0.44",
     "ethers-providers": "^2.1.19",
     "ethers-utils": "^2.1.11"
