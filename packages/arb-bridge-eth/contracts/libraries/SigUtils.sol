@@ -114,7 +114,7 @@ library SigUtils {
     function recoverAddress(
         bytes32 _messageHash,
         bytes memory _signature,
-        uint256 _offset
+        uint256 _index
     )
         internal
         pure
@@ -125,7 +125,7 @@ library SigUtils {
         bytes32 s;
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        (v, r, s) = parseSignature(_signature, _offset);
+        (v, r, s) = parseSignature(_signature, _index);
         return ecrecover(
             prefixedHash,
             v,

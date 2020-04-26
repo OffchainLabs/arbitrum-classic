@@ -14,87 +14,87 @@
  * limitations under the License.
  */
 
-const GlobalInbox = artifacts.require("GlobalInbox");
+const GlobalInbox = artifacts.require('GlobalInbox')
 
-const eutil = require("ethereumjs-util");
+const eutil = require('ethereumjs-util')
 
-contract("GlobalInbox", accounts => {
-  it("should make initial call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+contract('GlobalInbox', accounts => {
+  it('should make initial call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
-      "0x"
-    );
-  });
+      '0x'
+    )
+  })
 
-  it("should make second call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+  it('should make second call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
-      "0x"
-    );
-  });
+      '0x'
+    )
+  })
 
-  it("should make bigger call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+  it('should make bigger call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
       // 64 bytes of data
-      "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    );
-  });
+      '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    )
+  })
 
-  it("should make a batch call", async () => {
-    let chain = "0xffffffffffffffffffffffffffffffffffffffff";
+  it('should make a batch call', async () => {
+    let chain = '0xffffffffffffffffffffffffffffffffffffffff'
     let txDataTemplate = {
-      to: "0xffffffffffffffffffffffffffffffffffffffff",
+      to: '0xffffffffffffffffffffffffffffffffffffffff',
       sequenceNum: 2000,
       value: 54254535454544,
-      messageData: "0x"
-    };
-
-    let transactionsData = [];
-    for (let i = 0; i < 100; i++) {
-      transactionsData.push(txDataTemplate);
+      messageData: '0x1254',
     }
 
-    let tos = [];
-    let sequenceNums = [];
-    let values = [];
-    let messageData = "0x";
-    let messageLengths = [];
-    let signatures = "0x";
+    let transactionsData = []
+    for (let i = 0; i < 100; i++) {
+      transactionsData.push(txDataTemplate)
+    }
+
+    let tos = []
+    let sequenceNums = []
+    let values = []
+    let messageData = '0x'
+    let messageLengths = []
+    let signatures = '0x'
 
     for (var i = 0; i < transactionsData.length; i++) {
-      let txData = transactionsData[i];
+      let txData = transactionsData[i]
 
       let txHash = web3.utils.soliditySha3(
-        { t: "address", v: chain },
-        { t: "address", v: txData["to"] },
-        { t: "uint256", v: txData["sequenceNum"] },
-        { t: "uint256", v: txData["value"] },
-        { t: "bytes", v: txData["messageData"] }
-      );
-      let signedTxHash = await web3.eth.sign(txHash, accounts[0]);
-      tos.push(txData["to"]);
-      sequenceNums.push(txData["sequenceNum"]);
-      values.push(txData["value"]);
-      messageLengths.push((txData["messageData"].length - 2) / 2);
-      messageData += txData["messageData"].slice(2);
-      signatures += signedTxHash.slice(2);
+        { t: 'address', v: chain },
+        { t: 'address', v: txData['to'] },
+        { t: 'uint256', v: txData['sequenceNum'] },
+        { t: 'uint256', v: txData['value'] },
+        { t: 'bytes', v: txData['messageData'] }
+      )
+      let signedTxHash = await web3.eth.sign(txHash, accounts[0])
+      tos.push(txData['to'])
+      sequenceNums.push(txData['sequenceNum'])
+      values.push(txData['value'])
+      messageLengths.push((txData['messageData'].length - 2) / 2)
+      messageData += txData['messageData'].slice(2)
+      signatures += signedTxHash.slice(2)
     }
 
-    let global_inbox = await GlobalInbox.deployed();
-    await global_inbox.deliverTransactionBatch(
+    let global_inbox = await GlobalInbox.deployed()
+    let tx = await global_inbox.deliverTransactionBatch(
       chain,
       tos,
       sequenceNums,
@@ -102,6 +102,43 @@ contract("GlobalInbox", accounts => {
       messageLengths,
       messageData,
       signatures
-    );
-  });
-});
+    )
+
+    assert.equal(tx.logs.length, 100)
+
+    for (var i = 0; i < tx.logs.length; i++) {
+      assert.equal(
+        tx.logs[i].event,
+        'TransactionMessageDelivered',
+        'Incorrect event type'
+      )
+      assert.equal(
+        tx.logs[i].args.chain.toLowerCase(),
+        chain,
+        'Incorrect chain'
+      )
+      assert.equal(
+        tx.logs[i].args.to.toLowerCase(),
+        transactionsData[i]['to'],
+        'Incorrect to address'
+      )
+      assert.equal(
+        tx.logs[i].args.seqNumber,
+        transactionsData[i]['sequenceNum'],
+        'Incorrect sequence num'
+      )
+      assert.equal(
+        tx.logs[i].args.value,
+        transactionsData[i]['value'],
+        'Incorrect value'
+      )
+      assert.equal(
+        tx.logs[i].args.data,
+        transactionsData[i]['messageData'],
+        'Incorrect message data'
+      )
+
+      assert.equal(tx.logs[i].args.from, accounts[0], 'Incorrect from address')
+    }
+  })
+})
