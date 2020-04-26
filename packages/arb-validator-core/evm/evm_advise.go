@@ -62,7 +62,8 @@ func (e Return) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -84,7 +85,8 @@ func (e Revert) String() string {
 	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", returnVal: ")
 	sb.WriteString(hexutil.Encode(e.ReturnVal))
-	sb.WriteString(")")
+	sb.WriteString(") from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -111,7 +113,8 @@ func (e Stop) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -130,7 +133,8 @@ func (e BadSequenceNum) String() string {
 	var sb strings.Builder
 	sb.WriteString("BadSequenceNum(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -149,7 +153,8 @@ func (e Invalid) String() string {
 	var sb strings.Builder
 	sb.WriteString("Invalid(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 

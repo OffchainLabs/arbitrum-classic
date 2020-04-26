@@ -37,6 +37,7 @@ const (
 )
 
 type UnsentMessage interface {
+	fmt.Stringer
 	Type() MessageType
 	AsValue() value.Value
 	GetFuncName() string

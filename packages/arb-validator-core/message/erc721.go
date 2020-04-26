@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -30,6 +31,15 @@ type ERC721 struct {
 	From         common.Address
 	TokenAddress common.Address
 	Id           *big.Int
+}
+
+func (m ERC721) String() string {
+	return fmt.Sprintf("ERC721(to: %v, from: %v, token: %v, id: %v)",
+		m.To,
+		m.From,
+		m.TokenAddress,
+		m.Id,
+	)
 }
 
 func (m ERC721) Equals(o ERC721) bool {

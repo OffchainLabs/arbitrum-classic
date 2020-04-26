@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -30,6 +31,15 @@ type ERC20 struct {
 	From         common.Address
 	TokenAddress common.Address
 	Value        *big.Int
+}
+
+func (m ERC20) String() string {
+	return fmt.Sprintf("ERC20(to: %v, from: %v, token: %v, value: %v)",
+		m.To,
+		m.From,
+		m.TokenAddress,
+		m.Value,
+	)
 }
 
 func (m ERC20) Equals(o ERC20) bool {
