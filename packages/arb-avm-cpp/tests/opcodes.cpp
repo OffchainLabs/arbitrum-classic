@@ -763,62 +763,55 @@ TEST_CASE("ECDSA opcode is correct") {
         uint32_t msg[32];
         unsigned char seckey[32];
         secp256k1_pubkey pubkey;
-        uint64_t* thing = reinterpret_cast<uint64_t*>(seckey);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(seckey + 8);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(seckey + 16);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(seckey + 24);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(msg);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(msg + 8);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(msg + 16);
-        *thing = rand();
-        thing = reinterpret_cast<uint64_t*>(msg + 24);
-        *thing = rand();
+        auto* current_loc = reinterpret_cast<uint64_t*>(seckey);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(seckey + 8);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(seckey + 16);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(seckey + 24);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(msg);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(msg + 8);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(msg + 16);
+        *current_loc = rand();
+        current_loc = reinterpret_cast<uint64_t*>(msg + 24);
+        *current_loc = rand();
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
         REQUIRE(secp256k1_ecdsa_sign_recoverable(
                     ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
-                    NULL, NULL) == 1);
+                    nullptr, nullptr) == 1);
         s.stack.push(value(sig.data[64]));
-        uint256_t temp = 0;
+        uint256_t stack_value = 0;
         int counter = 0;
         for (auto& value : msg) {
-            for (int i = 0; i < 32; i++) {
-                temp *= 2;
-            }
-            temp += value;
+            stack_value <<= 32;
+            stack_value += value;
             counter++;
             if (counter == 8) {
                 counter = 0;
-                s.stack.push(temp);
-                temp = 0;
+                s.stack.push(stack_value);
+                stack_value = 0;
             }
         }
         for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 64; j++) {
-                temp *= 2;
-            }
-            temp += *reinterpret_cast<uint64_t*>(sig.data + i * 8);
+            stack_value <<= 64;
+            stack_value += *reinterpret_cast<uint64_t*>(sig.data + i * 8);
             if (i % 4 == 3) {
-                s.stack.push(temp);
-                temp = 0;
+                s.stack.push(stack_value);
+                stack_value = 0;
             }
         }
         s.runOp(OpCode::ECDSA);
         REQUIRE(s.stack[0] == value(1));
         secp256k1_pubkey evaluated_key;
         for (int i = 0; i < 8; i++) {
-            auto* stuff =
+            current_loc =
                 reinterpret_cast<uint64_t*>(evaluated_key.data + (8 * i));
-            temp = assumeInt(s.stack[1 + (i / 4)]);
-            for (int j = 0; j < 64 * (i % 4); j++) {
-                temp /= 2;
-            }
-            *stuff = static_cast<uint64_t>(temp);
+            stack_value = assumeInt(s.stack[1 + (i / 4)]) >> (64 * (i % 4));
+            *current_loc = static_cast<uint64_t>(stack_value);
         }
         bool identical_keys = true;
         for (int i = 0; i < 64; i++) {

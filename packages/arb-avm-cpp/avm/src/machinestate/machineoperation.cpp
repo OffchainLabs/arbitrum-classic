@@ -558,12 +558,9 @@ void ecdsa(MachineState& m) {
     secp256k1_ecdsa_recoverable_signature signature;
     uint256_t temp;
     for (int i = 0; i < 8; i++) {
-        auto* thing = reinterpret_cast<uint64_t*>(signature.data + 8 * i);
-        temp = assumeInt(m.stack[1 - i / 4]);
-        for (int j = 0; j < 192 - 64 * (i % 4); j++) {
-            temp /= 2;
-        }
-        *thing = static_cast<uint64_t>(temp);
+        auto* sig_loc = reinterpret_cast<uint64_t*>(signature.data + 8 * i);
+        temp = assumeInt(m.stack[1 - i / 4]) >> (192 - 64 * (i % 4));
+        *sig_loc = static_cast<uint64_t>(temp);
     }
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
     uint32_t message[32];
@@ -578,9 +575,7 @@ void ecdsa(MachineState& m) {
     assumeInt(m.stack[0]) = 0;
     assumeInt(m.stack[1]) = 0;
     for (int i = 7; i >= 0; i--) {
-        for (int j = 0; j < 64; j++) {
-            assumeInt(m.stack[i / 4]) *= 2;
-        }
+        assumeInt(m.stack[i / 4]) <<= 64;
         assumeInt(m.stack[i / 4]) +=
             *reinterpret_cast<uint64_t*>(pubkey.data + i * 8);
     }
