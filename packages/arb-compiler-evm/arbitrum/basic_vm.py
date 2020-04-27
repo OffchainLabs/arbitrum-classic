@@ -359,7 +359,8 @@ class BasicVM:
         self.stack.push(big_endian_to_int(res))
 
     def ecdsa(self):
-        self.push(0x80)
+        print("ECDSA does not yet support native python execution")
+        exit()
 
     def gettime(self):
         self.stack.push(self.env.time_bounds)
