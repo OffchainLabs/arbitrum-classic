@@ -236,7 +236,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}},
 
-    {OpCode::ECDSA, {true, true}}};
+    {OpCode::ECDSA, {true, true, true, true, true, true, true}}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {static_cast<OpCode>(0), {}},
