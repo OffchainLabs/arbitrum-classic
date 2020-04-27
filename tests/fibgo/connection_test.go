@@ -13,6 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -163,7 +167,16 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	manager2.AddListener(validatorListener2)
 
 	go func() {
-		err := rollupvalidator.LaunchRPC(manager2, "1235")
+		validatorServer := rollupvalidator.NewRPCServer(manager2, time.Second*60)
+		s := rpc.NewServer()
+		s.RegisterCodec(json.NewCodec(), "application/json")
+		s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
+
+		if err := s.RegisterService(validatorServer, "Validator"); err != nil {
+			t.Fatal(err)
+		}
+
+		err := utils.LaunchRPC(s, "1235")
 		if err != nil {
 			t.Fatal(err)
 		}
