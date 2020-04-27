@@ -50,6 +50,7 @@ var rollupAssertedID ethcommon.Hash
 var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
 var transactionMessageDeliveredID ethcommon.Hash
+var transactionMessageBatchDeliveredID ethcommon.Hash
 var ethDepositMessageDeliveredID ethcommon.Hash
 var depositERC20MessageDeliveredID ethcommon.Hash
 var depositERC721MessageDeliveredID ethcommon.Hash
@@ -76,6 +77,7 @@ func init() {
 	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
 
 	transactionMessageDeliveredID = parsedInbox.Events["TransactionMessageDelivered"].ID()
+	transactionMessageBatchDeliveredID = parsedInbox.Events["TransactionMessageBatchDelivered"].ID()
 	ethDepositMessageDeliveredID = parsedInbox.Events["EthDepositMessageDelivered"].ID()
 	depositERC20MessageDeliveredID = parsedInbox.Events["ERC20DepositMessageDelivered"].ID()
 	depositERC721MessageDeliveredID = parsedInbox.Events["ERC721DepositMessageDelivered"].ID()
@@ -205,6 +207,33 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(chainInfo arbbridge.Ch
 			Message:   msg,
 		}, nil
 
+	} else if ethLog.Topics[0] == transactionMessageBatchDeliveredID {
+		val, err := vm.GlobalInbox.ParseTransactionMessageBatchDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		messages := make([]message.InboxMessage, 0, len(val.Tos))
+		dataOffset := uint64(0)
+		for i := range val.Tos {
+			messages = append(messages, message.DeliveredTransaction{
+				Transaction: message.Transaction{
+					Chain:       common.NewAddressFromEth(vm.rollupAddress),
+					To:          common.NewAddressFromEth(val.Tos[i]),
+					From:        common.NewAddressFromEth(val.Froms[i]),
+					SequenceNum: val.SeqNumbers[i],
+					Value:       val.Values[i],
+					Data:        val.Data[dataOffset : dataOffset+val.MessageLengths[i].Uint64()],
+				},
+				BlockNum: common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			})
+			dataOffset += val.MessageLengths[i].Uint64()
+		}
+
+		return arbbridge.MessageBatchDeliveredEvent{
+			ChainInfo: chainInfo,
+			Messages:  messages,
+		}, nil
 	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
 		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
 		if err != nil {

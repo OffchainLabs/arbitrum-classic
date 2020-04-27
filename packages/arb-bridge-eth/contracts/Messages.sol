@@ -34,7 +34,7 @@ library Messages {
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes memory data,
+        bytes32 dataHash,
         uint256 blockNumber,
         uint256 timestamp
     )
@@ -50,7 +50,7 @@ library Messages {
                 from,
                 seqNumber,
                 value,
-                data,
+                dataHash,
                 blockNumber,
                 timestamp
             )

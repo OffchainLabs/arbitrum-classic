@@ -108,7 +108,7 @@ contract MessagesChallenge is BisectionChallenge {
             _from,
             _seqNumber,
             _value,
-            _data,
+            keccak256(_data),
             _blockNumber,
             _timestamp
         );

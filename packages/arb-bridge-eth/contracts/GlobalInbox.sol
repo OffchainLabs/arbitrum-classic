@@ -240,84 +240,59 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         public
     {
         uint256 messageCount = _tos.length;
-        uint256 dataOffset = 0;
+        uint256 dataOffset = 0x20;
         require(_seqNumbers.length == messageCount, "wrong input length");
         require(_values.length == messageCount, "wrong input length");
         require(_messageLengths.length == messageCount, "wrong input length");
 
-        Inbox storage inbox = inboxes[_chain];
-        bytes32 inboxVal = inbox.value;
+        bytes32 inboxVal = inboxes[_chain].value;
+
+        address[] memory froms = new address[](messageCount);
 
         for (uint256 i = 0; i < messageCount; i++) {
-            uint256 messageLength = _messageLengths[i];
-            bytes memory messageData = _data.slice(dataOffset, messageLength);
-            dataOffset += messageLength;
-
-            bytes32 messageHash = deliverTransactionSingle(
-                _chain,
-                _tos[i],
-                _seqNumbers[i],
-                _values[i],
-                messageData,
+            bytes32 dataHash;
+            assembly {
+                dataHash := keccak256(add(_data, dataOffset), mload(add(add(_messageLengths, 0x20), mul(i, 32))))
+            }
+            dataOffset += _messageLengths[i];
+            froms[i] = SigUtils.recoverAddress(
+                keccak256(
+                    abi.encodePacked(
+                        _chain,
+                        _tos[i],
+                        _seqNumbers[i],
+                        _values[i],
+                        dataHash
+                    )
+                ),
                 _signatures,
                 i
             );
-
+            bytes32 messageHash = Messages.transactionHash(
+                _chain,
+                _tos[i],
+                froms[i],
+                _seqNumbers[i],
+                _values[i],
+                dataHash,
+                block.number,
+                block.timestamp
+            );
             inboxVal = Protocol.addMessageToInbox(inboxVal, messageHash);
         }
 
-        inbox.value = inboxVal;
-        inbox.count += messageCount;
-    }
+        inboxes[_chain].value = inboxVal;
+        inboxes[_chain].count += messageCount;
 
-    function deliverTransactionSingle(
-        address _chain,
-        address _to,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes memory _messageData,
-        bytes memory _signatures,
-        uint256 index
-    )
-        private
-        returns(bytes32)
-    {
-        address from = SigUtils.recoverAddress(
-            keccak256(
-                abi.encodePacked(
-                    _chain,
-                    _to,
-                    _seqNumber,
-                    _value,
-                    _messageData
-                )
-            ),
-            _signatures,
-            index
-        );
-
-        bytes32 messageHash = Messages.transactionHash(
+        emit IGlobalInbox.TransactionMessageBatchDelivered(
             _chain,
-            _to,
-            from,
-            _seqNumber,
-            _value,
-            _messageData,
-            block.number,
-            block.timestamp
+            _tos,
+            froms,
+            _seqNumbers,
+            _values,
+            _messageLengths,
+            _data
         );
-
-
-        emit IGlobalInbox.TransactionMessageDelivered(
-            _chain,
-            _to,
-            from,
-            _seqNumber,
-            _value,
-            _messageData
-        );
-
-        return messageHash;
     }
 
     function _deliverTransactionMessage(
@@ -336,7 +311,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _from,
             _seqNumber,
             _value,
-            _data,
+            keccak256(_data),
             block.number,
             block.timestamp
         );

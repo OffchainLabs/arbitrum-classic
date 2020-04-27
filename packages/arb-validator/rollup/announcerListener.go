@@ -73,6 +73,10 @@ func (al *AnnouncerListener) MessageDelivered(context.Context, *ChainObserver, a
 	log.Println(al.Prefix, "MessageDelivered")
 }
 
+func (al *AnnouncerListener) MessageBatchDelivered(context.Context, *ChainObserver, arbbridge.MessageBatchDeliveredEvent) {
+	log.Println(al.Prefix, "MessageBatchDelivered")
+}
+
 func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {
 	log.Println(al.Prefix, "AssertionPrepared")
 }

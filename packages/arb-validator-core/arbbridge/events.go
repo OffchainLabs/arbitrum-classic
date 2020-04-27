@@ -144,6 +144,11 @@ type MessageDeliveredEvent struct {
 	Message message.InboxMessage
 }
 
+type MessageBatchDeliveredEvent struct {
+	ChainInfo
+	Messages []message.InboxMessage
+}
+
 type NewTimeEvent struct {
 	ChainInfo
 }

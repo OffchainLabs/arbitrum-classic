@@ -166,6 +166,18 @@ interface GlobalInboxInterface extends Interface {
       ]): string[]
     }>
 
+    TransactionMessageBatchDelivered: TypedEventDescription<{
+      encodeTopics([
+        chain,
+        tos,
+        froms,
+        seqNumbers,
+        values,
+        messageLengths,
+        data,
+      ]: [string | null, null, null, null, null, null, null]): string[]
+    }>
+
     TransactionMessageDelivered: TypedEventDescription<{
       encodeTopics([chain, to, from, seqNumber, value, data]: [
         string | null,
@@ -422,6 +434,16 @@ export class GlobalInbox extends Contract {
       from: string | null,
       value: null,
       messageNum: null
+    ): EventFilter
+
+    TransactionMessageBatchDelivered(
+      chain: string | null,
+      tos: null,
+      froms: null,
+      seqNumbers: null,
+      values: null,
+      messageLengths: null,
+      data: null
     ): EventFilter
 
     TransactionMessageDelivered(

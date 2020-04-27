@@ -15,8 +15,7 @@
  */
 
 const GlobalInbox = artifacts.require('GlobalInbox')
-
-const eutil = require('ethereumjs-util')
+const ethers = require('ethers')
 
 contract('GlobalInbox', accounts => {
   it('should make initial call', async () => {
@@ -54,6 +53,7 @@ contract('GlobalInbox', accounts => {
   })
 
   it('should make a batch call', async () => {
+    let messageCount = 100
     let chain = '0xffffffffffffffffffffffffffffffffffffffff'
     let txDataTemplate = {
       to: '0xffffffffffffffffffffffffffffffffffffffff',
@@ -63,7 +63,7 @@ contract('GlobalInbox', accounts => {
     }
 
     let transactionsData = []
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < messageCount; i++) {
       transactionsData.push(txDataTemplate)
     }
 
@@ -82,7 +82,10 @@ contract('GlobalInbox', accounts => {
         { t: 'address', v: txData['to'] },
         { t: 'uint256', v: txData['sequenceNum'] },
         { t: 'uint256', v: txData['value'] },
-        { t: 'bytes', v: txData['messageData'] }
+        {
+          t: 'bytes32',
+          v: web3.utils.soliditySha3({ t: 'bytes', v: txData['messageData'] }),
+        }
       )
       let signedTxHash = await web3.eth.sign(txHash, accounts[0])
       tos.push(txData['to'])
@@ -104,41 +107,53 @@ contract('GlobalInbox', accounts => {
       signatures
     )
 
-    assert.equal(tx.logs.length, 100)
+    assert.equal(tx.logs.length, 1)
 
-    for (var i = 0; i < tx.logs.length; i++) {
+    let ev = tx.logs[0]
+
+    assert.equal(
+      ev.event,
+      'TransactionMessageBatchDelivered',
+      'Incorrect event type'
+    )
+
+    assert.equal(ev.args.tos.length, messageCount)
+    assert.equal(ev.args.froms.length, messageCount)
+    assert.equal(ev.args.seqNumbers.length, messageCount)
+    assert.equal(ev.args.values.length, messageCount)
+    assert.equal(ev.args.messageLengths.length, messageCount)
+
+    var dataOffset = 0
+
+    for (var i = 0; i < messageCount; i++) {
       assert.equal(
-        tx.logs[i].event,
-        'TransactionMessageDelivered',
-        'Incorrect event type'
-      )
-      assert.equal(
-        tx.logs[i].args.chain.toLowerCase(),
-        chain,
-        'Incorrect chain'
-      )
-      assert.equal(
-        tx.logs[i].args.to.toLowerCase(),
+        ev.args.tos[i].toLowerCase(),
         transactionsData[i]['to'],
         'Incorrect to address'
       )
       assert.equal(
-        tx.logs[i].args.seqNumber,
+        ev.args.seqNumbers[i],
         transactionsData[i]['sequenceNum'],
         'Incorrect sequence num'
       )
       assert.equal(
-        tx.logs[i].args.value,
+        ev.args.values[i],
         transactionsData[i]['value'],
         'Incorrect value'
       )
       assert.equal(
-        tx.logs[i].args.data,
+        ethers.utils.hexDataSlice(
+          ev.args.data,
+          dataOffset,
+          dataOffset + ev.args.messageLengths[i].toNumber()
+        ),
         transactionsData[i]['messageData'],
         'Incorrect message data'
       )
 
-      assert.equal(tx.logs[i].args.from, accounts[0], 'Incorrect from address')
+      assert.equal(ev.args.froms[i], accounts[0], 'Incorrect from address')
+
+      dataOffset += ev.args.messageLengths[i].toNumber()
     }
   })
 })

@@ -39,7 +39,7 @@ contract MessageTester {
             from,
             seqNumber,
             value,
-            data,
+            keccak256(data),
             blockNumber,
             timestamp
         );
