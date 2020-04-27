@@ -314,6 +314,8 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 messagesOffset = 0;
         bytes32 confNode = latestConfirmed();
         bytes32 vmProtoStateHash = data.initalProtoStateHash;
+
+        // uint[]
         for (uint256 i = 0; i < nodeCount; i++) {
             uint256 branchType = data.branches[i];
             bytes32 nodeDataHash;
