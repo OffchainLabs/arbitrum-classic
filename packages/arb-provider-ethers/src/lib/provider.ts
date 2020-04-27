@@ -90,7 +90,7 @@ export function calculateTransactionHash(
 
 export class ArbProvider extends ethers.providers.BaseProvider {
   public chainId: number
-  public provider: ethers.providers.JsonRpcProvider
+  public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
 
   private arbRollupCache?: ArbRollup
@@ -104,14 +104,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   ) {
     super(123456789)
     this.chainId = 123456789
-    this.provider = provider
+    this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
   }
 
   public async arbRollupConn(): Promise<ArbRollup> {
     if (!this.arbRollupCache) {
       const vmID = await this.client.getVmID()
-      const arbRollup = ArbRollupFactory.connect(vmID, this.provider)
+      const arbRollup = ArbRollupFactory.connect(vmID, this.ethProvider)
       this.arbRollupCache = arbRollup
       return arbRollup
     }
@@ -128,7 +128,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       const globalInboxAddress = await arbRollup.globalInbox()
       const globalInbox = GlobalInboxFactory.connect(
         globalInboxAddress,
-        this.provider
+        this.ethProvider
       )
       this.globalInboxCache = globalInbox
       return globalInbox
@@ -143,7 +143,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public getSigner(index: number): ArbWallet {
     return new ArbWallet(
       this.client,
-      this.provider.getSigner(index),
+      this.ethProvider.getSigner(index),
       this,
       false
     )
@@ -258,7 +258,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public async getMessageResult(
     ethTxHash: string
   ): Promise<MessageResult | null> {
-    const ethReceipt = await this.provider.waitForTransaction(ethTxHash)
+    const ethReceipt = await this.ethProvider.waitForTransaction(ethTxHash)
     const arbTxId = await this.getArbTxId(ethReceipt)
     if (!arbTxId) {
       return null
@@ -381,7 +381,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
               value: (result.evmVal.orig as TxMessage).amount,
               chainId: 123456789,
             } as ethers.providers.TransactionResponse
-            return this.provider._wrapTransaction(tx)
+            return this.ethProvider._wrapTransaction(tx)
           } else {
             return null
           }
@@ -413,7 +413,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return arbInfo.getBalance(params.address)
       }
     }
-    const forwardResponse = this.provider.perform(method, params)
+    const forwardResponse = this.ethProvider.perform(method, params)
     // console.log('Forwarding query to provider', method, forwardResponse);
     return forwardResponse
   }
@@ -426,7 +426,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Cannot create call without a destination')
     }
     const dest = await transaction.to
-    const sender = await this.provider.getSigner(0).getAddress()
+    const sender = await this.ethProvider.getSigner(0).getAddress()
     const rawData = await transaction.data
     let data = '0x'
     if (rawData) {
@@ -484,7 +484,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     logPostHash: string,
     onChainTxHash: string
   ): Promise<void> {
-    const receipt = await this.provider.waitForTransaction(onChainTxHash)
+    const receipt = await this.ethProvider.waitForTransaction(onChainTxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
     }
