@@ -572,6 +572,11 @@ void ecdsa(MachineState& m) {
     bool result =
         secp256k1_ecdsa_recover(context, &pubkey, &signature,
                                 reinterpret_cast<unsigned char*>(message));
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
     assumeInt(m.stack[0]) = 0;
     assumeInt(m.stack[1]) = 0;
     for (int i = 7; i >= 0; i--) {
