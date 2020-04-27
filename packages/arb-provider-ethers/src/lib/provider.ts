@@ -17,9 +17,11 @@
 'use strict'
 
 import { ArbClient, EVMCode, EVMResult, TxMessage } from './client'
+import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
 import { Contract } from './contract'
+import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
@@ -68,31 +70,11 @@ interface Message {
   pubkey: string
 }
 
-export enum TxType {
-  Transaction = 0,
-  DepositEth = 1,
-  DepositERC20 = 2,
-  DepositERC721 = 3,
-}
-
-export function calculateTransactionHash(
-  chain: string,
-  to: string,
-  from: string,
-  sequenceNum: ethers.utils.BigNumber,
-  value: ethers.utils.BigNumber,
-  data: string
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
-    [TxType.Transaction, chain, to, from, sequenceNum, value, data]
-  )
-}
-
 export class ArbProvider extends ethers.providers.BaseProvider {
   public chainId: number
   public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
+  public aggregator?: AggregatorClient
 
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
@@ -101,12 +83,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   constructor(
     validatorUrl: string,
-    provider: ethers.providers.JsonRpcProvider
+    provider: ethers.providers.JsonRpcProvider,
+    aggregatorUrl?: string
   ) {
     super(123456789)
     this.chainId = 123456789
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
+    if (aggregatorUrl) {
+      this.aggregator = new AggregatorClient(aggregatorUrl)
+    }
   }
 
   public async arbRollupConn(): Promise<ArbRollup> {
@@ -191,21 +177,21 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   //     }
   // }
 
-  public async sendMessages(messages: Message[]): Promise<string> {
-    let txHash: Promise<string> = new Promise<string>((): string => '')
-    for (const message of messages) {
-      txHash = this.client.sendMessage(
-        message.to,
-        message.sequenceNum,
-        message.value,
-        message.data,
-        message.signature,
-        message.pubkey
-      )
-      await sleep(1)
-    }
-    return txHash
-  }
+  // public async sendMessages(messages: Message[]): Promise<string> {
+  //   let txHash: Promise<string> = new Promise<string>((): string => '')
+  //   for (const message of messages) {
+  //     txHash = this.client.sendMessage(
+  //       message.to,
+  //       message.sequenceNum,
+  //       message.value,
+  //       message.data,
+  //       message.signature,
+  //       message.pubkey
+  //     )
+  //     await sleep(1)
+  //   }
+  //   return txHash
+  // }
 
   public async getVmID(): Promise<string> {
     if (!this.vmIdCache) {
@@ -233,7 +219,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         if (log.name == TransactionMessageDelivered) {
           const vmId = await this.getVmID()
-          return calculateTransactionHash(
+          return Hashing.calculateTransactionHash(
             vmId,
             log.values.to,
             log.values.from,
@@ -256,15 +242,25 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     return null
   }
 
-  public async getMessageResult(
-    ethTxHash: string
-  ): Promise<MessageResult | null> {
-    const ethReceipt = await this.ethProvider.waitForTransaction(ethTxHash)
-    const arbTxId = await this.getArbTxId(ethReceipt)
-    if (!arbTxId) {
-      return null
+  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
+    // Transaction hash could be either an L1 transaction or
+    // an arbitrum transaction
+    let arbTxHash: string
+    const ethReceipt = await this.ethProvider.getTransactionReceipt(txHash)
+    if (ethReceipt) {
+      // If this receipt exists, it must've been an L1 hash
+      const arbTxId = await this.getArbTxId(ethReceipt)
+      if (!arbTxId) {
+        // If the Ethereum transaction wasn't actually a message send, the input data was bad
+        return null
+      }
+      arbTxHash = arbTxId
+    } else {
+      arbTxHash = txHash
     }
-    const result = await this.client.getMessageResult(arbTxId)
+
+    const result = await this.client.getMessageResult(arbTxHash)
+    console.log('Got tx result', txHash, arbTxHash, result)
     if (!result) {
       return null
     }
@@ -283,10 +279,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     const txHashCheck = evmVal.bridgeData.txHash
 
     // Check txHashCheck matches txHash
-    if (arbTxId !== txHashCheck) {
+    if (arbTxHash !== txHashCheck) {
       throw Error(
         'txHash did not match its queried transaction ' +
-          arbTxId +
+          arbTxHash +
           ' ' +
           txHashCheck
       )
@@ -350,7 +346,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             status = 1
             logs = result.evmVal.logs
           }
-          return {
+
+          console.log('Got tx result2', params.transactionHash, result)
+          const txReceipt: ethers.providers.TransactionReceipt = {
             blockHash: result.txHash,
             blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
             confirmations: 1000,
@@ -363,7 +361,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             transactionHash: result.txHash,
             transactionIndex: 0,
             byzantium: true,
-          } as ethers.providers.TransactionReceipt
+          }
+          return txReceipt
         } else {
           return null
         }

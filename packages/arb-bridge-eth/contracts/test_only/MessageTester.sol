@@ -71,6 +71,63 @@ contract MessageTester {
         );
     }
 
+    function transactionBatchHash(
+        address chain,
+        address[] memory tos,
+        uint256[] memory seqNumbers,
+        uint256[] memory values,
+        uint32[] memory dataLengths,
+        bytes memory data,
+        bytes memory signatures,
+        uint256 blockNumber,
+        uint256 timestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionBatchHash(
+            chain,
+            tos,
+            seqNumbers,
+            values,
+            dataLengths,
+            data,
+            signatures,
+            blockNumber,
+            timestamp
+        );
+    }
+
+    function transactionMessageBatchHash(
+        bytes32 prev,
+        address chain,
+        address[] memory tos,
+        uint256[] memory seqNumbers,
+        uint256[] memory values,
+        uint32[] memory dataLengths,
+        bytes memory data,
+        bytes memory signatures,
+        uint256 blockNumber,
+        uint256 timestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionMessageBatchHash(
+            prev,
+            chain,
+            tos,
+            seqNumbers,
+            values,
+            dataLengths,
+            data,
+            signatures,
+            [blockNumber, timestamp]
+        );
+    }
+
     function ethHash(
         address to,
         address from,

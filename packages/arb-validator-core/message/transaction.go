@@ -53,7 +53,11 @@ func (m Transaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m Transaction) Equals(o Transaction) bool {
+func (m Transaction) Equals(other Message) bool {
+	o, ok := other.(Transaction)
+	if !ok {
+		return false
+	}
 	return m.Chain == o.Chain &&
 		m.To == o.To &&
 		m.From == o.From &&
@@ -133,7 +137,7 @@ func (m Transaction) ReceiptHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 	)
 }
 
@@ -169,7 +173,7 @@ func (m DeliveredTransaction) CommitmentHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.Timestamp),
 	)

@@ -167,8 +167,6 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ctx, ev)
-	case arbbridge.MessageBatchDeliveredEvent:
-		chain.messageBatchDelivered(ctx, ev)
 	case arbbridge.StakeCreatedEvent:
 		chain.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
@@ -228,16 +226,6 @@ func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.M
 	chain.inbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, chain, ev)
-	}
-}
-
-func (chain *ChainObserver) messageBatchDelivered(ctx context.Context, ev arbbridge.MessageBatchDeliveredEvent) {
-	for _, msg := range ev.Messages {
-		chain.inbox.DeliverMessage(msg)
-	}
-
-	for _, lis := range chain.listeners {
-		lis.MessageBatchDelivered(ctx, chain, ev)
 	}
 }
 

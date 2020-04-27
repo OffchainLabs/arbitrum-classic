@@ -37,7 +37,7 @@ type Result interface {
 
 type Return struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 
 	ReturnVal []byte
 	Logs      []Log
@@ -69,7 +69,7 @@ func (e Return) String() string {
 
 type Revert struct {
 	Msg       EthBridgeMessage
-	ArbCall   message.UnsentMessage
+	ArbCall   message.ExecutionMessage
 	ReturnVal []byte
 }
 
@@ -92,7 +92,7 @@ func (e Revert) String() string {
 
 type Stop struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 	Logs    []Log
 }
 
@@ -120,7 +120,7 @@ func (e Stop) String() string {
 
 type BadSequenceNum struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
@@ -140,7 +140,7 @@ func (e BadSequenceNum) String() string {
 
 type Invalid struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e Invalid) GetEthMsg() EthBridgeMessage {
@@ -251,7 +251,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	arbMessage, err := message.UnmarshalUnsent(ethMsg.Type, messageVal, chain)
+	arbMessage, err := message.UnmarshalExecuted(ethMsg.Type, messageVal, chain)
 	if err != nil {
 		return nil, err
 	}

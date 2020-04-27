@@ -49,7 +49,11 @@ func (m ContractTransaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m ContractTransaction) Equals(o ContractTransaction) bool {
+func (m ContractTransaction) Equals(other Message) bool {
+	o, ok := other.(ContractTransaction)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.Value.Cmp(o.Value) == 0 &&

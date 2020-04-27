@@ -17,6 +17,8 @@
 pragma solidity ^0.5.3;
 
 import "./arch/Value.sol";
+import "./libraries/SigUtils.sol";
+import "./arch/Protocol.sol";
 
 
 library Messages {
@@ -25,6 +27,8 @@ library Messages {
     uint8 internal constant ERC20_DEPOSIT = 2;
     uint8 internal constant ERC721_DEPOSIT = 3;
     uint8 internal constant CONTRACT_TRANSACTION_MSG = 4;
+    uint8 internal constant CALL_MSG = 5;
+    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
 
     using Value for Value.Data;
 
@@ -57,6 +61,7 @@ library Messages {
         );
     }
 
+
     function transactionMessageHash(
         address chain,
         address to,
@@ -64,6 +69,34 @@ library Messages {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
+        uint256 blockNumber,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return transactionMessageHash(
+            chain,
+            to,
+            from,
+            seqNumber,
+            value,
+            keccak256(data),
+            Value.bytesToBytestackHash(data, 0, data.length),
+            blockNumber,
+            blockTimestamp
+        );
+    }
+
+    function transactionMessageHash(
+        address chain,
+        address to,
+        address from,
+        uint256 seqNumber,
+        uint256 value,
+        bytes32 dataHash,
+        bytes32 dataTupleHash,
         uint256 blockNumber,
         uint256 timestamp
     )
@@ -79,15 +112,14 @@ library Messages {
                 from,
                 seqNumber,
                 value,
-                data
+                dataHash
             )
         );
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataHash);
+        msgValues[3] = Value.newHashOnly(dataTupleHash);
 
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(TRANSACTION_MSG);
@@ -100,6 +132,113 @@ library Messages {
             Value.newInt(uint256(txHash)),
             Value.newTuple(msgType)
         ]);
+    }
+
+    function transactionBatchHash(
+        address _chain,
+        address[] memory _tos,
+        uint256[] memory _seqNumbers,
+        uint256[] memory _values,
+        uint32[] memory _dataLengths,
+        bytes memory _data,
+        bytes memory _signatures,
+        uint256 blockNumber,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        uint256 messageCount = _tos.length;
+        require(_seqNumbers.length == messageCount, "wrong input length");
+        require(_values.length == messageCount, "wrong input length");
+        require(_dataLengths.length == messageCount, "wrong input length");
+
+        bytes memory data = abi.encode(
+            _chain,
+            _tos,
+            _seqNumbers,
+            _values,
+            _dataLengths,
+            _data,
+            _signatures
+        );
+        uint256 dataLength = data.length;
+
+        bytes32 messageHash;
+        assembly {
+            let ptr := add(data, 31)
+            mstore8(ptr, TRANSACTION_BATCH_MSG)
+            ptr := add(add(data, 32), dataLength)
+            mstore(ptr, blockNumber)
+            ptr := add(ptr, 32)
+            mstore(ptr, blockTimestamp)
+            ptr := add(ptr, 32)
+            messageHash := keccak256(add(data, 31), add(dataLength, 33))
+        }
+        return messageHash;
+    }
+
+    struct TransactionMessageBatchHashFrame {
+        address from;
+        bytes32 messageHash;
+        bytes32 dataTupleHash;
+    }
+
+    function transactionMessageBatchHash(
+        bytes32 _prev,
+        address _chain,
+        address[] memory _tos,
+        uint256[] memory _seqNumbers,
+        uint256[] memory _values,
+        uint32[] memory _dataLengths,
+        bytes memory _data,
+        bytes memory _signatures,
+        uint256[2] memory blockAndTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        TransactionMessageBatchHashFrame memory frame;
+        uint256 dataOffset = 0;
+        bytes32 dataHash;
+
+        for (uint256 i = 0; i < _tos.length; i++) {
+            uint256 dataLength = _dataLengths[i];
+            assembly {
+                dataHash := keccak256(add(add(_data, 0x20), dataOffset), dataLength)
+            }
+            frame.from = SigUtils.recoverAddress(
+                keccak256(
+                    abi.encodePacked(
+                        _chain,
+                        _tos[i],
+                        _seqNumbers[i],
+                        _values[i],
+                        dataHash
+                    )
+                ),
+                _signatures,
+                i
+            );
+            frame.dataTupleHash = Value.bytesToBytestackHash(_data, dataOffset, dataLength);
+            frame.messageHash = transactionMessageHash(
+                _chain,
+                _tos[i],
+                frame.from,
+                _seqNumbers[i],
+                _values[i],
+                dataHash,
+                frame.dataTupleHash,
+                blockAndTimestamp[0],
+                blockAndTimestamp[1]
+            );
+            _prev = Protocol.addMessageToVMInbox(_prev, frame.messageHash);
+            dataOffset += dataLength;
+        }
+
+        return _prev;
     }
 
     function ethHash(
@@ -297,7 +436,7 @@ library Messages {
         pure
         returns(bytes32)
     {
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
+        bytes32 dataHash = Value.bytesToBytestackHash(data, 0, data.length);
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);

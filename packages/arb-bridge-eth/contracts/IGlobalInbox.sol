@@ -28,13 +28,7 @@ interface IGlobalInbox {
     );
 
     event TransactionMessageBatchDelivered(
-        address indexed chain,
-        address[] tos,
-        address[] froms,
-        uint256[] seqNumbers,
-        uint256[] values,
-        uint256[] messageLengths,
-        bytes data
+        address indexed chain
     );
 
     event EthDepositMessageDelivered(

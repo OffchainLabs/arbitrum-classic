@@ -39,7 +39,7 @@ func NewVMInbox() *VMInbox {
 }
 
 func (b *VMInbox) DeliverMessage(msg message.Message) {
-	b.value = value.NewTuple2(b.value, message.DeliveredValue(msg))
+	b.value = message.AddToPrev(b.value, msg)
 	b.hashes = append(b.hashes, b.value.Hash())
 }
 

@@ -36,7 +36,11 @@ func (m Eth) String() string {
 	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, m.Value)
 }
 
-func (m Eth) Equals(o Eth) bool {
+func (m Eth) Equals(other Message) bool {
+	o, ok := other.(Eth)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.Value.Cmp(o.Value) == 0

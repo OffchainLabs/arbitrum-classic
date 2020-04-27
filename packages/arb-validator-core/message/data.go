@@ -24,16 +24,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func bytesToIntValues(val []byte) []*big.Int {
-	var ints []*big.Int
+func bytesToValues(val []byte) []value.Value {
+	var ints []value.Value
 	for i := 0; i < len(val); i += 32 {
 		remaining := len(val) - i
 		if remaining < 32 {
 			data := [32]byte{}
 			copy(data[:], val[i:])
-			ints = append(ints, new(big.Int).SetBytes(data[:]))
+			ints = append(ints, value.NewIntValue(new(big.Int).SetBytes(data[:])))
 		} else {
-			ints = append(ints, new(big.Int).SetBytes(val[i:i+32]))
+			ints = append(ints, value.NewIntValue(new(big.Int).SetBytes(val[i:i+32])))
 		}
 	}
 	return ints
@@ -60,6 +60,14 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 		}
 	}
 	return values, nil
+}
+
+func ListToStackValue(vals []value.Value) value.TupleValue {
+	ret := value.NewEmptyTuple()
+	for _, val := range vals {
+		ret = value.NewTuple2(ret, val)
+	}
+	return ret
 }
 
 func ByteStackToHex(val value.Value) ([]byte, error) {
@@ -104,11 +112,8 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	return buf.Bytes()[:intLength], nil
 }
 
-func BytesToByteStack(val []byte) value.Value {
-	chunks := bytesToIntValues(val)
-	ret := value.NewEmptyTuple()
-	for _, chunk := range chunks {
-		ret = value.NewTuple2(ret, value.NewIntValue(chunk))
-	}
+func BytesToByteStack(val []byte) value.TupleValue {
+	chunks := bytesToValues(val)
+	ret := ListToStackValue(chunks)
 	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret)
 }

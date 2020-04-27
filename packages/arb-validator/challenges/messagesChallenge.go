@@ -24,8 +24,6 @@ import (
 	"math/big"
 	"math/rand"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 
@@ -146,11 +144,6 @@ func defendMessages(
 					return 0, err
 				}
 
-				log.Println("OneStepProofEthMessage", startInbox, startMessages)
-
-				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
-				log.Println("vm inbox after", value.NewTuple2(value.NewHashOnlyValue(startMessages, 1), message.DeliveredValue(msg)).Hash())
-
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
 					err = contract.OneStepProofTransactionMessage(ctx, startInbox, startMessages, msg)
@@ -162,6 +155,8 @@ func defendMessages(
 					err = contract.OneStepProofERC721Message(ctx, startInbox, startMessages, msg)
 				case message.DeliveredContractTransaction:
 					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, startMessages, msg)
+				case message.DeliveredTransactionBatch:
+
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")

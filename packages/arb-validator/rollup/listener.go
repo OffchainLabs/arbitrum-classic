@@ -47,7 +47,6 @@ type ChainListener interface {
 	ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent)
 	PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent)
 	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
-	MessageBatchDelivered(context.Context, *ChainObserver, arbbridge.MessageBatchDeliveredEvent)
 
 	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
 	ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
@@ -579,8 +578,6 @@ func (lis *ValidatorChainListener) ConfirmedNode(context.Context, *ChainObserver
 func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
-}
-func (lis *ValidatorChainListener) MessageBatchDelivered(context.Context, *ChainObserver, arbbridge.MessageBatchDeliveredEvent) {
 }
 func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
 }

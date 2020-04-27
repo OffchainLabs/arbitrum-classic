@@ -27,8 +27,6 @@ import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
 
-import "bytes/contracts/BytesLib.sol";
-
 contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox {
 
     uint8 internal constant TRANSACTION_MSG = 0;
@@ -36,7 +34,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     uint8 internal constant ERC20_DEPOSIT = 2;
     uint8 internal constant ERC721_DEPOSIT = 3;
 
-    using BytesLib for bytes;
+    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
+
     using Value for Value.Data;
 
     address internal constant ETH_ADDRESS = address(0);
@@ -229,70 +228,38 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     }
 
     function deliverTransactionBatch(
-        address _chain,
-        address[] memory _tos,
-        uint256[] memory _seqNumbers,
-        uint256[] memory _values,
-        uint256[] memory _messageLengths,
-        bytes memory _data,
-        bytes memory _signatures
+        address chain,
+        address[] calldata tos,
+        uint256[] calldata seqNumbers,
+        uint256[] calldata values,
+        uint32[] calldata dataLengths,
+        bytes calldata /* data */,
+        bytes calldata /* signatures */
     )
-        public
+        external
     {
-        uint256 messageCount = _tos.length;
-        uint256 dataOffset = 0x20;
-        require(_seqNumbers.length == messageCount, "wrong input length");
-        require(_values.length == messageCount, "wrong input length");
-        require(_messageLengths.length == messageCount, "wrong input length");
+        uint256 messageCount = tos.length;
+        require(seqNumbers.length == messageCount, "wrong input length");
+        require(values.length == messageCount, "wrong input length");
+        require(dataLengths.length == messageCount, "wrong input length");
 
-        bytes32 inboxVal = inboxes[_chain].value;
-
-        address[] memory froms = new address[](messageCount);
-
-        for (uint256 i = 0; i < messageCount; i++) {
-            bytes32 dataHash;
-            assembly {
-                dataHash := keccak256(add(_data, dataOffset), mload(add(add(_messageLengths, 0x20), mul(i, 32))))
-            }
-            dataOffset += _messageLengths[i];
-            froms[i] = SigUtils.recoverAddress(
-                keccak256(
-                    abi.encodePacked(
-                        _chain,
-                        _tos[i],
-                        _seqNumbers[i],
-                        _values[i],
-                        dataHash
-                    )
-                ),
-                _signatures,
-                i
-            );
-            bytes32 messageHash = Messages.transactionHash(
-                _chain,
-                _tos[i],
-                froms[i],
-                _seqNumbers[i],
-                _values[i],
-                dataHash,
-                block.number,
-                block.timestamp
-            );
-            inboxVal = Protocol.addMessageToInbox(inboxVal, messageHash);
+        bytes32 messageHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore8(ptr, TRANSACTION_BATCH_MSG)
+            ptr := add(ptr, 1)
+            calldatacopy(ptr, 4, sub(calldatasize, 4))
+            ptr := add(ptr, sub(calldatasize, 4))
+            mstore(ptr, number)
+            ptr := add(ptr, 32)
+            mstore(ptr, timestamp)
+            ptr := add(ptr, 32)
+            messageHash := keccak256(mload(0x40), sub(ptr, mload(0x40)))
         }
 
-        inboxes[_chain].value = inboxVal;
-        inboxes[_chain].count += messageCount;
+        _deliverMessage(chain, messageHash);
 
-        emit IGlobalInbox.TransactionMessageBatchDelivered(
-            _chain,
-            _tos,
-            froms,
-            _seqNumbers,
-            _values,
-            _messageLengths,
-            _data
-        );
+        emit TransactionMessageBatchDelivered(chain);
     }
 
     function _deliverTransactionMessage(

@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	errors2 "github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -50,7 +52,7 @@ func NewServer(ctx context.Context, globalInbox arbbridge.GlobalInbox, rollupAdd
 	server := &Server{rollupAddress: rollupAddress, globalInbox: globalInbox, valid: true}
 
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
+		ticker := time.NewTicker(common.NewTimeBlocksInt(5).Duration())
 		defer ticker.Stop()
 		for {
 			select {
@@ -73,6 +75,11 @@ func (m *Server) sendBatch(ctx context.Context) {
 		return
 	}
 
+	if len(m.transactions) == 0 {
+		m.Unlock()
+		return
+	}
+
 	if len(m.transactions) > maxTransactions {
 		txes = m.transactions[:maxTransactions]
 		sigs = m.signatures[:maxTransactions]
@@ -85,6 +92,12 @@ func (m *Server) sendBatch(ctx context.Context) {
 		m.signatures = nil
 	}
 	m.Unlock()
+
+	log.Println("Submitting batch with", len(txes), "transactions")
+
+	for _, tx := range txes {
+		log.Println("tx: ", tx)
+	}
 
 	err := m.globalInbox.DeliverTransactionBatch(ctx, m.rollupAddress, txes, sigs)
 	if err != nil {
@@ -99,36 +112,34 @@ func (m *Server) sendBatch(ctx context.Context) {
 func (m *Server) SendTransaction(ctx context.Context, args *SendTransactionArgs) (*SendTransactionReply, error) {
 	toBytes, err := hexutil.Decode(args.To)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "error decoding to")
 	}
 	var to common.Address
-	copy(toBytes[:], toBytes)
+	copy(to[:], toBytes)
 
-	sequenceNumBytes, err := hexutil.Decode(args.SequenceNum)
-	if err != nil {
-		return nil, err
+	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
+	if !valid {
+		return nil, errors.New("Invalid sequence num")
 	}
-	sequenceNum := new(big.Int).SetBytes(sequenceNumBytes[:])
 
-	valueBytes, err := hexutil.Decode(args.Value)
-	if err != nil {
-		return nil, err
+	valueInt, valid := new(big.Int).SetString(args.Value, 10)
+	if !valid {
+		return nil, errors.New("Invalid value")
 	}
-	valueInt := new(big.Int).SetBytes(valueBytes[:])
 
 	data, err := hexutil.Decode(args.Data)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "error decoding data")
 	}
 
 	pubkey, err := hexutil.Decode(args.Pubkey)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "error decoding pubkey")
 	}
 
-	signature, err := hexutil.Decode(args.Data)
+	signature, err := hexutil.Decode(args.Signature)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "error decoding signature")
 	}
 
 	if len(signature) != 65 {
@@ -142,16 +153,17 @@ func (m *Server) SendTransaction(ctx context.Context, args *SendTransactionArgs)
 		signature[64] = 1
 	}
 
-	txDataHash := hashing.SoliditySHA3(
-		hashing.Address(m.rollupAddress),
-		hashing.Address(to),
-		hashing.Uint256(sequenceNum),
-		hashing.Uint256(valueInt),
+	txDataHash := message.OffchainTxHash(
+		m.rollupAddress,
+		to,
+		sequenceNum,
+		valueInt,
 		data,
 	)
 
 	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
-	if !crypto.VerifySignature(pubkey, messageHash[:], signature) {
+
+	if !crypto.VerifySignature(pubkey, messageHash[:], signature[:len(signature)-1]) {
 		return nil, errors.New("Invalid signature")
 	}
 

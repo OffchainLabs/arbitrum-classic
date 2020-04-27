@@ -55,9 +55,6 @@ func (al *AssertionListener) PrunedLeaf(context.Context, *ChainObserver, arbbrid
 func (al *AssertionListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
 }
 
-func (al *AssertionListener) MessageBatchDelivered(context.Context, *ChainObserver, arbbridge.MessageBatchDeliveredEvent) {
-}
-
 func (al *AssertionListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {}
 func (al *AssertionListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
 }

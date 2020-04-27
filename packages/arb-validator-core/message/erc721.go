@@ -42,7 +42,11 @@ func (m ERC721) String() string {
 	)
 }
 
-func (m ERC721) Equals(o ERC721) bool {
+func (m ERC721) Equals(other Message) bool {
+	o, ok := other.(ERC721)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.TokenAddress == o.TokenAddress &&

@@ -74,14 +74,14 @@ func (con *globalInbox) DeliverTransactionBatch(
 	tos := make([]ethcommon.Address, 0, len(transactions))
 	seqNums := make([]*big.Int, 0, len(transactions))
 	amounts := make([]*big.Int, 0, len(transactions))
-	messageLengths := make([]*big.Int, 0, len(transactions))
+	dataLengths := make([]uint32, 0, len(transactions))
 	data := make([]byte, 0)
 	signaturesFlat := make([]byte, 0, len(transactions)*65)
 	for i, tx := range transactions {
 		tos = append(tos, tx.To.ToEthAddress())
 		seqNums = append(seqNums, tx.SequenceNum)
 		amounts = append(amounts, tx.Value)
-		messageLengths = append(messageLengths, big.NewInt(int64(len(tx.Data))))
+		dataLengths = append(dataLengths, uint32(len(tx.Data)))
 		data = append(data, tx.Data...)
 		signaturesFlat = append(signaturesFlat, signatures[i][:]...)
 	}
@@ -93,7 +93,7 @@ func (con *globalInbox) DeliverTransactionBatch(
 		tos,
 		seqNums,
 		amounts,
-		messageLengths,
+		dataLengths,
 		data,
 		signaturesFlat,
 	)

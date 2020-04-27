@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -180,12 +179,8 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		Timestamp: big.NewInt(time.Now().Unix()),
 	}
 
-	callingMessage := message.DeliveredValue(msg)
-
-	messageStack := protocol.NewMessageStack()
-	messageStack.AddMessage(callingMessage)
-
-	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallTime)
+	inbox := message.AddToPrev(value.NewEmptyTuple(), msg)
+	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
 
 	log.Println("Executed call for", steps, "steps")
 

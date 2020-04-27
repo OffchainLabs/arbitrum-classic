@@ -123,6 +123,15 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	return nil
 }
 
+func (c *MessagesChallenge) OneStepProofTransactionBatchMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredTransactionBatch,
+) error {
+	return nil
+}
+
 func (c *MessagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
