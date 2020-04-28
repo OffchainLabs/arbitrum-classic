@@ -804,7 +804,7 @@ TEST_CASE("ECDSA opcode is correct") {
                 stack_value = 0;
             }
         }
-        s.runOp(OpCode::ECDSA);
+        s.runOp(OpCode::ECRECOVER);
         REQUIRE(s.stack[0] == value(1));
         secp256k1_pubkey evaluated_key;
         for (int i = 0; i < 8; i++) {

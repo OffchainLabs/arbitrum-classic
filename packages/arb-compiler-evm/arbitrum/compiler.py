@@ -618,7 +618,7 @@ class VMCompiler:
             ast.ImmediateOp(ast.BasicOp(instructions.OPS["jump"]), location)
         )
 
-    def ecdsa(self):
+    def ecrecover(self):
         self.block.append(ast.ImmediateOp(ast.BasicOp(instructions.OPS["ecdsa"])))
 
 

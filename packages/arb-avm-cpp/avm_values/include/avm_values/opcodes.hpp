@@ -89,7 +89,7 @@ enum class OpCode : uint8_t {
     DEBUG,
     DEFAULT,
 
-    ECDSA = 0x80
+    ECRECOVER = 0x80
 };
 
 inline bool isValidOpcode(OpCode op) {
@@ -101,7 +101,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
            (op >= OpCode::SEND && op <= OpCode::HALT) ||
-           (op >= OpCode::ECDSA && op <= OpCode::ECDSA);
+           (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
 }
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -169,7 +169,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::HALT, "halt"},
     {OpCode::DEBUG, "debug"},
 
-    {OpCode::ECDSA, "ecdsa"}};
+    {OpCode::ECRECOVER, "ecdsa"}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {static_cast<OpCode>(0), {}},
@@ -236,7 +236,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}},
 
-    {OpCode::ECDSA, {true, true, true, true, true, true, true}}};
+    {OpCode::ECRECOVER, {true, true, true, true, true, true, true}}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {static_cast<OpCode>(0), {}},
@@ -303,7 +303,7 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}},
 
-    {OpCode::ECDSA, {}}};
+    {OpCode::ECRECOVER, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
@@ -369,6 +369,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::HALT, 10},
     {OpCode::DEBUG, 1},
 
-    {OpCode::ECDSA, 9999}};
+    {OpCode::ECRECOVER, 9999}};
 
 #endif /* opcodes_hpp */

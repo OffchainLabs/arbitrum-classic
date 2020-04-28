@@ -452,8 +452,8 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /*****************/
             /*  Precompiles  */
             /*****************/
-        case OpCode::ECDSA:
-            machineoperation::ecdsa(*this);
+        case OpCode::ECRECOVER:
+            machineoperation::ec_recover(*this);
             break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)

@@ -550,7 +550,7 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
-void ecdsa(MachineState& m) {
+void ec_recover(MachineState& m) {
     m.stack.prepForMod(7);
     secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);

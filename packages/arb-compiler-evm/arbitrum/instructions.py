@@ -89,10 +89,10 @@ OP_CODES = [
     ("halt", 0x74, [], []),
     ("debug", 0x75, [], []),
     (
-        "ecdsa",
+        "ecrecover",
         0x80,
-        [IntType(), IntType(), IntType(), IntType(), IntType(), IntType()],
-        [IntType()],
+        [IntType(), IntType(), IntType(), IntType(), IntType(), IntType(), IntType()],
+        [IntType(), IntType(), IntType()],
     ),
 ]
 
