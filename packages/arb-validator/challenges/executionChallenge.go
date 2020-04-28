@@ -127,7 +127,6 @@ func defendExecution(
 			if timedOut {
 				proof, err := defender.SolidityOneStepProof()
 				if err != nil {
-					fmt.Println("fail SolidityOneStepProof")
 					return 0, err
 				}
 				pre := defender.GetPrecondition()
@@ -145,7 +144,6 @@ func defendExecution(
 					proof,
 				)
 				if err != nil {
-					fmt.Println("fail OneStepProof")
 					return 0, err
 				}
 				event, state, err = getNextEvent(eventChan)
@@ -167,11 +165,9 @@ func defendExecution(
 			defenders, assertions = defender.NBisect(uint64(bisectionCount))
 			err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 			if err != nil {
-				fmt.Println("fail BisectAssertion")
 				fmt.Println(err)
 				return 0, err
 			}
-			fmt.Println("BisectAssertion!!!!")
 			event, state, err = getNextEvent(eventChan)
 		}
 
@@ -201,9 +197,7 @@ func defendExecution(
 		if timedOut {
 			// Freshly bisected assertion
 			defender = defenders[contEv.SegmentIndex.Uint64()]
-			fmt.Println("timeout out")
 		} else {
-			fmt.Println("replayed")
 			// Replayed from existing event
 			totalSteps := uint64(0)
 			for i := uint64(0); i < contEv.SegmentIndex.Uint64(); i++ {

@@ -367,15 +367,21 @@ contract NodeGraph is ChallengeType {
         pure
         returns(bytes32)
     {
-        Value.Data memory importedMsgsVal = Value.newHashOnly(data.importedMessagesSlice, data.importedMessagesValueSize);
-
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
              data.beforeVMHash,
              data.timeBoundsBlocks,
-             importedMsgsVal
+             Value.newHashOnly(data.importedMessagesSlice, data.importedMessagesValueSize)
         );
 
-        bytes32 assertionHash = generateAssertionHash(data);
+        bytes32 assertionHash = Protocol.generateAssertionHash(
+            data.afterVMHash,
+            data.didInboxInsn,
+            data.numArbGas,
+            0x00,
+            data.messagesAccHash,
+            0x00,
+            data.logsAccHash
+        );
 
         bytes32 executionHash = ChallengeUtils.executionHash(
             data.numSteps,
@@ -391,18 +397,6 @@ contract NodeGraph is ChallengeType {
             ),
             INVALID_EXECUTION_TYPE,
             vmProtoHashBefore
-        );
-    }
-
-    function generateAssertionHash(MakeAssertionData memory data) private pure returns (bytes32){
-        return Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.didInboxInsn,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
         );
     }
 

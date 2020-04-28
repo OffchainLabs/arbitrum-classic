@@ -1551,18 +1551,16 @@ library OneStepProof {
             }
         }
 
-        // require(
-        //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
-        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
-        // );
-        require(_data.beforeHash == startMachine.hash(), startMachine.toString());
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
-        require(_data.afterHash == endMachine.hash(), endMachine.toString());
+        require(
+            _data.beforeHash == startMachine.hash(),
+            string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
+            " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
+        );
+        require(
+            _data.afterHash == endMachine.hash(),
+            string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+            " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        );
 
         return 0;
     }

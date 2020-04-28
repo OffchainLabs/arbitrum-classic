@@ -211,64 +211,38 @@ contract ArbRollup is NodeGraph, Staking {
     )
         external
     {
-        (bytes32 prevLeaf, bytes32 newValid) = assertionHelper(
-            _fields,
-            _beforeInboxValueSize,
+        MakeAssertionData memory assertData = MakeAssertionData(
+            _fields[0],
+            _fields[1],
             _beforeInboxCount,
+
+            _fields[2],
             _prevDeadlineTicks,
+            _fields[3],
             _prevChildType,
+
             _numSteps,
             _timeBoundsBlocks,
             _importedMessageCount,
+
+            _fields[4],
+
+            _fields[5],
+            _beforeInboxValueSize,
+
+            _fields[6],
             _didInboxInsn,
-            _numArbGas);
+            _numArbGas,
+            _fields[7],
+            _fields[8]
+        );
+
+        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(assertData);
 
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
         updateStakerLocation(msg.sender, newValid);
     }
-
-    function assertionHelper(
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxValueSize,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint128[2] memory _timeBoundsBlocks,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas) internal returns(bytes32, bytes32)
-    {
-        return makeAssertion(
-            MakeAssertionData(
-                _fields[0],
-                _fields[1],
-                _beforeInboxCount,
-
-                _fields[2],
-                _prevDeadlineTicks,
-                _fields[3],
-                _prevChildType,
-
-                _numSteps,
-                _timeBoundsBlocks,
-                _importedMessageCount,
-
-                _fields[4],
-
-                _fields[5],
-                _beforeInboxValueSize,
-
-                _fields[6],
-                _didInboxInsn,
-                _numArbGas,
-                _fields[7],
-                _fields[8]
-            )
-        );
-    }
-
 
     modifier onlyOwner() {
         require(msg.sender == owner, ONLY_OWNER);

@@ -38,13 +38,6 @@ func NewVMInbox() *VMInbox {
 }
 
 func (b *VMInbox) DeliverMessage(msg message.Message) {
-	//currentHash := value.NewHashOnlyValue(b.Hash(), 1)
-	//updatedHash := value.NewHashOnlyValue(message.DeliveredValue(msg).Hash(), 1)
-	//tuple := value.NewTuple2(currentHash, updatedHash)
-	//
-	//b.value = tuple
-	//b.hashes = append(b.hashes, tuple.Hash())
-
 	tuple := value.NewTuple2(b.value, message.DeliveredValue(msg))
 
 	b.value = tuple

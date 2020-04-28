@@ -147,8 +147,6 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstLog,
         bytes32 _lastLog) internal {
 
-
-
         bytes32 precondition = Protocol.generatePreconditionHash(
              _beforeHash,
              _timeBoundsBlocks,

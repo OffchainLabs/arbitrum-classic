@@ -117,15 +117,16 @@ func (m *Machine) ExecuteAssertion(
 		Logs:         nil,
 	}
 	totalSteps := uint64(0)
-	stepIncrease := uint64(50000)
+	stepIncrease := uint64(5000)
 	for i := uint64(0); i < maxSteps; i += stepIncrease {
 		steps := stepIncrease
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
 		}
 		pcStart := m.gomachine.GetPC()
-		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+
 		if ranSteps1 != ranSteps2 {
 			pcEnd := m.gomachine.GetPC()
 			log.Println("cpp num steps", ranSteps1, a1.NumGas)
@@ -177,7 +178,7 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	if err2 != nil {
 		return nil, err2
 	}
-	//
+
 	if !bytes.Equal(h1, h2) {
 		m.cppmachine.PrintState()
 		m.gomachine.PrintState()

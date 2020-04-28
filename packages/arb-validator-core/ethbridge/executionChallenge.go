@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -84,7 +83,6 @@ func (c *executionChallenge) BisectAssertion(
 		totalSteps,
 	)
 	if err != nil {
-		fmt.Println("error what")
 		return c.challenge.BisectAssertionCall(
 			ctx,
 			c.client,

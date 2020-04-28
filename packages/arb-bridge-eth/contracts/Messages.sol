@@ -68,34 +68,14 @@ library Messages {
         pure
         returns(bytes32)
     {
-        bytes32 txHash = keccak256(
-            abi.encodePacked(
-                TRANSACTION_MSG,
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                data
-            )
-        );
 
-        Value.Data[] memory msgValues = new Value.Data[](4);
-        msgValues[0] = Value.newInt(uint256(to));
-        msgValues[1] = Value.newInt(seqNumber);
-        msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.bytesToBytestackHash(data);
-
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(TRANSACTION_MSG);
-        msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
-
-        Value.Data[] memory tup_data = new Value.Data[](3);
-        tup_data[0] = Value.newInt(blockNumber);
-        tup_data[1] = Value.newInt(uint256(txHash));
-        tup_data[2] = Value.newTuple(msgType);
-        Value.Data memory tuple = Value.newTuple(tup_data);
+        Value.Data memory tuple = transactionMessage(chain, 
+                                                    to, 
+                                                    from, 
+                                                    seqNumber, 
+                                                    value, 
+                                                    data, 
+                                                    blockNumber);
 
         return Value.hashTuple(tuple);
     }
@@ -178,21 +158,12 @@ library Messages {
         pure
         returns(bytes32)
     {
-        Value.Data[] memory msgValues = new Value.Data[](2);
-        msgValues[0] = Value.newInt(uint256(to));
-        msgValues[1] = Value.newInt(value);
-
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(ETH_DEPOSIT);
-        msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
-
-        Value.Data[] memory ethMsg = new Value.Data[](3);
-        ethMsg[0] = Value.newInt(blockNumber);
-        ethMsg[1] = Value.newInt(messageNum);
-        ethMsg[2] = Value.newTuple(msgType);
-
-        return Value.newTuple(ethMsg).hash().hash;
+        Value.Data memory tuple = ethMessageValue(to, 
+                                                from, 
+                                                value, 
+                                                blockNumber, 
+                                                messageNum);
+        return Value.hashTuple(tuple);
     }
 
     function ethMessageValue(

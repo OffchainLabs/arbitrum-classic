@@ -43,14 +43,8 @@ std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
             marshalShallow(val, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(val), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-
-            auto size = getSize(val);
-            std::array<unsigned char, 32> tmpbuf2;
-            to_big_endian(size, tmpbuf2.begin());
-            buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
+            HashOnly hashOnly(::hash(val), ::getSize(val));
+            hashOnly.marshal(buf);
         }
     }
     HashOnly hashOnly(c.hash(), c.getTotalValueSize());

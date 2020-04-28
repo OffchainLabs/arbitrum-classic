@@ -100,14 +100,8 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
             ::marshalShallow(*immediate, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(*immediate), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-
-            auto size = ::getSize(*immediate);
-            std::array<unsigned char, 32> tmpbuf2;
-            to_big_endian(size, tmpbuf2.begin());
-            buf.insert(buf.end(), tmpbuf2.begin(), tmpbuf2.end());
+            HashOnly hashOnly(::hash(*immediate), ::getSize(*immediate));
+            hashOnly.marshal(buf);
         }
     } else {
         buf.push_back(0);
