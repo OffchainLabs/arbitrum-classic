@@ -1573,6 +1573,13 @@ func TestGettime(t *testing.T) {
 		0,
 	)
 	// verify known and unknown match
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(5),
+		value.NewInt64Value(10),
+		value.NewInt64Value(0),
+		value.NewInt64Value(100000),
+	})
+	knownMachine.Stack().Push(tup)
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
