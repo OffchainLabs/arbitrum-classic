@@ -19,9 +19,10 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -711,7 +712,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 	biTimeout := timeout.BigInt()
-	lowerTimeBound := state.GetStartTime()
+	lowerTimeBound := state.GetStartBlock()
 	inboxVal := state.GetInbox()
 	if (biTimeout.Cmp(lowerTimeBound.BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
 		mods = PushStackInt(state, mods, timeout)
@@ -1040,7 +1041,13 @@ func insnSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackTuple(state, mods, value.NewTuple2(state.GetStartTime(), state.GetEndTime()))
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		state.GetStartBlock(),
+		state.GetEndBlock(),
+		state.GetStartTimestamp(),
+		state.GetEndTimestamp(),
+	})
+	mods = PushStackTuple(state, mods, tup)
 	state.IncrPC()
 	return mods, nil
 }

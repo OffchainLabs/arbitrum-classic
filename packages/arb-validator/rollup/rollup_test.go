@@ -168,7 +168,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	theMachine := baseNode.machine
-	timeBounds := &protocol.TimeBoundsBlocks{
+	timeBounds := &protocol.TimeBounds{
 		StartBlock: common.NewTimeBlocks(big.NewInt(0)),
 		EndBlock:   common.NewTimeBlocks(big.NewInt(1000)),
 	}

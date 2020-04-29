@@ -365,7 +365,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			PrevLeafHash: eventVal.Fields[0],
 			Params: &valprotocol.AssertionParams{
 				NumSteps: eventVal.NumSteps,
-				TimeBounds: &protocol.TimeBoundsBlocks{
+				TimeBounds: &protocol.TimeBounds{
 					common.NewTimeBlocks(eventVal.TimeBounds[0]),
 					common.NewTimeBlocks(eventVal.TimeBounds[1]),
 					eventVal.TimeBounds[2],

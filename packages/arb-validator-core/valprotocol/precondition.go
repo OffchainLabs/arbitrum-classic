@@ -27,11 +27,11 @@ import (
 
 type Precondition struct {
 	BeforeHash  common.Hash
-	TimeBounds  *protocol.TimeBoundsBlocks
+	TimeBounds  *protocol.TimeBounds
 	BeforeInbox value.Value
 }
 
-func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, beforeInbox value.Value) *Precondition {
+func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBounds, beforeInbox value.Value) *Precondition {
 	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
 }
 

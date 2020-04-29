@@ -24,14 +24,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type TimeBoundsBlocks struct {
+type TimeBounds struct {
 	StartBlock *common.TimeBlocks
 	EndBlock   *common.TimeBlocks
 	StartTime  *big.Int
 	EndTime    *big.Int
 }
 
-func (a *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
+func (a *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
 		StartBlock: a.StartBlock.Marshal(),
 		EndBlock:   a.EndBlock.Marshal(),
@@ -40,8 +40,8 @@ func (a *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
 	}
 }
 
-func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBoundsBlocks {
-	return &TimeBoundsBlocks{
+func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
+	return &TimeBounds{
 		StartBlock: a.StartBlock.Unmarshal(),
 		EndBlock:   a.EndBlock.Unmarshal(),
 		StartTime:  a.StartTime.Unmarshal(),
@@ -49,8 +49,8 @@ func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBoundsBlocks {
 	}
 }
 
-func (tb *TimeBoundsBlocks) Clone() *TimeBoundsBlocks {
-	return &TimeBoundsBlocks{
+func (tb *TimeBounds) Clone() *TimeBounds {
+	return &TimeBounds{
 		StartBlock: tb.StartBlock.Clone(),
 		EndBlock:   tb.EndBlock.Clone(),
 		StartTime:  new(big.Int).Set(tb.StartTime),
@@ -58,18 +58,18 @@ func (tb *TimeBoundsBlocks) Clone() *TimeBoundsBlocks {
 	}
 }
 
-func (tb *TimeBoundsBlocks) AsIntArray() [4]*big.Int {
+func (tb *TimeBounds) AsIntArray() [4]*big.Int {
 	return [4]*big.Int{tb.StartBlock.AsInt(), tb.EndBlock.AsInt(), tb.StartTime, tb.EndTime}
 }
 
-func (tb *TimeBoundsBlocks) Equals(other *TimeBoundsBlocks) bool {
+func (tb *TimeBounds) Equals(other *TimeBounds) bool {
 	return tb.StartBlock.AsInt().Cmp(other.StartBlock.AsInt()) == 0 &&
 		tb.EndBlock.AsInt().Cmp(other.EndBlock.AsInt()) == 0 &&
 		tb.StartTime.Cmp(other.StartTime) == 0 &&
 		tb.EndTime.Cmp(other.EndTime) == 0
 }
 
-func (tb *TimeBoundsBlocks) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) error {
+func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) error {
 	startTime := tb.StartBlock.AsInt()
 	if block.AsInt().Cmp(startTime) < 0 {
 		return errors.New("TimeBounds minimum block must less than the block")
@@ -89,7 +89,7 @@ func (tb *TimeBoundsBlocks) IsValidTime(block *common.TimeBlocks, timestamp *big
 	return nil
 }
 
-func (tb *TimeBoundsBlocks) AsValue() value.TupleValue {
+func (tb *TimeBounds) AsValue() value.TupleValue {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(tb.StartBlock.AsInt()),
 		value.NewIntValue(tb.EndBlock.AsInt()),

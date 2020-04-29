@@ -27,7 +27,7 @@ type UnanimousRequestData struct {
 	BeforeHash  common.Hash
 	BeforeInbox common.Hash
 	SequenceNum uint64
-	TimeBounds  *protocol.TimeBoundsBlocks
+	TimeBounds  *protocol.TimeBounds
 }
 
 func (r UnanimousRequestData) Hash() common.Hash {

@@ -23,8 +23,10 @@ import (
 
 type Context interface {
 	Send(message value.Value)
-	GetStartTime() value.IntValue
-	GetEndTime() value.IntValue
+	GetStartBlock() value.IntValue
+	GetEndBlock() value.IntValue
+	GetStartTimestamp() value.IntValue
+	GetEndTimestamp() value.IntValue
 	NotifyStep(uint64)
 	LoggedValue(value.Value)
 	GetInbox() value.TupleValue
@@ -55,11 +57,19 @@ func (m *NoContext) OutMessageCount() int {
 	return 0
 }
 
-func (m *NoContext) GetStartTime() value.IntValue {
+func (m *NoContext) GetStartBlock() value.IntValue {
 	return value.NewInt64Value(0)
 }
 
-func (m *NoContext) GetEndTime() value.IntValue {
+func (m *NoContext) GetEndBlock() value.IntValue {
+	return value.NewInt64Value(0)
+}
+
+func (m *NoContext) GetStartTimestamp() value.IntValue {
+	return value.NewInt64Value(0)
+}
+
+func (m *NoContext) GetEndTimestamp() value.IntValue {
 	return value.NewInt64Value(0)
 }
 
@@ -68,7 +78,7 @@ func (m *NoContext) NotifyStep(uint64) {
 
 type MachineAssertionContext struct {
 	machine      *Machine
-	timeBounds   *protocol.TimeBoundsBlocks
+	timeBounds   *protocol.TimeBounds
 	inbox        value.TupleValue
 	didInboxInsn bool
 	numSteps     uint64
@@ -77,7 +87,7 @@ type MachineAssertionContext struct {
 	logs         []value.Value
 }
 
-func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) *MachineAssertionContext {
+func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds, inbox value.TupleValue) *MachineAssertionContext {
 	ret := &MachineAssertionContext{
 		m,
 		timeBounds,
@@ -121,12 +131,20 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (m *MachineAssertionContext) GetStartTime() value.IntValue {
+func (m *MachineAssertionContext) GetStartBlock() value.IntValue {
 	return value.NewIntValue(m.timeBounds.StartBlock.AsInt())
 }
 
-func (m *MachineAssertionContext) GetEndTime() value.IntValue {
+func (m *MachineAssertionContext) GetEndBlock() value.IntValue {
 	return value.NewIntValue(m.timeBounds.EndBlock.AsInt())
+}
+
+func (m *MachineAssertionContext) GetStartTimestamp() value.IntValue {
+	return value.NewIntValue(m.timeBounds.StartTime)
+}
+
+func (m *MachineAssertionContext) GetEndTimestamp() value.IntValue {
+	return value.NewIntValue(m.timeBounds.EndTime)
 }
 
 func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {

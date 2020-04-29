@@ -361,11 +361,11 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 	}
 }
 
-func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
+func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBounds {
 	latestBlock := chain.latestBlockId.Height
 	// Start timestamp slightly in the past to avoid it being invalid
 	latestTimestamp := time.Now().Unix() - 60
-	return &protocol.TimeBoundsBlocks{
+	return &protocol.TimeBounds{
 		StartBlock: latestBlock,
 		EndBlock:   common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxBlockBoundsWidth)))),
 		StartTime:  big.NewInt(latestTimestamp),

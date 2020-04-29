@@ -17,10 +17,6 @@
 package speedtest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,6 +24,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func getInsnMultiplier(filePath string) uint64 {
@@ -61,7 +62,7 @@ func runAoFile(b *testing.B, filePath string) {
 		b.Fail()
 	}
 
-	unusedTimeBounds := &protocol.TimeBoundsBlocks{
+	unusedTimeBounds := &protocol.TimeBounds{
 		common.NewTimeBlocks(big.NewInt(0)),
 		common.NewTimeBlocks(big.NewInt(0)),
 	}

@@ -72,7 +72,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := &protocol.TimeBoundsBlocks{common.NewTimeBlocks(big.NewInt(0)), common.NewTimeBlocks(big.NewInt(10000))}
+	timeBounds := &protocol.TimeBounds{common.NewTimeBlocks(big.NewInt(0)), common.NewTimeBlocks(big.NewInt(10000))}
 	steps := uint64(100000)
 	cont := true
 

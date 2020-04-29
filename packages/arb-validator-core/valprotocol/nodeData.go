@@ -105,7 +105,7 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 
 type AssertionParams struct {
 	NumSteps             uint64
-	TimeBounds           *protocol.TimeBoundsBlocks
+	TimeBounds           *protocol.TimeBounds
 	ImportedMessageCount *big.Int
 }
 

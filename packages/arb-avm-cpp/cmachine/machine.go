@@ -132,7 +132,7 @@ func (m *Machine) PrintState() {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBoundsBlocks,
+	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {

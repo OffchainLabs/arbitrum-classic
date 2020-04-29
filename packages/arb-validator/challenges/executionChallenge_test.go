@@ -38,7 +38,7 @@ func testExecutionChallenge(t *testing.T) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := &protocol.TimeBoundsBlocks{
+	timeBounds := &protocol.TimeBounds{
 		common.NewTimeBlocks(big.NewInt(100)),
 		common.NewTimeBlocks(big.NewInt(120)),
 	}
