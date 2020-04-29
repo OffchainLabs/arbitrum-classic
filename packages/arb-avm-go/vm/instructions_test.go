@@ -764,6 +764,8 @@ func TestInbox(t *testing.T) {
 		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(100000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		messageStack.GetValue(),
 	)
@@ -1491,6 +1493,8 @@ func TestLog(t *testing.T) {
 		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(10000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1528,6 +1532,8 @@ func TestSend(t *testing.T) {
 		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(10000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1560,6 +1566,8 @@ func TestGettime(t *testing.T) {
 		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(5)),
 			common.NewTimeBlocks(big.NewInt(10)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
