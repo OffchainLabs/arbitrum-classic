@@ -247,8 +247,9 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	}, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		mach := chain.LatestKnownValidMachine()
-		latestTime := chain.CurrentBlockId().Height
-		timeBounds := &protocol.TimeBoundsBlocks{latestTime, latestTime}
+		latestBlock := chain.CurrentBlockId().Height
+		latestTime := big.NewInt(time.Now().Unix())
+		timeBounds := &protocol.TimeBoundsBlocks{latestBlock, latestBlock, latestTime, latestTime}
 		go func() {
 			assertion, numSteps := mach.ExecuteAssertion(
 				// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity

@@ -22,6 +22,7 @@ import (
 	"log"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
@@ -361,9 +362,13 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 }
 
 func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
-	latestTime := chain.latestBlockId.Height
+	latestBlock := chain.latestBlockId.Height
+	// Start timestamp slightly in the past to avoid it being invalid
+	latestTimestamp := time.Now().Unix() - 60
 	return &protocol.TimeBoundsBlocks{
-		latestTime,
-		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxTimeBoundsWidth)))),
+		StartBlock: latestBlock,
+		EndBlock:   common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxBlockBoundsWidth)))),
+		StartTime:  big.NewInt(latestTimestamp),
+		EndTime:    big.NewInt(latestTimestamp + int64(chain.nodeGraph.params.MaxTimestampBoundsWidth)),
 	}
 }

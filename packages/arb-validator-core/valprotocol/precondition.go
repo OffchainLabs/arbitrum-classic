@@ -40,8 +40,8 @@ func (pre *Precondition) String() string {
 	return fmt.Sprintf(
 		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
 		pre.BeforeHash,
-		pre.TimeBounds.Start.AsInt(),
-		pre.TimeBounds.End.AsInt(),
+		pre.TimeBounds.StartBlock.AsInt(),
+		pre.TimeBounds.EndBlock.AsInt(),
 		inboxHash,
 	)
 }
@@ -55,8 +55,8 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 func (pre *Precondition) Hash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(pre.BeforeHash),
-		hashing.TimeBlocks(pre.TimeBounds.Start),
-		hashing.TimeBlocks(pre.TimeBounds.End),
+		hashing.TimeBlocks(pre.TimeBounds.StartBlock),
+		hashing.TimeBlocks(pre.TimeBounds.EndBlock),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
 	)
 }

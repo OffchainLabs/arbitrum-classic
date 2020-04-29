@@ -366,8 +366,10 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			Params: &valprotocol.AssertionParams{
 				NumSteps: eventVal.NumSteps,
 				TimeBounds: &protocol.TimeBoundsBlocks{
-					common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
-					common.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+					common.NewTimeBlocks(eventVal.TimeBounds[0]),
+					common.NewTimeBlocks(eventVal.TimeBounds[1]),
+					eventVal.TimeBounds[2],
+					eventVal.TimeBounds[3],
 				},
 				ImportedMessageCount: eventVal.ImportedMessageCount,
 			},
@@ -421,7 +423,8 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainPar
 		StakeRequirement:        stakeRequired,
 		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
-		MaxTimeBoundsWidth:      rawParams.MaxTimeBoundsWidth,
+		MaxBlockBoundsWidth:     rawParams.MaxBlockBoundsWidth,
+		MaxTimestampBoundsWidth: rawParams.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }

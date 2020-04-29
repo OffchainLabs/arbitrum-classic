@@ -190,8 +190,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						startTime := prepared.params.TimeBounds.Start
-						endTime := prepared.params.TimeBounds.End
+						startTime := prepared.params.TimeBounds.StartBlock
+						endTime := prepared.params.TimeBounds.EndBlock
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
 						if chain.latestBlockId.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
 							for _, lis := range chain.listeners {
@@ -232,10 +232,10 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
-	log.Println("timeBounds: ", timeBounds.Start.String(), timeBounds.End.String())
+	log.Println("timeBounds: ", timeBounds.StartBlock.String(), timeBounds.EndBlock.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	currentHeight := chain.latestBlockId.Height.Clone()
-	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())
+	timeBoundsLength := new(big.Int).Sub(timeBounds.EndBlock.AsInt(), timeBounds.StartBlock.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
 	runDuration := common.NewTimeBlocks(runBlocks).Duration()
 	log.Println("Asserting for up to", runBlocks, " blocks")
@@ -255,8 +255,8 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		beforeHash,
 		afterHash,
 		blockReason,
-		timeBounds.Start.AsInt(),
-		timeBounds.End.AsInt(),
+		timeBounds.StartBlock.AsInt(),
+		timeBounds.EndBlock.AsInt(),
 		currentOpinionHash,
 	)
 

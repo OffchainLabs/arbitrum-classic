@@ -26,7 +26,8 @@ type ChainParams struct {
 	StakeRequirement        *big.Int         // in Wei
 	GracePeriod             common.TimeTicks // in Ticks
 	MaxExecutionSteps       uint64
-	MaxTimeBoundsWidth      uint64 // in blocks
+	MaxBlockBoundsWidth     uint64 // in blocks
+	MaxTimestampBoundsWidth uint64 // in seconds
 	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
 }
 
@@ -52,9 +53,15 @@ func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 	return ret
 }
 
-func (cp ChainParams) WithMaxTimeBoundsWidth(width uint64) ChainParams {
+func (cp ChainParams) WithMaxBlocksBoundsWidth(width uint64) ChainParams {
 	ret := cp
-	ret.MaxTimeBoundsWidth = width
+	ret.MaxBlockBoundsWidth = width
+	return ret
+}
+
+func (cp ChainParams) WithMaxTimestampBoundsWidth(width uint64) ChainParams {
+	ret := cp
+	ret.MaxTimestampBoundsWidth = width
 	return ret
 }
 
@@ -69,7 +76,8 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
 		GracePeriod:             params.GracePeriod.MarshalToBuf(),
 		MaxExecutionSteps:       params.MaxExecutionSteps,
-		MaxTimeBoundsWidth:      params.MaxTimeBoundsWidth,
+		MaxBlockBoundsWidth:     params.MaxBlockBoundsWidth,
+		MaxTimestampBoundsWidth: params.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
 	}
 }
@@ -79,7 +87,8 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 		StakeRequirement:        m.StakeRequirement.Unmarshal(),
 		GracePeriod:             m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps:       m.MaxExecutionSteps,
-		MaxTimeBoundsWidth:      m.MaxTimeBoundsWidth,
+		MaxBlockBoundsWidth:     m.MaxBlockBoundsWidth,
+		MaxTimestampBoundsWidth: m.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }
@@ -87,5 +96,8 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 func (cp ChainParams) Equals(cp2 ChainParams) bool {
 	return cp.StakeRequirement.Cmp(cp2.StakeRequirement) == 0 &&
 		cp.GracePeriod == cp2.GracePeriod &&
-		cp.MaxExecutionSteps == cp2.MaxExecutionSteps
+		cp.MaxExecutionSteps == cp2.MaxExecutionSteps &&
+		cp.MaxBlockBoundsWidth == cp2.MaxBlockBoundsWidth &&
+		cp.MaxTimestampBoundsWidth == cp2.MaxTimestampBoundsWidth &&
+		cp.ArbGasSpeedLimitPerTick == cp2.ArbGasSpeedLimitPerTick
 }

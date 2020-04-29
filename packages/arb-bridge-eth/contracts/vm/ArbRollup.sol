@@ -69,7 +69,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64 _maxTimeBoundsWidth,
+        uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
@@ -202,7 +202,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[2] calldata _timeBoundsBlocks,
+        uint128[4] calldata _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas,
@@ -222,7 +222,7 @@ contract ArbRollup is NodeGraph, Staking {
                 _prevChildType,
 
                 _numSteps,
-                _timeBoundsBlocks,
+                _timeBounds,
                 _importedMessageCount,
 
                 _fields[4],

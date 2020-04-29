@@ -16,9 +16,7 @@ interface ArbFactoryInterface extends Interface {
       encode([]: []): string
     }>
 
-    globalInboxAddress: TypedFunctionDescription<{
-      encode([]: []): string
-    }>
+    globalInboxAddress: TypedFunctionDescription<{ encode([]: []): string }>
 
     rollupTemplate: TypedFunctionDescription<{ encode([]: []): string }>
 
@@ -36,7 +34,7 @@ interface ArbFactoryInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        BigNumberish,
+        BigNumberish[],
         BigNumberish,
         string
       ]): string
@@ -75,7 +73,7 @@ export class ArbFactory extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string,
       overrides?: TransactionOverrides
@@ -93,7 +91,7 @@ export class ArbFactory extends Contract {
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
-    _maxTimeBoundsWidth: BigNumberish,
+    _maxTimeBoundsWidth: BigNumberish[],
     _stakeRequirement: BigNumberish,
     _owner: string,
     overrides?: TransactionOverrides
@@ -115,7 +113,7 @@ export class ArbFactory extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string
     ): Promise<BigNumber>

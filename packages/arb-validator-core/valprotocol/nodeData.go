@@ -113,8 +113,8 @@ func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
 		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
 		ap.NumSteps,
-		ap.TimeBounds.Start.AsInt(),
-		ap.TimeBounds.End.AsInt(),
+		ap.TimeBounds.StartBlock.AsInt(),
+		ap.TimeBounds.EndBlock.AsInt(),
 		ap.ImportedMessageCount,
 	)
 }
