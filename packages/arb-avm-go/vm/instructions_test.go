@@ -47,6 +47,8 @@ func TestMachineAdd(t *testing.T) {
 	tb := &protocol.TimeBounds{
 		common.NewTimeBlocks(big.NewInt(0)),
 		common.NewTimeBlocks(big.NewInt(100000)),
+		big.NewInt(0),
+		big.NewInt(100000),
 	}
 	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue(), 0)
 }
