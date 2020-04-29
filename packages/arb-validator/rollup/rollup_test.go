@@ -72,7 +72,6 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
 	blockId := &common.BlockId{
 		common.NewTimeBlocks(big.NewInt(7337)),
-		big.NewInt(5346),
 		common.Hash{},
 	}
 	ctx := checkpointing.NewCheckpointContextImpl()
@@ -251,7 +250,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		false,
 		&common.BlockId{
 			Height:     common.NewTimeBlocks(big.NewInt(10)),
-			Time:       big.NewInt(200),
 			HeaderHash: common.Hash{},
 		},
 	)
@@ -273,7 +271,6 @@ func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash c
 		ChainInfo: arbbridge.ChainInfo{
 			BlockId: &common.BlockId{
 				Height:     common.NewTimeBlocks(big.NewInt(73)),
-				Time:       big.NewInt(500),
 				HeaderHash: common.Hash{},
 			},
 			LogIndex: 0,
