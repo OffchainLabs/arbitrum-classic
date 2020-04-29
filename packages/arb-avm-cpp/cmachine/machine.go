@@ -173,8 +173,8 @@ func (m *Machine) ExecuteAssertion(
 
 	startBlockData := startBlockBuf.Bytes()
 	endBlockData := endBlockBuf.Bytes()
-	startTimestampData := startTimestamp.Bytes()
-	endTimestampData := endTimestamp.Bytes()
+	startTimestampData := startTimestampBuf.Bytes()
+	endTimestampData := endTimestampBuf.Bytes()
 	msgData := buf.Bytes()
 	startBlockDataC := C.CBytes(startBlockData)
 	endBlockDataC := C.CBytes(endBlockData)
