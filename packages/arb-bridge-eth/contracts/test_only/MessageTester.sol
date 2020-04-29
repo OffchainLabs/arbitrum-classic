@@ -26,7 +26,8 @@ contract MessageTester {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         public
         pure
@@ -39,7 +40,8 @@ contract MessageTester {
             seqNumber,
             value,
             data,
-            blockNumber
+            blockNumber,
+            timestamp
         );
     }
 
@@ -50,7 +52,8 @@ contract MessageTester {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         public
         pure
@@ -63,7 +66,8 @@ contract MessageTester {
             seqNumber,
             value,
             data,
-            blockNumber
+            blockNumber,
+            timestamp
         );
     }
 
@@ -72,6 +76,7 @@ contract MessageTester {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -83,6 +88,7 @@ contract MessageTester {
             from,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -92,6 +98,7 @@ contract MessageTester {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -103,6 +110,7 @@ contract MessageTester {
             from,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -113,6 +121,7 @@ contract MessageTester {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -125,6 +134,7 @@ contract MessageTester {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -135,6 +145,7 @@ contract MessageTester {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -147,6 +158,7 @@ contract MessageTester {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -157,6 +169,7 @@ contract MessageTester {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -169,6 +182,7 @@ contract MessageTester {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -179,6 +193,7 @@ contract MessageTester {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -191,6 +206,7 @@ contract MessageTester {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }

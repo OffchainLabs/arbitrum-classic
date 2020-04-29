@@ -303,7 +303,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _seqNumber,
             _value,
             _messageData,
-            block.number
+            block.number,
+            block.timestamp
         );
 
 
@@ -336,7 +337,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _seqNumber,
             _value,
             _data,
-            block.number
+            block.number,
+            block.timestamp
         );
 
         _deliverMessage(_chain, messageHash);
@@ -365,6 +367,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _from,
             _value,
             block.number,
+            block.timestamp,
             messageNum
         );
 
@@ -395,6 +398,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _erc20,
             _value,
             block.number,
+            block.timestamp,
             messageNum
         );
 
@@ -426,6 +430,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _erc721,
             _id,
             block.number,
+            block.timestamp,
             messageNum
         );
 
@@ -457,6 +462,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _value,
             _data,
             block.number,
+            block.timestamp,
             messageNum
         );
 

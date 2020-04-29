@@ -35,7 +35,8 @@ library Messages {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         internal
         pure
@@ -50,7 +51,8 @@ library Messages {
                 seqNumber,
                 value,
                 data,
-                blockNumber
+                blockNumber,
+                timestamp
             )
         );
     }
@@ -62,7 +64,8 @@ library Messages {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         internal
         pure
@@ -93,6 +96,7 @@ library Messages {
 
         return Value.hashTuple([
             Value.newInt(blockNumber),
+            Value.newInt(timestamp),
             Value.newInt(uint256(txHash)),
             Value.newTuple(msgType)
         ]);
@@ -103,6 +107,7 @@ library Messages {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -116,6 +121,7 @@ library Messages {
                 from,
                 value,
                 blockNumber,
+                timestamp,
                 messageNum
             )
         );
@@ -126,6 +132,7 @@ library Messages {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -141,10 +148,11 @@ library Messages {
         msgType[1] = Value.newInt(uint256(from));
         msgType[2] = Value.newTuple(msgValues);
 
-        Value.Data[] memory ethMsg = new Value.Data[](3);
+        Value.Data[] memory ethMsg = new Value.Data[](4);
         ethMsg[0] = Value.newInt(blockNumber);
-        ethMsg[1] = Value.newInt(messageNum);
-        ethMsg[2] = Value.newTuple(msgType);
+        ethMsg[1] = Value.newInt(timestamp);
+        ethMsg[2] = Value.newInt(messageNum);
+        ethMsg[3] = Value.newTuple(msgType);
 
         return Value.newTuple(ethMsg).hash().hash;
     }
@@ -155,6 +163,7 @@ library Messages {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -168,6 +177,7 @@ library Messages {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -178,6 +188,7 @@ library Messages {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -191,6 +202,7 @@ library Messages {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -201,6 +213,7 @@ library Messages {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -214,6 +227,7 @@ library Messages {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -224,6 +238,7 @@ library Messages {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -237,6 +252,7 @@ library Messages {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -247,6 +263,7 @@ library Messages {
         uint256 value,
         bytes memory data,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -261,6 +278,7 @@ library Messages {
                 value,
                 data,
                 blockNumber,
+                timestamp,
                 messageNum
             )
         );
@@ -272,6 +290,7 @@ library Messages {
         uint256 value,
         bytes memory data,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         internal
@@ -291,6 +310,7 @@ library Messages {
 
         return Value.hashTuple([
             Value.newInt(blockNumber),
+            Value.newInt(timestamp),
             Value.newInt(messageNum),
             Value.newTuple(msgType)
         ]);
@@ -303,6 +323,7 @@ library Messages {
         address tokenContract,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         private
@@ -317,6 +338,7 @@ library Messages {
                 tokenContract,
                 value,
                 blockNumber,
+                timestamp,
                 messageNum
             )
         );
@@ -329,6 +351,7 @@ library Messages {
         address tokenContract,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         private
@@ -345,10 +368,11 @@ library Messages {
         msgType[1] = Value.newInt(uint256(from));
         msgType[2] = Value.newTuple(msgValues);
 
-        Value.Data[] memory ercTokenMsg = new Value.Data[](3);
+        Value.Data[] memory ercTokenMsg = new Value.Data[](4);
         ercTokenMsg[0] = Value.newInt(blockNumber);
-        ercTokenMsg[1] = Value.newInt(messageNum);
-        ercTokenMsg[2] = Value.newTuple(msgType);
+        ercTokenMsg[1] = Value.newInt(timestamp);
+        ercTokenMsg[2] = Value.newInt(messageNum);
+        ercTokenMsg[3] = Value.newTuple(msgType);
 
         return  Value.newTuple(ercTokenMsg).hash().hash;
     }
