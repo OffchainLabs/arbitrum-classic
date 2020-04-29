@@ -1580,7 +1580,6 @@ func TestGettime(t *testing.T) {
 		value.NewInt64Value(100000),
 	})
 	knownMachine.Stack().Push(tup)
-	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
