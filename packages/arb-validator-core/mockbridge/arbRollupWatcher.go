@@ -216,7 +216,8 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainPar
 		StakeRequirement:        nil,
 		GracePeriod:             common.TimeTicks{},
 		MaxExecutionSteps:       0,
-		MaxTimeBoundsWidth:      0,
+		MaxBlockBoundsWidth:     0,
+		MaxTimestampBoundsWidth: 0,
 		ArbGasSpeedLimitPerTick: 0,
 	}, nil
 }
