@@ -334,8 +334,6 @@ contract ArbRollup is NodeGraph, Staking {
                 messagesOffset += messageLength;
                 vmProtoStateHash = data.vmProtoStateHashes[validNum];
                 validNum++;
-
-                emit ConfirmedValidAssertion(nodeDataHash);
             } else {
                 nodeDataHash = data.challengeNodeData[invalidNum];
                 invalidNum++;
@@ -347,6 +345,10 @@ contract ArbRollup is NodeGraph, Staking {
                 branchType,
                 vmProtoStateHash
             );
+
+            if (branchType == VALID_CHILD_TYPE) {
+                emit ConfirmedValidAssertion(confNode);
+            }
         }
         require(messagesOffset == data.messages.length, "Didn't read all messages");
         // If last node is after deadline, then all nodes are
