@@ -63,8 +63,10 @@ func runAoFile(b *testing.B, filePath string) {
 	}
 
 	unusedTimeBounds := &protocol.TimeBounds{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(0)),
+		StartBlock: common.NewTimeBlocks(big.NewInt(100)),
+		EndBlock:   common.NewTimeBlocks(big.NewInt(120)),
+		StartTime:  big.NewInt(100),
+		EndTime:    big.NewInt(120),
 	}
 	b.ResetTimer()
 	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple(), time.Hour)
