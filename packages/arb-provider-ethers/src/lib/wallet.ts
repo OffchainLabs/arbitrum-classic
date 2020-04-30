@@ -74,7 +74,7 @@ export class ArbWallet extends ethers.Signer {
     return currentSeq
   }
 
-  public incrementSeq() {
+  public incrementSeq(): void {
     if (this.seqCache === undefined) {
       throw Error('Sequence number must have already been generated')
     }

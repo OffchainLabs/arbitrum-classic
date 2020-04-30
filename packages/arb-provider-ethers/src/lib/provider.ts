@@ -38,12 +38,6 @@ import { ArbSys } from './abi/ArbSys'
 
 import { ArbInfoFactory } from './abi/ArbInfoFactory'
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve: any): void => {
-    setTimeout(resolve, ms)
-  })
-}
-
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated'
 const EB_EVENT_CDA = 'RollupAsserted'
@@ -175,22 +169,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   //             throw Error('Invalid signature');
   //         }
   //     }
-  // }
-
-  // public async sendMessages(messages: Message[]): Promise<string> {
-  //   let txHash: Promise<string> = new Promise<string>((): string => '')
-  //   for (const message of messages) {
-  //     txHash = this.client.sendMessage(
-  //       message.to,
-  //       message.sequenceNum,
-  //       message.value,
-  //       message.data,
-  //       message.signature,
-  //       message.pubkey
-  //     )
-  //     await sleep(1)
-  //   }
-  //   return txHash
   // }
 
   public async getVmID(): Promise<string> {

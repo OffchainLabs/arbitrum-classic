@@ -16,8 +16,6 @@
 /* eslint-env browser */
 'use strict'
 
-import * as ArbValue from './value'
-
 import * as ethers from 'ethers'
 
 import {
