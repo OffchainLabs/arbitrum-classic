@@ -17,12 +17,13 @@
 package rolluptest
 
 import (
+	"time"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"time"
 )
 
 // evil machine is like a regular machine, except it returns a wrong hash w/ probability 1/8, repeatably
@@ -62,7 +63,7 @@ func _inverseTweakHash(h common.Hash) common.Hash {
 
 func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBoundsBlocks,
+	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {

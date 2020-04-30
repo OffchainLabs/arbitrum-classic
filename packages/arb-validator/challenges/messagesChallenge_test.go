@@ -41,6 +41,7 @@ func testMessagesChallenge(t *testing.T) {
 				Value: big.NewInt(6745),
 			},
 			BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp:  big.NewInt(5435254),
 			MessageNum: big.NewInt(i),
 		})
 	}

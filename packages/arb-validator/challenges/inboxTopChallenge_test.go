@@ -39,6 +39,7 @@ func testInboxTopChallenge(t *testing.T) {
 			Value: big.NewInt(6745),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(1),
 	}
 	msg2 := message.DeliveredEth{
@@ -48,6 +49,7 @@ func testInboxTopChallenge(t *testing.T) {
 			Value: big.NewInt(6745),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(2),
 	}
 	msg3 := message.DeliveredEth{
@@ -57,6 +59,7 @@ func testInboxTopChallenge(t *testing.T) {
 			Value: big.NewInt(6745),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(3),
 	}
 	msg4 := message.DeliveredEth{
@@ -66,6 +69,7 @@ func testInboxTopChallenge(t *testing.T) {
 			Value: big.NewInt(6745),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(4),
 	}
 	messageStack := structures.NewMessageStack()

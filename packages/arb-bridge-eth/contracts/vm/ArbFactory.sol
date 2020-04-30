@@ -47,11 +47,11 @@ contract ArbFactory is CloneFactory {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64 _maxTimeBoundsWidth,
+        uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner
     )
-        public
+        external
     {
         address clone = createClone(rollupTemplate);
         IArbRollup(clone).init(

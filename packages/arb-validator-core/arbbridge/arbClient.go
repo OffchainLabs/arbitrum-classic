@@ -27,8 +27,9 @@ import (
 )
 
 type MaybeBlockId struct {
-	BlockId *common.BlockId
-	Err     error
+	BlockId   *common.BlockId
+	Timestamp *big.Int
+	Err       error
 }
 
 type ArbClient interface {

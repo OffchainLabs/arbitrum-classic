@@ -62,6 +62,10 @@ func Uint256(input *big.Int) []byte {
 	return solsha3.Uint256(new(big.Int).Set(input))
 }
 
+func Uint128(input *big.Int) []byte {
+	return solsha3.Uint128(new(big.Int).Set(input))
+}
+
 func Uint64(input uint64) []byte {
 	return solsha3.Uint64(input)
 }

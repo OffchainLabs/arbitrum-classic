@@ -74,6 +74,7 @@ ethbridge_message = std.Struct(
     "ethbridge_message",
     [
         ("block_number", value.IntType()),
+        ("block_timestamp", value.IntType()),
         ("txhash", value.IntType()),
         ("message", message.typ),
     ],

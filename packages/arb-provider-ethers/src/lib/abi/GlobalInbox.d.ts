@@ -50,9 +50,7 @@ interface GlobalInboxInterface extends Interface {
 
     withdrawEth: TypedFunctionDescription<{ encode([]: []): string }>
 
-    getInbox: TypedFunctionDescription<{
-      encode([account]: [string]): string
-    }>
+    getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>
 
     sendMessages: TypedFunctionDescription<{
       encode([_messages]: [Arrayish]): string

@@ -195,6 +195,7 @@ func CreateManagerAdvanced(
 					}
 
 					blockId := maybeBlockId.BlockId
+					timestamp := maybeBlockId.Timestamp
 
 					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
 						log.Println("Reached head")
@@ -206,7 +207,7 @@ func CreateManagerAdvanced(
 					chain.NotifyNewBlock(blockId.Clone())
 					log.Print(chain.DebugString("== "))
 
-					events, err := watcher.GetEvents(runCtx, blockId)
+					events, err := watcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
 						log.Println("Manager hit error getting events", err)
 						break runLoop
@@ -247,8 +248,9 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	}, 1)
 	man.actionChan <- func(chain *rollup.ChainObserver) {
 		mach := chain.LatestKnownValidMachine()
-		latestTime := chain.CurrentBlockId().Height
-		timeBounds := &protocol.TimeBoundsBlocks{latestTime, latestTime}
+		latestBlock := chain.CurrentBlockId().Height
+		latestTime := big.NewInt(time.Now().Unix())
+		timeBounds := &protocol.TimeBounds{latestBlock, latestBlock, latestTime, latestTime}
 		go func() {
 			assertion, numSteps := mach.ExecuteAssertion(
 				// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity

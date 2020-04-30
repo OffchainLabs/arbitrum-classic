@@ -105,7 +105,7 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 
 type AssertionParams struct {
 	NumSteps             uint64
-	TimeBounds           *protocol.TimeBoundsBlocks
+	TimeBounds           *protocol.TimeBounds
 	ImportedMessageCount *big.Int
 }
 
@@ -113,8 +113,8 @@ func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
 		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
 		ap.NumSteps,
-		ap.TimeBounds.Start.AsInt(),
-		ap.TimeBounds.End.AsInt(),
+		ap.TimeBounds.LowerBoundBlock.AsInt(),
+		ap.TimeBounds.UpperBoundBlock.AsInt(),
 		ap.ImportedMessageCount,
 	)
 }

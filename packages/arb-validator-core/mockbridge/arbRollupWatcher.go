@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
@@ -61,7 +62,7 @@ func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthR
 //	return nil
 //}
 
-func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
@@ -216,7 +217,8 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainPar
 		StakeRequirement:        nil,
 		GracePeriod:             common.TimeTicks{},
 		MaxExecutionSteps:       0,
-		MaxTimeBoundsWidth:      0,
+		MaxBlockBoundsWidth:     0,
+		MaxTimestampBoundsWidth: 0,
 		ArbGasSpeedLimitPerTick: 0,
 	}, nil
 }
