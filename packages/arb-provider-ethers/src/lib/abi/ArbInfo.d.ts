@@ -16,9 +16,7 @@ interface ArbInfoInterface extends Interface {
       encode([account]: [string]): string
     }>
 
-    getCode: TypedFunctionDescription<{
-      encode([account]: [string]): string
-    }>
+    getCode: TypedFunctionDescription<{ encode([account]: [string]): string }>
   }
 
   events: {}

@@ -167,9 +167,11 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	theMachine := baseNode.machine
-	timeBounds := &protocol.TimeBoundsBlocks{
-		Start: common.NewTimeBlocks(big.NewInt(0)),
-		End:   common.NewTimeBlocks(big.NewInt(1000)),
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
@@ -243,7 +245,8 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
-			MaxTimeBoundsWidth:      20,
+			MaxBlockBoundsWidth:     20,
+			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,

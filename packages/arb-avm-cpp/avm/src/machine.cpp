@@ -50,14 +50,12 @@ void Machine::initializeMachine(const MachineState& initial_state) {
 }
 
 Assertion Machine::run(uint64_t stepCount,
-                       uint256_t timeBoundStart,
-                       uint256_t timeBoundEnd,
+                       const TimeBounds& timeBounds,
                        Tuple messages,
                        std::chrono::seconds wallLimit) {
     bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
-    machine_state.context = AssertionContext{
-        TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
+    machine_state.context = AssertionContext{timeBounds, std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
         auto blockReason = runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {

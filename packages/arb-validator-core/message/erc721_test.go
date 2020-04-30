@@ -48,6 +48,7 @@ func generateTestDeliveredERC721() DeliveredERC721 {
 	return DeliveredERC721{
 		ERC721:     generateTestERC721(),
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:  big.NewInt(65435643),
 		MessageNum: big.NewInt(9675),
 	}
 }

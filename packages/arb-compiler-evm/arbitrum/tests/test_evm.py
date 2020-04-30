@@ -25,7 +25,7 @@ from arbitrum.evm.log import EVMReturn, EVMStop
 
 
 def make_msg_val(message):
-    return [0, 0, message]
+    return [0, 0, 0, message]
 
 
 def run_until_block(vm, test):

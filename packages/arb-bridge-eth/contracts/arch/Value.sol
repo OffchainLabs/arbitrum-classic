@@ -154,6 +154,15 @@ library Value {
         return hashTuple(vals);
     }
 
+    function hashTuple(Data[4] memory val) internal pure returns (bytes32) {
+        Data[] memory vals = new Data[](val.length);
+        uint256 valCount = vals.length;
+        for (uint256 i = 0; i < valCount; i++) {
+            vals[i] = val[i];
+        }
+        return hashTuple(vals);
+    }
+
     function hashTuple(Data[] memory val) private pure returns (bytes32) {
         require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);

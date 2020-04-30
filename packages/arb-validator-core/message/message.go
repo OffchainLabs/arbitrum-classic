@@ -47,6 +47,7 @@ type Message interface {
 	Equals(o Message) bool
 	ReceiptHash() common.Hash
 	DeliveredHeight() *common.TimeBlocks
+	DeliveredTimestamp() *big.Int
 }
 
 type InboxMessage interface {
@@ -111,6 +112,7 @@ func DeliveredValue(m Message) value.Value {
 	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
 	msg, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(m.DeliveredHeight().AsInt()),
+		value.NewIntValue(m.DeliveredTimestamp()),
 		value.NewIntValue(receiptVal),
 		m.AsValue(),
 	})

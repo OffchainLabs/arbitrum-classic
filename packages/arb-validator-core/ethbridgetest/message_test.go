@@ -74,7 +74,8 @@ func TestMessageHashing(t *testing.T) {
 				Value:       big.NewInt(89735406),
 				Data:        []byte{65, 23, 68, 87, 12},
 			},
-			BlockNum: common.NewTimeBlocks(big.NewInt(87962345)),
+			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp: big.NewInt(35463245),
 		}
 		bridgeHash, err := tester.TransactionHash(
 			nil,
@@ -85,6 +86,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.Value,
 			msg.Data,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -102,6 +104,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.Value,
 			msg.Data,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -120,6 +123,7 @@ func TestMessageHashing(t *testing.T) {
 				Value: big.NewInt(89735406),
 			},
 			BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp:  big.NewInt(35463245),
 			MessageNum: big.NewInt(98742),
 		}
 		bridgeHash, err := tester.EthHash(
@@ -128,6 +132,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.From.ToEthAddress(),
 			msg.Value,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
@@ -143,6 +148,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.From.ToEthAddress(),
 			msg.Value,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
@@ -163,6 +169,7 @@ func TestMessageHashing(t *testing.T) {
 				Value:        big.NewInt(89735406),
 			},
 			BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp:  big.NewInt(35463245),
 			MessageNum: big.NewInt(98742),
 		}
 		bridgeHash, err := tester.Erc20Hash(
@@ -172,6 +179,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.TokenAddress.ToEthAddress(),
 			msg.Value,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
@@ -188,6 +196,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.TokenAddress.ToEthAddress(),
 			msg.Value,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
@@ -208,6 +217,7 @@ func TestMessageHashing(t *testing.T) {
 				Id:           big.NewInt(89735406),
 			},
 			BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp:  big.NewInt(35463245),
 			MessageNum: big.NewInt(98742),
 		}
 		bridgeHash, err := tester.Erc721Hash(
@@ -217,6 +227,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.TokenAddress.ToEthAddress(),
 			msg.Id,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
@@ -233,6 +244,7 @@ func TestMessageHashing(t *testing.T) {
 			msg.TokenAddress.ToEthAddress(),
 			msg.Id,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 		if err != nil {
