@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -48,7 +49,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (vm *ExecutionChallenge) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 

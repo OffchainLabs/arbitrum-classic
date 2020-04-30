@@ -195,6 +195,7 @@ func CreateManagerAdvanced(
 					}
 
 					blockId := maybeBlockId.BlockId
+					timestamp := maybeBlockId.Timestamp
 
 					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
 						log.Println("Reached head")
@@ -206,7 +207,7 @@ func CreateManagerAdvanced(
 					chain.NotifyNewBlock(blockId.Clone())
 					log.Print(chain.DebugString("== "))
 
-					events, err := watcher.GetEvents(runCtx, blockId)
+					events, err := watcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
 						log.Println("Manager hit error getting events", err)
 						break runLoop

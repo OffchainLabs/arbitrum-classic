@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func (_MessagesChallenge *MessagesChallengeTransactor) OneStepProofEthMessageCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _lowerHashA [32]byte, _lowerHashB [32]byte, _to common.Address, _from common.Address, _value *big.Int, _blockNumber *big.Int, _messageNum *big.Int) error {
-	return CallCheck(ctx, client, from, contractAddress, "oneStepProofEthMessage", _lowerHashA, _lowerHashB, _to, _from, _value, _blockNumber, _messageNum)
+func (_MessagesChallenge *MessagesChallengeTransactor) OneStepProofEthMessageCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _lowerHashA [32]byte, _lowerHashB [32]byte, _to common.Address, _from common.Address, _value *big.Int, _blockNumber *big.Int, _timestamp *big.Int, _messageNum *big.Int) error {
+	return CallCheck(ctx, client, from, contractAddress, "oneStepProofEthMessage", _lowerHashA, _lowerHashB, _to, _from, _value, _blockNumber, _timestamp, _messageNum)
 }
 
 func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {

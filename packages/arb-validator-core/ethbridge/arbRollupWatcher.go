@@ -118,7 +118,7 @@ func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client)
 	}, nil
 }
 
-func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	addressIndex := ethcommon.Hash{}
 	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32))
@@ -163,7 +163,7 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(inboxLogs))
 
 	for _, evmLog := range inboxLogs {
-		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
+		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog, timestamp)
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	}
 
 	for _, evmLog := range rollupLogs {
-		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
+		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog, timestamp)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	return events, nil
 }
 
-func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
+func (vm *ethRollupWatcher) processMessageDeliveredEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log, timestamp *big.Int) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == transactionMessageDeliveredID {
 		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
@@ -196,7 +196,8 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 				Value:       val.Value,
 				Data:        val.Data,
 			},
-			BlockNum: common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			Timestamp: timestamp,
 		}
 
 		return arbbridge.MessageDeliveredEvent{
@@ -217,6 +218,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 				Value: val.Value,
 			},
 			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
 
@@ -239,6 +241,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 				Value:        val.Value,
 			},
 			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
 
@@ -261,6 +264,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 				Id:           val.Id,
 			},
 			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
 
@@ -282,6 +286,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 				Data:  val.Data,
 			},
 			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
 		return arbbridge.MessageDeliveredEvent{
@@ -293,7 +298,7 @@ func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(chainInfo arbbridge.Ch
 	}
 }
 
-func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log) (arbbridge.Event, error) {
+func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog types.Log, timestamp *big.Int) (arbbridge.Event, error) {
 	if ethLog.Topics[0] == rollupStakeCreatedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {
@@ -407,7 +412,7 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
 	}
-	return vm.ProcessMessageDeliveredEvents(chainInfo, ethLog)
+	return vm.processMessageDeliveredEvents(chainInfo, ethLog, timestamp)
 }
 
 func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {

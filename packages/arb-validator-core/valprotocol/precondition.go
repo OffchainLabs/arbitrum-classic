@@ -57,6 +57,8 @@ func (pre *Precondition) Hash() common.Hash {
 		hashing.Bytes32(pre.BeforeHash),
 		hashing.TimeBlocks(pre.TimeBounds.StartBlock),
 		hashing.TimeBlocks(pre.TimeBounds.EndBlock),
+		hashing.Uint128(pre.TimeBounds.StartTime),
+		hashing.Uint128(pre.TimeBounds.EndTime),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
 	)
 }

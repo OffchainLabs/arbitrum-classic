@@ -30,18 +30,20 @@ import (
 )
 
 type Call struct {
-	To       common.Address
-	From     common.Address
-	Data     []byte
-	BlockNum *common.TimeBlocks
+	To        common.Address
+	From      common.Address
+	Data      []byte
+	BlockNum  *common.TimeBlocks
+	Timestamp *big.Int
 }
 
 func (m Call) String() string {
-	return fmt.Sprintf("Transaction(to: %v, from: %v, data: %v, blockNum: %v)",
+	return fmt.Sprintf("Transaction(to: %v, from: %v, data: %v, blockNum: %v, timestamp: %v)",
 		m.To,
 		m.From,
 		m.Data,
 		m.BlockNum.AsInt(),
+		m.Timestamp,
 	)
 }
 
@@ -57,7 +59,8 @@ func (m Call) Equals(other Message) bool {
 	return m.To == o.To &&
 		m.From == o.From &&
 		bytes.Equal(m.Data, o.Data) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0
+		m.BlockNum.Cmp(o.BlockNum) == 0 &&
+		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
 func (m Call) Type() MessageType {
@@ -116,4 +119,8 @@ func (m Call) ReceiptHash() common.Hash {
 
 func (m Call) DeliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
+}
+
+func (m Call) DeliveredTimestamp() *big.Int {
+	return m.Timestamp
 }

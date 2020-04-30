@@ -95,6 +95,7 @@ func UnmarshalEth(val value.Value) (Eth, error) {
 type DeliveredEth struct {
 	Eth
 	BlockNum   *common.TimeBlocks
+	Timestamp  *big.Int
 	MessageNum *big.Int
 }
 
@@ -105,11 +106,16 @@ func (m DeliveredEth) Equals(other Message) bool {
 	}
 	return m.Eth.Equals(o.Eth) &&
 		m.BlockNum.Cmp(o.BlockNum) == 0 &&
+		m.Timestamp.Cmp(o.Timestamp) == 0 &&
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
 func (m DeliveredEth) DeliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
+}
+
+func (m DeliveredEth) DeliveredTimestamp() *big.Int {
+	return m.Timestamp
 }
 
 func (m DeliveredEth) CommitmentHash() common.Hash {
@@ -119,6 +125,7 @@ func (m DeliveredEth) CommitmentHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.Value),
 		hashing.Uint256(m.BlockNum.AsInt()),
+		hashing.Uint256(m.Timestamp),
 		hashing.Uint256(m.MessageNum),
 	)
 }
@@ -140,33 +147,39 @@ func (m DeliveredEth) CheckpointValue() value.Value {
 
 func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
 	tup, ok := v.(value.TupleValue)
-	if !ok || tup.Len() != 5 {
-		return DeliveredEth{}, errors.New("tx val must be 5-tuple")
+	failRet := DeliveredEth{}
+	if !ok || tup.Len() != 6 {
+		return failRet, errors.New("tx val must be 5-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
 	if !ok {
-		return DeliveredEth{}, errors.New("to must be int")
+		return failRet, errors.New("to must be int")
 	}
 	from, _ := tup.GetByInt64(1)
 	fromInt, ok := from.(value.IntValue)
 	if !ok {
-		return DeliveredEth{}, errors.New("from must be int")
+		return failRet, errors.New("from must be int")
 	}
 	val, _ := tup.GetByInt64(2)
 	valInt, ok := val.(value.IntValue)
 	if !ok {
-		return DeliveredEth{}, errors.New("chain must be int")
+		return failRet, errors.New("chain must be int")
 	}
 	blockNum, _ := tup.GetByInt64(3)
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
-		return DeliveredEth{}, errors.New("blockNum must be int")
+		return failRet, errors.New("blockNum must be int")
 	}
-	messageNum, _ := tup.GetByInt64(4)
+	timestamp, _ := tup.GetByInt64(4)
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be int")
+	}
+	messageNum, _ := tup.GetByInt64(5)
 	messageNumInt, ok := messageNum.(value.IntValue)
 	if !ok {
-		return DeliveredEth{}, errors.New("messageNum must be int")
+		return failRet, errors.New("messageNum must be int")
 	}
 
 	return DeliveredEth{
@@ -176,6 +189,7 @@ func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
 			Value: valInt.BigInt(),
 		},
 		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
+		Timestamp:  timestampInt.BigInt(),
 		MessageNum: messageNumInt.BigInt(),
 	}, nil
 }

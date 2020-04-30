@@ -34,6 +34,7 @@ func getStack() *MessageStack {
 			Value: big.NewInt(2868),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(1),
 	}
 
@@ -44,6 +45,7 @@ func getStack() *MessageStack {
 			Value: big.NewInt(2868),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(2),
 	}
 
@@ -54,6 +56,7 @@ func getStack() *MessageStack {
 			Value: big.NewInt(2868),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(3),
 	}
 
@@ -64,6 +67,7 @@ func getStack() *MessageStack {
 			Value: big.NewInt(2868),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(4),
 	}
 
@@ -125,6 +129,7 @@ func TestInboxInsert(t *testing.T) {
 			Value: big.NewInt(2868),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(38653),
 	}
 
@@ -135,6 +140,7 @@ func TestInboxInsert(t *testing.T) {
 			Value: big.NewInt(8741),
 		},
 		BlockNum:   common.NewTimeBlocks(big.NewInt(1735)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(7456),
 	}
 
