@@ -175,10 +175,11 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	copy(sender[:], senderBytes)
 
 	msg := message.Call{
-		To:       contractAddress,
-		From:     sender,
-		Data:     dataBytes,
-		BlockNum: m.man.CurrentBlockId().Height,
+		To:        contractAddress,
+		From:      sender,
+		Data:      dataBytes,
+		BlockNum:  m.man.CurrentBlockId().Height,
+		Timestamp: big.NewInt(time.Now().Unix()),
 	}
 
 	callingMessage := message.DeliveredValue(msg)

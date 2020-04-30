@@ -43,6 +43,7 @@ func generateTestDeliveredEth() DeliveredEth {
 	return DeliveredEth{
 		Eth:        generateTestEth(),
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(9675),
 	}
 }

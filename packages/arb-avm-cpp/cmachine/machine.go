@@ -132,21 +132,35 @@ func (m *Machine) PrintState() {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBoundsBlocks,
+	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	startTime := timeBounds.Start.AsInt()
-	endTime := timeBounds.End.AsInt()
+	lowerBoundBlock := timeBounds.LowerBoundBlock.AsInt()
+	upperBoundBlock := timeBounds.UpperBoundBlock.AsInt()
+	lowerBoundTimestamp := timeBounds.LowerBoundTimestamp
+	upperBoundTimestamp := timeBounds.UpperBoundTimestamp
 
-	var startTimeBuf bytes.Buffer
-	err := value.NewIntValue(startTime).Marshal(&startTimeBuf)
+	var lowerBoundBlockBuf bytes.Buffer
+	err := value.NewIntValue(lowerBoundBlock).Marshal(&lowerBoundBlockBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var endTimeBuf bytes.Buffer
-	err = value.NewIntValue(endTime).Marshal(&endTimeBuf)
+	var upperBoundBlockBuf bytes.Buffer
+	err = value.NewIntValue(upperBoundBlock).Marshal(&upperBoundBlockBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var lowerBoundTimestampBuf bytes.Buffer
+	err = value.NewIntValue(lowerBoundTimestamp).Marshal(&lowerBoundTimestampBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var upperBoundTimestampBuf bytes.Buffer
+	err = value.NewIntValue(upperBoundTimestamp).Marshal(&upperBoundTimestampBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -157,22 +171,30 @@ func (m *Machine) ExecuteAssertion(
 		log.Fatal(err)
 	}
 
-	startTimeData := startTimeBuf.Bytes()
-	endTimeData := endTimeBuf.Bytes()
+	lowerBoundBlockData := lowerBoundBlockBuf.Bytes()
+	upperBoundBlockData := upperBoundBlockBuf.Bytes()
+	lowerBoundTimestampData := lowerBoundTimestampBuf.Bytes()
+	upperBoundTimestampData := upperBoundTimestampBuf.Bytes()
 	msgData := buf.Bytes()
-	startTimeDataC := C.CBytes(startTimeData)
-	endTimeDataC := C.CBytes(endTimeData)
+	lowerBoundBlockDataC := C.CBytes(lowerBoundBlockData)
+	upperBoundBlockDataC := C.CBytes(upperBoundBlockData)
+	lowerBoundTimestampDataC := C.CBytes(lowerBoundTimestampData)
+	upperBoundTimestampDataC := C.CBytes(upperBoundTimestampData)
 	msgDataC := C.CBytes(msgData)
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		startTimeDataC,
-		endTimeDataC,
+		lowerBoundBlockDataC,
+		upperBoundBlockDataC,
+		lowerBoundTimestampDataC,
+		upperBoundTimestampDataC,
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
-	C.free(startTimeDataC)
-	C.free(endTimeDataC)
+	C.free(lowerBoundBlockDataC)
+	C.free(upperBoundBlockDataC)
+	C.free(lowerBoundTimestampDataC)
+	C.free(upperBoundTimestampDataC)
 	C.free(msgDataC)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)

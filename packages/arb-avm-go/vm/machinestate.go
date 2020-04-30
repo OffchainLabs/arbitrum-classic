@@ -148,12 +148,20 @@ func (m *Machine) GetInbox() value.TupleValue {
 	return m.context.GetInbox()
 }
 
-func (m *Machine) GetStartTime() value.IntValue {
-	return m.context.GetStartTime()
+func (m *Machine) GetLowerBoundBlock() value.IntValue {
+	return m.context.GetLowerBoundBlock()
 }
 
-func (m *Machine) GetEndTime() value.IntValue {
-	return m.context.GetEndTime()
+func (m *Machine) GetUpperBoundBlock() value.IntValue {
+	return m.context.GetUpperBoundBlock()
+}
+
+func (m *Machine) GetLowerBoundTimestamp() value.IntValue {
+	return m.context.GetLowerBoundTimestamp()
+}
+
+func (m *Machine) GetUpperBoundTimestamp() value.IntValue {
+	return m.context.GetUpperBoundTimestamp()
 }
 
 func (m *Machine) IncrPC() {
@@ -260,7 +268,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBoundsBlocks,
+	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {

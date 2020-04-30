@@ -28,7 +28,7 @@ library OneStepProof {
 
     struct ValidateProofData {
         bytes32 beforeHash;
-        uint128[2] timeBoundsBlocks;
+        uint128[4] timeBounds;
         bytes32 beforeInbox;
         bytes32 afterHash;
         bool    didInboxInsn;
@@ -42,7 +42,7 @@ library OneStepProof {
 
     function validateProof(
         bytes32 beforeHash,
-        uint128[2] memory timeBoundsBlocks,
+        uint128[4] memory timeBounds,
         bytes32 beforeInbox,
         bytes32 afterHash,
         bool    didInboxInsn,
@@ -60,7 +60,7 @@ library OneStepProof {
         return checkProof(
             ValidateProofData(
                 beforeHash,
-                timeBoundsBlocks,
+                timeBounds,
                 beforeInbox,
                 afterHash,
                 didInboxInsn,
@@ -602,8 +602,8 @@ library OneStepProof {
         Machine.Data memory machine,
         Value.Data memory val1,
         Value.Data memory val2
-    ) 
-        internal 
+    )
+        internal
         pure
         returns (bool)
     {
@@ -1511,12 +1511,14 @@ library OneStepProof {
                 messageHash = 0;
             }
         } else if (opCode == OP_GETTIME) {
-            Value.Data[] memory contents = new Value.Data[](2);
-            contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
-            contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
+            Value.Data[] memory contents = new Value.Data[](4);
+            contents[0] = Value.newInt(_data.timeBounds[0]);
+            contents[1] = Value.newInt(_data.timeBounds[1]);
+            contents[2] = Value.newInt(_data.timeBounds[2]);
+            contents[3] = Value.newInt(_data.timeBounds[3]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
+            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBounds[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {

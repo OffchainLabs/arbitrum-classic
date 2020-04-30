@@ -169,29 +169,37 @@ const (
 type EthBridgeMessage struct {
 	Type        message.MessageType
 	BlockNumber *big.Int
+	Timestamp   *big.Int
 	TxHash      common.Hash
 }
 
 func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Value, error) {
 	tup, ok := val.(value.TupleValue)
+	invalid := EthBridgeMessage{}
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("msg must be tuple value")
+		return invalid, nil, errors.New("msg must be tuple value")
 	}
-	if tup.Len() != 3 {
-		return EthBridgeMessage{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+	if tup.Len() != 4 {
+		return invalid, nil, fmt.Errorf("expected tuple of length 4, but recieved %v", tup)
 	}
 	blockNumberVal, _ := tup.GetByInt64(0)
-	txHashVal, _ := tup.GetByInt64(1)
-	restVal, _ := tup.GetByInt64(2)
+	timestampVal, _ := tup.GetByInt64(1)
+	txHashVal, _ := tup.GetByInt64(2)
+	restVal, _ := tup.GetByInt64(3)
 
 	blockNumberInt, ok := blockNumberVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("block number must be an int")
+		return invalid, nil, errors.New("block number must be an int")
+	}
+
+	timestampInt, ok := timestampVal.(value.IntValue)
+	if !ok {
+		return invalid, nil, errors.New("timestamp must be an int")
 	}
 
 	txHashInt, ok := txHashVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("tx hash must be an int")
+		return invalid, nil, errors.New("tx hash must be an int")
 	}
 
 	txHashBytes := txHashInt.ToBytes()
@@ -200,19 +208,20 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 
 	restValTup, ok := restVal.(value.TupleValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("message must be a tup")
+		return invalid, nil, errors.New("message must be a tup")
 	}
 
 	typeVal, _ := restValTup.GetByInt64(0)
 	typeInt, ok := typeVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("type must be an int")
+		return invalid, nil, errors.New("type must be an int")
 	}
 	typecode := uint8(typeInt.BigInt().Uint64())
 
 	return EthBridgeMessage{
 		Type:        message.MessageType(typecode),
 		BlockNumber: blockNumberInt.BigInt(),
+		Timestamp:   timestampInt.BigInt(),
 		TxHash:      txHash,
 	}, restValTup, nil
 }

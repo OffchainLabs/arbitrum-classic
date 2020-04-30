@@ -50,7 +50,11 @@ var maxFetchAttempts = 5
 func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
 
-	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId}
+	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId
 	go func() {
 		defer close(blockIdChan)
@@ -93,7 +97,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 			}
 
 			prevBlockId = getBlockID(nextHeader)
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId}
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(nextHeader.Time)}
 		}
 	}()
 

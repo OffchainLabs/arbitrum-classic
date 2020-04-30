@@ -27,7 +27,7 @@ CALL_TX_TYPE = 5
 
 
 def make_msg_val(message, blocknum=0):
-    return [blocknum, 0, message]
+    return [blocknum, 0, 0, message]
 
 
 def run_until_block(vm, test):

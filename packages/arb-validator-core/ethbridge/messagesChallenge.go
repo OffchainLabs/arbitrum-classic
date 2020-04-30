@@ -87,6 +87,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 		msg.Value,
 		msg.Data,
 		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 	)
 	if err != nil {
 		return err
@@ -110,6 +111,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		msg.From.ToEthAddress(),
 		msg.Value,
 		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 		msg.MessageNum,
 	)
 	if err != nil {
@@ -124,6 +126,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			msg.From.ToEthAddress(),
 			msg.Value,
 			msg.BlockNum.AsInt(),
+			msg.Timestamp,
 			msg.MessageNum,
 		)
 	}
@@ -147,6 +150,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
 		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 		msg.MessageNum,
 	)
 	if err != nil {
@@ -172,6 +176,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
 		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 		msg.MessageNum,
 	)
 	if err != nil {
@@ -197,6 +202,7 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		msg.Value,
 		msg.Data,
 		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 		msg.MessageNum,
 	)
 	if err != nil {
