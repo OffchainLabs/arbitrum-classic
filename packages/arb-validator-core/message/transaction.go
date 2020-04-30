@@ -193,7 +193,7 @@ func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, er
 	tup, ok := v.(value.TupleValue)
 	failRet := DeliveredTransaction{}
 	if !ok || tup.Len() != 8 {
-		return failRet, errors.New("tx val must be 7-tuple")
+		return failRet, errors.New("tx val must be 8-tuple")
 	}
 	chain, _ := tup.GetByInt64(0)
 	chainInt, ok := chain.(value.IntValue)

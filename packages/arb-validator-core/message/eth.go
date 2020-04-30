@@ -140,6 +140,7 @@ func (m DeliveredEth) CheckpointValue() value.Value {
 		addressToIntValue(m.From),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
 		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
 	return val
@@ -149,7 +150,7 @@ func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
 	tup, ok := v.(value.TupleValue)
 	failRet := DeliveredEth{}
 	if !ok || tup.Len() != 6 {
-		return failRet, errors.New("tx val must be 5-tuple")
+		return failRet, errors.New("tx val must be 6-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)

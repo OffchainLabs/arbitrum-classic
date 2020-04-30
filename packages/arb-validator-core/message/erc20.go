@@ -135,7 +135,7 @@ func UnmarshalERC20FromCheckpoint(v value.Value) (DeliveredERC20, error) {
 	tup, ok := v.(value.TupleValue)
 	failRet := DeliveredERC20{}
 	if !ok || tup.Len() != 7 {
-		return failRet, errors.New("tx val must be 6-tuple")
+		return failRet, errors.New("tx val must be 7-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
