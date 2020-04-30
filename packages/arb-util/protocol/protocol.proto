@@ -4,8 +4,8 @@ import "common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
 message TimeBoundsBlocksBuf {
-    common.TimeBlocksBuf startBlock = 1;
-    common.TimeBlocksBuf endBlock = 2;
-    common.BigIntegerBuf startTime = 3;
-    common.BigIntegerBuf endTime = 4;
+    common.TimeBlocksBuf lowerBoundBlock = 1;
+    common.TimeBlocksBuf upperBoundBlock = 2;
+    common.BigIntegerBuf lowerBoundTimestamp = 3;
+    common.BigIntegerBuf upperBoundTimestamp = 4;
 }

@@ -146,29 +146,35 @@ ByteSlice machineMarshallForProof(CMachine* m) {
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* startBlockData,
-                                     void* endBlockData,
-                                     void* startTimestampData,
-                                     void* endTimestampData,
+                                     void* lowerBoundBlockData,
+                                     void* upperBoundBlockData,
+                                     void* lowerBoundTimestampData,
+                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto startBlockPtr = reinterpret_cast<const char*>(startBlockData);
-    auto startBlock = deserializeUint256t(startBlockPtr);
-    auto endBlockPtr = reinterpret_cast<const char*>(endBlockData);
-    auto endBlock = deserializeUint256t(endBlockPtr);
-    auto startTimestampPtr = reinterpret_cast<const char*>(startTimestampData);
-    auto startTimestamp = deserializeUint256t(startTimestampPtr);
-    auto endTimestampPtr = reinterpret_cast<const char*>(endTimestampData);
-    auto endTimestamp = deserializeUint256t(endTimestampPtr);
+    auto lowerBoundBlockPtr =
+        reinterpret_cast<const char*>(lowerBoundBlockData);
+    auto lowerBoundBlock = deserializeUint256t(lowerBoundBlockPtr);
+    auto upperBoundBlockPtr =
+        reinterpret_cast<const char*>(upperBoundBlockData);
+    auto upperBoundBlock = deserializeUint256t(upperBoundBlockPtr);
+    auto lowerBoundTimestampPtr =
+        reinterpret_cast<const char*>(lowerBoundTimestampData);
+    auto lowerBoundTimestamp = deserializeUint256t(lowerBoundTimestampPtr);
+    auto upperBoundTimestampPtr =
+        reinterpret_cast<const char*>(upperBoundTimestampData);
+    auto upperBoundTimestamp = deserializeUint256t(upperBoundTimestampPtr);
 
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
 
+    TimeBounds timeBounds{lowerBoundBlock, upperBoundBlock, lowerBoundTimestamp,
+                          upperBoundTimestamp};
+
     Assertion assertion =
-        mach->run(maxSteps, startBlock, endBlock, startTimestamp, endTimestamp,
-                  nonstd::get<Tuple>(std::move(messages)),
+        mach->run(maxSteps, timeBounds, nonstd::get<Tuple>(std::move(messages)),
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {

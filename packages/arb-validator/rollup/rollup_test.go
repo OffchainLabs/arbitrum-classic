@@ -168,10 +168,10 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	theMachine := baseNode.machine
 	timeBounds := &protocol.TimeBounds{
-		StartBlock: common.NewTimeBlocks(big.NewInt(0)),
-		EndBlock:   common.NewTimeBlocks(big.NewInt(1000)),
-		StartTime:  big.NewInt(100),
-		EndTime:    big.NewInt(120),
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion

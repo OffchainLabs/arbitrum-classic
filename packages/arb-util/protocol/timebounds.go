@@ -25,64 +25,64 @@ import (
 )
 
 type TimeBounds struct {
-	StartBlock *common.TimeBlocks
-	EndBlock   *common.TimeBlocks
-	StartTime  *big.Int
-	EndTime    *big.Int
+	LowerBoundBlock     *common.TimeBlocks
+	UpperBoundBlock     *common.TimeBlocks
+	LowerBoundTimestamp *big.Int
+	UpperBoundTimestamp *big.Int
 }
 
 func (a *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
-		StartBlock: a.StartBlock.Marshal(),
-		EndBlock:   a.EndBlock.Marshal(),
-		StartTime:  common.MarshalBigInt(a.StartTime),
-		EndTime:    common.MarshalBigInt(a.EndTime),
+		LowerBoundBlock:     a.LowerBoundBlock.Marshal(),
+		UpperBoundBlock:     a.UpperBoundBlock.Marshal(),
+		LowerBoundTimestamp: common.MarshalBigInt(a.LowerBoundTimestamp),
+		UpperBoundTimestamp: common.MarshalBigInt(a.UpperBoundTimestamp),
 	}
 }
 
 func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
 	return &TimeBounds{
-		StartBlock: a.StartBlock.Unmarshal(),
-		EndBlock:   a.EndBlock.Unmarshal(),
-		StartTime:  a.StartTime.Unmarshal(),
-		EndTime:    a.EndTime.Unmarshal(),
+		LowerBoundBlock:     a.LowerBoundBlock.Unmarshal(),
+		UpperBoundBlock:     a.UpperBoundBlock.Unmarshal(),
+		LowerBoundTimestamp: a.LowerBoundTimestamp.Unmarshal(),
+		UpperBoundTimestamp: a.UpperBoundTimestamp.Unmarshal(),
 	}
 }
 
 func (tb *TimeBounds) Clone() *TimeBounds {
 	return &TimeBounds{
-		StartBlock: tb.StartBlock.Clone(),
-		EndBlock:   tb.EndBlock.Clone(),
-		StartTime:  new(big.Int).Set(tb.StartTime),
-		EndTime:    new(big.Int).Set(tb.EndTime),
+		LowerBoundBlock:     tb.LowerBoundBlock.Clone(),
+		UpperBoundBlock:     tb.UpperBoundBlock.Clone(),
+		LowerBoundTimestamp: new(big.Int).Set(tb.LowerBoundTimestamp),
+		UpperBoundTimestamp: new(big.Int).Set(tb.UpperBoundTimestamp),
 	}
 }
 
 func (tb *TimeBounds) AsIntArray() [4]*big.Int {
-	return [4]*big.Int{tb.StartBlock.AsInt(), tb.EndBlock.AsInt(), tb.StartTime, tb.EndTime}
+	return [4]*big.Int{tb.LowerBoundBlock.AsInt(), tb.UpperBoundBlock.AsInt(), tb.LowerBoundTimestamp, tb.UpperBoundTimestamp}
 }
 
 func (tb *TimeBounds) Equals(other *TimeBounds) bool {
-	return tb.StartBlock.AsInt().Cmp(other.StartBlock.AsInt()) == 0 &&
-		tb.EndBlock.AsInt().Cmp(other.EndBlock.AsInt()) == 0 &&
-		tb.StartTime.Cmp(other.StartTime) == 0 &&
-		tb.EndTime.Cmp(other.EndTime) == 0
+	return tb.LowerBoundBlock.AsInt().Cmp(other.LowerBoundBlock.AsInt()) == 0 &&
+		tb.UpperBoundBlock.AsInt().Cmp(other.UpperBoundBlock.AsInt()) == 0 &&
+		tb.LowerBoundTimestamp.Cmp(other.LowerBoundTimestamp) == 0 &&
+		tb.UpperBoundTimestamp.Cmp(other.UpperBoundTimestamp) == 0
 }
 
 func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) error {
-	startTime := tb.StartBlock.AsInt()
-	if block.AsInt().Cmp(startTime) < 0 {
+	lowerBoundBlock := tb.LowerBoundBlock.AsInt()
+	if block.AsInt().Cmp(lowerBoundBlock) < 0 {
 		return errors.New("TimeBounds minimum block must less than the block")
 	}
-	endTime := tb.EndBlock.AsInt()
-	if block.AsInt().Cmp(endTime) > 0 {
+	upperBoundBlock := tb.UpperBoundBlock.AsInt()
+	if block.AsInt().Cmp(upperBoundBlock) > 0 {
 		return errors.New("TimeBounds maximum block must greater than the block")
 	}
 
-	if timestamp.Cmp(tb.StartTime) < 0 {
+	if timestamp.Cmp(tb.LowerBoundTimestamp) < 0 {
 		return errors.New("TimeBounds minimum timestamp must less than the timestamp")
 	}
-	if timestamp.Cmp(tb.EndTime) > 0 {
+	if timestamp.Cmp(tb.UpperBoundTimestamp) > 0 {
 		return errors.New("TimeBounds maximum timestamp must greater than the timestamp")
 	}
 
@@ -91,10 +91,10 @@ func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) 
 
 func (tb *TimeBounds) AsValue() value.TupleValue {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(tb.StartBlock.AsInt()),
-		value.NewIntValue(tb.EndBlock.AsInt()),
-		value.NewIntValue(tb.StartTime),
-		value.NewIntValue(tb.EndTime),
+		value.NewIntValue(tb.LowerBoundBlock.AsInt()),
+		value.NewIntValue(tb.UpperBoundBlock.AsInt()),
+		value.NewIntValue(tb.LowerBoundTimestamp),
+		value.NewIntValue(tb.UpperBoundTimestamp),
 	})
 	return newTup
 }

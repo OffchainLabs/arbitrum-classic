@@ -70,10 +70,10 @@ func TestCheckpointMachine(t *testing.T) {
 	_, numSteps := mach.ExecuteAssertion(
 		1000,
 		&protocol.TimeBounds{
-			StartBlock: common.NewTimeBlocks(big.NewInt(100)),
-			EndBlock:   common.NewTimeBlocks(big.NewInt(120)),
-			StartTime:  big.NewInt(100),
-			EndTime:    big.NewInt(120),
+			LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
+			UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
+			LowerBoundTimestamp: big.NewInt(100),
+			UpperBoundTimestamp: big.NewInt(120),
 		},
 		value.NewEmptyTuple(),
 		time.Hour,

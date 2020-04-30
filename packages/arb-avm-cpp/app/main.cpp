@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Msg " << msg1 << std::endl;
 
-    Assertion assertion1 = mach.run(stepCount, 0, 0, 0, 0, std::move(msg1),
+    Assertion assertion1 = mach.run(stepCount, {0, 0, 0, 0}, std::move(msg1),
                                     std::chrono::seconds{1000});
 
     auto finish = std::chrono::high_resolution_clock::now();

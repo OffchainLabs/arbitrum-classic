@@ -35,8 +35,8 @@ func (r UnanimousRequestData) Hash() common.Hash {
 		hashing.Bytes32(r.BeforeHash),
 		hashing.Bytes32(r.BeforeInbox),
 		hashing.Uint64(r.SequenceNum),
-		hashing.TimeBlocks(r.TimeBounds.StartBlock),
-		hashing.TimeBlocks(r.TimeBounds.EndBlock),
+		hashing.TimeBlocks(r.TimeBounds.LowerBoundBlock),
+		hashing.TimeBlocks(r.TimeBounds.UpperBoundBlock),
 	)
 }
 

@@ -366,9 +366,9 @@ func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBounds {
 	// Start timestamp slightly in the past to avoid it being invalid
 	latestTimestamp := time.Now().Unix() - 60
 	return &protocol.TimeBounds{
-		StartBlock: latestBlock,
-		EndBlock:   common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxBlockBoundsWidth)))),
-		StartTime:  big.NewInt(latestTimestamp),
-		EndTime:    big.NewInt(latestTimestamp + int64(chain.nodeGraph.params.MaxTimestampBoundsWidth)),
+		LowerBoundBlock:     latestBlock,
+		UpperBoundBlock:     common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxBlockBoundsWidth)))),
+		LowerBoundTimestamp: big.NewInt(latestTimestamp),
+		UpperBoundTimestamp: big.NewInt(latestTimestamp + int64(chain.nodeGraph.params.MaxTimestampBoundsWidth)),
 	}
 }

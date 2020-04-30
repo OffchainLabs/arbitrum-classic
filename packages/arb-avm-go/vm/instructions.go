@@ -712,7 +712,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 	biTimeout := timeout.BigInt()
-	lowerTimeBound := state.GetStartBlock()
+	lowerTimeBound := state.GetLowerBoundBlock()
 	inboxVal := state.GetInbox()
 	if (biTimeout.Cmp(lowerTimeBound.BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
 		mods = PushStackInt(state, mods, timeout)
@@ -1042,10 +1042,10 @@ func insnSend(state *Machine) (StackMods, error) {
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
 	tup, _ := value.NewTupleFromSlice([]value.Value{
-		state.GetStartBlock(),
-		state.GetEndBlock(),
-		state.GetStartTimestamp(),
-		state.GetEndTimestamp(),
+		state.GetLowerBoundBlock(),
+		state.GetUpperBoundBlock(),
+		state.GetLowerBoundTimestamp(),
+		state.GetUpperBoundTimestamp(),
 	})
 	mods = PushStackTuple(state, mods, tup)
 	state.IncrPC()

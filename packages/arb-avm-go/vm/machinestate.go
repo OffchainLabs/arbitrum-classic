@@ -148,20 +148,20 @@ func (m *Machine) GetInbox() value.TupleValue {
 	return m.context.GetInbox()
 }
 
-func (m *Machine) GetStartBlock() value.IntValue {
-	return m.context.GetStartBlock()
+func (m *Machine) GetLowerBoundBlock() value.IntValue {
+	return m.context.GetLowerBoundBlock()
 }
 
-func (m *Machine) GetEndBlock() value.IntValue {
-	return m.context.GetEndBlock()
+func (m *Machine) GetUpperBoundBlock() value.IntValue {
+	return m.context.GetUpperBoundBlock()
 }
 
-func (m *Machine) GetStartTimestamp() value.IntValue {
-	return m.context.GetStartTimestamp()
+func (m *Machine) GetLowerBoundTimestamp() value.IntValue {
+	return m.context.GetLowerBoundTimestamp()
 }
 
-func (m *Machine) GetEndTimestamp() value.IntValue {
-	return m.context.GetEndTimestamp()
+func (m *Machine) GetUpperBoundTimestamp() value.IntValue {
+	return m.context.GetUpperBoundTimestamp()
 }
 
 func (m *Machine) IncrPC() {

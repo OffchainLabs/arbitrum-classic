@@ -43,10 +43,7 @@ class Machine {
     void initializeMachine(const MachineState& initial_state);
 
     Assertion run(uint64_t stepCount,
-                  uint256_t startBlock,
-                  uint256_t endBlock,
-                  uint256_t startTime,
-                  uint256_t endTime,
+                  const TimeBounds& timeBounds,
                   Tuple messages,
                   std::chrono::seconds wallLimit);
 
