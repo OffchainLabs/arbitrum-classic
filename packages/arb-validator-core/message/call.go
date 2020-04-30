@@ -82,23 +82,24 @@ func (m Call) AsValue() value.Value {
 
 func UnmarshalCall(val value.Value) (Call, error) {
 	from, tup, err := unmarshalTxWrapped(val, CallType)
+	failRet := Call{}
 	if err != nil {
-		return Call{}, err
+		return failRet, err
 	}
 
 	if tup.Len() != 2 {
-		return Call{}, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+		return failRet, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
 	}
 	destVal, _ := tup.GetByInt64(0)
 	dataVal, _ := tup.GetByInt64(1)
 
 	destInt, ok := destVal.(value.IntValue)
 	if !ok {
-		return Call{}, errors.New("dest must be an int")
+		return failRet, errors.New("dest must be an int")
 	}
 	data, err := ByteStackToHex(dataVal)
 	if err != nil {
-		return Call{}, err
+		return failRet, err
 	}
 
 	return Call{
