@@ -7,7 +7,7 @@ require (
 	github.com/gogo/protobuf v1.1.1
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/handlers v1.4.2
-	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.4.3
 	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.4.3
