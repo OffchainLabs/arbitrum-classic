@@ -91,6 +91,7 @@ func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 		txes = append(txes, DeliveredTransaction{
 			Transaction: tx,
 			BlockNum:    m.BlockNum,
+			Timestamp:   m.Timestamp,
 		})
 		dataOffset += m.DataLengths[i]
 	}
