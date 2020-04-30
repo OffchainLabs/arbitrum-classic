@@ -23,6 +23,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -40,7 +42,9 @@ import (
 
 var privateKeyHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
+var auth *bind.TransactOpts
 var tester *messagetester.MessageTester
+var client *ethclient.Client
 
 var addr1 common.Address
 var addr2 common.Address
@@ -54,11 +58,13 @@ func TestMain(m *testing.M) {
 	addr3[0] = 73
 	addr3[19] = 85
 
-	auth, err := test.SetupAuth(privateKeyHex)
+	var err error
+
+	auth, err = test.SetupAuth(privateKeyHex)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, err := ethclient.Dial(test.GetEthUrl())
+	client, err = ethclient.Dial(test.GetEthUrl())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +173,36 @@ func TestTransactionBatchMessage(t *testing.T) {
 		Timestamp: big.NewInt(35463245),
 	}
 
-	bridgeHash, err := tester.TransactionBatchHash(
+	tx, err := tester.TransactionBatchHash2(
+		auth,
+		msg.Chain.ToEthAddress(),
+		common.AddressArrayToEth(tos),
+		sequenceNums,
+		values,
+		dataLengths,
+		data,
+		sig,
+	)
+
+	receipt, err := ethbridge.WaitForReceiptWithResults(context.Background(), client, auth.From, tx, "TransactionBatchHash2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ethLog, err := tester.ParseTransactionBatchHashRet(*receipt.Logs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	bridgeHash := ethLog.MessageHash
+
+	header, err := client.HeaderByHash(context.Background(), receipt.BlockHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg.BlockNum = common.NewTimeBlocks(receipt.BlockNumber)
+	msg.Timestamp = new(big.Int).SetUint64(header.Time)
+
+	bridgeHash2, err := tester.TransactionBatchHash(
 		nil,
 		msg.Chain.ToEthAddress(),
 		common.AddressArrayToEth(tos),
@@ -183,6 +218,10 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
+		t.Error("Ethbridge calculated wrong hash")
+	}
+
+	if bridgeHash2 != msg.CommitmentHash().ToEthHash() {
 		t.Error("Ethbridge calculated wrong hash")
 	}
 

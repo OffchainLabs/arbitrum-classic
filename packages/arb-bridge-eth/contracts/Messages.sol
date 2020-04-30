@@ -174,7 +174,7 @@ library Messages {
             ptr := add(ptr, 32)
             mstore(ptr, blockTimestamp)
             ptr := add(ptr, 32)
-            messageHash := keccak256(add(data, 31), add(dataLength, 33))
+            messageHash := keccak256(add(data, 31), add(dataLength, 65))
         }
         return messageHash;
     }

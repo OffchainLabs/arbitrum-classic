@@ -19,6 +19,8 @@ pragma solidity ^0.5.3;
 import "../Messages.sol";
 
 contract MessageTester {
+    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
+
     function transactionHash(
         address chain,
         address to,
@@ -97,6 +99,38 @@ contract MessageTester {
             blockNumber,
             timestamp
         );
+    }
+
+    event TransactionBatchHashRet(
+        bytes32 messageHash
+    );
+
+    function transactionBatchHash2(
+        address chain,
+        address[] calldata tos,
+        uint256[] calldata seqNumbers,
+        uint256[] calldata values,
+        uint32[] calldata dataLengths,
+        bytes calldata /* data */,
+        bytes calldata /* signatures */
+
+    )
+        external
+    {
+        bytes32 messageHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore8(ptr, TRANSACTION_BATCH_MSG)
+            ptr := add(ptr, 1)
+            calldatacopy(ptr, 4, sub(calldatasize, 4))
+            ptr := add(ptr, sub(calldatasize, 4))
+            mstore(ptr, number)
+            ptr := add(ptr, 32)
+            mstore(ptr, timestamp)
+            ptr := add(ptr, 32)
+            messageHash := keccak256(mload(0x40), sub(ptr, mload(0x40)))
+        }
+        emit TransactionBatchHashRet(messageHash);
     }
 
     function transactionMessageBatchHash(
