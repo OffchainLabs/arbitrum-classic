@@ -192,7 +192,7 @@ export class ArbWallet extends ethers.Signer {
           data
         )
 
-        const offchainTxHash = Hashing.calculateOffchainTransactionHash(
+        const aggregatorTxHash = Hashing.calculateAggregatorTransactionHash(
           vmId,
           to,
           ethers.utils.bigNumberify(seq),
@@ -200,7 +200,7 @@ export class ArbWallet extends ethers.Signer {
           data
         )
 
-        const messageHashBytes = ethers.utils.arrayify(offchainTxHash)
+        const messageHashBytes = ethers.utils.arrayify(aggregatorTxHash)
         const sig = await this.signer.signMessage(messageHashBytes)
 
         if (!this.pubkey) {

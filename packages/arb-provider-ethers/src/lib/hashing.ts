@@ -48,7 +48,7 @@ export function calculateTransactionHash(
   )
 }
 
-export function calculateOffchainTransactionHash(
+export function calculateAggregatorTransactionHash(
   chain: string,
   to: string,
   sequenceNum: ethers.utils.BigNumber,

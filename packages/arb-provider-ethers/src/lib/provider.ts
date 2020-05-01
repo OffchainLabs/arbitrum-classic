@@ -222,7 +222,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   public async getMessageResult(txHash: string): Promise<MessageResult | null> {
     // Transaction hash could be either an L1 transaction or
-    // an arbitrum transaction
+    // an arbitrum transaction. An L1 transaction hash is over a very different
+    // data structure compared to the L2 transaction hash and so no collisions
+    // are possible since both use keccak256 which is cryptographically secure
     let arbTxHash: string
     const ethReceipt = await this.ethProvider.getTransactionReceipt(txHash)
     if (ethReceipt) {
