@@ -106,11 +106,11 @@ contract MessageTester {
     );
 
     function transactionBatchHash2(
-        address chain,
-        address[] calldata tos,
-        uint256[] calldata seqNumbers,
-        uint256[] calldata values,
-        uint32[] calldata dataLengths,
+        address,
+        address[] calldata,
+        uint256[] calldata,
+        uint256[] calldata,
+        uint32[] calldata,
         bytes calldata /* data */,
         bytes calldata /* signatures */
 

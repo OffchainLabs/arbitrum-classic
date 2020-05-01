@@ -233,15 +233,21 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         uint256[] calldata seqNumbers,
         uint256[] calldata values,
         uint32[] calldata dataLengths,
-        bytes calldata /* data */,
-        bytes calldata /* signatures */
+        bytes calldata data,
+        bytes calldata signatures
     )
         external
     {
-        uint256 messageCount = tos.length;
-        require(seqNumbers.length == messageCount, "wrong input length");
-        require(values.length == messageCount, "wrong input length");
-        require(dataLengths.length == messageCount, "wrong input length");
+        require(seqNumbers.length == tos.length, "wrong input length");
+        require(values.length == tos.length, "wrong input length");
+        require(dataLengths.length == tos.length, "wrong input length");
+
+        uint256 totalDataLength = 0;
+        for (uint256 i = 0; i < tos.length; i++) {
+            totalDataLength += dataLengths[i];
+        }
+        require(data.length == totalDataLength, "wrong data length");
+        require(signatures.length == tos.length * 65, "wrong signatures length");
 
         bytes32 messageHash;
         assembly {

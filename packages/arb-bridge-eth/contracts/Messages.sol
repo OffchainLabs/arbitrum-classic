@@ -134,6 +134,32 @@ library Messages {
         ]);
     }
 
+    function requireValidTransactionBatch(
+        address[] memory _tos,
+        uint256[] memory _seqNumbers,
+        uint256[] memory _values,
+        uint32[] memory _dataLengths,
+        bytes memory _data,
+        bytes memory _signatures
+    )
+        internal
+        pure
+    {
+        uint256 messageCount = _tos.length;
+        require(_seqNumbers.length == messageCount, "wrong input length");
+        require(_values.length == messageCount, "wrong input length");
+        require(_dataLengths.length == messageCount, "wrong input length");
+
+        uint256 totalDataLength = 0;
+        for (uint256 i = 0; i < messageCount; i++) {
+            totalDataLength += _dataLengths[i];
+        }
+        require(_data.length == totalDataLength, "wrong data length");
+        require(_signatures.length == messageCount * 65, "wrong signatures length");
+    }
+
+
+    // transactionBatchHash assumes that requireValidTransactionBatch has already been called
     function transactionBatchHash(
         address _chain,
         address[] memory _tos,
@@ -149,11 +175,6 @@ library Messages {
         pure
         returns(bytes32)
     {
-        uint256 messageCount = _tos.length;
-        require(_seqNumbers.length == messageCount, "wrong input length");
-        require(_values.length == messageCount, "wrong input length");
-        require(_dataLengths.length == messageCount, "wrong input length");
-
         bytes memory data = abi.encode(
             _chain,
             _tos,
@@ -185,6 +206,7 @@ library Messages {
         bytes32 dataTupleHash;
     }
 
+    // transactionMessageBatchHash assumes that requireValidTransactionBatch has already been called
     function transactionMessageBatchHash(
         bytes32 _prev,
         address _chain,

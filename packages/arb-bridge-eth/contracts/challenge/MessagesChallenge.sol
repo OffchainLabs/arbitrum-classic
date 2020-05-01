@@ -312,6 +312,15 @@ contract MessagesChallenge is BisectionChallenge {
         asserterAction
     {
 
+        Messages.requireValidTransactionBatch(
+            tos,
+            seqNumbers,
+            values,
+            dataLengths,
+            data,
+            signatures
+        );
+
         bytes32 messageHash = Messages.transactionBatchHash(
             chain,
             tos,
