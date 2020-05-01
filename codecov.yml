@@ -54,7 +54,7 @@ ignore:
   - 'packages/arb-validator-core/ethbridge/challengefactory/*'
   - 'packages/arb-validator-core/ethbridge/challengetester/*'
   - 'packages/arb-validator-core/ethbridge/executionchallenge/*'
-  - 'packages/arb-validator-core/ethbridge/globalpendinginbox/*'
+  - 'packages/arb-validator-core/ethbridge/globalinbox/*'
   - 'packages/arb-validator-core/ethbridge/messageschallenge/*'
   - 'packages/arb-validator-core/ethbridge/pendingtopchallenge/*'
   - 'packages/arb-validator-core/ethbridge/messagetester/*'
