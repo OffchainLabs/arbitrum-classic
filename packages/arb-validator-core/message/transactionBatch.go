@@ -102,6 +102,8 @@ func (m TransactionBatch) String() string {
 	return fmt.Sprintf("TransactionBatch()")
 }
 
+// Equals check for equality between this object and any other message by
+// checking for full equality of all members
 func (m TransactionBatch) Equals(other Message) bool {
 	o, ok := other.(TransactionBatch)
 	if !ok {

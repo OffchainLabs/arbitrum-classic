@@ -67,7 +67,7 @@ func (m Call) Type() MessageType {
 	return CallType
 }
 
-func (m Call) AsValue() value.Value {
+func (m Call) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		BytesToByteStack(m.Data),
@@ -118,10 +118,10 @@ func (m Call) ReceiptHash() common.Hash {
 	)
 }
 
-func (m Call) DeliveredHeight() *common.TimeBlocks {
+func (m Call) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m Call) DeliveredTimestamp() *big.Int {
+func (m Call) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }

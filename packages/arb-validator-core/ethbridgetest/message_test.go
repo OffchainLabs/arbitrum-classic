@@ -18,6 +18,7 @@ package ethbridgetest
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math/big"
 	"os"
@@ -49,6 +50,9 @@ var client *ethclient.Client
 var addr1 common.Address
 var addr2 common.Address
 var addr3 common.Address
+
+var errHash = errors.New("ethbridge calculated wrong hash")
+var errMsgHash = errors.New("ethbridge calculated wrong message hash")
 
 func TestMain(m *testing.M) {
 	addr1[0] = 76
@@ -109,7 +113,7 @@ func TestTransactionMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	messageBridgeHash, err := tester.TransactionMessageHash(
@@ -128,7 +132,7 @@ func TestTransactionMessage(t *testing.T) {
 	}
 
 	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong message hash")
+		t.Error(errMsgHash)
 	}
 }
 
@@ -218,11 +222,11 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	if bridgeHash2 != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
@@ -243,7 +247,7 @@ func TestTransactionBatchMessage(t *testing.T) {
 	}
 	valInboxHash := message.AddToPrev(value.NewEmptyTuple(), msg).Hash()
 	if bridgeInboxHash != valInboxHash.ToEthHash() {
-		t.Error("Ethbridge calculated wrong message hash")
+		t.Error(errMsgHash)
 	}
 }
 
@@ -271,7 +275,7 @@ func TestEthMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	messageBridgeHash, err := tester.EthMessageHash(
@@ -288,7 +292,7 @@ func TestEthMessage(t *testing.T) {
 	}
 
 	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong message hash")
+		t.Error(errMsgHash)
 	}
 }
 
@@ -318,7 +322,7 @@ func TestERC20Message(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	messageBridgeHash, err := tester.Erc20MessageHash(
@@ -336,7 +340,7 @@ func TestERC20Message(t *testing.T) {
 	}
 
 	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong message hash")
+		t.Error(errMsgHash)
 	}
 }
 
@@ -366,7 +370,7 @@ func TestERC721Message(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong hash")
+		t.Error(errHash)
 	}
 
 	messageBridgeHash, err := tester.Erc721MessageHash(
@@ -384,6 +388,6 @@ func TestERC721Message(t *testing.T) {
 	}
 
 	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
-		t.Error("Ethbridge calculated wrong message hash")
+		t.Error(errMsgHash)
 	}
 }

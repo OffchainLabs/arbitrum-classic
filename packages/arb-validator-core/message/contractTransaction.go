@@ -64,7 +64,7 @@ func (m ContractTransaction) Type() MessageType {
 	return ContractTransactionType
 }
 
-func (m ContractTransaction) AsValue() value.Value {
+func (m ContractTransaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -132,11 +132,11 @@ func (m DeliveredContractTransaction) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredContractTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredContractTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredContractTransaction) DeliveredTimestamp() *big.Int {
+func (m DeliveredContractTransaction) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

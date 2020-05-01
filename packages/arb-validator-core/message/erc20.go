@@ -61,7 +61,7 @@ func (m ERC20) GetFuncName() string {
 	return "ERC20Transfer"
 }
 
-func (m ERC20) AsValue() value.Value {
+func (m ERC20) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
@@ -107,11 +107,11 @@ func (m DeliveredERC20) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredERC20) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredERC20) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredERC20) DeliveredTimestamp() *big.Int {
+func (m DeliveredERC20) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

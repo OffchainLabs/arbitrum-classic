@@ -24,6 +24,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
+// RPCServer converts Server over to the interface required for automatic RPC
+// interface generation
 type RPCServer struct {
 	*Server
 }
@@ -32,6 +34,8 @@ func NewRPCServer(ctx context.Context, globalInbox arbbridge.GlobalInbox, rollup
 	return &RPCServer{Server: NewServer(ctx, globalInbox, rollupAddress)}
 }
 
+// SendTransaction converts the server implementation of SendTransaction to the
+// required rpc server interface
 func (m *RPCServer) SendTransaction(r *http.Request, args *SendTransactionArgs, reply *SendTransactionReply) error {
 	ret, err := m.Server.SendTransaction(context.Background(), args)
 	if ret != nil {

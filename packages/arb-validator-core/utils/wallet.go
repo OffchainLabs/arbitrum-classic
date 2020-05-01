@@ -54,12 +54,11 @@ func AddFlags(fs *flag.FlagSet) WalletFlags {
 	}
 }
 
-/* GetKeystore returns a transaction authorization based on an existing ethereum
- * keystore located in validatorFolder/wallets or creates one if it does not
- * exist. It accepts a password using the "password" command line argument or
- * via an interactive prompt. It also sets the gas price of the auth via an
- * optional "gasprice" arguement.
- */
+// GetKeystore returns a transaction authorization based on an existing ethereum
+// keystore located in validatorFolder/wallets or creates one if it does not
+// exist. It accepts a password using the "password" command line argument or
+// via an interactive prompt. It also sets the gas price of the auth via an
+// optional "gasprice" arguement.
 func GetKeystore(
 	validatorFolder string,
 	args WalletFlags,

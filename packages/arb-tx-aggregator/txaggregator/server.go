@@ -37,6 +37,9 @@ import (
 
 const maxTransactions = 50
 
+const signatureLength = 65
+const recoverBitPos = signatureLength - 1
+
 type Server struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
@@ -44,7 +47,7 @@ type Server struct {
 	sync.Mutex
 	valid        bool
 	transactions []message.Transaction
-	signatures   [][65]byte
+	signatures   [][signatureLength]byte
 }
 
 // NewServer returns a new instance of the Server class
@@ -76,7 +79,7 @@ func NewServer(
 
 func (m *Server) sendBatch(ctx context.Context) {
 	var txes []message.Transaction
-	var sigs [][65]byte
+	var sigs [][signatureLength]byte
 
 	m.Lock()
 	if !m.valid {
@@ -121,7 +124,8 @@ func (m *Server) sendBatch(ctx context.Context) {
 	}
 }
 
-// CallMessage takes a request from a client to process in a temporary context and return the result
+// SendTransaction takes a request signed transaction message from a client
+// and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(
 	ctx context.Context,
 	args *SendTransactionArgs,
@@ -158,15 +162,15 @@ func (m *Server) SendTransaction(
 		return nil, errors2.Wrap(err, "error decoding signature")
 	}
 
-	if len(signature) != 65 {
+	if len(signature) != signatureLength {
 		return nil, errors.New("signature of wrong length")
 	}
 
 	// Convert sig with normalized v
-	if signature[64] == 27 {
-		signature[64] = 0
-	} else if signature[64] == 28 {
-		signature[64] = 1
+	if signature[recoverBitPos] == 27 {
+		signature[recoverBitPos] = 0
+	} else if signature[recoverBitPos] == 28 {
+		signature[recoverBitPos] = 1
 	}
 
 	txDataHash := message.OffchainTxHash(
@@ -201,7 +205,7 @@ func (m *Server) SendTransaction(
 		Data:        data,
 	})
 
-	var sigData [65]byte
+	var sigData [signatureLength]byte
 	copy(sigData[:], signature)
 	m.signatures = append(m.signatures, sigData)
 	return &SendTransactionReply{}, nil

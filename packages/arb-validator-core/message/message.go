@@ -38,10 +38,11 @@ const (
 )
 
 type SingleMessage interface {
-	AsValue() value.Value
 	ReceiptHash() common.Hash
-	DeliveredHeight() *common.TimeBlocks
-	DeliveredTimestamp() *big.Int
+
+	asValue() value.Value
+	deliveredHeight() *common.TimeBlocks
+	deliveredTimestamp() *big.Int
 }
 
 type Message interface {
@@ -152,6 +153,9 @@ func uint32sToValue(ints []uint32) value.TupleValue {
 	return ListToStackValue(ret)
 }
 
+// UnmarshalExecuted converts the given Arbitrum message value which is the
+// encoding of one of our value types for a VM, back into the original message
+// type
 func UnmarshalExecuted(typecode MessageType, messageVal value.Value, chain common.Address) (ExecutionMessage, error) {
 	switch typecode {
 	case TransactionType:
@@ -194,10 +198,10 @@ func DeliveredValue(m SingleMessage) value.Value {
 	receiptHash := m.ReceiptHash()
 	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
 	msg, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(m.DeliveredHeight().AsInt()),
-		value.NewIntValue(m.DeliveredTimestamp()),
+		value.NewIntValue(m.deliveredHeight().AsInt()),
+		value.NewIntValue(m.deliveredTimestamp()),
 		value.NewIntValue(receiptVal),
-		m.AsValue(),
+		m.asValue(),
 	})
 	return msg
 }

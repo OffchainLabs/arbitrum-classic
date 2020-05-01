@@ -42,21 +42,21 @@ import (
 )
 
 var rollupCreatedID ethcommon.Hash
-var rollupStakeCreatedID ethcommon.Hash
-var rollupChallengeStartedID ethcommon.Hash
-var rollupChallengeCompletedID ethcommon.Hash
+var stakeCreatedID ethcommon.Hash
+var challengeStartedID ethcommon.Hash
+var challengeCompletedID ethcommon.Hash
 var rollupRefundedID ethcommon.Hash
 var rollupPrunedID ethcommon.Hash
 var rollupStakeMovedID ethcommon.Hash
 var rollupAssertedID ethcommon.Hash
 var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
-var transactionMessageDeliveredID ethcommon.Hash
-var transactionMessageBatchDeliveredID ethcommon.Hash
-var ethDepositMessageDeliveredID ethcommon.Hash
-var depositERC20MessageDeliveredID ethcommon.Hash
-var depositERC721MessageDeliveredID ethcommon.Hash
-var contractTransactionMessageDeliveredID ethcommon.Hash
+var transactionID ethcommon.Hash
+var transactionBatchID ethcommon.Hash
+var ethDepositID ethcommon.Hash
+var depositERC20ID ethcommon.Hash
+var depositERC721ID ethcommon.Hash
+var contractTxID ethcommon.Hash
 var transactionBatchTxCallABI abi.Method
 
 type TransactionBatchTxCallArgs struct {
@@ -74,14 +74,14 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	parsedInbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
+	inbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID()
-	rollupStakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
-	rollupChallengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
-	rollupChallengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
+	stakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
+	challengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
+	challengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
 	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID()
 	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID()
 	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID()
@@ -89,14 +89,14 @@ func init() {
 	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
 	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
 
-	transactionMessageDeliveredID = parsedInbox.Events["TransactionMessageDelivered"].ID()
-	transactionMessageBatchDeliveredID = parsedInbox.Events["TransactionMessageBatchDelivered"].ID()
-	ethDepositMessageDeliveredID = parsedInbox.Events["EthDepositMessageDelivered"].ID()
-	depositERC20MessageDeliveredID = parsedInbox.Events["ERC20DepositMessageDelivered"].ID()
-	depositERC721MessageDeliveredID = parsedInbox.Events["ERC721DepositMessageDelivered"].ID()
-	contractTransactionMessageDeliveredID = parsedInbox.Events["ContractTransactionMessageDelivered"].ID()
+	transactionID = inbox.Events["TransactionMessageDelivered"].ID()
+	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID()
+	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID()
+	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID()
+	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID()
+	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID()
 
-	transactionBatchTxCallABI = parsedInbox.Methods["deliverTransactionBatch"]
+	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
 	transactionBatchTxCallABI.Inputs[5].Name = "data"
 	transactionBatchTxCallABI.Inputs[6].Name = "signatures"
 }
@@ -110,22 +110,30 @@ type ethRollupWatcher struct {
 	client        *ethclient.Client
 }
 
-func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client) (*ethRollupWatcher, error) {
+func newRollupWatcher(
+	rollupAddress ethcommon.Address,
+	client *ethclient.Client,
+) (*ethRollupWatcher, error) {
 	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
 
-	globalInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
-		Pending: false,
-		Context: context.Background(),
-	})
+	globalInboxAddress, err := arbitrumRollupContract.GlobalInbox(
+		&bind.CallOpts{
+			Pending: false,
+			Context: context.Background(),
+		},
+	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to get GlobalInbox address")
+		return nil, errors2.Wrap(err, "failed to get inbox")
 	}
-	globalInboxContract, err := rollup.NewIGlobalInbox(globalInboxAddress, client)
+	globalInboxContract, err := rollup.NewIGlobalInbox(
+		globalInboxAddress,
+		client,
+	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
+		return nil, errors2.Wrap(err, "failed to connect to inbox")
 	}
 
 	return &ethRollupWatcher{
@@ -137,20 +145,27 @@ func newRollupWatcher(rollupAddress ethcommon.Address, client *ethclient.Client)
 	}, nil
 }
 
-func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
+func (vm *ethRollupWatcher) GetEvents(
+	ctx context.Context,
+	blockId *common.BlockId,
+	timestamp *big.Int,
+) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	addressIndex := ethcommon.Hash{}
-	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32))
+	copy(
+		addressIndex[:],
+		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
+	)
 	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{vm.inboxAddress},
 		Topics: [][]ethcommon.Hash{
 			{
-				transactionMessageDeliveredID,
-				transactionMessageBatchDeliveredID,
-				ethDepositMessageDeliveredID,
-				depositERC20MessageDeliveredID,
-				depositERC721MessageDeliveredID,
+				transactionID,
+				transactionBatchID,
+				ethDepositID,
+				depositERC20ID,
+				depositERC721ID,
 			}, {
 				addressIndex,
 			},
@@ -164,9 +179,9 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 		Addresses: []ethcommon.Address{vm.rollupAddress},
 		Topics: [][]ethcommon.Hash{
 			{
-				rollupStakeCreatedID,
-				rollupChallengeStartedID,
-				rollupChallengeCompletedID,
+				stakeCreatedID,
+				challengeStartedID,
+				challengeCompletedID,
 				rollupRefundedID,
 				rollupPrunedID,
 				rollupStakeMovedID,
@@ -183,7 +198,12 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(rollupLogs))
 
 	for _, evmLog := range inboxLogs {
-		event, err := vm.processEvents(ctx, getLogChainInfo(evmLog), evmLog, timestamp)
+		event, err := vm.processEvents(
+			ctx,
+			getLogChainInfo(evmLog),
+			evmLog,
+			timestamp,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +211,12 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	}
 
 	for _, evmLog := range rollupLogs {
-		event, err := vm.processEvents(ctx, getLogChainInfo(evmLog), evmLog, timestamp)
+		event, err := vm.processEvents(
+			ctx,
+			getLogChainInfo(evmLog),
+			evmLog,
+			timestamp,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -200,8 +225,13 @@ func (vm *ethRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 	return events, nil
 }
 
-func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, chainInfo arbbridge.ChainInfo, ethLog types.Log, timestamp *big.Int) (arbbridge.Event, error) {
-	if ethLog.Topics[0] == transactionMessageDeliveredID {
+func (vm *ethRollupWatcher) processMessageDeliveredEvents(
+	ctx context.Context,
+	chainInfo arbbridge.ChainInfo,
+	ethLog types.Log,
+	timestamp *big.Int,
+) (arbbridge.Event, error) {
+	if ethLog.Topics[0] == transactionID {
 		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -216,7 +246,9 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 				Value:       val.Value,
 				Data:        val.Data,
 			},
-			BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(ethLog.BlockNumber),
+			),
 			Timestamp: timestamp,
 		}
 
@@ -225,7 +257,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == transactionMessageBatchDeliveredID {
+	} else if ethLog.Topics[0] == transactionBatchID {
 		tx, _, err := vm.client.TransactionByHash(ctx, ethLog.TxHash)
 		if err != nil {
 			return nil, err
@@ -250,10 +282,12 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 					Data:         args.Data,
 					Signatures:   args.Signatures,
 				},
-				BlockNum: common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+				BlockNum: common.NewTimeBlocks(
+					new(big.Int).SetUint64(ethLog.BlockNumber),
+				),
 			},
 		}, nil
-	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
+	} else if ethLog.Topics[0] == ethDepositID {
 		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -265,7 +299,9 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 				From:  common.NewAddressFromEth(val.From),
 				Value: val.Value,
 			},
-			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(ethLog.BlockNumber),
+			),
 			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
@@ -275,7 +311,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
+	} else if ethLog.Topics[0] == depositERC20ID {
 		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -288,7 +324,9 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 				TokenAddress: common.NewAddressFromEth(val.Erc20),
 				Value:        val.Value,
 			},
-			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(ethLog.BlockNumber),
+			),
 			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
@@ -298,7 +336,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
+	} else if ethLog.Topics[0] == depositERC721ID {
 		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -311,7 +349,9 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 				TokenAddress: common.NewAddressFromEth(val.Erc721),
 				Id:           val.Id,
 			},
-			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(ethLog.BlockNumber),
+			),
 			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
@@ -320,8 +360,10 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 			ChainInfo: chainInfo,
 			Message:   msg,
 		}, nil
-	} else if ethLog.Topics[0] == contractTransactionMessageDeliveredID {
-		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(ethLog)
+	} else if ethLog.Topics[0] == contractTxID {
+		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(
+			ethLog,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +375,9 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 				Value: val.Value,
 				Data:  val.Data,
 			},
-			BlockNum:   common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(ethLog.BlockNumber),
+			),
 			Timestamp:  timestamp,
 			MessageNum: val.MessageNum,
 		}
@@ -346,8 +390,13 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(ctx context.Context, c
 	}
 }
 
-func (vm *ethRollupWatcher) processEvents(ctx context.Context, chainInfo arbbridge.ChainInfo, ethLog types.Log, timestamp *big.Int) (arbbridge.Event, error) {
-	if ethLog.Topics[0] == rollupStakeCreatedID {
+func (vm *ethRollupWatcher) processEvents(
+	ctx context.Context,
+	chainInfo arbbridge.ChainInfo,
+	ethLog types.Log,
+	timestamp *big.Int,
+) (arbbridge.Event, error) {
+	if ethLog.Topics[0] == stakeCreatedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {
 			return nil, err
@@ -357,28 +406,34 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, chainInfo arbbrid
 			Staker:    common.NewAddressFromEth(eventVal.Staker),
 			NodeHash:  eventVal.NodeHash,
 		}, nil
-	} else if ethLog.Topics[0] == rollupChallengeStartedID {
+	} else if ethLog.Topics[0] == challengeStartedID {
 		eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(ethLog)
 		if err != nil {
 			return nil, err
 		}
 		return arbbridge.ChallengeStartedEvent{
-			ChainInfo:         chainInfo,
-			Asserter:          common.NewAddressFromEth(eventVal.Asserter),
-			Challenger:        common.NewAddressFromEth(eventVal.Challenger),
-			ChallengeType:     valprotocol.ChildType(eventVal.ChallengeType.Uint64()),
-			ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
+			ChainInfo:  chainInfo,
+			Asserter:   common.NewAddressFromEth(eventVal.Asserter),
+			Challenger: common.NewAddressFromEth(eventVal.Challenger),
+			ChallengeType: valprotocol.ChildType(
+				eventVal.ChallengeType.Uint64(),
+			),
+			ChallengeContract: common.NewAddressFromEth(
+				eventVal.ChallengeContract,
+			),
 		}, nil
-	} else if ethLog.Topics[0] == rollupChallengeCompletedID {
+	} else if ethLog.Topics[0] == challengeCompletedID {
 		eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(ethLog)
 		if err != nil {
 			return nil, err
 		}
 		return arbbridge.ChallengeCompletedEvent{
-			ChainInfo:         chainInfo,
-			Winner:            common.NewAddressFromEth(eventVal.Winner),
-			Loser:             common.NewAddressFromEth(eventVal.Loser),
-			ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
+			ChainInfo: chainInfo,
+			Winner:    common.NewAddressFromEth(eventVal.Winner),
+			Loser:     common.NewAddressFromEth(eventVal.Loser),
+			ChallengeContract: common.NewAddressFromEth(
+				eventVal.ChallengeContract,
+			),
 		}, nil
 	} else if ethLog.Topics[0] == rollupRefundedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(ethLog)
@@ -463,7 +518,9 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, chainInfo arbbrid
 	return vm.processMessageDeliveredEvents(ctx, chainInfo, ethLog, timestamp)
 }
 
-func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
+func (vm *ethRollupWatcher) GetParams(
+	ctx context.Context,
+) (valprotocol.ChainParams, error) {
 	rawParams, err := vm.ArbRollup.VmParams(nil)
 	if err != nil {
 		return valprotocol.ChainParams{}, err
@@ -473,8 +530,10 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainPar
 		return valprotocol.ChainParams{}, err
 	}
 	return valprotocol.ChainParams{
-		StakeRequirement:        stakeRequired,
-		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
+		StakeRequirement: stakeRequired,
+		GracePeriod: common.TimeTicks{
+			Val: rawParams.GracePeriodTicks,
+		},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
 		MaxBlockBoundsWidth:     rawParams.MaxBlockBoundsWidth,
 		MaxTimestampBoundsWidth: rawParams.MaxTimestampBoundsWidth,
@@ -482,14 +541,21 @@ func (vm *ethRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainPar
 	}, nil
 }
 
-func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+func (vm *ethRollupWatcher) InboxAddress(
+	ctx context.Context,
+) (common.Address, error) {
 	addr, err := vm.ArbRollup.GlobalInbox(nil)
 	return common.NewAddressFromEth(addr), err
 }
 
-func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
+func (con *ethRollupWatcher) GetCreationInfo(
+	ctx context.Context,
+) (*common.BlockId, common.Hash, error) {
 	addressIndex := ethcommon.Hash{}
-	copy(addressIndex[:], ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32))
+	copy(
+		addressIndex[:],
+		ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32),
+	)
 	logs, err := con.client.FilterLogs(ctx, ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{con.rollupAddress},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
@@ -498,7 +564,9 @@ func (con *ethRollupWatcher) GetCreationInfo(ctx context.Context) (*common.Block
 		return nil, common.Hash{}, err
 	}
 	if len(logs) != 1 {
-		return nil, common.Hash{}, errors.New("more than one chain created with same address")
+		return nil,
+			common.Hash{},
+			errors.New("more than one chain created with same address")
 	}
 	ev, err := con.ArbRollup.ParseRollupCreated(logs[0])
 	if err != nil {

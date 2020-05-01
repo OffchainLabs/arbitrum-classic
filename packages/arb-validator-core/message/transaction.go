@@ -70,7 +70,7 @@ func (m Transaction) Type() MessageType {
 	return TransactionType
 }
 
-func (m Transaction) AsValue() value.Value {
+func (m Transaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
@@ -157,11 +157,11 @@ func (m DeliveredTransaction) Equals(other Message) bool {
 		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
-func (m DeliveredTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredTransaction) DeliveredTimestamp() *big.Int {
+func (m DeliveredTransaction) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

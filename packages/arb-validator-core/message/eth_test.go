@@ -51,7 +51,7 @@ func generateTestDeliveredEth() DeliveredEth {
 func TestMarshalEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEth(msg.AsValue())
+	msg2, err := UnmarshalEth(msg.asValue())
 	if err != nil {
 		t.Error(err)
 	}
