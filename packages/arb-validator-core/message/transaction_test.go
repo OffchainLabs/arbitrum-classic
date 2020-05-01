@@ -53,6 +53,7 @@ func generateTestDeliveredTransaction() DeliveredTransaction {
 	return DeliveredTransaction{
 		Transaction: generateTestTransaction(),
 		BlockNum:    common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:   big.NewInt(65435643),
 	}
 }
 

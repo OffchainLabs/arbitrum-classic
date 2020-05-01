@@ -40,19 +40,17 @@ Running that command will produce a compiled Arbitrum VM binary, `contract.ao`.
 
 Although we support most solidity code, there are a number of restrictions that currently exist.
 
--   Unsupported Solidity Features:
+- Unsupported Solidity Features:
 
-    -   `blockhash(uint blockNumber) returns (bytes32)`
-    -   `block.coinbase`
-    -   `block.difficulty`
-    -   `block.gaslimit`
-    -   `block.timestamp`
-    -   `gasleft() returns (uint256)`
-    -   `now`
-    -   General contract creation
+  - `blockhash(uint blockNumber) returns (bytes32)`
+  - `block.coinbase`
+  - `block.difficulty`
+  - `block.gaslimit`
+  - `gasleft() returns (uint256)`
+  - General contract creation
 
 # Workarounds
 
--   Contract cloning
-    -   Despite the fact that we don't support standard contract creation, we do support the cloning of already deployed contracts (producing a similar result as [EIP-1167](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1167.md)).
-    -   Cloning an existing contract is done through `ArbSys(100).cloneContract(contractAddress)`
+- Contract cloning
+  - Despite the fact that we don't support standard contract creation, we do support the cloning of already deployed contracts (producing a similar result as [EIP-1167](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1167.md)).
+  - Cloning an existing contract is done through `ArbSys(100).cloneContract(contractAddress)`

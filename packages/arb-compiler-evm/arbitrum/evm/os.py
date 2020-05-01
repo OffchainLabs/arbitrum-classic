@@ -42,6 +42,7 @@ global_exec_state = Struct(
     [
         ("origin", value.IntType()),
         ("block_number", value.IntType()),
+        ("block_timestamp", value.IntType()),
         ("txhash", value.IntType()),
         ("current_msg", ethbridge_message.typ),
     ],
@@ -68,12 +69,14 @@ def make_global_exec_state():
     vm.push(0)
     vm.push(0)
     vm.push(0)
+    vm.push(0)
     tx_message.new(vm)
 
     global_exec_state.new(vm)
     global_exec_state.set_val("current_msg")(vm)
     global_exec_state.set_val("origin")(vm)
     global_exec_state.set_val("block_number")(vm)
+    global_exec_state.set_val("block_timestamp")(vm)
     global_exec_state.set_val("txhash")(vm)
     return vm.stack.items[0]
 
@@ -85,13 +88,16 @@ def update_execution_state(vm):
     vm.auxpush()
 
     vm.swap1()
-    global_exec_state.get("block_number")(vm)
+    vm.dup0()
+    global_exec_state.get("block_timestamp")(vm)
     vm.swap1()
-    # msg old_block_number
+    global_exec_state.get("block_number")(vm)
+    # old_block old_timestamp msg
 
+    vm.swap2()
     vm.dup0()
     ethbridge_message.get("block_number")(vm)
-    # block_number msg old_block_number
+    # block_nunmber msg old_block old_timestamp
 
     vm.swap1()
     vm.swap2()
@@ -99,23 +105,35 @@ def update_execution_state(vm):
     vm.gettime()
     vm.tgetn(0)
     std.arith.max(vm)
-    vm.swap1()
-    # msg block_number
 
-    # msg block_number
+    # block_nunmber msg old_timestamp
+    vm.swap1()
+    vm.swap2()
+    # old_timestamp block msg
+    vm.dup2()
+    ethbridge_message.get("block_timestamp")(vm)
+    # timestamp old_timestamp block msg
+    std.arith.max(vm)
+    vm.gettime()
+    vm.tgetn(2)
+    std.arith.max(vm)
+    vm.swap2()
+    # msg block_number timestamp
+
     ethbridge_message.get("txhash")(vm)
     vm.auxpop()
     vm.dup0()
     ethbridge_message.get("message")(vm)
     message.get("sender")(vm)
 
-    # origin msg txhash block_number
+    # origin msg txhash block_number timestamp
     vm.push(global_exec_state.make())
     vm.cast(global_exec_state.typ)
     global_exec_state.set_val("origin")(vm)
     global_exec_state.set_val("current_msg")(vm)
     global_exec_state.set_val("txhash")(vm)
     global_exec_state.set_val("block_number")(vm)
+    global_exec_state.set_val("block_timestamp")(vm)
 
 
 @modifies_stack([], [chain_state.typ])
@@ -167,6 +185,13 @@ def get_block_number(vm):
     get_chain_state(vm)
     chain_state.get("global_exec_state")(vm)
     global_exec_state.get("block_number")(vm)
+
+
+@modifies_stack([], [value.IntType()])
+def get_block_timestamp(vm):
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("block_timestamp")(vm)
 
 
 def create_initial_evm_state(contracts):

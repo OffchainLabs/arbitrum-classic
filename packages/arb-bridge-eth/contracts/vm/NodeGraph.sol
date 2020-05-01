@@ -62,12 +62,13 @@ contract NodeGraph is ChallengeType {
     //  afterVMHash
     //  messagesAccHash
     //  logsAccHash
+    //  validNodeHash
 
     event RollupAsserted(
-        bytes32[7] fields,
+        bytes32[8] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
-        uint128[2] timeBoundsBlocks,
+        uint128[4] timeBounds,
         uint64 numArbGas,
         uint64 numSteps,
         bool didInboxInsn
@@ -95,7 +96,7 @@ contract NodeGraph is ChallengeType {
         uint32  prevChildType;
 
         uint64 numSteps;
-        uint128[2] timeBoundsBlocks;
+        uint128[4] timeBounds;
         uint256 importedMessageCount;
 
         bytes32 afterInboxTop;
@@ -164,7 +165,7 @@ contract NodeGraph is ChallengeType {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64 _maxTimeBoundsWidth,
+        uint64[2] memory _maxTimeBoundsWidth,
         address _globalInboxAddress
     )
         internal
@@ -191,7 +192,8 @@ contract NodeGraph is ChallengeType {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.maxTimeBoundsWidth = _maxTimeBoundsWidth;
+        vmParams.maxBlockBoundsWidth = _maxTimeBoundsWidth[0];
+        vmParams.maxTimestampBoundsWidth = _maxTimeBoundsWidth[1];
 
         emit RollupCreated(_vmState);
     }
@@ -212,8 +214,9 @@ contract NodeGraph is ChallengeType {
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
-        require(data.timeBoundsBlocks[1] <= data.timeBoundsBlocks[0]+vmParams.maxTimeBoundsWidth);
-        require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
+        require(data.timeBounds[1] <= data.timeBounds[0]+vmParams.maxBlockBoundsWidth);
+        require(data.timeBounds[2] <= data.timeBounds[3]+vmParams.maxTimestampBoundsWidth);
+        require(VM.withinTimeBounds(data.timeBounds), MAKE_TIME);
         require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
@@ -264,7 +267,7 @@ contract NodeGraph is ChallengeType {
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, inboxValue, inboxCount);
+        emitAssertedEvent(data, prevLeaf, validHash, inboxValue, inboxCount);
         return (prevLeaf, validHash);
     }
 
@@ -273,7 +276,15 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 inboxValue, uint256 inboxCount) private {
+    function emitAssertedEvent(
+        MakeAssertionData memory data,
+        bytes32 prevLeaf,
+        bytes32 validLeaf,
+        bytes32 inboxValue,
+        uint256 inboxCount
+    )
+        private
+    {
         emit RollupAsserted(
             [
                 prevLeaf,
@@ -282,11 +293,12 @@ contract NodeGraph is ChallengeType {
                 data.importedMessagesSlice,
                 data.afterVMHash,
                 data.messagesAccHash,
-                data.logsAccHash
+                data.logsAccHash,
+                validLeaf
             ],
             inboxCount,
             data.importedMessageCount,
-            data.timeBoundsBlocks,
+            data.timeBounds,
             data.numArbGas,
             data.numSteps,
             data.didInboxInsn
@@ -368,7 +380,7 @@ contract NodeGraph is ChallengeType {
     {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
              data.beforeVMHash,
-             data.timeBoundsBlocks,
+             data.timeBounds,
              data.importedMessagesSlice
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(

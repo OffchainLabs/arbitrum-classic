@@ -146,23 +146,36 @@ ByteSlice machineMarshallForProof(CMachine* m) {
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* timeboundStartData,
-                                     void* timeboundEndData,
+                                     void* lowerBoundBlockData,
+                                     void* upperBoundBlockData,
+                                     void* lowerBoundTimestampData,
+                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
-    auto timeboundStart = deserializeUint256t(timeboundStartPtr);
-    auto timeboundEndPtr = reinterpret_cast<const char*>(timeboundEndData);
-    auto timeboundEnd = deserializeUint256t(timeboundEndPtr);
+    auto lowerBoundBlockPtr =
+        reinterpret_cast<const char*>(lowerBoundBlockData);
+    auto lowerBoundBlock = deserializeUint256t(lowerBoundBlockPtr);
+    auto upperBoundBlockPtr =
+        reinterpret_cast<const char*>(upperBoundBlockData);
+    auto upperBoundBlock = deserializeUint256t(upperBoundBlockPtr);
+    auto lowerBoundTimestampPtr =
+        reinterpret_cast<const char*>(lowerBoundTimestampData);
+    auto lowerBoundTimestamp = deserializeUint256t(lowerBoundTimestampPtr);
+    auto upperBoundTimestampPtr =
+        reinterpret_cast<const char*>(upperBoundTimestampData);
+    auto upperBoundTimestamp = deserializeUint256t(upperBoundTimestampPtr);
 
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
 
-    Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd,
-                                    nonstd::get<Tuple>(std::move(messages)),
-                                    std::chrono::seconds{wallLimit});
+    TimeBounds timeBounds{lowerBoundBlock, upperBoundBlock, lowerBoundTimestamp,
+                          upperBoundTimestamp};
+
+    Assertion assertion =
+        mach->run(maxSteps, timeBounds, nonstd::get<Tuple>(std::move(messages)),
+                  std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
         marshal_value(outMsg, outMsgData);

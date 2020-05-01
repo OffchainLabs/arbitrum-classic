@@ -24,57 +24,77 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type TimeBoundsBlocks struct {
-	Start *common.TimeBlocks
-	End   *common.TimeBlocks
+type TimeBounds struct {
+	LowerBoundBlock     *common.TimeBlocks
+	UpperBoundBlock     *common.TimeBlocks
+	LowerBoundTimestamp *big.Int
+	UpperBoundTimestamp *big.Int
 }
 
-func (a *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
+func (a *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
-		Start: a.Start.Marshal(),
-		End:   a.End.Marshal(),
+		LowerBoundBlock:     a.LowerBoundBlock.Marshal(),
+		UpperBoundBlock:     a.UpperBoundBlock.Marshal(),
+		LowerBoundTimestamp: common.MarshalBigInt(a.LowerBoundTimestamp),
+		UpperBoundTimestamp: common.MarshalBigInt(a.UpperBoundTimestamp),
 	}
 }
 
-func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBoundsBlocks {
-	return &TimeBoundsBlocks{
-		Start: a.Start.Unmarshal(),
-		End:   a.End.Unmarshal(),
+func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
+	return &TimeBounds{
+		LowerBoundBlock:     a.LowerBoundBlock.Unmarshal(),
+		UpperBoundBlock:     a.UpperBoundBlock.Unmarshal(),
+		LowerBoundTimestamp: a.LowerBoundTimestamp.Unmarshal(),
+		UpperBoundTimestamp: a.UpperBoundTimestamp.Unmarshal(),
 	}
 }
 
-func (tb *TimeBoundsBlocks) Clone() *TimeBoundsBlocks {
-	return &TimeBoundsBlocks{
-		Start: tb.Start.Clone(),
-		End:   tb.End.Clone(),
+func (tb *TimeBounds) Clone() *TimeBounds {
+	return &TimeBounds{
+		LowerBoundBlock:     tb.LowerBoundBlock.Clone(),
+		UpperBoundBlock:     tb.UpperBoundBlock.Clone(),
+		LowerBoundTimestamp: new(big.Int).Set(tb.LowerBoundTimestamp),
+		UpperBoundTimestamp: new(big.Int).Set(tb.UpperBoundTimestamp),
 	}
 }
 
-func (tb *TimeBoundsBlocks) AsIntArray() [2]*big.Int {
-	return [2]*big.Int{tb.Start.AsInt(), tb.End.AsInt()}
+func (tb *TimeBounds) AsIntArray() [4]*big.Int {
+	return [4]*big.Int{tb.LowerBoundBlock.AsInt(), tb.UpperBoundBlock.AsInt(), tb.LowerBoundTimestamp, tb.UpperBoundTimestamp}
 }
 
-func (tb *TimeBoundsBlocks) Equals(other *TimeBoundsBlocks) bool {
-	return tb.Start.AsInt().Cmp(other.Start.AsInt()) == 0 &&
-		tb.End.AsInt().Cmp(other.End.AsInt()) == 0
+func (tb *TimeBounds) Equals(other *TimeBounds) bool {
+	return tb.LowerBoundBlock.AsInt().Cmp(other.LowerBoundBlock.AsInt()) == 0 &&
+		tb.UpperBoundBlock.AsInt().Cmp(other.UpperBoundBlock.AsInt()) == 0 &&
+		tb.LowerBoundTimestamp.Cmp(other.LowerBoundTimestamp) == 0 &&
+		tb.UpperBoundTimestamp.Cmp(other.UpperBoundTimestamp) == 0
 }
 
-func (tb *TimeBoundsBlocks) IsValidTime(time *common.TimeBlocks) error {
-	startTime := tb.Start.AsInt()
-	if time.AsInt().Cmp(startTime) < 0 {
-		return errors.New("TimeBounds minimum time must less than the time")
+func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) error {
+	lowerBoundBlock := tb.LowerBoundBlock.AsInt()
+	if block.AsInt().Cmp(lowerBoundBlock) < 0 {
+		return errors.New("TimeBounds minimum block must less than the block")
 	}
-	endTime := tb.End.AsInt()
-	if time.AsInt().Cmp(endTime) > 0 {
-		return errors.New("TimeBounds maximum time must greater than the time")
+	upperBoundBlock := tb.UpperBoundBlock.AsInt()
+	if block.AsInt().Cmp(upperBoundBlock) > 0 {
+		return errors.New("TimeBounds maximum block must greater than the block")
 	}
+
+	if timestamp.Cmp(tb.LowerBoundTimestamp) < 0 {
+		return errors.New("TimeBounds minimum timestamp must less than the timestamp")
+	}
+	if timestamp.Cmp(tb.UpperBoundTimestamp) > 0 {
+		return errors.New("TimeBounds maximum timestamp must greater than the timestamp")
+	}
+
 	return nil
 }
 
-func (tb *TimeBoundsBlocks) AsValue() value.TupleValue {
+func (tb *TimeBounds) AsValue() value.TupleValue {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(tb.Start.AsInt()),
-		value.NewIntValue(tb.End.AsInt()),
+		value.NewIntValue(tb.LowerBoundBlock.AsInt()),
+		value.NewIntValue(tb.UpperBoundBlock.AsInt()),
+		value.NewIntValue(tb.LowerBoundTimestamp),
+		value.NewIntValue(tb.UpperBoundTimestamp),
 	})
 	return newTup
 }

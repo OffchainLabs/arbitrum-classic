@@ -27,7 +27,7 @@ type UnanimousRequestData struct {
 	BeforeHash  common.Hash
 	BeforeInbox common.Hash
 	SequenceNum uint64
-	TimeBounds  *protocol.TimeBoundsBlocks
+	TimeBounds  *protocol.TimeBounds
 }
 
 func (r UnanimousRequestData) Hash() common.Hash {
@@ -35,8 +35,8 @@ func (r UnanimousRequestData) Hash() common.Hash {
 		hashing.Bytes32(r.BeforeHash),
 		hashing.Bytes32(r.BeforeInbox),
 		hashing.Uint64(r.SequenceNum),
-		hashing.TimeBlocks(r.TimeBounds.Start),
-		hashing.TimeBlocks(r.TimeBounds.End),
+		hashing.TimeBlocks(r.TimeBounds.LowerBoundBlock),
+		hashing.TimeBlocks(r.TimeBounds.UpperBoundBlock),
 	)
 }
 

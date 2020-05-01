@@ -1,10 +1,11 @@
 package machine
 
 import (
+	"time"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"time"
 )
 
 type Status int
@@ -25,7 +26,7 @@ type Machine interface {
 
 	ExecuteAssertion(
 		maxSteps uint64,
-		timeBounds *protocol.TimeBoundsBlocks,
+		timeBounds *protocol.TimeBounds,
 		inbox value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)

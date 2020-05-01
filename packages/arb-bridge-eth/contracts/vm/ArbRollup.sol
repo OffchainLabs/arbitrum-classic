@@ -53,7 +53,7 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    string public constant VERSION = "1";
+    string public constant VERSION = "2";
 
     address payable owner;
 
@@ -64,12 +64,16 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32[] logsAccHash
     );
 
+    event ConfirmedValidAssertion(
+        bytes32 indexed nodeHash
+    );
+
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64 _maxTimeBoundsWidth,
+        uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
@@ -202,7 +206,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[2] calldata _timeBoundsBlocks,
+        uint128[4] calldata _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas,
@@ -222,7 +226,7 @@ contract ArbRollup is NodeGraph, Staking {
                 _prevChildType,
 
                 _numSteps,
-                _timeBoundsBlocks,
+                _timeBounds,
                 _importedMessageCount,
 
                 _fields[4],
@@ -341,6 +345,10 @@ contract ArbRollup is NodeGraph, Staking {
                 branchType,
                 vmProtoStateHash
             );
+
+            if (branchType == VALID_CHILD_TYPE) {
+                emit ConfirmedValidAssertion(confNode);
+            }
         }
         require(messagesOffset == data.messages.length, "Didn't read all messages");
         // If last node is after deadline, then all nodes are
