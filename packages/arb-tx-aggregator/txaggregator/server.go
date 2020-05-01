@@ -48,8 +48,16 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(ctx context.Context, globalInbox arbbridge.GlobalInbox, rollupAddress common.Address) *Server {
-	server := &Server{rollupAddress: rollupAddress, globalInbox: globalInbox, valid: true}
+func NewServer(
+	ctx context.Context,
+	globalInbox arbbridge.GlobalInbox,
+	rollupAddress common.Address,
+) *Server {
+	server := &Server{
+		rollupAddress: rollupAddress,
+		globalInbox:   globalInbox,
+		valid:         true,
+	}
 
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(5).Duration())
@@ -99,7 +107,12 @@ func (m *Server) sendBatch(ctx context.Context) {
 		log.Println("tx: ", tx)
 	}
 
-	err := m.globalInbox.DeliverTransactionBatch(ctx, m.rollupAddress, txes, sigs)
+	err := m.globalInbox.DeliverTransactionBatch(
+		ctx,
+		m.rollupAddress,
+		txes,
+		sigs,
+	)
 	if err != nil {
 		log.Println("Transaction aggregator failed: ", err)
 		m.Lock()
@@ -109,7 +122,10 @@ func (m *Server) sendBatch(ctx context.Context) {
 }
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *Server) SendTransaction(ctx context.Context, args *SendTransactionArgs) (*SendTransactionReply, error) {
+func (m *Server) SendTransaction(
+	ctx context.Context,
+	args *SendTransactionArgs,
+) (*SendTransactionReply, error) {
 	toBytes, err := hexutil.Decode(args.To)
 	if err != nil {
 		return nil, errors2.Wrap(err, "error decoding to")
@@ -143,7 +159,7 @@ func (m *Server) SendTransaction(ctx context.Context, args *SendTransactionArgs)
 	}
 
 	if len(signature) != 65 {
-		return nil, errors.New("SendTransaction: Signature of wrong length")
+		return nil, errors.New("signature of wrong length")
 	}
 
 	// Convert sig with normalized v
@@ -163,7 +179,11 @@ func (m *Server) SendTransaction(ctx context.Context, args *SendTransactionArgs)
 
 	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
 
-	if !crypto.VerifySignature(pubkey, messageHash[:], signature[:len(signature)-1]) {
+	if !crypto.VerifySignature(
+		pubkey,
+		messageHash[:],
+		signature[:len(signature)-1],
+	) {
 		return nil, errors.New("Invalid signature")
 	}
 
