@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	ValidEthBridgeVersion = "assertion-tracking"
+	ValidEthBridgeVersion = "2"
 )
 
 type Manager struct {
