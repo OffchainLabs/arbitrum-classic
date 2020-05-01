@@ -96,6 +96,8 @@ type DeliveredERC721 struct {
 	MessageNum *big.Int
 }
 
+// Equals check for equality between this object and any other message by
+// checking for full equality of all members
 func (m DeliveredERC721) Equals(other Message) bool {
 	o, ok := other.(DeliveredERC721)
 	if !ok {

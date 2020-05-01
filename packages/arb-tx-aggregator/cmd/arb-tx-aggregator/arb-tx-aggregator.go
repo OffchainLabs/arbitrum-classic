@@ -44,7 +44,11 @@ func main() {
 	}
 
 	if fs.NArg() != 3 {
-		log.Fatalf("usage: arb-tx-aggregator [--password=pass] [--gasprice==FloatInGwei] %v", utils.RollupArgsString)
+		log.Fatalf(
+			"usage: arb-tx-aggregator %v %v",
+			utils.WalletArgsString,
+			utils.RollupArgsString,
+		)
 	}
 
 	rollupArgs := utils.ParseRollupCommand(fs, 0)
@@ -60,7 +64,11 @@ func main() {
 	}
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForNonZeroBalance(
+		context.Background(),
+		client,
+		common.NewAddressFromEth(auth.From),
+	); err != nil {
 		log.Fatal(err)
 	}
 
@@ -77,11 +85,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := txaggregator.NewRPCServer(context.Background(), globalInbox, rollupArgs.Address)
+	server := txaggregator.NewRPCServer(
+		context.Background(),
+		globalInbox, rollupArgs.Address,
+	)
 
 	s := rpc.NewServer()
-	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
+	s.RegisterCodec(
+		json.NewCodec(),
+		"application/json",
+	)
+	s.RegisterCodec(
+		json.NewCodec(),
+		"application/json;charset=UTF-8",
+	)
 
 	if err := s.RegisterService(server, "TxAggregator"); err != nil {
 		log.Fatal(err)

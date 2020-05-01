@@ -231,7 +231,8 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 	ethLog types.Log,
 	timestamp *big.Int,
 ) (arbbridge.Event, error) {
-	if ethLog.Topics[0] == transactionID {
+	switch ethLog.Topics[0] {
+	case transactionID:
 		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -257,7 +258,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == transactionBatchID {
+	case transactionBatchID:
 		tx, _, err := vm.client.TransactionByHash(ctx, ethLog.TxHash)
 		if err != nil {
 			return nil, err
@@ -287,7 +288,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 				),
 			},
 		}, nil
-	} else if ethLog.Topics[0] == ethDepositID {
+	case ethDepositID:
 		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -311,7 +312,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == depositERC20ID {
+	case depositERC20ID:
 		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -336,7 +337,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			Message:   msg,
 		}, nil
 
-	} else if ethLog.Topics[0] == depositERC721ID {
+	case depositERC721ID:
 		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -360,7 +361,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			ChainInfo: chainInfo,
 			Message:   msg,
 		}, nil
-	} else if ethLog.Topics[0] == contractTxID {
+	case contractTxID:
 		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(
 			ethLog,
 		)
@@ -385,7 +386,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			ChainInfo: chainInfo,
 			Message:   msg,
 		}, nil
-	} else {
+	default:
 		return nil, errors2.New("unknown arbitrum event type")
 	}
 }
@@ -396,7 +397,8 @@ func (vm *ethRollupWatcher) processEvents(
 	ethLog types.Log,
 	timestamp *big.Int,
 ) (arbbridge.Event, error) {
-	if ethLog.Topics[0] == stakeCreatedID {
+	switch ethLog.Topics[0] {
+	case stakeCreatedID:
 		eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 		if err != nil {
 			return nil, err
@@ -406,7 +408,7 @@ func (vm *ethRollupWatcher) processEvents(
 			Staker:    common.NewAddressFromEth(eventVal.Staker),
 			NodeHash:  eventVal.NodeHash,
 		}, nil
-	} else if ethLog.Topics[0] == challengeStartedID {
+	case challengeStartedID:
 		eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(ethLog)
 		if err != nil {
 			return nil, err
@@ -422,7 +424,7 @@ func (vm *ethRollupWatcher) processEvents(
 				eventVal.ChallengeContract,
 			),
 		}, nil
-	} else if ethLog.Topics[0] == challengeCompletedID {
+	case challengeCompletedID:
 		eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(ethLog)
 		if err != nil {
 			return nil, err
@@ -435,7 +437,7 @@ func (vm *ethRollupWatcher) processEvents(
 				eventVal.ChallengeContract,
 			),
 		}, nil
-	} else if ethLog.Topics[0] == rollupRefundedID {
+	case rollupRefundedID:
 		eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(ethLog)
 		if err != nil {
 			return nil, err
@@ -444,7 +446,7 @@ func (vm *ethRollupWatcher) processEvents(
 			ChainInfo: chainInfo,
 			Staker:    common.NewAddressFromEth(eventVal.Staker),
 		}, nil
-	} else if ethLog.Topics[0] == rollupPrunedID {
+	case rollupPrunedID:
 		eventVal, err := vm.ArbRollup.ParseRollupPruned(ethLog)
 		if err != nil {
 			return nil, err
@@ -453,7 +455,7 @@ func (vm *ethRollupWatcher) processEvents(
 			ChainInfo: chainInfo,
 			Leaf:      eventVal.Leaf,
 		}, nil
-	} else if ethLog.Topics[0] == rollupStakeMovedID {
+	case rollupStakeMovedID:
 		eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
 		if err != nil {
 			return nil, err
@@ -463,7 +465,7 @@ func (vm *ethRollupWatcher) processEvents(
 			Staker:    common.NewAddressFromEth(eventVal.Staker),
 			Location:  eventVal.ToNodeHash,
 		}, nil
-	} else if ethLog.Topics[0] == rollupAssertedID {
+	case rollupAssertedID:
 		eventVal, err := vm.ArbRollup.ParseRollupAsserted(ethLog)
 		if err != nil {
 			return nil, err
@@ -497,7 +499,7 @@ func (vm *ethRollupWatcher) processEvents(
 			MaxInboxTop:   eventVal.Fields[1],
 			MaxInboxCount: eventVal.InboxCount,
 		}, nil
-	} else if ethLog.Topics[0] == rollupConfirmedID {
+	case rollupConfirmedID:
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
 		if err != nil {
 			return nil, err
@@ -506,7 +508,7 @@ func (vm *ethRollupWatcher) processEvents(
 			ChainInfo: chainInfo,
 			NodeHash:  eventVal.NodeHash,
 		}, nil
-	} else if ethLog.Topics[0] == confirmedAssertionID {
+	case confirmedAssertionID:
 		eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(ethLog)
 		if err != nil {
 			return nil, err
@@ -514,8 +516,9 @@ func (vm *ethRollupWatcher) processEvents(
 		return arbbridge.ConfirmedAssertionEvent{
 			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
+	default:
+		return vm.processMessageDeliveredEvents(ctx, chainInfo, ethLog, timestamp)
 	}
-	return vm.processMessageDeliveredEvents(ctx, chainInfo, ethLog, timestamp)
 }
 
 func (vm *ethRollupWatcher) GetParams(

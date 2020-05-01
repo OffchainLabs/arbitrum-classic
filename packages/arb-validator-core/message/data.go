@@ -31,9 +31,15 @@ func bytesToValues(val []byte) []value.Value {
 		if remaining < 32 {
 			data := [32]byte{}
 			copy(data[:], val[i:])
-			ints = append(ints, value.NewIntValue(new(big.Int).SetBytes(data[:])))
+			ints = append(
+				ints,
+				value.NewIntValue(new(big.Int).SetBytes(data[:])),
+			)
 		} else {
-			ints = append(ints, value.NewIntValue(new(big.Int).SetBytes(val[i:i+32])))
+			ints = append(
+				ints,
+				value.NewIntValue(new(big.Int).SetBytes(val[i:i+32])),
+			)
 		}
 	}
 	return ints
@@ -100,7 +106,7 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	for _, val := range vals {
 		intVal, ok := val.(value.IntValue)
 		if !ok {
-			return nil, errors.New("bytestack expected chunk to be int value")
+			return nil, errors.New("bytestack expected chunk to be int")
 		}
 		byteChunks = append(byteChunks, intVal.ToBytes())
 	}

@@ -163,11 +163,11 @@ func (m DeliveredTransactionBatch) Equals(other Message) bool {
 		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
-func (m DeliveredTransactionBatch) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredTransactionBatch) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredTransactionBatch) DeliveredTimestamp() *big.Int {
+func (m DeliveredTransactionBatch) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

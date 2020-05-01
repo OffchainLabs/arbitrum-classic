@@ -39,6 +39,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
+// ValidateRollupChain creates a validator given the managerCreationFunc.
+// This allows for the abstraction of the manager setup away from command line
+// parsing and initialization of common structures and behavior
 func ValidateRollupChain(
 	execName string,
 	managerCreationFunc func(
