@@ -49,14 +49,37 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
     mapping(address => Inbox) inboxes;
 
-    PaymentRecords paymentRecords;
+    // PaymentRecords paymentRecords;
 
-    function getPaymentOwner(
-        address originalOwner,
+    // function getPaymentOwner(
+    //     address originalOwner,
+    //     bytes32 nodeHash, 
+    //     uint256 messageIndex) public view returns(address)
+    // {
+    //     return paymentRecords.getPaymentOwner(originalOwner, nodeHash, messageIndex);
+    // }
+
+    // function transferPayment(
+    //     address originalOwner,
+    //     address newOwner, 
+    //     bytes32 nodeHash, 
+    //     uint256 messageIndex) external
+    // {
+    //     paymentRecords.transferPayment(originalOwner, newOwner, nodeHash, messageIndex);
+    // }
+
+    event PaymentTransfer(
         bytes32 nodeHash, 
-        uint256 messageIndex) external returns(address)
-    {
-        return paymentRecords.getPaymentOwner(originalOwner, nodeHash, messageIndex);
+        uint256 messageIndex,
+        address originalOwner,
+        address prevOwner,
+        address newOwner);
+
+    mapping(bytes32 => mapping(uint256 => mapping(address => address))) paymentMap;
+
+    function getInbox(address account) external view returns(bytes32, uint) {
+        Inbox storage inbox = inboxes[account];
+        return (inbox.value, inbox.count);
     }
 
     function transferPayment(
@@ -65,15 +88,34 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         bytes32 nodeHash, 
         uint256 messageIndex) external
     {
-        paymentRecords.transferPayment(originalOwner, newOwner, nodeHash, messageIndex);
+        address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
+
+        if(currentOwner == address(0x0)){
+            require(msg.sender == originalOwner, "Must be owner.");
+        }else{
+            require(msg.sender == currentOwner, "Must be owner.");
+        }
+
+        paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
+
+        emit PaymentTransfer(nodeHash, messageIndex, originalOwner, msg.sender, newOwner);
     }
 
-    function getInbox(address account) external view returns(bytes32, uint) {
-        Inbox storage inbox = inboxes[account];
-        return (inbox.value, inbox.count);
+    function getPaymentOwner(
+        address originalOwner,
+        bytes32 nodeHash, 
+        uint256 messageIndex) public view returns(address)
+    {
+        address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
+
+        if(currentOwner == address(0)){
+            return originalOwner;
+        }else{
+            return currentOwner;
+        }
     }
 
-    function sendMessages(bytes calldata _messages, uint[] messageCounts, bytes32[] nodeHashes) external {
+    function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external {
         bool valid;
         uint256 offset = 0;
         uint256 messageType;
@@ -85,21 +127,30 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         uint256 currentIndex = 0;
 
         while (offset < totalLength) {
-            (
-                valid,
-                offset,
-                messageType,
-                sender
-            ) = Value.deserializeMessageData(_messages, offset);
-            if (!valid) {
-                break;
-            }
-            (valid, offset) = sendDeserializedMsg(nodeHashes[currentNode], currentIndex, _messages, offset, messageType);
-            if (!valid) {
-                break;
-            }
+            if(messageCounts[currentNode] == 0){
 
-            currentIndex += 1;
+                currentNode += 1;
+                currentIndex = 0;
+            } else {
+                (   valid,
+                    offset,
+                    messageType,
+                    sender
+                ) = Value.deserializeMessageData(_messages, offset);
+                if (!valid) {
+                    break;
+                }
+                (valid, offset) = sendDeserializedMsg(nodeHashes[currentNode], currentIndex, _messages, offset, messageType);
+                if (!valid) {
+                    break;
+                }
+
+                currentIndex += 1;
+                if(currentIndex >= messageCounts[currentNode]){
+                    currentNode += 1;
+                    currentIndex = 0;
+                }
+            }
 
         }
     }
@@ -129,8 +180,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferEth(msg.sender, paymentOwner, value);
+            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
+            transferEth(msg.sender, to, value);
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -144,8 +195,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferERC20(msg.sender, paymentOwner, erc20, value);
+            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
+            transferERC20(msg.sender, to, erc20, value);
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -159,8 +210,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferNFT(msg.sender, paymentOwner, erc721, value);
+            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
+            transferNFT(msg.sender, to, erc721, value);
             return (true, offset);
         } else {
             return (false, startOffset);

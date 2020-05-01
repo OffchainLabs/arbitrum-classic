@@ -16,9 +16,7 @@ interface ArbFactoryInterface extends Interface {
       encode([]: []): string
     }>
 
-    globalInboxAddress: TypedFunctionDescription<{
-      encode([]: []): string
-    }>
+    globalInboxAddress: TypedFunctionDescription<{ encode([]: []): string }>
 
     rollupTemplate: TypedFunctionDescription<{ encode([]: []): string }>
 

@@ -233,6 +233,7 @@ func (vm *arbRollup) MakeAssertion(
 			hashSliceToRaw(stakerProof),
 		)
 	}
+
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 

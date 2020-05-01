@@ -64,7 +64,7 @@ interface IGlobalInbox {
 
     function getInbox(address account) external view returns(bytes32, uint);
 
-    function sendMessages(bytes calldata _messages) external;
+    function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external;
 
     function depositEthMessage(address _chain, address _to) external payable;
 

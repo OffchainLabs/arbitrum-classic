@@ -149,47 +149,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     )
   }
 
-  // public async getValidatorAddresses(): Promise<string[]> {
-  //     if (!this.validatorAddressesCache) {
-  //         const ArbRollup = await this.arbChannelConn();
-  //         const validators = await this.client.getValidatorList();
-  //         const isValidators = await arbChannel.isValidatorList(validators);
-  //         if (!isValidators) {
-  //             throw new Error('Incorrect validator list');
-  //         }
-
-  //         // Cache the set of lowercase validator addresses (without "0x")
-  //         this.validatorAddressesCache = validators.map((addr: string) => addr.toLowerCase().slice(2)).sort();
-  //         return this.validatorAddressesCache;
-  //     }
-  //     return this.validatorAddressesCache;
-  // }
-
-  // public async verifyUnanimousSignatures(
-  //     assertionHash: ethers.utils.Arrayish,
-  //     validatorSigs: string[],
-  // ): Promise<void> {
-  //     const validatorAddresses = await this.getValidatorAddresses();
-  //     if (validatorAddresses.length !== validatorSigs.length) {
-  //         throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);
-  //     }
-
-  //     const addresses = validatorSigs
-  //         .map(sig =>
-  //             ethers.utils
-  //                 .verifyMessage(ethers.utils.arrayify(assertionHash), sig)
-  //                 .toLowerCase()
-  //                 .slice(2),
-  //         )
-  //         .sort();
-
-  //     for (let i = 0; i < validatorAddresses.length; i++) {
-  //         if (validatorAddresses[i] !== addresses[i]) {
-  //             throw Error('Invalid signature');
-  //         }
-  //     }
-  // }
-
   public async sendMessages(messages: Message[]): Promise<string> {
     let txHash: Promise<string> = new Promise<string>((): string => '')
     for (const message of messages) {

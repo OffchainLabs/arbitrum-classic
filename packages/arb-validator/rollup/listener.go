@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -129,6 +130,11 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 }
 
 func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) error {
+	fmt.Println("====================================================")
+	fmt.Println("Assetion here!!!!!")
+	fmt.Println("Node hash: ", prepared.leafHash)
+	fmt.Println("msg count: ", len(prepared.assertion.OutMsgs))
+	fmt.Println("====================================================")
 	return rollup.MakeAssertion(
 		ctx,
 		prepared.prevPrevLeafHash,

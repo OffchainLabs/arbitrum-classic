@@ -315,7 +315,9 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32 confNode = latestConfirmed();
         bytes32 vmProtoStateHash = data.initalProtoStateHash;
 
-        // uint[]
+        bytes32[] memory nodeHashes = new bytes32[](nodeCount);
+        uint[] memory messageCounts = new uint[](nodeCount);
+
         for (uint256 i = 0; i < nodeCount; i++) {
             uint256 branchType = data.branches[i];
             bytes32 nodeDataHash;
@@ -332,10 +334,17 @@ contract ArbRollup is NodeGraph, Staking {
                 messagesOffset += messageLength;
                 vmProtoStateHash = data.vmProtoStateHashes[validNum];
                 validNum++;
+
+                messageCounts[i] = messageLength;
             } else {
+                messageCounts[i] = 0;
+                
                 nodeDataHash = data.challengeNodeData[invalidNum];
                 invalidNum++;
             }
+
+            nodeHashes[i] = nodeDataHash;
+
             confNode = RollupUtils.childNodeHash(
                 confNode,
                 data.deadlineTicks[i],
@@ -359,7 +368,7 @@ contract ArbRollup is NodeGraph, Staking {
         confirmNode(confNode);
 
         // Send all messages is a single batch
-        globalInbox.sendMessages(data.messages);
+        globalInbox.sendMessages(data.messages, messageCounts, nodeHashes);
 
         if (validNum > 0) {
             emit ConfirmedAssertion(

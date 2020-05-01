@@ -162,6 +162,23 @@ export class ArbWallet extends ethers.Signer {
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
+  public async transferPayment(
+    originalOwner: string,
+    newOwner: string,
+    nodeHash: string,
+    messageIndex: ethers.utils.BigNumberish
+  ): Promise<ethers.providers.TransactionResponse> {
+    const msgIndex = ethers.utils.bigNumberify(messageIndex)
+    const globalInbox = await this.globalInboxConn()
+    const tx = await globalInbox.transferPayment(
+      originalOwner,
+      newOwner,
+      nodeHash,
+      msgIndex
+    )
+    return this.provider._wrapTransaction(tx, tx.hash)
+  }
+
   public async sendTransactionMessage(
     to: string,
     value: ethers.utils.BigNumberish,

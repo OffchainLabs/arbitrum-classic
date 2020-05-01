@@ -24,7 +24,7 @@ contract PaymentRecords {
         uint256 messageIndex,
         address originalOwner,
         address prevOwner,
-        address newOwner)
+        address newOwner);
 
 
     function transferPayment(
@@ -35,11 +35,11 @@ contract PaymentRecords {
     {
         address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
 
-        if(currentOwner == 0x0){
-            require(msg.sender == originalOwner, "Must be owner.");
-        }else{
-            require(msg.sender == currentOwner, "Must be owner.");
-        }
+        // if(currentOwner == address(0x0)){
+        //     require(msg.sender == originalOwner, "Must be owner.");
+        // }else{
+        //     require(msg.sender == currentOwner, "Must be owner.");
+        // }
 
         paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
 
@@ -49,11 +49,11 @@ contract PaymentRecords {
     function getPaymentOwner(
         address originalOwner,
         bytes32 nodeHash, 
-        uint256 messageIndex) external returns(address)
+        uint256 messageIndex) public view returns(address)
     {
     	address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
 
-    	if(currentOwner == 0x0){
+    	if(currentOwner == address(0)){
     		return originalOwner;
 		}else{
 			return currentOwner;

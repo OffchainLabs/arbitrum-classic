@@ -50,12 +50,31 @@ interface GlobalInboxInterface extends Interface {
 
     withdrawEth: TypedFunctionDescription<{ encode([]: []): string }>
 
-    getInbox: TypedFunctionDescription<{
-      encode([account]: [string]): string
+    getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>
+
+    transferPayment: TypedFunctionDescription<{
+      encode([originalOwner, newOwner, nodeHash, messageIndex]: [
+        string,
+        string,
+        Arrayish,
+        BigNumberish
+      ]): string
+    }>
+
+    getPaymentOwner: TypedFunctionDescription<{
+      encode([originalOwner, nodeHash, messageIndex]: [
+        string,
+        Arrayish,
+        BigNumberish
+      ]): string
     }>
 
     sendMessages: TypedFunctionDescription<{
-      encode([_messages]: [Arrayish]): string
+      encode([_messages, messageCounts, nodeHashes]: [
+        Arrayish,
+        BigNumberish[],
+        Arrayish[]
+      ]): string
     }>
 
     sendTransactionMessage: TypedFunctionDescription<{
@@ -168,6 +187,16 @@ interface GlobalInboxInterface extends Interface {
       ]): string[]
     }>
 
+    PaymentTransfer: TypedEventDescription<{
+      encodeTopics([
+        nodeHash,
+        messageIndex,
+        originalOwner,
+        prevOwner,
+        newOwner,
+      ]: [null, null, null, null, null]): string[]
+    }>
+
     TransactionMessageDelivered: TypedEventDescription<{
       encodeTopics([chain, to, from, seqNumber, value, data]: [
         string | null,
@@ -231,8 +260,24 @@ export class GlobalInbox extends Contract {
       1: BigNumber
     }>
 
+    transferPayment(
+      originalOwner: string,
+      newOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    getPaymentOwner(
+      originalOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<string>
+
     sendMessages(
       _messages: Arrayish,
+      messageCounts: BigNumberish[],
+      nodeHashes: Arrayish[],
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -329,8 +374,24 @@ export class GlobalInbox extends Contract {
     1: BigNumber
   }>
 
+  transferPayment(
+    originalOwner: string,
+    newOwner: string,
+    nodeHash: Arrayish,
+    messageIndex: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  getPaymentOwner(
+    originalOwner: string,
+    nodeHash: Arrayish,
+    messageIndex: BigNumberish
+  ): Promise<string>
+
   sendMessages(
     _messages: Arrayish,
+    messageCounts: BigNumberish[],
+    nodeHashes: Arrayish[],
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -426,6 +487,14 @@ export class GlobalInbox extends Contract {
       messageNum: null
     ): EventFilter
 
+    PaymentTransfer(
+      nodeHash: null,
+      messageIndex: null,
+      originalOwner: null,
+      prevOwner: null,
+      newOwner: null
+    ): EventFilter
+
     TransactionMessageDelivered(
       chain: string | null,
       to: string | null,
@@ -461,7 +530,24 @@ export class GlobalInbox extends Contract {
 
     getInbox(account: string): Promise<BigNumber>
 
-    sendMessages(_messages: Arrayish): Promise<BigNumber>
+    transferPayment(
+      originalOwner: string,
+      newOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<BigNumber>
+
+    getPaymentOwner(
+      originalOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<BigNumber>
+
+    sendMessages(
+      _messages: Arrayish,
+      messageCounts: BigNumberish[],
+      nodeHashes: Arrayish[]
+    ): Promise<BigNumber>
 
     sendTransactionMessage(
       _chain: string,
