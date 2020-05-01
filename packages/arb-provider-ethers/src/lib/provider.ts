@@ -56,6 +56,7 @@ const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
 interface MessageResult {
   evmVal: EVMResult
   txHash: string
+  validNodeHash: string
 }
 
 interface Message {
@@ -296,17 +297,23 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Failed to prove val is in logPostHash')
     }
 
+    let validNodeHash = ''
+
     // Step 2: prove that logPostHash is in assertion and assertion is valid
     if (validatorSigs && validatorSigs.length > 0) {
       throw Error('Unanimous assertions not supported')
       // this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
     } else {
-      this.processConfirmedDisputableAssertion(logPostHash, onChainTxHash)
+      validNodeHash = await this.processConfirmedDisputableAssertion(
+        logPostHash,
+        onChainTxHash
+      )
     }
 
     return {
       evmVal,
       txHash: txHashCheck,
+      validNodeHash,
     }
   }
 
@@ -479,11 +486,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   // logPostHash: hexString
   // onChainTxHash: hexString
-  // Returns true if assertionHash is logged by the onChainTxHash
+  // Returns the valid node hash if assertionHash is logged by the onChainTxHash
   private async processConfirmedDisputableAssertion(
     logPostHash: string,
     onChainTxHash: string
-  ): Promise<void> {
+  ): Promise<string> {
     const receipt = await this.ethProvider.waitForTransaction(onChainTxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
@@ -520,5 +527,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     // DisputableAssertion is correct
     // TODO: must wait for finality (past the re-org period)
+
+    return cda.values.fields[7]
   }
 }

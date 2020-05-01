@@ -61,9 +61,10 @@ contract NodeGraph is ChallengeType {
     //  afterVMHash
     //  messagesAccHash
     //  logsAccHash
+    //  validNodeHash
 
     event RollupAsserted(
-        bytes32[7] fields,
+        bytes32[8] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
         uint128[4] timeBounds,
@@ -264,7 +265,7 @@ contract NodeGraph is ChallengeType {
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, inboxValue, inboxCount);
+        emitAssertedEvent(data, prevLeaf, validHash, inboxValue, inboxCount);
         return (prevLeaf, validHash);
     }
 
@@ -273,7 +274,15 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 inboxValue, uint256 inboxCount) private {
+    function emitAssertedEvent(
+        MakeAssertionData memory data,
+        bytes32 prevLeaf,
+        bytes32 validLeaf,
+        bytes32 inboxValue,
+        uint256 inboxCount
+    )
+        private
+    {
         emit RollupAsserted(
             [
                 prevLeaf,
@@ -282,7 +291,8 @@ contract NodeGraph is ChallengeType {
                 data.importedMessagesSlice,
                 data.afterVMHash,
                 data.messagesAccHash,
-                data.logsAccHash
+                data.logsAccHash,
+                validLeaf
             ],
             inboxCount,
             data.importedMessageCount,

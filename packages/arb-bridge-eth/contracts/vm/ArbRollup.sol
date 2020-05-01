@@ -53,7 +53,7 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    string public constant VERSION = "1";
+    string public constant VERSION = "2";
 
     address payable owner;
 
@@ -62,6 +62,10 @@ contract ArbRollup is NodeGraph, Staking {
 
     event ConfirmedAssertion(
         bytes32[] logsAccHash
+    );
+
+    event ConfirmedValidAssertion(
+        bytes32 indexed nodeHash
     );
 
     function init(
@@ -341,6 +345,10 @@ contract ArbRollup is NodeGraph, Staking {
                 branchType,
                 vmProtoStateHash
             );
+
+            if (branchType == VALID_CHILD_TYPE) {
+                emit ConfirmedValidAssertion(confNode);
+            }
         }
         require(messagesOffset == data.messages.length, "Didn't read all messages");
         // If last node is after deadline, then all nodes are

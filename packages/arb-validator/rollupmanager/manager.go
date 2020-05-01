@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	ValidEthBridgeVersion = "1"
+	ValidEthBridgeVersion = "2"
 )
 
 type Manager struct {
