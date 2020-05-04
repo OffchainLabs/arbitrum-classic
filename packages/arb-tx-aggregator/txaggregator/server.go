@@ -73,7 +73,10 @@ func NewServer(
 			case <-ticker.C:
 				server.Lock()
 				// Keep sending in spin loop until we can't anymore
-				for server.valid && len(server.transactions) > 0 {
+				for server.valid && len(server.transactions) >= maxTransactions {
+					server.sendBatch(ctx)
+				}
+				if server.valid && len(server.transactions) >= 0 {
 					server.sendBatch(ctx)
 				}
 				server.Unlock()
