@@ -66,12 +66,12 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 	return con.waitForReceipt(ctx, tx, "SendTransactionMessage")
 }
 
-func (con *globalInbox) DeliverTransactionBatch(
+func (con *globalInbox) deliverTransactionBatch(
 	ctx context.Context,
 	chain common.Address,
 	transactions []message.Transaction,
 	signatures [][65]byte,
-) error {
+) (*types.Transaction, error) {
 	data := make([]byte, 0)
 	for i, tx := range transactions {
 		if len(tx.Data) > math.MaxUint16 {
@@ -86,16 +86,40 @@ func (con *globalInbox) DeliverTransactionBatch(
 		)...)
 	}
 	con.auth.Lock()
-	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.DeliverTransactionBatch(
+	return con.GlobalInbox.DeliverTransactionBatch(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
 		data,
 	)
+}
+
+func (con *globalInbox) DeliverTransactionBatch(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.Transaction,
+	signatures [][65]byte,
+) error {
+	tx, err := con.deliverTransactionBatch(ctx, chain, transactions, signatures)
 	if err != nil {
 		return err
 	}
+	defer con.auth.Unlock()
+
 	return con.waitForReceipt(ctx, tx, "DeliverTransactionBatch")
+}
+
+func (con *globalInbox) DeliverTransactionBatchNoWait(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.Transaction,
+	signatures [][65]byte,
+) error {
+	_, err := con.deliverTransactionBatch(ctx, chain, transactions, signatures)
+	if err != nil {
+		return err
+	}
+	con.auth.Unlock()
+	return err
 }
 
 func (con *globalInbox) DepositEthMessage(

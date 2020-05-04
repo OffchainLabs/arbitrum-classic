@@ -35,7 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
-const maxTransactions = 50
+const maxTransactions = 200
 
 const signatureLength = 65
 const recoverBitPos = signatureLength - 1
@@ -63,14 +63,20 @@ func NewServer(
 	}
 
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(5).Duration())
+		ticker := time.NewTicker(time.Second * 5)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
+
 			case <-ticker.C:
-				server.sendBatch(ctx)
+				server.Lock()
+				// Keep sending in spin loop until we can't anymore
+				for server.valid && len(server.transactions) > 0 {
+					server.sendBatch(ctx)
+				}
+				server.Unlock()
 			}
 		}
 	}()
@@ -80,12 +86,6 @@ func NewServer(
 func (m *Server) sendBatch(ctx context.Context) {
 	var txes []message.Transaction
 	var sigs [][signatureLength]byte
-
-	m.Lock()
-	if !m.valid || len(m.transactions) == 0 {
-		m.Unlock()
-		return
-	}
 
 	if len(m.transactions) > maxTransactions {
 		txes = m.transactions[:maxTransactions]
@@ -106,17 +106,17 @@ func (m *Server) sendBatch(ctx context.Context) {
 		log.Println("tx: ", tx)
 	}
 
-	err := m.globalInbox.DeliverTransactionBatch(
+	err := m.globalInbox.DeliverTransactionBatchNoWait(
 		ctx,
 		m.rollupAddress,
 		txes,
 		sigs,
 	)
+
+	m.Lock()
 	if err != nil {
 		log.Println("Transaction aggregator failed: ", err)
-		m.Lock()
 		m.valid = false
-		m.Unlock()
 	}
 }
 

@@ -110,7 +110,7 @@ contract('GlobalInbox', accounts => {
   })
 
   it('should make a batch call', async () => {
-    let messageCount = 1000
+    let messageCount = 200
     let chain = '0xffffffffffffffffffffffffffffffffffffffff'
 
     // console.log(data);
@@ -154,13 +154,7 @@ contract('GlobalInbox', accounts => {
       'incorrect tx data from input'
     )
 
-    // let messageTester = await MessageTester.new()
-    // await messageTester.transactionMessageBatchHash(
-    //   "0x00",
-    //   chain,
-    //   data,
-    //   0,
-    //   0
-    // );
+    let messageTester = await MessageTester.new()
+    await messageTester.transactionMessageBatchHash('0x00', chain, data, 0, 0)
   })
 })

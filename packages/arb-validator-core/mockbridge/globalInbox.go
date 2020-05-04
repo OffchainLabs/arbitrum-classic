@@ -59,6 +59,15 @@ func (con *GlobalInbox) DeliverTransactionBatch(
 	return nil
 }
 
+func (con *GlobalInbox) DeliverTransactionBatchNoWait(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.Transaction,
+	signatures [][65]byte,
+) error {
+	return nil
+}
+
 func (con *GlobalInbox) DepositEthMessage(
 	ctx context.Context,
 	vmAddress common.Address,
