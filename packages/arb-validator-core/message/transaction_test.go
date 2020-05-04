@@ -60,7 +60,7 @@ func generateTestDeliveredTransaction() DeliveredTransaction {
 func TestMarshalTransaction(t *testing.T) {
 	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalTransaction(msg.AsValue(), generateTestChain())
+	msg2, err := UnmarshalTransaction(msg.asValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}

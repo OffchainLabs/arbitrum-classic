@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,7 +33,20 @@ type ERC721 struct {
 	Id           *big.Int
 }
 
-func (m ERC721) Equals(o ERC721) bool {
+func (m ERC721) String() string {
+	return fmt.Sprintf("ERC721(to: %v, from: %v, token: %v, id: %v)",
+		m.To,
+		m.From,
+		m.TokenAddress,
+		m.Id,
+	)
+}
+
+func (m ERC721) Equals(other Message) bool {
+	o, ok := other.(ERC721)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.TokenAddress == o.TokenAddress &&
@@ -47,7 +61,7 @@ func (m ERC721) GetFuncName() string {
 	return "ERC721Transfer"
 }
 
-func (m ERC721) AsValue() value.Value {
+func (m ERC721) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
@@ -82,6 +96,8 @@ type DeliveredERC721 struct {
 	MessageNum *big.Int
 }
 
+// Equals check for equality between this object and any other message by
+// checking for full equality of all members
 func (m DeliveredERC721) Equals(other Message) bool {
 	o, ok := other.(DeliveredERC721)
 	if !ok {
@@ -93,11 +109,11 @@ func (m DeliveredERC721) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredERC721) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredERC721) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredERC721) DeliveredTimestamp() *big.Int {
+func (m DeliveredERC721) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

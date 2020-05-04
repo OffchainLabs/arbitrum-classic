@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,7 +33,20 @@ type ERC20 struct {
 	Value        *big.Int
 }
 
-func (m ERC20) Equals(o ERC20) bool {
+func (m ERC20) String() string {
+	return fmt.Sprintf("ERC20(to: %v, from: %v, token: %v, value: %v)",
+		m.To,
+		m.From,
+		m.TokenAddress,
+		m.Value,
+	)
+}
+
+func (m ERC20) Equals(other Message) bool {
+	o, ok := other.(ERC20)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.TokenAddress == o.TokenAddress &&
@@ -47,7 +61,7 @@ func (m ERC20) GetFuncName() string {
 	return "ERC20Transfer"
 }
 
-func (m ERC20) AsValue() value.Value {
+func (m ERC20) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
@@ -93,11 +107,11 @@ func (m DeliveredERC20) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredERC20) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredERC20) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredERC20) DeliveredTimestamp() *big.Int {
+func (m DeliveredERC20) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

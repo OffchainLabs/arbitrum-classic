@@ -37,7 +37,7 @@ type Result interface {
 
 type Return struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 
 	ReturnVal []byte
 	Logs      []Log
@@ -62,13 +62,14 @@ func (e Return) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Revert struct {
 	Msg       EthBridgeMessage
-	ArbCall   message.UnsentMessage
+	ArbCall   message.ExecutionMessage
 	ReturnVal []byte
 }
 
@@ -84,13 +85,14 @@ func (e Revert) String() string {
 	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", returnVal: ")
 	sb.WriteString(hexutil.Encode(e.ReturnVal))
-	sb.WriteString(")")
+	sb.WriteString(") from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Stop struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 	Logs    []Log
 }
 
@@ -111,13 +113,14 @@ func (e Stop) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type BadSequenceNum struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
@@ -130,13 +133,14 @@ func (e BadSequenceNum) String() string {
 	var sb strings.Builder
 	sb.WriteString("BadSequenceNum(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Invalid struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e Invalid) GetEthMsg() EthBridgeMessage {
@@ -149,7 +153,8 @@ func (e Invalid) String() string {
 	var sb strings.Builder
 	sb.WriteString("Invalid(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -246,7 +251,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	arbMessage, err := message.UnmarshalUnsent(ethMsg.Type, messageVal, chain)
+	arbMessage, err := message.UnmarshalExecuted(ethMsg.Type, messageVal, chain)
 	if err != nil {
 		return nil, err
 	}

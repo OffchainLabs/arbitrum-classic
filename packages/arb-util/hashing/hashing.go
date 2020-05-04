@@ -46,6 +46,14 @@ func Address(input common.Address) []byte {
 	return solsha3.Address(input.ToEthAddress())
 }
 
+func AddressArray(input []common.Address) []byte {
+	addresses := make([]ethcommon.Address, 0, len(input))
+	for _, address := range input {
+		addresses = append(addresses, address.ToEthAddress())
+	}
+	return solsha3.AddressArray(addresses)
+}
+
 func Bool(input bool) []byte {
 	return solsha3.Bool(input)
 }
@@ -58,26 +66,46 @@ func TimeBlocks(input *common.TimeBlocks) []byte {
 	return solsha3.Uint128(input.AsInt())
 }
 
+// Uint256 converts input to its packed ABI encoding
 func Uint256(input *big.Int) []byte {
 	return solsha3.Uint256(new(big.Int).Set(input))
 }
 
+// Uint128 converts input to its packed ABI encoding
 func Uint128(input *big.Int) []byte {
 	return solsha3.Uint128(new(big.Int).Set(input))
 }
 
+// Uint256Array converts input to its packed ABI encoding
+func Uint256Array(input []*big.Int) []byte {
+	ints := make([]*big.Int, 0, len(input))
+	for _, val := range input {
+		ints = append(ints, new(big.Int).Set(val))
+	}
+	return solsha3.Uint256Array(ints)
+}
+
+// Uint64 converts input to its packed ABI encoding
 func Uint64(input uint64) []byte {
 	return solsha3.Uint64(input)
 }
 
+// Uint32 converts input to its packed ABI encoding
 func Uint32(input uint32) []byte {
 	return solsha3.Uint32(input)
 }
 
+// Uint32Array converts input to its packed ABI encoding
+func Uint32Array(input []uint32) []byte {
+	return solsha3.Uint32Array(input)
+}
+
+// Uint8 converts input to its packed ABI encoding
 func Uint8(input uint8) []byte {
 	return solsha3.Uint8(input)
 }
 
+// Bytes32ArrayEncoded converts input to its packed ABI encoding
 func Bytes32ArrayEncoded(input []common.Hash) []byte {
 	var values []byte
 	for _, val := range input {

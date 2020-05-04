@@ -19,6 +19,7 @@
     "prepublishOnly": "yarn build && yarn format && yarn test",
     "preversion": "yarn lint",
     "build": "./scripts/builder",
+    "watch": "tsc --watch",
     "test": "jest --config jest.config.js",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",

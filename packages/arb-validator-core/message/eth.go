@@ -36,7 +36,11 @@ func (m Eth) String() string {
 	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, m.Value)
 }
 
-func (m Eth) Equals(o Eth) bool {
+func (m Eth) Equals(other Message) bool {
+	o, ok := other.(Eth)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.Value.Cmp(o.Value) == 0
@@ -50,7 +54,7 @@ func (m Eth) GetFuncName() string {
 	return "EthTransfer"
 }
 
-func (m Eth) AsValue() value.Value {
+func (m Eth) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -110,11 +114,11 @@ func (m DeliveredEth) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredEth) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredEth) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredEth) DeliveredTimestamp() *big.Int {
+func (m DeliveredEth) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

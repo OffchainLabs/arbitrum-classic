@@ -21,13 +21,13 @@ library SigUtils {
 
     function parseSignature(
         bytes memory _signatures,
-        uint256 _pos
+        uint256 _start
     )
         internal
         pure
         returns (uint8 v, bytes32 r, bytes32 s)
     {
-        uint256 offset = _pos * 65;
+        uint256 offset = _start;
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
@@ -75,7 +75,7 @@ library SigUtils {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
         for (uint256 i = 0; i < count; i++) {
-            (v, r, s) = parseSignature(_signatures, i);
+            (v, r, s) = parseSignature(_signatures, i*65);
             addresses[i] = ecrecover(
                 prefixedHash,
                 v,

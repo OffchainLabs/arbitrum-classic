@@ -34,20 +34,26 @@ const (
 	ERC721Type
 	ContractTransactionType
 	CallType
+	TransactionBatchType
 )
 
-type UnsentMessage interface {
-	Type() MessageType
-	AsValue() value.Value
-	GetFuncName() string
+type SingleMessage interface {
+	ReceiptHash() common.Hash
+
+	asValue() value.Value
+	deliveredHeight() *common.TimeBlocks
+	deliveredTimestamp() *big.Int
 }
 
 type Message interface {
-	UnsentMessage
+	fmt.Stringer
+	Type() MessageType
 	Equals(o Message) bool
-	ReceiptHash() common.Hash
-	DeliveredHeight() *common.TimeBlocks
-	DeliveredTimestamp() *big.Int
+}
+
+type ExecutionMessage interface {
+	Message
+	GetFuncName() string
 }
 
 type InboxMessage interface {
@@ -71,7 +77,86 @@ func intValueToAddress(val value.IntValue) common.Address {
 	return address
 }
 
-func UnmarshalUnsent(typecode MessageType, messageVal value.Value, chain common.Address) (UnsentMessage, error) {
+func addressesToValue(addresses []common.Address) value.TupleValue {
+	var ret []value.Value
+	for _, address := range addresses {
+		ret = append(ret, addressToIntValue(address))
+	}
+	return ListToStackValue(ret)
+}
+
+func valueToIntValuess(val value.Value) ([]value.IntValue, error) {
+	rawVals, err := StackValueToList(val)
+	if err != nil {
+		return nil, err
+	}
+	ints := make([]value.IntValue, 0, len(rawVals))
+	for _, rawVal := range rawVals {
+		rawValInt, ok := rawVal.(value.IntValue)
+		if !ok {
+			return nil, errors.New("value inside stack must be an int")
+		}
+		ints = append(ints, rawValInt)
+	}
+	return ints, nil
+}
+
+func valueToAddresses(val value.Value) ([]common.Address, error) {
+	ints, err := valueToIntValuess(val)
+	if err != nil {
+		return nil, err
+	}
+	addresses := make([]common.Address, 0, len(ints))
+	for _, intVal := range ints {
+		addresses = append(addresses, intValueToAddress(intVal))
+	}
+	return addresses, nil
+}
+
+func valueToInts(val value.Value) ([]*big.Int, error) {
+	ints, err := valueToIntValuess(val)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]*big.Int, 0, len(ints))
+	for _, intVal := range ints {
+		ret = append(ret, intVal.BigInt())
+	}
+	return ret, nil
+}
+
+func valueToUInt32s(val value.Value) ([]uint32, error) {
+	ints, err := valueToIntValuess(val)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]uint32, 0, len(ints))
+	for _, intVal := range ints {
+		ret = append(ret, uint32(intVal.BigInt().Uint64()))
+	}
+	return ret, nil
+}
+
+func intsToValue(ints []*big.Int) value.TupleValue {
+	var ret []value.Value
+	for _, val := range ints {
+		ret = append(ret, value.NewIntValue(new(big.Int).Set((val))))
+	}
+	return ListToStackValue(ret)
+}
+
+func uint32sToValue(ints []uint32) value.TupleValue {
+	var ret []value.Value
+	for _, val := range ints {
+		ret = append(ret, value.NewIntValue(new(big.Int).SetUint64((uint64(val)))))
+	}
+	return ListToStackValue(ret)
+}
+
+// UnmarshalExecuted converts the given Arbitrum message value which is the
+// encoding of one of our value types for a VM, back into the original message
+// type
+func UnmarshalExecuted(typecode MessageType, messageVal value.Value, chain common.Address) (ExecutionMessage, error) {
 	switch typecode {
 	case TransactionType:
 		return UnmarshalTransaction(messageVal, chain)
@@ -102,21 +187,39 @@ func UnmarshalFromCheckpoint(msgType MessageType, v value.Value) (InboxMessage, 
 		return UnmarshalERC721FromCheckpoint(v)
 	case ContractTransactionType:
 		return UnmarshalContractTransactionFromCheckpoint(v)
+	case TransactionBatchType:
+		return UnmarshalTransactionBatchFromCheckpoint(v)
 	default:
 		return nil, errors.New("bad message type")
 	}
 }
 
-func DeliveredValue(m Message) value.Value {
+func DeliveredValue(m SingleMessage) value.Value {
 	receiptHash := m.ReceiptHash()
 	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
 	msg, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(m.DeliveredHeight().AsInt()),
-		value.NewIntValue(m.DeliveredTimestamp()),
+		value.NewIntValue(m.deliveredHeight().AsInt()),
+		value.NewIntValue(m.deliveredTimestamp()),
 		value.NewIntValue(receiptVal),
-		m.AsValue(),
+		m.asValue(),
 	})
 	return msg
+}
+
+func AddToPrev(prev value.TupleValue, msg Message) value.TupleValue {
+	switch msg := msg.(type) {
+	case SingleMessage:
+		return value.NewTuple2(prev, DeliveredValue(msg))
+	case DeliveredTransactionBatch:
+		ret := prev
+		txes := msg.getTransactions()
+		for _, tx := range txes {
+			ret = value.NewTuple2(ret, DeliveredValue(tx))
+		}
+		return ret
+	default:
+		panic("Bad message type")
+	}
 }
 
 func unmarshalTxWrapped(val value.Value, msgType MessageType) (common.Address, value.TupleValue, error) {

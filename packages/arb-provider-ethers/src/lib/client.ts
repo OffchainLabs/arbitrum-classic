@@ -454,40 +454,6 @@ export class ArbClient {
     }
   }
 
-  public sendMessage(
-    to: string,
-    sequenceNum: ethers.utils.BigNumberish,
-    value: ethers.utils.BigNumberish,
-    data: string,
-    signature: string,
-    pubkey: string
-  ): Promise<string> {
-    return new Promise((resolve, reject): void => {
-      this.client.request(
-        'Validator.SendMessage',
-        [
-          {
-            to,
-            sequenceNum,
-            value,
-            data,
-            signature,
-            pubkey,
-          },
-        ],
-        (err: Error, error: Error, result: SendMessageReply) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(result.txHash)
-          }
-        }
-      )
-    })
-  }
-
   public call(
     contractAddress: string,
     sender: string,

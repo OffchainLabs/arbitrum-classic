@@ -53,7 +53,11 @@ func (m Transaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m Transaction) Equals(o Transaction) bool {
+func (m Transaction) Equals(other Message) bool {
+	o, ok := other.(Transaction)
+	if !ok {
+		return false
+	}
 	return m.Chain == o.Chain &&
 		m.To == o.To &&
 		m.From == o.From &&
@@ -66,7 +70,7 @@ func (m Transaction) Type() MessageType {
 	return TransactionType
 }
 
-func (m Transaction) AsValue() value.Value {
+func (m Transaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
@@ -133,7 +137,7 @@ func (m Transaction) ReceiptHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 	)
 }
 
@@ -153,11 +157,11 @@ func (m DeliveredTransaction) Equals(other Message) bool {
 		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
-func (m DeliveredTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredTransaction) DeliveredTimestamp() *big.Int {
+func (m DeliveredTransaction) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 
@@ -169,7 +173,7 @@ func (m DeliveredTransaction) CommitmentHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.Timestamp),
 	)

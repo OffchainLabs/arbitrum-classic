@@ -56,7 +56,7 @@ func generateTestDeliveredERC20() DeliveredERC20 {
 func TestMarshalERC20(t *testing.T) {
 	msg := generateTestERC20()
 
-	msg2, err := UnmarshalERC20(msg.AsValue())
+	msg2, err := UnmarshalERC20(msg.asValue())
 	if err != nil {
 		t.Error(err)
 	}

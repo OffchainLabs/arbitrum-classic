@@ -17,6 +17,8 @@
 pragma solidity ^0.5.3;
 
 import "./arch/Value.sol";
+import "./libraries/SigUtils.sol";
+import "./arch/Protocol.sol";
 
 
 library Messages {
@@ -25,8 +27,11 @@ library Messages {
     uint8 internal constant ERC20_DEPOSIT = 2;
     uint8 internal constant ERC721_DEPOSIT = 3;
     uint8 internal constant CONTRACT_TRANSACTION_MSG = 4;
+    uint8 internal constant CALL_MSG = 5;
+    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
 
     using Value for Value.Data;
+    using BytesLib for bytes;
 
     function transactionHash(
         address chain,
@@ -34,7 +39,7 @@ library Messages {
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes memory data,
+        bytes32 dataHash,
         uint256 blockNumber,
         uint256 timestamp
     )
@@ -50,10 +55,38 @@ library Messages {
                 from,
                 seqNumber,
                 value,
-                data,
+                dataHash,
                 blockNumber,
                 timestamp
             )
+        );
+    }
+
+
+    function transactionMessageHash(
+        address chain,
+        address to,
+        address from,
+        uint256 seqNumber,
+        uint256 value,
+        bytes memory data,
+        uint256 blockNumber,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return transactionMessageHash(
+            chain,
+            to,
+            from,
+            seqNumber,
+            value,
+            keccak256(data),
+            Value.bytesToBytestackHash(data, 0, data.length),
+            blockNumber,
+            blockTimestamp
         );
     }
 
@@ -63,7 +96,8 @@ library Messages {
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes memory data,
+        bytes32 dataHash,
+        bytes32 dataTupleHash,
         uint256 blockNumber,
         uint256 timestamp
     )
@@ -79,15 +113,14 @@ library Messages {
                 from,
                 seqNumber,
                 value,
-                data
+                dataHash
             )
         );
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataHash);
+        msgValues[3] = Value.newHashOnly(dataTupleHash);
 
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(TRANSACTION_MSG);
@@ -100,6 +133,114 @@ library Messages {
             Value.newInt(uint256(txHash)),
             Value.newTuple(msgType)
         ]);
+    }
+
+    function transactionBatchHash(
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                TRANSACTION_BATCH_MSG,
+                transactions,
+                blockNum,
+                blockTimestamp
+            )
+        );
+    }
+
+    uint256 internal constant TO_OFFSET = 2;
+    uint256 internal constant SEQ_OFFSET = 22;
+    uint256 internal constant VALUE_OFFSET = 54;
+    uint256 internal constant SIG_OFFSET = 86;
+    uint256 internal constant DATA_OFFSET = 151;
+
+    function transactionMessageBatchHash(
+        bytes32 prev,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        uint256 transactionsLength = transactions.length;
+        uint256 start = 0x20;
+        // Continue until we run out of enough data for a tx with no data
+        while (start + DATA_OFFSET < transactionsLength) {
+            uint16 dataLength = transactions.toUint16(start);
+            // Terminate if the input data is shorter than the fixed length + claimed data length
+            if (start + DATA_OFFSET + dataLength > transactionsLength) {
+                return prev;
+            }
+
+            bytes32 messageHash = transactionMessageBatchHashSingle(
+                start,
+                chain,
+                transactions,
+                blockNum,
+                blockTimestamp
+            );
+
+            prev = Protocol.addMessageToVMInbox(prev, messageHash);
+            start += DATA_OFFSET + dataLength;
+        }
+        return prev;
+    }
+
+    function keccak256Subset(bytes memory data, uint256 start, uint256 length) internal pure returns(bytes32 dataHash) {
+        assembly {
+            dataHash := keccak256(add(data, start), length)
+        }
+    }
+
+    function transactionMessageBatchHashSingle(
+        uint256 start,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        bytes32 dataHash = keccak256Subset(transactions, start + DATA_OFFSET, transactions.toUint16(start));
+
+        address from = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    chain,
+                    transactions.toAddress(start + TO_OFFSET),
+                    transactions.toUint(start + SEQ_OFFSET),
+                    transactions.toUint(start + VALUE_OFFSET),
+                    dataHash
+                )
+            ),
+            transactions,
+            start + SIG_OFFSET
+        );
+
+        bytes32 dataTupHash = Value.bytesToBytestackHash(transactions, start + DATA_OFFSET, transactions.toUint16(start));
+
+        return transactionMessageHash(
+            chain,
+            transactions.toAddress(start + TO_OFFSET),
+            from,
+            transactions.toUint(start + SEQ_OFFSET),
+            transactions.toUint(start + VALUE_OFFSET),
+            dataHash,
+            dataTupHash,
+            blockNum,
+            blockTimestamp
+        );
     }
 
     function ethHash(
@@ -297,7 +438,7 @@ library Messages {
         pure
         returns(bytes32)
     {
-        bytes32 dataHash = Value.bytesToBytestackHash(data);
+        bytes32 dataHash = Value.bytesToBytestackHash(data, 0, data.length);
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);

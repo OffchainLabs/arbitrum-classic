@@ -49,7 +49,11 @@ func (m ContractTransaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m ContractTransaction) Equals(o ContractTransaction) bool {
+func (m ContractTransaction) Equals(other Message) bool {
+	o, ok := other.(ContractTransaction)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.Value.Cmp(o.Value) == 0 &&
@@ -60,7 +64,7 @@ func (m ContractTransaction) Type() MessageType {
 	return ContractTransactionType
 }
 
-func (m ContractTransaction) AsValue() value.Value {
+func (m ContractTransaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -128,11 +132,11 @@ func (m DeliveredContractTransaction) Equals(other Message) bool {
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredContractTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredContractTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
 }
 
-func (m DeliveredContractTransaction) DeliveredTimestamp() *big.Int {
+func (m DeliveredContractTransaction) deliveredTimestamp() *big.Int {
 	return m.Timestamp
 }
 

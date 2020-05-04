@@ -14,94 +14,144 @@
  * limitations under the License.
  */
 
-const GlobalInbox = artifacts.require("GlobalInbox");
+const GlobalInbox = artifacts.require('GlobalInbox')
+const MessageTester = artifacts.require('MessageTester')
+const ethers = require('ethers')
 
-const eutil = require("ethereumjs-util");
+function calcTxHash(chain, to, sequenceNum, value, messageData) {
+  return web3.utils.soliditySha3(
+    { t: 'address', v: chain },
+    { t: 'address', v: to },
+    { t: 'uint256', v: sequenceNum },
+    { t: 'uint256', v: value },
+    {
+      t: 'bytes32',
+      v: web3.utils.soliditySha3({ t: 'bytes', v: messageData }),
+    }
+  )
+}
 
-contract("GlobalInbox", accounts => {
-  it("should make initial call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+async function generateTxData(accounts, chain, messageCount) {
+  let txDataTemplate = {
+    to: '0xffffffffffffffffffffffffffffffffffffffff',
+    sequenceNum: 2000,
+    value: 54254535454544,
+    messageData: '0x00',
+  }
+
+  let transactionsData = []
+  for (let i = 0; i < messageCount; i++) {
+    transactionsData.push(txDataTemplate)
+  }
+
+  let data = '0x'
+
+  for (var i = 0; i < transactionsData.length; i++) {
+    let txData = transactionsData[i]
+
+    let txHash = calcTxHash(
+      chain,
+      txData['to'],
+      txData['sequenceNum'],
+      txData['value'],
+      txData['messageData']
+    )
+    let signedTxHash = await web3.eth.sign(txHash, accounts[0])
+
+    let packedTxData = ethers.utils.solidityPack(
+      ['uint16', 'address', 'uint256', 'uint256', 'bytes', 'bytes'],
+      [
+        (txData['messageData'].length - 2) / 2,
+        txData['to'],
+        txData['sequenceNum'],
+        txData['value'],
+        signedTxHash,
+        txData['messageData'],
+      ]
+    )
+    data += packedTxData.slice(2)
+  }
+  return data
+}
+
+contract('GlobalInbox', accounts => {
+  it('should make initial call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
-      "0x"
-    );
-  });
+      '0x'
+    )
+  })
 
-  it("should make second call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+  it('should make second call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
-      "0x"
-    );
-  });
+      '0x'
+    )
+  })
 
-  it("should make bigger call", async () => {
-    let global_inbox = await GlobalInbox.deployed();
+  it('should make bigger call', async () => {
+    let global_inbox = await GlobalInbox.deployed()
     await global_inbox.sendTransactionMessage(
-      "0xffffffffffffffffffffffffffffffffffffffff",
-      "0xffffffffffffffffffffffffffffffffffffffff",
+      '0xffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffffffffffffffffffffffffffffffffffff',
       2000,
       54254535454544,
       // 64 bytes of data
-      "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    );
-  });
+      '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    )
+  })
 
-  it("should make a batch call", async () => {
-    let chain = "0xffffffffffffffffffffffffffffffffffffffff";
-    let txDataTemplate = {
-      to: "0xffffffffffffffffffffffffffffffffffffffff",
-      sequenceNum: 2000,
-      value: 54254535454544,
-      messageData: "0x"
-    };
+  it('should make a batch call', async () => {
+    let messageCount = 500
+    let chain = '0xffffffffffffffffffffffffffffffffffffffff'
 
-    let transactionsData = [];
-    for (let i = 0; i < 100; i++) {
-      transactionsData.push(txDataTemplate);
-    }
+    // console.log(data);
 
-    let tos = [];
-    let sequenceNums = [];
-    let values = [];
-    let messageData = "0x";
-    let messageLengths = [];
-    let signatures = "0x";
+    let data = await generateTxData(accounts, chain, messageCount)
 
-    for (var i = 0; i < transactionsData.length; i++) {
-      let txData = transactionsData[i];
+    let globalInbox = await GlobalInbox.deployed()
+    let tx = await globalInbox.deliverTransactionBatch(chain, data)
 
-      let txHash = web3.utils.soliditySha3(
-        { t: "address", v: chain },
-        { t: "address", v: txData["to"] },
-        { t: "uint256", v: txData["sequenceNum"] },
-        { t: "uint256", v: txData["value"] },
-        { t: "bytes", v: txData["messageData"] }
-      );
-      let signedTxHash = await web3.eth.sign(txHash, accounts[0]);
-      tos.push(txData["to"]);
-      sequenceNums.push(txData["sequenceNum"]);
-      values.push(txData["value"]);
-      messageLengths.push((txData["messageData"].length - 2) / 2);
-      messageData += txData["messageData"].slice(2);
-      signatures += signedTxHash.slice(2);
-    }
+    assert.equal(tx.logs.length, 1)
 
-    let global_inbox = await GlobalInbox.deployed();
-    await global_inbox.deliverTransactionBatch(
-      chain,
-      tos,
-      sequenceNums,
-      values,
-      messageLengths,
-      messageData,
-      signatures
-    );
-  });
-});
+    let ev = tx.logs[0]
+
+    assert.equal(
+      ev.event,
+      'TransactionMessageBatchDelivered',
+      'Incorrect event type'
+    )
+
+    assert.equal(
+      ev.args.chain.toLowerCase(),
+      chain.toLowerCase(),
+      'incorrect chain in event'
+    )
+
+    let txObj = await web3.eth.getTransaction(tx.tx)
+    let [chainInput, txDataInput] = ethers.utils.defaultAbiCoder.decode(
+      ['address', 'bytes'],
+      ethers.utils.hexDataSlice(txObj.input, 4)
+    )
+
+    assert.equal(
+      chainInput.toLowerCase(),
+      chain.toLowerCase(),
+      'incorrect chain from input'
+    )
+
+    assert.equal(
+      txDataInput.toLowerCase(),
+      data.toLowerCase(),
+      'incorrect tx data from input'
+    )
+  })
+})

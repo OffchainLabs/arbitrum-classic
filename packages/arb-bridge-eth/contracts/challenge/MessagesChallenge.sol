@@ -108,7 +108,7 @@ contract MessagesChallenge is BisectionChallenge {
             _from,
             _seqNumber,
             _value,
-            _data,
+            keccak256(_data),
             _blockNumber,
             _timestamp
         );
@@ -296,6 +296,43 @@ contract MessagesChallenge is BisectionChallenge {
         );
     }
 
+    function oneStepProofTransactionBatchMessage(
+        bytes32 lowerHashA,
+        bytes32 lowerHashB,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        public
+        asserterAction
+    {
+        bytes32 messageHash = Messages.transactionBatchHash(
+            transactions,
+            blockNum,
+            blockTimestamp
+        );
+
+        bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
+            lowerHashB,
+            chain,
+            transactions,
+            blockNum,
+            blockTimestamp
+        );
+
+        requireMatchesPrevState(
+            ChallengeUtils.messagesHash(
+                lowerHashA,
+                Protocol.addMessageToInbox(lowerHashA, messageHash),
+                lowerHashB,
+                afterInboxHash,
+                1
+            )
+        );
+        finishOneStepProof();
+    }
+
     function oneStepProof(
         bytes32 _lowerHashA,
         bytes32 _lowerHashB,
@@ -314,6 +351,10 @@ contract MessagesChallenge is BisectionChallenge {
             )
         );
 
+        finishOneStepProof();
+    }
+
+    function finishOneStepProof() private {
         emit OneStepProofCompleted();
         _asserterWin();
     }
