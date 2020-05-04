@@ -15,6 +15,7 @@
  */
 
 const GlobalInbox = artifacts.require('GlobalInbox')
+const MessageTester = artifacts.require('MessageTester')
 const ethers = require('ethers')
 
 function calcTxHash(chain, to, sequenceNum, value, messageData) {
@@ -29,6 +30,50 @@ function calcTxHash(chain, to, sequenceNum, value, messageData) {
     }
   )
 }
+
+async function generateTxData(accounts, chain, messageCount) {
+  let txDataTemplate = {
+    to: '0xffffffffffffffffffffffffffffffffffffffff',
+    sequenceNum: 2000,
+    value: 54254535454544,
+    messageData: '0x00',
+  }
+
+  let transactionsData = []
+  for (let i = 0; i < messageCount; i++) {
+    transactionsData.push(txDataTemplate)
+  }
+
+  let data = '0x'
+
+  for (var i = 0; i < transactionsData.length; i++) {
+    let txData = transactionsData[i]
+
+    let txHash = calcTxHash(
+      chain,
+      txData['to'],
+      txData['sequenceNum'],
+      txData['value'],
+      txData['messageData']
+    )
+    let signedTxHash = await web3.eth.sign(txHash, accounts[0])
+
+    let packedTxData = ethers.utils.solidityPack(
+      ['uint16', 'address', 'uint256', 'uint256', 'bytes', 'bytes'],
+      [
+        (txData['messageData'].length - 2) / 2,
+        txData['to'],
+        txData['sequenceNum'],
+        txData['value'],
+        signedTxHash,
+        txData['messageData'],
+      ]
+    )
+    data += packedTxData.slice(2)
+  }
+  return data
+}
+
 contract('GlobalInbox', accounts => {
   it('should make initial call', async () => {
     let global_inbox = await GlobalInbox.deployed()
@@ -65,144 +110,57 @@ contract('GlobalInbox', accounts => {
   })
 
   it('should make a batch call', async () => {
-    let messageCount = 100
+    let messageCount = 1000
     let chain = '0xffffffffffffffffffffffffffffffffffffffff'
-    let txDataTemplate = {
-      to: '0xffffffffffffffffffffffffffffffffffffffff',
-      sequenceNum: 2000,
-      value: 54254535454544,
-      messageData: '0x1254',
-    }
 
-    let transactionsData = []
-    for (let i = 0; i < messageCount; i++) {
-      transactionsData.push(txDataTemplate)
-    }
+    // console.log(data);
 
-    let tos = []
-    let sequenceNums = []
-    let values = []
-    let messageData = '0x'
-    let messageLengths = []
-    let signatures = '0x'
+    let data = await generateTxData(accounts, chain, messageCount)
 
-    for (var i = 0; i < transactionsData.length; i++) {
-      let txData = transactionsData[i]
+    let globalInbox = await GlobalInbox.deployed()
+    let tx = await globalInbox.deliverTransactionBatch(chain, data)
 
-      let txHash = calcTxHash(
-        chain,
-        txData['to'],
-        txData['sequenceNum'],
-        txData['value'],
-        txData['messageData']
-      )
-      let signedTxHash = await web3.eth.sign(txHash, accounts[0])
-      tos.push(txData['to'])
-      sequenceNums.push(txData['sequenceNum'])
-      values.push(txData['value'])
-      messageLengths.push((txData['messageData'].length - 2) / 2)
-      messageData += txData['messageData'].slice(2)
-      signatures += signedTxHash.slice(2)
-    }
+    assert.equal(tx.logs.length, 1)
 
-    let global_inbox = await GlobalInbox.deployed()
-    let tx = await global_inbox.deliverTransactionBatch(
-      chain,
-      tos,
-      sequenceNums,
-      values,
-      messageLengths,
-      messageData,
-      signatures
+    let ev = tx.logs[0]
+
+    assert.equal(
+      ev.event,
+      'TransactionMessageBatchDelivered',
+      'Incorrect event type'
+    )
+
+    assert.equal(
+      ev.args.chain.toLowerCase(),
+      chain.toLowerCase(),
+      'incorrect chain in event'
     )
 
     let txObj = await web3.eth.getTransaction(tx.tx)
-
-    console.log('Input data length', ethers.utils.hexDataLength(txObj.input))
-
-    let txData = ethers.utils.defaultAbiCoder.decode(
-      [
-        'address',
-        'address[]',
-        'uint256[]',
-        'uint256[]',
-        'uint32[]',
-        'bytes',
-        'bytes',
-      ],
+    let [chainInput, txDataInput] = ethers.utils.defaultAbiCoder.decode(
+      ['address', 'bytes'],
       ethers.utils.hexDataSlice(txObj.input, 4)
     )
 
-    //   console.log("txData", txData);
+    assert.equal(
+      chainInput.toLowerCase(),
+      chain.toLowerCase(),
+      'incorrect chain from input'
+    )
 
-    //   console.log(await web3.eth.getTransaction(tx.tx));
+    assert.equal(
+      txDataInput.toLowerCase(),
+      data.toLowerCase(),
+      'incorrect tx data from input'
+    )
 
-    //   assert.equal(tx.logs.length, 1)
-
-    //   let ev = tx.logs[0]
-
-    //   assert.equal(
-    //     ev.event,
-    //     'TransactionMessageBatchDelivered',
-    //     'Incorrect event type'
-    //   )
-
-    //   assert.equal(ev.args.tos.length, messageCount)
-    //   assert.equal(ev.args.seqNumbers.length, messageCount)
-    //   assert.equal(ev.args.values.length, messageCount)
-    //   assert.equal(ev.args.dataLengths.length, messageCount)
-
-    //   var dataOffset = 0
-
-    //   for (var i = 0; i < messageCount; i++) {
-    //     assert.equal(
-    //       ev.args.tos[i].toLowerCase(),
-    //       transactionsData[i]['to'],
-    //       'Incorrect to address'
-    //     )
-    //     assert.equal(
-    //       ev.args.seqNumbers[i],
-    //       transactionsData[i]['sequenceNum'],
-    //       'Incorrect sequence num'
-    //     )
-    //     assert.equal(
-    //       ev.args.values[i],
-    //       transactionsData[i]['value'],
-    //       'Incorrect value'
-    //     )
-    //     assert.equal(
-    //       ethers.utils.hexDataSlice(
-    //         ev.args.data,
-    //         dataOffset,
-    //         dataOffset + ev.args.dataLengths[i].toNumber()
-    //       ),
-    //       transactionsData[i]['messageData'],
-    //       'Incorrect message data'
-    //     )
-
-    //     let txHash = calcTxHash(
-    //       chain,
-    //       ev.args.tos[i],
-    //       ev.args.seqNumbers[i],
-    //       ev.args.values[i],
-    //       ethers.utils.hexDataSlice(
-    //         ev.args.data,
-    //         dataOffset,
-    //         dataOffset + ev.args.dataLengths[i].toNumber()
-    //       )
-    //     )
-
-    //     const messageHashBytes = ethers.utils.arrayify(txHash)
-
-    //     let sig = ethers.utils.hexDataSlice(
-    //       ev.args.signatures,
-    //       i*65,
-    //       (i+1)*65
-    //     );
-
-    //     let recoveredAddress = ethers.utils.verifyMessage(messageHashBytes, ethers.utils.arrayify(sig));
-    //     assert.equal(recoveredAddress, accounts[0], "Incorrect signature")
-    //     dataOffset += ev.args.dataLengths[i].toNumber()
-    //   }
+    // let messageTester = await MessageTester.new()
+    // await messageTester.transactionMessageBatchHash(
+    //   "0x00",
+    //   chain,
+    //   data,
+    //   0,
+    //   0
+    // );
   })
 })

@@ -82,11 +82,7 @@ func (m *Server) sendBatch(ctx context.Context) {
 	var sigs [][signatureLength]byte
 
 	m.Lock()
-	if !m.valid {
-		return
-	}
-
-	if len(m.transactions) == 0 {
+	if !m.valid || len(m.transactions) == 0 {
 		m.Unlock()
 		return
 	}
@@ -173,7 +169,7 @@ func (m *Server) SendTransaction(
 		signature[recoverBitPos] = 1
 	}
 
-	txDataHash := message.OffchainTxHash(
+	txDataHash := message.BatchTxHash(
 		m.rollupAddress,
 		to,
 		sequenceNum,

@@ -300,49 +300,25 @@ contract MessagesChallenge is BisectionChallenge {
         bytes32 lowerHashA,
         bytes32 lowerHashB,
         address chain,
-        address[] memory tos,
-        uint256[] memory seqNumbers,
-        uint256[] memory values,
-        uint32[] memory dataLengths,
-        bytes memory data,
-        bytes memory signatures,
-        uint256[2] memory blockAndTimestamp
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
     )
         public
         asserterAction
     {
-
-        Messages.requireValidTransactionBatch(
-            tos,
-            seqNumbers,
-            values,
-            dataLengths,
-            data,
-            signatures
-        );
-
         bytes32 messageHash = Messages.transactionBatchHash(
-            chain,
-            tos,
-            seqNumbers,
-            values,
-            dataLengths,
-            data,
-            signatures,
-            blockAndTimestamp[0],
-            blockAndTimestamp[1]
+            transactions,
+            blockNum,
+            blockTimestamp
         );
 
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
             lowerHashB,
             chain,
-            tos,
-            seqNumbers,
-            values,
-            dataLengths,
-            data,
-            signatures,
-            blockAndTimestamp
+            transactions,
+            blockNum,
+            blockTimestamp
         );
 
         requireMatchesPrevState(

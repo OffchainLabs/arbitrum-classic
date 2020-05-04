@@ -108,13 +108,9 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 		lowerHashA,
 		lowerHashB,
 		msg.Chain.ToEthAddress(),
-		common.AddressArrayToEth(msg.Tos),
-		msg.SequenceNums,
-		msg.Values,
-		msg.DataLengths,
-		msg.Data,
-		msg.Signatures,
-		[2]*big.Int{msg.BlockNum.AsInt(), msg.Timestamp},
+		msg.TxData,
+		msg.BlockNum.AsInt(),
+		msg.Timestamp,
 	)
 	if err != nil {
 		return err

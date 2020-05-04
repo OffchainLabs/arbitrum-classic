@@ -227,41 +227,30 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         );
     }
 
+    // // Transaction format
+    // //   tx length bytes(32 bytes)
+    // //   to (20 bytes)
+    // //   seqNumber (32 bytes)
+    // //   value (32 bytes)
+    // //   signature (65 bytes)
+    // //   data (arbitrary length)
+
+
     function deliverTransactionBatch(
         address chain,
-        address[] calldata tos,
-        uint256[] calldata seqNumbers,
-        uint256[] calldata values,
-        uint32[] calldata dataLengths,
-        bytes calldata data,
-        bytes calldata signatures
+        bytes calldata transactions
     )
         external
     {
-        require(seqNumbers.length == tos.length, "wrong input length");
-        require(values.length == tos.length, "wrong input length");
-        require(dataLengths.length == tos.length, "wrong input length");
-
-        uint256 totalDataLength = 0;
-        for (uint256 i = 0; i < tos.length; i++) {
-            totalDataLength += dataLengths[i];
-        }
-        require(data.length == totalDataLength, "wrong data length");
-        require(signatures.length == tos.length * 65, "wrong signatures length");
-
-        bytes32 messageHash;
-        assembly {
-            let ptr := mload(0x40)
-            mstore8(ptr, TRANSACTION_BATCH_MSG)
-            ptr := add(ptr, 1)
-            calldatacopy(ptr, 4, sub(calldatasize, 4))
-            ptr := add(ptr, sub(calldatasize, 4))
-            mstore(ptr, number)
-            ptr := add(ptr, 32)
-            mstore(ptr, timestamp)
-            ptr := add(ptr, 32)
-            messageHash := keccak256(mload(0x40), sub(ptr, mload(0x40)))
-        }
+        require(msg.sender == tx.origin, "origin only");
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                TRANSACTION_BATCH_MSG,
+                transactions,
+                block.number,
+                block.timestamp
+            )
+        );
 
         _deliverMessage(chain, messageHash);
 

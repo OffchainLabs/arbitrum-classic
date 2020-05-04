@@ -31,6 +31,7 @@ library Messages {
     uint8 internal constant TRANSACTION_BATCH_MSG = 6;
 
     using Value for Value.Data;
+    using BytesLib for bytes;
 
     function transactionHash(
         address chain,
@@ -134,133 +135,112 @@ library Messages {
         ]);
     }
 
-    function requireValidTransactionBatch(
-        address[] memory _tos,
-        uint256[] memory _seqNumbers,
-        uint256[] memory _values,
-        uint32[] memory _dataLengths,
-        bytes memory _data,
-        bytes memory _signatures
-    )
-        internal
-        pure
-    {
-        uint256 messageCount = _tos.length;
-        require(_seqNumbers.length == messageCount, "wrong input length");
-        require(_values.length == messageCount, "wrong input length");
-        require(_dataLengths.length == messageCount, "wrong input length");
-
-        uint256 totalDataLength = 0;
-        for (uint256 i = 0; i < messageCount; i++) {
-            totalDataLength += _dataLengths[i];
-        }
-        require(_data.length == totalDataLength, "wrong data length");
-        require(_signatures.length == messageCount * 65, "wrong signatures length");
-    }
-
-
-    // transactionBatchHash assumes that requireValidTransactionBatch has already been called
     function transactionBatchHash(
-        address _chain,
-        address[] memory _tos,
-        uint256[] memory _seqNumbers,
-        uint256[] memory _values,
-        uint32[] memory _dataLengths,
-        bytes memory _data,
-        bytes memory _signatures,
-        uint256 blockNumber,
+        bytes memory transactions,
+        uint256 blockNum,
         uint256 blockTimestamp
     )
         internal
         pure
         returns(bytes32)
     {
-        bytes memory data = abi.encode(
-            _chain,
-            _tos,
-            _seqNumbers,
-            _values,
-            _dataLengths,
-            _data,
-            _signatures
+        return keccak256(
+            abi.encodePacked(
+                TRANSACTION_BATCH_MSG,
+                transactions,
+                blockNum,
+                blockTimestamp
+            )
         );
-        uint256 dataLength = data.length;
-
-        bytes32 messageHash;
-        assembly {
-            let ptr := add(data, 31)
-            mstore8(ptr, TRANSACTION_BATCH_MSG)
-            ptr := add(add(data, 32), dataLength)
-            mstore(ptr, blockNumber)
-            ptr := add(ptr, 32)
-            mstore(ptr, blockTimestamp)
-            ptr := add(ptr, 32)
-            messageHash := keccak256(add(data, 31), add(dataLength, 65))
-        }
-        return messageHash;
     }
 
-    struct TransactionMessageBatchHashFrame {
-        address from;
-        bytes32 messageHash;
-        bytes32 dataTupleHash;
-    }
+    uint256 internal constant TO_OFFSET = 2;
+    uint256 internal constant SEQ_OFFSET = 22;
+    uint256 internal constant VALUE_OFFSET = 54;
+    uint256 internal constant SIG_OFFSET = 86;
+    uint256 internal constant DATA_OFFSET = 151;
 
-    // transactionMessageBatchHash assumes that requireValidTransactionBatch has already been called
     function transactionMessageBatchHash(
-        bytes32 _prev,
-        address _chain,
-        address[] memory _tos,
-        uint256[] memory _seqNumbers,
-        uint256[] memory _values,
-        uint32[] memory _dataLengths,
-        bytes memory _data,
-        bytes memory _signatures,
-        uint256[2] memory blockAndTimestamp
+        bytes32 prev,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
     )
         internal
         pure
         returns(bytes32)
     {
-        TransactionMessageBatchHashFrame memory frame;
-        uint256 dataOffset = 0;
-        bytes32 dataHash;
-
-        for (uint256 i = 0; i < _tos.length; i++) {
-            uint256 dataLength = _dataLengths[i];
-            assembly {
-                dataHash := keccak256(add(add(_data, 0x20), dataOffset), dataLength)
+        uint256 transactionsLength = transactions.length;
+        uint256 start = 0x20;
+        // Continue until we run out of enough data for a tx with no data
+        while (start + DATA_OFFSET < transactionsLength) {
+            uint16 dataLength = transactions.toUint16(start);
+            // Terminate if the input data is shorter than the fixed length + claimed data length
+            if (start + DATA_OFFSET + dataLength > transactionsLength) {
+                return prev;
             }
-            frame.from = SigUtils.recoverAddress(
-                keccak256(
-                    abi.encodePacked(
-                        _chain,
-                        _tos[i],
-                        _seqNumbers[i],
-                        _values[i],
-                        dataHash
-                    )
-                ),
-                _signatures,
-                i
-            );
-            frame.dataTupleHash = Value.bytesToBytestackHash(_data, dataOffset, dataLength);
-            frame.messageHash = transactionMessageHash(
-                _chain,
-                _tos[i],
-                frame.from,
-                _seqNumbers[i],
-                _values[i],
-                dataHash,
-                frame.dataTupleHash,
-                blockAndTimestamp[0],
-                blockAndTimestamp[1]
-            );
-            _prev = Protocol.addMessageToVMInbox(_prev, frame.messageHash);
-            dataOffset += dataLength;
-        }
 
-        return _prev;
+            bytes32 messageHash = transactionMessageBatchHashSingle(
+                start,
+                chain,
+                transactions,
+                blockNum,
+                blockTimestamp
+            );
+
+            prev = Protocol.addMessageToVMInbox(prev, messageHash);
+            start += DATA_OFFSET + dataLength;
+        }
+        return prev;
+    }
+
+    function keccak256Subset(bytes memory data, uint256 start, uint256 length) internal pure returns(bytes32 dataHash) {
+        assembly {
+            dataHash := keccak256(add(data, start), length)
+        }
+    }
+
+    function transactionMessageBatchHashSingle(
+        uint256 start,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        bytes32 dataHash = keccak256Subset(transactions, start + DATA_OFFSET, transactions.toUint16(start));
+
+        address from = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    chain,
+                    transactions.toAddress(start + TO_OFFSET),
+                    transactions.toUint(start + SEQ_OFFSET),
+                    transactions.toUint(start + VALUE_OFFSET),
+                    dataHash
+                )
+            ),
+            transactions,
+            start + SIG_OFFSET
+        );
+
+        bytes32 dataTupHash = Value.bytesToBytestackHash(transactions, start + DATA_OFFSET, transactions.toUint16(start));
+
+        return transactionMessageHash(
+            chain,
+            transactions.toAddress(start + TO_OFFSET),
+            from,
+            transactions.toUint(start + SEQ_OFFSET),
+            transactions.toUint(start + VALUE_OFFSET),
+            dataHash,
+            dataTupHash,
+            blockNum,
+            blockTimestamp
+        );
     }
 
     function ethHash(

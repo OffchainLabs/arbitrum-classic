@@ -102,15 +102,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     deliverTransactionBatch: TypedFunctionDescription<{
-      encode([chain, tos, seqNumbers, values, dataLengths, ,]: [
-        string,
-        string[],
-        BigNumberish[],
-        BigNumberish[],
-        BigNumberish[],
-        Arrayish,
-        Arrayish
-      ]): string
+      encode([chain, transactions]: [string, Arrayish]): string
     }>
   }
 
@@ -277,12 +269,7 @@ export class GlobalInbox extends Contract {
 
     deliverTransactionBatch(
       chain: string,
-      tos: string[],
-      seqNumbers: BigNumberish[],
-      values: BigNumberish[],
-      dataLengths: BigNumberish[],
-      arg5: Arrayish,
-      arg6: Arrayish,
+      transactions: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
   }
@@ -375,12 +362,7 @@ export class GlobalInbox extends Contract {
 
   deliverTransactionBatch(
     chain: string,
-    tos: string[],
-    seqNumbers: BigNumberish[],
-    values: BigNumberish[],
-    dataLengths: BigNumberish[],
-    arg5: Arrayish,
-    arg6: Arrayish,
+    transactions: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -494,12 +476,7 @@ export class GlobalInbox extends Contract {
 
     deliverTransactionBatch(
       chain: string,
-      tos: string[],
-      seqNumbers: BigNumberish[],
-      values: BigNumberish[],
-      dataLengths: BigNumberish[],
-      arg5: Arrayish,
-      arg6: Arrayish
+      transactions: Arrayish
     ): Promise<BigNumber>
   }
 }

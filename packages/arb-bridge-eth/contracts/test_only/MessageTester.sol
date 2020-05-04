@@ -74,76 +74,27 @@ contract MessageTester {
     }
 
     function transactionBatchHash(
-        address chain,
-        address[] memory tos,
-        uint256[] memory seqNumbers,
-        uint256[] memory values,
-        uint32[] memory dataLengths,
-        bytes memory data,
-        bytes memory signatures,
-        uint256 blockNumber,
-        uint256 timestamp
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
     )
         public
         pure
         returns(bytes32)
     {
         return Messages.transactionBatchHash(
-            chain,
-            tos,
-            seqNumbers,
-            values,
-            dataLengths,
-            data,
-            signatures,
-            blockNumber,
-            timestamp
+            transactions,
+            blockNum,
+            blockTimestamp
         );
-    }
-
-    event TransactionBatchHashRet(
-        bytes32 messageHash
-    );
-
-    function transactionBatchHash2(
-        address,
-        address[] calldata,
-        uint256[] calldata,
-        uint256[] calldata,
-        uint32[] calldata,
-        bytes calldata /* data */,
-        bytes calldata /* signatures */
-
-    )
-        external
-    {
-        bytes32 messageHash;
-        assembly {
-            let ptr := mload(0x40)
-            mstore8(ptr, TRANSACTION_BATCH_MSG)
-            ptr := add(ptr, 1)
-            calldatacopy(ptr, 4, sub(calldatasize, 4))
-            ptr := add(ptr, sub(calldatasize, 4))
-            mstore(ptr, number)
-            ptr := add(ptr, 32)
-            mstore(ptr, timestamp)
-            ptr := add(ptr, 32)
-            messageHash := keccak256(mload(0x40), sub(ptr, mload(0x40)))
-        }
-        emit TransactionBatchHashRet(messageHash);
     }
 
     function transactionMessageBatchHash(
         bytes32 prev,
         address chain,
-        address[] memory tos,
-        uint256[] memory seqNumbers,
-        uint256[] memory values,
-        uint32[] memory dataLengths,
-        bytes memory data,
-        bytes memory signatures,
-        uint256 blockNumber,
-        uint256 timestamp
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
     )
         public
         pure
@@ -152,13 +103,9 @@ contract MessageTester {
         return Messages.transactionMessageBatchHash(
             prev,
             chain,
-            tos,
-            seqNumbers,
-            values,
-            dataLengths,
-            data,
-            signatures,
-            [blockNumber, timestamp]
+            transactions,
+            blockNum,
+            blockTimestamp
         );
     }
 

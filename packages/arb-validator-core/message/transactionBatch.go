@@ -18,12 +18,11 @@ package message
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -33,16 +32,13 @@ import (
 )
 
 type TransactionBatch struct {
-	Chain        common.Address
-	Tos          []common.Address
-	SequenceNums []*big.Int
-	Values       []*big.Int
-	DataLengths  []uint32
-	Data         []byte
-	Signatures   []byte
+	Chain  common.Address
+	TxData []byte
 }
 
-func OffchainTxHash(
+// BatchTxHash hashes the transaction data. This hash is signed by users
+// who submit transactions as part of a batch
+func BatchTxHash(
 	rollupAddress common.Address,
 	to common.Address,
 	sequenceNum *big.Int,
@@ -58,34 +54,74 @@ func OffchainTxHash(
 	)
 }
 
+func BatchTxData(
+	to common.Address,
+	sequenceNum *big.Int,
+	value *big.Int,
+	txData []byte,
+	sig [65]byte,
+) []byte {
+	data := make([]byte, 2)
+	binary.BigEndian.PutUint16(data[:], uint16(len(txData)))
+	data = append(data, to[:]...)
+	data = append(data, sequenceNum.Bytes()...)
+	data = append(data, value.Bytes()...)
+	data = append(data, sig[:]...)
+	data = append(data, data...)
+	return data
+}
+
+var DataOffset = uint32(151)
+
 func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
-	txes := make([]DeliveredTransaction, 0, len(m.Tos))
-	dataOffset := uint32(0)
-	for i := range m.Tos {
-		data := m.Data[dataOffset : dataOffset+m.DataLengths[i]]
-		offchainHash := OffchainTxHash(
+	txes := make([]DeliveredTransaction, 0)
+	offset := uint32(0)
+
+	data := m.TxData
+	for offset+DataOffset < uint32(len(data)) {
+		dataLength := uint32(binary.BigEndian.Uint16(data[offset : offset+2]))
+		if offset+DataOffset+dataLength < uint32(len(data)) {
+			break
+		}
+		offset += 2
+		toRaw := data[offset : offset+20]
+		var to common.Address
+		copy(to[:], toRaw)
+		offset += 20
+		seqRaw := data[offset : offset+32]
+		seq := new(big.Int).SetBytes(seqRaw)
+		offset += 32
+		valueRaw := data[offset : offset+32]
+		val := new(big.Int).SetBytes(valueRaw)
+		offset += 32
+		sig := data[offset : offset+65]
+		offset += 65
+		txData := data[offset : offset+dataLength]
+
+		batchTxHash := BatchTxHash(
 			m.Chain,
-			m.Tos[i],
-			m.SequenceNums[i],
-			m.Values[i],
-			data,
+			to,
+			seq,
+			val,
+			txData,
 		)
-		messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
-		sig := m.Signatures[i*65 : (i+1)*65]
+		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
 		pubkey, err := crypto.SigToPub(messageHash.Bytes(), sig)
 		if err != nil {
+			// TODO: Is this possible? If so we need to handle it
+			// What are the possible failure conditions and how do they relate
+			// to ecrecover's behavior
 			log.Fatalln("Invalid sig", err)
 		}
 
-		fromAddress := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-
+		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
 		tx := Transaction{
 			Chain:       m.Chain,
-			To:          m.Tos[i],
-			From:        fromAddress,
-			SequenceNum: m.SequenceNums[i],
-			Value:       m.Values[i],
-			Data:        data,
+			To:          to,
+			From:        from,
+			SequenceNum: seq,
+			Value:       val,
+			Data:        txData,
 		}
 
 		txes = append(txes, DeliveredTransaction{
@@ -93,7 +129,7 @@ func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 			BlockNum:    m.BlockNum,
 			Timestamp:   m.Timestamp,
 		})
-		dataOffset += m.DataLengths[i]
+		offset += dataLength
 	}
 	return txes
 }
@@ -109,38 +145,7 @@ func (m TransactionBatch) Equals(other Message) bool {
 	if !ok {
 		return false
 	}
-	if m.Chain != o.Chain ||
-		len(m.Tos) != len(o.Tos) ||
-		len(m.SequenceNums) != len(o.SequenceNums) ||
-		len(m.Values) != len(o.Values) ||
-		len(m.Data) != len(o.Data) ||
-		len(m.Signatures) != len(o.Signatures) {
-		return false
-	}
-
-	for i := range m.Tos {
-		if m.Tos[i] != o.Tos[i] {
-			return false
-		}
-	}
-	for i := range m.Tos {
-		if m.SequenceNums[i].Cmp(o.SequenceNums[i]) != 0 {
-			return false
-		}
-	}
-	for i := range m.Tos {
-		if m.Values[i].Cmp(o.Values[i]) != 0 {
-			return false
-		}
-	}
-	if !bytes.Equal(m.Data, o.Data) {
-		return false
-	}
-	if !bytes.Equal(m.Signatures, o.Signatures) {
-		return false
-	}
-
-	return true
+	return m.Chain != o.Chain || bytes.Equal(m.TxData, o.TxData)
 }
 
 func (m TransactionBatch) Type() MessageType {
@@ -172,69 +177,20 @@ func (m DeliveredTransactionBatch) deliveredTimestamp() *big.Int {
 }
 
 func (m DeliveredTransactionBatch) CommitmentHash() common.Hash {
-	addressTy, _ := abi.NewType("address", "", nil)
-	addressArrayTy, _ := abi.NewType("address[]", "", nil)
-	uint256ArrayTy, _ := abi.NewType("uint256[]", "", nil)
-	uint32ArrayTy, _ := abi.NewType("uint32[]", "", nil)
-	bytesTy, _ := abi.NewType("bytes", "", nil)
-	args := abi.Arguments{
-		abi.Argument{
-			Type: addressTy,
-		},
-		abi.Argument{
-			Type: addressArrayTy,
-		},
-		abi.Argument{
-			Type: uint256ArrayTy,
-		},
-		abi.Argument{
-			Type: uint256ArrayTy,
-		},
-		abi.Argument{
-			Type: uint32ArrayTy,
-		},
-		abi.Argument{
-			Type: bytesTy,
-		},
-		abi.Argument{
-			Type: bytesTy,
-		},
-	}
-	packedData, err := args.Pack(
-		m.Chain,
-		common.AddressArrayToEth(m.Tos),
-		m.SequenceNums,
-		m.Values,
-		m.DataLengths,
-		m.Data,
-		m.Signatures,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),
-		packedData,
+		m.TxData,
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.Timestamp),
 	)
 }
 
 func (m DeliveredTransactionBatch) CheckpointValue() value.Value {
-	innerTup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
-	})
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.Chain),
-		addressesToValue(m.Tos),
-		intsToValue(m.SequenceNums),
-		intsToValue(m.Values),
-		uint32sToValue(m.DataLengths),
-		BytesToByteStack(m.Data),
-		BytesToByteStack(m.Signatures),
-		innerTup,
+		BytesToByteStack(m.TxData),
+		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 	})
 	return val
 }
@@ -242,7 +198,7 @@ func (m DeliveredTransactionBatch) CheckpointValue() value.Value {
 func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (DeliveredTransactionBatch, error) {
 	tup, ok := v.(value.TupleValue)
 	failRet := DeliveredTransactionBatch{}
-	if !ok || tup.Len() != 8 {
+	if !ok || tup.Len() != 4 {
 		return failRet, errors.New("tx val must be 7-tuple")
 	}
 	chain, _ := tup.GetByInt64(0)
@@ -250,50 +206,17 @@ func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (DeliveredTransactio
 	if !ok {
 		return failRet, errors.New("chain must be int")
 	}
-	tos, _ := tup.GetByInt64(1)
-	tosAddresses, err := valueToAddresses(tos)
-	if err != nil {
-		return failRet, err
-	}
-
-	sequenceNums, _ := tup.GetByInt64(2)
-	sequenceNumsInts, err := valueToInts(sequenceNums)
-	if err != nil {
-		return failRet, err
-	}
-	values, _ := tup.GetByInt64(3)
-	valuesInts, err := valueToInts(values)
-	if err != nil {
-		return failRet, err
-	}
-	dataLengths, _ := tup.GetByInt64(4)
-	dataLengthsInts, err := valueToUInt32s(dataLengths)
-	if err != nil {
-		return failRet, err
-	}
-	data, _ := tup.GetByInt64(5)
+	data, _ := tup.GetByInt64(1)
 	dataBytes, err := ByteStackToHex(data)
 	if err != nil {
 		return failRet, err
 	}
-	signatures, _ := tup.GetByInt64(6)
-	signaturesBytes, err := ByteStackToHex(signatures)
-	if err != nil {
-		return failRet, err
-	}
-
-	innerVal, _ := tup.GetByInt64(7)
-	innerValTup, ok := innerVal.(value.TupleValue)
-	if !ok {
-		return failRet, errors.New("innerVal must be a tup")
-	}
-
-	blockNum, _ := innerValTup.GetByInt64(0)
+	blockNum, _ := tup.GetByInt64(2)
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
 		return failRet, errors.New("blockNum must be int")
 	}
-	timestamp, _ := innerValTup.GetByInt64(1)
+	timestamp, _ := tup.GetByInt64(3)
 	timestampInt, ok := timestamp.(value.IntValue)
 	if !ok {
 		return failRet, errors.New("timestamp must be int")
@@ -301,13 +224,8 @@ func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (DeliveredTransactio
 
 	return DeliveredTransactionBatch{
 		TransactionBatch: TransactionBatch{
-			Chain:        intValueToAddress(chainInt),
-			Tos:          tosAddresses,
-			SequenceNums: sequenceNumsInts,
-			Values:       valuesInts,
-			DataLengths:  dataLengthsInts,
-			Data:         dataBytes,
-			Signatures:   signaturesBytes,
+			Chain:  intValueToAddress(chainInt),
+			TxData: dataBytes,
 		},
 		BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
 		Timestamp: timestampInt.BigInt(),

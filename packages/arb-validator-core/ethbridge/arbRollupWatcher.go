@@ -59,16 +59,6 @@ var depositERC721ID ethcommon.Hash
 var contractTxID ethcommon.Hash
 var transactionBatchTxCallABI abi.Method
 
-type TransactionBatchTxCallArgs struct {
-	Chain       ethcommon.Address
-	Tos         []ethcommon.Address
-	SeqNumbers  []*big.Int
-	Values      []*big.Int
-	DataLengths []uint32
-	Data        []byte
-	Signatures  []byte
-}
-
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
 	if err != nil {
@@ -97,8 +87,6 @@ func init() {
 	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID()
 
 	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
-	transactionBatchTxCallABI.Inputs[5].Name = "data"
-	transactionBatchTxCallABI.Inputs[6].Name = "signatures"
 }
 
 type ethRollupWatcher struct {
@@ -264,8 +252,12 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
+		type TransactionBatchTxCallArgs struct {
+			Chain  ethcommon.Address
+			TxData []byte
+		}
+
 		var args TransactionBatchTxCallArgs
-		transactionBatchTxCallABI.Inputs.UnpackValues(tx.Data()[4:])
 		err = transactionBatchTxCallABI.Inputs.Unpack(&args, tx.Data()[4:])
 		if err != nil {
 			return nil, err
@@ -275,13 +267,8 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			ChainInfo: chainInfo,
 			Message: message.DeliveredTransactionBatch{
 				TransactionBatch: message.TransactionBatch{
-					Chain:        common.NewAddressFromEth(vm.rollupAddress),
-					Tos:          common.AddressArrayFromEth(args.Tos),
-					SequenceNums: args.SeqNumbers,
-					Values:       args.Values,
-					DataLengths:  args.DataLengths,
-					Data:         args.Data,
-					Signatures:   args.Signatures,
+					Chain:  common.NewAddressFromEth(vm.rollupAddress),
+					TxData: args.TxData,
 				},
 				BlockNum: common.NewTimeBlocks(
 					new(big.Int).SetUint64(ethLog.BlockNumber),

@@ -25,23 +25,19 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/messagetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-var privateKeyHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
+var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
 var auth *bind.TransactOpts
 var tester *messagetester.MessageTester
@@ -64,7 +60,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	auth, err = test.SetupAuth(privateKeyHex)
+	auth, err = test.SetupAuth(privHex)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,11 +68,20 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, tx, deployedTester, err := messagetester.DeployMessageTester(auth, client)
+	_, tx, deployedTester, err := messagetester.DeployMessageTester(
+		auth,
+		client,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), client, auth.From, tx, "DeployMessageTester")
+	_, err = ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		client,
+		auth.From,
+		tx,
+		"DeployMessageTester",
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -138,83 +143,52 @@ func TestTransactionMessage(t *testing.T) {
 
 func TestTransactionBatchMessage(t *testing.T) {
 	chain := addr3
-	data := []byte{65, 23, 68, 87, 12}
+	txData := []byte{65, 23, 68, 87, 12}
 	tos := []common.Address{addr1}
 	sequenceNums := []*big.Int{big.NewInt(74563)}
 	values := []*big.Int{big.NewInt(89735406)}
-	dataLengths := []uint32{uint32(len(data))}
 
-	offchainHash := message.OffchainTxHash(
+	offchainHash := message.BatchTxHash(
 		chain,
 		tos[0],
 		sequenceNums[0],
 		values[0],
-		data,
+		txData,
 	)
 	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
 
-	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	privateKey, err := crypto.HexToECDSA(privHex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig, err := crypto.Sign(messageHash.Bytes(), privateKey)
+	sigBytes, err := crypto.Sign(messageHash.Bytes(), privateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
+	var sig [65]byte
+	copy(sig[:], sigBytes)
+
+	data := message.BatchTxData(
+		tos[0],
+		sequenceNums[0],
+		values[0],
+		txData,
+		sig,
+	)
 
 	msg := message.DeliveredTransactionBatch{
 		TransactionBatch: message.TransactionBatch{
-			Chain:        addr3,
-			Tos:          tos,
-			SequenceNums: sequenceNums,
-			Values:       values,
-			DataLengths:  dataLengths,
-			Data:         data,
-			Signatures:   sig,
+			Chain:  addr3,
+			TxData: data,
 		},
 		BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
 		Timestamp: big.NewInt(35463245),
 	}
 
-	tx, err := tester.TransactionBatchHash2(
-		auth,
-		msg.Chain.ToEthAddress(),
-		common.AddressArrayToEth(tos),
-		sequenceNums,
-		values,
-		dataLengths,
-		data,
-		sig,
-	)
-
-	receipt, err := ethbridge.WaitForReceiptWithResults(context.Background(), client, auth.From, tx, "TransactionBatchHash2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ethLog, err := tester.ParseTransactionBatchHashRet(*receipt.Logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	bridgeHash := ethLog.MessageHash
-
-	header, err := client.HeaderByHash(context.Background(), receipt.BlockHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	msg.BlockNum = common.NewTimeBlocks(receipt.BlockNumber)
-	msg.Timestamp = new(big.Int).SetUint64(header.Time)
-
-	bridgeHash2, err := tester.TransactionBatchHash(
+	bridgeHash, err := tester.TransactionBatchHash(
 		nil,
-		msg.Chain.ToEthAddress(),
-		common.AddressArrayToEth(tos),
-		sequenceNums,
-		values,
-		dataLengths,
 		data,
-		sig,
 		msg.BlockNum.AsInt(),
 		msg.Timestamp,
 	)
@@ -225,20 +199,11 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	if bridgeHash2 != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
 		nil,
 		value.NewEmptyTuple().Hash(),
 		msg.Chain.ToEthAddress(),
-		common.AddressArrayToEth(tos),
-		sequenceNums,
-		values,
-		dataLengths,
 		data,
-		sig,
 		msg.BlockNum.AsInt(),
 		msg.Timestamp,
 	)

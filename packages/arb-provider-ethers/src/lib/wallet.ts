@@ -192,7 +192,7 @@ export class ArbWallet extends ethers.Signer {
           data
         )
 
-        const aggregatorTxHash = Hashing.calculateAggregatorTransactionHash(
+        const aggregatorTxHash = Hashing.calculateBatchTransactionHash(
           vmId,
           to,
           ethers.utils.bigNumberify(seq),

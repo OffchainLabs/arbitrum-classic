@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -71,31 +72,25 @@ func (con *globalInbox) DeliverTransactionBatch(
 	transactions []message.Transaction,
 	signatures [][65]byte,
 ) error {
-	tos := make([]ethcommon.Address, 0, len(transactions))
-	seqNums := make([]*big.Int, 0, len(transactions))
-	amounts := make([]*big.Int, 0, len(transactions))
-	dataLengths := make([]uint32, 0, len(transactions))
 	data := make([]byte, 0)
-	signaturesFlat := make([]byte, 0, len(transactions)*65)
 	for i, tx := range transactions {
-		tos = append(tos, tx.To.ToEthAddress())
-		seqNums = append(seqNums, tx.SequenceNum)
-		amounts = append(amounts, tx.Value)
-		dataLengths = append(dataLengths, uint32(len(tx.Data)))
-		data = append(data, tx.Data...)
-		signaturesFlat = append(signaturesFlat, signatures[i][:]...)
+		if len(tx.Data) > math.MaxUint16 {
+			continue
+		}
+		data = append(data, message.BatchTxData(
+			tx.To,
+			tx.SequenceNum,
+			tx.Value,
+			tx.Data,
+			signatures[i],
+		)...)
 	}
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DeliverTransactionBatch(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
-		tos,
-		seqNums,
-		amounts,
-		dataLengths,
 		data,
-		signaturesFlat,
 	)
 	if err != nil {
 		return err
