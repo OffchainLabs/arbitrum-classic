@@ -72,6 +72,7 @@ function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
 class EthBridgeMessage {
   public typecode: number
   public blockNumber: ethers.utils.BigNumber
+  public timestamp: ethers.utils.BigNumber
   public txHash: string
   public sender: string
   public message: ArbValue.TupleValue
@@ -79,11 +80,12 @@ class EthBridgeMessage {
 
   constructor(value: ArbValue.TupleValue) {
     this.blockNumber = (value.get(0) as ArbValue.IntValue).bignum
+    this.timestamp = (value.get(1) as ArbValue.IntValue).bignum
     this.txHash = ethers.utils.hexZeroPad(
-      (value.get(1) as ArbValue.IntValue).bignum.toHexString(),
+      (value.get(2) as ArbValue.IntValue).bignum.toHexString(),
       32
     )
-    const restVal = value.get(2) as ArbValue.TupleValue
+    const restVal = value.get(3) as ArbValue.TupleValue
     this.typecode = (restVal.get(0) as ArbValue.IntValue).bignum.toNumber()
     this.sender = ethers.utils.getAddress(
       (restVal.get(1) as ArbValue.IntValue).bignum.toHexString()
