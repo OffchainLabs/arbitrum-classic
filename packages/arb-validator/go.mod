@@ -16,6 +16,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.4.3
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4
+	google.golang.org/protobuf v1.21.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
