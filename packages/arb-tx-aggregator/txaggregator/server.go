@@ -79,7 +79,7 @@ func NewServer(
 					sentFull = true
 				}
 				// If we have've sent any batches, send a partial
-				if !sentFull && server.valid && len(server.transactions) >= 0 {
+				if !sentFull && server.valid && len(server.transactions) > 0 {
 					server.sendBatch(ctx)
 				}
 				server.Unlock()
