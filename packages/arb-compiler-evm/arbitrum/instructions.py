@@ -91,7 +91,7 @@ OP_CODES = [
     (
         "ecrecover",
         0x80,
-        [IntType(), IntType(), IntType(), IntType(), IntType(), IntType(), IntType()],
+        [IntType(), IntType(), IntType(), IntType()],
         [IntType(), IntType(), IntType()],
     ),
 ]

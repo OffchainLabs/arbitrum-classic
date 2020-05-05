@@ -618,9 +618,6 @@ class VMCompiler:
             ast.ImmediateOp(ast.BasicOp(instructions.OPS["jump"]), location)
         )
 
-    def ecrecover(self):
-        self.block.append(ast.ImmediateOp(ast.BasicOp(instructions.OPS["ecdsa"])))
-
 
 def expectation_dependencies(expectations):
     expectation_dependencies = set()

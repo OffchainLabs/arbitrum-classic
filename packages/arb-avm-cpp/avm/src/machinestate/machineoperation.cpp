@@ -551,30 +551,30 @@ void tlen(MachineState& m) {
 }
 
 void ec_recover(MachineState& m) {
-    m.stack.prepForMod(7);
+    m.stack.prepForMod(4);
     secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
     uint256_t temp;
+    // Convert the stack data into secp256k1 native signature format
     for (int i = 0; i < 8; i++) {
         auto* sig_loc = reinterpret_cast<uint64_t*>(signature.data + 8 * i);
         temp = assumeInt(m.stack[1 - i / 4]) >> (192 - 64 * (i % 4));
         *sig_loc = static_cast<uint64_t>(temp);
     }
-    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[6]));
-    uint32_t message[32];
-    for (int i = 0; i < 32; i++) {
-        message[i] = static_cast<uint32_t>(
-            assumeInt(m.stack[5 - (i / 8)]) >> (224 - 32 * (i % 8)) &
-            std::numeric_limits<uint32_t>::max());
+    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[3]));
+    uint32_t message[8];
+    for (int i = 0; i < 8; i++) {
+        message[i] =
+            static_cast<uint32_t>(assumeInt(m.stack[2]) >> (224 - 32 * i));
     }
     bool result =
         secp256k1_ecdsa_recover(context, &pubkey, &signature,
                                 reinterpret_cast<unsigned char*>(message));
-    m.stack.popClear();
-    m.stack.popClear();
-    m.stack.popClear();
+    std::array<unsigned char, 32> hashData;
+    evm::Keccak_256(pubkey.data, 64, hashData.data());
+    auto cool = from_big_endian(hashData.begin(), hashData.end());
     m.stack.popClear();
     m.stack.popClear();
     assumeInt(m.stack[0]) = 0;
@@ -584,6 +584,7 @@ void ec_recover(MachineState& m) {
         assumeInt(m.stack[i / 4]) +=
             *reinterpret_cast<uint64_t*>(pubkey.data + i * 8);
     }
+    m.stack[0] = cool;
     m.stack.push(uint256_t(result));
 }
 

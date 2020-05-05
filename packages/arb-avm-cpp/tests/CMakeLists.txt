@@ -19,6 +19,7 @@ project (avm_tests)
 
 set(TEST_CASES_PATH ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json)
 set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_BINARY_DIR}/contract.ao)
+set(TEST_ECRECOVER_PATH ${CMAKE_CURRENT_BINARY_DIR}/precompiles.ao)
 
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in"

@@ -29,16 +29,18 @@ set(LIB_HEADERS
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
   include/avm_values/vmValueParser.hpp
+        include/avm_values/keccak.hpp
 )
 
 set(LIB_SOURCES
-  src/bigint.cpp
-  src/codepoint.cpp
-  src/pool.cpp
-  src/tuple.cpp
-  src/value.cpp
-  src/vmValueParser.cpp
-)
+        src/bigint.cpp
+        src/codepoint.cpp
+        src/pool.cpp
+        src/tuple.cpp
+        src/value.cpp
+        src/vmValueParser.cpp
+        src/keccak.cpp
+        )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
 

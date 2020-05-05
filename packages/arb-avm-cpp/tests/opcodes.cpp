@@ -20,8 +20,7 @@
 #include <catch2/catch.hpp>
 
 #include <secp256k1_recovery.h>
-#include <boost/filesystem.hpp>
-#include <boost/range/adaptor/reversed.hpp>
+#include <avm_values/keccak.hpp>
 #include <cstdlib>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 
@@ -735,14 +734,6 @@ TEST_CASE("SEND opcode is correct") {
     }
 }
 
-static void counting_illegal_callback_fn(const char* str, void* data) {
-    /* Dummy callback function that just counts. */
-    int32_t* p;
-    (void)str;
-    p = static_cast<int32_t*>(data);
-    (*p)++;
-}
-
 uint256_t& assumeInt(value& val) {
     auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
@@ -752,33 +743,26 @@ uint256_t& assumeInt(value& val) {
 }
 
 TEST_CASE("ECDSA opcode is correct") {
+#import "config.hpp"
     SECTION("ecdsa") {
         MachineState s;
-        s.initialize_machinestate(
-            "/Users/robertgates/Documents/arbitrum/packages/arb-compiler-evm/"
-            "precompiles.ao");
+        s.initialize_machinestate(test_ecrecover_path);
         auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
                                             SECP256K1_CONTEXT_VERIFY);
         secp256k1_ecdsa_recoverable_signature sig;
-        uint32_t msg[32];
+        uint32_t msg[8];
         unsigned char seckey[32];
         secp256k1_pubkey pubkey;
-        auto* current_loc = reinterpret_cast<uint64_t*>(seckey);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(seckey + 8);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(seckey + 16);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(seckey + 24);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(msg);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(msg + 8);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(msg + 16);
-        *current_loc = rand();
-        current_loc = reinterpret_cast<uint64_t*>(msg + 24);
-        *current_loc = rand();
+        auto* current_loc = reinterpret_cast<uint32_t*>(seckey);
+        for (int i = 0; i < 8; i++) {
+            *current_loc = rand();
+            ++current_loc;
+        }
+        current_loc = reinterpret_cast<uint32_t*>(msg);
+        for (int i = 0; i < 8; i++) {
+            *current_loc = rand();
+            ++current_loc;
+        }
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
         REQUIRE(secp256k1_ecdsa_sign_recoverable(
                     ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
@@ -806,18 +790,10 @@ TEST_CASE("ECDSA opcode is correct") {
         }
         s.runOp(OpCode::ECRECOVER);
         REQUIRE(s.stack[0] == value(1));
-        secp256k1_pubkey evaluated_key;
-        for (int i = 0; i < 8; i++) {
-            current_loc =
-                reinterpret_cast<uint64_t*>(evaluated_key.data + (8 * i));
-            stack_value = assumeInt(s.stack[1 + (i / 4)]) >> (64 * (i % 4));
-            *current_loc = static_cast<uint64_t>(stack_value);
-        }
-        bool identical_keys = true;
-        for (int i = 0; i < 64; i++) {
-            identical_keys &= evaluated_key.data[i] == pubkey.data[i];
-        }
-        REQUIRE(identical_keys);
+        std::array<unsigned char, 32> hashData;
+        keccak(pubkey.data, 64, hashData.data());
+        auto cool = from_big_endian(hashData.begin(), hashData.end());
+        REQUIRE(cool == assumeInt(s.stack[1]));
     }
 }
 
