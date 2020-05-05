@@ -17,8 +17,8 @@ func (_MessagesChallenge *MessagesChallengeTransactor) OneStepProofEthMessageCal
 	return CallCheck(ctx, client, from, contractAddress, "oneStepProofEthMessage", _lowerHashA, _lowerHashB, _to, _from, _value, _blockNumber, _messageNum)
 }
 
-func (_MessagesChallenge *MessagesChallengeTransactor) BisectCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _segmentHashes [][32]byte, _segmentInnerHashes [][32]byte, _segmentSizes []*big.Int, _chainLength *big.Int) error {
-	return CallCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _segmentHashes, _segmentInnerHashes, _segmentSizes, _chainLength)
+func (_MessagesChallenge *MessagesChallengeTransactor) BisectCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _segmentHashes [][32]byte, _chainLength *big.Int) error {
+	return CallCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _segmentHashes, _chainLength)
 }
 
 func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {

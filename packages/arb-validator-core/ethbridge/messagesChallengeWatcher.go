@@ -106,13 +106,11 @@ func (c *messagesChallengeWatcher) parseMessagesEvent(chainInfo arbbridge.ChainI
 			return nil, err
 		}
 		return arbbridge.MessagesBisectionEvent{
-			ChainInfo:          chainInfo,
-			ChainHashes:        hashSliceToHashes(eventVal.ChainHashes),
-			SegmentHashes:      hashSliceToHashes(eventVal.SegmentHashes),
-			SegmentInnerHashes: hashSliceToHashes(eventVal.SegmentInnerHashes),
-			SegmentSizes:       eventVal.SegmentSizes,
-			TotalLength:        eventVal.TotalLength,
-			Deadline:           common.TimeTicks{Val: eventVal.DeadlineTicks},
+			ChainInfo:     chainInfo,
+			ChainHashes:   hashSliceToHashes(eventVal.ChainHashes),
+			SegmentHashes: hashSliceToHashes(eventVal.SegmentHashes),
+			TotalLength:   eventVal.TotalLength,
+			Deadline:      common.TimeTicks{Val: eventVal.DeadlineTicks},
 		}, nil
 	} else if log.Topics[0] == messagesOneStepProofCompletedID {
 		_, err := c.contract.ParseOneStepProofCompleted(log)

@@ -53,18 +53,15 @@ func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	segmentHashes []value.HashOnlyValue,
-	segmentPreImage []common.Hash,
 	chainLength *big.Int,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashes, sizes := hashValueSliceToRaw(segmentHashes)
+	hashes, _ := hashValueSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
 		hashes,
-		hashSliceToRaw(segmentPreImage),
-		sizes,
 		chainLength,
 	)
 	if err != nil {
@@ -75,8 +72,6 @@ func (c *messagesChallenge) Bisect(
 			c.contractAddress,
 			hashSliceToRaw(chainHashes),
 			hashes,
-			hashSliceToRaw(segmentPreImage),
-			sizes,
 			chainLength)
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")

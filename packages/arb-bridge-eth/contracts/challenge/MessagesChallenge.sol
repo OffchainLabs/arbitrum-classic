@@ -29,8 +29,6 @@ contract MessagesChallenge is BisectionChallenge {
     event Bisected(
         bytes32[] chainHashes,
         bytes32[] segmentHashes,
-        bytes32[] segmentInnerHashes,
-        uint256[] segmentSizes,
         uint256 totalLength,
         uint256 deadlineTicks
     );
@@ -43,8 +41,6 @@ contract MessagesChallenge is BisectionChallenge {
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
-        bytes32[] memory _segmentInnerHashes,
-        uint256[] memory _segmentSizes,
         uint256 _chainLength
     )
         public
@@ -52,12 +48,6 @@ contract MessagesChallenge is BisectionChallenge {
     {
         uint256 bisectionCount = _chainHashes.length - 1;
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
-
-        bytes32 segmentHash = Value.hashTuplePreImage(
-            _segmentInnerHashes[bisectionCount], 
-            _segmentSizes[bisectionCount]);
-
-        require(segmentHash == _segmentHashes[bisectionCount], "invalid segment");
 
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
@@ -92,8 +82,6 @@ contract MessagesChallenge is BisectionChallenge {
         emit Bisected(
             _chainHashes,
             _segmentHashes,
-            _segmentInnerHashes,
-            _segmentSizes,
             _chainLength,
             deadlineTicks
         );
