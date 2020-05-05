@@ -26,7 +26,7 @@
     "ethers-utils": "^2.1.11"
   },
   "devDependencies": {
-    "jest": "^25.1.0",
+    "jest": "^26.0.0",
     "jest-junit": "^10.0.0"
   }
 }
