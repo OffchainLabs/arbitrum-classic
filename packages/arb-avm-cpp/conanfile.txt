@@ -2,7 +2,7 @@
 Catch2/2.9.1@catchorg/stable
 jsonformoderncpp/3.6.1@vthiery/stable
 variant-lite/1.2.2@nonstd-lite/stable
-gmp/6.1.2@bincrafters/stable
+gmp/6.1.2
 
 [generators]
 cmake

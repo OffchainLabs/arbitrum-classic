@@ -56,9 +56,7 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-find_package(GMP REQUIRED)
-
-target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 libff PRIVATE avm_utils ${GMP_LIBRARY})
+target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 libff CONAN_PKG::gmp PRIVATE avm_utils)
 
 target_code_coverage(avm AUTO ALL)
 

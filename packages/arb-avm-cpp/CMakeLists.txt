@@ -31,7 +31,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 message(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
 
 find_package(Threads REQUIRED)
-find_package(GMP REQUIRED)
 find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
 find_package(RocksDB)
 if (NOT ROCKSDB_FOUND)
