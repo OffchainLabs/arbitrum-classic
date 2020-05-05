@@ -238,7 +238,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstMessage,
         bytes32 _lastMessage,
         bytes32 _firstLog,
-        bytes32 _lastLog) internal {
+        bytes32 _lastLog) internal view {
 
         bytes32 beforeInbox = Value.hashTuplePreImage(_beforeInbox, _beforeInboxValueSize);
         bytes32 precondition = Protocol.generatePreconditionHash(
