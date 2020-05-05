@@ -312,6 +312,7 @@ func TestFib(t *testing.T) {
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
+
 		tx, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
