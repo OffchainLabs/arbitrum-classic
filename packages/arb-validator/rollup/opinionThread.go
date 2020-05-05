@@ -270,7 +270,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
-			ImportedMessagesSlice: inbox.Hash(),
+			ImportedMessagesSlice: inbox.Hash().Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
@@ -281,7 +281,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         beforeInboxTop,
-			ImportedMessagesSlice: value.NewHashOnlyValueFromValue(value.NewEmptyTuple()),
+			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	}
@@ -310,7 +310,7 @@ func getNodeOpinion(
 	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
 		return valprotocol.InvalidInboxTopChildType, nil
 	}
-	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
+	if calculatedMessagesSlice.Hash() != claim.ImportedMessagesSlice {
 		return valprotocol.InvalidMessagesChildType, nil
 	}
 

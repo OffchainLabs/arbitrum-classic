@@ -64,7 +64,6 @@ contract NodeGraph is ChallengeType {
 
     event RollupAsserted(
         bytes32[7] fields,
-        uint256 importedMessagesValueSize,
         uint256 inboxCount,
         uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
@@ -101,7 +100,6 @@ contract NodeGraph is ChallengeType {
         bytes32 afterInboxTop;
 
         bytes32 importedMessagesSlice;
-        uint256 importedMessagesValueSize;
 
         bytes32 afterVMHash;
         bool didInboxInsn;
@@ -284,7 +282,6 @@ contract NodeGraph is ChallengeType {
                 data.messagesAccHash,
                 data.logsAccHash
             ],
-            data.importedMessagesValueSize,
             inboxCount,
             data.importedMessageCount,
             data.timeBoundsBlocks,
@@ -370,7 +367,7 @@ contract NodeGraph is ChallengeType {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
              data.beforeVMHash,
              data.timeBoundsBlocks,
-             Value.newHashOnly(data.importedMessagesSlice, data.importedMessagesValueSize)
+             data.importedMessagesSlice
         );
 
         bytes32 assertionHash = Protocol.generateAssertionHash(
@@ -388,6 +385,7 @@ contract NodeGraph is ChallengeType {
             preconditionHash,
             assertionHash
         );
+
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,

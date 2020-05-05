@@ -195,7 +195,7 @@ func (vm *arbRollup) MakeAssertion(
 		prevPrevLeafHash,
 		prevDataHash,
 		assertionClaim.AfterInboxTop,
-		assertionClaim.ImportedMessagesSlice.Hash(),
+		assertionClaim.ImportedMessagesSlice,
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
@@ -203,7 +203,6 @@ func (vm *arbRollup) MakeAssertion(
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		extraParams,
-		big.NewInt(assertionClaim.ImportedMessagesSlice.Size()),
 		beforeState.InboxCount,
 		prevDeadline.Val,
 		uint32(prevChildType),

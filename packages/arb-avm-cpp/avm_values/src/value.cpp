@@ -61,11 +61,12 @@ CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
 }
 
 Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup(&pool, size);
-    for (int i = 0; i < size; i++) {
-        tup.set_element(i, deserialize_value(bufptr, pool));
-    }
+    Tuple tup;
     if (size > 0) {
+        tup = Tuple(&pool, size);
+        for (int i = 0; i < size; i++) {
+            tup.set_element(i, deserialize_value(bufptr, pool));
+        }
         tup.computeValueSize();
     }
 

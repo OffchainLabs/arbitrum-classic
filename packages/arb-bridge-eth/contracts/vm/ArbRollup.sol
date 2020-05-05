@@ -198,7 +198,6 @@ contract ArbRollup is NodeGraph, Staking {
 
     function makeAssertion(
         bytes32[9] calldata _fields,
-        uint256 _beforeInboxValueSize,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -228,7 +227,6 @@ contract ArbRollup is NodeGraph, Staking {
             _fields[4],
 
             _fields[5],
-            _beforeInboxValueSize,
 
             _fields[6],
             _didInboxInsn,

@@ -32,6 +32,7 @@ type MessagesChallenge interface {
 		ctx context.Context,
 		chainHashes []common.Hash,
 		segmentHashes []value.HashOnlyValue,
+		segmentPreImage []common.Hash,
 		chainLength *big.Int,
 	) error
 

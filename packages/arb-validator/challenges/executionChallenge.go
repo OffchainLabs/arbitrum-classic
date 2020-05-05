@@ -24,7 +24,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
@@ -133,7 +132,7 @@ func defendExecution(
 				assertion, _ := defender.GetMachineState().ExecuteAssertion(
 					1,
 					pre.TimeBounds,
-					pre.BeforeInbox.(value.TupleValue),
+					pre.BeforeInbox,
 					0,
 				)
 
@@ -210,7 +209,7 @@ func defendExecution(
 			assertion, _ := mach.ExecuteAssertion(
 				totalSteps,
 				pre.TimeBounds,
-				pre.BeforeInbox.(value.TupleValue),
+				pre.BeforeInbox,
 				0,
 			)
 			pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
@@ -280,7 +279,7 @@ func challengeExecution(
 					assertion, _ := cMach.ExecuteAssertion(
 						stepCount,
 						pre.TimeBounds,
-						pre.BeforeInbox.(value.TupleValue),
+						pre.BeforeInbox,
 						0,
 					)
 					pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
@@ -323,7 +322,7 @@ func challengeExecution(
 			assertion, _ := mach.ExecuteAssertion(
 				totalSteps,
 				startPrecondition.TimeBounds,
-				startPrecondition.BeforeInbox.(value.TupleValue),
+				startPrecondition.BeforeInbox,
 				0,
 			)
 			precondition = precondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))

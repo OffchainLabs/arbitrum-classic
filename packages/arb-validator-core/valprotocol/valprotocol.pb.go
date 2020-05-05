@@ -4,12 +4,11 @@
 package valprotocol
 
 import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	math "math"
-	"math/big"
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -449,9 +448,8 @@ func (m *AssertionParamsBuf) GetImportedMessageCount() *common.BigIntegerBuf {
 }
 
 type AssertionClaimBuf struct {
-	AfterInboxTop         *common.HashBuf `protobuf:"bytes,1,opt,name=afterInboxTop,proto3" json:"afterInboxTop,omitempty"`
-	ImportedMessagesSlice *common.HashBuf `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
-	ImportedMsgsValSize   *big.Int
+	AfterInboxTop         *common.HashBuf            `protobuf:"bytes,1,opt,name=afterInboxTop,proto3" json:"afterInboxTop,omitempty"`
+	ImportedMessagesSlice *common.HashBuf            `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
 	AssertionStub         *ExecutionAssertionStubBuf `protobuf:"bytes,3,opt,name=assertionStub,proto3" json:"assertionStub,omitempty"`
 	XXX_NoUnkeyedLiteral  struct{}                   `json:"-"`
 	XXX_unrecognized      []byte                     `json:"-"`

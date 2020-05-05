@@ -118,15 +118,31 @@ library Value {
         );
     }
 
-    function hashEmptyTuple() internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](0);
+    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                uint8(TUPLE_TYPECODE),
-                uint256(1),
+                innerHash,
+                valueSize
+            )
+        );
+    }
+
+    function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
+        require(hashes.length <= 8, "Invalid tuple length");
+
+        bytes32 firstHash = keccak256(
+            abi.encodePacked(
+                uint8(TUPLE_TYPECODE + hashes.length),
                 hashes
             )
         );
+
+        return hashTuplePreImage(firstHash, size);
+    }
+
+    function hashEmptyTuple() internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](0);
+        return hashTuple(hashes, uint256(1));
     }
 
     function hashTuple(Data memory val) internal pure returns (bytes32) {
@@ -140,24 +156,7 @@ library Value {
             hashes[i] = hashVal.hash;
         }
 
-        return keccak256(
-            abi.encodePacked(
-                uint8(TUPLE_TYPECODE + val.tupleVal.length),
-                val.size,
-                hashes
-            )
-        );
-    }
-
-    function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
-        require(hashes.length <= 8, "Invalid tuple length");
-        return keccak256(
-            abi.encodePacked(
-                uint8(TUPLE_TYPECODE + hashes.length),
-                size,
-                hashes
-            )
-        );
+        return hashTuple(hashes, val.size);
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {

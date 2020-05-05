@@ -29,29 +29,36 @@ import (
 
 const MaxTupleSize = 8
 
-var hashOfNone common.Hash
+var HashOfNone common.Hash
+var NonePreImage common.Hash
 
 func init() {
-	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple), hashing.Uint256(big.NewInt(1)))
+	NonePreImage = hashing.SoliditySHA3(
+		hashing.Uint8(TypeCodeTuple))
+	HashOfNone = hashing.SoliditySHA3(
+		hashing.Bytes32(NonePreImage),
+		hashing.Uint256(big.NewInt(1)),
+	)
 }
 
 type TupleValue struct {
 	contentsArr     [MaxTupleSize]Value
 	itemCount       int8
 	cachedHash      common.Hash
+	cachedPreImage  common.Hash
 	size            int64
 	deferredHashing bool
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false}
+	return TupleValue{[MaxTupleSize]Value{}, 0, HashOfNone, NonePreImage, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, common.Hash{}, 0, true}
+	ret := TupleValue{contents, size, common.Hash{}, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
@@ -61,7 +68,7 @@ func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
 
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, common.Hash{}, 0, true}
 	for i := int64(0); i < size; i++ {
 		ret.contentsArr[i] = value
 	}
@@ -81,7 +88,7 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, common.Hash{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
 }
@@ -180,7 +187,7 @@ func (tv TupleValue) Clone() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) CloneShallow() Value {
@@ -192,7 +199,7 @@ func (tv TupleValue) CloneShallow() Value {
 			newContents[i] = NewHashOnlyValueFromValue(b)
 		}
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
@@ -230,23 +237,45 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func (tv TupleValue) internalHash() common.Hash {
+func (tv TupleValue) HashPreImage(firstHash common.Hash, size int64) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(firstHash),
+		hashing.Uint256(big.NewInt(size)),
+	)
+}
+
+func (tv TupleValue) internalHash() (common.Hash, common.Hash) {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
 	}
 
-	return hashing.SoliditySHA3(
+	firstHash := hashing.SoliditySHA3(
 		hashing.Uint8(tv.InternalTypeCode()),
-		hashing.Uint256(big.NewInt(tv.size)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
+
+	finalHash := tv.HashPreImage(firstHash, tv.internalSize())
+	return finalHash, firstHash
 }
 
 func (tv TupleValue) Hash() common.Hash {
 	if tv.deferredHashing {
-		tv.cachedHash = tv.internalHash()
+		hash, preImageHash := tv.internalHash()
+		tv.cachedHash = hash
+		tv.cachedPreImage = preImageHash
 		tv.deferredHashing = false
 	}
 	return tv.cachedHash
+}
+
+func (tv TupleValue) GetPreImage() (common.Hash, int64) {
+	if tv.deferredHashing {
+		hash, preImageHash := tv.internalHash()
+		tv.cachedHash = hash
+		tv.cachedPreImage = preImageHash
+		tv.deferredHashing = false
+	}
+
+	return tv.cachedPreImage, tv.Size()
 }

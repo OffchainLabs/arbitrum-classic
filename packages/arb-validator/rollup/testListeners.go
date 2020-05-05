@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -57,7 +56,7 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, o
 		assertion.claim.AfterInboxTop = badHash
 		log.Println("Prepared EVIL inbox top assertion")
 	case WrongMessagesSliceAssertion:
-		assertion.claim.ImportedMessagesSlice = value.NewHashOnlyValue(badHash, 1)
+		assertion.claim.ImportedMessagesSlice = badHash
 		log.Println("Prepared EVIL imported messages assertion")
 	case WrongExecutionAssertion:
 		assertion.claim.AssertionStub.AfterHash = badHash

@@ -43,7 +43,7 @@ library Protocol {
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint128[2] memory _timeBounds,
-        Value.Data memory _beforeInbox
+        bytes32 _beforeInboxHash
     )
         internal
         pure
@@ -54,7 +54,7 @@ library Protocol {
                 _beforeHash,
                 _timeBounds[0],
                 _timeBounds[1],
-                Value.hash(_beforeInbox).hash
+                _beforeInboxHash
             )
         );
     }

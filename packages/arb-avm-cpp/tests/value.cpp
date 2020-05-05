@@ -38,7 +38,6 @@ std::vector<char> hexStringToBytes(const std::string& hexstr) {
 
 TEST_CASE("Value hashing") {
     std::ifstream i(test_cases_path);
-    std::cout << test_cases_path << std::endl;
     nlohmann::json j;
     i >> j;
     for (auto valtest : j) {
@@ -53,11 +52,6 @@ TEST_CASE("Value hashing") {
             REQUIRE(givenHash == calcHash);
         }
     }
-
-    //    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1,
-    //    OpCode::SUB); }
-    //
-    //    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB);
 }
 
 TEST_CASE("Value marshaling") {

@@ -126,11 +126,12 @@ type InboxTopBisectionEvent struct {
 
 type MessagesBisectionEvent struct {
 	ChainInfo
-	ChainHashes   []common.Hash
-	SegmentHashes []common.Hash
-	SegmentSizes  []*big.Int
-	TotalLength   *big.Int
-	Deadline      common.TimeTicks
+	ChainHashes        []common.Hash
+	SegmentHashes      []common.Hash
+	SegmentInnerHashes []common.Hash
+	SegmentSizes       []*big.Int
+	TotalLength        *big.Int
+	Deadline           common.TimeTicks
 }
 
 type ExecutionBisectionEvent struct {

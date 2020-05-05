@@ -50,12 +50,13 @@ func (con *oneStepProof) ValidateProof(
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
+	preImage, size := precondition.GetInboxPreImage()
 	return con.contract.ValidateProof(
 		&bind.CallOpts{Context: ctx},
 		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
-		precondition.BeforeInbox.Hash(),
-		big.NewInt(precondition.BeforeInbox.Size()),
+		preImage,
+		size,
 		assertion.AfterHash,
 		assertion.DidInboxInsn,
 		assertion.FirstMessageHash,

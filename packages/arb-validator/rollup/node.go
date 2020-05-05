@@ -160,12 +160,13 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind valprotocol.ChildType) *No
 
 func (node *Node) ExecutionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
-	pre := &valprotocol.Precondition{
-		BeforeHash:  vmProtoData.MachineHash,
-		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice.Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice.Size()),
-	}
-	return pre.Hash()
+
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(vmProtoData.MachineHash),
+		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.Start),
+		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.End),
+		hashing.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
+	)
 }
 
 func (node *Node) NodeDataHash(params valprotocol.ChainParams) common.Hash {
@@ -204,7 +205,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			vmProtoData.InboxTop,
 			node.disputable.AssertionClaim.AfterInboxTop,
 			value.NewEmptyTuple().Hash(),
-			node.disputable.AssertionClaim.ImportedMessagesSlice.Hash(),
+			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))

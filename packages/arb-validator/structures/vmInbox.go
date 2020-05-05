@@ -18,35 +18,49 @@ package structures
 
 import (
 	"fmt"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type VMInbox struct {
-	hashes []value.HashOnlyValue
-	value  value.TupleValue
+	hashes         []value.HashOnlyValue
+	preImageHashes []common.Hash
+	value          value.TupleValue
 }
 
 func NewVMInbox() *VMInbox {
+	tuple := value.NewEmptyTuple()
+	hash := tuple.Hash()
+	image, size := tuple.GetPreImage()
+
 	hashes := make([]value.HashOnlyValue, 0)
-	hashes = append(hashes, value.NewHashOnlyValue(value.NewEmptyTuple().Hash(), 1))
+	hashes = append(hashes, value.NewHashOnlyValue(hash, size))
+
+	preImageHashes := make([]common.Hash, 0)
+	preImageHashes = append(preImageHashes, image)
+
 	return &VMInbox{
-		hashes: hashes,
-		value:  value.NewEmptyTuple(),
+		hashes:         hashes,
+		value:          value.NewEmptyTuple(),
+		preImageHashes: preImageHashes,
 	}
 }
 
 func (b *VMInbox) DeliverMessage(msg message.Message) {
 	tuple := value.NewTuple2(b.value, message.DeliveredValue(msg))
-
 	b.value = tuple
-	b.hashes = append(b.hashes, value.NewHashOnlyValue(tuple.Hash(), tuple.Size()))
+
+	hash := b.value.Hash()
+	image, size := b.value.GetPreImage()
+
+	b.hashes = append(b.hashes, value.NewHashOnlyValue(hash, size))
+	b.preImageHashes = append(b.preImageHashes, image)
 }
 
-func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value.HashOnlyValue, error) {
+func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value.HashOnlyValue, []common.Hash, error) {
 	if count > uint64(len(b.hashes)) {
-		return nil, fmt.Errorf("can't generate bisection of %v with only %v items", count, len(b.hashes))
+		return nil, nil, fmt.Errorf("can't generate bisection of %v with only %v items", count, len(b.hashes))
 	}
 	if count < segments {
 		segments = count
@@ -54,14 +68,20 @@ func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value
 	item := startIndex
 	inboxCuts := make([]value.HashOnlyValue, 0, segments+1)
 	inboxCuts = append(inboxCuts, b.hashes[item])
+
+	imageCuts := make([]common.Hash, 0, segments+1)
+	imageCuts = append(imageCuts, b.preImageHashes[item])
+
 	otherSegmentSize := count / segments
 	item += count/segments + count%segments
 	inboxCuts = append(inboxCuts, b.hashes[item])
+	imageCuts = append(imageCuts, b.preImageHashes[item])
 	for i := uint64(1); i < segments; i++ {
 		item += otherSegmentSize
 		inboxCuts = append(inboxCuts, b.hashes[item])
+		imageCuts = append(imageCuts, b.preImageHashes[item])
 	}
-	return inboxCuts, nil
+	return inboxCuts, imageCuts, nil
 }
 
 func (b *VMInbox) String() string {

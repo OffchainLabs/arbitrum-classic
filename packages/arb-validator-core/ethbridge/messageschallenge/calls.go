@@ -3,10 +3,9 @@ package messageschallenge
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -18,33 +17,15 @@ func (_MessagesChallenge *MessagesChallengeTransactor) OneStepProofEthMessageCal
 	return CallCheck(ctx, client, from, contractAddress, "oneStepProofEthMessage", _lowerHashA, _lowerHashB, _to, _from, _value, _blockNumber, _messageNum)
 }
 
+func (_MessagesChallenge *MessagesChallengeTransactor) BisectCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _segmentHashes [][32]byte, _segmentInnerHashes [][32]byte, _segmentSizes []*big.Int, _chainLength *big.Int) error {
+	return CallCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _segmentHashes, _segmentInnerHashes, _segmentSizes, _chainLength)
+}
+
 func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(MessagesChallengeABI)))
 	if err != nil {
 		return err
 	}
 
-	// Pack the input, call and unpack the results
-	input, err := contractABI.Pack(method, params...)
-	if err != nil {
-		return err
-	}
-	var (
-		msg    = ethereum.CallMsg{From: from, To: &contractAddress, Data: input}
-		output []byte
-	)
-
-	output, err = client.PendingCallContract(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	if len(output) < 69 {
-		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
-	}
-	length := new(big.Int).SetBytes(output[36:68])
-	if uint64(len(output)) < 68+length.Uint64()+1 {
-		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
-	}
-	return fmt.Errorf("%v returned val: %v", method, string(output[68:68+length.Uint64()]))
+	return ethutils.CallCheck(ctx, client, from, contractAddress, contractABI, method, params...)
 }

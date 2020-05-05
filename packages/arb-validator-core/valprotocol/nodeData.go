@@ -18,7 +18,6 @@ package valprotocol
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -152,16 +151,15 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 
 type AssertionClaim struct {
 	AfterInboxTop         common.Hash
-	ImportedMessagesSlice value.HashOnlyValue
+	ImportedMessagesSlice common.Hash
 	AssertionStub         *ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
-		"AssertionClaim(AfterInboxTop: %v, ImportedMessagesSlice: %v, ImportedMessagesSliceValSize: %v, Assertion: %v)",
+		"AssertionClaim(AfterInboxTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
 		dn.AfterInboxTop,
-		dn.ImportedMessagesSlice.Hash(),
-		dn.ImportedMessagesSlice.Size(),
+		dn.ImportedMessagesSlice,
 		dn.AssertionStub,
 	)
 }
@@ -183,8 +181,7 @@ func (dn *AssertionClaim) Clone() *AssertionClaim {
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
 		AfterInboxTop:         dn.AfterInboxTop.MarshalToBuf(),
-		ImportedMessagesSlice: dn.ImportedMessagesSlice.Hash().MarshalToBuf(),
-		ImportedMsgsValSize:   big.NewInt(dn.ImportedMessagesSlice.Size()),
+		ImportedMessagesSlice: dn.ImportedMessagesSlice.MarshalToBuf(),
 		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
 	}
 }
@@ -192,7 +189,7 @@ func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
 		AfterInboxTop:         m.AfterInboxTop.Unmarshal(),
-		ImportedMessagesSlice: value.NewHashOnlyValue(m.ImportedMessagesSlice.Unmarshal(), m.ImportedMsgsValSize.Int64()),
+		ImportedMessagesSlice: m.ImportedMessagesSlice.Unmarshal(),
 		AssertionStub:         m.AssertionStub.Unmarshal(),
 	}
 }
