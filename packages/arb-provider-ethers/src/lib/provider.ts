@@ -122,12 +122,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   }
 
   public getSigner(index: number): ArbWallet {
-    return new ArbWallet(
-      this.client,
-      this.ethProvider.getSigner(index),
-      this,
-      false
-    )
+    return new ArbWallet(this.ethProvider.getSigner(index), this)
   }
 
   // public async getValidatorAddresses(): Promise<string[]> {
@@ -239,7 +234,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     const result = await this.client.getMessageResult(arbTxHash)
-    console.log('Got tx result', txHash, arbTxHash, result)
     if (!result) {
       return null
     }
@@ -326,7 +320,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             logs = result.evmVal.logs
           }
 
-          console.log('Got tx result2', params.transactionHash, result)
           const txReceipt: ethers.providers.TransactionReceipt = {
             blockHash: result.txHash,
             blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),

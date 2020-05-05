@@ -38,8 +38,7 @@ type GlobalInbox interface {
 	DeliverTransactionBatch(
 		ctx context.Context,
 		chain common.Address,
-		transactions []message.Transaction,
-		signatures [][65]byte,
+		transactions []message.BatchTx,
 	) error
 
 	// DeliverTransactionBatchNoWait calls DeliverTransactionBatch without
@@ -50,8 +49,7 @@ type GlobalInbox interface {
 	DeliverTransactionBatchNoWait(
 		ctx context.Context,
 		chain common.Address,
-		transactions []message.Transaction,
-		signatures [][65]byte,
+		transactions []message.BatchTx,
 	) error
 
 	DepositEthMessage(

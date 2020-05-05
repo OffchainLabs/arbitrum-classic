@@ -172,7 +172,7 @@ library Messages {
         returns(bytes32)
     {
         uint256 transactionsLength = transactions.length;
-        uint256 start = 0x20;
+        uint256 start = 0x00;
         // Continue until we run out of enough data for a tx with no data
         while (start + DATA_OFFSET < transactionsLength) {
             uint16 dataLength = transactions.toUint16(start);
@@ -197,7 +197,7 @@ library Messages {
 
     function keccak256Subset(bytes memory data, uint256 start, uint256 length) internal pure returns(bytes32 dataHash) {
         assembly {
-            dataHash := keccak256(add(data, start), length)
+            dataHash := keccak256(add(add(data, 0x20), start), length)
         }
     }
 
@@ -214,19 +214,13 @@ library Messages {
     {
         bytes32 dataHash = keccak256Subset(transactions, start + DATA_OFFSET, transactions.toUint16(start));
 
-        address from = SigUtils.recoverAddress(
-            keccak256(
-                abi.encodePacked(
-                    chain,
-                    transactions.toAddress(start + TO_OFFSET),
-                    transactions.toUint(start + SEQ_OFFSET),
-                    transactions.toUint(start + VALUE_OFFSET),
-                    dataHash
-                )
-            ),
-            transactions,
-            start + SIG_OFFSET
+        address from = transactionMessageBatchSingleSender(
+            start,
+            chain,
+            dataHash,
+            transactions
         );
+        require(from != address(0), "invalid sig");
 
         bytes32 dataTupHash = Value.bytesToBytestackHash(transactions, start + DATA_OFFSET, transactions.toUint16(start));
 
@@ -240,6 +234,31 @@ library Messages {
             dataTupHash,
             blockNum,
             blockTimestamp
+        );
+    }
+
+    function transactionMessageBatchSingleSender(
+        uint256 start,
+        address chain,
+        bytes32 dataHash,
+        bytes memory transactions
+    )
+        internal
+        pure
+        returns(address)
+    {
+        return SigUtils.recoverAddressFromData(
+            keccak256(
+                abi.encodePacked(
+                    chain,
+                    transactions.toAddress(start + TO_OFFSET),
+                    transactions.toUint(start + SEQ_OFFSET),
+                    transactions.toUint(start + VALUE_OFFSET),
+                    dataHash
+                )
+            ),
+            transactions,
+            start + SIG_OFFSET
         );
     }
 

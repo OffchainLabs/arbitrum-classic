@@ -53,8 +53,7 @@ func (con *GlobalInbox) SendTransactionMessage(
 func (con *GlobalInbox) DeliverTransactionBatch(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) error {
 	return nil
 }
@@ -62,8 +61,7 @@ func (con *GlobalInbox) DeliverTransactionBatch(
 func (con *GlobalInbox) DeliverTransactionBatchNoWait(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) error {
 	return nil
 }

@@ -19,3 +19,4 @@ import * as abi from './lib/abi'
 
 export { ArbValue, abi }
 export { ArbProvider } from './lib/provider'
+export { ArbWallet } from './lib/wallet'

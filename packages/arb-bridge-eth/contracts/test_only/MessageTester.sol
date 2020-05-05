@@ -89,6 +89,44 @@ contract MessageTester {
         );
     }
 
+    function transactionMessageBatchHashSingle(
+        uint256 start,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionMessageBatchHashSingle(
+            start,
+            chain,
+            transactions,
+            blockNum,
+            blockTimestamp
+        );
+    }
+
+    function transactionMessageBatchSingleSender(
+        uint256 start,
+        address chain,
+        bytes32 dataHash,
+        bytes memory transactions
+    )
+        public
+        pure
+        returns(address)
+    {
+        return Messages.transactionMessageBatchSingleSender(
+            start,
+            chain,
+            dataHash,
+            transactions
+        );
+    }
+
     function transactionMessageBatchHash(
         bytes32 prev,
         address chain,
