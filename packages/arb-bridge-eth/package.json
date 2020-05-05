@@ -1,7 +1,7 @@
 {
   "name": "arb-bridge-eth",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.5.0",
   "description": "",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
