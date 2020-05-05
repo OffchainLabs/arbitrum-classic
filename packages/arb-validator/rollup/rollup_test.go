@@ -22,14 +22,14 @@ import (
 	"testing"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 var dummyAddress common.Address

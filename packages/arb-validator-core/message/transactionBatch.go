@@ -24,6 +24,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -54,59 +56,82 @@ func BatchTxHash(
 	)
 }
 
-func BatchTxData(
-	to common.Address,
-	sequenceNum *big.Int,
-	value *big.Int,
-	txData []byte,
-	sig [65]byte,
-) []byte {
+type BatchTx struct {
+	To     common.Address
+	SeqNum *big.Int
+	Value  *big.Int
+	Data   []byte
+	Sig    [65]byte
+}
+
+func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
+	dataLength := int(binary.BigEndian.Uint16(data[offset : offset+2]))
+	if offset+DataOffset+dataLength < len(data) {
+		return BatchTx{}, errors.New("not enough data remaining")
+	}
+	offset += 2
+	toRaw := data[offset : offset+20]
+	var to common.Address
+	copy(to[:], toRaw)
+	offset += 20
+	seqRaw := data[offset : offset+32]
+	seq := new(big.Int).SetBytes(seqRaw)
+	offset += 32
+	valueRaw := data[offset : offset+32]
+	val := new(big.Int).SetBytes(valueRaw)
+	offset += 32
+	sigRaw := data[offset : offset+65]
+	var sig [65]byte
+	copy(sig[:], sigRaw)
+	offset += 65
+	txData := data[offset : offset+dataLength]
+
+	return BatchTx{
+		To:     to,
+		SeqNum: seq,
+		Value:  val,
+		Data:   txData,
+		Sig:    sig,
+	}, nil
+}
+
+func (b BatchTx) encodedLength() int {
+	return DataOffset + len(b.Data)
+}
+
+func (b BatchTx) ToBytes() []byte {
 	data := make([]byte, 2)
-	binary.BigEndian.PutUint16(data[:], uint16(len(txData)))
-	data = append(data, to[:]...)
-	data = append(data, sequenceNum.Bytes()...)
-	data = append(data, value.Bytes()...)
-	data = append(data, sig[:]...)
-	data = append(data, data...)
+	binary.BigEndian.PutUint16(data[:], uint16(len(b.Data)))
+	data = append(data, b.To[:]...)
+	data = append(data, abi.U256(b.SeqNum)...)
+	data = append(data, abi.U256(b.Value)...)
+	data = append(data, b.Sig[:]...)
+	data = append(data, b.Data...)
 	return data
 }
 
-var DataOffset = uint32(151)
+var DataOffset = 151
 
 func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 	txes := make([]DeliveredTransaction, 0)
-	offset := uint32(0)
+	offset := 0
 
 	data := m.TxData
-	for offset+DataOffset < uint32(len(data)) {
-		dataLength := uint32(binary.BigEndian.Uint16(data[offset : offset+2]))
-		if offset+DataOffset+dataLength < uint32(len(data)) {
+	for offset+DataOffset < len(data) {
+		batch, err := NewBatchTxFromData(data, offset)
+		if err != nil {
 			break
 		}
-		offset += 2
-		toRaw := data[offset : offset+20]
-		var to common.Address
-		copy(to[:], toRaw)
-		offset += 20
-		seqRaw := data[offset : offset+32]
-		seq := new(big.Int).SetBytes(seqRaw)
-		offset += 32
-		valueRaw := data[offset : offset+32]
-		val := new(big.Int).SetBytes(valueRaw)
-		offset += 32
-		sig := data[offset : offset+65]
-		offset += 65
-		txData := data[offset : offset+dataLength]
 
 		batchTxHash := BatchTxHash(
 			m.Chain,
-			to,
-			seq,
-			val,
-			txData,
+			batch.To,
+			batch.SeqNum,
+			batch.Value,
+			batch.Data,
 		)
 		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
-		pubkey, err := crypto.SigToPub(messageHash.Bytes(), sig)
+		pubkey, err := crypto.SigToPub(messageHash.Bytes(), batch.Sig[:])
 		if err != nil {
 			// TODO: Is this possible? If so we need to handle it
 			// What are the possible failure conditions and how do they relate
@@ -117,11 +142,11 @@ func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
 		tx := Transaction{
 			Chain:       m.Chain,
-			To:          to,
+			To:          batch.To,
 			From:        from,
-			SequenceNum: seq,
-			Value:       val,
-			Data:        txData,
+			SequenceNum: batch.SeqNum,
+			Value:       batch.Value,
+			Data:        batch.Data,
 		}
 
 		txes = append(txes, DeliveredTransaction{
@@ -129,7 +154,7 @@ func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 			BlockNum:    m.BlockNum,
 			Timestamp:   m.Timestamp,
 		})
-		offset += dataLength
+		offset += batch.encodedLength()
 	}
 	return txes
 }

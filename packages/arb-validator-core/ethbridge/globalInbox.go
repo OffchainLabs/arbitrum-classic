@@ -69,21 +69,14 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 func (con *globalInbox) deliverTransactionBatch(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) (*types.Transaction, error) {
 	data := make([]byte, 0)
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		if len(tx.Data) > math.MaxUint16 {
 			continue
 		}
-		data = append(data, message.BatchTxData(
-			tx.To,
-			tx.SequenceNum,
-			tx.Value,
-			tx.Data,
-			signatures[i],
-		)...)
+		data = append(data, tx.ToBytes()...)
 	}
 	con.auth.Lock()
 	return con.GlobalInbox.DeliverTransactionBatch(
@@ -96,10 +89,9 @@ func (con *globalInbox) deliverTransactionBatch(
 func (con *globalInbox) DeliverTransactionBatch(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) error {
-	tx, err := con.deliverTransactionBatch(ctx, chain, transactions, signatures)
+	tx, err := con.deliverTransactionBatch(ctx, chain, transactions)
 	if err != nil {
 		return err
 	}
@@ -111,10 +103,9 @@ func (con *globalInbox) DeliverTransactionBatch(
 func (con *globalInbox) DeliverTransactionBatchNoWait(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) error {
-	_, err := con.deliverTransactionBatch(ctx, chain, transactions, signatures)
+	_, err := con.deliverTransactionBatch(ctx, chain, transactions)
 	if err != nil {
 		return err
 	}

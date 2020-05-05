@@ -27,27 +27,18 @@ import * as ethers from 'ethers'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
 export class ArbWallet extends ethers.Signer {
-  public client: ArbClient
   public signer: ethers.Signer
   public provider: ArbProvider
   public globalInboxCache?: GlobalInbox
   public seqCache?: number
   public pubkey?: string
-  public channelMode: boolean
 
-  constructor(
-    client: ArbClient,
-    signer: ethers.Signer,
-    provider: ArbProvider,
-    channelMode: boolean
-  ) {
+  constructor(signer: ethers.Signer, provider: ArbProvider) {
     super()
     this.signer = signer
     this.provider = provider
-    this.client = client
     this.seqCache = undefined
     this.pubkey = undefined
-    this.channelMode = channelMode
   }
 
   public async generateSeq(): Promise<number> {
