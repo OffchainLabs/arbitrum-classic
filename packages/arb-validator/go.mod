@@ -11,7 +11,6 @@ require (
 	github.com/gorilla/rpc v1.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.5.0
-	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.5.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.5.0
 	github.com/pkg/errors v0.9.1
