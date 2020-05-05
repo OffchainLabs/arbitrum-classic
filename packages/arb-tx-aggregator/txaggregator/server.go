@@ -46,8 +46,7 @@ type Server struct {
 
 	sync.Mutex
 	valid        bool
-	transactions []message.Transaction
-	signatures   [][signatureLength]byte
+	transactions []message.BatchTx
 }
 
 // NewServer returns a new instance of the Server class
@@ -90,19 +89,14 @@ func NewServer(
 }
 
 func (m *Server) sendBatch(ctx context.Context) {
-	var txes []message.Transaction
-	var sigs [][signatureLength]byte
+	var txes []message.BatchTx
 
 	if len(m.transactions) > maxTransactions {
 		txes = m.transactions[:maxTransactions]
-		sigs = m.signatures[:maxTransactions]
 		m.transactions = m.transactions[maxTransactions:]
-		m.signatures = m.signatures[maxTransactions:]
 	} else {
 		txes = m.transactions
 		m.transactions = nil
-		sigs = m.signatures
-		m.signatures = nil
 	}
 	m.Unlock()
 
@@ -116,7 +110,6 @@ func (m *Server) sendBatch(ctx context.Context) {
 		ctx,
 		m.rollupAddress,
 		txes,
-		sigs,
 	)
 
 	m.Lock()
@@ -200,15 +193,16 @@ func (m *Server) SendTransaction(
 		return nil, errors.New("Tx aggregator is not running")
 	}
 
-	m.transactions = append(m.transactions, message.Transaction{
-		To:          to,
-		SequenceNum: sequenceNum,
-		Value:       valueInt,
-		Data:        data,
-	})
-
 	var sigData [signatureLength]byte
 	copy(sigData[:], signature)
-	m.signatures = append(m.signatures, sigData)
+
+	m.transactions = append(m.transactions, message.BatchTx{
+		To:     to,
+		SeqNum: sequenceNum,
+		Value:  valueInt,
+		Data:   data,
+		Sig:    sigData,
+	})
+
 	return &SendTransactionReply{}, nil
 }

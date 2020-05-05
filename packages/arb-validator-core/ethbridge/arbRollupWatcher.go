@@ -253,8 +253,8 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 		}
 
 		type TransactionBatchTxCallArgs struct {
-			Chain  ethcommon.Address
-			TxData []byte
+			Chain        ethcommon.Address
+			Transactions []byte
 		}
 
 		var args TransactionBatchTxCallArgs
@@ -268,11 +268,12 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			Message: message.DeliveredTransactionBatch{
 				TransactionBatch: message.TransactionBatch{
 					Chain:  common.NewAddressFromEth(vm.rollupAddress),
-					TxData: args.TxData,
+					TxData: args.Transactions,
 				},
 				BlockNum: common.NewTimeBlocks(
 					new(big.Int).SetUint64(ethLog.BlockNumber),
 				),
+				Timestamp: timestamp,
 			},
 		}, nil
 	case ethDepositID:
