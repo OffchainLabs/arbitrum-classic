@@ -29,14 +29,14 @@ import (
 
 const MaxTupleSize = 8
 
-var HashOfNone common.Hash
-var NonePreImage common.Hash
+var hashOfNone common.Hash
+var nonePreImage common.Hash
 
 func init() {
-	NonePreImage = hashing.SoliditySHA3(
+	nonePreImage = hashing.SoliditySHA3(
 		hashing.Uint8(TypeCodeTuple))
-	HashOfNone = hashing.SoliditySHA3(
-		hashing.Bytes32(NonePreImage),
+	hashOfNone = hashing.SoliditySHA3(
+		hashing.Bytes32(nonePreImage),
 		hashing.Uint256(big.NewInt(1)),
 	)
 }
@@ -51,7 +51,7 @@ type TupleValue struct {
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, HashOfNone, NonePreImage, 1, false}
+	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, nonePreImage, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
