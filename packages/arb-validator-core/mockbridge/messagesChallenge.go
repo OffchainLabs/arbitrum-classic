@@ -99,7 +99,6 @@ func (c *MessagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	segmentHashes []value.HashOnlyValue,
-	segmentPreImage []common.Hash,
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
