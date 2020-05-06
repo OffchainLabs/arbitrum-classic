@@ -29,11 +29,17 @@ interface ArbSys {
     // Send given amount of Eth to dest with from sender.
     function withdrawEth(address dest, uint256 amount) external;
 
-    // Return time when current message was posted on-chain
-    function currentMessageTime() external view returns(uint);
+    // Return block when current message was posted on-chain
+    function currentMessageBlock() external view returns(uint);
+
+    // Return timestamp when current message was posted on-chain
+    function currentMessageTimestamp() external view returns(uint);
 
     // Return upper bound on the on-chain block number
-    function timeUpperBound() external view returns(uint);
+    function blockUpperBound() external view returns(uint);
+
+    // Return upper bound on the on-chain timestamp
+    function timestampUpperBound() external view returns(uint);
 
     // Return the number of transactions issued by the given external account
     // or the account sequence number of the given contract
