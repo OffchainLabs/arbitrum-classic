@@ -26,9 +26,12 @@
     "update-abi": "./scripts/update-abi && yarn format"
   },
   "dependencies": {
-    "ethers": "^4.0.47",
+    "ethers": "4.0.47",
     "jayson": "^3.2.0",
     "promise-poller": "^1.9.1"
+  },
+  "peerDependencies": {
+    "ethers": "^4.0.47"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",
