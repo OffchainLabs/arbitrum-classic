@@ -358,7 +358,7 @@ class BasicVM:
         res = keccak(encode_single_packed("(uint256,uint256)", [op1, op2]))
         self.stack.push(big_endian_to_int(res))
 
-    def ecrecover(self):
+    def ecrecover():
         print("ECDSA does not yet support native python execution")
         exit()
 

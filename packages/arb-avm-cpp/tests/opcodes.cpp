@@ -753,7 +753,7 @@ TEST_CASE("ECDSA opcode is correct") {
         uint32_t msg[8];
         unsigned char seckey[32];
         secp256k1_pubkey pubkey;
-        auto* current_loc = reinterpret_cast<uint32_t*>(seckey);
+        uint32_t* current_loc = reinterpret_cast<uint32_t*>(seckey);
         for (int i = 0; i < 8; i++) {
             *current_loc = rand();
             ++current_loc;
