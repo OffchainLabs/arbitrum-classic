@@ -18,7 +18,7 @@ If your Solidity contract, running on Arbitrum Rollup, accesses `block.number` o
 Because ArbChains operate off-chain, an ArbChain's block number or timestamp might differ a little bit from the current Ethereum block.
 The ArbChain's clock will never get ahead of the Ethereum's, but the ArbChain's clock might "run a bit slow".
 A rollup chain can configure the maximum amount its clock can differ, but generally it will stay within 20 blocks or 10 minutes
-In particular, a rollup chain can configure how far behind it's clock may fall, but generally it will stay within 20 blocks or 10 minutes.
+In particular, a rollup chain can configure how far behind its clock may fall, but generally it will stay within 20 blocks or 10 minutes.
 
 As you would expect, the results given by `block.number` and `block.timestamp` will never decrease; they can only increase.
 
@@ -32,7 +32,7 @@ At any time, you can get an upper bound on the true Ethereum block number or tim
     ArbSys(address(100)).blockUpperBound()
     ArbSys(address(100)).timestampUpperBound()
 
-This will have the same accurancy guarantee from the ArbChain's configuration described about. For example the `blockUpperBound()` can be configured to never be more than 20 blocks ahead of the current Ethereum block number.
+This will have the same accurancy guarantee from the ArbChain's configuration described above. For example the `blockUpperBound()` can be configured to never be more than 20 blocks ahead of the current Ethereum block number.
 The real Ethereum block number and timestamp will always be between the ArbChain's `block.number`/`block.timestamp` and what `blockUpperBound()`/`timestampUpperBound()` would return (inclusive).
 
 Bear in mind that the ArbChain might "freeze" at any time, so the upper bound is only a real upper bound at the moment that you make that call.
@@ -45,14 +45,14 @@ If you don't mind a little bit of time lag, you can keep on using `block.number`
 
 ### Setting deadlines for user response
 
-An exception is a use case like an auction, where the contract emits an event, and you want to give people out there in userland N block times to respond.
+An exception is a use case like an auction, where the contract emits an event, and you want to give people out there in userland N hours to respond.
 To do that, you'll want to "start the clock ticking" by using code like this:
 
-    deadline = ArbSys(address(100)).blockUpperBound() + N;
+    deadline = ArbSys(address(100)).timestampUpperBound() + N hours;
     emit StartAuction(..., deadline);
 
 You'll presumably have an `endAuction` call, which can only be called by a transaction submitted to the inbox after the deadline.
 To ensure that, you can use code like this:
 
     function endAuction(...) public {
-        require(ArbSys(address(100)).currentMessageBlock() > deadline, "Auction has not ended yet");
+        require(ArbSys(address(100)).timestampUpperBound() > deadline, "Auction has not ended yet");
