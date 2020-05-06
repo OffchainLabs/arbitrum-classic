@@ -1,0 +1,8 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### launch-parity
+### --------------------------------------------------------------------
+
+cp -r installed_contracts/bytes node_modules/bytes
+truffle run etherscan OneStepProof Value MessagesChallenge InboxTopChallenge ExecutionChallenge ArbRollup GlobalInbox ChallengeFactory ArbFactory "$@"
+rm -rf node_modules/bytes
