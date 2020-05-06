@@ -29,8 +29,9 @@ library VM {
     struct Params {  // these are defined just once for each vM
         uint256 gracePeriodTicks;
         uint256 arbGasSpeedLimitPerTick;
-        uint64  maxExecutionSteps;
-        uint64  maxTimeBoundsWidth;
+        uint64 maxExecutionSteps;
+        uint64 maxBlockBoundsWidth;
+        uint64 maxTimestampBoundsWidth;
     }
 
     function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
@@ -41,7 +42,11 @@ library VM {
         return vmStateHash == MACHINE_HALT_HASH;
     }
 
-    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks) internal view returns (bool) {
-        return block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1];
+    function withinTimeBounds(uint128[4] memory _timeBoundsBlocks) internal view returns (bool) {
+        return
+            block.number >= _timeBoundsBlocks[0] &&
+            block.number <= _timeBoundsBlocks[1] &&
+            block.timestamp >= _timeBoundsBlocks[2] &&
+            block.timestamp <= _timeBoundsBlocks[3];
     }
 }

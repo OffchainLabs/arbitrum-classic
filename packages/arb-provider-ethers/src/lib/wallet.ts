@@ -17,38 +17,28 @@
 'use strict'
 
 import { ArbClient } from './client'
-import { Contract } from './contract'
 import { ArbProvider } from './provider'
-import * as ArbValue from './value'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
+import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
 export class ArbWallet extends ethers.Signer {
-  public client: ArbClient
   public signer: ethers.Signer
   public provider: ArbProvider
   public globalInboxCache?: GlobalInbox
   public seqCache?: number
   public pubkey?: string
-  public channelMode: boolean
 
-  constructor(
-    client: ArbClient,
-    signer: ethers.Signer,
-    provider: ArbProvider,
-    channelMode: boolean
-  ) {
+  constructor(signer: ethers.Signer, provider: ArbProvider) {
     super()
     this.signer = signer
     this.provider = provider
-    this.client = client
     this.seqCache = undefined
     this.pubkey = undefined
-    this.channelMode = channelMode
   }
 
   public async generateSeq(): Promise<number> {
@@ -62,7 +52,20 @@ export class ArbWallet extends ethers.Signer {
     return this.seqCache
   }
 
-  public async incrementSeq(): Promise<void> {
+  public async generateAndIncrementSeq(): Promise<number> {
+    if (!this.seqCache) {
+      const seq = await this.provider.getTransactionCount(
+        await this.getAddress()
+      )
+      this.seqCache = seq + 1
+      return seq
+    }
+    const currentSeq = this.seqCache
+    this.seqCache = currentSeq + 1
+    return currentSeq
+  }
+
+  public incrementSeq(): void {
     if (this.seqCache === undefined) {
       throw Error('Sequence number must have already been generated')
     }
@@ -83,9 +86,7 @@ export class ArbWallet extends ethers.Signer {
     return this.signer.getAddress()
   }
 
-  public async signMessage(
-    message: ethers.utils.Arrayish | string
-  ): Promise<string> {
+  public signMessage(message: ethers.utils.Arrayish | string): Promise<string> {
     return this.signer.signMessage(message)
   }
 
@@ -136,17 +137,16 @@ export class ArbWallet extends ethers.Signer {
 
   public async depositERC721(
     to: string,
-    tokenAddress: string,
-    value: ethers.utils.BigNumberish
+    erc721: string,
+    tokenId: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const tokenValue = ethers.utils.bigNumberify(value)
     const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
       chain,
       to,
-      tokenAddress,
-      value
+      erc721,
+      tokenId
     )
     return this.provider._wrapTransaction(tx, tx.hash)
   }
@@ -155,7 +155,6 @@ export class ArbWallet extends ethers.Signer {
     to: string,
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const valueNum = ethers.utils.bigNumberify(value)
     const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositEthMessage(chain, to, { value })
@@ -168,20 +167,79 @@ export class ArbWallet extends ethers.Signer {
     data: string
   ): Promise<ethers.providers.TransactionResponse> {
     const vmId = await this.provider.getVmID()
-    const from = await this.getAddress()
     const valueNum = ethers.utils.bigNumberify(value)
     const globalInbox = await this.globalInboxConn()
-    const seq = await this.generateSeq()
-    const tx = await globalInbox.sendTransactionMessage(
-      vmId,
-      to,
-      seq,
-      valueNum,
-      data
-    )
-    const tx2 = this.provider._wrapTransaction(tx, tx.hash)
-    await this.incrementSeq()
-    return tx2
+    const seq = await this.generateAndIncrementSeq()
+    const from = await this.getAddress()
+
+    try {
+      if (this.provider.aggregator) {
+        const arbTxHash = Hashing.calculateTransactionHash(
+          vmId,
+          to,
+          from,
+          ethers.utils.bigNumberify(seq),
+          valueNum,
+          data
+        )
+
+        const batchTxHash = Hashing.calculateBatchTransactionHash(
+          vmId,
+          to,
+          ethers.utils.bigNumberify(seq),
+          valueNum,
+          data
+        )
+
+        const messageHashBytes = ethers.utils.arrayify(batchTxHash)
+        const sig = await this.signer.signMessage(messageHashBytes)
+
+        if (!this.pubkey) {
+          this.pubkey = ethers.utils.recoverPublicKey(
+            ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
+            sig
+          )
+        }
+
+        this.provider.aggregator.sendTransaction(
+          to,
+          ethers.utils.bigNumberify(seq),
+          valueNum,
+          data,
+          this.pubkey,
+          sig
+        )
+
+        const tx: ethers.utils.Transaction = {
+          data: data,
+          from: from,
+          gasLimit: ethers.utils.bigNumberify(1),
+          gasPrice: ethers.utils.bigNumberify(1),
+          hash: arbTxHash,
+          nonce: seq,
+          to: to,
+          value: valueNum,
+          chainId: this.provider.chainId,
+        }
+
+        return this.provider._wrapTransaction(tx, arbTxHash)
+      } else {
+        const tx = await globalInbox.sendTransactionMessage(
+          vmId,
+          to,
+          seq,
+          valueNum,
+          data
+        )
+        const tx2 = this.provider._wrapTransaction(tx, tx.hash)
+        return tx2
+      }
+    } catch (err) {
+      if (this.seqCache) {
+        this.seqCache -= 1
+      }
+      throw err
+    }
   }
 
   public async sendTransaction(

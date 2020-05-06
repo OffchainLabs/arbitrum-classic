@@ -100,7 +100,7 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        BigNumberish,
+        BigNumberish[],
         BigNumberish,
         string,
         string,
@@ -166,7 +166,7 @@ interface ArbRollupInterface extends Interface {
         _prevDeadlineTicks,
         _prevChildType,
         _numSteps,
-        _timeBoundsBlocks,
+        _timeBounds,
         _importedMessageCount,
         _didInboxInsn,
         _numArbGas,
@@ -221,12 +221,16 @@ interface ArbRollupInterface extends Interface {
       encodeTopics([logsAccHash]: [null]): string[]
     }>
 
+    ConfirmedValidAssertion: TypedEventDescription<{
+      encodeTopics([nodeHash]: [Arrayish | null]): string[]
+    }>
+
     RollupAsserted: TypedEventDescription<{
       encodeTopics([
         fields,
         inboxCount,
         importedMessageCount,
-        timeBoundsBlocks,
+        timeBounds,
         numArbGas,
         numSteps,
         didInboxInsn,
@@ -341,11 +345,13 @@ export class ArbRollup extends Contract {
       gracePeriodTicks: BigNumber
       arbGasSpeedLimitPerTick: BigNumber
       maxExecutionSteps: BigNumber
-      maxTimeBoundsWidth: BigNumber
+      maxBlockBoundsWidth: BigNumber
+      maxTimestampBoundsWidth: BigNumber
       0: BigNumber
       1: BigNumber
       2: BigNumber
       3: BigNumber
+      4: BigNumber
     }>
 
     init(
@@ -353,7 +359,7 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -419,7 +425,7 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBoundsBlocks: BigNumberish[],
+      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,
@@ -498,11 +504,13 @@ export class ArbRollup extends Contract {
     gracePeriodTicks: BigNumber
     arbGasSpeedLimitPerTick: BigNumber
     maxExecutionSteps: BigNumber
-    maxTimeBoundsWidth: BigNumber
+    maxBlockBoundsWidth: BigNumber
+    maxTimestampBoundsWidth: BigNumber
     0: BigNumber
     1: BigNumber
     2: BigNumber
     3: BigNumber
+    4: BigNumber
   }>
 
   init(
@@ -510,7 +518,7 @@ export class ArbRollup extends Contract {
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
-    _maxTimeBoundsWidth: BigNumberish,
+    _maxTimeBoundsWidth: BigNumberish[],
     _stakeRequirement: BigNumberish,
     _owner: string,
     _challengeFactoryAddress: string,
@@ -576,7 +584,7 @@ export class ArbRollup extends Contract {
     _prevDeadlineTicks: BigNumberish,
     _prevChildType: BigNumberish,
     _numSteps: BigNumberish,
-    _timeBoundsBlocks: BigNumberish[],
+    _timeBounds: BigNumberish[],
     _importedMessageCount: BigNumberish,
     _didInboxInsn: boolean,
     _numArbGas: BigNumberish,
@@ -604,11 +612,13 @@ export class ArbRollup extends Contract {
   filters: {
     ConfirmedAssertion(logsAccHash: null): EventFilter
 
+    ConfirmedValidAssertion(nodeHash: Arrayish | null): EventFilter
+
     RollupAsserted(
       fields: null,
       inboxCount: null,
       importedMessageCount: null,
-      timeBoundsBlocks: null,
+      timeBounds: null,
       numArbGas: null,
       numSteps: null,
       didInboxInsn: null
@@ -692,7 +702,7 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -736,7 +746,7 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBoundsBlocks: BigNumberish[],
+      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,

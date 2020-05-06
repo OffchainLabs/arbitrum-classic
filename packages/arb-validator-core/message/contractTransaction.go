@@ -49,7 +49,11 @@ func (m ContractTransaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m ContractTransaction) Equals(o ContractTransaction) bool {
+func (m ContractTransaction) Equals(other Message) bool {
+	o, ok := other.(ContractTransaction)
+	if !ok {
+		return false
+	}
 	return m.To == o.To &&
 		m.From == o.From &&
 		m.Value.Cmp(o.Value) == 0 &&
@@ -60,7 +64,7 @@ func (m ContractTransaction) Type() MessageType {
 	return ContractTransactionType
 }
 
-func (m ContractTransaction) AsValue() value.Value {
+func (m ContractTransaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -113,6 +117,7 @@ func UnmarshalContractTransaction(val value.Value) (ContractTransaction, error) 
 type DeliveredContractTransaction struct {
 	ContractTransaction
 	BlockNum   *common.TimeBlocks
+	Timestamp  *big.Int
 	MessageNum *big.Int
 }
 
@@ -123,11 +128,16 @@ func (m DeliveredContractTransaction) Equals(other Message) bool {
 	}
 	return m.ContractTransaction.Equals(o.ContractTransaction) &&
 		m.BlockNum.Cmp(o.BlockNum) == 0 &&
+		m.Timestamp.Cmp(o.Timestamp) == 0 &&
 		m.MessageNum.Cmp(o.MessageNum) == 0
 }
 
-func (m DeliveredContractTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredContractTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
+}
+
+func (m DeliveredContractTransaction) deliveredTimestamp() *big.Int {
+	return m.Timestamp
 }
 
 func (m DeliveredContractTransaction) CommitmentHash() common.Hash {
@@ -138,6 +148,7 @@ func (m DeliveredContractTransaction) CommitmentHash() common.Hash {
 		hashing.Uint256(m.Value),
 		m.Data,
 		hashing.Uint256(m.BlockNum.AsInt()),
+		hashing.Uint256(m.Timestamp),
 		hashing.Uint256(m.MessageNum),
 	)
 }
@@ -153,6 +164,7 @@ func (m DeliveredContractTransaction) CheckpointValue() value.Value {
 		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
 		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 		value.NewIntValue(m.MessageNum),
 	})
 	return val
@@ -160,38 +172,44 @@ func (m DeliveredContractTransaction) CheckpointValue() value.Value {
 
 func UnmarshalContractTransactionFromCheckpoint(v value.Value) (DeliveredContractTransaction, error) {
 	tup, ok := v.(value.TupleValue)
-	if !ok || tup.Len() != 6 {
-		return DeliveredContractTransaction{}, errors.New("tx val must be 7-tuple")
+	failRet := DeliveredContractTransaction{}
+	if !ok || tup.Len() != 7 {
+		return failRet, errors.New("tx val must be 7-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
 	if !ok {
-		return DeliveredContractTransaction{}, errors.New("to must be int")
+		return failRet, errors.New("to must be int")
 	}
 	from, _ := tup.GetByInt64(1)
 	fromInt, ok := from.(value.IntValue)
 	if !ok {
-		return DeliveredContractTransaction{}, errors.New("from must be int")
+		return failRet, errors.New("from must be int")
 	}
 	val, _ := tup.GetByInt64(2)
 	valInt, ok := val.(value.IntValue)
 	if !ok {
-		return DeliveredContractTransaction{}, errors.New("chain must be int")
+		return failRet, errors.New("chain must be int")
 	}
 	data, _ := tup.GetByInt64(3)
 	dataBytes, err := ByteStackToHex(data)
 	if err != nil {
-		return DeliveredContractTransaction{}, err
+		return failRet, err
 	}
 	blockNum, _ := tup.GetByInt64(4)
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
-		return DeliveredContractTransaction{}, errors.New("blockNum must be int")
+		return failRet, errors.New("blockNum must be int")
 	}
-	msgNum, _ := tup.GetByInt64(5)
+	timestamp, _ := tup.GetByInt64(5)
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be int")
+	}
+	msgNum, _ := tup.GetByInt64(6)
 	msgNumInt, ok := msgNum.(value.IntValue)
 	if !ok {
-		return DeliveredContractTransaction{}, errors.New("msgNum must be int")
+		return failRet, errors.New("msgNum must be int")
 	}
 
 	return DeliveredContractTransaction{
@@ -202,6 +220,7 @@ func UnmarshalContractTransactionFromCheckpoint(v value.Value) (DeliveredContrac
 			Data:  dataBytes,
 		},
 		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
+		Timestamp:  timestampInt.BigInt(),
 		MessageNum: msgNumInt.BigInt(),
 	}, nil
 }

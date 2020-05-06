@@ -19,6 +19,8 @@ pragma solidity ^0.5.3;
 import "../Messages.sol";
 
 contract MessageTester {
+    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
+
     function transactionHash(
         address chain,
         address to,
@@ -26,7 +28,8 @@ contract MessageTester {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         public
         pure
@@ -38,8 +41,9 @@ contract MessageTester {
             from,
             seqNumber,
             value,
-            data,
-            blockNumber
+            keccak256(data),
+            blockNumber,
+            timestamp
         );
     }
 
@@ -50,7 +54,8 @@ contract MessageTester {
         uint256 seqNumber,
         uint256 value,
         bytes memory data,
-        uint256 blockNumber
+        uint256 blockNumber,
+        uint256 timestamp
     )
         public
         pure
@@ -63,7 +68,82 @@ contract MessageTester {
             seqNumber,
             value,
             data,
-            blockNumber
+            blockNumber,
+            timestamp
+        );
+    }
+
+    function transactionBatchHash(
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionBatchHash(
+            transactions,
+            blockNum,
+            blockTimestamp
+        );
+    }
+
+    function transactionMessageBatchHashSingle(
+        uint256 start,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionMessageBatchHashSingle(
+            start,
+            chain,
+            transactions,
+            blockNum,
+            blockTimestamp
+        );
+    }
+
+    function transactionMessageBatchSingleSender(
+        uint256 start,
+        address chain,
+        bytes32 dataHash,
+        bytes memory transactions
+    )
+        public
+        pure
+        returns(address)
+    {
+        return Messages.transactionMessageBatchSingleSender(
+            start,
+            chain,
+            dataHash,
+            transactions
+        );
+    }
+
+    function transactionMessageBatchHash(
+        bytes32 prev,
+        address chain,
+        bytes memory transactions,
+        uint256 blockNum,
+        uint256 blockTimestamp
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.transactionMessageBatchHash(
+            prev,
+            chain,
+            transactions,
+            blockNum,
+            blockTimestamp
         );
     }
 
@@ -72,6 +152,7 @@ contract MessageTester {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -83,6 +164,7 @@ contract MessageTester {
             from,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -92,6 +174,7 @@ contract MessageTester {
         address from,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -103,6 +186,7 @@ contract MessageTester {
             from,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -113,6 +197,7 @@ contract MessageTester {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -125,6 +210,7 @@ contract MessageTester {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -135,6 +221,7 @@ contract MessageTester {
         address erc20,
         uint256 value,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -147,6 +234,7 @@ contract MessageTester {
             erc20,
             value,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -157,6 +245,7 @@ contract MessageTester {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -169,6 +258,7 @@ contract MessageTester {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }
@@ -179,6 +269,7 @@ contract MessageTester {
         address erc721,
         uint256 id,
         uint256 blockNumber,
+        uint256 timestamp,
         uint256 messageNum
     )
         public
@@ -191,6 +282,7 @@ contract MessageTester {
             erc721,
             id,
             blockNumber,
+            timestamp,
             messageNum
         );
     }

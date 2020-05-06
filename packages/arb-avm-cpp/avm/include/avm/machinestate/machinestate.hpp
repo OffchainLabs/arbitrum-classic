@@ -27,7 +27,12 @@
 
 enum class Status { Extensive, Halted, Error };
 
-typedef std::array<uint256_t, 2> TimeBounds;
+struct TimeBounds {
+    uint256_t lowerBoundBlock;
+    uint256_t upperBoundBlock;
+    uint256_t lowerBoundTimestamp;
+    uint256_t upperBoundTimestamp;
+};
 
 class CheckpointStorage;
 

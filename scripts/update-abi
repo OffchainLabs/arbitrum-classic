@@ -19,6 +19,7 @@ abigen --sol=GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
+abigen --sol=test_only/SigUtilsTester.sol --pkg=sigutilstester --out=sigutilstester.go
 
 \cp arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
 \cp arbrollup.go ../../arb-validator-core/ethbridge/rollup/
@@ -29,12 +30,13 @@ abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester
 \cp globalinbox.go ../../arb-validator-core/ethbridge/globalinbox/
 \cp challengetester.go ../../arb-validator-core/ethbridge/challengetester/
 \cp messagetester.go ../../arb-validator-core/ethbridge/messagetester/
+\cp sigutilstester.go ../../arb-validator-core/ethbridge/sigutilstester/
 rm -rf @openzeppelin bytes
 rm -f arbfactory.go arbrollup.go
 rm -f challengefactory.go
 rm -f inboxtopchallenge.go messageschallenge.go executionchallenge.go
 rm -f globalinbox.go
-rm -f challengetester.go messagetester.go
+rm -f challengetester.go messagetester.go sigutilstester.go
 cd ../../..
 
 yarn workspace arb-provider-ethers update-abi

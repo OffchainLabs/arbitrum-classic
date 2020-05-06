@@ -37,7 +37,7 @@ type Result interface {
 
 type Return struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 
 	ReturnVal []byte
 	Logs      []Log
@@ -62,13 +62,14 @@ func (e Return) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Revert struct {
 	Msg       EthBridgeMessage
-	ArbCall   message.UnsentMessage
+	ArbCall   message.ExecutionMessage
 	ReturnVal []byte
 }
 
@@ -84,13 +85,14 @@ func (e Revert) String() string {
 	sb.WriteString(e.ArbCall.GetFuncName())
 	sb.WriteString(", returnVal: ")
 	sb.WriteString(hexutil.Encode(e.ReturnVal))
-	sb.WriteString(")")
+	sb.WriteString(") from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Stop struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 	Logs    []Log
 }
 
@@ -111,13 +113,14 @@ func (e Stop) String() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type BadSequenceNum struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
@@ -130,13 +133,14 @@ func (e BadSequenceNum) String() string {
 	var sb strings.Builder
 	sb.WriteString("BadSequenceNum(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
 type Invalid struct {
 	Msg     EthBridgeMessage
-	ArbCall message.UnsentMessage
+	ArbCall message.ExecutionMessage
 }
 
 func (e Invalid) GetEthMsg() EthBridgeMessage {
@@ -149,7 +153,8 @@ func (e Invalid) String() string {
 	var sb strings.Builder
 	sb.WriteString("Invalid(func: ")
 	sb.WriteString(e.ArbCall.GetFuncName())
-	sb.WriteString("])")
+	sb.WriteString("]) from transaction ")
+	sb.WriteString(e.ArbCall.String())
 	return sb.String()
 }
 
@@ -169,29 +174,37 @@ const (
 type EthBridgeMessage struct {
 	Type        message.MessageType
 	BlockNumber *big.Int
+	Timestamp   *big.Int
 	TxHash      common.Hash
 }
 
 func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Value, error) {
 	tup, ok := val.(value.TupleValue)
+	invalid := EthBridgeMessage{}
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("msg must be tuple value")
+		return invalid, nil, errors.New("msg must be tuple value")
 	}
-	if tup.Len() != 3 {
-		return EthBridgeMessage{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+	if tup.Len() != 4 {
+		return invalid, nil, fmt.Errorf("expected tuple of length 4, but recieved %v", tup)
 	}
 	blockNumberVal, _ := tup.GetByInt64(0)
-	txHashVal, _ := tup.GetByInt64(1)
-	restVal, _ := tup.GetByInt64(2)
+	timestampVal, _ := tup.GetByInt64(1)
+	txHashVal, _ := tup.GetByInt64(2)
+	restVal, _ := tup.GetByInt64(3)
 
 	blockNumberInt, ok := blockNumberVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("block number must be an int")
+		return invalid, nil, errors.New("block number must be an int")
+	}
+
+	timestampInt, ok := timestampVal.(value.IntValue)
+	if !ok {
+		return invalid, nil, errors.New("timestamp must be an int")
 	}
 
 	txHashInt, ok := txHashVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("tx hash must be an int")
+		return invalid, nil, errors.New("tx hash must be an int")
 	}
 
 	txHashBytes := txHashInt.ToBytes()
@@ -200,19 +213,20 @@ func NewEthBridgeMessageFromValue(val value.Value) (EthBridgeMessage, value.Valu
 
 	restValTup, ok := restVal.(value.TupleValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("message must be a tup")
+		return invalid, nil, errors.New("message must be a tup")
 	}
 
 	typeVal, _ := restValTup.GetByInt64(0)
 	typeInt, ok := typeVal.(value.IntValue)
 	if !ok {
-		return EthBridgeMessage{}, nil, errors.New("type must be an int")
+		return invalid, nil, errors.New("type must be an int")
 	}
 	typecode := uint8(typeInt.BigInt().Uint64())
 
 	return EthBridgeMessage{
 		Type:        message.MessageType(typecode),
 		BlockNumber: blockNumberInt.BigInt(),
+		Timestamp:   timestampInt.BigInt(),
 		TxHash:      txHash,
 	}, restValTup, nil
 }
@@ -237,7 +251,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	arbMessage, err := message.UnmarshalUnsent(ethMsg.Type, messageVal, chain)
+	arbMessage, err := message.UnmarshalExecuted(ethMsg.Type, messageVal, chain)
 	if err != nil {
 		return nil, err
 	}

@@ -304,7 +304,7 @@ EVM_STATIC_OPS = {
     # 40s: Block Information
     "BLOCKHASH": lambda vm: not_supported_op("BLOCKHASH"),
     "COINBASE": lambda vm: not_supported_op("COINBASE"),
-    "TIMESTAMP": lambda vm: not_supported_op("TIMESTAMP"),
+    "TIMESTAMP": os.get_block_timestamp,
     "NUMBER": os.get_block_number,
     "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),
     "GASLIMIT": lambda vm: vm.push(10000000000),

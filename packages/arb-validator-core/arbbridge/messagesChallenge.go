@@ -76,6 +76,13 @@ type MessagesChallenge interface {
 		segmentHashes []common.Hash,
 		chainLength *big.Int,
 	) error
+
+	OneStepProofTransactionBatchMessage(
+		ctx context.Context,
+		lowerHashA common.Hash,
+		lowerHashB common.Hash,
+		msg message.DeliveredTransactionBatch,
+	) error
 }
 
 type MessagesChallengeWatcher interface {

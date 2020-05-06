@@ -626,9 +626,11 @@ BlockReason send(MachineState& m) {
 }
 
 void getTime(MachineState& m) {
-    Tuple tup(m.pool.get(), 2);
-    tup.set_element(0, m.context.timeBounds[0]);
-    tup.set_element(1, m.context.timeBounds[1]);
+    Tuple tup(m.pool.get(), 4);
+    tup.set_element(0, m.context.timeBounds.lowerBoundBlock);
+    tup.set_element(1, m.context.timeBounds.upperBoundBlock);
+    tup.set_element(2, m.context.timeBounds.lowerBoundTimestamp);
+    tup.set_element(3, m.context.timeBounds.upperBoundTimestamp);
     m.stack.push(std::move(tup));
     ++m.pc;
 }
@@ -636,7 +638,8 @@ void getTime(MachineState& m) {
 BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
-    if (aNum > m.context.timeBounds[0] && m.context.inbox.tuple_size() == 0) {
+    if (aNum > m.context.timeBounds.lowerBoundBlock &&
+        m.context.inbox.tuple_size() == 0) {
         return InboxBlocked(aNum);
     } else {
         m.stack[0] = std::move(m.context.inbox);

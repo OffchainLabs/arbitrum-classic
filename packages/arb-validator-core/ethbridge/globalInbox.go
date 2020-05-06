@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -65,42 +66,51 @@ func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte,
 	return con.waitForReceipt(ctx, tx, "SendTransactionMessage")
 }
 
+func (con *globalInbox) deliverTransactionBatch(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.BatchTx,
+) (*types.Transaction, error) {
+	data := make([]byte, 0)
+	for _, tx := range transactions {
+		if len(tx.Data) > math.MaxUint16 {
+			continue
+		}
+		data = append(data, tx.ToBytes()...)
+	}
+	con.auth.Lock()
+	return con.GlobalInbox.DeliverTransactionBatch(
+		con.auth.getAuth(ctx),
+		chain.ToEthAddress(),
+		data,
+	)
+}
+
 func (con *globalInbox) DeliverTransactionBatch(
 	ctx context.Context,
 	chain common.Address,
-	transactions []message.Transaction,
-	signatures [][65]byte,
+	transactions []message.BatchTx,
 ) error {
-	tos := make([]ethcommon.Address, 0, len(transactions))
-	seqNums := make([]*big.Int, 0, len(transactions))
-	amounts := make([]*big.Int, 0, len(transactions))
-	messageLengths := make([]*big.Int, 0, len(transactions))
-	data := make([]byte, 0)
-	signaturesFlat := make([]byte, 0, len(transactions)*65)
-	for i, tx := range transactions {
-		tos = append(tos, tx.To.ToEthAddress())
-		seqNums = append(seqNums, tx.SequenceNum)
-		amounts = append(amounts, tx.Value)
-		messageLengths = append(messageLengths, big.NewInt(int64(len(tx.Data))))
-		data = append(data, tx.Data...)
-		signaturesFlat = append(signaturesFlat, signatures[i][:]...)
-	}
-	con.auth.Lock()
-	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.DeliverTransactionBatch(
-		con.auth.getAuth(ctx),
-		chain.ToEthAddress(),
-		tos,
-		seqNums,
-		amounts,
-		messageLengths,
-		data,
-		signaturesFlat,
-	)
+	tx, err := con.deliverTransactionBatch(ctx, chain, transactions)
 	if err != nil {
 		return err
 	}
+	defer con.auth.Unlock()
+
 	return con.waitForReceipt(ctx, tx, "DeliverTransactionBatch")
+}
+
+func (con *globalInbox) DeliverTransactionBatchNoWait(
+	ctx context.Context,
+	chain common.Address,
+	transactions []message.BatchTx,
+) error {
+	_, err := con.deliverTransactionBatch(ctx, chain, transactions)
+	if err != nil {
+		return err
+	}
+	con.auth.Unlock()
+	return err
 }
 
 func (con *globalInbox) DepositEthMessage(
