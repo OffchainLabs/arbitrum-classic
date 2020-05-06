@@ -556,12 +556,8 @@ void ec_recover(MachineState& m) {
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
-    uint256_t temp;
-    // Convert the stack data into secp256k1 native signature format
-    for (int i = 0; i < 8; i++) {
-        auto* sig_loc = reinterpret_cast<uint64_t*>(signature.data + 8 * i);
-        temp = assumeInt(m.stack[1 - i / 4]) >> (192 - 64 * (i % 4));
-        *sig_loc = static_cast<uint64_t>(temp);
+    for (int i = 0; i < 2; i++) {
+        to_big_endian(assumeInt(m.stack[1 - i]), signature.data + (32 * i));
     }
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[3]));
     uint32_t message[8];

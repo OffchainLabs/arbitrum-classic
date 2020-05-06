@@ -780,10 +780,10 @@ TEST_CASE("ECDSA opcode is correct") {
                 stack_value = 0;
             }
         }
-        for (int i = 0; i < 8; i++) {
-            stack_value <<= 64;
-            stack_value += *reinterpret_cast<uint64_t*>(sig.data + i * 8);
-            if (i % 4 == 3) {
+        for (int i = 0; i < 64; i++) {
+            stack_value <<= 8;
+            stack_value += *reinterpret_cast<uint8_t*>(sig.data + i);
+            if (i % 32 == 31) {
                 s.stack.push(stack_value);
                 stack_value = 0;
             }
