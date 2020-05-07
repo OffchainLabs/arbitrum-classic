@@ -51,7 +51,7 @@ func main() {
 func createStressedManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	return rollupmanager.CreateManager(
 		rollupAddress,
-		rollupmanager.NewStressTestClient(client, time.Second*20),
+		rollupmanager.NewStressTestClient(client, time.Second*10),
 		contractFile,
 		dbPath,
 	)
