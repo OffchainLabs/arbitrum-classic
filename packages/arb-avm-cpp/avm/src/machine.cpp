@@ -149,7 +149,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 if (index && *index < 8) {
                     if (current_stack_contents.back()
                             ->children[(uint64_t)*index] == nullptr) {
-                        // current_stack_contents.back()->is_read = true;
+                        current_stack_contents.back()->is_read = true;
                         current_stack_contents.back()
                             ->children[(uint64_t)*index] =
                             std::make_shared<TupleTree>();
@@ -277,8 +277,12 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 current_stack_contents.push_back(current_register_contents);
                 break;
             case OpCode::RSET:
-                current_stack_contents.back()->is_read = true;
-                current_register_contents = current_stack_contents.back();
+                if (!current_op.immediate) {
+                    current_stack_contents.back()->is_read = true;
+                    current_register_contents = current_stack_contents.back();
+                } else {
+                    current_register_contents = std::make_shared<TupleTree>();
+                }
                 break;
             default:
                 break;
