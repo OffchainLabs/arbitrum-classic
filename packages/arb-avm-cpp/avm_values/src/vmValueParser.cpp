@@ -45,6 +45,12 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
 
     auto bufptr = getContractData(contract_filename);
 
+    if (!bufptr) {
+        std::cerr << "Failed to open path: " << contract_filename << std::endl;
+        initial_state.valid_state = false;
+        return initial_state;
+    }
+
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = boost::endian::big_to_native(version);
