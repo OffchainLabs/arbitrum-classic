@@ -19,5 +19,6 @@
 
 const char* const test_cases_path = "@TEST_CASES_PATH@";
 const char* const test_contract_path = "@TEST_CONTRACT_PATH@";
+const char* const proof_machine_contract_path = "@PROOF_MACHINE_PATH@";
 
 #endif /* config_hpp_in */

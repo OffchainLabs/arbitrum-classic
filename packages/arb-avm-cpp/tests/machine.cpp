@@ -134,13 +134,13 @@ TEST_CASE("Delete machine checkpoint") {
 TEST_CASE("Trustless calls test") {
     SECTION("default") {
         Machine machine;
-        machine.initializeMachine(test_contract_path);
+        machine.initializeMachine(proof_machine_contract_path);
 
         Machine trustless = machine;
         uint64_t stack_start;
         uint64_t aux_start;
         int run_times = 25;
-        int run_length = 15;
+        int run_length = 1;
 
         for (int i = 0; i < run_times; i++) {
             auto output =
