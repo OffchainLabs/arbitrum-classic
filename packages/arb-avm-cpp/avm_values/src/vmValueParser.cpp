@@ -27,12 +27,12 @@ const char* getContractData(const std::string& contract_filename) {
     struct stat filestatus;
     stat(contract_filename.c_str(), &filestatus);
 
-    char* buf = (char*)malloc(filestatus.st_size);
+    char* buf = static_cast<char*>(malloc(filestatus.st_size));
 
     myfile.open(contract_filename, std::ios::in);
 
     if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
+        myfile.read(buf, filestatus.st_size);
         myfile.close();
     }
 
