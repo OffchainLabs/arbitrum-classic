@@ -53,6 +53,7 @@ interface MessageResult {
   evmVal: EVMResult
   txHash: string
   validNodeHash: string
+  onChainTxHash: string
 }
 
 interface Message {
@@ -283,6 +284,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       evmVal,
       txHash: txHashCheck,
       validNodeHash,
+      onChainTxHash,
     }
   }
 
