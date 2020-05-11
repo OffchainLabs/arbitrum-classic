@@ -30,7 +30,7 @@ FROM debian:buster-slim
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     apt-get install -y cmake curl git g++ libboost-dev libboost-filesystem-dev \
     lcov librocksdb-dev make python3 python3-dev python3-pip libgmp-dev libssl-dev \
-    autotools-dev && \
+    autotools-dev dh-autoreconf && \
     rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install --upgrade pip && \
     pip3 install conan && \
