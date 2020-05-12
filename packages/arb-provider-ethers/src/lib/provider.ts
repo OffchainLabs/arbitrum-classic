@@ -405,14 +405,17 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (!transaction.to) {
       throw Error('Cannot create call without a destination')
     }
-    const dest = await transaction.to
-    const sender = await this.ethProvider.getSigner(0).getAddress()
+    const to = await transaction.to
+    let from = await transaction.from
     const rawData = await transaction.data
+    if (!from) {
+      from = '0x1000000000000000000000000000000000000000'
+    }
     let data = '0x'
     if (rawData) {
       data = ethers.utils.hexlify(rawData)
     }
-    const resultData = await this.client.call(dest, sender, data)
+    const resultData = await this.client.call(to, from, data)
     return ethers.utils.hexlify(resultData)
   }
 
