@@ -33,14 +33,14 @@ set(LIB_HEADERS
 )
 
 set(LIB_SOURCES
-        src/bigint.cpp
-        src/codepoint.cpp
-        src/pool.cpp
-        src/tuple.cpp
-        src/value.cpp
-        src/vmValueParser.cpp
-        src/keccak.cpp
-        )
+  src/bigint.cpp
+  src/codepoint.cpp
+  src/pool.cpp
+  src/tuple.cpp
+  src/value.cpp
+  src/vmValueParser.cpp
+  src/keccak.cpp
+)
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
 
