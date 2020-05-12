@@ -24,6 +24,8 @@
 #include <cstdlib>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 
+#import "config.hpp"
+
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
     MachineState m;
     m.stack.push(arg1);
@@ -743,7 +745,6 @@ uint256_t& assumeInt(value& val) {
 }
 
 TEST_CASE("ECDSA opcode is correct") {
-#import "config.hpp"
     SECTION("ecdsa") {
         MachineState s;
         s.initialize_machinestate(test_ecrecover_path);
