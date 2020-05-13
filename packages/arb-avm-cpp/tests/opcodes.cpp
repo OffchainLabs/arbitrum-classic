@@ -771,13 +771,12 @@ TEST_CASE("ECDSA opcode is correct") {
         s.stack.push(from_big_endian(msg, msg + 32));
         s.stack.push(from_big_endian(sig.data, sig.data + 32));
         s.stack.push(from_big_endian(sig.data + 32, sig.data + 64));
-        REQUIRE(s.stack[2] == value(from_big_endian(msg, msg + 32)));
         s.runOp(OpCode::ECRECOVER);
-        REQUIRE(s.stack[0] == value(1));
+        REQUIRE(s.stack[0] != value(0));
         std::array<unsigned char, 32> hashData;
         keccak(pubkey.data, 64, hashData.data());
         REQUIRE(from_big_endian(hashData.begin(), hashData.end()) ==
-                assumeInt(s.stack[1]));
+                assumeInt(s.stack[0]));
     }
 }
 

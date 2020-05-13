@@ -568,8 +568,8 @@ void ec_recover(MachineState& m) {
     evm::Keccak_256(pubkey.data, 64, hashData.data());
     m.stack.popClear();
     m.stack.popClear();
+    m.stack.popClear();
     m.stack[0] = from_big_endian(hashData.begin(), hashData.end());
-    m.stack.push(uint256_t(result));
 }
 
 BlockReason breakpoint(MachineState& m) {
