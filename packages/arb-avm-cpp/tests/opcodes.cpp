@@ -751,7 +751,7 @@ TEST_CASE("ECDSA opcode is correct") {
         auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
                                             SECP256K1_CONTEXT_VERIFY);
         secp256k1_ecdsa_recoverable_signature sig;
-        uint32_t msg[8];
+        unsigned char msg[32];
         unsigned char seckey[32];
         secp256k1_pubkey pubkey;
         uint32_t* current_loc = reinterpret_cast<uint32_t*>(seckey);
@@ -765,25 +765,21 @@ TEST_CASE("ECDSA opcode is correct") {
             ++current_loc;
         }
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
-        REQUIRE(secp256k1_ecdsa_sign_recoverable(
-                    ctx, &sig, reinterpret_cast<unsigned char*>(msg), seckey,
-                    nullptr, nullptr) == 1);
+        REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg, seckey,
+                                                 nullptr, nullptr) == 1);
         s.stack.push(value(sig.data[64]));
         uint256_t stack_value = 0;
-        int counter = 0;
-        for (auto& value : msg) {
-            stack_value <<= 32;
-            stack_value += value;
-            counter++;
-            if (counter == 8) {
-                counter = 0;
-                s.stack.push(stack_value);
-                stack_value = 0;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 4; j++) {
+                stack_value <<= 8;
+                stack_value += msg[4 * i + 3 - j];
             }
         }
+        s.stack.push(stack_value);
+        stack_value = 0;
         for (int i = 0; i < 64; i++) {
             stack_value <<= 8;
-            stack_value += *reinterpret_cast<uint8_t*>(sig.data + i);
+            stack_value += *(sig.data + i);
             if (i % 32 == 31) {
                 s.stack.push(stack_value);
                 stack_value = 0;
@@ -793,8 +789,8 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(s.stack[0] == value(1));
         std::array<unsigned char, 32> hashData;
         keccak(pubkey.data, 64, hashData.data());
-        auto cool = from_big_endian(hashData.begin(), hashData.end());
-        REQUIRE(cool == assumeInt(s.stack[1]));
+        REQUIRE(from_big_endian(hashData.begin(), hashData.end()) ==
+                assumeInt(s.stack[1]));
     }
 }
 

@@ -560,26 +560,20 @@ void ec_recover(MachineState& m) {
         to_big_endian(assumeInt(m.stack[1 - i]), signature.data + (32 * i));
     }
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[3]));
-    uint32_t message[8];
+    unsigned char message[32];
     for (int i = 0; i < 8; i++) {
-        message[i] =
-            static_cast<uint32_t>(assumeInt(m.stack[2]) >> (224 - 32 * i));
+        for (int j = 0; j < 4; j++) {
+            message[4 * i + j] = static_cast<uint32_t>(assumeInt(m.stack[2]) >>
+                                                       (224 - 32 * i + 8 * j));
+        }
     }
     bool result =
-        secp256k1_ecdsa_recover(context, &pubkey, &signature,
-                                reinterpret_cast<unsigned char*>(message));
+        secp256k1_ecdsa_recover(context, &pubkey, &signature, message);
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(pubkey.data, 64, hashData.data());
     auto cool = from_big_endian(hashData.begin(), hashData.end());
     m.stack.popClear();
     m.stack.popClear();
-    assumeInt(m.stack[0]) = 0;
-    assumeInt(m.stack[1]) = 0;
-    for (int i = 7; i >= 0; i--) {
-        assumeInt(m.stack[i / 4]) <<= 64;
-        assumeInt(m.stack[i / 4]) +=
-            *reinterpret_cast<uint64_t*>(pubkey.data + i * 8);
-    }
     m.stack[0] = cool;
     m.stack.push(uint256_t(result));
 }
