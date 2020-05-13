@@ -768,17 +768,10 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg, seckey,
                                                  nullptr, nullptr) == 1);
         s.stack.push(value(sig.data[64]));
-        uint256_t stack_value = 0;
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 4; j++) {
-                stack_value <<= 8;
-                stack_value += msg[4 * i + j];
-            }
-        }
-        s.stack.push(stack_value);
+        s.stack.push(from_big_endian(msg, msg + 32));
         s.stack.push(from_big_endian(sig.data, sig.data + 32));
         s.stack.push(from_big_endian(sig.data + 32, sig.data + 64));
-        REQUIRE(s.stack[1] == value(from_big_endian(sig.data, sig.data + 32)));
+        REQUIRE(s.stack[2] == value(from_big_endian(msg, msg + 32)));
         s.runOp(OpCode::ECRECOVER);
         REQUIRE(s.stack[0] == value(1));
         std::array<unsigned char, 32> hashData;

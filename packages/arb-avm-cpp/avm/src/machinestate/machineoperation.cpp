@@ -556,25 +556,19 @@ void ec_recover(MachineState& m) {
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
+    unsigned char message[32];
     for (int i = 0; i < 2; i++) {
         to_big_endian(assumeInt(m.stack[1 - i]), signature.data + (32 * i));
     }
     signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[3]));
-    unsigned char message[32];
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 4; j++) {
-            message[4 * i + j] = static_cast<uint32_t>(assumeInt(m.stack[2]) >>
-                                                       (248 - 32 * i - 8 * j));
-        }
-    }
+    to_big_endian(assumeInt(m.stack[2]), message);
     bool result =
         secp256k1_ecdsa_recover(context, &pubkey, &signature, message);
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(pubkey.data, 64, hashData.data());
-    auto cool = from_big_endian(hashData.begin(), hashData.end());
     m.stack.popClear();
     m.stack.popClear();
-    m.stack[0] = cool;
+    m.stack[0] = from_big_endian(hashData.begin(), hashData.end());
     m.stack.push(uint256_t(result));
 }
 
