@@ -25,6 +25,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/status-im/keycard-go/hexutils"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -93,6 +95,15 @@ func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 		Data:   txData,
 		Sig:    sig,
 	}, nil
+}
+
+func (b BatchTx) String() string {
+	return fmt.Sprintf("BatchTx(chain: %v, to: %v, from: %v, seq: %v, value: %v, data: %v)",
+		b.To,
+		b.SeqNum,
+		b.Value,
+		hexutils.BytesToHex(b.Data),
+	)
 }
 
 func (b BatchTx) encodedLength() int {
