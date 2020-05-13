@@ -775,6 +775,9 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(s.stack[0] != value(0));
         std::array<unsigned char, 32> hashData;
         keccak(pubkey.data, 64, hashData.data());
+        for (int i = 0; i < 12; i++) {
+            hashData[i] = 0;
+        }
         REQUIRE(from_big_endian(hashData.begin(), hashData.end()) ==
                 assumeInt(s.stack[0]));
     }

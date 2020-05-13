@@ -568,6 +568,9 @@ void ec_recover(MachineState& m) {
     if (secp256k1_ecdsa_recover(context, &pubkey, &signature, message)) {
         std::array<unsigned char, 32> hashData;
         evm::Keccak_256(pubkey.data, 64, hashData.data());
+        for (int i = 0; i < 12; i++) {
+            hashData[i] = 0;
+        }
         m.stack[0] = from_big_endian(hashData.begin(), hashData.end());
     } else {
         m.stack[0] = 0;
