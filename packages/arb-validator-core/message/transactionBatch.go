@@ -25,11 +25,9 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/status-im/keycard-go/hexutils"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -98,7 +96,7 @@ func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 }
 
 func (b BatchTx) String() string {
-	return fmt.Sprintf("BatchTx(chain: %v, to: %v, from: %v, seq: %v, value: %v, data: %v)",
+	return fmt.Sprintf("BatchTx(to: %v, seq: %v, value: %v, data: %v)",
 		b.To,
 		b.SeqNum,
 		b.Value,
