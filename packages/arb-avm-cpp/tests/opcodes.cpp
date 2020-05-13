@@ -776,15 +776,9 @@ TEST_CASE("ECDSA opcode is correct") {
             }
         }
         s.stack.push(stack_value);
-        stack_value = 0;
-        for (int i = 0; i < 64; i++) {
-            stack_value <<= 8;
-            stack_value += *(sig.data + i);
-            if (i % 32 == 31) {
-                s.stack.push(stack_value);
-                stack_value = 0;
-            }
-        }
+        s.stack.push(from_big_endian(sig.data, sig.data + 32));
+        s.stack.push(from_big_endian(sig.data + 32, sig.data + 64));
+        REQUIRE(s.stack[1] == value(from_big_endian(sig.data, sig.data + 32)));
         s.runOp(OpCode::ECRECOVER);
         REQUIRE(s.stack[0] == value(1));
         std::array<unsigned char, 32> hashData;
