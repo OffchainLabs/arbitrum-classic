@@ -772,7 +772,7 @@ TEST_CASE("ECDSA opcode is correct") {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 4; j++) {
                 stack_value <<= 8;
-                stack_value += msg[4 * i + 3 - j];
+                stack_value += msg[4 * i + j];
             }
         }
         s.stack.push(stack_value);

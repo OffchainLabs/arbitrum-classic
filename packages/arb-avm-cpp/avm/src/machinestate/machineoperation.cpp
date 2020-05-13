@@ -564,7 +564,7 @@ void ec_recover(MachineState& m) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 4; j++) {
             message[4 * i + j] = static_cast<uint32_t>(assumeInt(m.stack[2]) >>
-                                                       (224 - 32 * i + 8 * j));
+                                                       (248 - 32 * i - 8 * j));
         }
     }
     bool result =
