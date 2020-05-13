@@ -169,7 +169,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::HALT, "halt"},
     {OpCode::DEBUG, "debug"},
 
-    {OpCode::ECRECOVER, "ecdsa"}};
+    {OpCode::ECRECOVER, "ecrecover"}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {static_cast<OpCode>(0), {}},
