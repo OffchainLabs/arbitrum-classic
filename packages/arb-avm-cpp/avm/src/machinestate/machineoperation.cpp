@@ -557,11 +557,11 @@ void ec_recover(MachineState& m) {
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature signature;
     unsigned char message[32];
+    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[2]));
     for (int i = 0; i < 2; i++) {
         to_big_endian(assumeInt(m.stack[1 - i]), signature.data + (32 * i));
     }
-    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[3]));
-    to_big_endian(assumeInt(m.stack[2]), message);
+    to_big_endian(assumeInt(m.stack[3]), message);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();

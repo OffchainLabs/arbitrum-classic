@@ -767,8 +767,8 @@ TEST_CASE("ECDSA opcode is correct") {
         REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
         REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg, seckey,
                                                  nullptr, nullptr) == 1);
-        s.stack.push(value(sig.data[64]));
         s.stack.push(from_big_endian(msg, msg + 32));
+        s.stack.push(value(sig.data[64]));
         s.stack.push(from_big_endian(sig.data, sig.data + 32));
         s.stack.push(from_big_endian(sig.data + 32, sig.data + 64));
         s.runOp(OpCode::ECRECOVER);
