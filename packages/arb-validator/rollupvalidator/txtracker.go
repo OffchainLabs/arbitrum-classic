@@ -17,6 +17,7 @@
 package rollupvalidator
 
 import (
+	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -37,6 +38,12 @@ type validatorRequest interface {
 
 type assertionCountRequest struct {
 	resultChan chan<- int
+}
+
+type outputMsgRequest struct {
+	assertionNodeHash common.Hash
+	msgIndex          int64
+	resultChan        chan<- value.Value
 }
 
 type txRequest struct {
@@ -72,9 +79,11 @@ type assertionInfo struct {
 	TxLogs            []logsInfo
 	LogsAccHashes     []string
 	LogsValHashes     []string
+	OutMessages       []value.Value
 	SequenceNum       uint64
 	BeforeHash        common.Hash
 	OriginalInboxHash common.Hash
+	AssertNodeHash    common.Hash
 }
 
 type logResponse struct {
@@ -142,6 +151,12 @@ func (tr *txTracker) AssertionCount() <-chan int {
 	return req
 }
 
+func (tr *txTracker) OutputMsgVal(assertionHash common.Hash, msgIndex int64) <-chan value.Value {
+	req := make(chan value.Value, 1)
+	tr.requests <- outputMsgRequest{assertionHash, msgIndex, req}
+	return req
+}
+
 func (tr *txTracker) TxInfo(txHash common.Hash) <-chan txInfo {
 	req := make(chan txInfo, 1)
 	tr.requests <- txRequest{txHash, req}
@@ -168,8 +183,12 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 	disputableTxHash := hexutil.Encode(assertion.OnChainTxHash[:])
 
 	logs := assertion.Assertion.Logs
+
+	info.OutMessages = assertion.Assertion.OutMsgs
+	info.AssertNodeHash = assertion.NodeHash
 	info.LogsValHashes = make([]string, 0, len(logs))
 	info.LogsAccHashes = make([]string, 0, len(logs))
+
 	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
@@ -229,6 +248,26 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 
 func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
+	case outputMsgRequest:
+		assertionVal := newAssertionInfo()
+		fmt.Println("inside process request outputMsg")
+		for _, assertion := range tr.assertionInfo {
+			if request.assertionNodeHash == assertion.AssertNodeHash {
+				assertionVal = assertion
+				fmt.Println("got same hash")
+				break
+			}
+			fmt.Println("msgs: ", assertion.OutMessages)
+		}
+
+		fmt.Println("asserttion info: ", assertionVal)
+
+		if request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
+			val := assertionVal.OutMessages[request.msgIndex]
+			request.resultChan <- val
+		} else {
+			request.resultChan <- nil
+		}
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:

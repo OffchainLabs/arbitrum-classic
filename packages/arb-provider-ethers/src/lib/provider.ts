@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbClient, EVMCode, EVMResult, TxMessage } from './client'
+import { ArbClient, EVMCode, EVMResult, TxMessage, ArbMessage } from './client'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
 import { Contract } from './contract'
@@ -45,6 +45,7 @@ function sleep(ms: number): Promise<void> {
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated'
 const EB_EVENT_CDA = 'RollupAsserted'
+const EB_EVENT_NODE = 'RollupStakeMoved'
 const TransactionMessageDelivered = 'TransactionMessageDelivered'
 const EthDepositMessageDelivered = 'EthDepositMessageDelivered'
 const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered'
@@ -56,6 +57,10 @@ const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
 interface MessageResult {
   evmVal: EVMResult
   txHash: string
+}
+
+interface VerifyMessageResult {
+  value: ArbValue.Value
 }
 
 interface Message {
@@ -211,6 +216,24 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
       }
     }
+    return null
+  }
+
+  public async getPaymentMessage(
+    assertedNodeHash: string,
+    messageIndex: string
+  ): Promise<VerifyMessageResult | null> {
+    const results = await this.client.getOutputMssage(
+      assertedNodeHash,
+      messageIndex
+    )
+
+    if (results != null) {
+      return {
+        value: results.outputMsg,
+      }
+    }
+
     return null
   }
 
@@ -454,6 +477,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (eventIndex == -1) {
       throw Error('RollupAsserted ' + onChainTxHash + ' not found on chain')
     }
+
     const rawLog = receipt.logs[eventIndex]
     const cda = events[eventIndex]
     const vmId = await this.getVmID()

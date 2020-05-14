@@ -19,12 +19,13 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -347,6 +348,9 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 		}, nil
 	} else if ethLog.Topics[0] == rollupStakeMovedID {
 		eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		fmt.Println("new staked valid node: ", common.NewHashFromEth(eventVal.ToNodeHash))
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		if err != nil {
 			return nil, err
 		}
@@ -356,6 +360,10 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 			Location:  eventVal.ToNodeHash,
 		}, nil
 	} else if ethLog.Topics[0] == rollupAssertedID {
+
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		fmt.Println("rollect asserted: ")
+
 		eventVal, err := vm.ArbRollup.ParseRollupAsserted(ethLog)
 		if err != nil {
 			return nil, err
@@ -392,6 +400,9 @@ func (vm *ethRollupWatcher) processEvents(chainInfo arbbridge.ChainInfo, ethLog 
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("<<<<<<<>>>>>>>>>>>>>>>>>>>>>><<<<<<<>>>>>>>>>>>>>")
+		fmt.Println("new confirmed node: ", common.NewHashFromEth(eventVal.NodeHash))
+		fmt.Println(">>><<<<<<<>>>>>>>>>>>>")
 		return arbbridge.ConfirmedEvent{
 			ChainInfo: chainInfo,
 			NodeHash:  eventVal.NodeHash,

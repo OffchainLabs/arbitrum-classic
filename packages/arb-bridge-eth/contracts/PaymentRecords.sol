@@ -33,17 +33,12 @@ contract PaymentRecords {
         bytes32 nodeHash, 
         uint256 messageIndex) external
     {
-        address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
-
-        // if(currentOwner == address(0x0)){
-        //     require(msg.sender == originalOwner, "Must be owner.");
-        // }else{
-        //     require(msg.sender == currentOwner, "Must be owner.");
-        // }
+        address currentOwner = getPaymentOwner(originalOwner, nodeHash, messageIndex);
+        require(msg.sender == currentOwner, "Must be payment owner.");
 
         paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
 
-        emit PaymentTransfer(nodeHash, messageIndex, originalOwner, msg.sender, newOwner);
+        emit PaymentTransfer(nodeHash, messageIndex, originalOwner, currentOwner, newOwner);
     }
 
     function getPaymentOwner(

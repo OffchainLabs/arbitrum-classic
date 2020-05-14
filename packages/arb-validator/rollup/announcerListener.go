@@ -93,6 +93,6 @@ func (al *AnnouncerListener) AdvancedCalculatedValidNode(ctx context.Context, ob
 	log.Println(al.Prefix, "AdvancedCalculatedValidNode", nodeHash)
 }
 
-func (al *AnnouncerListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
+func (al *AnnouncerListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
 	log.Println(al.Prefix, "AdvancedKnownAssertion")
 }

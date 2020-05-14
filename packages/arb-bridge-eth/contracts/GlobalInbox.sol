@@ -30,7 +30,7 @@ import "./libraries/SigUtils.sol";
 
 import "bytes/contracts/BytesLib.sol";
 
-contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox {
+contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords {
 
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
@@ -49,70 +49,9 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
     mapping(address => Inbox) inboxes;
 
-    // PaymentRecords paymentRecords;
-
-    // function getPaymentOwner(
-    //     address originalOwner,
-    //     bytes32 nodeHash, 
-    //     uint256 messageIndex) public view returns(address)
-    // {
-    //     return paymentRecords.getPaymentOwner(originalOwner, nodeHash, messageIndex);
-    // }
-
-    // function transferPayment(
-    //     address originalOwner,
-    //     address newOwner, 
-    //     bytes32 nodeHash, 
-    //     uint256 messageIndex) external
-    // {
-    //     paymentRecords.transferPayment(originalOwner, newOwner, nodeHash, messageIndex);
-    // }
-
-    event PaymentTransfer(
-        bytes32 nodeHash, 
-        uint256 messageIndex,
-        address originalOwner,
-        address prevOwner,
-        address newOwner);
-
-    mapping(bytes32 => mapping(uint256 => mapping(address => address))) paymentMap;
-
     function getInbox(address account) external view returns(bytes32, uint) {
         Inbox storage inbox = inboxes[account];
         return (inbox.value, inbox.count);
-    }
-
-    function transferPayment(
-        address originalOwner,
-        address newOwner, 
-        bytes32 nodeHash, 
-        uint256 messageIndex) external
-    {
-        address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
-
-        if(currentOwner == address(0x0)){
-            require(msg.sender == originalOwner, "Must be owner.");
-        }else{
-            require(msg.sender == currentOwner, "Must be owner.");
-        }
-
-        paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
-
-        emit PaymentTransfer(nodeHash, messageIndex, originalOwner, msg.sender, newOwner);
-    }
-
-    function getPaymentOwner(
-        address originalOwner,
-        bytes32 nodeHash, 
-        uint256 messageIndex) public view returns(address)
-    {
-        address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
-
-        if(currentOwner == address(0)){
-            return originalOwner;
-        }else{
-            return currentOwner;
-        }
     }
 
     function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external {
@@ -180,8 +119,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferEth(msg.sender, to, value);
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferEth(msg.sender, paymentOwner, value);
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -195,8 +134,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferERC20(msg.sender, to, erc20, value);
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferERC20(msg.sender, paymentOwner, erc20, value);
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -210,8 +149,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
                 return (false, startOffset);
             }
 
-            // address paymentOwner = paymentRecords.getPaymentOwner(to, nodeHash, messageIndex);
-            transferNFT(msg.sender, to, erc721, value);
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferNFT(msg.sender, paymentOwner, erc721, value);
             return (true, offset);
         } else {
             return (false, startOffset);

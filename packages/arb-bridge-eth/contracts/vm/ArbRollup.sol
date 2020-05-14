@@ -343,8 +343,6 @@ contract ArbRollup is NodeGraph, Staking {
                 invalidNum++;
             }
 
-            nodeHashes[i] = nodeDataHash;
-
             confNode = RollupUtils.childNodeHash(
                 confNode,
                 data.deadlineTicks[i],
@@ -352,6 +350,8 @@ contract ArbRollup is NodeGraph, Staking {
                 branchType,
                 vmProtoStateHash
             );
+
+            nodeHashes[i] = confNode;
         }
         require(messagesOffset == data.messages.length, "Didn't read all messages");
         // If last node is after deadline, then all nodes are

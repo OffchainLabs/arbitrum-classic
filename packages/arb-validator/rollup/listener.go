@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -56,7 +55,7 @@ type ChainListener interface {
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
 	AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash)
-	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash)
+	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash)
 }
 
 type StakingKey struct {
@@ -130,14 +129,9 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 }
 
 func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) error {
-	fmt.Println("====================================================")
-	fmt.Println("Assetion here!!!!!")
-	fmt.Println("Node hash: ", prepared.leafHash)
-	fmt.Println("msg count: ", len(prepared.assertion.OutMsgs))
-	fmt.Println("====================================================")
 	return rollup.MakeAssertion(
 		ctx,
-		prepared.prevPrevLeafHash,
+		prepared.prevLeafHash,
 		prepared.prevDataHash,
 		prepared.prevDeadline,
 		prepared.prevChildType,
@@ -488,6 +482,20 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observe
 	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
 	confClone := conf.Clone()
+
+	//for _, nodes := range confClone.Nodes{
+	//	switch opp := nodes.(type) {
+	//	case valprotocol.ConfirmValidOpportunity:
+	//
+	//		fmt.Println("++++ confirm nodes +++++")
+	//		fmt.Println("node hash: ", opp.StateHash())
+	//		fmt.Println("size:  ", len(opp.Messages))
+	//		for _, msg := range opp.Messages {
+	//			fmt.Println(msg)
+	//		}
+	//		fmt.Println("++++ confirm msgs +++++")
+	//	}
+	//}
 	go func() {
 		err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
@@ -585,5 +593,5 @@ func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, a
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
 }
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
 }

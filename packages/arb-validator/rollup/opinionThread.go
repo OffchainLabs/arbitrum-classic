@@ -30,11 +30,11 @@ import (
 )
 
 type preparedAssertion struct {
-	leafHash         common.Hash
-	prevPrevLeafHash common.Hash
-	prevDataHash     common.Hash
-	prevDeadline     common.TimeTicks
-	prevChildType    valprotocol.ChildType
+	leafHash      common.Hash
+	prevLeafHash  common.Hash
+	prevDataHash  common.Hash
+	prevDeadline  common.TimeTicks
+	prevChildType valprotocol.ChildType
 
 	beforeState *valprotocol.VMProtoData
 	params      *valprotocol.AssertionParams
@@ -45,16 +45,16 @@ type preparedAssertion struct {
 
 func (pa *preparedAssertion) Clone() *preparedAssertion {
 	return &preparedAssertion{
-		leafHash:         pa.leafHash,
-		prevPrevLeafHash: pa.prevPrevLeafHash,
-		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     pa.prevDeadline.Clone(),
-		prevChildType:    pa.prevChildType,
-		beforeState:      pa.beforeState.Clone(),
-		params:           pa.params.Clone(),
-		claim:            pa.claim.Clone(),
-		assertion:        pa.assertion,
-		machine:          pa.machine,
+		leafHash:      pa.leafHash,
+		prevLeafHash:  pa.prevLeafHash,
+		prevDataHash:  pa.prevDataHash,
+		prevDeadline:  pa.prevDeadline.Clone(),
+		prevChildType: pa.prevChildType,
+		beforeState:   pa.beforeState.Clone(),
+		params:        pa.params.Clone(),
+		claim:         pa.claim.Clone(),
+		assertion:     pa.assertion,
+		machine:       pa.machine,
 	}
 }
 
@@ -142,7 +142,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.RLock()
 				if newOpinion == valprotocol.ValidChildType {
 					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
+						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash, correctNode.hash)
 					}
 				}
 				for _, listener := range chain.listeners {
@@ -286,16 +286,16 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 	}
 	return &preparedAssertion{
-		leafHash:         currentOpinionHash,
-		prevPrevLeafHash: prevPrevLeafHash,
-		prevDataHash:     prevDataHash,
-		prevDeadline:     prevDeadline,
-		prevChildType:    prevChildType,
-		beforeState:      beforeState,
-		params:           params,
-		claim:            claim,
-		assertion:        assertion,
-		machine:          mach,
+		leafHash:      currentOpinionHash,
+		prevLeafHash:  prevPrevLeafHash,
+		prevDataHash:  prevDataHash,
+		prevDeadline:  prevDeadline,
+		prevChildType: prevChildType,
+		beforeState:   beforeState,
+		params:        params,
+		claim:         claim,
+		assertion:     assertion,
+		machine:       mach,
 	}
 }
 
