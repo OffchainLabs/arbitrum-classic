@@ -65,7 +65,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         uint256 currentNode = 0;
         uint256 currentIndex = 0;
 
-        while (offset < totalLength) {
+        while (offset < totalLength && currentNode < nodeHashes.length) {
             if(messageCounts[currentNode] == 0){
 
                 currentNode += 1;

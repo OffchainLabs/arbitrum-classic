@@ -323,9 +323,66 @@ contract('GlobalInbox', accounts => {
     assert.equal(50, originalOwner_balance.toNumber())
   })
 
-  // it("tradeable-exits: commiting transfers, two msgs", async () => {
-  //   let global_inbox = await GlobalInbox.deployed();
-  //   let value_tester = await ValueTester.new();
+  it('tradeable-exits: commiting transfers, different mnsg indexes', async () => {
+    let global_inbox = await GlobalInbox.deployed()
+    let value_tester = await ValueTester.new()
 
-  // });
+    let reciept6 = await global_inbox.depositEthMessage(
+      chain_address,
+      address2,
+      {
+        from: address2,
+        value: 100,
+      }
+    )
+
+    await expectEvent(reciept6, 'EthDepositMessageDelivered')
+
+    let msg_data3 = await getMessageData(
+      chain_address,
+      address2,
+      10,
+      value_tester
+    )
+    let msgCounts = [0]
+    let bytes = web3.utils.hexToBytes(nodeHash2)
+    let nodeHashes = [bytes]
+
+    let reciept7 = await global_inbox.sendMessages(
+      msg_data3,
+      msgCounts,
+      nodeHashes,
+      {
+        from: chain_address,
+      }
+    )
+
+    chain_balance = await global_inbox.getEthBalance(chain_address)
+    assert.equal(100, chain_balance.toNumber())
+    address2_balance = await global_inbox.getEthBalance(address2)
+    assert.equal(0, address2_balance.toNumber())
+
+    let msg_data4 = await getMessageData(
+      chain_address,
+      address2,
+      10,
+      value_tester
+    )
+
+    msgCounts = [1]
+
+    let reciept8 = await global_inbox.sendMessages(
+      msg_data4,
+      msgCounts,
+      nodeHashes,
+      {
+        from: chain_address,
+      }
+    )
+
+    chain_balance = await global_inbox.getEthBalance(chain_address)
+    assert.equal(90, chain_balance.toNumber())
+    address2_balance = await global_inbox.getEthBalance(address2)
+    assert.equal(10, address2_balance.toNumber())
+  })
 })

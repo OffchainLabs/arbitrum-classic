@@ -109,7 +109,6 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 }
 
 func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
-	fmt.Println("in GetOutputMessage Server.go-------------------------------")
 	fmt.Println(args.AssertionNodeHash)
 	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
 	if err != nil {
@@ -117,19 +116,15 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 	}
 	assertionHash := common.Hash{}
 	copy(assertionHash[:], assertionHashBytes)
-	fmt.Println("got hash: ", assertionHash)
 	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
-	fmt.Println("got index: ", msgIndex)
 	resultChan := m.tracker.OutputMsgVal(assertionHash, msgIndex)
 	outputValue := <-resultChan
 
 	if outputValue == nil {
-		fmt.Println("val is nil")
 		return &validatorserver.GetOutputMessageReply{
 			Found: false,
 		}, nil
 	} else {
-		fmt.Println("val not nil")
 		var buf bytes.Buffer
 		_ = value.MarshalValue(outputValue, &buf)
 		return &validatorserver.GetOutputMessageReply{

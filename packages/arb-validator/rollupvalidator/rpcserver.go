@@ -18,7 +18,6 @@ package rollupvalidator
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -79,10 +78,8 @@ func (m *RPCServer) FindLogs(r *http.Request, args *validatorserver.FindLogsArgs
 func (m *RPCServer) GetOutputMessage(r *http.Request, args *validatorserver.GetOutputMessageArgs, reply *validatorserver.GetOutputMessageReply) error {
 	ret, err := m.Server.GetOutputMessage(context.Background(), args)
 	if ret != nil {
-		fmt.Println("not nil")
 		*reply = *ret
 	}
-	fmt.Println("outside")
 	return err
 }
 

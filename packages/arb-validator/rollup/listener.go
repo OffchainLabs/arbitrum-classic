@@ -483,19 +483,6 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observe
 	lis.Unlock()
 	confClone := conf.Clone()
 
-	//for _, nodes := range confClone.Nodes{
-	//	switch opp := nodes.(type) {
-	//	case valprotocol.ConfirmValidOpportunity:
-	//
-	//		fmt.Println("++++ confirm nodes +++++")
-	//		fmt.Println("node hash: ", opp.StateHash())
-	//		fmt.Println("size:  ", len(opp.Messages))
-	//		for _, msg := range opp.Messages {
-	//			fmt.Println(msg)
-	//		}
-	//		fmt.Println("++++ confirm msgs +++++")
-	//	}
-	//}
 	go func() {
 		err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {

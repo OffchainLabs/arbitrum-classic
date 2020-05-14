@@ -17,7 +17,6 @@
 package rollupvalidator
 
 import (
-	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -250,18 +249,12 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
 	case outputMsgRequest:
 		assertionVal := newAssertionInfo()
-		fmt.Println("inside process request outputMsg")
 		for _, assertion := range tr.assertionInfo {
 			if request.assertionNodeHash == assertion.AssertNodeHash {
 				assertionVal = assertion
-				fmt.Println("got same hash")
 				break
 			}
-			fmt.Println("msgs: ", assertion.OutMessages)
 		}
-
-		fmt.Println("asserttion info: ", assertionVal)
-
 		if request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
 			val := assertionVal.OutMessages[request.msgIndex]
 			request.resultChan <- val
