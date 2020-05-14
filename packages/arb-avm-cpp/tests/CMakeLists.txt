@@ -39,7 +39,6 @@ PRIVATE
     avm_utils
 	CONAN_PKG::Catch2
 	CONAN_PKG::jsonformoderncpp
-	CONAN_PKG::gmp
 )
 
 include(CTest)
