@@ -38,7 +38,7 @@ function provider(outputFolder, buildLocation, options, should_compile) {
     buildLocation = path.resolve(rootPath, 'build/contracts')
   }
   options.allowUnlimitedContractSize = true
-  options.gasLimit = 10000000;
+  options.gasLimit = 10000000
   options.network_id = 123456789
   const arbProvider = ganache.provider(options)
 
