@@ -180,12 +180,14 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 	var contractAddress common.Address
 	copy(contractAddress[:], contractAddressBytes)
 
-	senderBytes, err := hexutil.Decode(args.Sender)
-	if err != nil {
-		return nil, err
-	}
 	var sender common.Address
-	copy(sender[:], senderBytes)
+	if len(args.Sender) > 0 {
+		senderBytes, err := hexutil.Decode(args.Sender)
+		if err != nil {
+			return nil, err
+		}
+		copy(sender[:], senderBytes)
+	}
 
 	callMsg := message.Call{
 		To:   contractAddress,

@@ -226,7 +226,7 @@ export class ArbClient {
   private _call(
     callFunc: string,
     contractAddress: string,
-    sender: string,
+    sender: string | undefined,
     data: string
   ): Promise<Uint8Array> {
     return new Promise((resolve, reject): void => {
