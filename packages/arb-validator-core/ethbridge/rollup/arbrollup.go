@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -219,7 +218,7 @@ func (_ArbRollup *ArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupCaller) VERSION(opts *bind.CallOpts) (string, error) {
 	var (
 		ret0 = new(string)
@@ -231,21 +230,21 @@ func (_ArbRollup *ArbRollupCaller) VERSION(opts *bind.CallOpts) (string, error) 
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupSession) VERSION() (string, error) {
 	return _ArbRollup.Contract.VERSION(&_ArbRollup.CallOpts)
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupCallerSession) VERSION() (string, error) {
 	return _ArbRollup.Contract.VERSION(&_ArbRollup.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -257,21 +256,21 @@ func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupSession) ChallengeFactory() (common.Address, error) {
 	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) ChallengeFactory() (common.Address, error) {
 	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -283,21 +282,21 @@ func (_ArbRollup *ArbRollupCaller) GetStakeRequired(opts *bind.CallOpts) (*big.I
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupSession) GetStakeRequired() (*big.Int, error) {
 	return _ArbRollup.Contract.GetStakeRequired(&_ArbRollup.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupCallerSession) GetStakeRequired() (*big.Int, error) {
 	return _ArbRollup.Contract.GetStakeRequired(&_ArbRollup.CallOpts)
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupCaller) GlobalInbox(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -309,21 +308,21 @@ func (_ArbRollup *ArbRollupCaller) GlobalInbox(opts *bind.CallOpts) (common.Addr
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupSession) GlobalInbox() (common.Address, error) {
 	return _ArbRollup.Contract.GlobalInbox(&_ArbRollup.CallOpts)
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) GlobalInbox() (common.Address, error) {
 	return _ArbRollup.Contract.GlobalInbox(&_ArbRollup.CallOpts)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -335,21 +334,21 @@ func (_ArbRollup *ArbRollupCaller) IsStaked(opts *bind.CallOpts, _stakerAddress 
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _ArbRollup.Contract.IsStaked(&_ArbRollup.CallOpts, _stakerAddress)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupCallerSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _ArbRollup.Contract.IsStaked(&_ArbRollup.CallOpts, _stakerAddress)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -361,21 +360,21 @@ func (_ArbRollup *ArbRollupCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byt
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _ArbRollup.Contract.IsValidLeaf(&_ArbRollup.CallOpts, leaf)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupCallerSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _ArbRollup.Contract.IsValidLeaf(&_ArbRollup.CallOpts, leaf)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -387,21 +386,21 @@ func (_ArbRollup *ArbRollupCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byt
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupSession) LatestConfirmed() ([32]byte, error) {
 	return _ArbRollup.Contract.LatestConfirmed(&_ArbRollup.CallOpts)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupCallerSession) LatestConfirmed() ([32]byte, error) {
 	return _ArbRollup.Contract.LatestConfirmed(&_ArbRollup.CallOpts)
 }
 
 // SupportedContracts is a free data retrieval call binding the contract method 0xb7ff920e.
 //
-// Solidity: function supportedContracts(address ) constant returns(address)
+// Solidity: function supportedContracts(address ) view returns(address)
 func (_ArbRollup *ArbRollupCaller) SupportedContracts(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -413,21 +412,21 @@ func (_ArbRollup *ArbRollupCaller) SupportedContracts(opts *bind.CallOpts, arg0 
 
 // SupportedContracts is a free data retrieval call binding the contract method 0xb7ff920e.
 //
-// Solidity: function supportedContracts(address ) constant returns(address)
+// Solidity: function supportedContracts(address ) view returns(address)
 func (_ArbRollup *ArbRollupSession) SupportedContracts(arg0 common.Address) (common.Address, error) {
 	return _ArbRollup.Contract.SupportedContracts(&_ArbRollup.CallOpts, arg0)
 }
 
 // SupportedContracts is a free data retrieval call binding the contract method 0xb7ff920e.
 //
-// Solidity: function supportedContracts(address ) constant returns(address)
+// Solidity: function supportedContracts(address ) view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) SupportedContracts(arg0 common.Address) (common.Address, error) {
 	return _ArbRollup.Contract.SupportedContracts(&_ArbRollup.CallOpts, arg0)
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_ArbRollup *ArbRollupCaller) VmParams(opts *bind.CallOpts) (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -449,7 +448,7 @@ func (_ArbRollup *ArbRollupCaller) VmParams(opts *bind.CallOpts) (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_ArbRollup *ArbRollupSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -462,7 +461,7 @@ func (_ArbRollup *ArbRollupSession) VmParams() (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_ArbRollup *ArbRollupCallerSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -496,21 +495,21 @@ func (_ArbRollup *ArbRollupTransactorSession) Confirm(initalProtoStateHash [32]b
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_ArbRollup *ArbRollupTransactor) ForwardContractMessage(opts *bind.TransactOpts, _sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _ArbRollup.contract.Transact(opts, "forwardContractMessage", _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_ArbRollup *ArbRollupSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.ForwardContractMessage(&_ArbRollup.TransactOpts, _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_ArbRollup *ArbRollupTransactorSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.ForwardContractMessage(&_ArbRollup.TransactOpts, _sender, _data)
 }
@@ -601,21 +600,21 @@ func (_ArbRollup *ArbRollupTransactorSession) OwnerShutdown() (*types.Transactio
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupTransactor) PlaceStake(opts *bind.TransactOpts, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.contract.Transact(opts, "placeStake", proof1, proof2)
 }
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupSession) PlaceStake(proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, proof1, proof2)
 }
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupTransactorSession) PlaceStake(proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, proof1, proof2)
 }
@@ -2436,6 +2435,27 @@ func (_ArbVMContractProxy *ArbVMContractProxyTransactorRaw) Transact(opts *bind.
 	return _ArbVMContractProxy.Contract.contract.Transact(opts, method, params...)
 }
 
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_ArbVMContractProxy *ArbVMContractProxyTransactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
+	return _ArbVMContractProxy.contract.RawTransact(opts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_ArbVMContractProxy *ArbVMContractProxySession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _ArbVMContractProxy.Contract.Fallback(&_ArbVMContractProxy.TransactOpts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_ArbVMContractProxy *ArbVMContractProxyTransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _ArbVMContractProxy.Contract.Fallback(&_ArbVMContractProxy.TransactOpts, calldata)
+}
+
 // BytesLibABI is the input ABI used to generate the binding from.
 const BytesLibABI = "[]"
 
@@ -3075,21 +3095,21 @@ func (_IArbRollup *IArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, me
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupTransactor) ForwardContractMessage(opts *bind.TransactOpts, _sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.contract.Transact(opts, "forwardContractMessage", _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupTransactorSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
 }
@@ -3268,7 +3288,7 @@ func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.Tr
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -3280,14 +3300,14 @@ func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bi
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
@@ -3472,7 +3492,7 @@ func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
 	var (
 		ret0 = new([32]byte)
@@ -3488,14 +3508,14 @@ func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account c
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
@@ -3544,21 +3564,21 @@ func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC721Message(_chain 
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
@@ -3586,21 +3606,21 @@ func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardContractTransactionMe
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactor) ForwardEthMessage(opts *bind.TransactOpts, _to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.contract.Transact(opts, "forwardEthMessage", _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.ForwardEthMessage(&_IGlobalInbox.TransactOpts, _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.ForwardEthMessage(&_IGlobalInbox.TransactOpts, _to, _from)
 }
@@ -4782,7 +4802,7 @@ func (_NodeGraph *NodeGraphTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_NodeGraph *NodeGraphCaller) GlobalInbox(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -4794,21 +4814,21 @@ func (_NodeGraph *NodeGraphCaller) GlobalInbox(opts *bind.CallOpts) (common.Addr
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_NodeGraph *NodeGraphSession) GlobalInbox() (common.Address, error) {
 	return _NodeGraph.Contract.GlobalInbox(&_NodeGraph.CallOpts)
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_NodeGraph *NodeGraphCallerSession) GlobalInbox() (common.Address, error) {
 	return _NodeGraph.Contract.GlobalInbox(&_NodeGraph.CallOpts)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -4820,21 +4840,21 @@ func (_NodeGraph *NodeGraphCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byt
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _NodeGraph.Contract.IsValidLeaf(&_NodeGraph.CallOpts, leaf)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphCallerSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _NodeGraph.Contract.IsValidLeaf(&_NodeGraph.CallOpts, leaf)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -4846,21 +4866,21 @@ func (_NodeGraph *NodeGraphCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byt
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphSession) LatestConfirmed() ([32]byte, error) {
 	return _NodeGraph.Contract.LatestConfirmed(&_NodeGraph.CallOpts)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphCallerSession) LatestConfirmed() ([32]byte, error) {
 	return _NodeGraph.Contract.LatestConfirmed(&_NodeGraph.CallOpts)
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_NodeGraph *NodeGraphCaller) VmParams(opts *bind.CallOpts) (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -4882,7 +4902,7 @@ func (_NodeGraph *NodeGraphCaller) VmParams(opts *bind.CallOpts) (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_NodeGraph *NodeGraphSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -4895,7 +4915,7 @@ func (_NodeGraph *NodeGraphSession) VmParams() (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps, uint64 maxBlockBoundsWidth, uint64 maxTimestampBoundsWidth)
 func (_NodeGraph *NodeGraphCallerSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -6286,7 +6306,7 @@ func (_Staking *StakingTransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -6298,21 +6318,21 @@ func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Add
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingSession) ChallengeFactory() (common.Address, error) {
 	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingCallerSession) ChallengeFactory() (common.Address, error) {
 	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -6324,21 +6344,21 @@ func (_Staking *StakingCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, 
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingSession) GetStakeRequired() (*big.Int, error) {
 	return _Staking.Contract.GetStakeRequired(&_Staking.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingCallerSession) GetStakeRequired() (*big.Int, error) {
 	return _Staking.Contract.GetStakeRequired(&_Staking.CallOpts)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -6350,14 +6370,14 @@ func (_Staking *StakingCaller) IsStaked(opts *bind.CallOpts, _stakerAddress comm
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _Staking.Contract.IsStaked(&_Staking.CallOpts, _stakerAddress)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingCallerSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _Staking.Contract.IsStaked(&_Staking.CallOpts, _stakerAddress)
 }

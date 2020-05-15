@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -197,7 +196,7 @@ func (_ChallengeTester *ChallengeTesterTransactorRaw) Transact(opts *bind.Transa
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
 func (_ChallengeTester *ChallengeTesterCaller) ResolveChallenge(opts *bind.CallOpts, winner common.Address, loser common.Address, challengeType *big.Int) error {
 	var ()
 	out := &[]interface{}{}
@@ -207,14 +206,14 @@ func (_ChallengeTester *ChallengeTesterCaller) ResolveChallenge(opts *bind.CallO
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
 func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
 	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
 }
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
 func (_ChallengeTester *ChallengeTesterCallerSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
 	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
 }
@@ -529,7 +528,7 @@ func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.Tr
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -541,14 +540,14 @@ func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bi
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
