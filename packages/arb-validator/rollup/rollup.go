@@ -110,7 +110,7 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx *checkpointing.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
@@ -122,7 +122,7 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointCon
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx checkpointing.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx *checkpointing.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
@@ -190,7 +190,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := checkpointing.NewCheckpointContextImpl()
+	ckptCtx := checkpointing.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)

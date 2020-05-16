@@ -52,7 +52,7 @@ func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams)
 	}
 }
 
-func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *StakedNodeGraphBuf {
+func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
