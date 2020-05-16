@@ -34,6 +34,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
+var heightBoundsKey = []byte{0}
+var blockHeightKeyPrefix = []byte{1}
+var contentsKeyPrefix = []byte{2}
+
 type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
@@ -115,8 +119,7 @@ func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 }
 
 func (cp *IndexedCheckpointer) getHeightBounds() (*ckpHeightBounds, error) {
-	key := []byte{0}
-	valBytes := cp.db.GetData(key)
+	valBytes := cp.db.GetData(heightBoundsKey)
 	if valBytes == nil {
 		return nil, nil
 	}
@@ -128,13 +131,12 @@ func (cp *IndexedCheckpointer) getHeightBounds() (*ckpHeightBounds, error) {
 }
 
 func (cp *IndexedCheckpointer) setHeightBounds(bounds *ckpHeightBounds) error {
-	key := []byte{0}
 	buf := bounds.Marshal()
 	val, err := proto.Marshal(buf)
 	if err != nil {
 		return err
 	}
-	ok := cp.db.SaveData(key, val)
+	ok := cp.db.SaveData(heightBoundsKey, val)
 	if !ok {
 		return errors.New("db write error in checkpointer.setHeightBounds")
 	}
@@ -161,7 +163,7 @@ func (cp *IndexedCheckpointer) updateHeightUpperBound(height *common.TimeBlocks)
 }
 
 func (cp *IndexedCheckpointer) getIdsAtHeight(height *common.TimeBlocks) ([]*common.BlockId, error) {
-	key := append([]byte{1}, height.AsInt().Bytes()...)
+	key := append(blockHeightKeyPrefix, height.AsInt().Bytes()...)
 	valBytes := cp.db.GetData(key)
 	if valBytes == nil {
 		return nil, nil
@@ -178,7 +180,7 @@ func (cp *IndexedCheckpointer) getIdsAtHeight(height *common.TimeBlocks) ([]*com
 }
 
 func (cp *IndexedCheckpointer) setIdsAtHeight(height *common.TimeBlocks, ids []*common.BlockId) error {
-	key := append([]byte{1}, height.AsInt().Bytes()...)
+	key := append(blockHeightKeyPrefix, height.AsInt().Bytes()...)
 	idBufs := make([]*common.BlockIdBuf, 0, len(ids))
 	for _, id := range ids {
 		idBufs = append(idBufs, id.MarshalToBuf())
@@ -198,7 +200,7 @@ func (cp *IndexedCheckpointer) setIdsAtHeight(height *common.TimeBlocks, ids []*
 }
 
 func (cp *IndexedCheckpointer) deleteIdsAtHeight(height *common.TimeBlocks) error {
-	key := append([]byte{1}, height.AsInt().Bytes()...)
+	key := append(blockHeightKeyPrefix, height.AsInt().Bytes()...)
 	if ok := cp.db.DeleteData(key); !ok {
 		return errors.New("checkpointer failed to delete idsAtHeight")
 	}
@@ -246,13 +248,13 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	}
 }
 
-func (_ *IndexedCheckpointer) makeContentsKey(id *common.BlockId) []byte {
+func makeContentsKey(id *common.BlockId) []byte {
 	bidBuf := id.MarshalToBuf()
 	bytesBuf, err := proto.Marshal(bidBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return append([]byte{2}, bytesBuf...)
+	return append(contentsKeyPrefix, bytesBuf...)
 }
 
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ArbClient, unmarshalFunc func([]byte, RestoreContext) error) error {
@@ -267,24 +269,18 @@ func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbb
 		return errors.New("cannot restore because no checkpoint exists")
 	}
 	for height := heightBounds.hi; height.Cmp(heightBounds.lo) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
-		ids, err := cp.getIdsAtHeight(height)
-		if err != nil {
-			return err
-		}
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
 			return err
 		}
-		for _, id := range ids {
-			if id.Equals(onchainId) {
-				key := cp.makeContentsKey(id)
-				val := cp.db.GetData(key)
-				ckpWithMan := &CheckpointWithManifest{}
-				if err := proto.Unmarshal(val, ckpWithMan); err != nil {
-					return err
-				}
-				return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
+		key := makeContentsKey(onchainId)
+		val := cp.db.GetData(key)
+		if val != nil {
+			ckpWithMan := &CheckpointWithManifest{}
+			if err := proto.Unmarshal(val, ckpWithMan); err != nil {
+				return err
 			}
+			return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
 		}
 	}
 	log.Fatal("Called RestoreLatestState on checkpointer that has no stored checkpoints")
@@ -334,7 +330,7 @@ func (cp *IndexedCheckpointer) writeCheckpoint(wc *writableCheckpoint) error {
 	if err != nil {
 		return err
 	}
-	key := cp.makeContentsKey(wc.blockId)
+	key := makeContentsKey(wc.blockId)
 	if ok := cp.db.SaveData(key, bytesBuf); !ok {
 		return errors.New("failed to write checkpoint to checkpoint db")
 	}
@@ -406,7 +402,7 @@ func (cp *IndexedCheckpointer) deleteCheckpointForId(id *common.BlockId) error {
 	cp.Lock()
 	defer cp.Unlock()
 
-	key := cp.makeContentsKey(id)
+	key := makeContentsKey(id)
 	val := cp.db.GetData(key)
 	ckp := &CheckpointWithManifest{}
 	if err := proto.Unmarshal(val, ckp); err != nil {
