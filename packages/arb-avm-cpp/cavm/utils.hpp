@@ -19,6 +19,8 @@
 
 #include <vector>
 
+#include <cstdlib>
+
 inline unsigned char* vecToC(const std::vector<unsigned char>& data) {
     unsigned char* cData = (unsigned char*)malloc(data.size());
     std::copy(data.begin(), data.end(), cData);

@@ -211,13 +211,12 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 	defer ticker.Stop()
 	for {
 		<-ticker.C
-		cp.Lock()
-		cp.cleanup()
-		cp.Unlock()
 	}
 }
 
 func (cp *IndexedCheckpointer) cleanup() {
+	cp.Lock()
+	defer cp.Unlock()
 	height := common.NewTimeBlocks(new(big.Int).Sub(cp.db.MinBlockStoreHeight().AsInt(), big.NewInt(1)))
 	heightLimit := common.NewTimeBlocks(new(big.Int).Sub(cp.db.MaxBlockStoreHeight().AsInt(), cp.maxReorgHeight))
 	var prevIds []*common.BlockId
