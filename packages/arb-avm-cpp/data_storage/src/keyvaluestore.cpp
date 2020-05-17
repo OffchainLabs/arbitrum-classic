@@ -63,3 +63,17 @@ DataResults KeyValueStore::getData(
 
     return DataResults{status, data};
 }
+
+std::vector<std::vector<char>> KeyValueStore::getKeysWithPrefix(
+    const rocksdb::Slice& prefix) const {
+    std::vector<std::vector<char>> keys;
+
+    auto read_options = rocksdb::ReadOptions();
+    auto it = transaction->GetIterator(read_options);
+
+    for (it->Seek(prefix); it->key().compare(prefix) < 0; it->Next()) {
+        auto key = it->key();
+        keys.emplace_back(key.data(), key.data() + key.size_);
+    }
+    return keys;
+}

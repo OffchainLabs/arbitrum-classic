@@ -16,4 +16,6 @@ type CheckpointStorage interface {
 	SaveData(key []byte, serializedValue []byte) bool
 	GetData(key []byte) []byte
 	DeleteData(key []byte) bool
+
+	GetKeysWithPrefix(prefix []byte) [][]byte
 }

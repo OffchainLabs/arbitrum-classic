@@ -25,6 +25,7 @@ struct DataResults;
 namespace rocksdb {
 class Transaction;
 class Status;
+struct Slice;
 }  // namespace rocksdb
 
 class KeyValueStore {
@@ -37,6 +38,8 @@ class KeyValueStore {
                              const std::vector<unsigned char>& value);
     rocksdb::Status deleteData(const std::vector<unsigned char>& key);
     DataResults getData(const std::vector<unsigned char>& key) const;
+    std::vector<std::vector<char>> getKeysWithPrefix(
+        const rocksdb::Slice& prefix) const;
 };
 
 #endif /* keyvaluestore_hpp */

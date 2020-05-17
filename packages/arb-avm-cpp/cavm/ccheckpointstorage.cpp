@@ -229,3 +229,26 @@ int deleteData(CCheckpointStorage* storage_ptr,
     auto status = keyvalue_store->deleteData(key_vector);
     return status.ok();
 }
+
+ByteSliceArray getKeysWithPrefix(CCheckpointStorage* storage_ptr,
+                                 const void* prefix_data,
+                                 int prefix_length) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto keyvalue_store = storage->makeKeyValueStore();
+
+    auto prefix = rocksdb::Slice(reinterpret_cast<const char*>(prefix_data),
+                                 prefix_length);
+    auto keys = keyvalue_store->getKeysWithPrefix(prefix);
+
+    ByteSlice* byte_slices =
+        (ByteSlice*)malloc(keys.size() * sizeof(ByteSlice));
+
+    for (size_t i = 0; i < keys.size(); i++) {
+        const auto& key = keys[i];
+        auto key_data = (unsigned char*)malloc(key.size());
+        std::copy(key.begin(), key.end(), key_data);
+        byte_slices[i] = {key_data, static_cast<int>(key.size())};
+    }
+
+    return {byte_slices, static_cast<int>(keys.size())};
+}

@@ -22,10 +22,17 @@
 extern "C" {
 #endif
 
-typedef struct {
+struct ByteSliceStruct {
     void* data;
     int length;
-} ByteSlice;
+};
+
+typedef struct ByteSliceStruct ByteSlice;
+
+typedef struct {
+    ByteSlice* slices;
+    int count;
+} ByteSliceArray;
 
 typedef void CMachine;
 typedef void CCheckpointStorage;
@@ -52,6 +59,10 @@ ByteSlice getData(CCheckpointStorage* storage_ptr,
 int deleteData(CCheckpointStorage* storage_ptr,
                const void* key,
                int key_length);
+
+ByteSliceArray getKeysWithPrefix(CCheckpointStorage* storage_ptr,
+                                 const void* prefix_data,
+                                 int prefix_length);
 
 #ifdef __cplusplus
 }

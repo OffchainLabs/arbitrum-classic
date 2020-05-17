@@ -177,3 +177,26 @@ func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {
 
 	return success == 1
 }
+
+func (checkpoint *CheckpointStorage) GetKeysWithPrefix(prefix []byte) [][]byte {
+	cData := C.getKeysWithPrefix(checkpoint.c, unsafe.Pointer(&prefix[0]), C.int(len(prefix)))
+
+	keyCount := int(cData.count)
+
+	if keyCount == 0 {
+		return nil
+	}
+
+	ret := make([][]byte, 0, keyCount)
+
+	byteSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(cData.slices))[:keyCount:keyCount]
+	for _, cKey := range byteSlices {
+		dataBuff := C.GoBytes(unsafe.Pointer(cKey.data), cKey.length)
+		C.free(unsafe.Pointer(cKey.data))
+		ret = append(ret, dataBuff)
+	}
+
+	C.free(unsafe.Pointer(cData.slices))
+
+	return ret
+}
