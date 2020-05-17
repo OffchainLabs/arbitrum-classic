@@ -294,48 +294,41 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 	defer ticker.Stop()
 	for {
 		<-ticker.C
-		func() {
-			cp.Lock()
+		cp.Lock()
+		cp.cleanup()
+		cp.Unlock()
+	}
+}
+
+func (cp *IndexedCheckpointer) cleanup() {
+	bounds, err := cp.getHeightBounds()
+	if err != nil {
+		return
+	}
+	height := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
+	heightLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgHeight))
+	var prevIds [][]byte
+	for height.Cmp(heightLimit) < 0 {
+		dbKeys := cp.db.GetKeysWithPrefix(makeContentsHeightPrefix(height))
+		if len(dbKeys) > 0 {
+			for _, id := range prevIds {
+				_ = cp.deleteCheckpointForKey(id)
+			}
 			bounds, err := cp.getHeightBounds()
-			cp.Unlock()
 			if err != nil {
 				return
 			}
-			height := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
-			heightLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgHeight))
-			var prevIds [][]byte
-			for height.Cmp(heightLimit) < 0 {
-				cp.Lock()
-				dbKeys := cp.db.GetKeysWithPrefix(makeContentsHeightPrefix(height))
-				cp.Unlock()
-				if len(dbKeys) > 0 {
-					for _, id := range prevIds {
-						_ = cp.deleteCheckpointForKey(id) // OK to call without lock; callee will acquire lock
-					}
-					cp.Lock()
-					bounds, err := cp.getHeightBounds()
-					if err != nil {
-						cp.Unlock()
-						return
-					}
-					bounds.lo = height
-					if err := cp.setHeightBounds(bounds); err != nil {
-						cp.Unlock()
-						return
-					}
-					cp.Unlock()
-					prevIds = dbKeys
-				}
-				height = common.NewTimeBlocks(new(big.Int).Add(height.AsInt(), big.NewInt(1)))
+			bounds.lo = height
+			if err := cp.setHeightBounds(bounds); err != nil {
+				return
 			}
-		}()
+			prevIds = dbKeys
+		}
+		height = common.NewTimeBlocks(new(big.Int).Add(height.AsInt(), big.NewInt(1)))
 	}
 }
 
 func (cp *IndexedCheckpointer) deleteCheckpointForKey(key []byte) error {
-	cp.Lock()
-	defer cp.Unlock()
-
 	val := cp.db.GetData(key)
 	ckp := &CheckpointWithManifest{}
 	if err := proto.Unmarshal(val, ckp); err != nil {
