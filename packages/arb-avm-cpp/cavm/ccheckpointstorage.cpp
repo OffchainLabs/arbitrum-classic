@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-20, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 
 #include "ccheckpointstorage.h"
+#include "utils.hpp"
 
+#include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
@@ -187,11 +189,11 @@ int saveData(CCheckpointStorage* storage_ptr,
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto data_ptr = reinterpret_cast<const char*>(data);
 
-    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
+    auto key_slice = rocksdb::Slice(key_ptr, key_length);
     auto data_vector =
         std::vector<unsigned char>(data_ptr, data_ptr + data_length);
 
-    auto status = keyvalue_store->saveData(key_vector, data_vector);
+    auto status = keyvalue_store->saveData(key_slice, data_vector);
     return status.ok();
 }
 
@@ -202,9 +204,9 @@ ByteSlice getData(CCheckpointStorage* storage_ptr,
     auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
+    auto key_slice = rocksdb::Slice(key_ptr, key_length);
 
-    auto results = keyvalue_store->getData(key_vector);
+    auto results = keyvalue_store->getData(key_slice);
 
     if (!results.status.ok() || results.data.empty()) {
         return {nullptr, 0};
@@ -224,31 +226,115 @@ int deleteData(CCheckpointStorage* storage_ptr,
     auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
+    auto key_slice = rocksdb::Slice(key_ptr, key_length);
 
-    auto status = keyvalue_store->deleteData(key_vector);
+    auto status = keyvalue_store->deleteData(key_slice);
     return status.ok();
 }
 
-ByteSliceArray getKeysWithPrefix(CCheckpointStorage* storage_ptr,
-                                 const void* prefix_data,
-                                 int prefix_length) {
+int putBlock(CCheckpointStorage* storage_ptr,
+             const void* height,
+             const void* hash,
+             const void* data,
+             int data_length) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto keyvalue_store = storage->makeKeyValueStore();
+    auto block_store = storage->getBlockStore();
 
-    auto prefix = rocksdb::Slice(reinterpret_cast<const char*>(prefix_data),
-                                 prefix_length);
-    auto keys = keyvalue_store->getKeysWithPrefix(prefix);
+    auto height_ptr = reinterpret_cast<const char*>(height);
+    auto height_int = deserializeUint256t(height_ptr);
 
-    ByteSlice* byte_slices =
-        (ByteSlice*)malloc(keys.size() * sizeof(ByteSlice));
+    auto hash_ptr = reinterpret_cast<const char*>(hash);
+    auto hash_int = deserializeUint256t(hash_ptr);
 
-    for (size_t i = 0; i < keys.size(); i++) {
-        const auto& key = keys[i];
-        auto key_data = (unsigned char*)malloc(key.size());
-        std::copy(key.begin(), key.end(), key_data);
-        byte_slices[i] = {key_data, static_cast<int>(key.size())};
+    auto data_ptr = reinterpret_cast<const char*>(data);
+    auto data_vector = std::vector<char>(data_ptr, data_ptr + data_length);
+
+    auto status = block_store->putBlock(height_int, hash_int, data_vector);
+    return status.ok();
+}
+
+int deleteBlock(CCheckpointStorage* storage_ptr,
+                const void* height,
+                const void* hash) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+
+    auto height_ptr = reinterpret_cast<const char*>(height);
+    auto height_int = deserializeUint256t(height_ptr);
+
+    auto hash_ptr = reinterpret_cast<const char*>(hash);
+    auto hash_int = deserializeUint256t(hash_ptr);
+
+    return block_store->deleteBlock(height_int, hash_int).ok();
+}
+
+ByteSliceResult getBlock(const CCheckpointStorage* storage_ptr,
+                         const void* height,
+                         const void* hash) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+
+    auto height_ptr = reinterpret_cast<const char*>(height);
+    auto height_int = deserializeUint256t(height_ptr);
+
+    auto hash_ptr = reinterpret_cast<const char*>(hash);
+    auto hash_int = deserializeUint256t(hash_ptr);
+
+    auto results = block_store->getBlock(height_int, hash_int);
+    if (!results.status.ok()) {
+        return {{}, false};
     }
 
-    return {byte_slices, static_cast<int>(keys.size())};
+    auto value_data = (unsigned char*)malloc(results.data.size());
+    std::copy(results.data.begin(), results.data.end(), value_data);
+
+    auto void_data = reinterpret_cast<void*>(value_data);
+    return {{void_data, static_cast<int>(results.data.size())}, true};
+}
+
+HashList blockHashesAtHeight(const CCheckpointStorage* storage_ptr,
+                             const void* height) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+
+    auto height_ptr = reinterpret_cast<const char*>(height);
+    auto height_int = deserializeUint256t(height_ptr);
+
+    auto hashes = block_store->blockHashesAtHeight(height_int);
+
+    std::vector<unsigned char> serializedHashes;
+    for (const auto& hash : hashes) {
+        marshal_uint256_t(hash, serializedHashes);
+    }
+
+    unsigned char* hashesData = (unsigned char*)malloc(serializedHashes.size());
+    std::copy(serializedHashes.begin(), serializedHashes.end(), hashesData);
+
+    return {hashesData, static_cast<int>(hashes.size())};
+}
+
+int isBlockStoreEmpty(const CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+    return block_store->isEmpty();
+}
+
+void* maxBlockStoreHeight(const CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+    auto height = block_store->maxHeight();
+
+    std::vector<unsigned char> serializedHeight;
+    marshal_uint256_t(height, serializedHeight);
+    return vecToC(serializedHeight);
+}
+
+void* minBlockStoreHeight(const CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto block_store = storage->getBlockStore();
+    auto height = block_store->minHeight();
+
+    std::vector<unsigned char> serializedHeight;
+    marshal_uint256_t(height, serializedHeight);
+    return vecToC(serializedHeight);
 }

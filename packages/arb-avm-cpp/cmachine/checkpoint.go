@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"runtime"
 	"unsafe"
@@ -178,25 +179,104 @@ func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetKeysWithPrefix(prefix []byte) [][]byte {
-	cData := C.getKeysWithPrefix(checkpoint.c, unsafe.Pointer(&prefix[0]), C.int(len(prefix)))
+func (checkpoint *CheckpointStorage) PutBlock(id *common.BlockId, data []byte) error {
+	cHeight := intToData(id.Height.AsInt())
+	defer C.free(cHeight)
+	cHash := hashToData(id.HeaderHash)
+	defer C.free(cHash)
+	cData := C.CBytes(data)
+	defer C.free(cData)
 
-	keyCount := int(cData.count)
+	success := C.putBlock(
+		checkpoint.c,
+		cHeight,
+		cHash,
+		cData,
+		C.int(len(data)),
+	)
 
-	if keyCount == 0 {
+	if success == 0 {
+		return errors.New("write failed")
+	}
+	return nil
+}
+
+func (checkpoint *CheckpointStorage) DeleteBlock(id *common.BlockId) error {
+	cHeight := intToData(id.Height.AsInt())
+	defer C.free(cHeight)
+	cHash := hashToData(id.HeaderHash)
+	defer C.free(cHash)
+
+	success := C.deleteBlock(
+		checkpoint.c,
+		cHeight,
+		cHash,
+	)
+
+	if success == 0 {
+		return errors.New("delete failed")
+	}
+	return nil
+}
+
+func (checkpoint *CheckpointStorage) GetBlock(id *common.BlockId) ([]byte, error) {
+	cHeight := intToData(id.Height.AsInt())
+	defer C.free(cHeight)
+	cHash := hashToData(id.HeaderHash)
+	defer C.free(cHash)
+
+	result := C.getBlock(
+		checkpoint.c,
+		cHeight,
+		cHash,
+	)
+
+	if result.found == 0 {
+		return nil, errors.New("not found")
+	}
+
+	dataBuff := C.GoBytes(unsafe.Pointer(result.slice.data), result.slice.length)
+	C.free(unsafe.Pointer(result.slice.data))
+
+	return dataBuff, nil
+}
+
+func (checkpoint *CheckpointStorage) BlocksAtHeight(height *common.TimeBlocks) []*common.BlockId {
+	cHeight := intToData(height.AsInt())
+	defer C.free(cHeight)
+
+	cHashList := C.blockHashesAtHeight(checkpoint.c, cHeight)
+
+	if cHashList.count == 0 {
 		return nil
 	}
 
-	ret := make([][]byte, 0, keyCount)
-
-	byteSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(cData.slices))[:keyCount:keyCount]
-	for _, cKey := range byteSlices {
-		dataBuff := C.GoBytes(unsafe.Pointer(cKey.data), cKey.length)
-		C.free(unsafe.Pointer(cKey.data))
-		ret = append(ret, dataBuff)
+	data := C.GoBytes(unsafe.Pointer(cHashList.data), cHashList.count*32)
+	ret := make([]*common.BlockId, 0, int(cHashList.count))
+	for i := 0; i < int(cHashList.count); i++ {
+		var hashVal common.Hash
+		copy(hashVal[:], data[i*32:])
+		ret = append(ret, &common.BlockId{
+			Height:     height,
+			HeaderHash: hashVal,
+		})
 	}
 
-	C.free(unsafe.Pointer(cData.slices))
-
 	return ret
+}
+
+func (checkpoint *CheckpointStorage) IsBlockStoreEmpty() bool {
+	return C.isBlockStoreEmpty(checkpoint.c) == 1
+}
+
+func (checkpoint *CheckpointStorage) MaxBlockStoreHeight() *common.TimeBlocks {
+	cHeight := C.maxBlockStoreHeight(checkpoint.c)
+	defer C.free(cHeight)
+	return common.NewTimeBlocks(dataToInt(cHeight))
+}
+
+func (checkpoint *CheckpointStorage) MinBlockStoreHeight() *common.TimeBlocks {
+	cHeight := C.minBlockStoreHeight(checkpoint.c)
+	defer C.free(cHeight)
+	return common.NewTimeBlocks(dataToInt(cHeight))
 }

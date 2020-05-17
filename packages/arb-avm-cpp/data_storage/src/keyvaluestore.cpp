@@ -19,17 +19,18 @@
 #include <rocksdb/utilities/transaction_db.h>
 #include <data_storage/storageresult.hpp>
 
-KeyValueStore::KeyValueStore(rocksdb::Transaction* transaction_) {
+KeyValueStore::KeyValueStore(rocksdb::Transaction* transaction_,
+                             rocksdb::ColumnFamilyHandle* column_) {
     transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
+    column = column_;
 }
 
 rocksdb::Status KeyValueStore::saveData(
-    const std::vector<unsigned char>& key,
+    const rocksdb::Slice& key,
     const std::vector<unsigned char>& value) {
     std::string value_str(value.begin(), value.end());
-    std::string key_str(key.begin(), key.end());
 
-    auto save_status = transaction->Put(key_str, value_str);
+    auto save_status = transaction->Put(column, key, value_str);
 
     if (save_status.ok()) {
         return transaction->Commit();
@@ -38,11 +39,8 @@ rocksdb::Status KeyValueStore::saveData(
     }
 }
 
-rocksdb::Status KeyValueStore::deleteData(
-    const std::vector<unsigned char>& key) {
-    std::string key_str(key.begin(), key.end());
-
-    auto delete_status = transaction->Delete(key_str);
+rocksdb::Status KeyValueStore::deleteData(const rocksdb::Slice& key) {
+    auto delete_status = transaction->Delete(column, key);
 
     if (delete_status.ok()) {
         return transaction->Commit();
@@ -51,29 +49,12 @@ rocksdb::Status KeyValueStore::deleteData(
     }
 }
 
-DataResults KeyValueStore::getData(
-    const std::vector<unsigned char>& key) const {
+DataResults KeyValueStore::getData(const rocksdb::Slice& key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string stored_value;
-    std::string key_str(key.begin(), key.end());
-
-    auto status = transaction->Get(read_options, key_str, &stored_value);
+    auto status = transaction->Get(read_options, column, key, &stored_value);
     auto data =
         std::vector<unsigned char>(stored_value.begin(), stored_value.end());
 
     return DataResults{status, data};
-}
-
-std::vector<std::vector<char>> KeyValueStore::getKeysWithPrefix(
-    const rocksdb::Slice& prefix) const {
-    std::vector<std::vector<char>> keys;
-
-    auto read_options = rocksdb::ReadOptions();
-    auto it = transaction->GetIterator(read_options);
-
-    for (it->Seek(prefix); it->key().compare(prefix) < 0; it->Next()) {
-        auto key = it->key();
-        keys.emplace_back(key.data(), key.data() + key.size_);
-    }
-    return keys;
 }

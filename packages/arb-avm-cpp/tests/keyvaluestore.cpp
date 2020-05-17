@@ -28,8 +28,10 @@ std::string pathc =
     boost::filesystem::current_path().generic_string() + "/keyvaluestoreDb";
 
 namespace {
-std::vector<unsigned char> hash_key1 = {1};
-std::vector<unsigned char> hash_key2 = {2};
+std::vector<char> hash_key1_vec = {1};
+rocksdb::Slice hash_key1{hash_key1_vec.data(), hash_key1_vec.size()};
+std::vector<char> hash_key2_vec = {2};
+rocksdb::Slice hash_key2{hash_key2_vec.data(), hash_key2_vec.size()};
 std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
 std::vector<unsigned char> value4 = {};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};

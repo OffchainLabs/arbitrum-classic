@@ -17,5 +17,11 @@ type CheckpointStorage interface {
 	GetData(key []byte) []byte
 	DeleteData(key []byte) bool
 
-	GetKeysWithPrefix(prefix []byte) [][]byte
+	PutBlock(id *common.BlockId, data []byte) error
+	DeleteBlock(id *common.BlockId) error
+	GetBlock(id *common.BlockId) ([]byte, error)
+	BlocksAtHeight(height *common.TimeBlocks) []*common.BlockId
+	IsBlockStoreEmpty() bool
+	MaxBlockStoreHeight() *common.TimeBlocks
+	MinBlockStoreHeight() *common.TimeBlocks
 }

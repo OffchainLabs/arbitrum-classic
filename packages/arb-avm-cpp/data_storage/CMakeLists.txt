@@ -20,6 +20,7 @@ set (CMAKE_CXX_STANDARD 14)
 project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
+  include/data_storage/blockstore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/transaction.hpp
@@ -32,6 +33,7 @@ set(LIB_HEADERS
 )
 
 set(LIB_SOURCES
+  src/blockstore.cpp
   src/datastorage.cpp
   src/transaction.cpp
   src/keyvaluestore.cpp

@@ -34,9 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-var heightBoundsKey = []byte{0}
-var contentsKeyPrefix = []byte{2}
-
 type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
@@ -87,78 +84,11 @@ func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
 }
 
-type ckpHeightBounds struct {
-	lo *common.TimeBlocks
-	hi *common.TimeBlocks
-}
-
-func (db *ckpHeightBounds) Marshal() *HeightBoundsBuf {
-	return &HeightBoundsBuf{
-		Lo: db.lo.Marshal(),
-		Hi: db.hi.Marshal(),
-	}
-}
-
-func (x *HeightBoundsBuf) Unmarshal() *ckpHeightBounds {
-	return &ckpHeightBounds{
-		lo: x.Lo.Unmarshal(),
-		hi: x.Hi.Unmarshal(),
-	}
-}
-
 func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 	cp.Lock()
 	defer cp.Unlock()
 
-	bounds, err := cp.getHeightBounds()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return bounds != nil
-}
-
-func (cp *IndexedCheckpointer) getHeightBounds() (*ckpHeightBounds, error) {
-	valBytes := cp.db.GetData(heightBoundsKey)
-	if valBytes == nil {
-		return nil, nil
-	}
-	heightBounds := &HeightBoundsBuf{}
-	if err := proto.Unmarshal(valBytes, heightBounds); err != nil {
-		return nil, err
-	}
-	return heightBounds.Unmarshal(), nil
-}
-
-func (cp *IndexedCheckpointer) setHeightBounds(bounds *ckpHeightBounds) error {
-	buf := bounds.Marshal()
-	val, err := proto.Marshal(buf)
-	if err != nil {
-		return err
-	}
-	ok := cp.db.SaveData(heightBoundsKey, val)
-	if !ok {
-		return errors.New("db write error in checkpointer.setHeightBounds")
-	}
-	return nil
-}
-
-func (cp *IndexedCheckpointer) updateHeightUpperBound(height *common.TimeBlocks) error {
-	bounds, err := cp.getHeightBounds()
-	if err != nil {
-		return err
-	}
-	if bounds == nil {
-		bounds = &ckpHeightBounds{
-			lo: height.Clone(),
-			hi: height.Clone(),
-		}
-		return cp.setHeightBounds(bounds)
-	} else if bounds.hi.Cmp(height) < 0 {
-		bounds.hi = height.Clone()
-		return cp.setHeightBounds(bounds)
-	} else {
-		return nil
-	}
+	return !cp.db.IsBlockStoreEmpty()
 }
 
 func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -193,45 +123,34 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	}
 }
 
-func makeContentsHeightPrefix(height *common.TimeBlocks) []byte {
-	var key []byte
-	key = append(key, contentsKeyPrefix...)
-	key = append(key, height.AsInt().Bytes()...)
-	return key
-}
-
-func makeContentsKey(id *common.BlockId) []byte {
-	var key []byte
-	key = makeContentsHeightPrefix(id.Height)
-	key = append(key, id.HeaderHash.Bytes()...)
-	return key
-}
-
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ArbClient, unmarshalFunc func([]byte, RestoreContext) error) error {
 	cp.Lock()
 	defer cp.Unlock()
 
-	heightBounds, err := cp.getHeightBounds()
-	if err != nil {
-		return err
-	}
-	if heightBounds == nil {
+	if !cp.HasCheckpointedState() {
 		return errors.New("cannot restore because no checkpoint exists")
 	}
-	for height := heightBounds.hi; height.Cmp(heightBounds.lo) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
+
+	startHeight := cp.db.MaxBlockStoreHeight()
+	lowestHeight := cp.db.MinBlockStoreHeight()
+
+	for height := startHeight; height.Cmp(lowestHeight) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
 			return err
 		}
-		key := makeContentsKey(onchainId)
-		val := cp.db.GetData(key)
-		if val != nil {
-			ckpWithMan := &CheckpointWithManifest{}
-			if err := proto.Unmarshal(val, ckpWithMan); err != nil {
-				return err
-			}
-			return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
+		blockData, err := cp.db.GetBlock(onchainId)
+		if err != nil {
+			// If no record was found, try the next block
+			continue
 		}
+		ckpWithMan := &CheckpointWithManifest{}
+		if err := proto.Unmarshal(blockData, ckpWithMan); err != nil {
+			// If something went wrong, try the next block
+			continue
+		}
+		return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
+
 	}
 	log.Fatal("Called RestoreLatestState on checkpointer that has no stored checkpoints")
 	return nil // can't reach this but need to make the compiler happy
@@ -280,13 +199,11 @@ func (cp *IndexedCheckpointer) writeCheckpoint(wc *writableCheckpoint) error {
 	if err != nil {
 		return err
 	}
-	key := makeContentsKey(wc.blockId)
-	if ok := cp.db.SaveData(key, bytesBuf); !ok {
+	if err := cp.db.PutBlock(wc.blockId, bytesBuf); err != nil {
 		return errors.New("failed to write checkpoint to checkpoint db")
 	}
 
-	// update height bounds if needed
-	return cp.updateHeightUpperBound(wc.blockId.Height)
+	return nil
 }
 
 func (cp *IndexedCheckpointer) cleanupDaemon() {
@@ -301,40 +218,31 @@ func (cp *IndexedCheckpointer) cleanupDaemon() {
 }
 
 func (cp *IndexedCheckpointer) cleanup() {
-	bounds, err := cp.getHeightBounds()
-	if err != nil {
-		return
-	}
-	height := common.NewTimeBlocks(new(big.Int).Sub(bounds.lo.AsInt(), big.NewInt(1)))
-	heightLimit := common.NewTimeBlocks(new(big.Int).Sub(bounds.hi.AsInt(), cp.maxReorgHeight))
-	var prevIds [][]byte
+	height := common.NewTimeBlocks(new(big.Int).Sub(cp.db.MinBlockStoreHeight().AsInt(), big.NewInt(1)))
+	heightLimit := common.NewTimeBlocks(new(big.Int).Sub(cp.db.MaxBlockStoreHeight().AsInt(), cp.maxReorgHeight))
+	var prevIds []*common.BlockId
 	for height.Cmp(heightLimit) < 0 {
-		dbKeys := cp.db.GetKeysWithPrefix(makeContentsHeightPrefix(height))
-		if len(dbKeys) > 0 {
+		blockIds := cp.db.BlocksAtHeight(height)
+		if len(blockIds) > 0 {
 			for _, id := range prevIds {
 				_ = cp.deleteCheckpointForKey(id)
 			}
-			bounds, err := cp.getHeightBounds()
-			if err != nil {
-				return
-			}
-			bounds.lo = height
-			if err := cp.setHeightBounds(bounds); err != nil {
-				return
-			}
-			prevIds = dbKeys
+			prevIds = blockIds
 		}
 		height = common.NewTimeBlocks(new(big.Int).Add(height.AsInt(), big.NewInt(1)))
 	}
 }
 
-func (cp *IndexedCheckpointer) deleteCheckpointForKey(key []byte) error {
-	val := cp.db.GetData(key)
+func (cp *IndexedCheckpointer) deleteCheckpointForKey(id *common.BlockId) error {
+	val, err := cp.db.GetBlock(id)
+	if err != nil {
+		return err
+	}
 	ckp := &CheckpointWithManifest{}
 	if err := proto.Unmarshal(val, ckp); err != nil {
 		return err
 	}
-	_ = cp.db.DeleteData(key) // ignore error
+	_ = cp.db.DeleteBlock(id) // ignore error
 	if ckp.Manifest != nil {
 		for _, hbuf := range ckp.Manifest.Values {
 			h := hbuf.Unmarshal()
