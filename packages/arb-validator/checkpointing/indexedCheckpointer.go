@@ -348,38 +348,8 @@ func (cp *IndexedCheckpointer) deleteCheckpointForKey(key []byte) error {
 	return nil
 }
 
-type restoreContextLocked struct {
-	cp *IndexedCheckpointer
-}
-
-func (cp *IndexedCheckpointer) newRestoreContextLocked() RestoreContext {
-	return &restoreContextLocked{cp}
-}
-
-func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
-	return rcl.cp.getValueLocked(h)
-}
-
-func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
-	return rcl.cp.getMachineLocked(h)
-}
-
-func (cp *IndexedCheckpointer) GetValue(h common.Hash) value.Value {
-	cp.Lock()
-	defer cp.Unlock()
-
-	return cp.getValueLocked(h)
-}
-
 func (cp *IndexedCheckpointer) getValueLocked(h common.Hash) value.Value {
 	return cp.db.GetValue(h)
-}
-
-func (cp *IndexedCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	cp.Lock()
-	defer cp.Unlock()
-
-	return cp.getMachineLocked(h)
 }
 
 func (cp *IndexedCheckpointer) getMachineLocked(h common.Hash) machine.Machine {
@@ -388,4 +358,20 @@ func (cp *IndexedCheckpointer) getMachineLocked(h common.Hash) machine.Machine {
 		log.Fatal(err)
 	}
 	return ret
+}
+
+func (cp *IndexedCheckpointer) newRestoreContextLocked() RestoreContext {
+	return &restoreContextLocked{cp}
+}
+
+type restoreContextLocked struct {
+	cp *IndexedCheckpointer
+}
+
+func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
+	return rcl.cp.getValueLocked(h)
+}
+
+func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
+	return rcl.cp.getMachineLocked(h)
 }
