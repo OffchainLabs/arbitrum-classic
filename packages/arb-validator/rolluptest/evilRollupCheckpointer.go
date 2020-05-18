@@ -104,6 +104,6 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *checkpointing.CheckpointContext, closeWhenDone chan struct{}) {
-	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx, closeWhenDone)
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *checkpointing.CheckpointContext) {
+	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }
