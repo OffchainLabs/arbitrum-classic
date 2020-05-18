@@ -29,7 +29,7 @@ type RollupCheckpointerFactory interface {
 
 type RollupCheckpointer interface {
 	HasCheckpointedState() bool
-	RestoreLatestState(context.Context, arbbridge.ArbClient, func([]byte, RestoreContext) error) error
+	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *CheckpointContext, closeWhenDone chan struct{})
 }

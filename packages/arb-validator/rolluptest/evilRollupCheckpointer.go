@@ -72,7 +72,7 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
-	clnt arbbridge.ArbClient,
+	clnt arbbridge.ChainTimeGetter,
 	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
 ) error {
 	return e.cp.RestoreLatestState(

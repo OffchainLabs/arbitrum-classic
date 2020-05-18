@@ -284,12 +284,8 @@ ByteSliceResult getBlock(const CCheckpointStorage* storage_ptr,
     if (!results.status.ok()) {
         return {{}, false};
     }
-
-    auto value_data = (unsigned char*)malloc(results.data.size());
-    std::copy(results.data.begin(), results.data.end(), value_data);
-
-    auto void_data = reinterpret_cast<void*>(value_data);
-    return {{void_data, static_cast<int>(results.data.size())}, true};
+    return {{vecToC(results.data), static_cast<int>(results.data.size())},
+            true};
 }
 
 HashList blockHashesAtHeight(const CCheckpointStorage* storage_ptr,

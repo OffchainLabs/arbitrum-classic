@@ -34,6 +34,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
+var errNoCheckpoint = errors.New("cannot restore because no checkpoint exists")
+var errNoMatchingCheckpoint = errors.New("cannot restore because no matching checkpoint exists")
+
 type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
@@ -49,30 +52,54 @@ func NewIndexedCheckpointerFactory(
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
 ) RollupCheckpointerFactory {
+	ret, err := newIndexedCheckpointerFactory(
+		rollupAddr,
+		arbitrumCodeFilePath,
+		databasePath,
+		maxReorgHeight,
+		forceFreshStart,
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go ret.writeDaemon()
+	go ret.cleanupDaemon()
+	return ret
+}
+
+// newIndexedCheckpointerFactory creates the checkpoint factory, but doesn't
+// launch it's reading and writing threads. This is useful for deterministic
+// testing
+func newIndexedCheckpointerFactory(
+	rollupAddr common.Address,
+	arbitrumCodeFilePath string,
+	databasePath string,
+	maxReorgHeight *big.Int,
+	forceFreshStart bool,
+) (*IndexedCheckpointer, error) {
 	if databasePath == "" {
 		databasePath = MakeCheckpointDatabasePath(rollupAddr)
 	}
 	if forceFreshStart {
 		// for testing only --  delete old database to get fresh start
 		if err := os.RemoveAll(databasePath); err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 	}
 	cCheckpointer, err := cmachine.NewCheckpoint(databasePath, arbitrumCodeFilePath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	ret := &IndexedCheckpointer{
+	return &IndexedCheckpointer{
 		new(sync.Mutex),
 		cCheckpointer,
 		new(big.Int).Set(maxReorgHeight),
 		nil,
 		nil,
-	}
-	go ret.writeDaemon()
-	go ret.cleanupDaemon()
-	return ret
+	}, nil
 }
 
 // The checkpointer interface uses a factory pattern. The idea is that the rollup manager makes a factory, then
@@ -123,12 +150,12 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	}
 }
 
-func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ArbClient, unmarshalFunc func([]byte, RestoreContext) error) error {
+func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, RestoreContext) error) error {
 	cp.Lock()
 	defer cp.Unlock()
 
-	if !cp.HasCheckpointedState() {
-		return errors.New("cannot restore because no checkpoint exists")
+	if cp.db.IsBlockStoreEmpty() {
+		return errNoCheckpoint
 	}
 
 	startHeight := cp.db.MaxBlockStoreHeight()
@@ -152,8 +179,7 @@ func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbb
 		return unmarshalFunc(ckpWithMan.Contents, cp.newRestoreContextLocked())
 
 	}
-	log.Fatal("Called RestoreLatestState on checkpointer that has no stored checkpoints")
-	return nil // can't reach this but need to make the compiler happy
+	return errNoMatchingCheckpoint
 }
 
 func (cp *IndexedCheckpointer) writeDaemon() {

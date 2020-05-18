@@ -50,7 +50,7 @@ func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }
 
-func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.ArbClient, func([]byte, RestoreContext) error) error {
+func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, RestoreContext) error) error {
 	return errors.New("no checkpoints in database")
 }
 
