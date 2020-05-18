@@ -67,7 +67,8 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
     auto prefix = toKeyPrefix(height);
     rocksdb::Slice prefix_slice(prefix.begin(), prefix.size());
 
-    auto it = txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get());
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
 
     for (it->Seek(prefix_slice); it->key().starts_with(prefix_slice);
          it->Next()) {
@@ -78,7 +79,8 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
 }
 
 uint256_t BlockStore::maxHeight() const {
-    auto it = txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get());
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
     it->SeekToLast();
     if (it->Valid()) {
         return keyToHeight(it->key());
@@ -88,7 +90,8 @@ uint256_t BlockStore::maxHeight() const {
 }
 
 uint256_t BlockStore::minHeight() const {
-    auto it = txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get());
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
     it->SeekToFirst();
     if (it->Valid()) {
         return keyToHeight(it->key());
@@ -98,7 +101,8 @@ uint256_t BlockStore::minHeight() const {
 }
 
 bool BlockStore::isEmpty() const {
-    auto it = txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get());
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
     it->SeekToLast();
     return it->Valid();
 }

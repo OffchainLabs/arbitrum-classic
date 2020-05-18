@@ -39,7 +39,6 @@ class DataStorage {
 
    public:
     DataStorage(const std::string& db_path);
-    ~DataStorage();
     rocksdb::Status closeDb();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();

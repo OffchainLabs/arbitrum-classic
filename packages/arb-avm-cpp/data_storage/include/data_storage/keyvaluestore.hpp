@@ -32,11 +32,12 @@ class ColumnFamilyHandle;
 class KeyValueStore {
    private:
     std::unique_ptr<rocksdb::Transaction> transaction;
-    rocksdb::ColumnFamilyHandle* column;
+    std::shared_ptr<rocksdb::ColumnFamilyHandle> column;
 
    public:
-    KeyValueStore(rocksdb::Transaction* transaction_,
-                  rocksdb::ColumnFamilyHandle* column);
+    KeyValueStore(std::unique_ptr<rocksdb::Transaction> transaction_,
+                  std::shared_ptr<rocksdb::ColumnFamilyHandle> column_)
+        : transaction(std::move(transaction_)), column(std::move(column_)) {}
     rocksdb::Status saveData(const rocksdb::Slice& key,
                              const std::vector<unsigned char>& value);
     rocksdb::Status deleteData(const rocksdb::Slice& key);

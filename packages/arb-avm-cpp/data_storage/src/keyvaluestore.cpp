@@ -19,18 +19,12 @@
 #include <rocksdb/utilities/transaction_db.h>
 #include <data_storage/storageresult.hpp>
 
-KeyValueStore::KeyValueStore(rocksdb::Transaction* transaction_,
-                             rocksdb::ColumnFamilyHandle* column_) {
-    transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
-    column = column_;
-}
-
 rocksdb::Status KeyValueStore::saveData(
     const rocksdb::Slice& key,
     const std::vector<unsigned char>& value) {
     std::string value_str(value.begin(), value.end());
 
-    auto save_status = transaction->Put(column, key, value_str);
+    auto save_status = transaction->Put(column.get(), key, value_str);
 
     if (save_status.ok()) {
         return transaction->Commit();
@@ -40,7 +34,7 @@ rocksdb::Status KeyValueStore::saveData(
 }
 
 rocksdb::Status KeyValueStore::deleteData(const rocksdb::Slice& key) {
-    auto delete_status = transaction->Delete(column, key);
+    auto delete_status = transaction->Delete(column.get(), key);
 
     if (delete_status.ok()) {
         return transaction->Commit();
@@ -52,7 +46,8 @@ rocksdb::Status KeyValueStore::deleteData(const rocksdb::Slice& key) {
 DataResults KeyValueStore::getData(const rocksdb::Slice& key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string stored_value;
-    auto status = transaction->Get(read_options, column, key, &stored_value);
+    auto status =
+        transaction->Get(read_options, column.get(), key, &stored_value);
     auto data =
         std::vector<unsigned char>(stored_value.begin(), stored_value.end());
 

@@ -57,12 +57,12 @@ DataStorage::DataStorage(const std::string& db_path) {
     blocks_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
 }
 
-DataStorage::~DataStorage() {
-    txn_db->Close();
-}
-
 rocksdb::Status DataStorage::closeDb() {
-    return txn_db->Close();
+    blocks_column.reset();
+    default_column.reset();
+    auto s = txn_db->Close();
+    txn_db.reset();
+    return s;
 }
 
 GetResults DataStorage::getValue(
@@ -86,14 +86,17 @@ GetResults DataStorage::getValue(
 
 std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
-    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
-    return std::make_unique<Transaction>(transaction);
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<Transaction>(std::move(transaction));
 }
 
 std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
     rocksdb::WriteOptions writeOptions;
-    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
-    return std::make_unique<KeyValueStore>(transaction, blocks_column.get());
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<KeyValueStore>(std::move(transaction),
+                                           default_column);
 }
 
 std::unique_ptr<BlockStore> DataStorage::getBlockStore() const {
