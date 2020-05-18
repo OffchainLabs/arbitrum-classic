@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 
 func TestEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestEmpty(t *testing.T) {
 
 func TestWriteCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestWriteCheckpoint(t *testing.T) {
 	}
 
 	checkpointContext := NewCheckpointContext()
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -118,7 +118,7 @@ func TestWriteCheckpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
@@ -157,7 +157,7 @@ func TestWriteCheckpoint(t *testing.T) {
 
 func TestRestoreEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,14 +172,14 @@ func TestRestoreEmpty(t *testing.T) {
 
 func TestRestoreSingleCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -224,14 +224,14 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 
 func TestRestoreReorg(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -239,7 +239,7 @@ func TestRestoreReorg(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
@@ -305,28 +305,28 @@ func TestRestoreReorg(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, big.NewInt(100), true)
+	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
 	}); err != nil {
 		t.Error(err)
 	}
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
 	}); err != nil {
 		t.Error(err)
 	}
-	if err = cp.writeCheckpoint(&writableCheckpoint{
+	if err = writeCheckpoint(cp.db, &writableCheckpoint{
 		blockId:  distantEntryBlockId,
 		contents: checkpointData3,
 		ckpCtx:   checkpointContext,
@@ -338,7 +338,7 @@ func TestCleanup(t *testing.T) {
 		t.Error("minimum height incorrect")
 	}
 
-	cp.cleanup()
+	cleanup(cp.db, big.NewInt(100))
 
 	if cp.db.MinBlockStoreHeight().Cmp(laterEntryBlockId.Height) != 0 {
 		t.Error("minimum height incorrect after cleanup", cp.db.MinBlockStoreHeight())
