@@ -13,22 +13,30 @@
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
 
+constexpr auto height_size = 32;
+constexpr auto hash_size = 32;
+
 namespace {
 std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
     std::array<char, 64> key;
     to_big_endian(height, key.begin());
-    to_big_endian(hash, key.begin() + 32);
+    to_big_endian(hash, key.begin() + height_size);
     return key;
 }
 
-std::array<char, 32> toKeyPrefix(const uint256_t& height) {
-    std::array<char, 32> key;
+std::array<char, height_size> toKeyPrefix(const uint256_t& height) {
+    std::array<char, height_size> key;
     to_big_endian(height, key.begin());
     return key;
 }
 
 uint256_t keyToHeight(const rocksdb::Slice& key) {
-    return from_big_endian(key.data() + 32, key.data() + key.size());
+    return from_big_endian(key.data(), key.data() + height_size);
+}
+
+uint256_t keyToHash(const rocksdb::Slice& key) {
+    return from_big_endian(key.data() + height_size,
+                           key.data() + height_size + hash_size);
 }
 }  // namespace
 
@@ -70,10 +78,9 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
     auto it = std::unique_ptr<rocksdb::Iterator>(
         txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
 
-    for (it->Seek(prefix_slice); it->key().starts_with(prefix_slice);
-         it->Next()) {
-        auto key = it->key();
-        hashes.push_back(keyToHeight(key));
+    for (it->Seek(prefix_slice);
+         it->key().starts_with(prefix_slice) && it->Valid(); it->Next()) {
+        hashes.push_back(keyToHash(it->key()));
     }
     return hashes;
 }
@@ -104,5 +111,5 @@ bool BlockStore::isEmpty() const {
     auto it = std::unique_ptr<rocksdb::Iterator>(
         txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
     it->SeekToLast();
-    return it->Valid();
+    return !it->Valid();
 }
