@@ -15,6 +15,7 @@
  */
 
 #include "config.hpp"
+#include "helper.hpp"
 
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -26,9 +27,6 @@
 #include <catch2/catch.hpp>
 
 #include <boost/filesystem.hpp>
-
-std::string path =
-    boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void saveValue(MachineStateSaver& saver,
                const value& val,
@@ -91,7 +89,8 @@ void getTupleValues(MachineStateFetcher& fetcher,
 }
 
 TEST_CASE("Save value") {
-    CheckpointStorage storage(path, test_contract_path);
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
     auto saver = MachineStateSaver(storage.makeTransaction());
 
     SECTION("save 1 num tuple") {
@@ -108,11 +107,11 @@ TEST_CASE("Save value") {
         auto code_point = CodePoint(1, Operation(), 0);
         saveValue(saver, code_point, 1, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save tuple") {
-    CheckpointStorage storage(path, test_contract_path);
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
     auto saver = MachineStateSaver(storage.makeTransaction());
 
     TuplePool pool;
@@ -135,12 +134,12 @@ TEST_CASE("Save tuple") {
         saveTuple(saver, tuple, 1, true);
         saveTuple(saver, tuple, 2, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get value") {
     SECTION("save empty tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -151,9 +150,9 @@ TEST_CASE("Save and get value") {
         saveValue(saver, tuple, 1, true);
         getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -166,9 +165,9 @@ TEST_CASE("Save and get value") {
         saveValue(saver, tuple, 1, true);
         getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save num") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -179,9 +178,9 @@ TEST_CASE("Save and get value") {
         saveValue(saver, num, 1, true);
         getValue(fetcher, hash_key, 1, num_hash, NUM, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -193,7 +192,8 @@ TEST_CASE("Save and get value") {
         getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
     }
     SECTION("save err codepoint") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         auto code_point = getErrCodePoint();
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -204,12 +204,12 @@ TEST_CASE("Save and get value") {
         saveValue(saver, code_point, 1, true);
         getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get tuple values") {
     SECTION("save num tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -223,9 +223,9 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         CodePoint code_point = storage.getInitialVmValues().code[1];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -240,9 +240,9 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -257,9 +257,9 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save nested tuple") {
-        CheckpointStorage storage(path, test_contract_path);
+        DBDeleter deleter;
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -274,10 +274,10 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -294,10 +294,10 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple, saveValue()") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[2];
 
@@ -315,13 +315,13 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save And Get Tuple") {
     SECTION("save 1 num tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -334,10 +334,10 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint in tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto code_point = storage.getInitialVmValues().code[0];
 
@@ -351,10 +351,10 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 1 num tuple twice") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto saver2 = MachineStateSaver(storage.makeTransaction());
@@ -369,10 +369,10 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver2, tuple, 2, true);
         getTuple(fetcher, hash_key, 2, tup_hash, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 2 num tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -386,10 +386,10 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save tuple in tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -407,10 +407,10 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 2 tuples in tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -433,10 +433,10 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key2, 1, inner_tup_hash2, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save saved tuple in tuple") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto saver2 = MachineStateSaver(storage.makeTransaction());
@@ -456,7 +456,6 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key, 2, inner_tup_hash, 1, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 void saveState(MachineStateSaver& saver,
@@ -634,8 +633,9 @@ std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
 
 TEST_CASE("Save Machinestatedata") {
     SECTION("default") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
@@ -645,10 +645,10 @@ TEST_CASE("Save Machinestatedata") {
 
         saveState(saver, data_values, checkpoint_key);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with values") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
         CodePoint code_point2 = storage.getInitialVmValues().code[1];
@@ -660,13 +660,13 @@ TEST_CASE("Save Machinestatedata") {
 
         saveState(saver, state_data, checkpoint_key);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Get Machinestate data") {
     SECTION("default") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
@@ -682,10 +682,10 @@ TEST_CASE("Get Machinestate data") {
         saver.commitTransaction();
         getSavedState(fetcher, checkpoint_key, data_values, 1, keys);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with values") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
         CodePoint code_point2 = storage.getInitialVmValues().code[1];
@@ -701,13 +701,13 @@ TEST_CASE("Get Machinestate data") {
         saveState(saver, state_data, checkpoint_key);
         getSavedState(fetcher, checkpoint_key, state_data, 1, keys);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Delete checkpoint") {
     SECTION("default") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
 
@@ -723,10 +723,10 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with actual state values") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
         CodePoint code_point2 = storage.getInitialVmValues().code[2];
@@ -743,10 +743,10 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
     }
-    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
         CodePoint code_point2 = storage.getInitialVmValues().code[1];
@@ -764,10 +764,10 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpointSavedTwice(storage, fetcher, checkpoint_key, hash_keys);
     }
-    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice, reordered") {
+        DBDeleter deleter;
         TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         CodePoint code_point = storage.getInitialVmValues().code[0];
         CodePoint code_point2 = storage.getInitialVmValues().code[1];
@@ -788,5 +788,4 @@ TEST_CASE("Delete checkpoint") {
         deleteCheckpointSavedTwiceReordered(storage, fetcher, checkpoint_key,
                                             hash_keys);
     }
-    boost::filesystem::remove_all(path);
 }
