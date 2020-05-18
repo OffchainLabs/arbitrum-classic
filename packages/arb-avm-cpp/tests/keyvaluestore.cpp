@@ -15,6 +15,7 @@
  */
 
 #include "config.hpp"
+#include "helper.hpp"
 
 #include <ccheckpointstorage.h>
 
@@ -23,9 +24,6 @@
 
 #include <boost/filesystem.hpp>
 #include <catch2/catch.hpp>
-
-std::string pathc =
-    boost::filesystem::current_path().generic_string() + "/keyvaluestoreDb";
 
 namespace {
 std::vector<char> hash_key1_vec = {1};
@@ -38,7 +36,8 @@ std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 }  // namespace
 
 TEST_CASE("KeyValueStore test") {
-    CheckpointStorage storage(pathc, test_contract_path);
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
     auto store = storage.makeKeyValueStore();
 
     auto status = store->saveData(hash_key1, value1);
@@ -56,8 +55,10 @@ TEST_CASE("KeyValueStore test") {
 }
 
 TEST_CASE("CCheckpointStorage test") {
-    auto store = createCheckpointStorage(pathc.c_str(), test_contract_path);
+    DBDeleter deleter;
+    auto store = createCheckpointStorage(dbpath.c_str(), test_contract_path);
     auto res = getData(store, hash_key2.data(), hash_key2.size());
 
     REQUIRE(res.length == 0);
+    destroyCheckpointStorage(store);
 }
