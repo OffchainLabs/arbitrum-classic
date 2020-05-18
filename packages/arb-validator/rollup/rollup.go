@@ -195,7 +195,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
 func (chain *ChainObserver) CurrentBlockId() *common.BlockId {

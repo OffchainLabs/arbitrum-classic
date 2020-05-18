@@ -31,7 +31,7 @@ type RollupCheckpointer interface {
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)
-	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *CheckpointContext, closeWhenDone chan struct{})
+	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *CheckpointContext)
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"

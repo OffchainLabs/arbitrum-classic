@@ -58,8 +58,4 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.fac.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *CheckpointContext, closeWhenDone chan struct{}) {
-	if closeWhenDone != nil {
-		closeWhenDone <- struct{}{}
-	}
-}
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *CheckpointContext) {}
