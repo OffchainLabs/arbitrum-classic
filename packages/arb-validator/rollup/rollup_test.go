@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -63,32 +61,6 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if err != nil {
 		t.Error(err)
-	}
-	if !chain.equals(chain2) {
-		t.Fail()
-	}
-}
-
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
-	blockId := &common.BlockId{
-		common.NewTimeBlocks(big.NewInt(7337)),
-		common.Hash{},
-	}
-	ctx := checkpointing.NewCheckpointContext()
-	buf, err := chain.marshalToBytes(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	doneChan := make(chan struct{})
-	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
-	<-doneChan
-	cob := &ChainObserverBuf{}
-	if err := proto.Unmarshal(buf, cob); err != nil {
-		t.Fatal(err)
-	}
-	chain2, err := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
-	if err != nil {
-		t.Fatal(err)
 	}
 	if !chain.equals(chain2) {
 		t.Fail()
