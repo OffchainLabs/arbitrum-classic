@@ -137,13 +137,15 @@ MachineState Machine::trustlessCall(uint64_t steps,
         current_op = copyMachine.code->code[copyMachine.pc].op;
         uint256_t* index;
         uint64_t read_depth = InstructionStackPops.at(current_op.opcode).size();
+        uint64_t aux_read_depth =
+            InstructionAuxStackPops.at(current_op.opcode).size();
         if (current_op.immediate) {
             current_stack_contents.push_back(
                 std::make_shared<TupleTree>(TupleTree()));
             read_depth -= 1;
         }
-        /*switch (current_op.opcode) {
-            case OpCode::TGET:
+        switch (current_op.opcode) {
+            /*case OpCode::TGET:
                 if (current_op.immediate) {
                     current_stack_contents.pop_back();
                     pop_immediate = false;
@@ -340,10 +342,12 @@ MachineState Machine::trustlessCall(uint64_t steps,
                 } else {
                     current_register_contents = std::make_shared<TupleTree>();
                 }
-                break;
+                break;*/
+            case OpCode::AUXSTACKEMPTY:
+                aux_read_depth = aux_stack_contents.size();
             default:
                 break;
-        }*/
+        }
         if (current_op.immediate) {
             current_stack_contents.pop_back();
         }
@@ -355,12 +359,13 @@ MachineState Machine::trustlessCall(uint64_t steps,
         if (copyMachine.stack.stacksize() - read_depth < copy_start) {
             copy_start = copyMachine.stack.stacksize() - read_depth;
         }
-        /*if (copyMachine.auxstack.stacksize() < aux_copy_start) {
-            aux_copy_start = copyMachine.auxstack.stacksize();
-        }*/
+        if (copyMachine.auxstack.stacksize() - aux_read_depth <
+            aux_copy_start) {
+            aux_copy_start = copyMachine.auxstack.stacksize() - aux_read_depth;
+        }
     }
     // copy_start = 0;
-    aux_copy_start = 0;
+    // aux_copy_start = 0;
     auto outputMachine = machine_state;
     outputMachine.stack.values =
         std::vector<value>(machine_state.stack.values.begin() + copy_start,

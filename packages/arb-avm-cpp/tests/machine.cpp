@@ -154,6 +154,10 @@ TEST_CASE("Trustless calls test") {
         int run_length = 1;
 
         for (int i = 0; i < run_times; i++) {
+            if (i == 394) {
+                i = i;
+                //
+            }
             auto output =
                 trustless.trustlessCall(run_length, stack_start, aux_start);
 
