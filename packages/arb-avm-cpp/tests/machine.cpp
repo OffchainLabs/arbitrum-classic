@@ -131,6 +131,17 @@ TEST_CASE("Delete machine checkpoint") {
     boost::filesystem::remove_all(save_path);
 }
 
+void debug_print(std::ostream& os, const MachineState& val) {
+    os << "status " << static_cast<int>(val.state) << "\n";
+    // os << "codePointHash " << to_hex_str(hash(val.code->code[val.pc])) <<
+    // "\n";
+    os << "stack contents: " << val.stack << "\n";
+    // os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
+    // os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
+    // os << "staticHash " << to_hex_str(hash(val.code->staticVal)) << "\n";
+    // os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
+}
+
 TEST_CASE("Trustless calls test") {
     SECTION("default") {
         Machine machine;
@@ -151,7 +162,13 @@ TEST_CASE("Trustless calls test") {
             for (int j = 0; j < run_length; j++) {
                 output.runOne();
             }
+
             trustless.glueIn(output, stack_start, aux_start);
+            if (machine.hash() != trustless.hash()) {
+                debug_print(std::cout, machine.machine_state);
+                debug_print(std::cout, trustless.machine_state);
+                std::cout << std::endl;
+            }
             REQUIRE(machine.hash() == trustless.hash());
         }
     }
