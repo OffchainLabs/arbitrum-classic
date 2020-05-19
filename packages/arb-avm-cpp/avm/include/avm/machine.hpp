@@ -33,8 +33,6 @@ struct Assertion {
 };
 
 class Machine {
-    MachineState machine_state;
-
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     BlockReason runOne() { return machine_state.runOne(); }
 
@@ -69,6 +67,8 @@ class Machine {
                                uint64_t& copy_start,
                                uint64_t& aux_copy_start);
     void glueIn(MachineState state, uint64_t stack_start, uint64_t aux_start);
+
+    MachineState machine_state;
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

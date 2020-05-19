@@ -139,14 +139,14 @@ TEST_CASE("Trustless calls test") {
         Machine trustless = machine;
         uint64_t stack_start;
         uint64_t aux_start;
-        int run_times = 25;
+        int run_times = 470;
         int run_length = 1;
 
         for (int i = 0; i < run_times; i++) {
             auto output =
                 trustless.trustlessCall(run_length, stack_start, aux_start);
 
-            machine.run(run_length, 0, 0, Tuple(), std::chrono::seconds(1000));
+            machine.run(run_length, 0, 0, Tuple(), std::chrono::seconds(1));
 
             for (int j = 0; j < run_length; j++) {
                 output.runOne();
