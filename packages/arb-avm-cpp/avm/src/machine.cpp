@@ -140,6 +140,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
         if (current_op.immediate) {
             current_stack_contents.push_back(
                 std::make_shared<TupleTree>(TupleTree()));
+            read_depth -= 1;
         }
         /*switch (current_op.opcode) {
             case OpCode::TGET:
@@ -358,7 +359,7 @@ MachineState Machine::trustlessCall(uint64_t steps,
             aux_copy_start = copyMachine.auxstack.stacksize();
         }*/
     }
-    copy_start = 0;
+    // copy_start = 0;
     aux_copy_start = 0;
     auto outputMachine = machine_state;
     outputMachine.stack.values =
