@@ -133,9 +133,10 @@ MachineState Machine::trustlessCall(uint64_t steps,
         current_aux_contents.push_back(std::make_shared<TupleTree>(*tree));
     }
 
+    bool reads_register = false;
     for (uint64_t i = steps; i > 0; i--) {
         current_op = copyMachine.code->code[copyMachine.pc].op;
-        uint256_t* index;
+        // uint256_t* index;
         uint64_t read_depth = InstructionStackPops.at(current_op.opcode).size();
         uint64_t aux_read_depth =
             InstructionAuxStackPops.at(current_op.opcode).size();
@@ -343,8 +344,12 @@ MachineState Machine::trustlessCall(uint64_t steps,
                     current_register_contents = std::make_shared<TupleTree>();
                 }
                 break;*/
+            case OpCode::RPUSH:
+                reads_register = true;
+                break;
             case OpCode::AUXSTACKEMPTY:
                 aux_read_depth = aux_stack_contents.size();
+                break;
             default:
                 break;
         }
@@ -364,12 +369,13 @@ MachineState Machine::trustlessCall(uint64_t steps,
             aux_copy_start = copyMachine.auxstack.stacksize() - aux_read_depth;
         }
     }
-    // copy_start = 0;
-    // aux_copy_start = 0;
     auto outputMachine = machine_state;
     outputMachine.stack.values =
         std::vector<value>(machine_state.stack.values.begin() + copy_start,
                            machine_state.stack.values.end());
+    if (!reads_register) {
+        outputMachine.registerVal = HashOnly();
+    }
     /*for (uint64_t i = 0; i < outputMachine.stack.stacksize(); i++) {
         if (original_stack_contents[i + copy_start]->is_read) {
             uint256_t old_hash = ::hash(outputMachine.stack.values[i]);
@@ -409,5 +415,8 @@ void Machine::glueIn(MachineState state,
     machine_state.auxstack.hashes = state.auxstack.hashes;
     std::swap(machine_state.stack, state.stack);
     std::swap(machine_state.auxstack, state.auxstack);
+    if (nonstd::get_if<HashOnly>(&state.registerVal)) {
+        state.registerVal = machine_state.registerVal;
+    }
     machine_state = std::move(state);
 }

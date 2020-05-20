@@ -137,7 +137,7 @@ void debug_print(std::ostream& os, const MachineState& val) {
     // "\n";
     os << "stack contents: " << val.stack << "\n";
     // os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
-    // os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
+    os << "register contents: " << val.registerVal << "\n";
     // os << "staticHash " << to_hex_str(hash(val.code->staticVal)) << "\n";
     // os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
 }
@@ -154,7 +154,7 @@ TEST_CASE("Trustless calls test") {
         int run_length = 1;
 
         for (int i = 0; i < run_times; i++) {
-            if (i == 394) {
+            if (i == 369) {
                 i = i;
                 //
             }
