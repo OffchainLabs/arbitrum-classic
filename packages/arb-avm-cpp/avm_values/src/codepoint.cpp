@@ -100,7 +100,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
             ::marshalShallow(*immediate, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            HashOnly hashOnly(::hash(*immediate), ::getSize(*immediate));
+            HashOnly hashOnly(*immediate);
             hashOnly.marshal(buf);
         }
     } else {

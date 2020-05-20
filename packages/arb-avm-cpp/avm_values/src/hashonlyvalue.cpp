@@ -15,7 +15,13 @@
  */
 
 #include <avm_values/hashonlyvalue.hpp>
+#include <avm_values/tuple.hpp>
 #include <bigint_utils.hpp>
+
+HashOnly::HashOnly(const value& val) {
+    hash = ::hash(val);
+    size = ::getSize(val);
+}
 
 void HashOnly::marshal(std::vector<unsigned char>& buf) const {
     std::array<unsigned char, 32> tmpbuf;
@@ -29,12 +35,4 @@ void HashOnly::marshal(std::vector<unsigned char>& buf) const {
 std::ostream& operator<<(std::ostream& os, const HashOnly& val) {
     os << "HashOnly(" << val.getHash() << ")";
     return os;
-}
-
-void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
-    buf.insert(buf.end(), firstHash.begin(), firstHash.end());
-
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(valueSize, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }

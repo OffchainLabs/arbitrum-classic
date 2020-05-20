@@ -17,7 +17,7 @@
 #ifndef hashonlyvalue_hpp
 #define hashonlyvalue_hpp
 
-#include <avm_values/bigint.hpp>
+#include <avm_values/value.hpp>
 
 class HashOnly {
     uint256_t hash;
@@ -25,33 +25,10 @@ class HashOnly {
 
    public:
     HashOnly() = default;
-    HashOnly(const uint256_t& _hash, int _size) {
-        if (_size < 1) {
-            size = 1;
-        } else {
-            size = _size;
-        }
-        hash = _hash;
-    }
+    HashOnly(const value& val);
+
     uint256_t getHash() const { return hash; }
     int getSize() const { return size; }
-    void marshal(std::vector<unsigned char>& buf) const;
-};
-
-class HashPreImage {
-   private:
-    std::array<unsigned char, 32> firstHash;
-    int valueSize;
-
-   public:
-    HashPreImage(std::array<unsigned char, 32> _firstHash, int _valueSize) {
-        firstHash = _firstHash;
-        valueSize = _valueSize;
-    }
-    std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
-
-    int getSize() const { return valueSize; }
-
     void marshal(std::vector<unsigned char>& buf) const;
 };
 

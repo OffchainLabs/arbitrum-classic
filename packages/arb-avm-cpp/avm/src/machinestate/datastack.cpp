@@ -36,7 +36,7 @@ int Datastack::getTotalValueSize() const {
 
 HashOnly Datastack::getStackHashValue() const {
     if (values.empty()) {
-        return HashOnly(::hash(Tuple()), 1);
+        return HashOnly(Tuple());
     } else {
         calculateAllHashes();
         return hashes.back();
@@ -50,8 +50,9 @@ HashPreImage Datastack::getHashPreImage() const {
         calculateAllHashes();
         auto current_val = values[values.size() - 1];
         value prev_val;
+
         if (values.size() == 1) {
-            prev_val = HashOnly(::hash(Tuple()), 1);
+            prev_val = HashOnly(Tuple());
         } else {
             prev_val = hashes[values.size() - 2];
         }
@@ -73,7 +74,7 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
             marshalShallow(val, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            HashOnly hashOnly(::hash(val), ::getSize(val));
+            HashOnly hashOnly(val);
             hashOnly.marshal(buf);
         }
     }
@@ -139,13 +140,13 @@ void Datastack::addHash() const {
     if (hashes.size() > 0) {
         prev = hashes.back();
     } else {
-        prev = HashOnly(::hash(Tuple()), 1);
+        prev = HashOnly(Tuple());
     }
 
     auto newVal = values[hashes.size()];
     TuplePool pool;
     auto tup = Tuple(newVal, prev, &pool);
-    auto newHashVal = HashOnly(::hash(tup), tup.getSize());
+    auto newHashVal = HashOnly(tup);
     hashes.emplace_back(newHashVal);
 }
 

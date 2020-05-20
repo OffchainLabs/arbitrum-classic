@@ -124,19 +124,16 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-bool MachineState::verifyMachineValidity() {
+int MachineState::getMachineSize() {
     int machine_size = 0;
 
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
-
     machine_size += getSize(errpc);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
 
-    auto valid_machine = machine_size <= machine_size_limit;
-
-    return valid_machine;
+    return machine_size;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -152,26 +149,12 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
 
-    //    HashOnly nextHash(code[pc].nextHash, 1);
-    //    nextHash.marshal(buf);
     uint256_t_to_buf(code[pc].nextHash, buf);
-
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
-
     uint256_t_to_buf(::hash(registerVal), buf);
     uint256_t_to_buf(::hash(staticVal), buf);
     uint256_t_to_buf(::hash(errpc), buf);
-
-    //    HashOnly registerValHash(::hash(registerVal), ::getSize(registerVal));
-    //    registerValHash.marshal(buf);
-    //
-    //    HashOnly staticValHash(::hash(staticVal), ::getSize(staticVal));
-    //    staticValHash.marshal(buf);
-    //
-    //    HashOnly errpcHash(::hash(errpc), ::getSize(errpc));
-    //    errpcHash.marshal(buf);
-
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
@@ -490,13 +473,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
                       << ">" << std::hex << static_cast<int>(opcode);
             state = Status::Error;
-    }
-
-    auto valid_machine = verifyMachineValidity();
-
-    if (!valid_machine) {
-        state = Status::Error;
-        std::cerr << "Machine size invalid : error state" << std::endl;
     }
 
     return NotBlocked{};

@@ -118,8 +118,7 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
             marshalShallow(itemval, buf);
         } else {
             buf.push_back(HASH_ONLY);
-            HashOnly hval(::hash(val.get_element(i)),
-                          ::getSize(val.get_element(i)));
+            HashOnly hval(val.get_element(i));
             hval.marshal(buf);
         }
     }

@@ -248,7 +248,7 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
     }
 
-    function deserializeHash(
+    function deserializeHashed(
         bytes memory data,
         uint256 startOffset
     )
@@ -476,25 +476,6 @@ library Value {
             return (valid, offset, newTuple(tupleVal));
         }
         return (false, 0, newInt(0));
-    }
-
-    function deserializeHashed(
-        bytes memory data,
-        uint256 startOffset
-    )
-        internal
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            bytes32 // valHash
-        )
-    {
-        (bool valid, uint256 offset, Data memory value) = deserialize(data, startOffset);
-        if (!valid) {
-            return (false, startOffset, 0);
-        }
-        return (true, offset, value.hash().hash);
     }
 
     function getNextValid(

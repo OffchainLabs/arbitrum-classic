@@ -181,7 +181,7 @@ library Machine {
         m.status = MACHINE_EXTENSIVE;
         bytes32 hashVal;
         bool valid;
-        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
@@ -195,19 +195,19 @@ library Machine {
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
         m.registerHash = Value.newHashOnly(hashVal, 1);
 
-        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
         m.staticHash = Value.newHashOnly(hashVal, 1);
 
-        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }

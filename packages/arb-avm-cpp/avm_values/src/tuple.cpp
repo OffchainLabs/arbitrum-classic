@@ -19,6 +19,14 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
+    buf.insert(buf.end(), firstHash.begin(), firstHash.end());
+
+    std::array<unsigned char, 32> tmpbuf;
+    to_big_endian(valueSize, tmpbuf.begin());
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
     tpl->data.push_back(std::move(val));

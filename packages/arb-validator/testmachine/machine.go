@@ -123,7 +123,7 @@ func (m *Machine) ExecuteAssertion(
 			steps = maxSteps - i
 		}
 		pcStart := m.gomachine.GetPC()
-		fmt.Println("code point execution:    = ", pcStart)
+		fmt.Println("code point execution:   = = ", pcStart)
 		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 

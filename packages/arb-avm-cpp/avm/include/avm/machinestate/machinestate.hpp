@@ -53,8 +53,6 @@ struct AssertionContext {
     }
 };
 
-const int machine_size_limit = 1000000;
-
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
@@ -72,7 +70,7 @@ struct MachineState {
                  const value& static_val_,
                  std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);
-    bool verifyMachineValidity();
+    int getMachineSize();
     std::vector<unsigned char> marshalForProof();
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;

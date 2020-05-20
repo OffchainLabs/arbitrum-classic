@@ -27,6 +27,21 @@
 
 uint256_t zeroHash();
 
+class HashPreImage {
+   private:
+    std::array<unsigned char, 32> firstHash;
+    int valueSize;
+
+   public:
+    HashPreImage(std::array<unsigned char, 32> _firstHash, int _valueSize) {
+        firstHash = _firstHash;
+        valueSize = _valueSize;
+    }
+    std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
+    int getSize() const { return valueSize; }
+    void marshal(std::vector<unsigned char>& buf) const;
+};
+
 class Tuple {
    private:
     TuplePool* tuplePool;
