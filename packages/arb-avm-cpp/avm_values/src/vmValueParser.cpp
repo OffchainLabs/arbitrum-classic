@@ -25,7 +25,9 @@ const char* getContractData(const std::string& contract_filename) {
     std::ifstream myfile;
 
     struct stat filestatus;
-    stat(contract_filename.c_str(), &filestatus);
+    if (stat(contract_filename.c_str(), &filestatus) != 0) {
+        return nullptr;
+    }
 
     char* buf = static_cast<char*>(malloc(filestatus.st_size));
 
