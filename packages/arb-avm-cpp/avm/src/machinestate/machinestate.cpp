@@ -127,7 +127,6 @@ uint256_t MachineState::hash() const {
 bool MachineState::verifyMachineValidity() {
     int machine_size = 0;
 
-    machine_size += code.size();
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
 
@@ -153,20 +152,25 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
 
-    HashOnly nextHash(code[pc].nextHash, 1);
-    nextHash.marshal(buf);
+    //    HashOnly nextHash(code[pc].nextHash, 1);
+    //    nextHash.marshal(buf);
+    uint256_t_to_buf(code[pc].nextHash, buf);
 
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
 
-    HashOnly registerValHash(::hash(registerVal), ::getSize(registerVal));
-    registerValHash.marshal(buf);
+    uint256_t_to_buf(::hash(registerVal), buf);
+    uint256_t_to_buf(::hash(staticVal), buf);
+    uint256_t_to_buf(::hash(errpc), buf);
 
-    HashOnly staticValHash(::hash(staticVal), ::getSize(staticVal));
-    staticValHash.marshal(buf);
-
-    HashOnly errpcHash(::hash(errpc), ::getSize(errpc));
-    errpcHash.marshal(buf);
+    //    HashOnly registerValHash(::hash(registerVal), ::getSize(registerVal));
+    //    registerValHash.marshal(buf);
+    //
+    //    HashOnly staticValHash(::hash(staticVal), ::getSize(staticVal));
+    //    staticValHash.marshal(buf);
+    //
+    //    HashOnly errpcHash(::hash(errpc), ::getSize(errpc));
+    //    errpcHash.marshal(buf);
 
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
@@ -462,8 +466,15 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /**********************/
             /*  System Operations */
             /**********************/
-        case OpCode::SEND:
-            return machineoperation::send(*this);
+        case OpCode::SEND: {
+            auto send_results = machineoperation::send(*this);
+
+            if (send_results.success == false) {
+                std::cerr << "Send failure: over size limit" << std::endl;
+            }
+
+            return send_results.block_reason;
+        }
         case OpCode::GETTIME:
             machineoperation::getTime(*this);
             break;

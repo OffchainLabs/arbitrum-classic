@@ -25,14 +25,44 @@
 #include <bigint_utils.hpp>
 
 uint256_t Datastack::hash() const {
-    if (values.empty()) {
-        return ::hash(Tuple());
-    }
-    calculateAllHashes();
-    return hashes.back().getHash();
+    auto h_value = getStackHashValue();
+    return h_value.getHash();
 }
 
-std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
+int Datastack::getTotalValueSize() const {
+    auto h_value = getStackHashValue();
+    return h_value.getSize();
+}
+
+HashOnly Datastack::getStackHashValue() const {
+    if (values.empty()) {
+        return HashOnly(::hash(Tuple()), 1);
+    } else {
+        calculateAllHashes();
+        return hashes.back();
+    }
+}
+
+HashPreImage Datastack::getHashPreImage() const {
+    if (values.empty()) {
+        return Tuple().getHashPreImage();
+    } else {
+        calculateAllHashes();
+        auto current_val = values[values.size() - 1];
+        value prev_val;
+        if (values.size() == 1) {
+            prev_val = HashOnly(::hash(Tuple()), 1);
+        } else {
+            prev_val = hashes[values.size() - 2];
+        }
+
+        TuplePool pool;
+        auto tup = Tuple(current_val, prev_val, &pool);
+        return tup.getHashPreImage();
+    }
+}
+
+std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<bool>& stackInfo) {
     calculateAllHashes();
     Datastack c = *this;
@@ -47,8 +77,7 @@ std::pair<HashOnly, std::vector<unsigned char>> Datastack::marshalForProof(
             hashOnly.marshal(buf);
         }
     }
-    HashOnly hashOnly(c.hash(), c.getTotalValueSize());
-    return std::make_pair(hashOnly, std::move(buf));
+    return std::make_pair(c.getHashPreImage(), std::move(buf));
 }
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val) {

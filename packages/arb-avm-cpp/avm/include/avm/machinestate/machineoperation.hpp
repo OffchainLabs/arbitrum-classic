@@ -23,6 +23,11 @@ struct MachineState;
 
 const int send_size_limit = 10000;
 
+struct SendResults {
+    BlockReason block_reason;
+    bool success;
+};
+
 namespace machineoperation {
 void add(MachineState& m);
 void mul(MachineState& m);
@@ -73,7 +78,7 @@ void tlen(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
-BlockReason send(MachineState& m);
+SendResults send(MachineState& m);
 void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
 }  // namespace machineoperation

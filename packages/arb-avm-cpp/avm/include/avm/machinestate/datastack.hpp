@@ -32,6 +32,7 @@ class Datastack {
     void addHash() const;
     void calculateAllHashes() const;
     void initializeDataStack(const Tuple& tuple);
+    HashOnly getStackHashValue() const;
     Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
@@ -82,7 +83,7 @@ class Datastack {
         }
     }
 
-    std::pair<HashOnly, std::vector<unsigned char>> marshalForProof(
+    std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
         const std::vector<bool>& stackInfo);
 
     value& peek() {
@@ -93,17 +94,13 @@ class Datastack {
         return values.back();
     }
 
-    int getTotalValueSize() {
-        if (values.empty()) {
-            return 1;
-        }
-        calculateAllHashes();
-        return hashes.back().getSize();
-    }
-
     uint64_t stacksize() { return values.size(); }
 
     uint256_t hash() const;
+
+    HashPreImage getHashPreImage() const;
+
+    int getTotalValueSize() const;
 
     SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
 

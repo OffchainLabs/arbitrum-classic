@@ -30,3 +30,11 @@ std::ostream& operator<<(std::ostream& os, const HashOnly& val) {
     os << "HashOnly(" << val.getHash() << ")";
     return os;
 }
+
+void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
+    buf.insert(buf.end(), firstHash.begin(), firstHash.end());
+
+    std::array<unsigned char, 32> tmpbuf;
+    to_big_endian(valueSize, tmpbuf.begin());
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}

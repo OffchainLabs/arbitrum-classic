@@ -190,7 +190,7 @@ contract ExecutionChallenge is BisectionChallenge {
         public
         asserterAction
     {
-        setPreCondition(_beforeHash,
+        verifyPreCondition(_beforeHash,
                         _timeBoundsBlocks,
                         _beforeInbox,
                         _beforeInboxValueSize,
@@ -222,7 +222,7 @@ contract ExecutionChallenge is BisectionChallenge {
         _asserterWin();
     }
 
-    function setPreCondition(
+    function verifyPreCondition(
         bytes32 _beforeHash,
         uint128[2] memory _timeBoundsBlocks,
         bytes32 _beforeInbox,

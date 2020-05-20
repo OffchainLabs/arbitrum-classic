@@ -947,7 +947,12 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        return (true, val1.hash().hash);
+
+        if(val1.size <= send_size_limit){
+            return (true, val1.hash().hash);
+        }else{
+            return (true, 0);
+        }
     }
 
     function executeInboxInsn(
@@ -1505,21 +1510,23 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            // what would the proof check be since the machine should go in an error state
-            // if the value is larger than the send limit
-            require(stackVals[0].size <= send_size_limit, "send data should be less than size limit");
-
+            //make sure correct
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstMessage,
-                            messageHash
-                        )
-                    ) == _data.lastMessage,
-                    "sent message doesn't match output message"
-                );
+                if(messageHash == 0){
+                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, must not send");
+                }else{
+                    require(
+                        keccak256(
+                            abi.encodePacked(
+                                _data.firstMessage,
+                                messageHash
+                            )
+                        ) == _data.lastMessage,
+                        "sent message doesn't match output message"
+                    );
+                }
+
                 require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
             } else {
                 messageHash = 0;
@@ -1550,6 +1557,9 @@ library OneStepProof {
                 endMachine.instructionStackHash = endMachine.errHandler;
             }
         }
+
+        // require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
+        // require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         require(
             _data.beforeHash == startMachine.hash(),

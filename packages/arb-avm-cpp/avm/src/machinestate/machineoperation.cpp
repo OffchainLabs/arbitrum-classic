@@ -576,20 +576,23 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason send(MachineState& m) {
+SendResults send(MachineState& m) {
     m.stack.prepForMod(1);
 
     auto val_size = getSize(m.stack[0]);
+    bool success;
 
     if (val_size > send_size_limit) {
-        return ErrorBlocked();
+        success = false;
     } else {
         m.context.outMessage.push_back(std::move(m.stack[0]));
         m.stack.popClear();
         ++m.pc;
 
-        return NotBlocked();
+        success = true;
     }
+
+    return SendResults{NotBlocked(), success};
 }
 
 void getTime(MachineState& m) {

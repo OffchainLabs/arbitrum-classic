@@ -179,31 +179,40 @@ library Machine {
     {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
+        bytes32 hashVal;
         bool valid;
-        (valid, offset, m.instructionStackHash) = Value.deserializeHashValue(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.dataStackHash) = Value.deserializeHashValue(data, offset);
+        m.instructionStackHash = Value.newHashOnly(hashVal, 1);
+
+        (valid, offset, m.dataStackHash) = Value.deserializeHashPreImage(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.auxStackHash) = Value.deserializeHashValue(data, offset);
+        (valid, offset, m.auxStackHash) = Value.deserializeHashPreImage(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.registerHash) = Value.deserializeHashValue(data, offset);
+        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.staticHash) = Value.deserializeHashValue(data, offset);
+        m.registerHash = Value.newHashOnly(hashVal, 1);
+
+        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.errHandler) = Value.deserializeHashValue(data, offset);
+        m.staticHash = Value.newHashOnly(hashVal, 1);
+
+        (valid, offset, hashVal) = Value.deserializeHash(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
+        m.errHandler = Value.newHashOnly(hashVal, 1);
+
         return (true, offset, m);
     }
 }

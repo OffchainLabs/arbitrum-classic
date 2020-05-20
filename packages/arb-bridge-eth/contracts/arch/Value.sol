@@ -248,6 +248,28 @@ library Value {
         return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
     }
 
+    function deserializeHash(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            bytes32)
+    {
+        bytes32 hashData;
+        uint256 totalLength = data.length;
+
+        if (totalLength < startOffset || totalLength - startOffset < 32) {
+            return (false, startOffset, hashData);
+        }else{
+            hashData = data.toBytes32(startOffset);
+            return (true, startOffset + 32, hashData);
+        }
+    }
+
     function deserializeHashValue(
         bytes memory data,
         uint256 startOffset
@@ -275,6 +297,41 @@ library Value {
 
         if(valid){
             hashValue = newHashOnly(hashData, size);
+
+            return (true, startOffset, hashValue);
+        }else{
+            return (false, startOffset, hashValue);
+        }
+    }
+
+    function deserializeHashPreImage(
+        bytes memory data,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(
+            bool, // valid
+            uint256, // offset
+            Data memory
+        )
+    {
+        Data memory hashValue;
+        uint256 size;
+        bool valid;
+
+        uint256 totalLength = data.length;
+        if (totalLength < startOffset || totalLength - startOffset < 64) {
+            return (false, startOffset, hashValue);
+        }
+
+        bytes32 hashData = data.toBytes32(startOffset);
+        startOffset += 32;
+        (valid, startOffset, size) = deserializeInt(data, startOffset);
+
+        if(valid){
+            bytes32 computedHash = hashTuplePreImage(hashData, size);
+            hashValue = newHashOnly(computedHash, size);
 
             return (true, startOffset, hashValue);
         }else{
