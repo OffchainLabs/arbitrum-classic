@@ -3,6 +3,7 @@ ExternalProject_Add(secp256k1_ext
   GIT_REPOSITORY "https://github.com/bitcoin-core/secp256k1.git"
   GIT_TAG "master"
   SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/secp256k1"
+  INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CONFIGURE_COMMAND ./autogen.sh COMMAND <SOURCE_DIR>/configure --enable-module-recovery --prefix <INSTALL_DIR>
   BUILD_COMMAND make
   UPDATE_COMMAND ""
@@ -25,6 +26,7 @@ ExternalProject_Add(libff_ext
   GIT_REPOSITORY "https://github.com/scipr-lab/libff"
   GIT_TAG "master"
   SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libff"
+  INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CMAKE_ARGS -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
              -DOPENSSL_INCLUDE_DIR=${OPENSSL_ROOT_DIR}/include
              -DWITH_PROCPS=OFF
