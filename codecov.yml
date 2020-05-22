@@ -2,8 +2,12 @@ coverage:
   status:
     project:
       default: off
-      build:
-        flags: [unit, integration]
+      unit:
+        flags:
+          - unit
+      integration:
+        flags:
+          - integration
 
 flags: unit
   integration
