@@ -99,9 +99,17 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
         if (includeVal) {
             ::marshalShallow(*immediate, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            HashOnly hashOnly(*immediate);
-            hashOnly.marshal(buf);
+            if (nonstd::holds_alternative<Tuple>(*immediate)) {
+                buf.push_back(HASH_ONLY);
+                auto tup = nonstd::get<Tuple>(*immediate);
+                auto image = tup.getHashPreImage();
+                image.marshal(buf);
+            } else {
+                ::marshalShallow(*immediate, buf);
+            }
+            //            buf.push_back(HASH_ONLY);
+            //            HashOnly hashOnly(*immediate);
+            //            hashOnly.marshal(buf);
         }
     } else {
         buf.push_back(0);

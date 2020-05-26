@@ -73,9 +73,14 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
         if (si) {
             marshalShallow(val, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            HashOnly hashOnly(val);
-            hashOnly.marshal(buf);
+            if (nonstd::holds_alternative<Tuple>(val)) {
+                buf.push_back(HASH_ONLY);
+                auto tup = nonstd::get<Tuple>(val);
+                auto image = tup.getHashPreImage();
+                image.marshal(buf);
+            } else {
+                marshalShallow(val, buf);
+            }
         }
     }
     return std::make_pair(c.getHashPreImage(), std::move(buf));

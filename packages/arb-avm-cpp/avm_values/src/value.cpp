@@ -117,9 +117,14 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
         if (nonstd::holds_alternative<uint256_t>(itemval)) {
             marshalShallow(itemval, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            HashOnly hval(val.get_element(i));
-            hval.marshal(buf);
+            if (nonstd::holds_alternative<Tuple>(val.get_element(i))) {
+                buf.push_back(HASH_ONLY);
+                auto tup = nonstd::get<Tuple>(val.get_element(i));
+                auto image = tup.getHashPreImage();
+                image.marshal(buf);
+            } else {
+                ::marshalShallow(val.get_element(i), buf);
+            }
         }
     }
 }
