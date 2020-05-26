@@ -744,8 +744,8 @@ uint256_t& assumeInt(value& val) {
     return *aNum;
 }
 
-TEST_CASE("ECDSA opcode is correct") {
-    SECTION("ecdsa") {
+TEST_CASE("ecrecover opcode is correct") {
+    SECTION("ecrecover") {
         MachineState s;
         s.initialize_machinestate(test_ecrecover_path);
         auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |

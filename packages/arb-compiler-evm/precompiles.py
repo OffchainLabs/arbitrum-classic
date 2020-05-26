@@ -16,6 +16,10 @@ import arbitrum as arb
 
 
 def infiniteCounterLoop(vm):
+    vm.push(0)
+    vm.push(0)
+    vm.push(0)
+    vm.push(0)
     vm.ecrecover()
 
 

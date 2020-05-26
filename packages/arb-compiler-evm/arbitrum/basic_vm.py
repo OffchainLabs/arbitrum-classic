@@ -360,7 +360,7 @@ class BasicVM:
 
     def ecrecover(self):
         self.stack.push(0)
-        print("ECDSA does not yet support native python execution")
+        print("ecrecover does not yet support native python execution")
         exit()
 
     def gettime(self):
