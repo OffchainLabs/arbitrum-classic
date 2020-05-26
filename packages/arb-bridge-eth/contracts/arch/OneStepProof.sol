@@ -1510,11 +1510,10 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            //make sure correct
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
                 if(messageHash == 0){
-                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, must not send");
+                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, msg must be nonzero");
                 }else{
                     require(
                         keccak256(
@@ -1525,9 +1524,9 @@ library OneStepProof {
                         ) == _data.lastMessage,
                         "sent message doesn't match output message"
                     );
-                }
 
-                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                }
             } else {
                 messageHash = 0;
             }
@@ -1558,19 +1557,19 @@ library OneStepProof {
             }
         }
 
-        // require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
+        require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
+        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
-        require(
-            _data.beforeHash == startMachine.hash(),
-            string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
-            " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
-        );
-        require(
-            _data.afterHash == endMachine.hash(),
-            string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-            " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        );
+        // require(
+        //     _data.beforeHash == startMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
+        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
+        // );
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        // );
 
         return 0;
     }
