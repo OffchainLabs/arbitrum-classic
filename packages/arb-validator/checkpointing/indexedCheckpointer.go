@@ -41,6 +41,7 @@ type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
 	bs                    machine.BlockStore
+	ns                    machine.NodeStore
 	nextCheckpointToWrite *writableCheckpoint
 }
 
@@ -94,6 +95,7 @@ func newIndexedCheckpointerFactory(
 		new(sync.Mutex),
 		cCheckpointer,
 		cCheckpointer.GetBlockStore(),
+		cCheckpointer.GetNodeStore(),
 		nil,
 	}, nil
 }
@@ -138,6 +140,22 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, RestoreContext) error) error {
 	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
+}
+
+func (cp *IndexedCheckpointer) CheckpointConfirmed(
+	nodeHash common.Hash,
+	depth uint64,
+	nodeData []byte,
+	cpCtx *CheckpointContext,
+) error {
+	if _, err := cp.ns.GetNode(depth, nodeHash); err == nil {
+		// Node already exists so don't bother inserting
+		return nil
+	}
+	if err := saveCheckpointContext(cp.db, cpCtx); err != nil {
+		return err
+	}
+	return cp.ns.PutNode(depth, nodeHash, nodeData)
 }
 
 func restoreLatestState(

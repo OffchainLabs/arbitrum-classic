@@ -107,3 +107,7 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *checkpointing.CheckpointContext) {
 	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }
+
+func (e evilRollupCheckpointer) CheckpointConfirmed(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *checkpointing.CheckpointContext) error {
+	return e.cp.CheckpointConfirmed(nodeHash, depth, nodeData, cpCtx)
+}
