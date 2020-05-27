@@ -32,7 +32,13 @@ type MaybeBlockId struct {
 	Err       error
 }
 
+type ChainTimeGetter interface {
+	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
+	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
+}
+
 type ArbClient interface {
+	ChainTimeGetter
 	SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
@@ -43,8 +49,6 @@ type ArbClient interface {
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 
 	GetBalance(ctx context.Context, account common.Address) (*big.Int, error)
-	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 }
 
 type ArbAuthClient interface {

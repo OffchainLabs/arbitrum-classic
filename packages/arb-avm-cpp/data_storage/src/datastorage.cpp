@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <data_storage/blockstore.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>
@@ -29,11 +30,20 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options;
     options.create_if_missing = true;
+    options.create_missing_column_families = true;
 
     txn_db_path = std::move(db_path);
+
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
+    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
+        rocksdb::kDefaultColumnFamilyName, rocksdb::ColumnFamilyOptions()));
+    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
+        "blocks", rocksdb::ColumnFamilyOptions()));
+
     rocksdb::TransactionDB* db = nullptr;
-    auto status =
-        rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
+    std::vector<rocksdb::ColumnFamilyHandle*> handles;
+    auto status = rocksdb::TransactionDB::Open(
+        options, txn_options, txn_db_path, column_families, &handles, &db);
 
     if (!status.ok()) {
         std::cerr << "rocksdb construction status: " << status.ToString()
@@ -42,15 +52,17 @@ DataStorage::DataStorage(const std::string& db_path) {
         throw std::exception();
     }
     assert(status.ok());
-    txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
-}
-
-DataStorage::~DataStorage() {
-    txn_db->Close();
+    txn_db = std::shared_ptr<rocksdb::TransactionDB>(db);
+    default_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
+    blocks_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    return txn_db->Close();
+    blocks_column.reset();
+    default_column.reset();
+    auto s = txn_db->Close();
+    txn_db.reset();
+    return s;
 }
 
 GetResults DataStorage::getValue(
@@ -74,12 +86,19 @@ GetResults DataStorage::getValue(
 
 std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
-    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
-    return std::make_unique<Transaction>(transaction);
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<Transaction>(std::move(transaction));
 }
 
 std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
     rocksdb::WriteOptions writeOptions;
-    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
-    return std::make_unique<KeyValueStore>(transaction);
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<KeyValueStore>(std::move(transaction),
+                                           default_column);
+}
+
+std::unique_ptr<BlockStore> DataStorage::getBlockStore() const {
+    return std::make_unique<BlockStore>(txn_db, blocks_column);
 }

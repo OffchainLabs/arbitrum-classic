@@ -2,52 +2,15 @@ coverage:
   status:
     project:
       default: off
-      build:
+      unit:
         flags:
-          [
-            arb_avm_cpp,
-            arb_avm_go,
-            arb_bridge_eth,
-            arb_compiler_evm,
-            arb_provider_ethers,
-            arb_provider_go,
-            arb_provider_truffle,
-            arb_provider_web3,
-            arb_util,
-            arb-validator,
-          ]
+          - unit
+      integration:
+        flags:
+          - integration
 
-flags:
-  arb_avm_cpp:
-    paths:
-      - packages/arb-avm-cpp
-  arb_avm-go:
-    paths:
-      - packages/arb-avm-go
-  arb_bridge_eth:
-    paths:
-      - packages/arb-bridge-eth
-  arb_compiler_evm:
-    paths:
-      - packages/arb-compiler-evm
-  arb_provider_ethers:
-    paths:
-      - packages/arb-provider-ethers
-  arb_provider_go:
-    paths:
-      - packages/arb-provider-go
-  arb_provider_truffle:
-    paths:
-      - packages/arb-provider-truffle
-  arb_provider_web3:
-    paths:
-      - packages/arb-provider-web3
-  arb_util:
-    paths:
-      - packages/arb-util
-  arb_validator:
-    paths:
-      - packages/arb-validator
+flags: unit
+  integration
 
 ignore:
   - 'packages/arb-validator-core/ethbridge/arbfactory/*'

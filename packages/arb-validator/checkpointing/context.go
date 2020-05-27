@@ -22,93 +22,57 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type CheckpointContext interface {
-	AddValue(value.Value)
-	AddMachine(machine.Machine)
-	Manifest() *CheckpointManifest
-	Values() map[common.Hash]value.Value
-	Machines() map[common.Hash]machine.Machine
-}
-
 type RestoreContext interface {
 	GetValue(common.Hash) value.Value
 	GetMachine(common.Hash) machine.Machine
 }
 
-type CheckpointContextImpl struct {
+type CheckpointContext struct {
 	values   map[common.Hash]value.Value
 	machines map[common.Hash]machine.Machine
 }
 
-func NewCheckpointContextImpl() *CheckpointContextImpl {
-	return &CheckpointContextImpl{
+func NewCheckpointContext() *CheckpointContext {
+	return &CheckpointContext{
 		values:   make(map[common.Hash]value.Value),
 		machines: make(map[common.Hash]machine.Machine),
 	}
 }
 
-func (ctx *CheckpointContextImpl) AddValue(val value.Value) {
+func (ctx *CheckpointContext) AddValue(val value.Value) {
 	ctx.values[val.Hash()] = val
 }
 
-func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
+func (ctx *CheckpointContext) AddMachine(mach machine.Machine) {
 	if ctx.machines[mach.Hash()] == nil {
 		ctx.machines[mach.Hash()] = mach.Clone()
 	}
 }
 
-func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
-	vals := []*common.HashBuf{}
-	for h, _ := range ctx.values {
+func (ctx *CheckpointContext) Manifest() *CheckpointManifest {
+	vals := make([]*common.HashBuf, 0, len(ctx.values))
+	for h := range ctx.values {
 		vals = append(vals, h.MarshalToBuf())
 	}
-	machines := []*common.HashBuf{}
-	for h, _ := range ctx.machines {
+	machines := make([]*common.HashBuf, 0, len(ctx.machines))
+	for h := range ctx.machines {
 		machines = append(machines, h.MarshalToBuf())
 	}
 	return &CheckpointManifest{Values: vals, Machines: machines}
 }
 
-func (ctx *CheckpointContextImpl) Values() map[common.Hash]value.Value {
+func (ctx *CheckpointContext) Values() map[common.Hash]value.Value {
 	return ctx.values
 }
 
-func (ctx *CheckpointContextImpl) Machines() map[common.Hash]machine.Machine {
+func (ctx *CheckpointContext) Machines() map[common.Hash]machine.Machine {
 	return ctx.machines
 }
 
-func (ctx *CheckpointContextImpl) GetValue(h common.Hash) value.Value {
+func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
 	return ctx.values[h]
 }
 
-func (ctx *CheckpointContextImpl) GetMachine(h common.Hash) machine.Machine {
+func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
 	return ctx.machines[h]
-}
-
-type SimpleRestoreContext struct {
-	values   map[common.Hash]value.Value
-	machines map[common.Hash]machine.Machine
-}
-
-func NewSimpleRestoreContext() *SimpleRestoreContext {
-	return &SimpleRestoreContext{
-		values:   make(map[common.Hash]value.Value),
-		machines: make(map[common.Hash]machine.Machine),
-	}
-}
-
-func (src *SimpleRestoreContext) GetValue(h common.Hash) value.Value {
-	return src.values[h]
-}
-
-func (src *SimpleRestoreContext) GetMachine(h common.Hash) machine.Machine {
-	return src.machines[h]
-}
-
-func (src *SimpleRestoreContext) AddValue(val value.Value) {
-	src.values[val.Hash()] = val
-}
-
-func (src *SimpleRestoreContext) AddMachine(mach machine.Machine) {
-	src.machines[mach.Hash()] = mach
 }

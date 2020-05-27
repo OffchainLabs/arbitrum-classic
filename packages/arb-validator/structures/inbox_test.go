@@ -188,6 +188,6 @@ func TestInboxInsert(t *testing.T) {
 }
 
 func marshalUnmarshal(pi *Inbox) (*MessageStack, error) {
-	ctx := checkpointing.NewCheckpointContextImpl()
+	ctx := checkpointing.NewCheckpointContext()
 	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }

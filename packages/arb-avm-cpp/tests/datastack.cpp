@@ -15,6 +15,7 @@
  */
 
 #include "config.hpp"
+#include "helper.hpp"
 
 #include <avm/machinestate/datastack.hpp>
 
