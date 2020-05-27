@@ -125,6 +125,7 @@ type txTracker struct {
 	txRequestIndex int
 	transactions   map[common.Hash]txInfo
 	assertionInfo  []*assertionInfo
+	assertionMap   map[common.Hash]*assertionInfo
 	accountNonces  map[common.Address]uint64
 	vmID           common.Address
 	requests       chan validatorRequest
@@ -138,6 +139,7 @@ func newTxTracker(
 		txRequestIndex: 0,
 		transactions:   make(map[common.Hash]txInfo),
 		assertionInfo:  make([]*assertionInfo, 0),
+		assertionMap:   make(map[common.Hash]*assertionInfo),
 		accountNonces:  make(map[common.Address]uint64),
 		vmID:           vmID,
 		requests:       requests,
@@ -243,19 +245,14 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 		tr.transactions[msg.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
+	tr.assertionMap[info.AssertNodeHash] = info
 }
 
 func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
 	case outputMsgRequest:
-		assertionVal := newAssertionInfo()
-		for _, assertion := range tr.assertionInfo {
-			if request.assertionNodeHash == assertion.AssertNodeHash {
-				assertionVal = assertion
-				break
-			}
-		}
-		if request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
+		assertionVal, ok := tr.assertionMap[request.assertionNodeHash]
+		if ok && request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
 			val := assertionVal.OutMessages[request.msgIndex]
 			request.resultChan <- val
 		} else {

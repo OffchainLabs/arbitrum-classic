@@ -121,6 +121,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferEth(msg.sender, paymentOwner, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -136,6 +138,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferERC20(msg.sender, paymentOwner, erc20, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -151,6 +155,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+            
             return (true, offset);
         } else {
             return (false, startOffset);

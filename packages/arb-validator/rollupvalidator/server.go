@@ -109,7 +109,6 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 }
 
 func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
-	fmt.Println(args.AssertionNodeHash)
 	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
 	if err != nil {
 		return nil, err

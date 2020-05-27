@@ -131,7 +131,7 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) error {
 	return rollup.MakeAssertion(
 		ctx,
-		prepared.prevLeafHash,
+		prepared.prevPrevLeafHash,
 		prepared.prevDataHash,
 		prepared.prevDeadline,
 		prepared.prevChildType,

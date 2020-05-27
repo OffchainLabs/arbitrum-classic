@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbClient, EVMCode, EVMResult, TxMessage, ArbMessage } from './client'
+import { ArbClient, EVMCode, EVMResult, TxMessage } from './client'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
 import { Contract } from './contract'
@@ -45,7 +45,6 @@ function sleep(ms: number): Promise<void> {
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated'
 const EB_EVENT_CDA = 'RollupAsserted'
-const EB_EVENT_NODE = 'RollupStakeMoved'
 const TransactionMessageDelivered = 'TransactionMessageDelivered'
 const EthDepositMessageDelivered = 'EthDepositMessageDelivered'
 const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered'

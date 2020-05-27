@@ -45,6 +45,11 @@ message GetOutputMessageArgs {
     string MsgIndex = 2;
 }
 
+message GetOutputMessageReply {
+    bool found = 1;
+    string rawVal = 2;
+}
+
 message GetMessageResultArgs {
     string txHash = 1;
 }
@@ -56,11 +61,6 @@ message GetMessageResultReply {
     string logPostHash = 4;
     repeated string logValHashes = 5;
     string onChainTxHash = 6;
-}
-
-message GetOutputMessageReply {
-    bool found = 1;
-    string rawVal = 2;
 }
 
 message GetAssertionCountArgs {

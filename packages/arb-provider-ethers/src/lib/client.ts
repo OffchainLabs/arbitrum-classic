@@ -407,7 +407,6 @@ interface MessageResult {
 
 interface OutputMessage {
   outputMsg: ArbValue.Value
-  vmId: string
 }
 
 export class ArbClient {
@@ -417,7 +416,7 @@ export class ArbClient {
     this.client = _arbClient(managerUrl)
   }
 
-  public async getOutputMssage(
+  public async getOutputMessage(
     AssertionNodeHash: string,
     msgIndex: string
   ): Promise<OutputMessage | null> {
@@ -444,12 +443,10 @@ export class ArbClient {
       }
     )
     if (msgResult.found) {
-      const vmId = await this.getVmID()
       const val = ArbValue.unmarshal(msgResult.rawVal)
 
       return {
         outputMsg: val,
-        vmId: vmId,
       }
     } else {
       return null

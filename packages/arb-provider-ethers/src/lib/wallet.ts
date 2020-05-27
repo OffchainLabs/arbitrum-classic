@@ -176,7 +176,7 @@ export class ArbWallet extends ethers.Signer {
       nodeHash,
       msgIndex
     )
-    return this.provider._wrapTransaction(tx, tx.hash)
+    return tx
   }
 
   public async sendTransactionMessage(
