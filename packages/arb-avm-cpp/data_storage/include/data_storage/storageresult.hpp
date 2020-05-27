@@ -18,6 +18,7 @@
 #define storageresult_hpp
 
 #include <rocksdb/status.h>
+#include <data_storage/storageresultfwd.hpp>
 
 #include <vector>
 
@@ -45,9 +46,10 @@ struct DbResult {
     T data;
 };
 
-struct DataResults {
+template <typename T>
+struct ValueResult {
     rocksdb::Status status;
-    std::vector<unsigned char> data;
+    T data;
 };
 
 #endif /* checkpointresult_hpp */

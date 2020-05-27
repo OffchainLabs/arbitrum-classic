@@ -17,10 +17,10 @@
 #ifndef keyvaluestore_hpp
 #define keyvaluestore_hpp
 
+#include <data_storage/storageresultfwd.hpp>
+
 #include <memory>
 #include <vector>
-
-struct DataResults;
 
 namespace rocksdb {
 class Transaction;

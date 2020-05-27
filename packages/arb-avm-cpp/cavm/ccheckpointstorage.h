@@ -16,35 +16,13 @@
 #ifndef ccheckpointstorage_h
 #define ccheckpointstorage_h
 
+#include "ctypes.h"
+
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-struct ByteSliceStruct {
-    void* data;
-    int length;
-};
-typedef struct ByteSliceStruct ByteSlice;
-
-typedef struct {
-    ByteSlice slice;
-    int found;
-} ByteSliceResult;
-
-typedef struct {
-    void* data;
-    int count;
-} HashList;
-
-typedef struct {
-    ByteSlice* slices;
-    int count;
-} ByteSliceArray;
-
-typedef void CMachine;
-typedef void CCheckpointStorage;
 
 CCheckpointStorage* createCheckpointStorage(const char* filename,
                                             const char* contract_path);
@@ -62,29 +40,15 @@ int saveData(CCheckpointStorage* storage_ptr,
              int key_length,
              const void* data,
              int data_length);
-ByteSlice getData(CCheckpointStorage* storage_ptr,
-                  const void* key,
-                  int key_length);
+ByteSliceResult getData(CCheckpointStorage* storage_ptr,
+                        const void* key,
+                        int key_length);
 int deleteData(CCheckpointStorage* storage_ptr,
                const void* key,
                int key_length);
 
-int putBlock(CCheckpointStorage* storage_ptr,
-             const void* height,
-             const void* hash,
-             const void* data,
-             int data_length);
-int deleteBlock(CCheckpointStorage* storage_ptr,
-                const void* height,
-                const void* hash);
-ByteSliceResult getBlock(const CCheckpointStorage* storage_ptr,
-                         const void* height,
-                         const void* hash);
-HashList blockHashesAtHeight(const CCheckpointStorage* storage_ptr,
-                             const void* height);
-int isBlockStoreEmpty(const CCheckpointStorage* storage_ptr);
-void* maxBlockStoreHeight(const CCheckpointStorage* storage_ptr);
-void* minBlockStoreHeight(const CCheckpointStorage* storage_ptr);
+CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr);
+CNodeStore* createNodeStore(CCheckpointStorage* storage_ptr);
 
 #ifdef __cplusplus
 }

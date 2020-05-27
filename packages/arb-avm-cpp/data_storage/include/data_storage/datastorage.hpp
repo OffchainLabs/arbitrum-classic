@@ -22,13 +22,14 @@
 #include <vector>
 
 #include <data_storage/keyvaluestore.hpp>
+#include <data_storage/storageresultfwd.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-struct GetResults;
 class BlockStore;
+class NodeStore;
 
 class DataStorage {
    private:
@@ -36,6 +37,7 @@ class DataStorage {
     std::shared_ptr<rocksdb::TransactionDB> txn_db;
     std::shared_ptr<rocksdb::ColumnFamilyHandle> default_column;
     std::shared_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
+    std::shared_ptr<rocksdb::ColumnFamilyHandle> nodes_column;
 
    public:
     DataStorage(const std::string& db_path);
@@ -45,6 +47,7 @@ class DataStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
 
     std::unique_ptr<BlockStore> getBlockStore() const;
+    std::unique_ptr<NodeStore> getNodeStore() const;
 };
 
 #endif /* datastorage_hpp */

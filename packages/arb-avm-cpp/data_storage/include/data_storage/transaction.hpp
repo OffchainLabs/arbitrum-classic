@@ -17,12 +17,10 @@
 #ifndef transaction_hpp
 #define transaction_hpp
 
+#include <data_storage/storageresultfwd.hpp>
+
 #include <memory>
 #include <vector>
-
-struct DeleteResults;
-struct GetResults;
-struct SaveResults;
 
 namespace rocksdb {
 class Transaction;

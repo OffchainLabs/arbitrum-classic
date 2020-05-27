@@ -40,6 +40,7 @@ var errNoMatchingCheckpoint = errors.New("cannot restore because no matching che
 type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
+	bs                    machine.BlockStore
 	nextCheckpointToWrite *writableCheckpoint
 }
 
@@ -62,7 +63,7 @@ func NewIndexedCheckpointerFactory(
 	}
 
 	go ret.writeDaemon()
-	go cleanupDaemon(ret.db, maxReorgHeight)
+	go cleanupDaemon(ret.bs, ret.db, maxReorgHeight)
 	return ret
 }
 
@@ -92,6 +93,7 @@ func newIndexedCheckpointerFactory(
 	return &IndexedCheckpointer{
 		new(sync.Mutex),
 		cCheckpointer,
+		cCheckpointer.GetBlockStore(),
 		nil,
 	}, nil
 }
@@ -106,7 +108,7 @@ func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 }
 
 func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
-	return !cp.db.IsBlockStoreEmpty()
+	return !cp.bs.IsBlockStoreEmpty()
 }
 
 func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -135,23 +137,29 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 }
 
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, RestoreContext) error) error {
-	return restoreLatestState(ctx, cp.db, clnt, unmarshalFunc)
+	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
 }
 
-func restoreLatestState(ctx context.Context, db machine.CheckpointStorage, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, RestoreContext) error) error {
-	if db.IsBlockStoreEmpty() {
+func restoreLatestState(
+	ctx context.Context,
+	bs machine.BlockStore,
+	db machine.CheckpointStorage,
+	clnt arbbridge.ChainTimeGetter,
+	unmarshalFunc func([]byte, RestoreContext) error,
+) error {
+	if bs.IsBlockStoreEmpty() {
 		return errNoCheckpoint
 	}
 
-	startHeight := db.MaxBlockStoreHeight()
-	lowestHeight := db.MinBlockStoreHeight()
+	startHeight := bs.MaxBlockStoreHeight()
+	lowestHeight := bs.MinBlockStoreHeight()
 
 	for height := startHeight; height.Cmp(lowestHeight) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
 			return err
 		}
-		blockData, err := db.GetBlock(onchainId)
+		blockData, err := bs.GetBlock(onchainId)
 		if err != nil {
 			// If no record was found, try the next block
 			continue
@@ -177,7 +185,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 		cp.nextCheckpointToWrite = nil
 		cp.Unlock()
 		if checkpoint != nil {
-			err := writeCheckpoint(cp.db, checkpoint)
+			err := writeCheckpoint(cp.bs, cp.db, checkpoint)
 			if err != nil {
 				log.Println("Error writing checkpoint: {}", err)
 			}
@@ -185,17 +193,10 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 	}
 }
 
-func writeCheckpoint(db machine.CheckpointStorage, wc *writableCheckpoint) error {
+func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *writableCheckpoint) error {
 	// save values and machines
-	for _, val := range wc.ckpCtx.Values() {
-		if ok := db.SaveValue(val); !ok {
-			return errors.New("failed to write value to checkpoint db")
-		}
-	}
-	for _, mach := range wc.ckpCtx.Machines() {
-		if ok := mach.Checkpoint(db); !ok {
-			return errors.New("failed to write machine to checkpoint db")
-		}
+	if err := saveCheckpointContext(db, wc.ckpCtx); err != nil {
+		return err
 	}
 
 	// save main checkpoint data
@@ -207,33 +208,33 @@ func writeCheckpoint(db machine.CheckpointStorage, wc *writableCheckpoint) error
 	if err != nil {
 		return err
 	}
-	if err := db.PutBlock(wc.blockId, bytesBuf); err != nil {
+	if err := bs.PutBlock(wc.blockId, bytesBuf); err != nil {
 		return errors.New("failed to write checkpoint to checkpoint db")
 	}
 
 	return nil
 }
 
-func cleanupDaemon(db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+func cleanupDaemon(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
 	ticker := time.NewTicker(common.NewTimeBlocksInt(25).Duration())
 	defer ticker.Stop()
 	for {
 		<-ticker.C
-		cleanup(db, maxReorgHeight)
+		cleanup(bs, db, maxReorgHeight)
 	}
 }
 
-func cleanup(db machine.CheckpointStorage, maxReorgHeight *big.Int) {
-	currentMin := db.MinBlockStoreHeight()
-	currentMax := db.MaxBlockStoreHeight()
+func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+	currentMin := bs.MinBlockStoreHeight()
+	currentMax := bs.MaxBlockStoreHeight()
 	height := common.NewTimeBlocks(new(big.Int).Sub(currentMin.AsInt(), big.NewInt(1)))
 	heightLimit := common.NewTimeBlocks(new(big.Int).Sub(currentMax.AsInt(), maxReorgHeight))
 	var prevIds []*common.BlockId
 	for height.Cmp(heightLimit) < 0 {
-		blockIds := db.BlocksAtHeight(height)
+		blockIds := bs.BlocksAtHeight(height)
 		if len(blockIds) > 0 {
 			for _, id := range prevIds {
-				_ = deleteCheckpointForKey(db, id)
+				_ = deleteCheckpointForKey(bs, db, id)
 			}
 			prevIds = blockIds
 		}
@@ -241,8 +242,8 @@ func cleanup(db machine.CheckpointStorage, maxReorgHeight *big.Int) {
 	}
 }
 
-func deleteCheckpointForKey(db machine.CheckpointStorage, id *common.BlockId) error {
-	val, err := db.GetBlock(id)
+func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage, id *common.BlockId) error {
+	val, err := bs.GetBlock(id)
 	if err != nil {
 		return err
 	}
@@ -250,7 +251,7 @@ func deleteCheckpointForKey(db machine.CheckpointStorage, id *common.BlockId) er
 	if err := proto.Unmarshal(val, ckp); err != nil {
 		return err
 	}
-	_ = db.DeleteBlock(id) // ignore error
+	_ = bs.DeleteBlock(id) // ignore error
 	if ckp.Manifest != nil {
 		for _, hbuf := range ckp.Manifest.Values {
 			h := hbuf.Unmarshal()

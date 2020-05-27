@@ -16,6 +16,7 @@
 
 #include <data_storage/blockstore.hpp>
 #include <data_storage/datastorage.hpp>
+#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>
 
@@ -39,6 +40,8 @@ DataStorage::DataStorage(const std::string& db_path) {
         rocksdb::kDefaultColumnFamilyName, rocksdb::ColumnFamilyOptions()));
     column_families.push_back(rocksdb::ColumnFamilyDescriptor(
         "blocks", rocksdb::ColumnFamilyOptions()));
+    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
+        "nodes", rocksdb::ColumnFamilyOptions()));
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -55,6 +58,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     txn_db = std::shared_ptr<rocksdb::TransactionDB>(db);
     default_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
     blocks_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
+    nodes_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
@@ -101,4 +105,8 @@ std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
 
 std::unique_ptr<BlockStore> DataStorage::getBlockStore() const {
     return std::make_unique<BlockStore>(txn_db, blocks_column);
+}
+
+std::unique_ptr<NodeStore> DataStorage::getNodeStore() const {
+    return std::make_unique<NodeStore>(txn_db, nodes_column);
 }

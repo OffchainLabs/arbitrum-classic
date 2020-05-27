@@ -45,11 +45,9 @@ typedef struct {
 } CBlockReason;
 
 typedef struct {
-    unsigned char* outMessageData;
-    int outMessageLength;
+    ByteSlice outMessages;
     int outMessageCount;
-    unsigned char* logData;
-    int logLength;
+    ByteSlice logs;
     int logCount;
     uint64_t numSteps;
     uint64_t numGas;
