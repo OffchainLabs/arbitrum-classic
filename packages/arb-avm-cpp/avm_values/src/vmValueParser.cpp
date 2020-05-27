@@ -18,7 +18,6 @@
 
 #include <bigint_utils.hpp>
 
-#include <sys/stat.h>
 #include <fstream>
 
 std::vector<char> getContractData(const std::string& contract_filename) {
