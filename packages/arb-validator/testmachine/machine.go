@@ -122,8 +122,6 @@ func (m *Machine) ExecuteAssertion(
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
 		}
-		pcStart := m.gomachine.GetPC()
-		fmt.Println("code point execution:   = = ", pcStart)
 		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 

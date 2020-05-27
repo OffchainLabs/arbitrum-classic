@@ -179,7 +179,7 @@ struct GetSize {
 
     int operator()(const Tuple& val) const { return val.getSize(); }
 
-    int operator()(const uint256_t& val) const { return val > -1; }
+    int operator()(const uint256_t& val) const { return val >= 0; }
 
     int operator()(const CodePoint& val) const { return val.getSize(); }
 };
