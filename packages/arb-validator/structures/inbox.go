@@ -148,7 +148,7 @@ func hash2(h1, h2 common.Hash) common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
 }
 
-func (ms *MessageStack) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *InboxBuf {
+func (ms *MessageStack) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *InboxBuf {
 	var items []*InboxItemBuf
 	for item := ms.newest; item != nil; item = item.prev {
 		checkpointVal := item.message.CheckpointValue()

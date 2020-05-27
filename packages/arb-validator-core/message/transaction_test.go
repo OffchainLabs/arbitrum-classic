@@ -53,13 +53,14 @@ func generateTestDeliveredTransaction() DeliveredTransaction {
 	return DeliveredTransaction{
 		Transaction: generateTestTransaction(),
 		BlockNum:    common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:   big.NewInt(65435643),
 	}
 }
 
 func TestMarshalTransaction(t *testing.T) {
 	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalTransaction(msg.AsValue(), generateTestChain())
+	msg2, err := UnmarshalTransaction(msg.asValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}

@@ -22,22 +22,20 @@ import (
 	"log"
 	"math/big"
 	"sync"
+	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/golang/protobuf/proto"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator-core) -I. -I .. --go_out=paths=source_relative:. *.proto"
 
 type ChainObserver struct {
 	*sync.RWMutex
@@ -112,7 +110,7 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx *checkpointing.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
@@ -124,7 +122,7 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx checkpointing.CheckpointCon
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx checkpointing.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx *checkpointing.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
@@ -192,12 +190,12 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := checkpointing.NewCheckpointContextImpl()
+	ckptCtx := checkpointing.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
 func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
@@ -360,10 +358,14 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 	}
 }
 
-func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
-	latestTime := chain.latestBlockId.Height
-	return &protocol.TimeBoundsBlocks{
-		latestTime,
-		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxTimeBoundsWidth)))),
+func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBounds {
+	latestBlock := chain.latestBlockId.Height
+	// Start timestamp slightly in the past to avoid it being invalid
+	latestTimestamp := time.Now().Unix() - 60
+	return &protocol.TimeBounds{
+		LowerBoundBlock:     latestBlock,
+		UpperBoundBlock:     common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.nodeGraph.params.MaxBlockBoundsWidth)))),
+		LowerBoundTimestamp: big.NewInt(latestTimestamp),
+		UpperBoundTimestamp: big.NewInt(latestTimestamp + int64(chain.nodeGraph.params.MaxTimestampBoundsWidth)),
 	}
 }

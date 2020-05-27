@@ -243,7 +243,7 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	node.hash = hash
 }
 
-func (node *Node) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *NodeBuf {
+func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeBuf {
 	var machineHash *common.HashBuf
 	if node.machine != nil {
 		ctx.AddMachine(node.machine)

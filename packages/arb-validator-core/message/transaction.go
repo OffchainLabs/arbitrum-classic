@@ -53,7 +53,11 @@ func (m Transaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
-func (m Transaction) Equals(o Transaction) bool {
+func (m Transaction) Equals(other Message) bool {
+	o, ok := other.(Transaction)
+	if !ok {
+		return false
+	}
 	return m.Chain == o.Chain &&
 		m.To == o.To &&
 		m.From == o.From &&
@@ -66,7 +70,7 @@ func (m Transaction) Type() MessageType {
 	return TransactionType
 }
 
-func (m Transaction) AsValue() value.Value {
+func (m Transaction) asValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
@@ -133,13 +137,14 @@ func (m Transaction) ReceiptHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 	)
 }
 
 type DeliveredTransaction struct {
 	Transaction
-	BlockNum *common.TimeBlocks
+	BlockNum  *common.TimeBlocks
+	Timestamp *big.Int
 }
 
 func (m DeliveredTransaction) Equals(other Message) bool {
@@ -148,11 +153,16 @@ func (m DeliveredTransaction) Equals(other Message) bool {
 		return false
 	}
 	return m.Transaction.Equals(o.Transaction) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0
+		m.BlockNum.Cmp(o.BlockNum) == 0 &&
+		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
-func (m DeliveredTransaction) DeliveredHeight() *common.TimeBlocks {
+func (m DeliveredTransaction) deliveredHeight() *common.TimeBlocks {
 	return m.BlockNum
+}
+
+func (m DeliveredTransaction) deliveredTimestamp() *big.Int {
+	return m.Timestamp
 }
 
 func (m DeliveredTransaction) CommitmentHash() common.Hash {
@@ -163,8 +173,9 @@ func (m DeliveredTransaction) CommitmentHash() common.Hash {
 		hashing.Address(m.From),
 		hashing.Uint256(m.SequenceNum),
 		hashing.Uint256(m.Value),
-		m.Data,
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
 		hashing.Uint256(m.BlockNum.AsInt()),
+		hashing.Uint256(m.Timestamp),
 	)
 }
 
@@ -177,49 +188,56 @@ func (m DeliveredTransaction) CheckpointValue() value.Value {
 		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
 		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 	})
 	return val
 }
 
 func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, error) {
 	tup, ok := v.(value.TupleValue)
-	if !ok || tup.Len() != 7 {
-		return DeliveredTransaction{}, errors.New("tx val must be 7-tuple")
+	failRet := DeliveredTransaction{}
+	if !ok || tup.Len() != 8 {
+		return failRet, errors.New("tx val must be 8-tuple")
 	}
 	chain, _ := tup.GetByInt64(0)
 	chainInt, ok := chain.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("chain must be int")
+		return failRet, errors.New("chain must be int")
 	}
 	to, _ := tup.GetByInt64(1)
 	toInt, ok := to.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("to must be int")
+		return failRet, errors.New("to must be int")
 	}
 	from, _ := tup.GetByInt64(2)
 	fromInt, ok := from.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("from must be int")
+		return failRet, errors.New("from must be int")
 	}
 	seq, _ := tup.GetByInt64(3)
 	seqInt, ok := seq.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("seq must be int")
+		return failRet, errors.New("seq must be int")
 	}
 	val, _ := tup.GetByInt64(4)
 	valInt, ok := val.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("chain must be int")
+		return failRet, errors.New("chain must be int")
 	}
 	data, _ := tup.GetByInt64(5)
 	dataBytes, err := ByteStackToHex(data)
 	if err != nil {
-		return DeliveredTransaction{}, err
+		return failRet, err
 	}
 	blockNum, _ := tup.GetByInt64(6)
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
-		return DeliveredTransaction{}, errors.New("blockNum must be int")
+		return failRet, errors.New("blockNum must be int")
+	}
+	timestamp, _ := tup.GetByInt64(7)
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be int")
 	}
 
 	return DeliveredTransaction{
@@ -231,6 +249,7 @@ func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, er
 			Value:       valInt.BigInt(),
 			Data:        dataBytes,
 		},
-		BlockNum: common.NewTimeBlocks(blockNumInt.BigInt()),
+		BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
+		Timestamp: timestampInt.BigInt(),
 	}, nil
 }

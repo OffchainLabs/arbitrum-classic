@@ -52,7 +52,7 @@ func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *Node
 	}
 }
 
-func (chain *NodeGraph) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *NodeGraphBuf {
+func (chain *NodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*NodeBuf
 	for _, n := range chain.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))

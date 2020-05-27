@@ -72,7 +72,7 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
-	clnt arbbridge.ArbClient,
+	clnt arbbridge.ChainTimeGetter,
 	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
 ) error {
 	return e.cp.RestoreLatestState(
@@ -104,6 +104,6 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx checkpointing.CheckpointContext, closeWhenDone chan struct{}) {
-	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx, closeWhenDone)
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *checkpointing.CheckpointContext) {
+	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }

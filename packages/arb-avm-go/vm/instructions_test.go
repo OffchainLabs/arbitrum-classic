@@ -44,9 +44,11 @@ func TestMachineAdd(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	tb := &protocol.TimeBoundsBlocks{
+	tb := &protocol.TimeBounds{
 		common.NewTimeBlocks(big.NewInt(0)),
 		common.NewTimeBlocks(big.NewInt(100000)),
+		big.NewInt(0),
+		big.NewInt(100000),
 	}
 	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue(), 0)
 }
@@ -759,9 +761,11 @@ func TestInbox(t *testing.T) {
 
 	NewMachineAssertionContext(
 		m,
-		&protocol.TimeBoundsBlocks{
+		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(100000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		messageStack.GetValue(),
 	)
@@ -1486,9 +1490,11 @@ func TestLog(t *testing.T) {
 	m.Stack().Push(value.NewInt64Value(5))
 	ad, _ := m.ExecuteAssertion(
 		10,
-		&protocol.TimeBoundsBlocks{
+		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(10000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1523,9 +1529,11 @@ func TestSend(t *testing.T) {
 	// send token 15 value=7 to dest 4
 	ad, _ := m.ExecuteAssertion(
 		10,
-		&protocol.TimeBoundsBlocks{
+		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(0)),
 			common.NewTimeBlocks(big.NewInt(10000)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
@@ -1555,15 +1563,23 @@ func TestGettime(t *testing.T) {
 
 	m.ExecuteAssertion(
 		10,
-		&protocol.TimeBoundsBlocks{
+		&protocol.TimeBounds{
 			common.NewTimeBlocks(big.NewInt(5)),
 			common.NewTimeBlocks(big.NewInt(10)),
+			big.NewInt(0),
+			big.NewInt(100000),
 		},
 		value.NewEmptyTuple(),
 		0,
 	)
 	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(5),
+		value.NewInt64Value(10),
+		value.NewInt64Value(0),
+		value.NewInt64Value(100000),
+	})
+	knownMachine.Stack().Push(tup)
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}

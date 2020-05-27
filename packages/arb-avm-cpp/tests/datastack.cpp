@@ -15,6 +15,7 @@
  */
 
 #include "config.hpp"
+#include "helper.hpp"
 
 #include <avm/machinestate/datastack.hpp>
 
@@ -309,6 +310,15 @@ TEST_CASE("Save and get datastack") {
 
         saveTwiceAndGetDataStack(saver, fetcher, datastack, hash_key_vector,
                                  tup_rep.calculateHash());
+    }
+    boost::filesystem::remove_all(dbpath);
+}
+
+TEST_CASE("Initial VM Values") {
+    SECTION("parse invalid path") {
+        TuplePool pool = TuplePool();
+        TuplePool& pool_ref = pool;
+        auto values = parseInitialVmValues("nonexistent/path", pool_ref);
     }
     boost::filesystem::remove_all(dbpath);
 }

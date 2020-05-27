@@ -20,26 +20,26 @@ pragma solidity ^0.5.3;
 library SigUtils {
 
     function parseSignature(
-        bytes memory _signatures,
-        uint256 _pos
+        bytes memory _data,
+        uint256 _start
     )
         internal
         pure
         returns (uint8 v, bytes32 r, bytes32 s)
     {
-        uint256 offset = _pos * 65;
+        uint256 offset = _start + 0x20;
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
         assembly { // solium-disable-line security/no-inline-assembly
-            r := mload(add(_signatures, add(32, offset)))
-            s := mload(add(_signatures, add(64, offset)))
+            r := mload(add(_data, offset))
+            s := mload(add(_data, add(0x20, offset)))
             // Here we are loading the last 32 bytes, including 31 bytes
             // of 's'. There is no 'mload8' to do this.
             //
             // 'byte' is not working due to the Solidity parser, so lets
             // use the second best option, 'and'
-            v := and(mload(add(_signatures, add(65, offset))), 0xff)
+            v := byte(0, mload(add(_data, add(offset, 0x40))))
         }
 
         if (v < 27) {
@@ -75,7 +75,7 @@ library SigUtils {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
         for (uint256 i = 0; i < count; i++) {
-            (v, r, s) = parseSignature(_signatures, i);
+            (v, r, s) = parseSignature(_signatures, i*65);
             addresses[i] = ecrecover(
                 prefixedHash,
                 v,
@@ -97,23 +97,16 @@ library SigUtils {
         pure
         returns (address)
     {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        (v, r, s) = parseSignature(_signature, 0);
-        return ecrecover(
-            prefixedHash,
-            v,
-            r,
-            s
+        return recoverAddressFromData(
+            _messageHash,
+            _signature,
+            0x00
         );
     }
 
-    function recoverAddress(
+    function recoverAddressFromData(
         bytes32 _messageHash,
-        bytes memory _signature,
+        bytes memory _data,
         uint256 _offset
     )
         internal
@@ -125,7 +118,7 @@ library SigUtils {
         bytes32 s;
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        (v, r, s) = parseSignature(_signature, _offset);
+        (v, r, s) = parseSignature(_data, _offset);
         return ecrecover(
             prefixedHash,
             v,

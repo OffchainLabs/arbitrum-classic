@@ -50,7 +50,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (vm *MessagesChallenge) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
 	return nil, nil
 }
 
@@ -119,6 +119,15 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	lowerHashA common.Hash,
 	lowerHashB common.Hash,
 	msg message.DeliveredTransaction,
+) error {
+	return nil
+}
+
+func (c *MessagesChallenge) OneStepProofTransactionBatchMessage(
+	ctx context.Context,
+	lowerHashA common.Hash,
+	lowerHashB common.Hash,
+	msg message.DeliveredTransactionBatch,
 ) error {
 	return nil
 }

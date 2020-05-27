@@ -47,7 +47,7 @@ class VMEnv:
     def __init__(self):
         self.messages = value.Tuple([])
         self.pending_messages = value.Tuple([])
-        self.time_bounds = value.Tuple([0, 100000000])
+        self.time_bounds = value.Tuple([0, 100000000, 453, 73657336])
 
 
 class Stack:

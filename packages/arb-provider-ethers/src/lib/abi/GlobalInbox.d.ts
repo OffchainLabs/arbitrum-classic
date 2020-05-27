@@ -123,23 +123,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     deliverTransactionBatch: TypedFunctionDescription<{
-      encode([
-        _chain,
-        _tos,
-        _seqNumbers,
-        _values,
-        _messageLengths,
-        _data,
-        _signatures,
-      ]: [
-        string,
-        string[],
-        BigNumberish[],
-        BigNumberish[],
-        BigNumberish[],
-        Arrayish,
-        Arrayish
-      ]): string
+      encode([chain, transactions]: [string, Arrayish]): string
     }>
   }
 
@@ -195,6 +179,10 @@ interface GlobalInboxInterface extends Interface {
         prevOwner,
         newOwner,
       ]: [null, null, null, null, null]): string[]
+    }>
+
+    TransactionMessageBatchDelivered: TypedEventDescription<{
+      encodeTopics([chain]: [string | null]): string[]
     }>
 
     TransactionMessageDelivered: TypedEventDescription<{
@@ -327,13 +315,8 @@ export class GlobalInbox extends Contract {
     ): Promise<ContractTransaction>
 
     deliverTransactionBatch(
-      _chain: string,
-      _tos: string[],
-      _seqNumbers: BigNumberish[],
-      _values: BigNumberish[],
-      _messageLengths: BigNumberish[],
-      _data: Arrayish,
-      _signatures: Arrayish,
+      chain: string,
+      transactions: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
   }
@@ -441,13 +424,8 @@ export class GlobalInbox extends Contract {
   ): Promise<ContractTransaction>
 
   deliverTransactionBatch(
-    _chain: string,
-    _tos: string[],
-    _seqNumbers: BigNumberish[],
-    _values: BigNumberish[],
-    _messageLengths: BigNumberish[],
-    _data: Arrayish,
-    _signatures: Arrayish,
+    chain: string,
+    transactions: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -494,6 +472,8 @@ export class GlobalInbox extends Contract {
       prevOwner: null,
       newOwner: null
     ): EventFilter
+
+    TransactionMessageBatchDelivered(chain: string | null): EventFilter
 
     TransactionMessageDelivered(
       chain: string | null,
@@ -583,13 +563,8 @@ export class GlobalInbox extends Contract {
     forwardEthMessage(_to: string, _from: string): Promise<BigNumber>
 
     deliverTransactionBatch(
-      _chain: string,
-      _tos: string[],
-      _seqNumbers: BigNumberish[],
-      _values: BigNumberish[],
-      _messageLengths: BigNumberish[],
-      _data: Arrayish,
-      _signatures: Arrayish
+      chain: string,
+      transactions: Arrayish
     ): Promise<BigNumber>
   }
 }

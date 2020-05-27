@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -28,5 +29,5 @@ type MaybeEvent struct {
 }
 
 type ContractWatcher interface {
-	GetEvents(ctx context.Context, blockId *common.BlockId) ([]Event, error)
+	GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]Event, error)
 }

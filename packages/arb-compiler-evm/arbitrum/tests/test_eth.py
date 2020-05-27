@@ -26,8 +26,8 @@ from arbitrum.evm import contract_templates
 CALL_TX_TYPE = 5
 
 
-def make_msg_val(message, blocknum=0):
-    return [blocknum, 0, message]
+def make_msg_val(message, blocknum=0, timestamp=0):
+    return [blocknum, timestamp, 0, message]
 
 
 def run_until_block(vm, test):
@@ -213,7 +213,7 @@ class TestEVM(TestCase):
             value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
         )
 
-    def test_time(self):
+    def test_block(self):
         contract_a = make_contract("", "uint256")
         vm = create_evm_vm([contract_a], False, False)
 
@@ -228,7 +228,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.timeUpperBound(0, 0)]), 0
+                    value.Tuple([0, address, arbsys_abi.blockUpperBound(0, 0)]), 0
                 )
             ),
         )
@@ -236,7 +236,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageTime(1, 0)]), 37
+                    value.Tuple([0, address, arbsys_abi.currentMessageBlock(1, 0)]), 37
                 )
             ),
         )
@@ -245,7 +245,7 @@ class TestEVM(TestCase):
             value.Tuple(
                 make_msg_val(
                     value.Tuple(
-                        [CALL_TX_TYPE, address, arbsys_abi.call_timeUpperBound()]
+                        [CALL_TX_TYPE, address, arbsys_abi.call_blockUpperBound()]
                     ),
                     34,
                 )
@@ -266,6 +266,62 @@ class TestEVM(TestCase):
         self.assertEqual(parsed_out0.output_values[0], 100000000)
         self.assertEqual(parsed_out1.output_values[0], 37)
         self.assertEqual(parsed_out2.output_values[0], 100000000)
+
+    def test_timestamp(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
+
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.timestampUpperBound(0, 0)]), 0
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple([0, address, arbsys_abi.currentMessageTimestamp(1, 0)]),
+                    0,
+                    543,
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [CALL_TX_TYPE, address, arbsys_abi.call_timestampUpperBound()]
+                    ),
+                    34,
+                )
+            ),
+        )
+
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+
+        self.assertIsInstance(parsed_out0, EVMReturn)
+        self.assertIsInstance(parsed_out1, EVMReturn)
+        self.assertIsInstance(parsed_out2, EVMReturn)
+
+        self.assertEqual(parsed_out0.output_values[0], 73657336)
+        self.assertEqual(parsed_out1.output_values[0], 543)
+        self.assertEqual(parsed_out2.output_values[0], 73657336)
 
     def test_erc20(self):
         contract_a = make_contract("", "uint256")
