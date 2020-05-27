@@ -114,17 +114,13 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
     buf.push_back(TUPLE + val.tuple_size());
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto itemval = val.get_element(i);
-        if (nonstd::holds_alternative<uint256_t>(itemval)) {
-            marshalShallow(itemval, buf);
+        if (nonstd::holds_alternative<Tuple>(itemval)) {
+            buf.push_back(HASH_ONLY);
+            auto tup = nonstd::get<Tuple>(itemval);
+            auto image = tup.getHashPreImage();
+            image.marshal(buf);
         } else {
-            if (nonstd::holds_alternative<Tuple>(val.get_element(i))) {
-                buf.push_back(HASH_ONLY);
-                auto tup = nonstd::get<Tuple>(val.get_element(i));
-                auto image = tup.getHashPreImage();
-                image.marshal(buf);
-            } else {
-                ::marshalShallow(val.get_element(i), buf);
-            }
+            marshalShallow(itemval, buf);
         }
     }
 }
@@ -183,7 +179,7 @@ struct GetSize {
 
     int operator()(const Tuple& val) const { return val.getSize(); }
 
-    int operator()(const uint256_t& val) const { return 1; }
+    int operator()(const uint256_t& val) const { return val > -1; }
 
     int operator()(const CodePoint& val) const { return val.getSize(); }
 };

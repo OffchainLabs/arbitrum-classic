@@ -70,17 +70,13 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
-        if (si) {
+        if (si || !nonstd::holds_alternative<Tuple>(val)) {
             marshalShallow(val, buf);
         } else {
-            if (nonstd::holds_alternative<Tuple>(val)) {
-                buf.push_back(HASH_ONLY);
-                auto tup = nonstd::get<Tuple>(val);
-                auto image = tup.getHashPreImage();
-                image.marshal(buf);
-            } else {
-                marshalShallow(val, buf);
-            }
+            buf.push_back(HASH_ONLY);
+            auto tup = nonstd::get<Tuple>(val);
+            auto image = tup.getHashPreImage();
+            image.marshal(buf);
         }
     }
     return std::make_pair(c.getHashPreImage(), std::move(buf));
