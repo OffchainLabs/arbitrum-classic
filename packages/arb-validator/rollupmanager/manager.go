@@ -213,7 +213,10 @@ func CreateManagerAdvanced(
 						break runLoop
 					}
 					for _, event := range events {
-						chain.HandleNotification(runCtx, event)
+						if err := chain.HandleNotification(runCtx, event); err != nil {
+							log.Println("Manager hit error processing events", err)
+							break runLoop
+						}
 					}
 				case action := <-man.actionChan:
 					action(chain)

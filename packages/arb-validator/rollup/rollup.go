@@ -127,27 +127,27 @@ func (chain *ChainObserver) marshalToBytes(ctx *checkpointing.CheckpointContext)
 	return proto.Marshal(cob)
 }
 
-func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
+func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
 	restoreCtx checkpointing.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
-	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
-	inbox, err := m.Inbox.UnmarshalFromCheckpoint(restoreCtx)
+	nodeGraph := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	inbox, err := x.Inbox.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
 		return nil, err
 	}
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
-		rollupAddr:          m.ContractAddress.Unmarshal(),
-		inbox:               &structures.Inbox{inbox},
-		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
-		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
-		latestBlockId:       m.LatestBlockId.Unmarshal(),
+		rollupAddr:          x.ContractAddress.Unmarshal(),
+		inbox:               &structures.Inbox{MessageStack: inbox},
+		knownValidNode:      nodeGraph.nodeFromHash[x.KnownValidNode.Unmarshal()],
+		calculatedValidNode: nodeGraph.nodeFromHash[x.CalculatedValidNode.Unmarshal()],
+		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
-		isOpinionated:       m.IsOpinionated,
+		isOpinionated:       x.IsOpinionated,
 		atHead:              false,
 	}, nil
 }
@@ -158,7 +158,7 @@ func (chain *ChainObserver) DebugString(prefix string) string {
 	return chain.nodeGraph.DebugString(prefix)
 }
 
-func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) {
+func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := event.(type) {
@@ -177,13 +177,11 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ctx, ev)
 	case arbbridge.AssertedEvent:
-		err := chain.notifyAssert(ctx, ev)
-		if err != nil {
-			panic(err)
-		}
+		return chain.notifyAssert(ctx, ev)
 	case arbbridge.ConfirmedEvent:
-		chain.confirmNode(ctx, ev)
+		return chain.confirmNode(ctx, ev)
 	}
+	return nil
 }
 
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
@@ -288,17 +286,39 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 	}
 }
 
-func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
-	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
-	if newNode.depth > chain.knownValidNode.depth {
-		chain.knownValidNode = newNode
+func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) error {
+	confirmedNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	if confirmedNode.prev != nil {
+		// temporarily clear machine for marshalling
+		mach := confirmedNode.prev.machine
+		confirmedNode.prev.machine = nil
+		ckptCtx := checkpointing.NewCheckpointContext()
+		nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx)
+		nodeBytes, err := proto.Marshal(nodeData)
+		if err != nil {
+			return err
+		}
+		if err := chain.checkpointer.CheckpointConfirmed(
+			confirmedNode.hash,
+			confirmedNode.depth,
+			nodeBytes,
+			ckptCtx,
+		); err != nil {
+			return err
+		}
+		confirmedNode.prev.machine = mach
 	}
-	chain.nodeGraph.latestConfirmed = newNode
-	chain.nodeGraph.considerPruningNode(newNode.prev)
+	if confirmedNode.depth > chain.knownValidNode.depth {
+		chain.knownValidNode = confirmedNode
+	}
+	chain.nodeGraph.latestConfirmed = confirmedNode
+	chain.nodeGraph.considerPruningNode(confirmedNode.prev)
+
 	chain.updateOldest()
 	for _, listener := range chain.listeners {
 		listener.ConfirmedNode(ctx, chain, ev)
 	}
+	return nil
 }
 
 func (chain *ChainObserver) updateOldest() {
@@ -342,10 +362,10 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 	return nil
 }
 
-func (co *ChainObserver) equals(co2 *ChainObserver) bool {
-	return co.nodeGraph.Equals(co2.nodeGraph) &&
-		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
-		co.inbox.Equals(co2.inbox)
+func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
+	return chain.nodeGraph.Equals(co2.nodeGraph) &&
+		bytes.Compare(chain.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
+		chain.inbox.Equals(co2.inbox)
 }
 
 func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
