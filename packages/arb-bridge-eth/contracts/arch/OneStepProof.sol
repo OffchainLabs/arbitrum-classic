@@ -642,7 +642,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.staticHash);
+        machine.addDataStackValue(machine.staticHash);
         return true;
     }
 
@@ -653,7 +653,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.registerHash);
+        machine.addDataStackValue(machine.registerHash);
         return true;
     }
 
@@ -723,7 +723,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(pc);
+        machine.addDataStackValue(pc);
         return true;
     }
 
@@ -759,7 +759,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.errHandler);
+        machine.addDataStackValue(machine.errHandler);
         return true;
     }
 
@@ -970,7 +970,7 @@ library OneStepProof {
         }
         require(lowerTimeBound<val1.intVal && Value.hash(beforeInboxHash).hash==Value.hashEmptyTuple(),
             "Inbox instruction was blocked");
-        machine.addDataStackHashValue(beforeInboxHash);
+        machine.addDataStackValue(beforeInboxHash);
         return true;
     }
 

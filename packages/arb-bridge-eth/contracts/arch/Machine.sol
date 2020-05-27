@@ -85,14 +85,6 @@ library Machine {
         machine.status = MACHINE_HALT;
     }
 
-    function addDataStackHashValue(Data memory machine, Value.Data memory val) internal pure {
-        machine.dataStackHash = addStackVal(machine.dataStackHash, val);
-    }
-
-    function addAuxStackHashValue(Data memory machine, Value.Data memory val) internal pure {
-        machine.auxStackHash = addStackVal(machine.auxStackHash, val);
-    }
-
     function addDataStackValue(Data memory machine, Value.Data memory val) internal pure {
         machine.dataStackHash = addStackVal(machine.dataStackHash, val);
     }

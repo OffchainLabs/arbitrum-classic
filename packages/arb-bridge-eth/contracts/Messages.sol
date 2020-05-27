@@ -69,13 +69,14 @@ library Messages {
         returns(bytes32)
     {
 
-        Value.Data memory tuple = transactionMessage(chain, 
-                                                    to, 
-                                                    from, 
-                                                    seqNumber, 
-                                                    value, 
-                                                    data, 
-                                                    blockNumber);
+        Value.Data memory tuple = transactionMessage(
+            chain, 
+            to, 
+            from, 
+            seqNumber, 
+            value, 
+            data, 
+            blockNumber);
 
         return Value.hashTuple(tuple);
     }
@@ -158,11 +159,13 @@ library Messages {
         pure
         returns(bytes32)
     {
-        Value.Data memory tuple = ethMessageValue(to, 
-                                                from, 
-                                                value, 
-                                                blockNumber, 
-                                                messageNum);
+        Value.Data memory tuple = ethMessageValue(
+            to, 
+            from, 
+            value, 
+            blockNumber, 
+            messageNum);
+        
         return Value.hashTuple(tuple);
     }
 

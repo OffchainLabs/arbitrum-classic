@@ -326,7 +326,6 @@ contract MessagesChallenge is BisectionChallenge {
         _asserterWin();
     }
 
-
     function resolveChallengeAsserterWon() internal {
         IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_MESSAGES_TYPE);
     }
