@@ -16,6 +16,7 @@
 
 #include "cmachine.h"
 #include "bigint_utils.hpp"
+#include "utils.hpp"
 
 #include <avm/machine.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
@@ -114,11 +115,7 @@ struct ReasonConverter {
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
         marshal_value(val.timout, inboxDataVec);
-        unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
-        std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
-        return CBlockReason{
-            BLOCK_TYPE_INBOX,
-            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())}};
+        return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
     }
 };
 
@@ -127,8 +124,7 @@ CBlockReason machineIsBlocked(CMachine* m,
                               int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto currentTimePtr = reinterpret_cast<const char*>(currentTimeData);
-    auto currentTime = deserializeUint256t(currentTimePtr);
+    auto currentTime = receiveUint256(currentTimeData);
     auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
@@ -137,11 +133,7 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
-    auto proof = mach->marshalForProof();
-    auto proofData = (unsigned char*)malloc(proof.size());
-    std::copy(proof.begin(), proof.end(), proofData);
-    auto voidData = reinterpret_cast<void*>(proofData);
-    return {voidData, static_cast<int>(proof.size())};
+    return returnCharVector(mach->marshalForProof());
 }
 
 RawAssertion machineExecuteAssertion(CMachine* m,
@@ -154,18 +146,10 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto lowerBoundBlockPtr =
-        reinterpret_cast<const char*>(lowerBoundBlockData);
-    auto lowerBoundBlock = deserializeUint256t(lowerBoundBlockPtr);
-    auto upperBoundBlockPtr =
-        reinterpret_cast<const char*>(upperBoundBlockData);
-    auto upperBoundBlock = deserializeUint256t(upperBoundBlockPtr);
-    auto lowerBoundTimestampPtr =
-        reinterpret_cast<const char*>(lowerBoundTimestampData);
-    auto lowerBoundTimestamp = deserializeUint256t(lowerBoundTimestampPtr);
-    auto upperBoundTimestampPtr =
-        reinterpret_cast<const char*>(upperBoundTimestampData);
-    auto upperBoundTimestamp = deserializeUint256t(upperBoundTimestampPtr);
+    auto lowerBoundBlock = receiveUint256(lowerBoundBlockData);
+    auto upperBoundBlock = receiveUint256(upperBoundBlockData);
+    auto lowerBoundTimestamp = receiveUint256(lowerBoundTimestampData);
+    auto upperBoundTimestamp = receiveUint256(upperBoundTimestampData);
 
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
@@ -185,17 +169,9 @@ RawAssertion machineExecuteAssertion(CMachine* m,
         marshal_value(log, logData);
     }
 
-    unsigned char* cMessageData = (unsigned char*)malloc(outMsgData.size());
-    std::copy(outMsgData.begin(), outMsgData.end(), cMessageData);
-
-    unsigned char* cLogData = (unsigned char*)malloc(logData.size());
-    std::copy(logData.begin(), logData.end(), cLogData);
-
-    return {cMessageData,
-            static_cast<int>(outMsgData.size()),
+    return {returnCharVector(outMsgData),
             static_cast<int>(assertion.outMessages.size()),
-            cLogData,
-            static_cast<int>(logData.size()),
+            returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             assertion.stepCount,
             assertion.gasCount,

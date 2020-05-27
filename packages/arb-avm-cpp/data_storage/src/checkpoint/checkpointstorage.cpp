@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
@@ -61,4 +63,8 @@ std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {
 
 std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
     return datastorage->getBlockStore();
+}
+
+std::unique_ptr<NodeStore> CheckpointStorage::getNodeStore() const {
+    return datastorage->getNodeStore();
 }

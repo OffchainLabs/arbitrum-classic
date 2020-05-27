@@ -59,6 +59,7 @@ TEST_CASE("CCheckpointStorage test") {
     auto store = createCheckpointStorage(dbpath.c_str(), test_contract_path);
     auto res = getData(store, hash_key2.data(), hash_key2.size());
 
-    REQUIRE(res.length == 0);
+    REQUIRE(res.found == false);
+    REQUIRE(res.slice.length == 0);
     destroyCheckpointStorage(store);
 }

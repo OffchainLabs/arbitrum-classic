@@ -17,6 +17,7 @@
 package checkpointing
 
 import (
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -75,4 +76,18 @@ func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
 
 func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
 	return ctx.machines[h]
+}
+
+func saveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {
+	for _, val := range ckpCtx.Values() {
+		if ok := db.SaveValue(val); !ok {
+			return errors.New("failed to write value to checkpoint db")
+		}
+	}
+	for _, mach := range ckpCtx.Machines() {
+		if ok := mach.Checkpoint(db); !ok {
+			return errors.New("failed to write machine to checkpoint db")
+		}
+	}
+	return nil
 }

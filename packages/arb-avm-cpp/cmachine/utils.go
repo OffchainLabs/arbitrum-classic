@@ -16,7 +16,12 @@
 
 package cmachine
 
+/*
+#include "../cavm/ctypes.h"
+#include <stdlib.h>
+*/
 import "C"
+
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -55,4 +60,9 @@ func bytesArrayToVals(data []byte, valCount int) []value.Value {
 		vals = append(vals, val)
 	}
 	return vals
+}
+
+func toByteSlice(slice C.ByteSlice) []byte {
+	defer C.free(unsafe.Pointer(slice.data))
+	return C.GoBytes(unsafe.Pointer(slice.data), slice.length)
 }
