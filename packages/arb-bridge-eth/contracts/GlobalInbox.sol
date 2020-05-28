@@ -21,14 +21,15 @@ import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
 import "./IGlobalInbox.sol";
 import "./Messages.sol";
+import "./PaymentRecords.sol";
 
 import "./arch/Protocol.sol";
 import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
+import "bytes/contracts/BytesLib.sol";
 
-contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox {
-
+contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords {
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
     uint8 internal constant ERC20_DEPOSIT = 2;
@@ -52,31 +53,49 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         return (inbox.value, inbox.count);
     }
 
-    function sendMessages(bytes calldata _messages) external {
+    function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external {
         bool valid;
         uint256 offset = 0;
         uint256 messageType;
         address sender;
         uint256 totalLength = _messages.length;
 
-        while (offset < totalLength) {
-            (
-                valid,
-                offset,
-                messageType,
-                sender
-            ) = Value.deserializeMessageData(_messages, offset);
-            if (!valid) {
-                break;
+
+        uint256 currentNode = 0;
+        uint256 currentIndex = 0;
+
+        while (offset < totalLength && currentNode < nodeHashes.length) {
+            if(messageCounts[currentNode] == 0){
+
+                currentNode += 1;
+                currentIndex = 0;
+            } else {
+                (   valid,
+                    offset,
+                    messageType,
+                    sender
+                ) = Value.deserializeMessageData(_messages, offset);
+                if (!valid) {
+                    break;
+                }
+                (valid, offset) = sendDeserializedMsg(nodeHashes[currentNode], currentIndex, _messages, offset, messageType);
+                if (!valid) {
+                    break;
+                }
+
+                currentIndex += 1;
+                if(currentIndex >= messageCounts[currentNode]){
+                    currentNode += 1;
+                    currentIndex = 0;
+                }
             }
-            (valid, offset) = sendDeserializedMsg(_messages, offset, messageType);
-            if (!valid) {
-                break;
-            }
+
         }
     }
 
     function sendDeserializedMsg(
+        bytes32 nodeHash, 
+        uint256 messageIndex,
         bytes memory _messages,
         uint256 startOffset,
         uint256 messageType
@@ -98,7 +117,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferEth(msg.sender, to, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferEth(msg.sender, paymentOwner, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -111,7 +134,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferERC20(msg.sender, to, erc20, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferERC20(msg.sender, paymentOwner, erc20, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -124,7 +151,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferNFT(msg.sender, to, erc721, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferNFT(msg.sender, paymentOwner, erc721, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+            
             return (true, offset);
         } else {
             return (false, startOffset);

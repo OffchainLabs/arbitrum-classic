@@ -55,7 +55,7 @@ type ChainListener interface {
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
 	AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash)
-	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash)
+	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash)
 }
 
 type StakingKey struct {
@@ -482,6 +482,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observe
 	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
 	confClone := conf.Clone()
+
 	go func() {
 		err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
@@ -579,5 +580,5 @@ func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, a
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
 }
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
 }

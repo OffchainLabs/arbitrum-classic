@@ -308,36 +308,41 @@ contract ArbRollup is NodeGraph, Staking {
 
     function _confirm(ConfirmData memory data) private {
         uint256 nodeCount = data.branches.length;
-        uint256 validNodeCount = data.messagesLengths.length;
-        require(data.vmProtoStateHashes.length == validNodeCount);
-        require(data.logsAcc.length == validNodeCount);
-        require(data.deadlineTicks.length == nodeCount);
-        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+        _verifyDataLength(data);
         uint256 validNum = 0;
         uint256 invalidNum = 0;
         uint256 messagesOffset = 0;
         bytes32 confNode = latestConfirmed();
+
+        bytes32[] memory nodeHashes = new bytes32[](nodeCount);
+        uint[] memory messageCounts = new uint[](nodeCount);
+
         bytes32 vmProtoStateHash = data.initalProtoStateHash;
+
         for (uint256 i = 0; i < nodeCount; i++) {
             uint256 branchType = data.branches[i];
             bytes32 nodeDataHash;
             if (branchType == VALID_CHILD_TYPE) {
+                bytes32 lastMsgHash;
                 uint256 messageLength = data.messagesLengths[validNum];
+                (lastMsgHash, messageCounts[i]) = Protocol.generateLastMessageHash(
+                    data.messages,
+                    messagesOffset,
+                    messageLength
+                );
                 nodeDataHash = RollupUtils.validDataHash(
-                    Protocol.generateLastMessageHash(
-                        data.messages,
-                        messagesOffset,
-                        messageLength
-                    ),
+                    lastMsgHash,
                     data.logsAcc[validNum]
                 );
                 messagesOffset += messageLength;
                 vmProtoStateHash = data.vmProtoStateHashes[validNum];
                 validNum++;
             } else {
+                messageCounts[i] = 0;
                 nodeDataHash = data.challengeNodeData[invalidNum];
                 invalidNum++;
             }
+
             confNode = RollupUtils.childNodeHash(
                 confNode,
                 data.deadlineTicks[i],
@@ -345,6 +350,7 @@ contract ArbRollup is NodeGraph, Staking {
                 branchType,
                 vmProtoStateHash
             );
+            nodeHashes[i] = confNode;
 
             if (branchType == VALID_CHILD_TYPE) {
                 emit ConfirmedValidAssertion(confNode);
@@ -365,7 +371,7 @@ contract ArbRollup is NodeGraph, Staking {
         confirmNode(confNode);
 
         // Send all messages is a single batch
-        globalInbox.sendMessages(data.messages);
+        globalInbox.sendMessages(data.messages, messageCounts, nodeHashes);
 
         if (validNum > 0) {
             emit ConfirmedAssertion(
@@ -374,4 +380,12 @@ contract ArbRollup is NodeGraph, Staking {
         }
     }
 
+    function _verifyDataLength(ConfirmData memory data) private pure{
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messagesLengths.length;
+        require(data.vmProtoStateHashes.length == validNodeCount);
+        require(data.logsAcc.length == validNodeCount);
+        require(data.deadlineTicks.length == nodeCount);
+        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+    }
 }

@@ -56,6 +56,10 @@ interface MessageResult {
   onChainTxHash: string
 }
 
+interface VerifyMessageResult {
+  value: ArbValue.Value
+}
+
 interface Message {
   to: string
   sequenceNum: ethers.utils.BigNumberish
@@ -213,6 +217,24 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
       }
     }
+    return null
+  }
+
+  public async getPaymentMessage(
+    assertedNodeHash: string,
+    messageIndex: string
+  ): Promise<VerifyMessageResult | null> {
+    const results = await this.client.getOutputMssage(
+      assertedNodeHash,
+      messageIndex
+    )
+
+    if (results != null) {
+      return {
+        value: results.outputMsg,
+      }
+    }
+
     return null
   }
 
@@ -478,6 +500,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (eventIndex == -1) {
       throw Error('RollupAsserted ' + onChainTxHash + ' not found on chain')
     }
+
     const rawLog = receipt.logs[eventIndex]
     const cda = events[eventIndex]
     const vmId = await this.getVmID()

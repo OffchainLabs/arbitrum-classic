@@ -52,6 +52,14 @@ func (m *RPCServer) FindLogs(
 	return err
 }
 
+func (m *RPCServer) GetOutputMessage(r *http.Request, args *validatorserver.GetOutputMessageArgs, reply *validatorserver.GetOutputMessageReply) error {
+	ret, err := m.Server.GetOutputMessage(context.Background(), args)
+	if ret != nil {
+		*reply = *ret
+	}
+	return err
+}
+
 // GetMessageResult returns the value output by the VM in response to the
 //message with the given hash
 func (m *RPCServer) GetMessageResult(
