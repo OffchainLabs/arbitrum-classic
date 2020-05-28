@@ -87,11 +87,11 @@ struct ValueSerializer {
         return value_vector;
     }
 
-    std::vector<unsigned char> operator()(const HashOnly& val) const {
+    std::vector<unsigned char> operator()(const HashPreImage& val) const {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(HASH_ONLY);
         value_vector.push_back(type_code);
-        marshal_HashOnly(val, value_vector);
+        marshal_HashPreImage(val, value_vector);
 
         return value_vector;
     }

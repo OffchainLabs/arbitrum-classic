@@ -19,7 +19,6 @@
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/exceptions.hpp>
-#include <avm_values/hashonlyvalue.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/value.hpp>
 
@@ -30,30 +29,47 @@ uint256_t zeroHash();
 class HashPreImage {
    private:
     std::array<unsigned char, 32> firstHash;
-    int valueSize;
+    uint256_t valueSize;
 
    public:
-    HashPreImage(std::array<unsigned char, 32> _firstHash, int _valueSize) {
+    HashPreImage() = default;
+    HashPreImage(std::array<unsigned char, 32> _firstHash,
+                 uint256_t _valueSize) {
         firstHash = _firstHash;
         valueSize = _valueSize;
     }
     std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
-    int getSize() const { return valueSize; }
+    uint256_t getSize() const { return valueSize; }
     void marshal(std::vector<unsigned char>& buf) const;
+    uint256_t hash() const;
 };
+
+inline uint256_t hash(const HashPreImage& hv) {
+    return hv.hash();
+}
+
+inline bool operator==(const HashPreImage& val1, const HashPreImage& val2) {
+    return val1.hash() == val2.hash();
+}
+
+inline bool operator!=(const HashPreImage& val1, const HashPreImage& val2) {
+    return val1.hash() != val2.hash();
+}
+
+std::ostream& operator<<(std::ostream& os, const HashPreImage& val);
 
 class Tuple {
    private:
     TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
-    int value_size = 1;
+    uint256_t value_size = 1;
 
     friend uint256_t hash(const Tuple&);
 
    public:
     Tuple() = default;
     uint256_t calculateHash() const;
-    int getSize() const;
+    uint256_t getSize() const;
 
     Tuple(TuplePool* pool, size_t size) {
         if (size > 0) {

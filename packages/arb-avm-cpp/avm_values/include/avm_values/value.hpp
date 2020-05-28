@@ -27,10 +27,10 @@ class TuplePool;
 class Tuple;
 struct Operation;
 struct CodePoint;
-class HashOnly;
+class HashPreImage;
 
 // Note: uint256_t is actually 48 bytes long
-using value = nonstd::variant<Tuple, uint256_t, CodePoint, HashOnly>;
+using value = nonstd::variant<Tuple, uint256_t, CodePoint, HashPreImage>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
@@ -45,13 +45,14 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
-void marshal_HashOnly(const HashOnly& val, std::vector<unsigned char>& buf);
+void marshal_HashPreImage(const HashPreImage& val,
+                          std::vector<unsigned char>& buf);
 
 void marshalShallow(const value& val, std::vector<unsigned char>& buf);
 void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf);
 void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
-void marshalShallow(const HashOnly& val, std::vector<unsigned char>& buf);
+void marshalShallow(const HashPreImage& val, std::vector<unsigned char>& buf);
 
 template <typename T>
 static T shrink(uint256_t i) {
@@ -59,6 +60,6 @@ static T shrink(uint256_t i) {
 }
 
 std::vector<unsigned char> GetHashKey(const value& val);
-int getSize(const value& val);
+uint256_t getSize(const value& val);
 
 #endif /* value_hpp */

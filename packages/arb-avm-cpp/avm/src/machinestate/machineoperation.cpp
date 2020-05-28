@@ -576,7 +576,7 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-SendResults send(MachineState& m) {
+bool send(MachineState& m) {
     m.stack.prepForMod(1);
 
     auto val_size = getSize(m.stack[0]);
@@ -592,7 +592,7 @@ SendResults send(MachineState& m) {
         success = true;
     }
 
-    return SendResults{NotBlocked(), success};
+    return success;
 }
 
 void getTime(MachineState& m) {

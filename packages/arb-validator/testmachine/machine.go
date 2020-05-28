@@ -122,11 +122,13 @@ func (m *Machine) ExecuteAssertion(
 		if i+stepIncrease > maxSteps {
 			steps = maxSteps - i
 		}
+
+		_ = m.gomachine.GetPC()
 		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
 		//if ranSteps1 != ranSteps2 {
-		//	pcEnd := m.gomachine.GetPC()
+		//	_ = m.gomachine.GetPC()
 		//	log.Println("cpp num steps", ranSteps1, a1.NumGas)
 		//	log.Println("go num steps", ranSteps2, a2.NumGas)
 		//	log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)

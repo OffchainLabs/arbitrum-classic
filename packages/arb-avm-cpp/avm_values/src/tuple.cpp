@@ -19,12 +19,43 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+uint256_t hashPreImage(std::array<unsigned char, 32> first_hash,
+                       uint256_t size) {
+    std::array<unsigned char, 64> tupData2;
+    auto iter = tupData2.begin();
+    auto val_length = 32;
+
+    for (uint64_t i = 0; i < first_hash.size(); i++) {
+        tupData2[i] = first_hash[i];
+    }
+    iter += val_length;
+
+    std::array<uint64_t, 4> sizeValue;
+    to_big_endian(size, sizeValue.begin());
+    iter = std::copy(
+        reinterpret_cast<unsigned char*>(sizeValue.data()),
+        reinterpret_cast<unsigned char*>(sizeValue.data()) + val_length, iter);
+
+    std::array<unsigned char, 32> hashData2;
+    evm::Keccak_256(tupData2.data(), 64, hashData2.data());
+    return from_big_endian(hashData2.begin(), hashData2.end());
+}
+
+uint256_t HashPreImage::hash() const {
+    return hashPreImage(firstHash, valueSize);
+}
+
 void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
     buf.insert(buf.end(), firstHash.begin(), firstHash.end());
 
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(valueSize, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
+std::ostream& operator<<(std::ostream& os, const HashPreImage& val) {
+    os << "HashPreImage(" << val.hash() << ")";
+    return os;
 }
 
 Tuple::Tuple(value val, TuplePool* pool)
@@ -176,7 +207,7 @@ value Tuple::clone_shallow() {
     return tup;
 }
 
-int Tuple::getSize() const {
+uint256_t Tuple::getSize() const {
     return value_size;
 }
 
@@ -185,28 +216,6 @@ void Tuple::computeValueSize() {
     for (uint64_t i = 0; i < tpl->data.size(); i++) {
         value_size += ::getSize(tpl->data[i]);
     }
-}
-
-uint256_t hashPreImage(std::array<unsigned char, 32> first_hash, int size) {
-    std::array<unsigned char, 64> tupData2;
-    auto iter = tupData2.begin();
-    auto val_length = 32;
-
-    for (uint64_t i = 0; i < 32; i++) {
-        tupData2[i] = first_hash[i];
-    }
-    iter += val_length;
-
-    std::array<uint64_t, 4> sizeValue;
-    to_big_endian(size, sizeValue.begin());
-    std::copy(reinterpret_cast<unsigned char*>(sizeValue.data()),
-              reinterpret_cast<unsigned char*>(sizeValue.data()) + val_length,
-              iter);
-    iter += val_length;
-
-    std::array<unsigned char, 32> hashData2;
-    evm::Keccak_256(tupData2.data(), 64, hashData2.data());
-    return from_big_endian(hashData2.begin(), hashData2.end());
 }
 
 HashPreImage Tuple::getHashPreImage() const {
@@ -237,7 +246,7 @@ HashPreImage Tuple::getHashPreImage() const {
 
 uint256_t Tuple::calculateHash() const {
     auto preImage = getHashPreImage();
-    return hashPreImage(preImage.getFirstHash(), preImage.getSize());
+    return preImage.hash();
 }
 
 uint256_t zeroHash() {

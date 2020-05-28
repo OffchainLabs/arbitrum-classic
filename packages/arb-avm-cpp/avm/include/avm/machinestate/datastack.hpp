@@ -32,12 +32,11 @@ class Datastack {
     void addHash() const;
     void calculateAllHashes() const;
     void initializeDataStack(const Tuple& tuple);
-    HashOnly getStackHashValue() const;
     Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
     std::vector<value> values;
-    mutable std::vector<HashOnly> hashes;
+    mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
         values.reserve(1000);
@@ -100,7 +99,7 @@ class Datastack {
 
     HashPreImage getHashPreImage() const;
 
-    int getTotalValueSize() const;
+    uint256_t getTotalValueSize() const;
 
     SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
 

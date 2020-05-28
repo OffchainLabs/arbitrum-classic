@@ -124,8 +124,8 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-int MachineState::getMachineSize() {
-    int machine_size = 0;
+uint256_t MachineState::getMachineSize() {
+    uint256_t machine_size = 0;
 
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
@@ -452,11 +452,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::SEND: {
             auto send_results = machineoperation::send(*this);
 
-            if (send_results.success == false) {
+            if (send_results == false) {
                 std::cerr << "Send failure: over size limit" << std::endl;
             }
 
-            return send_results.block_reason;
+            break;
         }
         case OpCode::GETTIME:
             machineoperation::getTime(*this);

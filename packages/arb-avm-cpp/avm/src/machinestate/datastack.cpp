@@ -25,22 +25,13 @@
 #include <bigint_utils.hpp>
 
 uint256_t Datastack::hash() const {
-    auto h_value = getStackHashValue();
-    return h_value.getHash();
+    auto h_value = getHashPreImage();
+    return h_value.hash();
 }
 
-int Datastack::getTotalValueSize() const {
-    auto h_value = getStackHashValue();
+uint256_t Datastack::getTotalValueSize() const {
+    auto h_value = getHashPreImage();
     return h_value.getSize();
-}
-
-HashOnly Datastack::getStackHashValue() const {
-    if (values.empty()) {
-        return HashOnly(Tuple());
-    } else {
-        calculateAllHashes();
-        return hashes.back();
-    }
 }
 
 HashPreImage Datastack::getHashPreImage() const {
@@ -48,18 +39,7 @@ HashPreImage Datastack::getHashPreImage() const {
         return Tuple().getHashPreImage();
     } else {
         calculateAllHashes();
-        auto current_val = values[values.size() - 1];
-        value prev_val;
-
-        if (values.size() == 1) {
-            prev_val = HashOnly(Tuple());
-        } else {
-            prev_val = hashes[values.size() - 2];
-        }
-
-        TuplePool pool;
-        auto tup = Tuple(current_val, prev_val, &pool);
-        return tup.getHashPreImage();
+        return hashes.back();
     }
 }
 
@@ -137,18 +117,17 @@ void Datastack::initializeDataStack(const Tuple& tuple) {
 }
 
 void Datastack::addHash() const {
-    HashOnly prev;
+    HashPreImage prev;
     if (hashes.size() > 0) {
         prev = hashes.back();
     } else {
-        prev = HashOnly(Tuple());
+        prev = Tuple().getHashPreImage();
     }
 
     auto newVal = values[hashes.size()];
     TuplePool pool;
     auto tup = Tuple(newVal, prev, &pool);
-    auto newHashVal = HashOnly(tup);
-    hashes.emplace_back(newHashVal);
+    hashes.emplace_back(tup.getHashPreImage());
 }
 
 void Datastack::calculateAllHashes() const {

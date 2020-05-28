@@ -642,7 +642,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(machine.staticHash);
+        machine.addDataStackValue(machine.staticVal);
         return true;
     }
 
@@ -653,7 +653,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(machine.registerHash);
+        machine.addDataStackValue(machine.registerVal);
         return true;
     }
 
@@ -665,7 +665,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.registerHash = val1;
+        machine.registerVal = val1;
         return true;
     }
 
@@ -677,7 +677,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.instructionStackHash = val1;
+        machine.instructionStack = val1;
         return true;
     }
 
@@ -697,7 +697,7 @@ library OneStepProof {
             return false;
         }
         if (val2.intVal != 0) {
-            machine.instructionStackHash = val1;
+            machine.instructionStack = val1;
         }
         return true;
     }
@@ -710,7 +710,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.dataStackHash).hash == Value.hashEmptyTuple())
+            Value.newBoolean(Value.hash(machine.dataStack).hash == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -747,7 +747,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.auxStackHash).hash == Value.hashEmptyTuple())
+            Value.newBoolean(Value.hash(machine.auxStack).hash == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -1309,9 +1309,9 @@ library OneStepProof {
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStackHash = Value.newHashOnly(Value.hashCodePointBasic(
+            startMachine.instructionStack = Value.newHashOnly(Value.hashCodePointBasic(
                 uint8(opCode),
-                Value.hash(startMachine.instructionStackHash).hash
+                Value.hash(startMachine.instructionStack).hash
             ), 1);
         } else {
             Value.Data memory immediateVal;
@@ -1324,10 +1324,10 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStackHash = Value.newHashOnly(Value.hashCodePointImmediate(
+            startMachine.instructionStack = Value.newHashOnly(Value.hashCodePointImmediate(
                 uint8(opCode),
                 Value.hash(immediateVal).hash,
-                Value.hash(startMachine.instructionStackHash).hash
+                Value.hash(startMachine.instructionStack).hash
             ), 1);
         }
 
@@ -1443,7 +1443,7 @@ library OneStepProof {
         } else if (opCode == OP_STACKEMPTY) {
             correct = executeStackemptyInsn(endMachine);
         } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
+            correct = executePcpushInsn(endMachine, startMachine.instructionStack);
         } else if (opCode == OP_AUXPUSH) {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
@@ -1513,7 +1513,7 @@ library OneStepProof {
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
                 if(messageHash == 0){
-                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, msg must be nonzero");
+                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, no message should be sent");
                 }else{
                     require(
                         keccak256(
@@ -1553,7 +1553,7 @@ library OneStepProof {
             if (Value.hash(endMachine.errHandler).hash == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
-                endMachine.instructionStackHash = endMachine.errHandler;
+                endMachine.instructionStack = endMachine.errHandler;
             }
         }
 

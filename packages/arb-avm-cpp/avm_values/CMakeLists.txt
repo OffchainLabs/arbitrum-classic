@@ -29,7 +29,6 @@ set(LIB_HEADERS
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
   include/avm_values/vmValueParser.hpp
-  include/avm_values/hashonlyvalue.hpp
 )
 
 set(LIB_SOURCES
@@ -39,7 +38,6 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/vmValueParser.cpp
-  src/hashonlyvalue.cpp
 )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
