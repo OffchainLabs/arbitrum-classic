@@ -105,6 +105,31 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 	}, nil
 }
 
+func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
+	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
+	if err != nil {
+		return nil, err
+	}
+	assertionHash := common.Hash{}
+	copy(assertionHash[:], assertionHashBytes)
+	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
+	resultChan := m.tracker.OutputMsgVal(assertionHash, msgIndex)
+	outputValue := <-resultChan
+
+	if outputValue == nil {
+		return &validatorserver.GetOutputMessageReply{
+			Found: false,
+		}, nil
+	} else {
+		var buf bytes.Buffer
+		_ = value.MarshalValue(outputValue, &buf)
+		return &validatorserver.GetOutputMessageReply{
+			Found:  true,
+			RawVal: hexutil.Encode(buf.Bytes()),
+		}, nil
+	}
+}
+
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
 func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.GetMessageResultArgs) (*validatorserver.GetMessageResultReply, error) {
 	txHashBytes, err := hexutil.Decode(args.TxHash)

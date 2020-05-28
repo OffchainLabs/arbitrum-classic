@@ -142,7 +142,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.RLock()
 				if newOpinion == valprotocol.ValidChildType {
 					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
+						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash, correctNode.hash)
 					}
 				}
 				for _, listener := range chain.listeners {

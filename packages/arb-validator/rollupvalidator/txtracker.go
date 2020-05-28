@@ -39,6 +39,12 @@ type assertionCountRequest struct {
 	resultChan chan<- int
 }
 
+type outputMsgRequest struct {
+	assertionNodeHash common.Hash
+	msgIndex          int64
+	resultChan        chan<- value.Value
+}
+
 type txRequest struct {
 	txHash     common.Hash
 	resultChan chan<- txInfo
@@ -72,9 +78,11 @@ type assertionInfo struct {
 	TxLogs            []logsInfo
 	LogsAccHashes     []string
 	LogsValHashes     []string
+	OutMessages       []value.Value
 	SequenceNum       uint64
 	BeforeHash        common.Hash
 	OriginalInboxHash common.Hash
+	AssertNodeHash    common.Hash
 }
 
 type logResponse struct {
@@ -117,6 +125,7 @@ type txTracker struct {
 	txRequestIndex int
 	transactions   map[common.Hash]txInfo
 	assertionInfo  []*assertionInfo
+	assertionMap   map[common.Hash]*assertionInfo
 	accountNonces  map[common.Address]uint64
 	vmID           common.Address
 	requests       chan validatorRequest
@@ -130,6 +139,7 @@ func newTxTracker(
 		txRequestIndex: 0,
 		transactions:   make(map[common.Hash]txInfo),
 		assertionInfo:  make([]*assertionInfo, 0),
+		assertionMap:   make(map[common.Hash]*assertionInfo),
 		accountNonces:  make(map[common.Address]uint64),
 		vmID:           vmID,
 		requests:       requests,
@@ -139,6 +149,12 @@ func newTxTracker(
 func (tr *txTracker) AssertionCount() <-chan int {
 	req := make(chan int, 1)
 	tr.requests <- assertionCountRequest{req}
+	return req
+}
+
+func (tr *txTracker) OutputMsgVal(assertionHash common.Hash, msgIndex int64) <-chan value.Value {
+	req := make(chan value.Value, 1)
+	tr.requests <- outputMsgRequest{assertionHash, msgIndex, req}
 	return req
 }
 
@@ -168,8 +184,12 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 	disputableTxHash := hexutil.Encode(assertion.OnChainTxHash[:])
 
 	logs := assertion.Assertion.Logs
+
+	info.OutMessages = assertion.Assertion.OutMsgs
+	info.AssertNodeHash = assertion.NodeHash
 	info.LogsValHashes = make([]string, 0, len(logs))
 	info.LogsAccHashes = make([]string, 0, len(logs))
+
 	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
@@ -225,10 +245,19 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 		tr.transactions[msg.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
+	tr.assertionMap[info.AssertNodeHash] = info
 }
 
 func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
+	case outputMsgRequest:
+		assertionVal, ok := tr.assertionMap[request.assertionNodeHash]
+		if ok && request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
+			val := assertionVal.OutMessages[request.msgIndex]
+			request.resultChan <- val
+		} else {
+			request.resultChan <- nil
+		}
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:

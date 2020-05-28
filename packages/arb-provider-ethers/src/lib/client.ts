@@ -331,6 +331,11 @@ interface GetAssertionCountReply {
   assertionCount: number
 }
 
+interface GetOutputMessageReply {
+  found: boolean
+  rawVal: string
+}
+
 interface GetMessageResultReply {
   found: boolean
   rawVal: string
@@ -402,11 +407,52 @@ interface MessageResult {
   evmVal: EVMResult
 }
 
+interface OutputMessage {
+  outputMsg: ArbValue.Value
+}
+
 export class ArbClient {
   public client: any
 
   constructor(managerUrl: string) {
     this.client = _arbClient(managerUrl)
+  }
+
+  public async getOutputMessage(
+    AssertionNodeHash: string,
+    msgIndex: string
+  ): Promise<OutputMessage | null> {
+    const msgResult = await new Promise<GetOutputMessageReply>(
+      (resolve, reject): void => {
+        this.client.request(
+          'Validator.GetOutputMessage',
+          [
+            {
+              AssertionNodeHash,
+              msgIndex,
+            },
+          ],
+          (err: Error, error: Error, result: GetOutputMessageReply) => {
+            if (err) {
+              reject(err)
+            } else if (error) {
+              reject(error)
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      }
+    )
+    if (msgResult.found) {
+      const val = ArbValue.unmarshal(msgResult.rawVal)
+
+      return {
+        outputMsg: val,
+      }
+    } else {
+      return null
+    }
   }
 
   public async getMessageResult(txHash: string): Promise<MessageResult | null> {
