@@ -104,13 +104,13 @@ func TestWriteCheckpoint(t *testing.T) {
 	}
 	defer cp.db.CloseCheckpointStorage()
 
-	blockData, err := cp.db.GetBlock(initialEntryBlockId)
+	blockData, err := cp.bs.GetBlock(initialEntryBlockId)
 	if err == nil {
 		t.Error("block shouldn't exist before writing")
 	}
 
 	checkpointContext := NewCheckpointContext()
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -118,7 +118,7 @@ func TestWriteCheckpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
@@ -126,7 +126,7 @@ func TestWriteCheckpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	blockData, err = cp.db.GetBlock(initialEntryBlockId)
+	blockData, err = cp.bs.GetBlock(initialEntryBlockId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,7 @@ func TestWriteCheckpoint(t *testing.T) {
 		t.Error("block data didn't match. Got:", blockData, "wanted:", checkpointData)
 	}
 
-	blockData2, err := cp.db.GetBlock(laterEntryBlockId)
+	blockData2, err := cp.bs.GetBlock(laterEntryBlockId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -179,7 +179,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -231,7 +231,7 @@ func TestRestoreReorg(t *testing.T) {
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
@@ -239,7 +239,7 @@ func TestRestoreReorg(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
@@ -312,21 +312,21 @@ func TestCleanup(t *testing.T) {
 	defer cp.db.CloseCheckpointStorage()
 
 	checkpointContext := NewCheckpointContext()
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
 		contents: checkpointData,
 		ckpCtx:   checkpointContext,
 	}); err != nil {
 		t.Error(err)
 	}
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  laterEntryBlockId,
 		contents: checkpointData2,
 		ckpCtx:   checkpointContext,
 	}); err != nil {
 		t.Error(err)
 	}
-	if err = writeCheckpoint(cp.db, &writableCheckpoint{
+	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  distantEntryBlockId,
 		contents: checkpointData3,
 		ckpCtx:   checkpointContext,
@@ -334,22 +334,22 @@ func TestCleanup(t *testing.T) {
 		t.Error(err)
 	}
 
-	if cp.db.MinBlockStoreHeight().Cmp(initialEntryBlockId.Height) != 0 {
+	if cp.bs.MinBlockStoreHeight().Cmp(initialEntryBlockId.Height) != 0 {
 		t.Error("minimum height incorrect")
 	}
 
-	cleanup(cp.db, big.NewInt(100))
+	cleanup(cp.bs, cp.db, big.NewInt(100))
 
-	if cp.db.MinBlockStoreHeight().Cmp(laterEntryBlockId.Height) != 0 {
-		t.Error("minimum height incorrect after cleanup", cp.db.MinBlockStoreHeight())
+	if cp.bs.MinBlockStoreHeight().Cmp(laterEntryBlockId.Height) != 0 {
+		t.Error("minimum height incorrect after cleanup", cp.bs.MinBlockStoreHeight())
 	}
 
-	_, err = cp.db.GetBlock(laterEntryBlockId)
+	_, err = cp.bs.GetBlock(laterEntryBlockId)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = cp.db.GetBlock(distantEntryBlockId)
+	_, err = cp.bs.GetBlock(distantEntryBlockId)
 	if err != nil {
 		t.Error(err)
 	}
