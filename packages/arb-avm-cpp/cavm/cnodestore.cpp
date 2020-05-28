@@ -54,6 +54,10 @@ HashResult getNodeHash(CNodeStore* ptr, uint64_t height) {
     return returnUint256Result(static_cast<NodeStore*>(ptr)->getHash(height));
 }
 
-uint64_t longestNodeChainCount(CNodeStore* ptr) {
-    return static_cast<NodeStore*>(ptr)->longestChainCount();
+int isNodeStoreEmpty(CNodeStore* ptr) {
+    return static_cast<NodeStore*>(ptr)->isEmpty();
+}
+
+uint64_t maxNodeHeight(CNodeStore* ptr) {
+    return static_cast<NodeStore*>(ptr)->maxNodeHeight();
 }

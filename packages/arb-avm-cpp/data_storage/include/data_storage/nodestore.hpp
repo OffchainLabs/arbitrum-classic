@@ -46,7 +46,9 @@ class NodeStore {
 
     ValueResult<uint64_t> getHeight(const uint256_t& hash) const;
     ValueResult<uint256_t> getHash(uint64_t height) const;
-    uint64_t longestChainCount() const;
+
+    bool isEmpty() const;
+    uint64_t maxNodeHeight() const;
 };
 
 #endif /* nodestore_hpp */

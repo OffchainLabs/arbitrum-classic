@@ -28,8 +28,9 @@ constexpr auto hash_size = 32;
 namespace {
 std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
     std::array<char, 64> key;
-    to_big_endian(height, key.begin());
-    to_big_endian(hash, key.begin() + height_size);
+    auto it = key.begin();
+    it = to_big_endian(height, it);
+    to_big_endian(hash, it);
     return key;
 }
 

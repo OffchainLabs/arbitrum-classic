@@ -363,16 +363,8 @@ void ethhash2Op(MachineState& m) {
     auto& bNum = assumeInt(m.stack[1]);
 
     std::array<unsigned char, 64> inData;
-    std::array<uint64_t, 4> anumInts;
-    to_big_endian(aNum, anumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(anumInts.data()),
-              reinterpret_cast<unsigned char*>(anumInts.data()) + 32,
-              inData.begin());
-    std::array<uint64_t, 4> bnumInts;
-    to_big_endian(bNum, bnumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(bnumInts.data()),
-              reinterpret_cast<unsigned char*>(bnumInts.data()) + 32,
-              inData.begin() + 32);
+    auto it = to_big_endian(aNum, inData.begin());
+    to_big_endian(bNum, it);
 
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(inData.data(), 64, hashData.data());

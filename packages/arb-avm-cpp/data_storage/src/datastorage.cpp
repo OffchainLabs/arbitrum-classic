@@ -64,6 +64,7 @@ DataStorage::DataStorage(const std::string& db_path) {
 rocksdb::Status DataStorage::closeDb() {
     blocks_column.reset();
     default_column.reset();
+    nodes_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
