@@ -36,7 +36,8 @@ ByteSliceResult getNode(CNodeStore* node_store,
                         const void* hash);
 Uint64Result getNodeHeight(CNodeStore* node_store, const void* hash);
 HashResult getNodeHash(CNodeStore* node_store, uint64_t height);
-uint64_t longestNodeChainCount(CNodeStore* node_store);
+int isNodeStoreEmpty(CNodeStore* node_store);
+uint64_t maxNodeHeight(CNodeStore* node_store);
 
 #ifdef __cplusplus
 }

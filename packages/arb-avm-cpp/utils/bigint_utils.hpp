@@ -54,18 +54,24 @@ auto from_big_endian(const Iterator begin, const Iterator end) {
     return v;
 }
 
-template <typename Iterator>
-inline void to_big_endian(uint256_t v, Iterator out) {
+template <typename Iterator,
+          typename = std::enable_if_t<
+              sizeof(typename std::iterator_traits<Iterator>::value_type) == 1>>
+inline auto to_big_endian(uint256_t v, Iterator out) {
     // boost::multiprecision::export_bits() does not work here, because it
     // doesn't support fixed width export.
-    uint64_t* o = reinterpret_cast<uint64_t*>(&*out);
     constexpr uint64_t mask64 = 0xffffffff'ffffffff;
 
     for (size_t i = 4; i-- > 0;) {
         uint64_t n = static_cast<uint64_t>(v & mask64);
+        n = boost::endian::native_to_big(n);
+
+        auto n_ptr = reinterpret_cast<const char*>(&n);
+        std::copy(n_ptr, n_ptr + sizeof(n), out + sizeof(uint64_t) * i);
+
         v >>= 64;
-        o[i] = boost::endian::native_to_big(n);
     }
+    return out + 32;
 }
 
 #endif /* bigint_utils_hpp */

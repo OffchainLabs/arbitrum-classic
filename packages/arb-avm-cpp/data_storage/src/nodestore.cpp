@@ -50,7 +50,7 @@ std::array<char, node_key_size> toNodeKey(uint64_t height,
     std::array<char, node_key_size> key;
     auto it =
         std::copy(node_key_prefix.begin(), node_key_prefix.end(), key.begin());
-    addHeightToKey(height, it);
+    it = addHeightToKey(height, it);
     to_big_endian(hash, it);
     return key;
 }
@@ -146,15 +146,15 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
     std::string chain_count_value;
     s = transaction->Get(rocksdb::ReadOptions(), node_column.get(),
                          chain_count_key_slice, &chain_count_value);
-    if (!s.ok()) {
-        transaction->Rollback();
-        return s;
-    }
-    auto chain_count_height = valueToHeight(chain_count_value);
 
-    if (height > chain_count_height) {
+    uint64_t current_max_height = 0;
+    if (s.ok()) {
+        current_max_height = valueToHeight(chain_count_value);
+    }
+
+    if (height > current_max_height) {
         s = transaction->Put(node_column.get(), chain_count_key_slice,
-                             node_height_value_slice);
+                             node_hash_value_slice);
         if (!s.ok()) {
             transaction->Rollback();
             return s;
@@ -199,7 +199,14 @@ ValueResult<uint256_t> NodeStore::getHash(uint64_t height) const {
     return {status, valueToHash(value)};
 }
 
-uint64_t NodeStore::longestChainCount() const {
+bool NodeStore::isEmpty() const {
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        txn_db->NewIterator(rocksdb::ReadOptions(), node_column.get()));
+    it->SeekToLast();
+    return !it->Valid();
+}
+
+uint64_t NodeStore::maxNodeHeight() const {
     rocksdb::Slice key_slice(chain_count_key.begin(), chain_count_key.size());
     std::string value;
     auto status = txn_db->DB::Get(rocksdb::ReadOptions(), node_column.get(),
