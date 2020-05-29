@@ -34,7 +34,8 @@ import (
 )
 
 type Node struct {
-	prev        *Node
+	prevHash    common.Hash
+	prev        *Node // Node with hash prevHash if non-nil
 	deadline    common.TimeTicks
 	disputable  *valprotocol.DisputableNode
 	linkType    valprotocol.ChildType
@@ -58,6 +59,7 @@ func (n *Node) String() string {
 
 func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
+		prevHash:   common.Hash{},
 		prev:       nil,
 		deadline:   common.TimeTicks{big.NewInt(0)},
 		disputable: nil,
@@ -129,6 +131,7 @@ func NewNodeFromPrev(
 	}
 
 	ret := &Node{
+		prevHash:        prev.hash,
 		prev:            prev,
 		deadline:        deadlineTicks,
 		disputable:      disputable,
@@ -140,6 +143,11 @@ func NewNodeFromPrev(
 	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
 	return ret
+}
+
+func (node *Node) isInitial() bool {
+	emptyHash := common.Hash{}
+	return node.prevHash == emptyHash
 }
 
 func (node *Node) Equals(node2 *Node) bool {
@@ -281,12 +289,13 @@ func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *No
 	}
 }
 
-func (m *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext, chain *NodeGraph) *Node {
+func (m *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *Node {
 	var disputableNode *valprotocol.DisputableNode
 	if m.DisputableNode != nil {
 		disputableNode = m.DisputableNode.Unmarshal()
 	}
 	node := &Node{
+		prevHash:        m.PrevHash.Unmarshal(),
 		prev:            nil,
 		deadline:        m.Deadline.Unmarshal(),
 		disputable:      disputableNode,
@@ -309,8 +318,6 @@ func (m *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext, chai
 	if m.Assertion != nil {
 		node.assertion = m.Assertion.UnmarshalFromCheckpoint(ctx)
 	}
-
-	chain.nodeFromHash[node.hash] = node
 
 	// can't set up prev and successorHash fields yet; caller must do this later
 	return node
