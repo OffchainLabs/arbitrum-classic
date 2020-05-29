@@ -267,3 +267,7 @@ func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, valprot
 
 	return prevN1, prevN2, linkType, nil
 }
+
+func (chain *NodeGraph) GetSuccessor(node *Node, kind valprotocol.ChildType) *Node {
+	return chain.nodeFromHash[node.successorHashes[kind]]
+}

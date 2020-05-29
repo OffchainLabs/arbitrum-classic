@@ -216,7 +216,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
 	currentOpinionHash := currentOpinion.hash
-	prevPrevLeafHash := currentOpinion.PrevHash()
+	prevPrevLeafHash := currentOpinion.prevHash
 	prevDataHash := currentOpinion.nodeDataHash
 	prevDeadline := common.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
 	prevChildType := currentOpinion.linkType
