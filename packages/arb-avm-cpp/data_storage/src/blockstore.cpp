@@ -15,6 +15,7 @@
  */
 
 #include <data_storage/blockstore.hpp>
+#include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <bigint_utils.hpp>
@@ -56,16 +57,17 @@ rocksdb::Status BlockStore::putBlock(const uint256_t& height,
     auto key = toKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     rocksdb::Slice value_slice(value.data(), value.size());
-    return txn_db->DB::Put(rocksdb::WriteOptions(), blocks_column.get(),
-                           key_slice, value_slice);
+    return data_storage->txn_db->DB::Put(rocksdb::WriteOptions(),
+                                         data_storage->blocks_column.get(),
+                                         key_slice, value_slice);
 }
 
 rocksdb::Status BlockStore::deleteBlock(const uint256_t& height,
                                         const uint256_t& hash) {
     auto key = toKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
-    return txn_db->DB::Delete(rocksdb::WriteOptions(), blocks_column.get(),
-                              key_slice);
+    return data_storage->txn_db->DB::Delete(
+        rocksdb::WriteOptions(), data_storage->blocks_column.get(), key_slice);
 }
 
 DataResults BlockStore::getBlock(const uint256_t& height,
@@ -73,8 +75,9 @@ DataResults BlockStore::getBlock(const uint256_t& height,
     auto key = toKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     std::string value;
-    auto status = txn_db->DB::Get(rocksdb::ReadOptions(), blocks_column.get(),
-                                  key_slice, &value);
+    auto status = data_storage->txn_db->DB::Get(
+        rocksdb::ReadOptions(), data_storage->blocks_column.get(), key_slice,
+        &value);
     return {status, {value.begin(), value.end()}};
 }
 
@@ -85,8 +88,9 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
     auto prefix = toKeyPrefix(height);
     rocksdb::Slice prefix_slice(prefix.begin(), prefix.size());
 
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
+    auto it =
+        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
+            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
 
     for (it->Seek(prefix_slice);
          it->key().starts_with(prefix_slice) && it->Valid(); it->Next()) {
@@ -96,8 +100,9 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
 }
 
 uint256_t BlockStore::maxHeight() const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
+    auto it =
+        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
+            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
     it->SeekToLast();
     if (it->Valid()) {
         return keyToHeight(it->key());
@@ -107,8 +112,9 @@ uint256_t BlockStore::maxHeight() const {
 }
 
 uint256_t BlockStore::minHeight() const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
+    auto it =
+        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
+            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
     it->SeekToFirst();
     if (it->Valid()) {
         return keyToHeight(it->key());
@@ -118,8 +124,9 @@ uint256_t BlockStore::minHeight() const {
 }
 
 bool BlockStore::isEmpty() const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-        txn_db->NewIterator(rocksdb::ReadOptions(), blocks_column.get()));
+    auto it =
+        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
+            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
     it->SeekToLast();
     return !it->Valid();
 }

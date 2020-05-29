@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <data_storage/datastorage.hpp>
 #include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
@@ -100,14 +101,14 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
                                    const uint256_t& hash,
                                    const std::vector<char>& value) {
     auto transaction = std::unique_ptr<rocksdb::Transaction>(
-        txn_db->BeginTransaction(rocksdb::WriteOptions()));
+        data_storage->txn_db->BeginTransaction(rocksdb::WriteOptions()));
 
     auto key = toNodeKey(height, hash);
     rocksdb::Slice node_key_slice(key.begin(), key.size());
     rocksdb::Slice node_value_slice(value.data(), value.size());
 
-    auto s =
-        transaction->Put(node_column.get(), node_key_slice, node_value_slice);
+    auto s = transaction->Put(data_storage->node_column.get(), node_key_slice,
+                              node_value_slice);
     if (!s.ok()) {
         transaction->Rollback();
         return s;
@@ -120,7 +121,7 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
     rocksdb::Slice node_hash_value_slice(node_hash_value.begin(),
                                          node_hash_value.size());
 
-    s = transaction->Put(node_column.get(), node_hash_key_slice,
+    s = transaction->Put(data_storage->node_column.get(), node_hash_key_slice,
                          node_hash_value_slice);
     if (!s.ok()) {
         transaction->Rollback();
@@ -134,7 +135,7 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
     rocksdb::Slice node_height_value_slice(node_height_value.begin(),
                                            node_height_value.size());
 
-    s = transaction->Put(node_column.get(), node_height_key_slice,
+    s = transaction->Put(data_storage->node_column.get(), node_height_key_slice,
                          node_height_value_slice);
     if (!s.ok()) {
         transaction->Rollback();
@@ -144,8 +145,9 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
     rocksdb::Slice chain_count_key_slice(chain_count_key.begin(),
                                          chain_count_key.size());
     std::string chain_count_value;
-    s = transaction->Get(rocksdb::ReadOptions(), node_column.get(),
-                         chain_count_key_slice, &chain_count_value);
+    s = transaction->Get(rocksdb::ReadOptions(),
+                         data_storage->node_column.get(), chain_count_key_slice,
+                         &chain_count_value);
 
     uint64_t current_max_height = 0;
     if (s.ok()) {
@@ -153,8 +155,8 @@ rocksdb::Status NodeStore::putNode(uint64_t height,
     }
 
     if (height > current_max_height) {
-        s = transaction->Put(node_column.get(), chain_count_key_slice,
-                             node_hash_value_slice);
+        s = transaction->Put(data_storage->node_column.get(),
+                             chain_count_key_slice, node_hash_value_slice);
         if (!s.ok()) {
             transaction->Rollback();
             return s;
@@ -168,8 +170,9 @@ DataResults NodeStore::getNode(uint64_t height, const uint256_t& hash) const {
     auto key = toNodeKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     std::string value;
-    auto status = txn_db->DB::Get(rocksdb::ReadOptions(), node_column.get(),
-                                  key_slice, &value);
+    auto status = data_storage->txn_db->DB::Get(rocksdb::ReadOptions(),
+                                                data_storage->node_column.get(),
+                                                key_slice, &value);
     return {status, {value.begin(), value.end()}};
 }
 
@@ -177,8 +180,9 @@ ValueResult<uint64_t> NodeStore::getHeight(const uint256_t& hash) const {
     auto key = toNodeHashKey(hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     std::string value;
-    auto status = txn_db->DB::Get(rocksdb::ReadOptions(), node_column.get(),
-                                  key_slice, &value);
+    auto status = data_storage->txn_db->DB::Get(rocksdb::ReadOptions(),
+                                                data_storage->node_column.get(),
+                                                key_slice, &value);
 
     if (!status.ok()) {
         return {status, 0};
@@ -190,8 +194,9 @@ ValueResult<uint256_t> NodeStore::getHash(uint64_t height) const {
     auto key = toNodeHeightKey(height);
     rocksdb::Slice key_slice(key.begin(), key.size());
     std::string value;
-    auto status = txn_db->DB::Get(rocksdb::ReadOptions(), node_column.get(),
-                                  key_slice, &value);
+    auto status = data_storage->txn_db->DB::Get(rocksdb::ReadOptions(),
+                                                data_storage->node_column.get(),
+                                                key_slice, &value);
 
     if (!status.ok()) {
         return {status, 0};
@@ -200,8 +205,9 @@ ValueResult<uint256_t> NodeStore::getHash(uint64_t height) const {
 }
 
 bool NodeStore::isEmpty() const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-        txn_db->NewIterator(rocksdb::ReadOptions(), node_column.get()));
+    auto it =
+        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
+            rocksdb::ReadOptions(), data_storage->node_column.get()));
     it->SeekToLast();
     return !it->Valid();
 }
@@ -209,8 +215,9 @@ bool NodeStore::isEmpty() const {
 uint64_t NodeStore::maxNodeHeight() const {
     rocksdb::Slice key_slice(chain_count_key.begin(), chain_count_key.size());
     std::string value;
-    auto status = txn_db->DB::Get(rocksdb::ReadOptions(), node_column.get(),
-                                  key_slice, &value);
+    auto status = data_storage->txn_db->DB::Get(rocksdb::ReadOptions(),
+                                                data_storage->node_column.get(),
+                                                key_slice, &value);
 
     if (!status.ok()) {
         return 0;

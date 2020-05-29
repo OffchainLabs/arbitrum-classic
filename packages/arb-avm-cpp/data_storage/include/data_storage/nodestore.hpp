@@ -23,6 +23,8 @@
 #include <memory>
 #include <vector>
 
+class DataStorage;
+
 namespace rocksdb {
 class TransactionDB;
 class Status;
@@ -32,13 +34,12 @@ class ColumnFamilyHandle;
 
 class NodeStore {
    private:
-    std::shared_ptr<rocksdb::TransactionDB> txn_db;
-    std::shared_ptr<rocksdb::ColumnFamilyHandle> node_column;
+    std::shared_ptr<DataStorage> data_storage;
 
    public:
-    NodeStore(std::shared_ptr<rocksdb::TransactionDB> txn_db_,
-              std::shared_ptr<rocksdb::ColumnFamilyHandle> node_column_)
-        : txn_db(std::move(txn_db_)), node_column(std::move(node_column_)) {}
+    NodeStore() = default;
+    NodeStore(std::shared_ptr<DataStorage> data_storage_)
+        : data_storage(std::move(data_storage_)) {}
     rocksdb::Status putNode(uint64_t height,
                             const uint256_t& hash,
                             const std::vector<char>& data);
