@@ -19,7 +19,7 @@ package rollup
 import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"strconv"
 
@@ -30,16 +30,16 @@ import (
 )
 
 type NodeGraph struct {
-	latestConfirmed *node.Node
+	latestConfirmed *structures.Node
 	leaves          *LeafSet
-	nodeFromHash    map[common.Hash]*node.Node
-	oldestNode      *node.Node
+	nodeFromHash    map[common.Hash]*structures.Node
+	oldestNode      *structures.Node
 	params          valprotocol.ChainParams
 }
 
 func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
-	newNode := node.NewInitialNode(machine)
-	nodeFromHash := make(map[common.Hash]*node.Node)
+	newNode := structures.NewInitialNode(machine)
+	nodeFromHash := make(map[common.Hash]*structures.Node)
 	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()
 	leaves.Add(newNode)
@@ -53,12 +53,12 @@ func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *Node
 }
 
 func (ng *NodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *NodeGraphBuf {
-	var allNodes []*node.NodeBuf
+	var allNodes []*structures.NodeBuf
 	for _, n := range ng.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx, true))
 	}
 	var leafHashes []common.Hash
-	ng.leaves.forall(func(node *node.Node) {
+	ng.leaves.forall(func(node *structures.Node) {
 		leafHashes = append(leafHashes, node.Hash())
 	})
 	return &NodeGraphBuf{
@@ -74,7 +74,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
-		nodeFromHash:    make(map[common.Hash]*node.Node),
+		nodeFromHash:    make(map[common.Hash]*structures.Node),
 		oldestNode:      nil,
 		params:          x.Params.Unmarshal(),
 	}
@@ -91,7 +91,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 			if !ok {
 				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
 			}
-			if err := node.Link(nd, prev); err != nil {
+			if err := structures.Link(nd, prev); err != nil {
 				// This can only fail if prev is not actually the prev of nd
 				log.Fatal(err)
 			}
@@ -118,7 +118,7 @@ func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
 	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
 }
 
-func (ng *NodeGraph) DebugStringForNodeRecursive(node *node.Node, stakers *StakerSet, prefix string) string {
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string) string {
 	ret := prefix + strconv.Itoa(int(node.LinkType())) + ":" + node.Hash().ShortString()
 	if ng.leaves.IsLeaf(node) {
 		ret = ret + " leaf"
@@ -158,7 +158,7 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 	return true
 }
 
-func (ng *NodeGraph) pruneNode(node *node.Node) {
+func (ng *NodeGraph) pruneNode(node *structures.Node) {
 	oldNode := node.Prev()
 	if node.UnlinkPrev() {
 		ng.considerPruningNode(oldNode)
@@ -166,7 +166,7 @@ func (ng *NodeGraph) pruneNode(node *node.Node) {
 	delete(ng.nodeFromHash, node.Hash())
 }
 
-func (ng *NodeGraph) pruneOldestNode(oldest *node.Node) {
+func (ng *NodeGraph) pruneOldestNode(oldest *structures.Node) {
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succHash := oldest.SuccessorHashes()[i]
 		if !succHash.Equals(common.Hash{}) {
@@ -176,7 +176,7 @@ func (ng *NodeGraph) pruneOldestNode(oldest *node.Node) {
 	delete(ng.nodeFromHash, oldest.Hash())
 }
 
-func (ng *NodeGraph) HasReference(node *node.Node) bool {
+func (ng *NodeGraph) HasReference(node *structures.Node) bool {
 	if node.NumStakers() > 0 || ng.leaves.IsLeaf(node) {
 		return true
 	}
@@ -188,13 +188,13 @@ func (ng *NodeGraph) HasReference(node *node.Node) bool {
 	return false
 }
 
-func (ng *NodeGraph) considerPruningNode(node *node.Node) {
+func (ng *NodeGraph) considerPruningNode(node *structures.Node) {
 	if !ng.HasReference(node) {
 		ng.pruneNode(node)
 	}
 }
 
-func (ng *NodeGraph) getLeaf(node *node.Node) *node.Node {
+func (ng *NodeGraph) getLeaf(node *structures.Node) *structures.Node {
 	for _, successor := range node.SuccessorHashes() {
 		if successor != zeroBytes32 {
 			return ng.getLeaf(ng.nodeFromHash[successor])
@@ -204,7 +204,7 @@ func (ng *NodeGraph) getLeaf(node *node.Node) *node.Node {
 }
 
 func (ng *NodeGraph) CreateNodesOnAssert(
-	prevNode *node.Node,
+	prevNode *structures.Node,
 	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
@@ -216,12 +216,12 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 
 	// create nodes for invalid branches
 	for kind := valprotocol.ChildType(0); kind <= valprotocol.MaxInvalidChildType; kind++ {
-		newNode := node.NewNodeFromInvalidPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		newNode := structures.NewNodeFromInvalidPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
 		ng.nodeFromHash[newNode.Hash()] = newNode
 		ng.leaves.Add(newNode)
 	}
 
-	newNode := node.NewNodeFromValidPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	newNode := structures.NewNodeFromValidPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
 	ng.nodeFromHash[newNode.Hash()] = newNode
 	ng.leaves.Add(newNode)
 }
@@ -231,7 +231,7 @@ func (ng *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
 	ng.pruneNode(nd)
 }
 
-func GetConflictAncestor(n1, n2 *node.Node) (*node.Node, *node.Node, valprotocol.ChildType, error) {
+func GetConflictAncestor(n1, n2 *structures.Node) (*structures.Node, *structures.Node, valprotocol.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1
@@ -263,6 +263,6 @@ func GetConflictAncestor(n1, n2 *node.Node) (*node.Node, *node.Node, valprotocol
 	return prevN1, prevN2, linkType, nil
 }
 
-func (ng *NodeGraph) GetSuccessor(node *node.Node, kind valprotocol.ChildType) *node.Node {
+func (ng *NodeGraph) GetSuccessor(node *structures.Node, kind valprotocol.ChildType) *structures.Node {
 	return ng.nodeFromHash[node.SuccessorHashes()[kind]]
 }

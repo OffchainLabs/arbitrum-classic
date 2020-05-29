@@ -19,11 +19,10 @@ package rollup;
 import "common/common.proto";
 import "structures/structures.proto";
 import "valprotocol/valprotocol.proto";
-import "node/node.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message NodeGraphBuf {
-    repeated node.NodeBuf nodes = 1;
+    repeated structures.NodeBuf nodes = 1;
     common.HashBuf oldestNodeHash = 2;
     common.HashBuf latestConfirmedHash = 3;
     repeated common.HashBuf    leafHashes = 4;

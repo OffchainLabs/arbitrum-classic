@@ -19,7 +19,7 @@ package rollup
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
 	"time"
@@ -144,7 +144,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	tryMarshalUnmarshal(chain, t)
 }
 
-func doAnAssertion(chain *ChainObserver, baseNode *node.Node) error {
+func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
 	timeBounds := &protocol.TimeBounds{
 		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),

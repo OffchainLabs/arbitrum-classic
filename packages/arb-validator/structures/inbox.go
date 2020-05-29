@@ -19,14 +19,14 @@ package structures
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 type messageStackItem struct {

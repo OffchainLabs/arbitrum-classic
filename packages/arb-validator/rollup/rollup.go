@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"math/big"
 	"sync"
@@ -44,8 +43,8 @@ type ChainObserver struct {
 	nodeGraph           *StakedNodeGraph
 	rollupAddr          common.Address
 	inbox               *structures.Inbox
-	knownValidNode      *node.Node
-	calculatedValidNode *node.Node
+	knownValidNode      *structures.Node
+	calculatedValidNode *structures.Node
 	latestBlockId       *common.BlockId
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
@@ -262,7 +261,7 @@ func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMov
 func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	_, challengerAncestor, err := node.GetConflictAncestor(asserter.location, challenger.location)
+	_, challengerAncestor, err := structures.GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
@@ -327,7 +326,7 @@ func (chain *ChainObserver) updateOldest() {
 		if chain.calculatedValidNode == chain.nodeGraph.oldestNode {
 			return
 		}
-		var successor *node.Node
+		var successor *structures.Node
 		for _, successorHash := range chain.nodeGraph.oldestNode.SuccessorHashes() {
 			if successorHash != zeroBytes32 {
 				if successor != nil {
@@ -366,7 +365,7 @@ func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
 		chain.inbox.Equals(co2.inbox)
 }
 
-func (chain *ChainObserver) executionPrecondition(node *node.Node) *valprotocol.Precondition {
+func (chain *ChainObserver) executionPrecondition(node *structures.Node) *valprotocol.Precondition {
 	vmProtoData := node.Prev().VMProtoData()
 	params := node.Disputable().AssertionParams
 	inbox, _ := chain.inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())

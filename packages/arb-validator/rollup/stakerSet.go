@@ -18,7 +18,7 @@ package rollup
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"strconv"
 
@@ -27,7 +27,7 @@ import (
 
 type Staker struct {
 	address      common.Address
-	location     *node.Node
+	location     *structures.Node
 	creationTime common.TimeTicks
 	challenge    common.Address
 }
