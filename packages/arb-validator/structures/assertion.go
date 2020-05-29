@@ -20,10 +20,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
-func MarshalAssertionForCheckpoint(ctx *checkpointing.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
+func MarshalAssertionForCheckpoint(ctx *ckptcontext.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
 	messages := make([]*common.HashBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
 		ctx.AddValue(msg)
@@ -43,7 +43,7 @@ func MarshalAssertionForCheckpoint(ctx *checkpointing.CheckpointContext, a *prot
 	}
 }
 
-func (a *ExecutionAssertionBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *protocol.ExecutionAssertion {
+func (a *ExecutionAssertionBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *protocol.ExecutionAssertion {
 	messages := make([]value.Value, 0, len(a.Logs))
 	for _, valLog := range a.Messages {
 		val := ctx.GetValue(valLog.Unmarshal())
