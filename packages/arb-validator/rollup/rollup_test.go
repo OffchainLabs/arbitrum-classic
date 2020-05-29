@@ -80,7 +80,7 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 	}
 
 	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
+	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
 	doAnAssertion(chain, validTip)
 	if chain.nodeGraph.leaves.NumLeaves() != 7 {
 		t.Fatal("unexpected leaf count")
@@ -105,8 +105,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	staker1addr := common.Address{1}
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
-	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.InvalidMessagesChildType)
+	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
+	tip2 := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.InvalidMessagesChildType)
 	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)

@@ -154,18 +154,6 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
-func (node *Node) PrevHash() common.Hash {
-	if node.prev != nil {
-		return node.prev.hash
-	} else {
-		return common.Hash{}
-	}
-}
-
-func (node *Node) GetSuccessor(chain *NodeGraph, kind valprotocol.ChildType) *Node {
-	return chain.nodeFromHash[node.successorHashes[kind]]
-}
-
 func (node *Node) ExecutionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
 
@@ -338,17 +326,6 @@ func GeneratePathProof(from, to *Node) []common.Hash {
 	return append(sub, to.innerHash)
 }
 
-func GenerateConflictProof(from, to1, to2 *Node) ([]common.Hash, []common.Hash) {
-	// returns nil, nil if no proof exists
-	proof1 := GeneratePathProof(from, to1)
-	proof2 := GeneratePathProof(from, to2)
-	if proof1 == nil || proof2 == nil || len(proof1) == 0 || len(proof2) == 0 || proof1[0] == proof2[0] {
-		return nil, nil
-	} else {
-		return proof1, proof2
-	}
-}
-
 func (node *Node) EqualsFull(n2 *Node) bool {
 	return node.Equals(n2) &&
 		node.depth == n2.depth &&
@@ -356,11 +333,6 @@ func (node *Node) EqualsFull(n2 *Node) bool {
 		node.linkType == n2.linkType &&
 		node.successorHashes == n2.successorHashes &&
 		node.numStakers == n2.numStakers
-}
-
-func CommonAncestor(n1, n2 *Node) *Node {
-	n1, _, _ = GetConflictAncestor(n1, n2)
-	return n1.prev
 }
 
 func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
