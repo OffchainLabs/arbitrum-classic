@@ -18,7 +18,7 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"time"
@@ -71,7 +71,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			currentHash := currentOpinion.Hash()
 			log.Println("Building opinion on top of", currentHash)
 			successorHashes := currentOpinion.SuccessorHashes()
-			successor := func() *node.Node {
+			successor := func() *structures.Node {
 				for _, successor := range successorHashes {
 					if successor != zeroBytes32 {
 						return chain.nodeGraph.nodeFromHash[successor]

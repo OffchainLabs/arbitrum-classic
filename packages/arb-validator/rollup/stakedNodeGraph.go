@@ -19,7 +19,7 @@ package rollup
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"sort"
 
@@ -158,9 +158,9 @@ func (sa SortableAddressList) Swap(i, j int) {
 
 func (sng *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valprotocol.PruneParams {
 	var prunesToDo []valprotocol.PruneParams
-	sng.leaves.forall(func(leaf *node.Node) {
+	sng.leaves.forall(func(leaf *structures.Node) {
 		if leaf != sng.latestConfirmed {
-			leafAncestor, _, err := node.GetConflictAncestor(leaf, sng.latestConfirmed)
+			leafAncestor, _, err := structures.GetConflictAncestor(leaf, sng.latestConfirmed)
 			if err == nil {
 				noStakersOnLeaf := true
 				sng.stakers.forall(func(s *Staker) {
@@ -172,8 +172,8 @@ func (sng *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valproto
 					prunesToDo = append(prunesToDo, valprotocol.PruneParams{
 						LeafHash:     leaf.Hash(),
 						AncestorHash: leafAncestor.Prev().Hash(),
-						LeafProof:    node.GeneratePathProof(leafAncestor.Prev(), leaf),
-						AncProof:     node.GeneratePathProof(leafAncestor.Prev(), sng.latestConfirmed),
+						LeafProof:    structures.GeneratePathProof(leafAncestor.Prev(), leaf),
+						AncProof:     structures.GeneratePathProof(leafAncestor.Prev(), sng.latestConfirmed),
 					})
 				}
 			}
@@ -194,7 +194,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	nodeOps := make([]valprotocol.ConfirmNodeOpportunity, 0)
 	conf := sng.latestConfirmed
 	keepChecking := true
-	confNodes := make([]*node.Node, 0)
+	confNodes := make([]*structures.Node, 0)
 	for ; keepChecking; keepChecking = false {
 		for _, successor := range conf.SuccessorHashes() {
 			if successor == zeroBytes32 {
@@ -271,7 +271,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 }
 
 func (sng *StakedNodeGraph) generateAlignedStakersProofs(
-	confirmingNode *node.Node,
+	confirmingNode *structures.Node,
 	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
 ) [][]common.Hash {
@@ -285,7 +285,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 		if staker.creationTime.Cmp(deadline) >= 0 {
 			continue
 		}
-		subProof := node.GeneratePathProof(confirmingNode, staker.location)
+		subProof := structures.GeneratePathProof(confirmingNode, staker.location)
 		if subProof == nil {
 			return nil
 		}
@@ -295,7 +295,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 }
 
 func (sng *StakedNodeGraph) isConfirmableNode(
-	confirmingNode *node.Node,
+	confirmingNode *structures.Node,
 	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
 ) bool {
@@ -309,7 +309,7 @@ func (sng *StakedNodeGraph) isConfirmableNode(
 		if staker.creationTime.Cmp(deadline) >= 0 {
 			continue
 		}
-		subProof := node.GeneratePathProof(confirmingNode, staker.location)
+		subProof := structures.GeneratePathProof(confirmingNode, staker.location)
 		if subProof == nil {
 			return false
 		}
@@ -328,13 +328,13 @@ func (sng *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParam
 			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
 				addr:         staker.address,
 				ancestorHash: prev.Hash(),
-				lcProof:      node.GeneratePathProof(prev, sng.latestConfirmed),
-				stProof:      node.GeneratePathProof(prev, staker.location),
+				lcProof:      structures.GeneratePathProof(prev, sng.latestConfirmed),
+				stProof:      structures.GeneratePathProof(prev, staker.location),
 			})
 		} else if staker.location.Depth() < sng.latestConfirmed.Depth() {
 			oldToDo = append(oldToDo, recoverStakeOldParams{
 				addr:  staker.address,
-				proof: node.GeneratePathProof(staker.location, sng.latestConfirmed),
+				proof: structures.GeneratePathProof(staker.location, sng.latestConfirmed),
 			})
 		}
 	})
@@ -361,7 +361,7 @@ func (sng *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Stak
 	if !staker1.challenge.IsZero() || !staker2.challenge.IsZero() {
 		return nil
 	}
-	staker1Ancestor, staker2Ancestor, err := node.GetConflictAncestor(staker1.location, staker2.location)
+	staker1Ancestor, staker2Ancestor, err := structures.GetConflictAncestor(staker1.location, staker2.location)
 	if err != nil {
 		return nil
 	}
@@ -369,9 +369,9 @@ func (sng *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Stak
 	linkType2 := staker2Ancestor.LinkType()
 
 	var asserterStaker *Staker
-	var asserterAncestor *node.Node
+	var asserterAncestor *structures.Node
 	var challengerStaker *Staker
-	var challengerAncestor *node.Node
+	var challengerAncestor *structures.Node
 	if linkType1 < linkType2 {
 		asserterStaker = staker2
 		asserterAncestor = staker2Ancestor
@@ -395,8 +395,8 @@ func (sng *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Stak
 		challengerNodeType:    challengerAncestor.LinkType(),
 		asserterVMProtoHash:   asserterAncestor.VMProtoData().Hash(),
 		challengerVMProtoHash: challengerAncestor.VMProtoData().Hash(),
-		asserterProof:         node.GeneratePathProof(asserterAncestor, asserterStaker.location),
-		challengerProof:       node.GeneratePathProof(challengerAncestor, challengerStaker.location),
+		asserterProof:         structures.GeneratePathProof(asserterAncestor, asserterStaker.location),
+		challengerProof:       structures.GeneratePathProof(challengerAncestor, challengerStaker.location),
 		asserterNodeHash:      asserterAncestor.NodeDataHash(),
 		challengerDataHash:    challengerDataHash,
 		challengerPeriodTicks: challengerPeriodTicks,

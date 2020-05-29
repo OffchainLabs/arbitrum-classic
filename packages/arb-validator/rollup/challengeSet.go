@@ -17,7 +17,7 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -29,7 +29,7 @@ type Challenge struct {
 	asserter     common.Address
 	challenger   common.Address
 	contract     common.Address
-	conflictNode *node.Node
+	conflictNode *structures.Node
 }
 
 type ChallengeSet struct {

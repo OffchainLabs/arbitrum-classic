@@ -18,7 +18,7 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"sync"
@@ -107,8 +107,8 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 
 func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *StakingKey) error {
 	location := chain.knownValidNode
-	proof1 := node.GeneratePathProof(chain.nodeGraph.latestConfirmed, location)
-	proof2 := node.GeneratePathProof(location, chain.nodeGraph.getLeaf(location))
+	proof1 := structures.GeneratePathProof(chain.nodeGraph.latestConfirmed, location)
+	proof2 := structures.GeneratePathProof(location, chain.nodeGraph.getLeaf(location))
 	stakeAmount := chain.nodeGraph.params.StakeRequirement
 
 	log.Println("Placing stake for", stakingKey.client.Address())
@@ -165,7 +165,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 			// stakingKey is not staked
 			continue
 		}
-		proof := node.GeneratePathProof(stakerPos.location, leaf)
+		proof := structures.GeneratePathProof(stakerPos.location, leaf)
 		if proof == nil {
 			// staker can't move to new asertion
 			continue
@@ -562,8 +562,8 @@ func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Conte
 		}
 		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
 		if newValidNode.Depth() > staker.location.Depth() {
-			proof1 := node.GeneratePathProof(staker.location, newValidNode)
-			proof2 := node.GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
+			proof1 := structures.GeneratePathProof(staker.location, newValidNode)
+			proof2 := structures.GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
 			lis.actor.MoveStake(ctx, proof1, proof2)
 		}
 	}

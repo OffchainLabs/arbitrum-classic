@@ -14,12 +14,11 @@
 * limitations under the License.
  */
 
-package node
+package structures
 
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
 
@@ -29,7 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 var zeroBytes32 common.Hash // deliberately zeroed
@@ -357,9 +356,9 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 		disputableNodeBuf = node.disputable.MarshalToBuf()
 	}
 
-	var assertion *structures.ExecutionAssertionBuf
+	var assertion *ExecutionAssertionBuf
 	if node.assertion != nil {
-		assertion = structures.MarshalAssertionForCheckpoint(ctx, node.assertion)
+		assertion = MarshalAssertionForCheckpoint(ctx, node.assertion)
 	}
 	return &NodeBuf{
 		PrevHash:        node.prevHash.MarshalToBuf(),
