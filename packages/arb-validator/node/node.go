@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package node
 
 import (
 	"errors"
@@ -32,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
+
+var zeroBytes32 common.Hash // deliberately zeroed
 
 type Node struct {
 	prevHash    common.Hash
@@ -53,15 +55,15 @@ type Node struct {
 	numStakers      uint64
 }
 
-func (n *Node) String() string {
-	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", n.linkType, n.disputable, n.deadline.Val, n.vmProtoData)
+func (node *Node) String() string {
+	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", node.linkType, node.disputable, node.deadline.Val, node.vmProtoData)
 }
 
 func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prevHash:   common.Hash{},
 		prev:       nil,
-		deadline:   common.TimeTicks{big.NewInt(0)},
+		deadline:   common.TimeTicks{Val: big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: valprotocol.NewVMProtoData(
@@ -140,12 +142,106 @@ func NewNodeFromPrev(
 		depth:           prev.depth + 1,
 		assertionTxHash: assertionTxHash,
 	}
-	ret.setHash(ret.NodeDataHash(params))
+	ret.setHash(ret.calculateNodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
 	return ret
 }
 
-func (node *Node) isInitial() bool {
+func (node *Node) Hash() common.Hash {
+	return node.hash
+}
+
+func (node *Node) AssertionTxHash() common.Hash {
+	return node.assertionTxHash
+}
+
+func (node *Node) LinkType() valprotocol.ChildType {
+	return node.linkType
+}
+
+func (node *Node) PrevHash() common.Hash {
+	return node.prevHash
+}
+
+func (node *Node) Prev() *Node {
+	return node.prev
+}
+
+func (node *Node) ClearPrev() {
+	node.prev = nil
+}
+
+func (node *Node) UnlinkPrev() bool {
+	hasPrev := node.prev != nil
+	if hasPrev {
+		node.prev.successorHashes[node.LinkType()] = zeroBytes32
+		node.prev = nil
+	}
+	return hasPrev
+}
+
+func (node *Node) Deadline() common.TimeTicks {
+	return node.deadline
+}
+
+func (node *Node) Disputable() *valprotocol.DisputableNode {
+	return node.disputable
+}
+
+func (node *Node) VMProtoData() *valprotocol.VMProtoData {
+	return node.vmProtoData
+}
+
+func (node *Node) Machine() machine.Machine {
+	return node.machine
+}
+
+func (node *Node) Assertion() *protocol.ExecutionAssertion {
+	return node.assertion
+}
+
+func (node *Node) UpdateValidOpinion(machine machine.Machine, assertion *protocol.ExecutionAssertion) error {
+	if node.linkType != valprotocol.ValidChildType {
+		return errors.New("node is invalid")
+	}
+	node.machine = machine
+	node.assertion = assertion
+	return nil
+}
+
+func (node *Node) UpdateInvalidOpinion() error {
+	if node.linkType == valprotocol.ValidChildType {
+		return errors.New("node is valid")
+	}
+	node.machine = node.prev.machine.Clone()
+	return nil
+}
+
+func (node *Node) Depth() uint64 {
+	return node.depth
+}
+
+func (node *Node) NodeDataHash() common.Hash {
+	return node.nodeDataHash
+}
+
+func (node *Node) SuccessorHashes() [valprotocol.MaxChildType + 1]common.Hash {
+	return node.successorHashes
+}
+
+func (node *Node) NumStakers() uint64 {
+	return node.numStakers
+}
+
+func (node *Node) AddStaker() {
+	node.numStakers++
+}
+
+func (node *Node) RemoveStaker() {
+	node.numStakers--
+}
+
+func (node *Node) IsInitial() bool {
 	emptyHash := common.Hash{}
 	return node.prevHash == emptyHash
 }
@@ -154,7 +250,7 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
-func (node *Node) ExecutionPreconditionHash() common.Hash {
+func (node *Node) executionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
 
 	return hashing.SoliditySHA3(
@@ -167,7 +263,7 @@ func (node *Node) ExecutionPreconditionHash() common.Hash {
 	)
 }
 
-func (node *Node) NodeDataHash(params valprotocol.ChainParams) common.Hash {
+func (node *Node) calculateNodeDataHash(params valprotocol.ChainParams) common.Hash {
 	if node.disputable == nil {
 		return common.Hash{}
 	}
@@ -211,7 +307,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 	case valprotocol.InvalidExecutionChildType:
 		ret := valprotocol.ExecutionDataHash(
 			node.disputable.AssertionParams.NumSteps,
-			node.ExecutionPreconditionHash(),
+			node.executionPreconditionHash(),
 			node.disputable.AssertionClaim.AssertionStub.Hash(),
 		)
 		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
@@ -242,15 +338,20 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	node.hash = hash
 }
 
-func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeBuf {
+func Link(nd *Node, prev *Node) error {
+	if nd.prevHash != prev.hash {
+		return errors.New("node is not parent")
+	}
+	nd.prev = prev
+	prev.successorHashes[nd.linkType] = nd.hash
+	return nil
+}
+
+func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext, includeMachine bool) *NodeBuf {
 	var machineHash *common.HashBuf
-	if node.machine != nil {
+	if includeMachine && node.machine != nil {
 		ctx.AddMachine(node.machine)
 		machineHash = node.machine.Hash().MarshalToBuf()
-	}
-	var prevHashBuf *common.HashBuf
-	if node.prev != nil {
-		prevHashBuf = node.prev.hash.MarshalToBuf()
 	}
 	var disputableNodeBuf *valprotocol.DisputableNodeBuf
 	if node.disputable != nil {
@@ -262,7 +363,7 @@ func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *No
 		assertion = structures.MarshalAssertionForCheckpoint(ctx, node.assertion)
 	}
 	return &NodeBuf{
-		PrevHash:        prevHashBuf,
+		PrevHash:        node.prevHash.MarshalToBuf(),
 		Deadline:        node.deadline.MarshalToBuf(),
 		DisputableNode:  disputableNodeBuf,
 		LinkType:        uint32(node.linkType),
@@ -277,34 +378,35 @@ func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *No
 	}
 }
 
-func (m *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *Node {
+func (x *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *Node {
 	var disputableNode *valprotocol.DisputableNode
-	if m.DisputableNode != nil {
-		disputableNode = m.DisputableNode.Unmarshal()
+	if x.DisputableNode != nil {
+		disputableNode = x.DisputableNode.Unmarshal()
 	}
+
 	node := &Node{
-		prevHash:        m.PrevHash.Unmarshal(),
+		prevHash:        x.PrevHash.Unmarshal(),
 		prev:            nil,
-		deadline:        m.Deadline.Unmarshal(),
+		deadline:        x.Deadline.Unmarshal(),
 		disputable:      disputableNode,
-		linkType:        valprotocol.ChildType(m.LinkType),
-		vmProtoData:     m.VmProtoData.Unmarshal(),
+		linkType:        valprotocol.ChildType(x.LinkType),
+		vmProtoData:     x.VmProtoData.Unmarshal(),
 		machine:         nil,
 		assertion:       nil,
-		depth:           m.Depth,
-		nodeDataHash:    m.NodeDataHash.Unmarshal(),
-		innerHash:       m.InnerHash.Unmarshal(),
-		hash:            m.Hash.Unmarshal(),
-		assertionTxHash: m.AssertionTxHash.Unmarshal(),
+		depth:           x.Depth,
+		nodeDataHash:    x.NodeDataHash.Unmarshal(),
+		innerHash:       x.InnerHash.Unmarshal(),
+		hash:            x.Hash.Unmarshal(),
+		assertionTxHash: x.AssertionTxHash.Unmarshal(),
 		numStakers:      0,
 	}
 
-	if m.MachineHash != nil {
-		node.machine = ctx.GetMachine(m.MachineHash.Unmarshal())
+	if x.MachineHash != nil {
+		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal())
 	}
 
-	if m.Assertion != nil {
-		node.assertion = m.Assertion.UnmarshalFromCheckpoint(ctx)
+	if x.Assertion != nil {
+		node.assertion = x.Assertion.UnmarshalFromCheckpoint(ctx)
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later

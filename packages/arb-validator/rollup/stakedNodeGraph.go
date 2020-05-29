@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"sort"
 
@@ -52,94 +53,94 @@ func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams)
 	}
 }
 
-func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *StakedNodeGraphBuf {
+func (sng *StakedNodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
-	chain.stakers.forall(func(staker *Staker) {
+	sng.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
 	var allChallenges []*ChallengeBuf
-	chain.challenges.forall(func(c *Challenge) {
+	sng.challenges.forall(func(c *Challenge) {
 		allChallenges = append(allChallenges, c.MarshalToBuf())
 	})
 	return &StakedNodeGraphBuf{
-		NodeGraph:  chain.NodeGraph.MarshalForCheckpoint(ctx),
+		NodeGraph:  sng.NodeGraph.MarshalForCheckpoint(ctx),
 		Stakers:    allStakers,
 		Challenges: allChallenges,
 	}
 }
 
-func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *StakedNodeGraph {
+func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *StakedNodeGraph {
 	chain := &StakedNodeGraph{
-		NodeGraph:  m.NodeGraph.UnmarshalFromCheckpoint(ctx),
+		NodeGraph:  x.NodeGraph.UnmarshalFromCheckpoint(ctx),
 		stakers:    NewStakerSet(),
 		challenges: NewChallengeSet(),
 	}
-	for _, stakerBuf := range m.Stakers {
+	for _, stakerBuf := range x.Stakers {
 		chain.stakers.Add(stakerBuf.Unmarshal(chain.NodeGraph))
 	}
-	for _, challengeBuf := range m.Challenges {
+	for _, challengeBuf := range x.Challenges {
 		chain.challenges.Add(challengeBuf.Unmarshal(chain.NodeGraph))
 	}
 	return chain
 }
 
-func (m *StakedNodeGraph) DebugString(prefix string) string {
+func (sng *StakedNodeGraph) DebugString(prefix string) string {
 	subPrefix := prefix + "  "
-	return "\n" + prefix + "nodes:\n" + m.NodeGraph.DebugString(m.stakers, subPrefix) + m.stakers.DebugString(prefix)
+	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix) + sng.stakers.DebugString(prefix)
 }
 
-func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
-	return s.NodeGraph.Equals(s2.NodeGraph) &&
-		s.stakers.Equals(s2.stakers) &&
-		s.challenges.Equals(s2.challenges)
+func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
+	return sng.NodeGraph.Equals(s2.NodeGraph) &&
+		sng.stakers.Equals(s2.stakers) &&
+		sng.challenges.Equals(s2.challenges)
 }
 
-func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
-	node, ok := chain.nodeFromHash[ev.NodeHash]
+func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
+	nd, ok := sng.nodeFromHash[ev.NodeHash]
 	if !ok {
 		log.Println("Bad location", ev.NodeHash)
 		panic("Tried to create stake on bad node")
 	}
-	chain.stakers.Add(&Staker{
+	sng.stakers.Add(&Staker{
 		ev.Staker,
-		node,
+		nd,
 		common.TicksFromBlockNum(ev.BlockId.Height),
 		common.Address{},
 	})
 }
 
-func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash common.Hash) {
-	staker := chain.stakers.Get(stakerAddr)
+func (sng *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash common.Hash) {
+	staker := sng.stakers.Get(stakerAddr)
 	if staker == nil {
 		log.Fatalf("Moved nonexistant staker %v to node %v", stakerAddr, nodeHash)
 	}
-	staker.location.numStakers--
+	staker.location.RemoveStaker()
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
-	newLocation, ok := chain.nodeFromHash[nodeHash]
+	newLocation, ok := sng.nodeFromHash[nodeHash]
 	if !ok {
 		log.Fatalf("Moved staker %v to nonexistant node %v", stakerAddr, nodeHash)
 	}
 	staker.location = newLocation
-	staker.location.numStakers++
+	staker.location.AddStaker()
 }
 
-func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
-	staker := chain.stakers.Get(stakerAddr)
-	staker.location.numStakers--
-	chain.considerPruningNode(staker.location)
-	chain.stakers.Delete(staker)
+func (sng *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
+	staker := sng.stakers.Get(stakerAddr)
+	staker.location.RemoveStaker()
+	sng.considerPruningNode(staker.location)
+	sng.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(chal *Challenge) {
-	chain.stakers.Get(chal.asserter).challenge = chal.contract
-	chain.stakers.Get(chal.challenger).challenge = chal.contract
-	chain.challenges.Add(chal)
+func (sng *StakedNodeGraph) NewChallenge(chal *Challenge) {
+	sng.stakers.Get(chal.asserter).challenge = chal.contract
+	sng.stakers.Get(chal.challenger).challenge = chal.contract
+	sng.challenges.Add(chal)
 }
 
-func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
-	chain.stakers.Get(winner).challenge = common.Address{}
-	chain.RemoveStake(loser)
-	chain.challenges.Delete(contract)
+func (sng *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
+	sng.stakers.Get(winner).challenge = common.Address{}
+	sng.RemoveStake(loser)
+	sng.challenges.Delete(contract)
 }
 
 type SortableAddressList []common.Address
@@ -156,24 +157,24 @@ func (sa SortableAddressList) Swap(i, j int) {
 	sa[i], sa[j] = sa[j], sa[i]
 }
 
-func (chain *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valprotocol.PruneParams {
-	prunesToDo := []valprotocol.PruneParams{}
-	chain.leaves.forall(func(leaf *Node) {
-		if leaf != chain.latestConfirmed {
-			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
+func (sng *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valprotocol.PruneParams {
+	var prunesToDo []valprotocol.PruneParams
+	sng.leaves.forall(func(leaf *node.Node) {
+		if leaf != sng.latestConfirmed {
+			leafAncestor, _, err := node.GetConflictAncestor(leaf, sng.latestConfirmed)
 			if err == nil {
 				noStakersOnLeaf := true
-				chain.stakers.forall(func(s *Staker) {
+				sng.stakers.forall(func(s *Staker) {
 					if s.location.Equals(leaf) {
 						noStakersOnLeaf = false
 					}
 				})
 				if noStakersOnLeaf {
 					prunesToDo = append(prunesToDo, valprotocol.PruneParams{
-						LeafHash:     leaf.hash,
-						AncestorHash: leafAncestor.prev.hash,
-						LeafProof:    GeneratePathProof(leafAncestor.prev, leaf),
-						AncProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+						LeafHash:     leaf.Hash(),
+						AncestorHash: leafAncestor.Prev().Hash(),
+						LeafProof:    node.GeneratePathProof(leafAncestor.Prev(), leaf),
+						AncProof:     node.GeneratePathProof(leafAncestor.Prev(), sng.latestConfirmed),
 					})
 				}
 			}
@@ -194,45 +195,46 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	nodeOps := make([]valprotocol.ConfirmNodeOpportunity, 0)
 	conf := sng.latestConfirmed
 	keepChecking := true
-	confNodes := make([]*Node, 0)
+	confNodes := make([]*node.Node, 0)
 	for ; keepChecking; keepChecking = false {
-		for _, successor := range conf.successorHashes {
+		for _, successor := range conf.SuccessorHashes() {
 			if successor == zeroBytes32 {
 				continue
 			}
-			node := sng.nodeFromHash[successor]
+			nd := sng.nodeFromHash[successor]
 
 			confirmable := sng.isConfirmableNode(
-				node,
+				nd,
 				currentTime,
 				stakerAddrs,
 			)
 			if confirmable {
 				var confOpp valprotocol.ConfirmNodeOpportunity
-				if node.linkType == valprotocol.ValidChildType {
+				if nd.LinkType() == valprotocol.ValidChildType {
 					// We need to know the contents of the actual assertion to confirm it
 					// We've only seen the hash accumulator of the messages before whereas this requires the full values
-					if node.assertion == nil {
+					assertion := nd.Assertion()
+					if assertion == nil {
 						break
 					}
 					confOpp = valprotocol.ConfirmValidOpportunity{
-						DeadlineTicks:    node.deadline,
-						Messages:         node.assertion.OutMsgs,
-						LogsAcc:          node.disputable.AssertionClaim.AssertionStub.LastLogHash,
-						VMProtoStateHash: node.vmProtoData.Hash(),
+						DeadlineTicks:    nd.Deadline(),
+						Messages:         assertion.OutMsgs,
+						LogsAcc:          nd.Disputable().AssertionClaim.AssertionStub.LastLogHash,
+						VMProtoStateHash: nd.VMProtoData().Hash(),
 					}
 
 				} else {
 					confOpp = valprotocol.ConfirmInvalidOpportunity{
-						DeadlineTicks:     node.deadline,
-						ChallengeNodeData: node.nodeDataHash,
-						Branch:            node.linkType,
-						VMProtoStateHash:  node.vmProtoData.Hash(),
+						DeadlineTicks:     nd.Deadline(),
+						ChallengeNodeData: nd.NodeDataHash(),
+						Branch:            nd.LinkType(),
+						VMProtoStateHash:  nd.VMProtoData().Hash(),
 					}
 				}
-				confNodes = append(confNodes, node)
+				confNodes = append(confNodes, nd)
 				nodeOps = append(nodeOps, confOpp)
-				conf = node
+				conf = nd
 				keepChecking = true
 				break
 			}
@@ -260,7 +262,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 		if totalSize < MaxAssertionSize || nodeLimit == 1 {
 			return &valprotocol.ConfirmOpportunity{
 				Nodes:                  nodeOps[:nodeLimit],
-				CurrentLatestConfirmed: sng.latestConfirmed.hash,
+				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
 				StakerAddresses:        stakerAddrs,
 				StakerProofs:           proofs,
 			}
@@ -270,12 +272,12 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 }
 
 func (sng *StakedNodeGraph) generateAlignedStakersProofs(
-	confirmingNode *Node,
+	confirmingNode *node.Node,
 	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
 ) [][]common.Hash {
 	proofs := make([][]common.Hash, 0)
-	deadline := confirmingNode.deadline
+	deadline := confirmingNode.Deadline()
 	if currentTime.Cmp(deadline) < 0 {
 		return nil
 	}
@@ -284,7 +286,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 		if staker.creationTime.Cmp(deadline) >= 0 {
 			continue
 		}
-		subProof := GeneratePathProof(confirmingNode, staker.location)
+		subProof := node.GeneratePathProof(confirmingNode, staker.location)
 		if subProof == nil {
 			return nil
 		}
@@ -294,11 +296,11 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 }
 
 func (sng *StakedNodeGraph) isConfirmableNode(
-	confirmingNode *Node,
+	confirmingNode *node.Node,
 	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
 ) bool {
-	deadline := confirmingNode.deadline
+	deadline := confirmingNode.Deadline()
 	stakeCount := 0
 	if currentTime.Cmp(deadline) < 0 {
 		return false
@@ -308,7 +310,7 @@ func (sng *StakedNodeGraph) isConfirmableNode(
 		if staker.creationTime.Cmp(deadline) >= 0 {
 			continue
 		}
-		subProof := GeneratePathProof(confirmingNode, staker.location)
+		subProof := node.GeneratePathProof(confirmingNode, staker.location)
 		if subProof == nil {
 			return false
 		}
@@ -317,22 +319,23 @@ func (sng *StakedNodeGraph) isConfirmableNode(
 	return stakeCount > 0
 }
 
-func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {
-	mootedToDo := []recoverStakeMootedParams{}
-	oldToDo := []recoverStakeOldParams{}
-	chain.stakers.forall(func(staker *Staker) {
-		stakerAncestor, _, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
+func (sng *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {
+	var mootedToDo []recoverStakeMootedParams
+	var oldToDo []recoverStakeOldParams
+	sng.stakers.forall(func(staker *Staker) {
+		stakerAncestor, _, _, err := GetConflictAncestor(staker.location, sng.latestConfirmed)
 		if err == nil {
+			prev := stakerAncestor.Prev()
 			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
 				addr:         staker.address,
-				ancestorHash: stakerAncestor.prev.hash,
-				lcProof:      GeneratePathProof(stakerAncestor.prev, chain.latestConfirmed),
-				stProof:      GeneratePathProof(stakerAncestor.prev, staker.location),
+				ancestorHash: prev.Hash(),
+				lcProof:      node.GeneratePathProof(prev, sng.latestConfirmed),
+				stProof:      node.GeneratePathProof(prev, staker.location),
 			})
-		} else if staker.location.depth < chain.latestConfirmed.depth {
+		} else if staker.location.Depth() < sng.latestConfirmed.Depth() {
 			oldToDo = append(oldToDo, recoverStakeOldParams{
 				addr:  staker.address,
-				proof: GeneratePathProof(staker.location, chain.latestConfirmed),
+				proof: node.GeneratePathProof(staker.location, sng.latestConfirmed),
 			})
 		}
 	})
@@ -355,21 +358,21 @@ type challengeOpportunity struct {
 	challengerPeriodTicks common.TimeTicks
 }
 
-func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
+func (sng *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
 	if !staker1.challenge.IsZero() || !staker2.challenge.IsZero() {
 		return nil
 	}
-	staker1Ancestor, staker2Ancestor, err := GetConflictAncestor(staker1.location, staker2.location)
+	staker1Ancestor, staker2Ancestor, err := node.GetConflictAncestor(staker1.location, staker2.location)
 	if err != nil {
 		return nil
 	}
-	linkType1 := staker1Ancestor.linkType
-	linkType2 := staker2Ancestor.linkType
+	linkType1 := staker1Ancestor.LinkType()
+	linkType2 := staker2Ancestor.LinkType()
 
 	var asserterStaker *Staker
-	var asserterAncestor *Node
+	var asserterAncestor *node.Node
 	var challengerStaker *Staker
-	var challengerAncestor *Node
+	var challengerAncestor *node.Node
 	if linkType1 < linkType2 {
 		asserterStaker = staker2
 		asserterAncestor = staker2Ancestor
@@ -382,33 +385,33 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 		challengerAncestor = staker2Ancestor
 	}
 
-	challengerDataHash, challengerPeriodTicks := challengerAncestor.ChallengeNodeData(chain.params)
+	challengerDataHash, challengerPeriodTicks := challengerAncestor.ChallengeNodeData(sng.params)
 
 	return &challengeOpportunity{
 		asserter:              asserterStaker.address,
 		challenger:            challengerStaker.address,
-		prevNodeHash:          asserterAncestor.prev.hash,
-		deadlineTicks:         asserterAncestor.deadline,
-		asserterNodeType:      asserterAncestor.linkType,
-		challengerNodeType:    challengerAncestor.linkType,
-		asserterVMProtoHash:   asserterAncestor.vmProtoData.Hash(),
-		challengerVMProtoHash: challengerAncestor.vmProtoData.Hash(),
-		asserterProof:         GeneratePathProof(asserterAncestor, asserterStaker.location),
-		challengerProof:       GeneratePathProof(challengerAncestor, challengerStaker.location),
-		asserterNodeHash:      asserterAncestor.nodeDataHash,
+		prevNodeHash:          asserterAncestor.Prev().Hash(),
+		deadlineTicks:         asserterAncestor.Deadline(),
+		asserterNodeType:      asserterAncestor.LinkType(),
+		challengerNodeType:    challengerAncestor.LinkType(),
+		asserterVMProtoHash:   asserterAncestor.VMProtoData().Hash(),
+		challengerVMProtoHash: challengerAncestor.VMProtoData().Hash(),
+		asserterProof:         node.GeneratePathProof(asserterAncestor, asserterStaker.location),
+		challengerProof:       node.GeneratePathProof(challengerAncestor, challengerStaker.location),
+		asserterNodeHash:      asserterAncestor.NodeDataHash(),
 		challengerDataHash:    challengerDataHash,
 		challengerPeriodTicks: challengerPeriodTicks,
 	}
 }
 
-func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *challengeOpportunity {
+func (sng *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *challengeOpportunity {
 	if !staker.challenge.IsZero() {
 		return nil
 	}
 	var ret *challengeOpportunity
-	chain.stakers.forall(func(staker2 *Staker) {
+	sng.stakers.forall(func(staker2 *Staker) {
 		if !staker2.Equals(staker) {
-			opp := chain.checkChallengeOpportunityPair(staker, staker2)
+			opp := sng.checkChallengeOpportunityPair(staker, staker2)
 			if opp != nil {
 				ret = opp
 				return
@@ -418,15 +421,15 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *chal
 	return ret
 }
 
-func (chain *StakedNodeGraph) checkChallengeOpportunityAllPairs() []*challengeOpportunity {
-	ret := []*challengeOpportunity{}
-	stakers := []*Staker{}
-	chain.stakers.forall(func(s *Staker) {
+func (sng *StakedNodeGraph) checkChallengeOpportunityAllPairs() []*challengeOpportunity {
+	var ret []*challengeOpportunity
+	var stakers []*Staker
+	sng.stakers.forall(func(s *Staker) {
 		stakers = append(stakers, s)
 	})
 	for i, s1 := range stakers {
 		for j := i + 1; j < len(stakers); j++ {
-			opp := chain.checkChallengeOpportunityPair(s1, stakers[j])
+			opp := sng.checkChallengeOpportunityPair(s1, stakers[j])
 			if opp != nil {
 				ret = append(ret, opp)
 				break

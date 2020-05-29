@@ -19,26 +19,11 @@ package rollup;
 import "common/common.proto";
 import "structures/structures.proto";
 import "valprotocol/valprotocol.proto";
+import "node/node.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
-message NodeBuf {
-    common.HashBuf prevHash = 1;
-    common.TimeTicksBuf deadline = 2;
-    valprotocol.DisputableNodeBuf disputableNode = 3;
-    uint32 linkType = 4;
-    valprotocol.VMProtoDataBuf vmProtoData = 5;
-
-    common.HashBuf machineHash = 6;
-    structures.ExecutionAssertionBuf assertion = 7;
-    uint64 depth = 8;
-    common.HashBuf nodeDataHash = 9;
-    common.HashBuf innerHash = 10;
-    common.HashBuf hash = 11;
-    common.HashBuf assertionTxHash = 12;
-}
-
 message NodeGraphBuf {
-    repeated NodeBuf nodes = 1;
+    repeated node.NodeBuf nodes = 1;
     common.HashBuf oldestNodeHash = 2;
     common.HashBuf latestConfirmedHash = 3;
     repeated common.HashBuf    leafHashes = 4;
