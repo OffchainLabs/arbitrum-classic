@@ -19,10 +19,9 @@ package node
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -347,7 +346,7 @@ func Link(nd *Node, prev *Node) error {
 	return nil
 }
 
-func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext, includeMachine bool) *NodeBuf {
+func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, includeMachine bool) *NodeBuf {
 	var machineHash *common.HashBuf
 	if includeMachine && node.machine != nil {
 		ctx.AddMachine(node.machine)
@@ -378,7 +377,7 @@ func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext, inc
 	}
 }
 
-func (x *NodeBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *Node {
+func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *Node {
 	var disputableNode *valprotocol.DisputableNode
 	if x.DisputableNode != nil {
 		disputableNode = x.DisputableNode.Unmarshal()

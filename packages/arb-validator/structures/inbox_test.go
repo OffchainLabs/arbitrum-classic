@@ -17,10 +17,9 @@
 package structures
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"math/big"
 	"testing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -188,6 +187,6 @@ func TestInboxInsert(t *testing.T) {
 }
 
 func marshalUnmarshal(pi *Inbox) (*MessageStack, error) {
-	ctx := checkpointing.NewCheckpointContext()
+	ctx := ckptcontext.NewCheckpointContext()
 	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }

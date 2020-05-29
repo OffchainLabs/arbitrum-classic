@@ -18,13 +18,12 @@ package rollup
 
 import (
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -53,7 +52,7 @@ func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *Node
 	}
 }
 
-func (ng *NodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeGraphBuf {
+func (ng *NodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*node.NodeBuf
 	for _, n := range ng.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx, true))
@@ -71,7 +70,7 @@ func (ng *NodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) 
 	}
 }
 
-func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *NodeGraph {
+func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *NodeGraph {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),

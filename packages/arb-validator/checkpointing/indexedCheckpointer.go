@@ -19,6 +19,7 @@ package checkpointing
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
 	"os"
@@ -120,13 +121,13 @@ func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
 type writableCheckpoint struct {
 	blockId  *common.BlockId
 	contents []byte
-	ckpCtx   *CheckpointContext
+	ckpCtx   *ckptcontext.CheckpointContext
 }
 
 func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	blockId *common.BlockId,
 	contents []byte,
-	cpCtx *CheckpointContext,
+	cpCtx *ckptcontext.CheckpointContext,
 ) {
 	cp.Lock()
 	defer cp.Unlock()
@@ -138,7 +139,7 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	}
 }
 
-func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, RestoreContext) error) error {
+func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, ckptcontext.RestoreContext) error) error {
 	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
 }
 
@@ -146,13 +147,13 @@ func (cp *IndexedCheckpointer) CheckpointConfirmed(
 	nodeHash common.Hash,
 	depth uint64,
 	nodeData []byte,
-	cpCtx *CheckpointContext,
+	cpCtx *ckptcontext.CheckpointContext,
 ) error {
 	if _, err := cp.ns.GetNode(depth, nodeHash); err == nil {
 		// Node already exists so don't bother inserting
 		return nil
 	}
-	if err := saveCheckpointContext(cp.db, cpCtx); err != nil {
+	if err := ckptcontext.SaveCheckpointContext(cp.db, cpCtx); err != nil {
 		return err
 	}
 	return cp.ns.PutNode(depth, nodeHash, nodeData)
@@ -163,7 +164,7 @@ func restoreLatestState(
 	bs machine.BlockStore,
 	db machine.CheckpointStorage,
 	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, RestoreContext) error,
+	unmarshalFunc func([]byte, ckptcontext.RestoreContext) error,
 ) error {
 	if bs.IsBlockStoreEmpty() {
 		return errNoCheckpoint
@@ -213,7 +214,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 
 func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *writableCheckpoint) error {
 	// save values and machines
-	if err := saveCheckpointContext(db, wc.ckpCtx); err != nil {
+	if err := ckptcontext.SaveCheckpointContext(db, wc.ckpCtx); err != nil {
 		return err
 	}
 

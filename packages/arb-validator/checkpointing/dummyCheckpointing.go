@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"log"
 )
@@ -50,7 +51,7 @@ func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }
 
-func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, RestoreContext) error) error {
+func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext) error) error {
 	return errors.New("no checkpoints in database")
 }
 
@@ -58,8 +59,9 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.fac.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *CheckpointContext) {}
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) {
+}
 
-func (dcp *DummyCheckpointer) CheckpointConfirmed(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *CheckpointContext) error {
+func (dcp *DummyCheckpointer) CheckpointConfirmed(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
 	return nil
 }

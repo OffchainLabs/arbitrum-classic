@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"math/big"
 	"testing"
@@ -57,7 +58,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
-	ctx := checkpointing.NewCheckpointContext()
+	ctx := ckptcontext.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
 	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if err != nil {

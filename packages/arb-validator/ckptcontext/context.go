@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package checkpointing
+package ckptcontext
 
 import (
 	"errors"
@@ -78,7 +78,7 @@ func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
 	return ctx.machines[h]
 }
 
-func saveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {
+func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {
 	for _, val := range ckpCtx.Values() {
 		if ok := db.SaveValue(val); !ok {
 			return errors.New("failed to write value to checkpoint db")

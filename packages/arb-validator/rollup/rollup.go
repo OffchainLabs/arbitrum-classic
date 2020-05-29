@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"math/big"
@@ -111,7 +112,7 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
-func (chain *ChainObserver) marshalForCheckpoint(ctx *checkpointing.CheckpointContext) *ChainObserverBuf {
+func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
@@ -123,14 +124,14 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *checkpointing.CheckpointCo
 	}
 }
 
-func (chain *ChainObserver) marshalToBytes(ctx *checkpointing.CheckpointContext) ([]byte, error) {
+func (chain *ChainObserver) marshalToBytes(ctx *ckptcontext.CheckpointContext) ([]byte, error) {
 	cob := chain.marshalForCheckpoint(ctx)
 	return proto.Marshal(cob)
 }
 
 func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
-	restoreCtx checkpointing.RestoreContext,
+	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
 	nodeGraph := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
@@ -189,7 +190,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId
-	ckptCtx := checkpointing.NewCheckpointContext()
+	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
@@ -290,7 +291,7 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) error {
 	confirmedNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
 	if confirmedNode.Prev() != nil {
-		ckptCtx := checkpointing.NewCheckpointContext()
+		ckptCtx := ckptcontext.NewCheckpointContext()
 		nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx, false)
 		nodeBytes, err := proto.Marshal(nodeData)
 		if err != nil {

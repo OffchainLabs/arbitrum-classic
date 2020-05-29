@@ -18,13 +18,12 @@ package rollup
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -53,7 +52,7 @@ func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams)
 	}
 }
 
-func (sng *StakedNodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *StakedNodeGraphBuf {
+func (sng *StakedNodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	sng.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
@@ -69,7 +68,7 @@ func (sng *StakedNodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointCo
 	}
 }
 
-func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *StakedNodeGraph {
+func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *StakedNodeGraph {
 	chain := &StakedNodeGraph{
 		NodeGraph:  x.NodeGraph.UnmarshalFromCheckpoint(ctx),
 		stakers:    NewStakerSet(),
