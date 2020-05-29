@@ -81,21 +81,18 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContex
 
 	// unmarshal nodes; their prev/successors will not be set up yet
 	for _, nodeBuf := range buf.Nodes {
-		node := nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
+		node := nodeBuf.UnmarshalFromCheckpoint(ctx)
 		chain.nodeFromHash[node.hash] = node
 	}
 	// now set up prevs and successors for all nodes
-	for _, nodeBuf := range buf.Nodes {
-		nodeHash := nodeBuf.Hash.Unmarshal()
-		node := chain.nodeFromHash[nodeHash]
-		if nodeBuf.PrevHash != nil {
-			prevHash := nodeBuf.PrevHash.Unmarshal()
-			prev, ok := chain.nodeFromHash[prevHash]
+	for _, node := range chain.nodeFromHash {
+		if !node.isInitial() {
+			prev, ok := chain.nodeFromHash[node.prevHash]
 			if !ok {
-				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", prevHash, nodeHash)
+				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", node.prevHash, node.hash)
 			}
 			node.prev = prev
-			prev.successorHashes[node.linkType] = nodeHash
+			prev.successorHashes[node.linkType] = node.hash
 		}
 	}
 
