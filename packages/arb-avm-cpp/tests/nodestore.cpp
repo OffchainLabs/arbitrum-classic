@@ -25,8 +25,8 @@
 
 TEST_CASE("NodeStore tests") {
     DBDeleter deleter;
-    DataStorage storage{dbpath};
-    auto store = storage.getNodeStore();
+    auto storage = std::make_shared<DataStorage>(dbpath);
+    auto store = std::make_unique<NodeStore>(storage);
 
     SECTION("isEmpty") {
         REQUIRE(store->isEmpty());

@@ -25,8 +25,8 @@
 
 TEST_CASE("BlockStore tests") {
     DBDeleter deleter;
-    DataStorage storage{dbpath};
-    auto store = storage.getBlockStore();
+    auto storage = std::make_shared<DataStorage>(dbpath);
+    auto store = std::make_unique<BlockStore>(storage);
 
     SECTION("BlockStore min, max, and empty") {
         REQUIRE(store->isEmpty());

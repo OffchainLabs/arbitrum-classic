@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 
+class DataStorage;
+
 namespace rocksdb {
 class Transaction;
 class Status;
@@ -31,13 +33,11 @@ class ColumnFamilyHandle;
 
 class KeyValueStore {
    private:
-    std::unique_ptr<rocksdb::Transaction> transaction;
-    std::shared_ptr<rocksdb::ColumnFamilyHandle> column;
+    std::shared_ptr<DataStorage> data_storage;
 
    public:
-    KeyValueStore(std::unique_ptr<rocksdb::Transaction> transaction_,
-                  std::shared_ptr<rocksdb::ColumnFamilyHandle> column_)
-        : transaction(std::move(transaction_)), column(std::move(column_)) {}
+    KeyValueStore(std::shared_ptr<DataStorage> data_storage_)
+        : data_storage(std::move(data_storage_)) {}
     rocksdb::Status saveData(const rocksdb::Slice& key,
                              const std::vector<unsigned char>& value);
     rocksdb::Status deleteData(const rocksdb::Slice& key);
