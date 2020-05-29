@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/node"
 	"log"
 	"math/big"
 	"sync"
@@ -42,8 +43,8 @@ type ChainObserver struct {
 	nodeGraph           *StakedNodeGraph
 	rollupAddr          common.Address
 	inbox               *structures.Inbox
-	knownValidNode      *Node
-	calculatedValidNode *Node
+	knownValidNode      *node.Node
+	calculatedValidNode *node.Node
 	latestBlockId       *common.BlockId
 	listeners           []ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
@@ -115,8 +116,8 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *checkpointing.CheckpointCo
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
 		Inbox:               chain.inbox.MarshalForCheckpoint(ctx),
-		KnownValidNode:      chain.knownValidNode.hash.MarshalToBuf(),
-		CalculatedValidNode: chain.calculatedValidNode.hash.MarshalToBuf(),
+		KnownValidNode:      chain.knownValidNode.Hash().MarshalToBuf(),
+		CalculatedValidNode: chain.calculatedValidNode.Hash().MarshalToBuf(),
 		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
 		IsOpinionated:       chain.isOpinionated,
 	}
@@ -212,7 +213,7 @@ func (chain *ChainObserver) ContractAddress() common.Address {
 
 func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 	chain.RLock()
-	mach := chain.calculatedValidNode.machine.Clone()
+	mach := chain.calculatedValidNode.Machine().Clone()
 	chain.RUnlock()
 	return mach
 }
@@ -260,7 +261,7 @@ func (chain *ChainObserver) moveStake(ctx context.Context, ev arbbridge.StakeMov
 func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	_, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
+	_, challengerAncestor, err := node.GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
@@ -288,31 +289,27 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) error {
 	confirmedNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
-	if confirmedNode.prev != nil {
-		// temporarily clear machine for marshalling
-		mach := confirmedNode.prev.machine
-		confirmedNode.prev.machine = nil
+	if confirmedNode.Prev() != nil {
 		ckptCtx := checkpointing.NewCheckpointContext()
-		nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx)
+		nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx, false)
 		nodeBytes, err := proto.Marshal(nodeData)
 		if err != nil {
 			return err
 		}
 		if err := chain.checkpointer.CheckpointConfirmed(
-			confirmedNode.hash,
-			confirmedNode.depth,
+			confirmedNode.Hash(),
+			confirmedNode.Depth(),
 			nodeBytes,
 			ckptCtx,
 		); err != nil {
 			return err
 		}
-		confirmedNode.prev.machine = mach
 	}
-	if confirmedNode.depth > chain.knownValidNode.depth {
+	if confirmedNode.Depth() > chain.knownValidNode.Depth() {
 		chain.knownValidNode = confirmedNode
 	}
 	chain.nodeGraph.latestConfirmed = confirmedNode
-	chain.nodeGraph.considerPruningNode(confirmedNode.prev)
+	chain.nodeGraph.considerPruningNode(confirmedNode.Prev())
 
 	chain.updateOldest()
 	for _, listener := range chain.listeners {
@@ -323,14 +320,14 @@ func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.Confir
 
 func (chain *ChainObserver) updateOldest() {
 	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
-		if chain.nodeGraph.oldestNode.numStakers > 0 {
+		if chain.nodeGraph.oldestNode.NumStakers() > 0 {
 			return
 		}
 		if chain.calculatedValidNode == chain.nodeGraph.oldestNode {
 			return
 		}
-		var successor *Node
-		for _, successorHash := range chain.nodeGraph.oldestNode.successorHashes {
+		var successor *node.Node
+		for _, successorHash := range chain.nodeGraph.oldestNode.SuccessorHashes() {
 			if successorHash != zeroBytes32 {
 				if successor != nil {
 					return
@@ -368,12 +365,13 @@ func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
 		chain.inbox.Equals(co2.inbox)
 }
 
-func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
-	vmProtoData := node.prev.vmProtoData
-	inbox, _ := chain.inbox.GenerateVMInbox(node.prev.vmProtoData.InboxTop, node.disputable.AssertionParams.ImportedMessageCount.Uint64())
+func (chain *ChainObserver) executionPrecondition(node *node.Node) *valprotocol.Precondition {
+	vmProtoData := node.Prev().VMProtoData()
+	params := node.Disputable().AssertionParams
+	inbox, _ := chain.inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
-		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
+		TimeBounds:  params.TimeBounds,
 		BeforeInbox: inbox.AsValue(),
 	}
 }
