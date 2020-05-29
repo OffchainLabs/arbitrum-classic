@@ -124,7 +124,6 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		msg.MessageNum,
 	)
 
-	// why call doesnt also take in lower hash size
 	if err != nil {
 		return c.contract.OneStepProofEthMessageCall(
 			ctx,

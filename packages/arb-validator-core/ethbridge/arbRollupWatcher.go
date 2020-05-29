@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	//"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"strings"
 

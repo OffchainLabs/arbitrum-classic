@@ -164,7 +164,6 @@ func defendExecution(
 			defenders, assertions = defender.NBisect(uint64(bisectionCount))
 			err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 			if err != nil {
-				fmt.Println(err)
 				return 0, err
 			}
 			event, state, err = getNextEvent(eventChan)

@@ -89,8 +89,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofTransactionMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        uint256 _lowerHashBSize,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _chain,
         address _to,
         address _from,
@@ -122,8 +122,7 @@ contract MessagesChallenge is BisectionChallenge {
             _blockNumber
         );
 
-        bytes32 lowerHashB = Value.hashTuplePreImage(_lowerHashB, _lowerHashBSize);
-        Value.Data memory _lowerHashBValue = Value.newHashOnly(lowerHashB, _lowerHashBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
@@ -135,8 +134,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofEthMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        uint256 _lowerHashBSize,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -162,8 +161,7 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
-        bytes32 lowerHashB = Value.hashTuplePreImage(_lowerHashB, _lowerHashBSize);
-        Value.Data memory _lowerHashBValue = Value.newHashOnly(lowerHashB, _lowerHashBSize);
+       Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
@@ -175,8 +173,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofERC20Message(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        uint256 _lowerHashBSize,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         address _erc20,
@@ -205,8 +203,7 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
-        bytes32 lowerHashB = Value.hashTuplePreImage(_lowerHashB, _lowerHashBSize);
-        Value.Data memory _lowerHashBValue = Value.newHashOnly(lowerHashB, _lowerHashBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
@@ -218,8 +215,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofERC721Message(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        uint256 _lowerHashBSize,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         address _erc721,
@@ -248,8 +245,7 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
-        bytes32 lowerHashB = Value.hashTuplePreImage(_lowerHashB, _lowerHashBSize);
-        Value.Data memory _lowerHashBValue = Value.newHashOnly(lowerHashB, _lowerHashBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
@@ -261,8 +257,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofContractTransactionMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        uint256 _lowerHashBSize,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -292,8 +288,7 @@ contract MessagesChallenge is BisectionChallenge {
             _messageNum
         );
 
-        bytes32 lowerHashB = Value.hashTuplePreImage(_lowerHashB, _lowerHashBSize);
-        Value.Data memory _lowerHashBValue = Value.newHashOnly(lowerHashB, _lowerHashBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,

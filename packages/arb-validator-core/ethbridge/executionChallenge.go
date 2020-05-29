@@ -68,10 +68,10 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hash := precondition.BeforeInbox.Hash()
+	beforeInboxHash := precondition.BeforeInbox.Hash()
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
-		hash,
+		beforeInboxHash,
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
 		didInboxInsns,
@@ -86,7 +86,7 @@ func (c *executionChallenge) BisectAssertion(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			hash,
+			beforeInboxHash,
 			precondition.TimeBounds.AsIntArray(),
 			machineHashes,
 			didInboxInsns,

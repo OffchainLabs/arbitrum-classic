@@ -194,7 +194,6 @@ func defendMessages(
 
 			err = contract.Bisect(ctx, chainHashes, inboxHashes, new(big.Int).SetUint64(messageCount))
 			if err != nil {
-				fmt.Println(err)
 				return 0, errors2.Wrap(err, "failing making bisection")
 			}
 

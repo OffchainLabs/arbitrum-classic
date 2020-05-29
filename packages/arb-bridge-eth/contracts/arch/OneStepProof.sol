@@ -30,8 +30,7 @@ library OneStepProof {
     struct ValidateProofData {
         bytes32 beforeHash;
         uint128[2] timeBoundsBlocks;
-        bytes32 beforeInbox;
-        uint256 beforeInboxValueSize;
+        Value.Data beforeInbox;
         bytes32 afterHash;
         bool    didInboxInsn;
         bytes32 firstMessage;
@@ -64,8 +63,9 @@ library OneStepProof {
             ValidateProofData(
                 beforeHash,
                 timeBoundsBlocks,
-                beforeInbox,
-                beforeInboxValueSize,
+                Value.newTuplePreImage(
+                    beforeInbox, 
+                    beforeInboxValueSize),
                 afterHash,
                 didInboxInsn,
                 firstMessage,
@@ -958,7 +958,7 @@ library OneStepProof {
     function executeInboxInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
-        Value.Data memory beforeInboxHash,
+        Value.Data memory beforeInbox,
         uint lowerTimeBound
     )
         internal
@@ -968,9 +968,9 @@ library OneStepProof {
         if (! val1.isInt()) {
             return false;
         }
-        require(lowerTimeBound<val1.intVal && Value.hash(beforeInboxHash).hash==Value.hashEmptyTuple(),
+        require(lowerTimeBound<val1.intVal && Value.hash(beforeInbox).hash==Value.hashEmptyTuple(),
             "Inbox instruction was blocked");
-        machine.addDataStackValue(beforeInboxHash);
+        machine.addDataStackValue(beforeInbox);
         return true;
     }
 
@@ -1309,10 +1309,10 @@ library OneStepProof {
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStack = Value.newHashOnly(Value.hashCodePointBasic(
+            startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
                 Value.hash(startMachine.instructionStack).hash
-            ), 1);
+            );
         } else {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
@@ -1324,11 +1324,11 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStack = Value.newHashOnly(Value.hashCodePointImmediate(
+            startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
-                Value.hash(immediateVal).hash,
-                Value.hash(startMachine.instructionStack).hash
-            ), 1);
+                Value.hash(startMachine.instructionStack).hash,
+                Value.hash(immediateVal).hash
+            );
         }
 
         uint i = 0;
@@ -1537,7 +1537,11 @@ library OneStepProof {
             contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.newHashOnly(_data.beforeInbox, _data.beforeInboxValueSize), _data.timeBoundsBlocks[0]);
+            correct = executeInboxInsn(
+                endMachine, 
+                stackVals[0], 
+                _data.beforeInbox,
+                _data.timeBoundsBlocks[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {

@@ -221,6 +221,14 @@ library Value {
         return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE, uint256(1));
     }
 
+    function newCodePoint(uint8 opCode, bytes32 nextHash) internal pure returns(Data memory){
+        return newCodePoint(CodePoint(opCode, nextHash, false, 0));
+    }
+
+    function newCodePoint(uint8 opCode, bytes32 nextHash, bytes32 immediateVal) internal pure returns(Data memory){
+        return newCodePoint(CodePoint(opCode, nextHash, true, immediateVal));
+    }
+
     function isValidTupleSize(uint256 size) internal pure returns (bool) {
         return size <= 8;
     }
@@ -242,6 +250,11 @@ library Value {
             values[i] = _val;
         }
         return newTuple(values);
+    }
+
+    function newTuplePreImage(bytes32 preImageHash, uint256 preImageSize) internal pure returns (Data memory){
+        bytes32 hashVal = hashTuplePreImage(preImageHash, preImageSize);
+        return newHashOnly(hashVal, preImageSize);
     }
 
     function newHashOnly(bytes32 _val, uint256 size) internal pure returns (Data memory) {
@@ -296,8 +309,7 @@ library Value {
         (valid, startOffset, size) = deserializeInt(data, startOffset);
 
         if(valid){
-            bytes32 computedHash = hashTuplePreImage(hashData, size);
-            hashValue = newHashOnly(computedHash, size);
+            hashValue = newTuplePreImage(hashData, size);
 
             return (true, startOffset, hashValue);
         }else{
