@@ -103,6 +103,17 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     }
 }
 
+void marshalStub(const value& val, std::vector<unsigned char>& buf) {
+    if (nonstd::holds_alternative<Tuple>(val)) {
+        buf.push_back(HASH_ONLY);
+        auto tup = nonstd::get<Tuple>(val);
+        auto image = tup.getHashPreImage();
+        image.marshal(buf);
+    } else {
+        marshalShallow(val, buf);
+    }
+}
+
 void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
     return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
                          val);
@@ -113,14 +124,7 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
     buf.push_back(TUPLE + val.tuple_size());
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto itemval = val.get_element(i);
-        if (nonstd::holds_alternative<Tuple>(itemval)) {
-            buf.push_back(HASH_ONLY);
-            auto tup = nonstd::get<Tuple>(itemval);
-            auto image = tup.getHashPreImage();
-            image.marshal(buf);
-        } else {
-            marshalShallow(itemval, buf);
-        }
+        marshalStub(itemval, buf);
     }
 }
 

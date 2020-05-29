@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"math/big"
 )
 
 type Precondition struct {
@@ -59,11 +58,6 @@ func (pre *Precondition) Hash() common.Hash {
 		hashing.TimeBlocks(pre.TimeBounds.End),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
 	)
-}
-
-func (pre *Precondition) GetInboxPreImage() (common.Hash, *big.Int) {
-	preImage, size := pre.BeforeInbox.GetPreImage()
-	return preImage, big.NewInt(size)
 }
 
 func (pre *Precondition) GeneratePostcondition(a *ExecutionAssertionStub) *Precondition {

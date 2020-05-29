@@ -31,42 +31,42 @@ type MessagesChallenge interface {
 	Bisect(
 		ctx context.Context,
 		chainHashes []common.Hash,
-		segmentHashes []value.HashOnlyValue,
+		segmentHashes []common.Hash,
 		chainLength *big.Int,
 	) error
 
 	OneStepProofTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB value.HashOnlyValue,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredTransaction,
 	) error
 
 	OneStepProofEthMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB value.HashOnlyValue,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredEth,
 	) error
 
 	OneStepProofERC20Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB value.HashOnlyValue,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredERC20,
 	) error
 
 	OneStepProofERC721Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB value.HashOnlyValue,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredERC721,
 	) error
 
 	OneStepProofContractTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB value.HashOnlyValue,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredContractTransaction,
 	) error
 

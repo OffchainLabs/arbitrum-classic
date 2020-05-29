@@ -136,9 +136,10 @@ func defendMessages(
 	inboxStartCount := uint64(0)
 
 	tuple := value.NewEmptyTuple()
-	preImage, size := tuple.GetPreImage()
-	startMessages := value.NewHashOnlyValue(preImage, size)
+	hashPreImage := tuple.GetPreImage()
 
+	inboxHashes := make([]value.HashOnlyValue, 0)
+	preImages := make([]common.Hash, 0)
 	for {
 		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
@@ -149,22 +150,21 @@ func defendMessages(
 					return 0, err
 				}
 
-				log.Println("OneStepProofEthMessage", startInbox, startMessages)
+				log.Println("OneStepProofEthMessage", startInbox, hashPreImage)
 
 				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
-				log.Println("vm inbox after", value.NewTuple2(startMessages, message.DeliveredValue(msg)).Hash())
 
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
-					err = contract.OneStepProofTransactionMessage(ctx, startInbox, startMessages, msg)
+					err = contract.OneStepProofTransactionMessage(ctx, startInbox, hashPreImage, msg)
 				case message.DeliveredEth:
-					err = contract.OneStepProofEthMessage(ctx, startInbox, startMessages, msg)
+					err = contract.OneStepProofEthMessage(ctx, startInbox, hashPreImage, msg)
 				case message.DeliveredERC20:
-					err = contract.OneStepProofERC20Message(ctx, startInbox, startMessages, msg)
+					err = contract.OneStepProofERC20Message(ctx, startInbox, hashPreImage, msg)
 				case message.DeliveredERC721:
-					err = contract.OneStepProofERC721Message(ctx, startInbox, startMessages, msg)
+					err = contract.OneStepProofERC721Message(ctx, startInbox, hashPreImage, msg)
 				case message.DeliveredContractTransaction:
-					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, startMessages, msg)
+					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, hashPreImage, msg)
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")
@@ -182,9 +182,8 @@ func defendMessages(
 			return ChallengeAsserterWon, nil
 		}
 
-		inboxHashes := make([]value.HashOnlyValue, bisectionCount)
-		preImages := make([]common.Hash, bisectionCount)
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+
 		if timedOut {
 			chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
 			inboxHashes, preImages, err = vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
@@ -192,7 +191,13 @@ func defendMessages(
 				return 0, err
 			}
 
-			err = contract.Bisect(ctx, chainHashes, inboxHashes, new(big.Int).SetUint64(messageCount))
+			simpleHashes := make([]common.Hash, 0, len(inboxHashes))
+
+			for _, h := range inboxHashes {
+				simpleHashes = append(simpleHashes, h.Hash())
+			}
+
+			err = contract.Bisect(ctx, chainHashes, simpleHashes, new(big.Int).SetUint64(messageCount))
 			if err != nil {
 				return 0, errors2.Wrap(err, "failing making bisection")
 			}
@@ -225,7 +230,8 @@ func defendMessages(
 		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
 		startHash := preImages[contEv.SegmentIndex.Uint64()]
 		startHashSize := inboxHashes[contEv.SegmentIndex.Uint64()].Size()
-		startMessages = value.NewHashOnlyValue(startHash, startHashSize)
+		hashPreImage.Size = startHashSize
+		hashPreImage.HashImage = startHash
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())

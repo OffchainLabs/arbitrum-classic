@@ -61,5 +61,6 @@ static T shrink(uint256_t i) {
 
 std::vector<unsigned char> GetHashKey(const value& val);
 uint256_t getSize(const value& val);
+void marshalStub(const value& val, std::vector<unsigned char>& buf);
 
 #endif /* value_hpp */

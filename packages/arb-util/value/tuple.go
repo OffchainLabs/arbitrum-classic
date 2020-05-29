@@ -50,6 +50,11 @@ type TupleValue struct {
 	deferredHashing bool
 }
 
+type HashPreImage struct {
+	HashImage common.Hash
+	Size      int64
+}
+
 func NewEmptyTuple() TupleValue {
 	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, nonePreImage, 1, false}
 }
@@ -269,7 +274,7 @@ func (tv TupleValue) Hash() common.Hash {
 	return tv.cachedHash
 }
 
-func (tv TupleValue) GetPreImage() (common.Hash, int64) {
+func (tv TupleValue) GetPreImage() HashPreImage {
 	if tv.deferredHashing {
 		hash, preImageHash := tv.internalHash()
 		tv.cachedHash = hash
@@ -277,5 +282,5 @@ func (tv TupleValue) GetPreImage() (common.Hash, int64) {
 		tv.deferredHashing = false
 	}
 
-	return tv.cachedPreImage, tv.Size()
+	return HashPreImage{tv.cachedPreImage, tv.Size()}
 }

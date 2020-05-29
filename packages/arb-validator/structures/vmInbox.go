@@ -25,20 +25,20 @@ import (
 
 type VMInbox struct {
 	hashes         []value.HashOnlyValue
-	preImageHashes []common.Hash
+	preImageHashes []value.HashPreImage
 	value          value.TupleValue
 }
 
 func NewVMInbox() *VMInbox {
 	tuple := value.NewEmptyTuple()
 	hash := tuple.Hash()
-	image, size := tuple.GetPreImage()
+	hashPreImage := tuple.GetPreImage()
 
 	hashes := make([]value.HashOnlyValue, 0)
-	hashes = append(hashes, value.NewHashOnlyValue(hash, size))
+	hashes = append(hashes, value.NewHashOnlyValue(hash, hashPreImage.Size))
 
-	preImageHashes := make([]common.Hash, 0)
-	preImageHashes = append(preImageHashes, image)
+	preImageHashes := make([]value.HashPreImage, 0)
+	preImageHashes = append(preImageHashes, hashPreImage)
 
 	return &VMInbox{
 		hashes:         hashes,
@@ -52,10 +52,10 @@ func (b *VMInbox) DeliverMessage(msg message.Message) {
 	b.value = tuple
 
 	hash := b.value.Hash()
-	image, size := b.value.GetPreImage()
+	hashPreImage := b.value.GetPreImage()
 
-	b.hashes = append(b.hashes, value.NewHashOnlyValue(hash, size))
-	b.preImageHashes = append(b.preImageHashes, image)
+	b.hashes = append(b.hashes, value.NewHashOnlyValue(hash, hashPreImage.Size))
+	b.preImageHashes = append(b.preImageHashes, hashPreImage)
 }
 
 func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value.HashOnlyValue, []common.Hash, error) {
@@ -70,16 +70,16 @@ func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value
 	inboxCuts = append(inboxCuts, b.hashes[item])
 
 	imageCuts := make([]common.Hash, 0, segments+1)
-	imageCuts = append(imageCuts, b.preImageHashes[item])
+	imageCuts = append(imageCuts, b.preImageHashes[item].HashImage)
 
 	otherSegmentSize := count / segments
 	item += count/segments + count%segments
 	inboxCuts = append(inboxCuts, b.hashes[item])
-	imageCuts = append(imageCuts, b.preImageHashes[item])
+	imageCuts = append(imageCuts, b.preImageHashes[item].HashImage)
 	for i := uint64(1); i < segments; i++ {
 		item += otherSegmentSize
 		inboxCuts = append(inboxCuts, b.hashes[item])
-		imageCuts = append(imageCuts, b.preImageHashes[item])
+		imageCuts = append(imageCuts, b.preImageHashes[item].HashImage)
 	}
 	return inboxCuts, imageCuts, nil
 }

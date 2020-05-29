@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	errors2 "github.com/pkg/errors"
+	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -107,12 +108,12 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	preImageHash, size := precondition.GetInboxPreImage()
+	hashPreImage := precondition.BeforeInbox.GetPreImage()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
 		precondition.BeforeHash,
-		preImageHash,
-		size,
+		hashPreImage.HashImage,
+		big.NewInt(hashPreImage.Size),
 		precondition.TimeBounds.AsIntArray(),
 		assertion.AfterHash,
 		assertion.DidInboxInsn,
@@ -130,8 +131,8 @@ func (c *executionChallenge) OneStepProof(
 			c.auth.auth.From,
 			c.contractAddress,
 			precondition.BeforeHash,
-			preImageHash,
-			size,
+			hashPreImage.HashImage,
+			big.NewInt(hashPreImage.Size),
 			precondition.TimeBounds.AsIntArray(),
 			assertion.AfterHash,
 			assertion.DidInboxInsn,

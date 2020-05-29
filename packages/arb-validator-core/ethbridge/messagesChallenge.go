@@ -52,12 +52,12 @@ func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, a
 func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
-	segmentHashes []value.HashOnlyValue,
+	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashes, _ := hashValueSliceToRaw(segmentHashes)
+	hashes := hashSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
@@ -80,7 +80,7 @@ func (c *messagesChallenge) Bisect(
 func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB value.HashOnlyValue,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredTransaction,
 ) error {
 	c.auth.Lock()
@@ -88,8 +88,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.Hash(),
-		big.NewInt(lowerHashB.Size()),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.Chain.ToEthAddress(),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -107,7 +107,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB value.HashOnlyValue,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredEth,
 ) error {
 	c.auth.Lock()
@@ -115,8 +115,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.Hash(),
-		big.NewInt(lowerHashB.Size()),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
@@ -131,7 +131,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB.Hash(),
+			lowerHashB.HashImage,
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
@@ -145,7 +145,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB value.HashOnlyValue,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredERC20,
 ) error {
 	c.auth.Lock()
@@ -153,8 +153,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.Hash(),
-		big.NewInt(lowerHashB.Size()),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -171,7 +171,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB value.HashOnlyValue,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredERC721,
 ) error {
 	c.auth.Lock()
@@ -179,8 +179,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.Hash(),
-		big.NewInt(lowerHashB.Size()),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -197,7 +197,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB value.HashOnlyValue,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredContractTransaction,
 ) error {
 	c.auth.Lock()
@@ -205,8 +205,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.Hash(),
-		big.NewInt(lowerHashB.Size()),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,

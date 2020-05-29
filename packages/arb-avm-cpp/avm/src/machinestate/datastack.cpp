@@ -50,13 +50,10 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
-        if (si || !nonstd::holds_alternative<Tuple>(val)) {
+        if (si) {
             marshalShallow(val, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            auto tup = nonstd::get<Tuple>(val);
-            auto image = tup.getHashPreImage();
-            image.marshal(buf);
+            marshalStub(val, buf);
         }
     }
     return std::make_pair(c.getHashPreImage(), std::move(buf));
