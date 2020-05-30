@@ -165,13 +165,8 @@ func defendMessages(
 				case message.DeliveredERC721:
 					err = contract.OneStepProofERC721Message(ctx, startInbox, hashPreImage, msg)
 				case message.DeliveredContractTransaction:
-					//<<<<<<< HEAD
 					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, hashPreImage, msg)
-					//=======
-					//					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, startMessages, msg)
 				case message.DeliveredTransactionBatch:
-
-					//>>>>>>> master
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")
