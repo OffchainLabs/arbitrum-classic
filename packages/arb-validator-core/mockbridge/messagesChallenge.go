@@ -127,7 +127,7 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 func (c *MessagesChallenge) OneStepProofTransactionBatchMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredTransactionBatch,
 ) error {
 	return nil

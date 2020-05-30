@@ -181,9 +181,12 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error("TransactionMessageBatchHashSingle result didn't match")
 	}
 
+	tup := value.NewEmptyTuple()
+
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
 		nil,
-		value.NewEmptyTuple().Hash(),
+		tup.Hash(),
+		big.NewInt(tup.Size()),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
 		msg.BlockNum.AsInt(),
