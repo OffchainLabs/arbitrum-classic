@@ -22,14 +22,12 @@ import (
 	"testing"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 var dummyAddress common.Address
@@ -58,37 +56,11 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
-	ctx := checkpointing.NewCheckpointContextImpl()
+	ctx := checkpointing.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
 	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if err != nil {
 		t.Error(err)
-	}
-	if !chain.equals(chain2) {
-		t.Fail()
-	}
-}
-
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp checkpointing.RollupCheckpointer, t *testing.T) {
-	blockId := &common.BlockId{
-		common.NewTimeBlocks(big.NewInt(7337)),
-		common.Hash{},
-	}
-	ctx := checkpointing.NewCheckpointContextImpl()
-	buf, err := chain.marshalToBytes(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	doneChan := make(chan struct{})
-	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
-	<-doneChan
-	cob := &ChainObserverBuf{}
-	if err := proto.Unmarshal(buf, cob); err != nil {
-		t.Fatal(err)
-	}
-	chain2, err := cob.UnmarshalFromCheckpoint(context.TODO(), ctx, cp)
-	if err != nil {
-		t.Fatal(err)
 	}
 	if !chain.equals(chain2) {
 		t.Fail()
@@ -167,9 +139,11 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	theMachine := baseNode.machine
-	timeBounds := &protocol.TimeBoundsBlocks{
-		Start: common.NewTimeBlocks(big.NewInt(0)),
-		End:   common.NewTimeBlocks(big.NewInt(1000)),
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
@@ -233,7 +207,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		checkpointFac := checkpointing.NewDummyCheckpointerFactory(contractPath)
 		checkpointer = checkpointFac.New(context.TODO())
 	case "fresh_rocksdb":
-		checkpointFac := checkpointing.NewRollupCheckpointerImplFactory(rollupAddress, contractPath, "", big.NewInt(1000000), true)
+		checkpointFac := checkpointing.NewIndexedCheckpointerFactory(rollupAddress, contractPath, "", big.NewInt(1000000), true)
 		checkpointer = checkpointFac.New(context.TODO())
 	}
 	chain, err := NewChain(
@@ -243,7 +217,8 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
-			MaxTimeBoundsWidth:      20,
+			MaxBlockBoundsWidth:     20,
+			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,

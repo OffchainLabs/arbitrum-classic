@@ -18,9 +18,9 @@ const ethers = require('ethers')
 const ArbProvider = require('arb-provider-ethers').ArbProvider
 var ProviderBridge = require('./ethers-web3-bridge')
 
-module.exports = function (managerUrl, provider) {
+module.exports = function (managerUrl, provider, aggregatorUrl) {
   const wrappedProv = new ethers.providers.Web3Provider(provider)
-  const arbProvider = new ArbProvider(managerUrl, wrappedProv)
+  const arbProvider = new ArbProvider(managerUrl, wrappedProv, aggregatorUrl)
   const wallet = arbProvider.getSigner(0)
   return new ProviderBridge(arbProvider, wallet)
 }

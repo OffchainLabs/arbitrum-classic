@@ -17,9 +17,11 @@
 'use strict'
 
 import { ArbClient, EVMCode, EVMResult, TxMessage } from './client'
+import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
 import { Contract } from './contract'
+import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
@@ -36,12 +38,6 @@ import { ArbSys } from './abi/ArbSys'
 
 import { ArbInfoFactory } from './abi/ArbInfoFactory'
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve: any): void => {
-    setTimeout(resolve, ms)
-  })
-}
-
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated'
 const EB_EVENT_CDA = 'RollupAsserted'
@@ -56,6 +52,12 @@ const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
 interface MessageResult {
   evmVal: EVMResult
   txHash: string
+  validNodeHash: string
+  onChainTxHash: string
+}
+
+interface VerifyMessageResult {
+  value: ArbValue.Value
 }
 
 interface Message {
@@ -67,31 +69,11 @@ interface Message {
   pubkey: string
 }
 
-export enum TxType {
-  Transaction = 0,
-  DepositEth = 1,
-  DepositERC20 = 2,
-  DepositERC721 = 3,
-}
-
-export function calculateTransactionHash(
-  chain: string,
-  to: string,
-  from: string,
-  sequenceNum: ethers.utils.BigNumber,
-  value: ethers.utils.BigNumber,
-  data: string
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['uint8', 'address', 'address', 'address', 'uint256', 'uint256', 'bytes'],
-    [TxType.Transaction, chain, to, from, sequenceNum, value, data]
-  )
-}
-
 export class ArbProvider extends ethers.providers.BaseProvider {
   public chainId: number
   public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
+  public aggregator?: AggregatorClient
 
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
@@ -100,12 +82,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   constructor(
     validatorUrl: string,
-    provider: ethers.providers.JsonRpcProvider
+    provider: ethers.providers.JsonRpcProvider,
+    aggregatorUrl?: string
   ) {
     super(123456789)
     this.chainId = 123456789
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
+    if (aggregatorUrl) {
+      this.aggregator = new AggregatorClient(aggregatorUrl)
+    }
   }
 
   public async arbRollupConn(): Promise<ArbRollup> {
@@ -141,12 +127,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   }
 
   public getSigner(index: number): ArbWallet {
-    return new ArbWallet(
-      this.client,
-      this.ethProvider.getSigner(index),
-      this,
-      false
-    )
+    return new ArbWallet(this.ethProvider.getSigner(index), this)
   }
 
   // public async getValidatorAddresses(): Promise<string[]> {
@@ -190,22 +171,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   //     }
   // }
 
-  public async sendMessages(messages: Message[]): Promise<string> {
-    let txHash: Promise<string> = new Promise<string>((): string => '')
-    for (const message of messages) {
-      txHash = this.client.sendMessage(
-        message.to,
-        message.sequenceNum,
-        message.value,
-        message.data,
-        message.signature,
-        message.pubkey
-      )
-      await sleep(1)
-    }
-    return txHash
-  }
-
   public async getVmID(): Promise<string> {
     if (!this.vmIdCache) {
       const vmId = await this.client.getVmID()
@@ -232,7 +197,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         if (log.name == TransactionMessageDelivered) {
           const vmId = await this.getVmID()
-          return calculateTransactionHash(
+          return Hashing.calculateTransactionHash(
             vmId,
             log.values.to,
             log.values.from,
@@ -255,15 +220,43 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     return null
   }
 
-  public async getMessageResult(
-    ethTxHash: string
-  ): Promise<MessageResult | null> {
-    const ethReceipt = await this.ethProvider.waitForTransaction(ethTxHash)
-    const arbTxId = await this.getArbTxId(ethReceipt)
-    if (!arbTxId) {
-      return null
+  public async getPaymentMessage(
+    assertedNodeHash: string,
+    messageIndex: string
+  ): Promise<VerifyMessageResult | null> {
+    const results = await this.client.getOutputMessage(
+      assertedNodeHash,
+      messageIndex
+    )
+
+    if (results != null) {
+      return {
+        value: results.outputMsg,
+      }
     }
-    const result = await this.client.getMessageResult(arbTxId)
+
+    return null
+  }
+
+  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
+    // TODO: Make sure that there can be no collision between arbitrum transaction hashes and
+    // Ethereum transaction hashes so that an attacker cannot fool the client into accepting a
+    // false transction
+    let arbTxHash: string
+    const ethReceipt = await this.ethProvider.getTransactionReceipt(txHash)
+    if (ethReceipt) {
+      // If this receipt exists, it must've been an L1 hash
+      const arbTxId = await this.getArbTxId(ethReceipt)
+      if (!arbTxId) {
+        // If the Ethereum transaction wasn't actually a message send, the input data was bad
+        return null
+      }
+      arbTxHash = arbTxId
+    } else {
+      arbTxHash = txHash
+    }
+
+    const result = await this.client.getMessageResult(arbTxHash)
     if (!result) {
       return null
     }
@@ -282,10 +275,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     const txHashCheck = evmVal.bridgeData.txHash
 
     // Check txHashCheck matches txHash
-    if (arbTxId !== txHashCheck) {
+    if (arbTxHash !== txHashCheck) {
       throw Error(
         'txHash did not match its queried transaction ' +
-          arbTxId +
+          arbTxHash +
           ' ' +
           txHashCheck
       )
@@ -296,17 +289,24 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Failed to prove val is in logPostHash')
     }
 
+    let validNodeHash = ''
+
     // Step 2: prove that logPostHash is in assertion and assertion is valid
     if (validatorSigs && validatorSigs.length > 0) {
       throw Error('Unanimous assertions not supported')
       // this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
     } else {
-      this.processConfirmedDisputableAssertion(logPostHash, onChainTxHash)
+      validNodeHash = await this.processConfirmedDisputableAssertion(
+        logPostHash,
+        onChainTxHash
+      )
     }
 
     return {
       evmVal,
       txHash: txHashCheck,
+      validNodeHash,
+      onChainTxHash,
     }
   }
 
@@ -343,7 +343,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             status = 1
             logs = result.evmVal.logs
           }
-          return {
+
+          const txReceipt: ethers.providers.TransactionReceipt = {
             blockHash: result.txHash,
             blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
             confirmations: 1000,
@@ -356,7 +357,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             transactionHash: result.txHash,
             transactionIndex: 0,
             byzantium: true,
-          } as ethers.providers.TransactionReceipt
+          }
+          return txReceipt
         } else {
           return null
         }
@@ -425,14 +427,17 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (!transaction.to) {
       throw Error('Cannot create call without a destination')
     }
-    const dest = await transaction.to
-    const sender = await this.ethProvider.getSigner(0).getAddress()
+    const to = await transaction.to
+    let from = await transaction.from
     const rawData = await transaction.data
+    if (!from) {
+      from = '0x1000000000000000000000000000000000000000'
+    }
     let data = '0x'
     if (rawData) {
       data = ethers.utils.hexlify(rawData)
     }
-    const resultData = await this.client.call(dest, sender, data)
+    const resultData = await this.client.call(to, from, data)
     return ethers.utils.hexlify(resultData)
   }
 
@@ -479,11 +484,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   // logPostHash: hexString
   // onChainTxHash: hexString
-  // Returns true if assertionHash is logged by the onChainTxHash
+  // Returns the valid node hash if assertionHash is logged by the onChainTxHash
   private async processConfirmedDisputableAssertion(
     logPostHash: string,
     onChainTxHash: string
-  ): Promise<void> {
+  ): Promise<string> {
     const receipt = await this.ethProvider.waitForTransaction(onChainTxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
@@ -495,6 +500,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (eventIndex == -1) {
       throw Error('RollupAsserted ' + onChainTxHash + ' not found on chain')
     }
+
     const rawLog = receipt.logs[eventIndex]
     const cda = events[eventIndex]
     const vmId = await this.getVmID()
@@ -520,5 +526,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     // DisputableAssertion is correct
     // TODO: must wait for finality (past the re-org period)
+
+    return cda.values.fields[7]
   }
 }

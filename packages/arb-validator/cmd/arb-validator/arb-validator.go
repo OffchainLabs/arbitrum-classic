@@ -18,29 +18,25 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
-	"math"
-	"math/big"
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
 func main() {
@@ -61,15 +57,14 @@ func main() {
 
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	passphrase := createCmd.String("password", "", "password=pass")
-	gasPrice := createCmd.Float64("gasprice", 4.5, "gasprice=FloatInGwei")
+	walletVars := utils.AddFlags(createCmd)
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if createCmd.NArg() != 3 {
-		return errors.New("usage: arb-validator create [--password=pass] [--gasprice==FloatInGwei] <validator_folder> <ethURL> <factoryAddress>")
+		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress>", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -84,13 +79,9 @@ func createRollupChain() error {
 		return errors2.Wrap(err, "loader error")
 	}
 
-	auth, err := cmdhelper.GetKeystore(validatorFolder, passphrase, createCmd)
+	auth, err := utils.GetKeystore(validatorFolder, walletVars, createCmd)
 	if err != nil {
 		return err
-	}
-	gasPriceAsFloat := 1e9 * (*gasPrice)
-	if gasPriceAsFloat < math.MaxInt64 {
-		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
 	ethclint, err := ethclient.Dial(ethURL)

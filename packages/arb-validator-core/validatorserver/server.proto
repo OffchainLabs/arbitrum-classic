@@ -40,6 +40,16 @@ message FindLogsReply {
     repeated LogInfo logs = 4;
 }
 
+message GetOutputMessageArgs {
+    string AssertionNodeHash = 1;
+    string MsgIndex = 2;
+}
+
+message GetOutputMessageReply {
+    bool found = 1;
+    string rawVal = 2;
+}
+
 message GetMessageResultArgs {
     string txHash = 1;
 }
@@ -80,6 +90,7 @@ message CallMessageReply {
 }
 
 service RollupValidator {
+    rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
     rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
     rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
     rpc FindLogs (FindLogsArgs) returns (FindLogsReply);

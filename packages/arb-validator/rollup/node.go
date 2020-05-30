@@ -163,8 +163,10 @@ func (node *Node) ExecutionPreconditionHash() common.Hash {
 
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(vmProtoData.MachineHash),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.Start),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.End),
+		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.LowerBoundBlock),
+		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.UpperBoundBlock),
+		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.LowerBoundTimestamp),
+		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.UpperBoundTimestamp),
 		hashing.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
 	)
 }
@@ -244,7 +246,7 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	node.hash = hash
 }
 
-func (node *Node) MarshalForCheckpoint(ctx checkpointing.CheckpointContext) *NodeBuf {
+func (node *Node) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeBuf {
 	var machineHash *common.HashBuf
 	if node.machine != nil {
 		ctx.AddMachine(node.machine)

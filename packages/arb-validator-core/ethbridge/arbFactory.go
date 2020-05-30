@@ -58,7 +58,7 @@ func (con *arbFactory) CreateRollup(
 		params.GracePeriod.Val,
 		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
 		params.MaxExecutionSteps,
-		params.MaxTimeBoundsWidth,
+		[2]uint64{params.MaxBlockBoundsWidth, params.MaxTimestampBoundsWidth},
 		params.StakeRequirement,
 		owner.ToEthAddress(),
 	)

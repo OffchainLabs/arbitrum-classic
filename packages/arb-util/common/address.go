@@ -33,6 +33,22 @@ func NewAddressFromEth(a ethcommon.Address) Address {
 	return Address(a)
 }
 
+func AddressArrayFromEth(addresses []ethcommon.Address) []Address {
+	ret := make([]Address, 0, len(addresses))
+	for _, a := range addresses {
+		ret = append(ret, NewAddressFromEth(a))
+	}
+	return ret
+}
+
+func AddressArrayToEth(addresses []Address) []ethcommon.Address {
+	ret := make([]ethcommon.Address, 0, len(addresses))
+	for _, a := range addresses {
+		ret = append(ret, a.ToEthAddress())
+	}
+	return ret
+}
+
 func (a Address) String() string {
 	return a.Hex()
 }

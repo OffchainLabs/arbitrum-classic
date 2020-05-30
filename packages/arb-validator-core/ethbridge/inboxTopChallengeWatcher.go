@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -77,7 +78,7 @@ func newInboxTopChallengeWatcher(address ethcommon.Address, client *ethclient.Cl
 	}, nil
 }
 
-func (c *inboxTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId) ([]arbbridge.Event, error) {
+func (c *inboxTopChallengeWatcher) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	logs, err := c.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,

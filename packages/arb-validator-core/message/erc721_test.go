@@ -48,6 +48,7 @@ func generateTestDeliveredERC721() DeliveredERC721 {
 	return DeliveredERC721{
 		ERC721:     generateTestERC721(),
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:  big.NewInt(65435643),
 		MessageNum: big.NewInt(9675),
 	}
 }
@@ -55,7 +56,7 @@ func generateTestDeliveredERC721() DeliveredERC721 {
 func TestMarshalERC721(t *testing.T) {
 	msg := generateTestERC721()
 
-	msg2, err := UnmarshalERC721(msg.AsValue())
+	msg2, err := UnmarshalERC721(msg.asValue())
 	if err != nil {
 		t.Error(err)
 	}

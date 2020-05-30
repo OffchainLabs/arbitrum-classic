@@ -38,8 +38,18 @@ type GlobalInbox interface {
 	DeliverTransactionBatch(
 		ctx context.Context,
 		chain common.Address,
-		transactions []message.Transaction,
-		signatures [][65]byte,
+		transactions []message.BatchTx,
+	) error
+
+	// DeliverTransactionBatchNoWait calls DeliverTransactionBatch without
+	// blocking while waiting for the receipt. This behavior is different from
+	// the other ArbBridge methods. At some point other methods should be
+	// updated to behave this way once we can be confident that it will not
+	// create any security problems
+	DeliverTransactionBatchNoWait(
+		ctx context.Context,
+		chain common.Address,
+		transactions []message.BatchTx,
 	) error
 
 	DepositEthMessage(

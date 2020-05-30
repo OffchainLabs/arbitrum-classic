@@ -24,6 +24,14 @@ interface GlobalInboxInterface extends Interface {
       encode([_owner]: [string]): string
     }>
 
+    getPaymentOwner: TypedFunctionDescription<{
+      encode([originalOwner, nodeHash, messageIndex]: [
+        string,
+        Arrayish,
+        BigNumberish
+      ]): string
+    }>
+
     hasERC721: TypedFunctionDescription<{
       encode([_erc721, _owner, _tokenId]: [
         string,
@@ -40,6 +48,15 @@ interface GlobalInboxInterface extends Interface {
       encode([_owner]: [string]): string
     }>
 
+    transferPayment: TypedFunctionDescription<{
+      encode([originalOwner, newOwner, nodeHash, messageIndex]: [
+        string,
+        string,
+        Arrayish,
+        BigNumberish
+      ]): string
+    }>
+
     withdrawERC20: TypedFunctionDescription<{
       encode([_tokenContract]: [string]): string
     }>
@@ -53,7 +70,11 @@ interface GlobalInboxInterface extends Interface {
     getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>
 
     sendMessages: TypedFunctionDescription<{
-      encode([_messages]: [Arrayish]): string
+      encode([_messages, messageCounts, nodeHashes]: [
+        Arrayish,
+        BigNumberish[],
+        Arrayish[]
+      ]): string
     }>
 
     sendTransactionMessage: TypedFunctionDescription<{
@@ -102,23 +123,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     deliverTransactionBatch: TypedFunctionDescription<{
-      encode([
-        _chain,
-        _tos,
-        _seqNumbers,
-        _values,
-        _messageLengths,
-        _data,
-        _signatures,
-      ]: [
-        string,
-        string[],
-        BigNumberish[],
-        BigNumberish[],
-        BigNumberish[],
-        Arrayish,
-        Arrayish
-      ]): string
+      encode([chain, transactions]: [string, Arrayish]): string
     }>
   }
 
@@ -166,6 +171,20 @@ interface GlobalInboxInterface extends Interface {
       ]): string[]
     }>
 
+    PaymentTransfer: TypedEventDescription<{
+      encodeTopics([
+        nodeHash,
+        messageIndex,
+        originalOwner,
+        prevOwner,
+        newOwner,
+      ]: [null, null, null, null, null]): string[]
+    }>
+
+    TransactionMessageBatchDelivered: TypedEventDescription<{
+      encodeTopics([chain]: [string | null]): string[]
+    }>
+
     TransactionMessageDelivered: TypedEventDescription<{
       encodeTopics([chain, to, from, seqNumber, value, data]: [
         string | null,
@@ -199,6 +218,12 @@ export class GlobalInbox extends Contract {
 
     getEthBalance(_owner: string): Promise<BigNumber>
 
+    getPaymentOwner(
+      originalOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<string>
+
     hasERC721(
       _erc721: string,
       _owner: string,
@@ -208,6 +233,14 @@ export class GlobalInbox extends Contract {
     ownedERC20s(_owner: string): Promise<string[]>
 
     ownedERC721s(_owner: string): Promise<string[]>
+
+    transferPayment(
+      originalOwner: string,
+      newOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     withdrawERC20(
       _tokenContract: string,
@@ -231,6 +264,8 @@ export class GlobalInbox extends Contract {
 
     sendMessages(
       _messages: Arrayish,
+      messageCounts: BigNumberish[],
+      nodeHashes: Arrayish[],
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -280,13 +315,8 @@ export class GlobalInbox extends Contract {
     ): Promise<ContractTransaction>
 
     deliverTransactionBatch(
-      _chain: string,
-      _tos: string[],
-      _seqNumbers: BigNumberish[],
-      _values: BigNumberish[],
-      _messageLengths: BigNumberish[],
-      _data: Arrayish,
-      _signatures: Arrayish,
+      chain: string,
+      transactions: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
   }
@@ -297,6 +327,12 @@ export class GlobalInbox extends Contract {
 
   getEthBalance(_owner: string): Promise<BigNumber>
 
+  getPaymentOwner(
+    originalOwner: string,
+    nodeHash: Arrayish,
+    messageIndex: BigNumberish
+  ): Promise<string>
+
   hasERC721(
     _erc721: string,
     _owner: string,
@@ -306,6 +342,14 @@ export class GlobalInbox extends Contract {
   ownedERC20s(_owner: string): Promise<string[]>
 
   ownedERC721s(_owner: string): Promise<string[]>
+
+  transferPayment(
+    originalOwner: string,
+    newOwner: string,
+    nodeHash: Arrayish,
+    messageIndex: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   withdrawERC20(
     _tokenContract: string,
@@ -329,6 +373,8 @@ export class GlobalInbox extends Contract {
 
   sendMessages(
     _messages: Arrayish,
+    messageCounts: BigNumberish[],
+    nodeHashes: Arrayish[],
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -378,13 +424,8 @@ export class GlobalInbox extends Contract {
   ): Promise<ContractTransaction>
 
   deliverTransactionBatch(
-    _chain: string,
-    _tos: string[],
-    _seqNumbers: BigNumberish[],
-    _values: BigNumberish[],
-    _messageLengths: BigNumberish[],
-    _data: Arrayish,
-    _signatures: Arrayish,
+    chain: string,
+    transactions: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -424,6 +465,16 @@ export class GlobalInbox extends Contract {
       messageNum: null
     ): EventFilter
 
+    PaymentTransfer(
+      nodeHash: null,
+      messageIndex: null,
+      originalOwner: null,
+      prevOwner: null,
+      newOwner: null
+    ): EventFilter
+
+    TransactionMessageBatchDelivered(chain: string | null): EventFilter
+
     TransactionMessageDelivered(
       chain: string | null,
       to: string | null,
@@ -441,6 +492,12 @@ export class GlobalInbox extends Contract {
 
     getEthBalance(_owner: string): Promise<BigNumber>
 
+    getPaymentOwner(
+      originalOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<BigNumber>
+
     hasERC721(
       _erc721: string,
       _owner: string,
@@ -451,6 +508,13 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<BigNumber>
 
+    transferPayment(
+      originalOwner: string,
+      newOwner: string,
+      nodeHash: Arrayish,
+      messageIndex: BigNumberish
+    ): Promise<BigNumber>
+
     withdrawERC20(_tokenContract: string): Promise<BigNumber>
 
     withdrawERC721(_erc721: string, _tokenId: BigNumberish): Promise<BigNumber>
@@ -459,7 +523,11 @@ export class GlobalInbox extends Contract {
 
     getInbox(account: string): Promise<BigNumber>
 
-    sendMessages(_messages: Arrayish): Promise<BigNumber>
+    sendMessages(
+      _messages: Arrayish,
+      messageCounts: BigNumberish[],
+      nodeHashes: Arrayish[]
+    ): Promise<BigNumber>
 
     sendTransactionMessage(
       _chain: string,
@@ -495,13 +563,8 @@ export class GlobalInbox extends Contract {
     forwardEthMessage(_to: string, _from: string): Promise<BigNumber>
 
     deliverTransactionBatch(
-      _chain: string,
-      _tos: string[],
-      _seqNumbers: BigNumberish[],
-      _values: BigNumberish[],
-      _messageLengths: BigNumberish[],
-      _data: Arrayish,
-      _signatures: Arrayish
+      chain: string,
+      transactions: Arrayish
     ): Promise<BigNumber>
   }
 }

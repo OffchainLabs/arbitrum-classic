@@ -43,6 +43,7 @@ func generateTestDeliveredEth() DeliveredEth {
 	return DeliveredEth{
 		Eth:        generateTestEth(),
 		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+		Timestamp:  big.NewInt(5435254),
 		MessageNum: big.NewInt(9675),
 	}
 }
@@ -50,7 +51,7 @@ func generateTestDeliveredEth() DeliveredEth {
 func TestMarshalEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEth(msg.AsValue())
+	msg2, err := UnmarshalEth(msg.asValue())
 	if err != nil {
 		t.Error(err)
 	}

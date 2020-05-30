@@ -42,7 +42,7 @@ library Protocol {
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
-        uint128[2] memory _timeBounds,
+        uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
     )
         internal
@@ -54,6 +54,8 @@ library Protocol {
                 _beforeHash,
                 _timeBounds[0],
                 _timeBounds[1],
+                _timeBounds[2],
+                _timeBounds[3],
                 _beforeInboxHash
             )
         );
@@ -85,29 +87,29 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32) {
+    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32, uint) {
         bool valid;
         bytes32 hashVal = 0x00;
         bytes32 msgHash;
         uint256 endOffset = startOffset + length;
         require(endOffset <= messages.length, "invalid length");
         uint256 offset;
+        uint msgCount = 0;
         for (offset = startOffset; offset < endOffset;) {
             (valid, offset, msgHash) = Value.deserializeHashed(messages, offset);
             require(valid, "Invalid output message");
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
+            msgCount++;
         }
         require(offset == startOffset + length, "value extended past length");
-        return hashVal;
+        return (hashVal, msgCount);
     }
 
-    function addMessageToVMInboxHash(Value.Data memory vmInboxHashValue, Value.Data memory messageHashValue) internal pure returns (bytes32) {
+    function addMessageToVMInboxHash(Value.Data memory vmInboxHashValue, Value.Data memory messageHashValue) internal pure returns (Value.Data memory) {
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = vmInboxHashValue;
         vals[1] = messageHashValue;
-        Value.Data memory tuple = Value.newTuple(vals);
-
-        return Value.hashTuple(tuple);
+        return Value.newTuple(vals);
     }
 
     function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {

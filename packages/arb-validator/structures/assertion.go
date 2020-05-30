@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
-func MarshalAssertionForCheckpoint(ctx checkpointing.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
+func MarshalAssertionForCheckpoint(ctx *checkpointing.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
 	messages := make([]*common.HashBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
 		ctx.AddValue(msg)

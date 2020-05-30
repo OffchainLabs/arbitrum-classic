@@ -45,6 +45,7 @@ class CheckpointStorage {
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
+    std::unique_ptr<BlockStore> getBlockStore() const;
 };
 
 #endif /* checkpointstorage_hpp */

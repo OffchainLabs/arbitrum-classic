@@ -35,13 +35,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
-
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
 
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
@@ -52,7 +49,7 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
 	man.AddListener(assertionListener)
@@ -62,7 +59,7 @@ func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, 
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -106,6 +103,31 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 	return &validatorserver.FindLogsReply{
 		Logs: ret,
 	}, nil
+}
+
+func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
+	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
+	if err != nil {
+		return nil, err
+	}
+	assertionHash := common.Hash{}
+	copy(assertionHash[:], assertionHashBytes)
+	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
+	resultChan := m.tracker.OutputMsgVal(assertionHash, msgIndex)
+	outputValue := <-resultChan
+
+	if outputValue == nil {
+		return &validatorserver.GetOutputMessageReply{
+			Found: false,
+		}, nil
+	} else {
+		var buf bytes.Buffer
+		_ = value.MarshalValue(outputValue, &buf)
+		return &validatorserver.GetOutputMessageReply{
+			Found:  true,
+			RawVal: hexutil.Encode(buf.Bytes()),
+		}, nil
+	}
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
@@ -175,18 +197,15 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	copy(sender[:], senderBytes)
 
 	msg := message.Call{
-		To:       contractAddress,
-		From:     sender,
-		Data:     dataBytes,
-		BlockNum: m.man.CurrentBlockId().Height,
+		To:        contractAddress,
+		From:      sender,
+		Data:      dataBytes,
+		BlockNum:  m.man.CurrentBlockId().Height,
+		Timestamp: big.NewInt(time.Now().Unix()),
 	}
 
-	callingMessage := message.DeliveredValue(msg)
-
-	messageStack := protocol.NewMessageStack()
-	messageStack.AddMessage(callingMessage)
-
-	assertion, steps := m.man.ExecuteCall(messageStack.GetValue(), m.maxCallTime)
+	inbox := message.AddToPrev(value.NewEmptyTuple(), msg)
+	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
 
 	log.Println("Executed call for", steps, "steps")
 

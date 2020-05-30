@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="arb-compiler-evm",
-    version="0.2.0",
+    version="0.5.0",
     description="Compiler from solidity to AVM bytecode",
     url="https://offchainlabs.com",
     author="Offchain Labs, Inc.",

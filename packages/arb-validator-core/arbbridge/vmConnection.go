@@ -48,7 +48,7 @@ func HandleBlockchainEvents(
 
 			blockId := maybeBlockId.BlockId
 
-			events, err := contract.GetEvents(ctx, blockId)
+			events, err := contract.GetEvents(ctx, blockId, maybeBlockId.Timestamp)
 			if err != nil {
 				log.Println("error in challenge", err)
 				return

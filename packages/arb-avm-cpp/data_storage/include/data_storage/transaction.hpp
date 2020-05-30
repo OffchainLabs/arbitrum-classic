@@ -45,7 +45,7 @@ class Transaction {
         const std::vector<unsigned char>& value);
 
    public:
-    Transaction(rocksdb::Transaction* transaction_);
+    Transaction(std::unique_ptr<rocksdb::Transaction> transaction_);
     ~Transaction();
     SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
     SaveResults saveData(const std::vector<unsigned char>& hash_key,

@@ -18,37 +18,46 @@
 
 #include <bigint_utils.hpp>
 
-#include <sys/stat.h>
 #include <fstream>
 
-const char* getContractData(const std::string& contract_filename) {
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(contract_filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(contract_filename, std::ios::in);
-
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
+std::vector<char> getContractData(const std::string& contract_filename) {
+    std::ifstream contract_file(contract_filename,
+                                std::ios::in | std::ios::binary);
+    if (!contract_file.is_open()) {
+        return {};
     }
-
-    return buf;
+    return {std::istreambuf_iterator<char>(contract_file),
+            std::istreambuf_iterator<char>()};
 }
 
 InitialVmValues parseInitialVmValues(const std::string& contract_filename,
                                      TuplePool& pool) {
     InitialVmValues initial_state;
 
-    auto bufptr = getContractData(contract_filename);
+    auto parseError = [&]() -> InitialVmValues {
+        std::cerr << "Failed to parse file " << contract_filename << std::endl;
+        initial_state.valid_state = false;
+        return initial_state;
+    };
+
+    auto contract_data = getContractData(contract_filename);
+
+    if (contract_data.size() < 32) {
+        std::cerr << "Failed to open path: " << contract_filename << std::endl;
+        initial_state.valid_state = false;
+        return initial_state;
+    }
+
+    size_t offset = 0;
 
     uint32_t version;
-    memcpy(&version, bufptr, sizeof(version));
+    if (offset + sizeof(version) > contract_data.size()) {
+        return parseError();
+    }
+    auto it = contract_data.begin() + offset;
+    std::copy(it, it + sizeof(version), reinterpret_cast<char*>(&version));
+    offset += sizeof(version);
     version = boost::endian::big_to_native(version);
-    bufptr += sizeof(version);
 
     if (version != CURRENT_AO_VERSION) {
         std::cerr << "incorrect version of .ao file" << std::endl;
@@ -57,34 +66,60 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
 
         initial_state.valid_state = false;
         return initial_state;
-    } else {
-        uint32_t extentionId = 1;
-        while (extentionId != 0) {
-            memcpy(&extentionId, bufptr, sizeof(extentionId));
-            extentionId = boost::endian::big_to_native(extentionId);
-            bufptr += sizeof(extentionId);
-            if (extentionId > 0) {
-                uint32_t extensionLength;
-                memcpy(&extensionLength, bufptr, sizeof(extensionLength));
-                extensionLength = boost::endian::big_to_native(extensionLength);
-                bufptr += sizeof(extensionLength) + extensionLength;
-            }
-        }
-        uint64_t codeCount;
-        memcpy(&codeCount, bufptr, sizeof(codeCount));
-        bufptr += sizeof(codeCount);
-        codeCount = boost::endian::big_to_native(codeCount);
-
-        initial_state.code.reserve(codeCount);
-
-        std::vector<Operation> ops;
-        for (uint64_t i = 0; i < codeCount; i++) {
-            ops.emplace_back(deserializeOperation(bufptr, pool));
-        }
-        initial_state.code = opsToCodePoints(ops);
-        initial_state.staticVal = deserialize_value(bufptr, pool);
-        initial_state.valid_state = true;
-
-        return initial_state;
     }
+    uint32_t extentionId = 1;
+    while (extentionId != 0) {
+        if (offset + sizeof(extentionId) > contract_data.size()) {
+            return parseError();
+        }
+        auto it = contract_data.begin() + offset;
+        std::copy(it, it + sizeof(extentionId),
+                  reinterpret_cast<char*>(&extentionId));
+        offset += sizeof(extentionId);
+        extentionId = boost::endian::big_to_native(extentionId);
+        if (extentionId > 0) {
+            uint32_t extensionLength;
+            if (offset + sizeof(extensionLength) > contract_data.size()) {
+                return parseError();
+            }
+            auto it = contract_data.begin() + offset;
+            std::copy(it, it + sizeof(extensionLength),
+                      reinterpret_cast<char*>(&extensionLength));
+            offset += sizeof(extensionLength);
+            extensionLength = boost::endian::big_to_native(extensionLength);
+
+            if (offset + extensionLength > contract_data.size()) {
+                return parseError();
+            }
+            offset += extensionLength;
+        }
+    }
+
+    uint64_t codeCount;
+    if (offset + sizeof(codeCount) > contract_data.size()) {
+        return parseError();
+    }
+    it = contract_data.begin() + offset;
+    std::copy(it, it + sizeof(codeCount), reinterpret_cast<char*>(&codeCount));
+    offset += sizeof(codeCount);
+    codeCount = boost::endian::big_to_native(codeCount);
+
+    initial_state.code.reserve(codeCount);
+
+    // TODO: The following code may read beyond the code buffer leading to a
+    // crash To fix this we would need to make all of the deserialization
+    // functions do bounds checking This may not be too big of a security risk
+    // since this would lead the validator to crash on point rather than at an
+    // attacker controlled time, but we should definitely fix if possible
+
+    const char* bufptr = contract_data.data() + offset;
+    std::vector<Operation> ops;
+    for (uint64_t i = 0; i < codeCount; i++) {
+        ops.emplace_back(deserializeOperation(bufptr, pool));
+    }
+    initial_state.code = opsToCodePoints(ops);
+    initial_state.staticVal = deserialize_value(bufptr, pool);
+    initial_state.valid_state = true;
+
+    return initial_state;
 }

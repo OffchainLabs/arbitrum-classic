@@ -17,10 +17,6 @@
 package speedtest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,6 +24,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func getInsnMultiplier(filePath string) uint64 {
@@ -61,9 +62,11 @@ func runAoFile(b *testing.B, filePath string) {
 		b.Fail()
 	}
 
-	unusedTimeBounds := &protocol.TimeBoundsBlocks{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(0)),
+	unusedTimeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	b.ResetTimer()
 	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple(), time.Hour)

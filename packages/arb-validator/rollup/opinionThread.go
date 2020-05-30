@@ -142,7 +142,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.RLock()
 				if newOpinion == valprotocol.ValidChildType {
 					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
+						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash, correctNode.hash)
 					}
 				}
 				for _, listener := range chain.listeners {
@@ -190,15 +190,15 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						startTime := prepared.params.TimeBounds.Start
-						endTime := prepared.params.TimeBounds.End
+						lowerBoundBlock := prepared.params.TimeBounds.LowerBoundBlock
+						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
-						if chain.latestBlockId.Height.Cmp(startTime) >= 0 && endCushion.Cmp(endTime) <= 0 {
+						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 && endCushion.Cmp(upperBoundBlock) <= 0 {
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(ctx, chain, prepared.Clone())
 							}
 						} else {
-							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", startTime.AsInt(), endTime.AsInt(), chain.latestBlockId.Height.AsInt())
+							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", lowerBoundBlock.AsInt(), upperBoundBlock.AsInt(), chain.latestBlockId.Height.AsInt())
 							// Prepared assertion is out of date
 							delete(preparingAssertions, chain.calculatedValidNode.hash)
 							delete(preparedAssertions, chain.calculatedValidNode.hash)
@@ -232,10 +232,10 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.machine.Clone()
 	timeBounds := chain.currentTimeBounds()
-	log.Println("timeBounds: ", timeBounds.Start.String(), timeBounds.End.String())
+	log.Println("timeBounds: ", timeBounds.LowerBoundBlock.String(), timeBounds.UpperBoundBlock.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
 	currentHeight := chain.latestBlockId.Height.Clone()
-	timeBoundsLength := new(big.Int).Sub(timeBounds.End.AsInt(), timeBounds.Start.AsInt())
+	timeBoundsLength := new(big.Int).Sub(timeBounds.UpperBoundBlock.AsInt(), timeBounds.LowerBoundBlock.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
 	runDuration := common.NewTimeBlocks(runBlocks).Duration()
 	log.Println("Asserting for up to", runBlocks, " blocks")
@@ -255,8 +255,8 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		beforeHash,
 		afterHash,
 		blockReason,
-		timeBounds.Start.AsInt(),
-		timeBounds.End.AsInt(),
+		timeBounds.LowerBoundBlock.AsInt(),
+		timeBounds.UpperBoundBlock.AsInt(),
 		currentOpinionHash,
 	)
 

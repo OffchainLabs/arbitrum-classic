@@ -19,10 +19,6 @@ package structures;
 import "common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing";
 
-message BlockIdBufList {
-    repeated common.BlockIdBuf bufs = 1;
-}
-
 message CheckpointMetadata {
     uint64 formatVersion = 1;
     common.BlockIdBuf oldest = 2;

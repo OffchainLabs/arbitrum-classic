@@ -26,11 +26,11 @@ import (
 
 type Precondition struct {
 	BeforeHash  common.Hash
-	TimeBounds  *protocol.TimeBoundsBlocks
+	TimeBounds  *protocol.TimeBounds
 	BeforeInbox value.TupleValue
 }
 
-func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBoundsBlocks, beforeInbox value.TupleValue) *Precondition {
+func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBounds, beforeInbox value.TupleValue) *Precondition {
 	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
 }
 
@@ -39,8 +39,8 @@ func (pre *Precondition) String() string {
 	return fmt.Sprintf(
 		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
 		pre.BeforeHash,
-		pre.TimeBounds.Start.AsInt(),
-		pre.TimeBounds.End.AsInt(),
+		pre.TimeBounds.LowerBoundBlock.AsInt(),
+		pre.TimeBounds.UpperBoundBlock.AsInt(),
 		inboxHash,
 	)
 }
@@ -54,8 +54,10 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 func (pre *Precondition) Hash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(pre.BeforeHash),
-		hashing.TimeBlocks(pre.TimeBounds.Start),
-		hashing.TimeBlocks(pre.TimeBounds.End),
+		hashing.TimeBlocks(pre.TimeBounds.LowerBoundBlock),
+		hashing.TimeBlocks(pre.TimeBounds.UpperBoundBlock),
+		hashing.Uint128(pre.TimeBounds.LowerBoundTimestamp),
+		hashing.Uint128(pre.TimeBounds.UpperBoundTimestamp),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
 	)
 }

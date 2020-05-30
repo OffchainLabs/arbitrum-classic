@@ -29,7 +29,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"runtime"
 	"time"
 	"unsafe"
@@ -88,16 +87,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 }
 
 func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	var currentTimeBuf bytes.Buffer
-	err := value.NewIntValue(currentTime.AsInt()).Marshal(&currentTimeBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	currentTimeDataC := intToData(currentTime.AsInt())
+
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
 	}
-	currentTimeDataC := C.CBytes(currentTimeBuf.Bytes())
 	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
 	C.free(currentTimeDataC)
 	switch cBlockReason.blockType {
@@ -132,48 +127,36 @@ func (m *Machine) PrintState() {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBoundsBlocks,
+	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	startTime := timeBounds.Start.AsInt()
-	endTime := timeBounds.End.AsInt()
-
-	var startTimeBuf bytes.Buffer
-	err := value.NewIntValue(startTime).Marshal(&startTimeBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var endTimeBuf bytes.Buffer
-	err = value.NewIntValue(endTime).Marshal(&endTimeBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	lowerBoundBlockDataC := intToData(timeBounds.LowerBoundBlock.AsInt())
+	defer C.free(lowerBoundBlockDataC)
+	upperBoundBlockDataC := intToData(timeBounds.UpperBoundBlock.AsInt())
+	defer C.free(upperBoundBlockDataC)
+	lowerBoundTimestampDataC := intToData(timeBounds.LowerBoundTimestamp)
+	defer C.free(lowerBoundTimestampDataC)
+	upperBoundTimestampDataC := intToData(timeBounds.UpperBoundTimestamp)
+	defer C.free(upperBoundTimestampDataC)
 
 	var buf bytes.Buffer
-	err = value.MarshalValue(inbox, &buf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	_ = value.MarshalValue(inbox, &buf)
 
-	startTimeData := startTimeBuf.Bytes()
-	endTimeData := endTimeBuf.Bytes()
 	msgData := buf.Bytes()
-	startTimeDataC := C.CBytes(startTimeData)
-	endTimeDataC := C.CBytes(endTimeData)
 	msgDataC := C.CBytes(msgData)
+	defer C.free(msgDataC)
+
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		startTimeDataC,
-		endTimeDataC,
+		lowerBoundBlockDataC,
+		upperBoundBlockDataC,
+		lowerBoundTimestampDataC,
+		upperBoundTimestampDataC,
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
-	C.free(startTimeDataC)
-	C.free(endTimeDataC)
-	C.free(msgDataC)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
@@ -199,17 +182,4 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
 
 	return success == 1
-}
-
-func bytesArrayToVals(data []byte, valCount int) []value.Value {
-	rd := bytes.NewReader(data)
-	vals := make([]value.Value, 0, valCount)
-	for i := 0; i < valCount; i++ {
-		val, err := value.UnmarshalValue(rd)
-		if err != nil {
-			panic(err)
-		}
-		vals = append(vals, val)
-	}
-	return vals
 }

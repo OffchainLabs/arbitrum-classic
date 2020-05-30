@@ -28,19 +28,23 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 struct GetResults;
+class BlockStore;
 
 class DataStorage {
    private:
     std::string txn_db_path;
-    std::unique_ptr<rocksdb::TransactionDB> txn_db;
+    std::shared_ptr<rocksdb::TransactionDB> txn_db;
+    std::shared_ptr<rocksdb::ColumnFamilyHandle> default_column;
+    std::shared_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
 
    public:
     DataStorage(const std::string& db_path);
-    ~DataStorage();
     rocksdb::Status closeDb();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
+
+    std::unique_ptr<BlockStore> getBlockStore() const;
 };
 
 #endif /* datastorage_hpp */
