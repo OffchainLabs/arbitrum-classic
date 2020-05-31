@@ -182,11 +182,12 @@ func TestTransactionBatchMessage(t *testing.T) {
 	}
 
 	tup := value.NewEmptyTuple()
+	preImage := tup.GetPreImage()
 
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
 		nil,
-		tup.Hash(),
-		big.NewInt(tup.Size()),
+		preImage.HashImage,
+		big.NewInt(preImage.Size),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
 		msg.BlockNum.AsInt(),
