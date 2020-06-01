@@ -4,13 +4,15 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:edge as arb-avm-cpp
+FROM alpine:3.9 as arb-avm-cpp
 # Alpine dependencies
 RUN apk update && apk add --no-cache boost-dev cmake g++ \
     git make musl-dev python3-dev && \
     apk add py-pip --no-cache && \
-    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
-    pip3 install conan && \
+    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/
+
+RUN pip3 install -Iv six==1.14.0 && \
+    pip3 install conan --ignore-installed  six && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -33,7 +35,7 @@ RUN cd build && conan install .. && \
     cp lib/* ../cmachine
 
 
-FROM alpine:edge as arb-validator-builder
+FROM alpine:3.9 as arb-validator-builder
 # Alpine dependencies
 RUN apk add --no-cache build-base git go \
     libc-dev linux-headers && \
