@@ -81,3 +81,40 @@ func (ns *NodeStore) GetNode(height uint64, hash common.Hash) ([]byte, error) {
 
 	return toByteSlice(result.slice), nil
 }
+
+func (ns *NodeStore) GetNodeHeight(hash common.Hash) (uint64, error) {
+	cHash := hashToData(hash)
+	defer C.free(cHash)
+
+	result := C.getNodeHeight(
+		ns.c,
+		cHash,
+	)
+
+	if result.found == 0 {
+		return 0, errors.New("not found")
+	}
+
+	return uint64(result.value), nil
+}
+
+func (ns *NodeStore) GetNodeHash(height uint64) (common.Hash, error) {
+	result := C.getNodeHash(
+		ns.c,
+		C.uint64_t(height),
+	)
+
+	if result.found == 0 {
+		return common.Hash{}, errors.New("not found")
+	}
+
+	return dataToHash(result.value), nil
+}
+
+func (ns *NodeStore) Empty() bool {
+	return C.isNodeStoreEmpty(ns.c) == 1
+}
+
+func (ns *NodeStore) MaxHeight() uint64 {
+	return uint64(C.maxNodeHeight(ns.c))
+}

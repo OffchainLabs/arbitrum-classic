@@ -49,6 +49,14 @@ func hashToData(val common.Hash) unsafe.Pointer {
 	return C.CBytes(lowerBoundBlockBuf.Bytes())
 }
 
+func dataToHash(ptr unsafe.Pointer) common.Hash {
+	defer C.free(ptr)
+	dataBuff := C.GoBytes(ptr, 32)
+	var hash common.Hash
+	copy(hash[:], dataBuff)
+	return hash
+}
+
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)

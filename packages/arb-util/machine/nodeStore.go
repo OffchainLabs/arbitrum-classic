@@ -16,11 +16,17 @@
 
 package machine
 
+import "C"
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type NodeStore interface {
 	PutNode(height uint64, hash common.Hash, data []byte) error
+
 	GetNode(height uint64, hash common.Hash) ([]byte, error)
+	GetNodeHeight(hash common.Hash) (uint64, error)
+	GetNodeHash(height uint64) (common.Hash, error)
+	Empty() bool
+	MaxHeight() uint64
 }

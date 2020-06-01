@@ -21,6 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"log"
 )
 
 type RestoreContext interface {
@@ -90,4 +91,24 @@ func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointConte
 		}
 	}
 	return nil
+}
+
+type SimpleRestore struct {
+	db machine.CheckpointStorage
+}
+
+func NewSimpleRestore(db machine.CheckpointStorage) *SimpleRestore {
+	return &SimpleRestore{db: db}
+}
+
+func (sr *SimpleRestore) GetValue(h common.Hash) value.Value {
+	return sr.db.GetValue(h)
+}
+
+func (sr *SimpleRestore) GetMachine(h common.Hash) machine.Machine {
+	ret, err := sr.db.GetMachine(h)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ret
 }
