@@ -316,8 +316,8 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProofTransactionBatchMessage(
         bytes32 lowerHashA,
-        bytes32 lowerHashB,
-        uint256 lowerHashBSize,
+        bytes32 preImageBHash,
+        uint256 preImageBSize,
         address chain,
         bytes memory transactions,
         uint256 blockNum,
@@ -333,8 +333,8 @@ contract MessagesChallenge is BisectionChallenge {
         );
 
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
-            lowerHashB,
-            lowerHashBSize,
+            preImageBHash,
+            preImageBSize,
             chain,
             transactions,
             blockNum,
@@ -345,7 +345,7 @@ contract MessagesChallenge is BisectionChallenge {
             ChallengeUtils.messagesHash(
                 lowerHashA,
                 Protocol.addMessageToInbox(lowerHashA, messageHash),
-                lowerHashB,
+                preImageBHash,
                 afterInboxHash,
                 1
             )
