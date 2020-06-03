@@ -109,6 +109,6 @@ func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, con
 	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }
 
-func (e evilRollupCheckpointer) CheckpointConfirmed(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
-	return e.cp.CheckpointConfirmed(nodeHash, depth, nodeData, cpCtx)
+func (e evilRollupCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
+	return e.cp.CheckpointConfirmedNode(nodeHash, depth, nodeData, cpCtx)
 }

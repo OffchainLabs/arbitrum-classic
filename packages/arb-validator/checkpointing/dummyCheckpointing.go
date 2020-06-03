@@ -62,6 +62,6 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) {
 }
 
-func (dcp *DummyCheckpointer) CheckpointConfirmed(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
+func (dcp *DummyCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
 	return nil
 }
