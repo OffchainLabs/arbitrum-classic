@@ -136,8 +136,7 @@ func defendMessages(
 	tuple := value.NewEmptyTuple()
 	hashPreImage := tuple.GetPreImage()
 
-	inboxHashes := make([]value.HashOnlyValue, 0)
-	preImages := make([]common.Hash, 0)
+	preImages := make([]value.HashPreImage, 0)
 	for {
 		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
@@ -148,13 +147,6 @@ func defendMessages(
 					return 0, err
 				}
 
-				//<<<<<<< HEAD
-				//				log.Println("OneStepProofEthMessage", startInbox, hashPreImage)
-				//
-				//				log.Println("inbox after", hashing.SoliditySHA3(hashing.Bytes32(startInbox), hashing.Bytes32(msg.CommitmentHash())))
-				//
-				//=======
-				//>>>>>>> master
 				switch msg := msg.(type) {
 				case message.DeliveredTransaction:
 					err = contract.OneStepProofTransactionMessage(ctx, startInbox, hashPreImage, msg)
@@ -188,14 +180,14 @@ func defendMessages(
 
 		if timedOut {
 			chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
-			inboxHashes, preImages, err = vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
+			preImages, err = vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
 			}
 
-			simpleHashes := make([]common.Hash, 0, len(inboxHashes))
+			simpleHashes := make([]common.Hash, 0, len(preImages))
 
-			for _, h := range inboxHashes {
+			for _, h := range preImages {
 				simpleHashes = append(simpleHashes, h.Hash())
 			}
 
@@ -230,8 +222,8 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		startHash := preImages[contEv.SegmentIndex.Uint64()]
-		startHashSize := inboxHashes[contEv.SegmentIndex.Uint64()].Size()
+		startHash := preImages[contEv.SegmentIndex.Uint64()].HashImage
+		startHashSize := preImages[contEv.SegmentIndex.Uint64()].Size
 		hashPreImage.Size = startHashSize
 		hashPreImage.HashImage = startHash
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
@@ -295,7 +287,7 @@ func challengeMessages(
 				return 0, err
 			}
 
-			vmInboxSegments, _, err := vmInbox.GenerateBisection(startInbox, uint64(len(ev.SegmentHashes))-1, ev.TotalLength.Uint64())
+			vmInboxSegments, err := vmInbox.GenerateBisection(startInbox, uint64(len(ev.SegmentHashes))-1, ev.TotalLength.Uint64())
 			if err != nil {
 				return 0, err
 			}

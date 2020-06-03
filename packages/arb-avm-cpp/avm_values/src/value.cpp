@@ -105,10 +105,8 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
 
 void marshalStub(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val)) {
-        buf.push_back(HASH_ONLY);
         auto tup = nonstd::get<Tuple>(val);
-        auto image = tup.getHashPreImage();
-        image.marshal(buf);
+        marshalShallow(tup.getHashPreImage(), buf);
     } else {
         marshalShallow(val, buf);
     }

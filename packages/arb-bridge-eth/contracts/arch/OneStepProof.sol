@@ -421,7 +421,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(Value.newBoolean(val1.hash().hash == val2.hash().hash));
+        machine.addDataStackValue(Value.newBoolean(val1.hash() == val2.hash()));
         return true;
     }
 
@@ -586,7 +586,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackInt(uint256(val1.hash().hash));
+        machine.addDataStackInt(uint256(val1.hash()));
         return true;
     }
 
@@ -710,7 +710,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.dataStack).hash == Value.hashEmptyTuple())
+            Value.newBoolean(Value.hash(machine.dataStack) == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -747,7 +747,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.auxStack).hash == Value.hashEmptyTuple())
+            Value.newBoolean(Value.hash(machine.auxStack) == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -933,8 +933,7 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        Value.HashOnly memory hashVal = val1.hash();
-        return (true, hashVal.hash);
+        return (true, val1.hash());
     }
 
     // System operations
@@ -949,7 +948,7 @@ library OneStepProof {
     {
 
         if(val1.size <= send_size_limit){
-            return (true, val1.hash().hash);
+            return (true, val1.hash());
         }else{
             return (true, 0);
         }
@@ -968,7 +967,7 @@ library OneStepProof {
         if (! val1.isInt()) {
             return false;
         }
-        require(lowerTimeBound<val1.intVal && Value.hash(beforeInbox).hash==Value.hashEmptyTuple(),
+        require(lowerTimeBound<val1.intVal && Value.hash(beforeInbox) == Value.hashEmptyTuple(),
             "Inbox instruction was blocked");
         machine.addDataStackValue(beforeInbox);
         return true;
@@ -1311,7 +1310,7 @@ library OneStepProof {
         if (immediate == 0) {
             startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
-                Value.hash(startMachine.instructionStack).hash
+                Value.hash(startMachine.instructionStack)
             );
         } else {
             Value.Data memory immediateVal;
@@ -1326,8 +1325,8 @@ library OneStepProof {
 
             startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
-                Value.hash(startMachine.instructionStack).hash,
-                Value.hash(immediateVal).hash
+                Value.hash(startMachine.instructionStack),
+                Value.hash(immediateVal)
             );
         }
 
@@ -1556,7 +1555,7 @@ library OneStepProof {
         }
 
         if (!correct) {
-            if (Value.hash(endMachine.errHandler).hash == CODE_POINT_ERROR) {
+            if (Value.hash(endMachine.errHandler) == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
                 endMachine.instructionStack = endMachine.errHandler;

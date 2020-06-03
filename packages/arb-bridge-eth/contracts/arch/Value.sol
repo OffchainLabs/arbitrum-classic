@@ -36,10 +36,6 @@ library Value {
         bytes32 immediateVal;
     }
 
-    struct HashOnly {
-        bytes32 hash;
-    }
-
     struct Data {
         uint256 intVal;
         CodePoint cpVal;
@@ -153,8 +149,8 @@ library Value {
 
         uint256 hashCount = hashes.length;
         for (uint256 i = 0; i < hashCount; i++) {
-            HashOnly memory hashVal = val.tupleVal[i].hash();
-            hashes[i] = hashVal.hash;
+            bytes32 hashVal = val.tupleVal[i].hash();
+            hashes[i] = hashVal;
         }
 
         return hashTuple(hashes, val.size);
@@ -187,16 +183,16 @@ library Value {
         return isTupleType(val.typeCode);
     }
 
-    function hash(Data memory val) internal pure returns (HashOnly memory) {
+    function hash(Data memory val) internal pure returns (bytes32) {
         require(val.typeCode < VALUE_TYPE_COUNT, "Invalid type code");
         if (val.typeCode == INT_TYPECODE) {
-            return HashOnly(hashInt(val.intVal));
+            return hashInt(val.intVal);
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
-            return HashOnly(hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint));
+            return hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint);
         } else if (val.typeCode == HASH_ONLY_TYPECODE) {
-            return HashOnly(bytes32(val.intVal));
+            return bytes32(val.intVal);
         } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
-            return HashOnly(hashTuple(val));
+            return hashTuple(val);
         } else {
             assert(false);
         }
@@ -384,7 +380,7 @@ library Value {
             if (!valid) {
                 return (false, startOffset, CodePoint(0, 0, false, 0));
             }
-            immediateVal = value.hash().hash;
+            immediateVal = value.hash();
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
@@ -658,7 +654,7 @@ library Value {
 
         for (uint i = 0; i < wholeChunkCount; i++) {
             vals[0] = stackHash;
-            vals[1] = newInt(data.toUint(startOffset + i * 32)).hash().hash;
+            vals[1] = newInt(data.toUint(startOffset + i * 32)).hash();
             size += 2;
 
             stackHash = hashTuple(vals, size);
@@ -669,13 +665,13 @@ library Value {
             lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
 
             vals[0] = stackHash;
-            vals[1] = newInt(lastVal).hash().hash;
+            vals[1] = newInt(lastVal).hash();
             size += 2;
 
             stackHash = hashTuple(vals, size);
         }
 
-        vals[0] = newInt(dataLength).hash().hash;
+        vals[0] = newInt(dataLength).hash();
         vals[1] = stackHash;
         size += 2;
 

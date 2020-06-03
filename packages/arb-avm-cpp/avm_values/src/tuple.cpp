@@ -23,18 +23,9 @@ uint256_t hashPreImage(std::array<unsigned char, 32> first_hash,
                        uint256_t size) {
     std::array<unsigned char, 64> tupData2;
     auto iter = tupData2.begin();
-    auto val_length = 32;
 
-    for (uint64_t i = 0; i < first_hash.size(); i++) {
-        tupData2[i] = first_hash[i];
-    }
-    iter += val_length;
-
-    std::array<uint64_t, 4> sizeValue;
-    to_big_endian(size, sizeValue.begin());
-    iter = std::copy(
-        reinterpret_cast<unsigned char*>(sizeValue.data()),
-        reinterpret_cast<unsigned char*>(sizeValue.data()) + val_length, iter);
+    iter = std::copy(first_hash.begin(), first_hash.end(), iter);
+    to_big_endian(size, iter);
 
     std::array<unsigned char, 32> hashData2;
     evm::Keccak_256(tupData2.data(), 64, hashData2.data());

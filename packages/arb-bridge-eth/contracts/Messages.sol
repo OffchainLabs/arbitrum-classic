@@ -183,7 +183,7 @@ library Messages {
             uint16 dataLength = transactions.toUint16(start);
             // Terminate if the input data is shorter than the fixed length + claimed data length
             if (start + DATA_OFFSET + dataLength > transactionsLength) {
-                return Value.hash(prevVal).hash;
+                return Value.hash(prevVal);
             }
 
             Value.Data memory message = transactionMessageBatchHashSingle(
@@ -197,7 +197,7 @@ library Messages {
             prevVal = Protocol.addMessageToVMInboxHash(prevVal, message);
             start += DATA_OFFSET + dataLength;
         }
-        return Value.hash(prevVal).hash;
+        return Value.hash(prevVal);
     }
 
     function keccak256Subset(bytes memory data, uint256 start, uint256 length) internal pure returns(bytes32 dataHash) {

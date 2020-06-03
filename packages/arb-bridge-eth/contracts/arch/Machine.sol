@@ -40,7 +40,7 @@ library Machine {
         vals[0] = valHash;
         vals[1] = stackValHash;
         Value.Data memory tuple = Value.newTuple(vals);
-        return Value.newHashOnly(Value.hash(tuple).hash, tuple.size);
+        return Value.newHashOnly(Value.hash(tuple), tuple.size);
     }
 
     struct Data {
@@ -57,17 +57,17 @@ library Machine {
         return string(
             abi.encodePacked(
                 "Machine(",
-                DebugPrint.bytes32string(Value.hash(machine.instructionStack).hash),
+                DebugPrint.bytes32string(Value.hash(machine.instructionStack)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.dataStack).hash),
+                DebugPrint.bytes32string(Value.hash(machine.dataStack)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.auxStack).hash),
+                DebugPrint.bytes32string(Value.hash(machine.auxStack)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.registerVal).hash),
+                DebugPrint.bytes32string(Value.hash(machine.registerVal)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.staticVal).hash),
+                DebugPrint.bytes32string(Value.hash(machine.staticVal)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.errHandler).hash),
+                DebugPrint.bytes32string(Value.hash(machine.errHandler)),
                 ")\n"
             )
         );
@@ -133,12 +133,12 @@ library Machine {
         } else {
             return keccak256(
                 abi.encodePacked(
-                    Value.hash(machine.instructionStack).hash,
-                    Value.hash(machine.dataStack).hash,
-                    Value.hash(machine.auxStack).hash,
-                    Value.hash(machine.registerVal).hash,
-                    Value.hash(machine.staticVal).hash,
-                    Value.hash(machine.errHandler).hash
+                    Value.hash(machine.instructionStack),
+                    Value.hash(machine.dataStack),
+                    Value.hash(machine.auxStack),
+                    Value.hash(machine.registerVal),
+                    Value.hash(machine.staticVal),
+                    Value.hash(machine.errHandler)
                 )
             );
         }

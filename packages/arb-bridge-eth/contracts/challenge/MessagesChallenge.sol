@@ -361,13 +361,13 @@ contract MessagesChallenge is BisectionChallenge {
     )
         private
     {
-        bytes32 hashVal = Value.hash(Protocol.addMessageToVMInboxHash(_lowerHashBValue, _valueB)).hash;
+        bytes32 hashVal = Value.hash(Protocol.addMessageToVMInboxHash(_lowerHashBValue, _valueB));
         
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
                 Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
-                Value.hash(_lowerHashBValue).hash,
+                Value.hash(_lowerHashBValue),
                 hashVal,
                 1
             )

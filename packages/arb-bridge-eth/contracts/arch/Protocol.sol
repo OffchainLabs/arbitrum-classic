@@ -37,7 +37,7 @@ library Protocol {
         values[1] = Value.newInt(uint256(_destination));
         values[2] = Value.newInt(_value);
         values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-        return Value.newTuple(values).hash().hash;
+        return Value.newTuple(values).hash();
     }
 
     function generatePreconditionHash(

@@ -106,7 +106,7 @@ contract MessageTester {
             transactions,
             blockNum,
             blockTimestamp
-        )).hash;
+        ));
     }
 
     function transactionMessageBatchSingleSender(
@@ -238,7 +238,7 @@ contract MessageTester {
             blockNumber,
             timestamp,
             messageNum
-        )).hash;
+        ));
     }
 
     function erc721Hash(
@@ -286,6 +286,6 @@ contract MessageTester {
             blockNumber,
             timestamp,
             messageNum
-        )).hash;
+        ));
     }
 }

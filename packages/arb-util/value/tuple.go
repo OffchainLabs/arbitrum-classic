@@ -55,6 +55,13 @@ type HashPreImage struct {
 	Size      int64
 }
 
+func (val HashPreImage) Hash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(val.HashImage),
+		hashing.Uint256(big.NewInt(val.Size)),
+	)
+}
+
 func NewEmptyTuple() TupleValue {
 	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, nonePreImage, 1, false}
 }
