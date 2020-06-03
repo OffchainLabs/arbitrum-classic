@@ -289,22 +289,26 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) error {
 	confirmedNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
-	if confirmedNode.Prev() != nil {
-		ckptCtx := ckptcontext.NewCheckpointContext()
-		nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx, false)
-		nodeBytes, err := proto.Marshal(nodeData)
-		if err != nil {
-			return err
-		}
-		if err := chain.checkpointer.CheckpointConfirmed(
-			confirmedNode.Hash(),
-			confirmedNode.Depth(),
-			nodeBytes,
-			ckptCtx,
-		); err != nil {
-			return err
-		}
+	ckptCtx := ckptcontext.NewCheckpointContext()
+
+	// Note that we marshal the node without including the machine state
+	// of that node. This is because saving the machine state for every confirmed
+	// node would significantly bloat the database and there is currently
+	// no usecase for this data
+	nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx, false)
+	nodeBytes, err := proto.Marshal(nodeData)
+	if err != nil {
+		return err
 	}
+	if err := chain.checkpointer.CheckpointConfirmedNode(
+		confirmedNode.Hash(),
+		confirmedNode.Depth(),
+		nodeBytes,
+		ckptCtx,
+	); err != nil {
+		return err
+	}
+
 	if confirmedNode.Depth() > chain.knownValidNode.Depth() {
 		chain.knownValidNode = confirmedNode
 	}

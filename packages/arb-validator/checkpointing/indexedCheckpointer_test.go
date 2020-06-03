@@ -388,7 +388,7 @@ func TestConfirm(t *testing.T) {
 		t.Error()
 	}
 
-	if err := cp.CheckpointConfirmed(
+	if err := cp.CheckpointConfirmedNode(
 		common.Hash{75},
 		3,
 		data,
@@ -397,7 +397,7 @@ func TestConfirm(t *testing.T) {
 		t.Error(err)
 	}
 
-	view := nodeview.New(cp.ns, cp.db)
+	view := nodeview.New(cp.confirmedNodeStore, cp.db)
 
 	loadedNd, err := view.GetNode(3, common.Hash{75})
 	if err != nil {

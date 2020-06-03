@@ -42,7 +42,7 @@ type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
 	bs                    machine.BlockStore
-	ns                    machine.NodeStore
+	confirmedNodeStore    machine.NodeStore
 	nextCheckpointToWrite *writableCheckpoint
 }
 
@@ -110,6 +110,8 @@ func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
 }
 
+// HasCheckpointedState checks whether the block store is empty, which is the table
+// which contains the checkpoints recorded by the IndexedCheckpointer
 func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 	return !cp.bs.IsBlockStoreEmpty()
 }
@@ -143,20 +145,20 @@ func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbb
 	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
 }
 
-func (cp *IndexedCheckpointer) CheckpointConfirmed(
+func (cp *IndexedCheckpointer) CheckpointConfirmedNode(
 	nodeHash common.Hash,
 	depth uint64,
 	nodeData []byte,
 	cpCtx *ckptcontext.CheckpointContext,
 ) error {
-	if _, err := cp.ns.GetNode(depth, nodeHash); err == nil {
+	if _, err := cp.confirmedNodeStore.GetNode(depth, nodeHash); err == nil {
 		// Node already exists so don't bother inserting
 		return nil
 	}
 	if err := ckptcontext.SaveCheckpointContext(cp.db, cpCtx); err != nil {
 		return err
 	}
-	return cp.ns.PutNode(depth, nodeHash, nodeData)
+	return cp.confirmedNodeStore.PutNode(depth, nodeHash, nodeData)
 }
 
 func restoreLatestState(
