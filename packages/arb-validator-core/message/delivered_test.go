@@ -27,8 +27,10 @@ func generateTestDeliveredERC20() Delivered {
 	return Delivered{
 		Message: generateTestERC20(),
 		DeliveryInfo: DeliveryInfo{
-			BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
-			Timestamp:  big.NewInt(65435643),
+			ChainTime: ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(64654)),
+				Timestamp: big.NewInt(65435643),
+			},
 			MessageNum: big.NewInt(9675),
 		},
 	}
