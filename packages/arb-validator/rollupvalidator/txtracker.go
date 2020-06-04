@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
-	"math/big"
 	"strconv"
 	"sync"
 
@@ -70,11 +69,11 @@ func newAssertionInfo() *assertionInfo {
 	return &assertionInfo{}
 }
 
-func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logResponse {
+func (a *assertionInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
 	for _, txLogs := range a.TxLogs {
 		for _, evmLog := range txLogs.Logs {
-			if address != nil && !value.NewIntValue(address).Equal(evmLog.ContractID) {
+			if address != nil && *address != evmLog.Address {
 				continue
 			}
 
@@ -177,7 +176,7 @@ func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 func (tr *txTracker) FindLogs(
 	fromHeight *int64,
 	toHeight *int64,
-	address *big.Int,
+	address *common.Address,
 	topics []common.Hash,
 ) []*validatorserver.LogInfo {
 	tr.RLock()
@@ -202,14 +201,13 @@ func (tr *txTracker) FindLogs(
 	for i, assertion := range assertions {
 		assertionLogs := assertion.FindLogs(address, topics)
 		for j, evmLog := range assertionLogs {
-			addressBytes := evmLog.Log.ContractID.ToBytes()
 			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
 			for _, topic := range evmLog.Log.Topics {
 				topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
 			}
 
 			logs = append(logs, &validatorserver.LogInfo{
-				Address:          hexutil.Encode(addressBytes[12:]),
+				Address:          hexutil.Encode(evmLog.Log.Address[:]),
 				BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
 				BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
 				Data:             hexutil.Encode(evmLog.Log.Data[:]),

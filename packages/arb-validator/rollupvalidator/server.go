@@ -56,12 +56,11 @@ func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
 func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArgs) (*validatorserver.FindLogsReply, error) {
-	addressBytes, err := hexutil.Decode(args.Address)
-	if err != nil {
-		fmt.Println("FindLogs error1", err)
-		return nil, err
+	var address *common.Address
+	if len(args.Address) > 0 {
+		addr := common.HexToAddress(args.Address)
+		address = &addr
 	}
-	addressInt := new(big.Int).SetBytes(addressBytes[:])
 
 	topics := make([]common.Hash, 0, len(args.Topics))
 	for _, topic := range args.Topics {
@@ -81,14 +80,14 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 
 	var logs []*validatorserver.LogInfo
 	if args.ToHeight == "latest" {
-		logs = m.tracker.FindLogs(&fromHeight, nil, addressInt, topics)
+		logs = m.tracker.FindLogs(&fromHeight, nil, address, topics)
 	} else {
 		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logs = m.tracker.FindLogs(&fromHeight, &toHeight, addressInt, topics)
+		logs = m.tracker.FindLogs(&fromHeight, &toHeight, address, topics)
 	}
 
 	return &validatorserver.FindLogsReply{
