@@ -30,7 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-type preparedAssertion struct {
+type PreparedAssertion struct {
 	leafHash         common.Hash
 	prevPrevLeafHash common.Hash
 	prevDataHash     common.Hash
@@ -44,8 +44,8 @@ type preparedAssertion struct {
 	machine     machine.Machine
 }
 
-func (pa *preparedAssertion) Clone() *preparedAssertion {
-	return &preparedAssertion{
+func (pa *PreparedAssertion) Clone() *PreparedAssertion {
+	return &PreparedAssertion{
 		leafHash:         pa.leafHash,
 		prevPrevLeafHash: pa.prevPrevLeafHash,
 		prevDataHash:     pa.prevDataHash,
@@ -62,9 +62,9 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
-		assertionPreparedChan := make(chan *preparedAssertion, 20)
+		assertionPreparedChan := make(chan *PreparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
-		preparedAssertions := make(map[common.Hash]*preparedAssertion)
+		preparedAssertions := make(map[common.Hash]*PreparedAssertion)
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
@@ -122,7 +122,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
-			preparedAssertions = make(map[common.Hash]*preparedAssertion)
+			preparedAssertions = make(map[common.Hash]*PreparedAssertion)
 
 			chain.RLock()
 			correctNode := chain.nodeGraph.GetSuccessor(currentOpinion, newOpinion)
@@ -208,7 +208,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
+func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
 	currentOpinionHash := currentOpinion.Hash()
@@ -281,7 +281,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	}
-	return &preparedAssertion{
+	return &PreparedAssertion{
 		leafHash:         currentOpinionHash,
 		prevPrevLeafHash: prevPrevLeafHash,
 		prevDataHash:     prevDataHash,

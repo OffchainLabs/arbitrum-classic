@@ -38,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 // Server provides an interface for interacting with a a running coordinator
@@ -52,7 +51,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
 	advancedNodeChan := make(chan *structures.Node)
-	assertionListener := rollup.NewAssertionListener(advancedNodeChan)
+	assertionListener := NewAssertionListener(advancedNodeChan)
 	man.AddListener(assertionListener)
 
 	tracker := newTxTracker(man.RollupAddress)
