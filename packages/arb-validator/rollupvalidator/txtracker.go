@@ -40,15 +40,11 @@ type logsInfo struct {
 	Logs []evm.Log
 }
 
-type txInfo struct {
-	Found           bool
-	assertionIndex  uint64
-	transactionHash common.Hash
-	RawVal          value.Value
-	LogsPreHash     string
-	LogsPostHash    string
-	LogsValHashes   []string
-	OnChainTxHash   string
+type txRecord struct {
+	nodeHeight       uint64
+	transactionIndex uint64
+	transactionHash  common.Hash
+	rawVal           value.Value
 }
 
 type assertionInfo struct {
@@ -58,6 +54,18 @@ type assertionInfo struct {
 	OutMessages       []value.Value
 	AssertNodeHash    common.Hash
 	TransactionHashes []common.Hash
+	OnChainTxHash     string
+}
+
+type txInfo struct {
+	Found           bool
+	assertionIndex  uint64
+	transactionHash common.Hash
+	RawVal          value.Value
+	LogsPreHash     string
+	LogsPostHash    string
+	LogsValHashes   []string
+	OnChainTxHash   string
 }
 
 type logResponse struct {
@@ -99,7 +107,7 @@ func (a *assertionInfo) FindLogs(address *common.Address, topics []common.Hash) 
 type txTracker struct {
 	*sync.RWMutex
 	rollup.NoopListener
-	transactions  map[common.Hash]txInfo
+	transactions  map[common.Hash]*txRecord
 	assertionInfo []*assertionInfo
 	assertionMap  map[common.Hash]*assertionInfo
 	chainAddress  common.Address
@@ -109,7 +117,7 @@ func newTxTracker(
 	chainAddress common.Address,
 ) *txTracker {
 	return &txTracker{
-		transactions:  make(map[common.Hash]txInfo),
+		transactions:  make(map[common.Hash]*txRecord),
 		assertionInfo: make([]*assertionInfo, 0),
 		assertionMap:  make(map[common.Hash]*assertionInfo),
 		chainAddress:  chainAddress,
@@ -180,7 +188,8 @@ func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 	if !ok {
 		return txInfo{Found: false}
 	}
-	return tx
+	assertionInfo := tr.assertionInfo[tx.nodeHeight]
+	return getTxInfo(assertionInfo, tx)
 }
 
 func (tr *txTracker) FindLogs(
@@ -231,19 +240,15 @@ func (tr *txTracker) FindLogs(
 	return logs
 }
 
-func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []txInfo) {
+func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []*txRecord) {
 	assertionInfo := newAssertionInfo()
 	assertionInfo.AssertNodeHash = node.Hash()
+	txHash := node.AssertionTxHash()
+	assertionInfo.OnChainTxHash = hexutil.Encode(txHash[:])
 
 	if node.LinkType() != valprotocol.ValidChildType {
 		return assertionInfo, nil
 	}
-
-	zero := common.Hash{}
-	logsPreHash := hexutil.Encode(zero[:])
-
-	txHash := node.AssertionTxHash()
-	disputableTxHash := hexutil.Encode(txHash[:])
 
 	assertion := node.Assertion()
 
@@ -266,22 +271,10 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 			hexutil.Encode(acc.Bytes()))
 	}
 
-	var logsPostHash string
-	if len(logs) > 0 {
-		logsPostHash = assertionInfo.LogsAccHashes[len(assertionInfo.LogsAccHashes)-1]
-	} else {
-		logsPostHash = hexutil.Encode(zero[:])
-	}
-
 	assertionInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
-	transactions := make([]txInfo, 0, len(logs))
+	transactions := make([]*txRecord, 0, len(logs))
 
 	for i, logVal := range logs {
-		if i > 0 {
-			logsPreHash = assertionInfo.LogsAccHashes[i-1] // Previous acc hash
-		}
-		logsValHashes := assertionInfo.LogsValHashes[i+1:] // log acc hashes after logVal
-
 		evmVal, err := evm.ProcessLog(logVal, chain)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
@@ -298,18 +291,43 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 
 		msg := evmVal.GetEthMsg()
 		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
-		info := txInfo{
-			Found:           true,
-			transactionHash: msg.TxHash,
-			assertionIndex:  node.Depth(),
-			RawVal:          logVal,
-			LogsPreHash:     logsPreHash,
-			LogsPostHash:    logsPostHash,
-			LogsValHashes:   logsValHashes,
-			OnChainTxHash:   disputableTxHash,
+		info := &txRecord{
+			nodeHeight:       node.Depth(),
+			transactionIndex: uint64(i),
+			transactionHash:  msg.TxHash,
+			rawVal:           logVal,
 		}
 		transactions = append(transactions, info)
 		assertionInfo.TransactionHashes = append(assertionInfo.TransactionHashes, info.transactionHash)
 	}
 	return assertionInfo, transactions
+}
+
+func getTxInfo(assertionInfo *assertionInfo, txRecord *txRecord) txInfo {
+
+	zero := common.Hash{}
+
+	var logsPostHash string
+	if len(assertionInfo.LogsAccHashes) > 0 {
+		logsPostHash = assertionInfo.LogsAccHashes[len(assertionInfo.LogsAccHashes)-1]
+	} else {
+		logsPostHash = hexutil.Encode(zero[:])
+	}
+
+	logsPreHash := hexutil.Encode(zero[:])
+	if txRecord.transactionIndex > 0 {
+		logsPreHash = assertionInfo.LogsAccHashes[txRecord.transactionIndex-1] // Previous acc hash
+	}
+	logsValHashes := assertionInfo.LogsValHashes[txRecord.transactionIndex+1:] // log acc hashes after logVal
+
+	return txInfo{
+		Found:           true,
+		transactionHash: txRecord.transactionHash,
+		assertionIndex:  txRecord.nodeHeight,
+		RawVal:          txRecord.rawVal,
+		LogsPreHash:     logsPreHash,
+		LogsPostHash:    logsPostHash,
+		LogsValHashes:   logsValHashes,
+		OnChainTxHash:   assertionInfo.OnChainTxHash,
+	}
 }
