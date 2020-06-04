@@ -115,7 +115,7 @@ export class ImmOp {
   }
 }
 
-export type Value = IntValue | TupleValue | CodePointValue | HashOnlyValue
+export type Value = IntValue | TupleValue | CodePointValue
 
 export class IntValue {
   public bignum: ethers.utils.BigNumber
@@ -134,6 +134,10 @@ export class IntValue {
 
   public toString(): string {
     return this.bignum.toString()
+  }
+
+  public size(): ethers.utils.BigNumber {
+    return ethers.utils.bigNumberify(1)
   }
 }
 
@@ -197,29 +201,9 @@ export class CodePointValue {
         return ''
     }
   }
-}
 
-export class HashOnlyValue {
-  public hashVal: string
-  public size: ethers.utils.BigNumber
-
-  // hash: 32 byte hash
-  // size: 8 byte integer
-  constructor(hash: string, size: ethers.utils.BigNumberish) {
-    this.hashVal = hash
-    this.size = ethers.utils.bigNumberify(size)
-  }
-
-  public typeCode(): ValueType {
-    return ValueType.HashOnly
-  }
-
-  public hash(): string {
-    return this.hashVal
-  }
-
-  public toString(): string {
-    return 'HashOnlyValue(' + this.hash() + ')'
+  public size(): ethers.utils.BigNumber {
+    return ethers.utils.bigNumberify(1)
   }
 }
 
@@ -235,10 +219,17 @@ export class TupleValue {
     this.contents = contents
     const hashes = this.contents.map((value): string => value.hash())
     const types = ['uint8'].concat(Array(contents.length).fill('bytes32'))
-    const values: any[] = [this.typeCode()]
-    this.cachedHash = ethers.utils.solidityKeccak256(
+
+    const values: any[] = [contents.length]
+
+    const firstHash = ethers.utils.solidityKeccak256(
       types,
       values.concat(hashes)
+    )
+
+    this.cachedHash = ethers.utils.solidityKeccak256(
+      ['uint8', 'bytes32', 'uint256'],
+      [ValueType.Tuple, firstHash, this.size()]
     )
   }
 
@@ -248,6 +239,17 @@ export class TupleValue {
 
   public hash(): string {
     return this.cachedHash
+  }
+
+  public size(): ethers.utils.BigNumber {
+    let valSize = 1
+
+    for (let i = 0; i < this.contents.length; i++) {
+      const current = this.get(i).size()
+      valSize += current.toNumber()
+    }
+
+    return ethers.utils.bigNumberify(valSize)
   }
 
   // index: uint8
@@ -438,10 +440,10 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
         return new Uint8Array()
       }
     }
-  } else if (ty === ValueType.HashOnly) {
-    const val = v as HashOnlyValue
-    // 1B type; 8B size; 32B hash
-    return ethers.utils.concat([accTy, intToBytes(val.size, 8), val.hash()])
+    // } else if (ty === ValueType.HashOnly) {
+    //   const val = v as HashOnlyValue
+    //   // 1B type; 8B size; 32B hash
+    //   return ethers.utils.concat([accTy, intToBytes(val.size, 8), val.hash()])
   } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {
     const val = v as TupleValue
     // 1B type; (ty-TYPE_TUPLE_0) number of Values
