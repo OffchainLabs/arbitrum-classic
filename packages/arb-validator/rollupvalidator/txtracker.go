@@ -108,7 +108,7 @@ func (a *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []log
 }
 
 type txTracker struct {
-	*sync.RWMutex
+	sync.RWMutex
 	rollup.NoopListener
 	txDB          *txDB
 	maxNodeHeight uint64
