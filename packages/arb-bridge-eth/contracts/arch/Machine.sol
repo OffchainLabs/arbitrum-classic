@@ -39,8 +39,8 @@ library Machine {
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = valHash;
         vals[1] = stackValHash;
-        Value.Data memory tuple = Value.newTuple(vals);
-        return Value.newHashOnly(Value.hash(tuple), tuple.size);
+
+        return Value.getTuplePreImage(Value.newTuple(vals));
     }
 
     struct Data {
@@ -171,13 +171,11 @@ library Machine {
     {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
-        bytes32 hashVal;
         bool valid;
-        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.instructionStack) = Value.deserializeHashedOnly(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        m.instructionStack = Value.newHashOnly(hashVal, 1);
 
         (valid, offset, m.dataStack) = Value.deserializeHashPreImage(data, offset);
         if (!valid) {
@@ -187,23 +185,20 @@ library Machine {
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.registerVal) = Value.deserialize(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        m.registerVal = Value.newHashOnly(hashVal, 1);
 
-        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.staticVal) = Value.deserialize(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        m.staticVal = Value.newHashOnly(hashVal, 1);
 
-        (valid, offset, hashVal) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.errHandler) = Value.deserialize(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
-        m.errHandler = Value.newHashOnly(hashVal, 1);
 
         return (true, offset, m);
     }

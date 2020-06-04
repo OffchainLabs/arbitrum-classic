@@ -152,9 +152,9 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     uint256_t_to_buf(code[pc].nextHash, buf);
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
-    uint256_t_to_buf(::hash(registerVal), buf);
-    uint256_t_to_buf(::hash(staticVal), buf);
-    uint256_t_to_buf(::hash(errpc), buf);
+    ::marshalStub(registerVal, buf);
+    ::marshalStub(staticVal, buf);
+    ::marshalStub(errpc, buf);
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
