@@ -29,7 +29,7 @@ type AnnouncerListener struct {
 	Prefix string
 }
 
-func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *ChainObserver) {
+func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
 	log.Println("RestartingFromLatestValid")
 }
 
