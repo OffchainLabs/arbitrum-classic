@@ -23,12 +23,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type recoverStakeOldParams struct {
+type RecoverStakeOldParams struct {
 	addr  common.Address
 	proof []common.Hash
 }
 
-type recoverStakeMootedParams struct {
+type RecoverStakeMootedParams struct {
 	addr         common.Address
 	ancestorHash common.Hash
 	lcProof      []common.Hash

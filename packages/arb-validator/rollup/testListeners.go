@@ -48,7 +48,7 @@ func NewEvil_WrongAssertionListener(
 	return &evil_WrongAssertionListener{NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
 }
 
-func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *preparedAssertion) {
+func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *PreparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
 	switch lis.kind {
