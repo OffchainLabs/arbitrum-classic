@@ -17,10 +17,13 @@
 package rollupvalidator
 
 import (
+	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 
@@ -32,46 +35,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 )
 
-type validatorRequest interface {
-}
-
-type assertionCountRequest struct {
-	resultChan chan<- int
-}
-
-type outputMsgRequest struct {
-	assertionNodeHash common.Hash
-	msgIndex          int64
-	resultChan        chan<- value.Value
-}
-
-type txRequest struct {
-	txHash     common.Hash
-	resultChan chan<- txInfo
-}
-
-type findLogsRequest struct {
-	fromHeight *int64
-	toHeight   *int64
-	address    *big.Int
-	topics     []common.Hash
-
-	resultChan chan<- []*validatorserver.LogInfo
-}
-
 type logsInfo struct {
 	msg  evm.EthBridgeMessage
 	Logs []evm.Log
 }
 
 type txInfo struct {
-	Found          bool
-	assertionIndex int
-	RawVal         value.Value
-	LogsPreHash    string
-	LogsPostHash   string
-	LogsValHashes  []string
-	OnChainTxHash  string
+	Found           bool
+	assertionIndex  uint64
+	transactionHash common.Hash
+	RawVal          value.Value
+	LogsPreHash     string
+	LogsPostHash    string
+	LogsValHashes   []string
+	OnChainTxHash   string
 }
 
 type assertionInfo struct {
@@ -122,19 +99,19 @@ func newAssertionInfo() *assertionInfo {
 }
 
 type txTracker struct {
+	*sync.RWMutex
+	rollup.NoopListener
 	txRequestIndex int
 	transactions   map[common.Hash]txInfo
 	assertionInfo  []*assertionInfo
 	assertionMap   map[common.Hash]*assertionInfo
 	accountNonces  map[common.Address]uint64
 	vmID           common.Address
-	requests       chan validatorRequest
 }
 
 func newTxTracker(
 	vmID common.Address,
 ) *txTracker {
-	requests := make(chan validatorRequest, 100)
 	return &txTracker{
 		txRequestIndex: 0,
 		transactions:   make(map[common.Hash]txInfo),
@@ -142,26 +119,33 @@ func newTxTracker(
 		assertionMap:   make(map[common.Hash]*assertionInfo),
 		accountNonces:  make(map[common.Address]uint64),
 		vmID:           vmID,
-		requests:       requests,
 	}
 }
 
-func (tr *txTracker) AssertionCount() <-chan int {
-	req := make(chan int, 1)
-	tr.requests <- assertionCountRequest{req}
-	return req
+func (tr *txTracker) AssertionCount() int {
+	tr.RLock()
+	defer tr.RUnlock()
+	return len(tr.assertionInfo) - 1
 }
 
-func (tr *txTracker) OutputMsgVal(assertionHash common.Hash, msgIndex int64) <-chan value.Value {
-	req := make(chan value.Value, 1)
-	tr.requests <- outputMsgRequest{assertionHash, msgIndex, req}
-	return req
+func (tr *txTracker) OutputMsgVal(assertionHash common.Hash, msgIndex int64) value.Value {
+	tr.RLock()
+	defer tr.RUnlock()
+	assertionVal, ok := tr.assertionMap[assertionHash]
+	if !ok || msgIndex < 0 || msgIndex >= int64(len(assertionVal.OutMessages)) {
+		return nil
+	}
+	return assertionVal.OutMessages[msgIndex]
 }
 
-func (tr *txTracker) TxInfo(txHash common.Hash) <-chan txInfo {
-	req := make(chan txInfo, 1)
-	tr.requests <- txRequest{txHash, req}
-	return req
+func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
+	tr.RLock()
+	defer tr.RUnlock()
+	tx, ok := tr.transactions[txHash]
+	if !ok {
+		return txInfo{Found: false}
+	}
+	return tx
 }
 
 func (tr *txTracker) FindLogs(
@@ -169,13 +153,51 @@ func (tr *txTracker) FindLogs(
 	toHeight *int64,
 	address *big.Int,
 	topics []common.Hash,
-) <-chan []*validatorserver.LogInfo {
-	req := make(chan []*validatorserver.LogInfo, 1)
-	tr.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
-	return req
+) []*validatorserver.LogInfo {
+	tr.RLock()
+	defer tr.RUnlock()
+	startHeight := int64(0)
+	endHeight := int64(len(tr.assertionInfo))
+	if fromHeight != nil && *fromHeight > int64(0) {
+		startHeight = *fromHeight
+	}
+	if toHeight != nil {
+		altEndHeight := *toHeight + 1
+		if endHeight > altEndHeight {
+			endHeight = altEndHeight
+		}
+	}
+	logs := make([]*validatorserver.LogInfo, 0)
+	if startHeight >= int64(len(tr.assertionInfo)) {
+		return logs
+	}
+	assertions := tr.assertionInfo[startHeight:endHeight]
+
+	for i, assertion := range assertions {
+		assertionLogs := assertion.FindLogs(address, topics)
+		for j, evmLog := range assertionLogs {
+			addressBytes := evmLog.Log.ContractID.ToBytes()
+			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
+			for _, topic := range evmLog.Log.Topics {
+				topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
+			}
+
+			logs = append(logs, &validatorserver.LogInfo{
+				Address:          hexutil.Encode(addressBytes[12:]),
+				BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
+				BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
+				Data:             hexutil.Encode(evmLog.Log.Data[:]),
+				LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
+				Topics:           topicStrings,
+				TransactionIndex: "0x0",
+				TransactionHash:  hexutil.Encode(evmLog.Msg.TxHash[:]),
+			})
+		}
+	}
+	return logs
 }
 
-func (tr *txTracker) processNode(node *structures.Node) {
+func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []txInfo) {
 	info := newAssertionInfo()
 
 	zero := common.Hash{}
@@ -213,23 +235,15 @@ func (tr *txTracker) processNode(node *structures.Node) {
 		logsPostHash = hexutil.Encode(zero[:])
 	}
 
+	transactions := make([]txInfo, 0, len(logs))
+
 	for i, logVal := range logs {
 		if i > 0 {
 			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
 		}
 		logsValHashes := info.LogsValHashes[i+1:] // log acc hashes after logVal
 
-		txInfo := txInfo{
-			Found:          true,
-			assertionIndex: len(tr.assertionInfo),
-			RawVal:         logVal,
-			LogsPreHash:    logsPreHash,
-			LogsPostHash:   logsPostHash,
-			LogsValHashes:  logsValHashes,
-			OnChainTxHash:  disputableTxHash,
-		}
-
-		evmVal, err := evm.ProcessLog(logVal, tr.vmID)
+		evmVal, err := evm.ProcessLog(logVal, chain)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue
@@ -245,82 +259,33 @@ func (tr *txTracker) processNode(node *structures.Node) {
 
 		msg := evmVal.GetEthMsg()
 		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
-		tr.transactions[msg.TxHash] = txInfo
+		info := txInfo{
+			Found:           true,
+			transactionHash: msg.TxHash,
+			assertionIndex:  node.Depth(),
+			RawVal:          logVal,
+			LogsPreHash:     logsPreHash,
+			LogsPostHash:    logsPostHash,
+			LogsValHashes:   logsValHashes,
+			OnChainTxHash:   disputableTxHash,
+		}
+		transactions = append(transactions, info)
 	}
-	tr.assertionInfo = append(tr.assertionInfo, info)
-	tr.assertionMap[info.AssertNodeHash] = info
+	return info, transactions
 }
 
-func (tr *txTracker) processRequest(request validatorRequest) {
-	switch request := request.(type) {
-	case outputMsgRequest:
-		assertionVal, ok := tr.assertionMap[request.assertionNodeHash]
-		if ok && request.msgIndex > -1 && request.msgIndex < int64(len(assertionVal.OutMessages)) {
-			val := assertionVal.OutMessages[request.msgIndex]
-			request.resultChan <- val
-		} else {
-			request.resultChan <- nil
-		}
-	case assertionCountRequest:
-		request.resultChan <- len(tr.assertionInfo) - 1
-	case txRequest:
-		tx, ok := tr.transactions[request.txHash]
-		if ok {
-			request.resultChan <- tx
-		} else {
-			request.resultChan <- txInfo{Found: false}
-		}
-	case findLogsRequest:
-		startHeight := int64(0)
-		endHeight := int64(len(tr.assertionInfo))
-		if request.fromHeight != nil && *request.fromHeight > int64(0) {
-			startHeight = *request.fromHeight
-		}
-		if request.toHeight != nil {
-			altEndHeight := *request.toHeight + 1
-			if endHeight > altEndHeight {
-				endHeight = altEndHeight
-			}
-		}
-		logs := make([]*validatorserver.LogInfo, 0)
-		if startHeight >= int64(len(tr.assertionInfo)) {
-			request.resultChan <- logs
-			break
-		}
-		assertions := tr.assertionInfo[startHeight:endHeight]
-
-		for i, assertion := range assertions {
-			assertionLogs := assertion.FindLogs(request.address, request.topics)
-			for j, evmLog := range assertionLogs {
-				addressBytes := evmLog.Log.ContractID.ToBytes()
-				topicStrings := make([]string, 0, len(evmLog.Log.Topics))
-				for _, topic := range evmLog.Log.Topics {
-					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
-				}
-
-				logs = append(logs, &validatorserver.LogInfo{
-					Address:          hexutil.Encode(addressBytes[12:]),
-					BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
-					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
-					Data:             hexutil.Encode(evmLog.Log.Data[:]),
-					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
-					Topics:           topicStrings,
-					TransactionIndex: "0x0",
-					TransactionHash:  hexutil.Encode(evmLog.Msg.TxHash[:]),
-				})
-			}
-		}
-		request.resultChan <- logs
-	}
+func (tr *txTracker) RestartingFromLatestValid(context.Context, *rollup.ChainObserver) {
 }
 
-func (tr *txTracker) handleTxResults(advancedNodeChan chan *structures.Node) {
-	for {
-		select {
-		case node := <-advancedNodeChan:
-			tr.processNode(node)
-		case request := <-tr.requests:
-			tr.processRequest(request)
+func (tr *txTracker) AdvancedKnownNode(ctx context.Context, chain *rollup.ChainObserver, node *structures.Node) {
+	go func() {
+		assertionInfo, transactions := processNode(node, tr.vmID)
+		tr.Lock()
+		defer tr.Unlock()
+		for _, tx := range transactions {
+			tr.transactions[tx.transactionHash] = tx
 		}
-	}
+		tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
+		tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
+	}()
 }
