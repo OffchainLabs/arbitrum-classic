@@ -67,6 +67,14 @@ func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing
 	return &evilRollupCheckpointer{fac.fac.New(ctx).(checkpointing.RollupCheckpointer)}
 }
 
+func (e *evilRollupCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
+	return e.cp.GetCheckpointDB()
+}
+
+func (e *evilRollupCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+	return e.cp.GetConfirmedNodeStore()
+}
+
 func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 	return e.cp.HasCheckpointedState()
 }

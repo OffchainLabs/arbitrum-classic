@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
@@ -44,10 +45,11 @@ type Manager struct {
 	// listenersLock is locked when writing listeners or activeChain
 	listenersLock sync.Mutex
 	// validCallLock is locked when there is not a valid chain caught up to head
-	validCallLock sync.Mutex
-	RollupAddress common.Address
-	listeners     []rollup.ChainListener
-	activeChain   *rollup.ChainObserver
+	validCallLock      sync.Mutex
+	RollupAddress      common.Address
+	listeners          []rollup.ChainListener
+	activeChain        *rollup.ChainObserver
+	activeCheckpointer checkpointing.RollupCheckpointer
 }
 
 const defaultMaxReorgDepth = 100
@@ -115,13 +117,14 @@ func CreateManagerAdvanced(
 
 			man.listenersLock.Lock()
 			man.activeChain = chain
+			man.activeCheckpointer = checkpointer
 			// Add manager's listeners
 			for _, listener := range man.listeners {
 				man.activeChain.AddListener(listener)
 			}
 			man.listenersLock.Unlock()
 
-			chain.RestartFromLatestValid(runCtx)
+			man.activeChain.RestartFromLatestValid(runCtx)
 
 			man.activeChain.Start(runCtx)
 
@@ -177,6 +180,7 @@ func CreateManagerAdvanced(
 
 			man.listenersLock.Lock()
 			man.activeChain = nil
+			man.activeCheckpointer = nil
 			man.listenersLock.Unlock()
 
 			cancelFunc()
@@ -223,6 +227,18 @@ func (man *Manager) CurrentBlockId() *common.BlockId {
 	man.validCallLock.Lock()
 	defer man.validCallLock.Unlock()
 	return man.activeChain.CurrentBlockId()
+}
+
+func (man *Manager) GetConfirmedNodeStore() machine.NodeStore {
+	man.validCallLock.Lock()
+	defer man.validCallLock.Unlock()
+	return man.activeCheckpointer.GetConfirmedNodeStore()
+}
+
+func (man *Manager) GetCheckpointStorage() machine.CheckpointStorage {
+	man.validCallLock.Lock()
+	defer man.validCallLock.Unlock()
+	return man.activeCheckpointer.GetCheckpointDB()
 }
 
 func verifyArbChain(

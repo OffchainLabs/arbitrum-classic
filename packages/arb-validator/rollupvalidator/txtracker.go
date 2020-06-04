@@ -18,6 +18,8 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -108,25 +110,24 @@ func (a *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []log
 type txTracker struct {
 	*sync.RWMutex
 	rollup.NoopListener
-	transactions  map[common.Hash]*TxRecord
-	nodesByHeight map[uint64]*nodeInfo
-	nodesByHash   map[common.Hash]*nodeInfo
+	txDB          *txDB
 	maxNodeHeight uint64
 	chainAddress  common.Address
 }
 
 func newTxTracker(
+	db machine.CheckpointStorage,
+	ns machine.NodeStore,
 	chainAddress common.Address,
 ) *txTracker {
 	return &txTracker{
-		transactions:  make(map[common.Hash]*TxRecord),
-		nodesByHeight: make(map[uint64]*nodeInfo),
-		nodesByHash:   make(map[common.Hash]*nodeInfo),
+		txDB:          newTxDB(db, ns, chainAddress),
 		chainAddress:  chainAddress,
+		maxNodeHeight: 0,
 	}
 }
 
-// Delete assertion and transaction data from the reorged blocks
+// Delete assertion and transaction data from the reorged blocks if there are any
 func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.ChainObserver, node *structures.Node) {
 	startDepth := node.Depth()
 	go func() {
@@ -134,16 +135,12 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.
 		defer tr.Unlock()
 		// First remove any data from reorged nodes
 		for i := tr.maxNodeHeight; i > startDepth; i-- {
-			node, ok := tr.nodesByHeight[i]
-			if !ok {
+			if err := tr.txDB.removeUnconfirmedNode(i); err != nil {
 				continue
 			}
-			for _, txHash := range node.TransactionHashes {
-				delete(tr.transactions, txHash)
-			}
-			delete(tr.nodesByHeight, i)
-			delete(tr.nodesByHash, node.NodeHash)
 		}
+
+		tr.maxNodeHeight = startDepth
 
 		// Next process data for any nodes which have not yet been processed
 		chain.ReplayNodesToLatestValid(tr.processNextNode)
@@ -154,6 +151,18 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 	go tr.processNextNode(node)
 }
 
+func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, ev arbbridge.ConfirmedEvent) {
+	go func() {
+		tr.Lock()
+		defer tr.Unlock()
+
+		if err := tr.txDB.confirmNode(ev.NodeHash); err != nil {
+			log.Println(err)
+			return
+		}
+	}()
+}
+
 func (tr *txTracker) processNextNode(node *structures.Node) {
 	// We must have already processed this node
 	if node.Depth() < tr.maxNodeHeight {
@@ -162,11 +171,8 @@ func (tr *txTracker) processNextNode(node *structures.Node) {
 	nodeInfo, transactions := processNode(node, tr.chainAddress)
 	tr.Lock()
 	defer tr.Unlock()
-	for _, tx := range transactions {
-		tr.transactions[tx.txHash] = tx.record
-	}
-	tr.nodesByHeight[node.Depth()] = nodeInfo
-	tr.nodesByHash[node.Hash()] = nodeInfo
+	tr.txDB.addUnconfirmedNode(nodeInfo, transactions)
+	tr.maxNodeHeight = node.Depth()
 }
 
 func (tr *txTracker) AssertionCount() uint64 {
@@ -178,21 +184,28 @@ func (tr *txTracker) AssertionCount() uint64 {
 func (tr *txTracker) OutputMsgVal(nodeHash common.Hash, msgIndex int64) value.Value {
 	tr.RLock()
 	defer tr.RUnlock()
-	assertionVal, ok := tr.nodesByHash[nodeHash]
-	if !ok || msgIndex < 0 || msgIndex >= int64(len(assertionVal.OutMessages)) {
+	nodeData, err := tr.txDB.lookupNodeWithHash(nodeHash)
+	if err != nil {
 		return nil
 	}
-	return assertionVal.OutMessages[msgIndex]
+
+	if msgIndex < 0 || msgIndex >= int64(len(nodeData.OutMessages)) {
+		return nil
+	}
+	return nodeData.OutMessages[msgIndex]
 }
 
 func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 	tr.RLock()
 	defer tr.RUnlock()
-	tx, ok := tr.transactions[txHash]
-	if !ok {
+	tx, err := tr.txDB.lookupTxRecord(txHash)
+	if err != nil {
 		return txInfo{Found: false}
 	}
-	nodeInfo := tr.nodesByHeight[tx.NodeHeight]
+	nodeInfo, err := tr.txDB.lookupNodeWithHeight(tx.NodeHeight)
+	if err != nil {
+		return txInfo{Found: false}
+	}
 	return getTxInfo(txHash, nodeInfo, tx)
 }
 
@@ -221,8 +234,8 @@ func (tr *txTracker) FindLogs(
 	}
 
 	for i := startHeight; i < endHeight; i++ {
-		assertion, ok := tr.nodesByHeight[uint64(i)]
-		if !ok {
+		assertion, err := tr.txDB.lookupNodeWithHeight(uint64(i))
+		if err != nil {
 			continue
 		}
 		assertionLogs := assertion.FindLogs(address, topics)

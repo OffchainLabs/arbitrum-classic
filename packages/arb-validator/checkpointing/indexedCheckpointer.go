@@ -110,6 +110,14 @@ func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
 }
 
+func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
+	return cp.db
+}
+
+func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+	return cp.confirmedNodeStore
+}
+
 // HasCheckpointedState checks whether the block store is empty, which is the table
 // which contains the checkpoints recorded by the IndexedCheckpointer
 func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
