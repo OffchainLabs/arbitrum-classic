@@ -123,30 +123,7 @@ library Value {
         );
     }
 
-    function hashTuplePreImage(Data memory preImage) internal pure returns (bytes32) {
-        require(preImage.typeCode == HASH_ONLY_TYPECODE, "must be preImage Hash");
-        return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
-    }
-
-    function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
-        require(hashes.length <= 8, "Invalid tuple length");
-
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(
-                uint8(TUPLE_TYPECODE + hashes.length),
-                hashes
-            )
-        );
-
-        return hashTuplePreImage(firstHash, size);
-    }
-
-    function hashEmptyTuple() internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](0);
-        return hashTuple(hashes, uint256(1));
-    }
-
-    function hashTuple(Data memory val) internal pure returns (bytes32) {
+    function hashTupleInner(Data memory val) private pure returns (bytes32[] memory){
         require(isTuple(val), "Must be Tuple type");
         require(val.tupleVal.length <= 8, "Invalid tuple length");
 
@@ -158,7 +135,40 @@ library Value {
             hashes[i] = hashVal;
         }
 
-        return hashTuple(hashes, val.size);
+        return hashes;
+    }
+
+    function hashTuplePreImage(Data memory preImage) private pure returns (bytes32) {
+        require(preImage.typeCode == HASH_ONLY_TYPECODE, "Must be PreImageHsh");
+        return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
+    }
+
+    function tuplePreImage(bytes32[] memory hashes) private pure returns (bytes32) {
+        require(hashes.length <= 8, "Invalid tuple length");
+
+        bytes32 firstHash = keccak256(
+            abi.encodePacked(
+                uint8(TUPLE_TYPECODE + hashes.length),
+                hashes
+            )
+        );
+
+        return (firstHash);
+    }
+
+    function hashTuple(bytes32[] memory hashes, uint256 size) private pure returns (bytes32) {
+        Data memory preImage = newTuplePreImage(hashes, size);
+        return hashTuplePreImage(preImage);
+    }
+
+    function hashTuple(Data memory val) internal pure returns (bytes32) {
+        Data memory preImage = getTuplePreImage(val);
+        return hashTuplePreImage(preImage);
+    }
+
+    function hashEmptyTuple() internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](0);
+        return hashTuple(hashes, uint256(1));
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
@@ -195,7 +205,7 @@ library Value {
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
             return hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint);
         } else if (val.typeCode == HASH_ONLY_TYPECODE) {
-            if(val.tupleVal.length == 1){
+            if(val.cpVal.nextCodePoint == bytes32(uint(1))){
                 return bytes32(val.intVal);
             }else{
                 return hashTuplePreImage(val);
@@ -258,35 +268,18 @@ library Value {
         return newTuple(values);
     }
 
-    function newTuplePreImage(bytes32 preImageHash, uint256 preImageSize) internal pure returns (Data memory){
-        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, preImageSize);
+    function getTuplePreImage(Data memory tuple) internal pure returns (Data memory) {
+        bytes32[] memory hashes = hashTupleInner(tuple);
+        return newTuplePreImage(hashes, tuple.size);
     }
 
-    function newTuplePreImage(bytes32[] memory hashes, uint256 size) private pure returns (Data memory) {
-        require(hashes.length <= 8, "Invalid tuple length");
-
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(
-                uint8(TUPLE_TYPECODE + hashes.length),
-                hashes
-            )
-        );
-
+    function newTuplePreImage(bytes32[] memory preImageHashes, uint256 size) private pure returns (Data memory) {
+        bytes32 firstHash = tuplePreImage(preImageHashes);
         return newTuplePreImage(firstHash, size);
     }
 
-    function getTuplePreImage(Data memory tuple) internal pure returns (Data memory) {
-        require(isTuple(tuple), "Must be Tuple type");
-
-        bytes32[] memory hashes = new bytes32[](tuple.tupleVal.length);
-
-        uint256 hashCount = hashes.length;
-        for (uint256 i = 0; i < hashCount; i++) {
-            bytes32 hashVal = tuple.tupleVal[i].hash();
-            hashes[i] = hashVal;
-        }
-
-        return newTuplePreImage(hashes, tuple.size);
+    function newTuplePreImage(bytes32 preImageHash, uint256 size) internal pure returns (Data memory){
+        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
     }
 
     function deserializeHashed(
@@ -331,7 +324,7 @@ library Value {
         if (!valid) {
             return (false, startOffset, hashValue);
         }else{
-            hashValue = Data(uint256(hashData), CodePoint(0, 0, false, 0), new Data[](1), HASH_ONLY_TYPECODE, 1);
+            hashValue = Data(uint256(hashData), CodePoint(0, bytes32(uint(1)), false, 0), new Data[](0), HASH_ONLY_TYPECODE, 1);
             return (true, startOffset, hashValue);
         }
     }
