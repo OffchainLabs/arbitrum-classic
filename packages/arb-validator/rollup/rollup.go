@@ -231,9 +231,7 @@ func (chain *ChainObserver) ReplayNodesToLatestValid(callback func(*structures.N
 	defer chain.RUnlock()
 	var nodes []*structures.Node
 	for node := chain.calculatedValidNode; node != chain.nodeGraph.latestConfirmed; node = node.Prev() {
-		if node.LinkType() == valprotocol.ValidChildType {
-			nodes = append(nodes, node)
-		}
+		nodes = append(nodes, node)
 	}
 	for i := range nodes {
 		callback(nodes[len(nodes)-1-i])
