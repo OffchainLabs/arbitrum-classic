@@ -36,8 +36,9 @@ import (
 )
 
 type logsInfo struct {
-	msg  evm.EthBridgeMessage
-	Logs []evm.Log
+	Logs    []evm.Log
+	TxIndex uint64
+	TxHash  common.Hash
 }
 
 type txRecord struct {
@@ -52,7 +53,8 @@ type assertionInfo struct {
 	LogsAccHashes     []string
 	LogsValHashes     []string
 	OutMessages       []value.Value
-	AssertNodeHash    common.Hash
+	NodeHash          common.Hash
+	NodeHeight        uint64
 	TransactionHashes []common.Hash
 	OnChainTxHash     string
 }
@@ -69,8 +71,9 @@ type txInfo struct {
 }
 
 type logResponse struct {
-	Log evm.Log
-	Msg evm.EthBridgeMessage
+	Log     evm.Log
+	TxIndex uint64
+	TxHash  common.Hash
 }
 
 func newAssertionInfo() *assertionInfo {
@@ -97,7 +100,11 @@ func (a *assertionInfo) FindLogs(address *common.Address, topics []common.Hash) 
 				}
 			}
 			if match {
-				logs = append(logs, logResponse{evmLog, txLogs.msg})
+				logs = append(logs, logResponse{
+					Log:     evmLog,
+					TxIndex: txLogs.TxIndex,
+					TxHash:  txLogs.TxHash,
+				})
 			}
 		}
 	}
@@ -135,7 +142,7 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.
 		assertionsToReorg := tr.assertionInfo[startDepth:]
 		tr.assertionInfo = tr.assertionInfo[:startDepth]
 		for _, assertion := range assertionsToReorg {
-			delete(tr.assertionMap, assertion.AssertNodeHash)
+			delete(tr.assertionMap, assertion.NodeHash)
 			for _, txHash := range assertion.TransactionHashes {
 				delete(tr.transactions, txHash)
 			}
@@ -162,7 +169,7 @@ func (tr *txTracker) processNextNode(node *structures.Node) {
 		tr.transactions[tx.transactionHash] = tx
 	}
 	tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
-	tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
+	tr.assertionMap[assertionInfo.NodeHash] = assertionInfo
 }
 
 func (tr *txTracker) AssertionCount() int {
@@ -217,7 +224,7 @@ func (tr *txTracker) FindLogs(
 	}
 	assertions := tr.assertionInfo[startHeight:endHeight]
 
-	for i, assertion := range assertions {
+	for _, assertion := range assertions {
 		assertionLogs := assertion.FindLogs(address, topics)
 		for j, evmLog := range assertionLogs {
 			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
@@ -227,13 +234,13 @@ func (tr *txTracker) FindLogs(
 
 			logs = append(logs, &validatorserver.LogInfo{
 				Address:          hexutil.Encode(evmLog.Log.Address[:]),
-				BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
-				BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
+				BlockHash:        hexutil.Encode(assertion.NodeHash.Bytes()),
+				BlockNumber:      "0x" + strconv.FormatInt(int64(assertion.NodeHeight), 16),
 				Data:             hexutil.Encode(evmLog.Log.Data[:]),
 				LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 				Topics:           topicStrings,
-				TransactionIndex: "0x0",
-				TransactionHash:  hexutil.Encode(evmLog.Msg.TxHash[:]),
+				TransactionIndex: "0x" + strconv.FormatInt(int64(evmLog.TxIndex), 16),
+				TransactionHash:  hexutil.Encode(evmLog.TxHash[:]),
 			})
 		}
 	}
@@ -242,7 +249,8 @@ func (tr *txTracker) FindLogs(
 
 func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []*txRecord) {
 	assertionInfo := newAssertionInfo()
-	assertionInfo.AssertNodeHash = node.Hash()
+	assertionInfo.NodeHash = node.Hash()
+	assertionInfo.NodeHeight = node.Depth()
 	txHash := node.AssertionTxHash()
 	assertionInfo.OnChainTxHash = hexutil.Encode(txHash[:])
 
@@ -280,16 +288,17 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue
 		}
-		switch evmVal := evmVal.(type) {
-		case evm.Stop:
-			assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
-		case evm.Return:
-			assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
-		case evm.Revert:
+		msg := evmVal.GetEthMsg()
+		assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{
+			Logs:    evmVal.GetLogs(),
+			TxIndex: uint64(i),
+			TxHash:  msg.TxHash,
+		})
+
+		if evmVal, ok := evmVal.(evm.Revert); ok {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
 
-		msg := evmVal.GetEthMsg()
 		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
 		info := &txRecord{
 			nodeHeight:       node.Depth(),
