@@ -18,6 +18,8 @@ package rollupvalidator
 
 import (
 	"context"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -76,9 +78,47 @@ func newNodeInfo() *nodeInfo {
 	return &nodeInfo{}
 }
 
-func (a *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
+func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
+	ethLogs := make([]*types.Log, 0)
+	logIndex := uint(0)
+	for _, logsInfo := range ni.TxLogs {
+		for _, ethLog := range logsInfo.Logs {
+			topics := make([]ethcommon.Hash, 0, len(ethLog.Topics))
+			for _, topic := range ethLog.Topics {
+				topics = append(topics, topic.ToEthHash())
+			}
+			ethLogs = append(ethLogs, &types.Log{
+				Address:     ethLog.Address.ToEthAddress(),
+				Topics:      topics,
+				Data:        ethLog.Data,
+				BlockNumber: ni.NodeHeight,
+				TxHash:      logsInfo.TxHash.ToEthHash(),
+				TxIndex:     uint(logsInfo.TxIndex),
+				BlockHash:   ni.NodeHash.ToEthHash(),
+				Index:       logIndex,
+			})
+			logIndex++
+		}
+	}
+	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
+}
+
+func (x *NodeMetadata) MaybeMatchesLogQuery(address *common.Address, topics []common.Hash) bool {
+	logFilter := types.BytesToBloom(x.LogBloom)
+	if address != nil && !logFilter.TestBytes(address[:]) {
+		return false
+	}
+	for _, topic := range topics {
+		if !logFilter.TestBytes(topic.Bytes()) {
+			return false
+		}
+	}
+	return true
+}
+
+func (ni *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
-	for _, txLogs := range a.TxLogs {
+	for _, txLogs := range ni.TxLogs {
 		for _, evmLog := range txLogs.Logs {
 			if address != nil && *address != evmLog.Address {
 				continue
@@ -188,7 +228,12 @@ func (tr *txTracker) AssertionCount() uint64 {
 func (tr *txTracker) OutputMsgVal(nodeHash common.Hash, msgIndex int64) value.Value {
 	tr.RLock()
 	defer tr.RUnlock()
-	nodeData, err := tr.txDB.lookupNodeWithHash(nodeHash)
+	height, err := tr.txDB.lookupNodeHeight(nodeHash)
+	if err != nil {
+		return nil
+	}
+
+	nodeData, err := tr.txDB.lookupNodeRecord(height, nodeHash)
 	if err != nil {
 		return nil
 	}
@@ -206,7 +251,7 @@ func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 	if err != nil {
 		return txInfo{Found: false}
 	}
-	nodeInfo, err := tr.txDB.lookupNodeWithHeight(tx.NodeHeight)
+	nodeInfo, err := tr.txDB.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
 	if err != nil {
 		return txInfo{Found: false}
 	}
@@ -238,11 +283,24 @@ func (tr *txTracker) FindLogs(
 	}
 
 	for i := startHeight; i < endHeight; i++ {
-		assertion, err := tr.txDB.lookupNodeWithHeight(uint64(i))
+		nodeHash, err := tr.txDB.lookupNodeHash(uint64(i))
 		if err != nil {
 			continue
 		}
-		assertionLogs := assertion.FindLogs(address, topics)
+		metadata, err := tr.txDB.lookupNodeMetadata(uint64(i), nodeHash)
+		if err != nil {
+			continue
+		}
+
+		if !metadata.MaybeMatchesLogQuery(address, topics) {
+			continue
+		}
+
+		info, err := tr.txDB.lookupNodeRecord(uint64(i), nodeHash)
+		if err != nil {
+			continue
+		}
+		assertionLogs := info.FindLogs(address, topics)
 		for j, evmLog := range assertionLogs {
 			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
 			for _, topic := range evmLog.Log.Topics {
@@ -251,8 +309,8 @@ func (tr *txTracker) FindLogs(
 
 			logs = append(logs, &validatorserver.LogInfo{
 				Address:          hexutil.Encode(evmLog.Log.Address[:]),
-				BlockHash:        hexutil.Encode(assertion.NodeHash.Bytes()),
-				BlockNumber:      "0x" + strconv.FormatInt(int64(assertion.NodeHeight), 16),
+				BlockHash:        hexutil.Encode(info.NodeHash.Bytes()),
+				BlockNumber:      "0x" + strconv.FormatInt(int64(info.NodeHeight), 16),
 				Data:             hexutil.Encode(evmLog.Log.Data[:]),
 				LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 				Topics:           topicStrings,
