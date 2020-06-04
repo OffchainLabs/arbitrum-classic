@@ -134,7 +134,10 @@ func ValidateRollupChain(
 	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
-		validatorServer := rollupvalidator.NewRPCServer(manager, time.Second*60)
+		validatorServer, err := rollupvalidator.NewRPCServer(manager, time.Second*60)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		if err := launchRPC(
 			validatorServer,
