@@ -25,14 +25,25 @@
 #include <bigint_utils.hpp>
 
 uint256_t Datastack::hash() const {
-    if (values.empty()) {
-        return ::hash(Tuple());
-    }
-    calculateAllHashes();
-    return hashes.back();
+    auto h_value = getHashPreImage();
+    return h_value.hash();
 }
 
-std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
+uint256_t Datastack::getTotalValueSize() const {
+    auto h_value = getHashPreImage();
+    return h_value.getSize();
+}
+
+HashPreImage Datastack::getHashPreImage() const {
+    if (values.empty()) {
+        return Tuple().getHashPreImage();
+    } else {
+        calculateAllHashes();
+        return hashes.back();
+    }
+}
+
+std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<bool>& stackInfo) {
     calculateAllHashes();
     Datastack c = *this;
@@ -42,13 +53,10 @@ std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
         if (si) {
             marshalShallow(val, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(val), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+            marshalStub(val, buf);
         }
     }
-    return std::make_pair(c.hash(), std::move(buf));
+    return std::make_pair(c.getHashPreImage(), std::move(buf));
 }
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val) {
@@ -106,29 +114,17 @@ void Datastack::initializeDataStack(const Tuple& tuple) {
 }
 
 void Datastack::addHash() const {
-    uint256_t prev;
+    HashPreImage prev;
     if (hashes.size() > 0) {
         prev = hashes.back();
     } else {
-        prev = ::hash(Tuple());
+        prev = Tuple().getHashPreImage();
     }
-    std::array<unsigned char, 1 + 2 * 32> tupData;
-    auto oit = tupData.begin();
-    tupData[0] = TUPLE + 2;
-    ++oit;
-    auto valHash = ::hash(values[hashes.size()]);
-    std::array<uint64_t, 4> valHashInts;
-    to_big_endian(valHash, valHashInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(valHashInts.data()),
-              reinterpret_cast<unsigned char*>(valHashInts.data()) + 32, oit);
-    oit += 32;
-    std::array<uint64_t, 4> valHashInts2;
-    to_big_endian(prev, valHashInts2.begin());
-    std::copy(reinterpret_cast<unsigned char*>(valHashInts2.data()),
-              reinterpret_cast<unsigned char*>(valHashInts2.data()) + 32, oit);
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 1 + 32 * 2, hashData.data());
-    hashes.emplace_back(from_big_endian(hashData.begin(), hashData.end()));
+
+    auto newVal = values[hashes.size()];
+    TuplePool pool;
+    auto tup = Tuple(newVal, prev, &pool);
+    hashes.emplace_back(tup.getHashPreImage());
 }
 
 void Datastack::calculateAllHashes() const {

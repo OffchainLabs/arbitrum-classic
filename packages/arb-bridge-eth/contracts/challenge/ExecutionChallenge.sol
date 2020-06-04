@@ -82,62 +82,6 @@ contract ExecutionChallenge is BisectionChallenge {
         );
     }
 
-    function oneStepProof(
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint128[4] memory _timeBounds,
-        bytes32 _afterHash,
-        bool _didInboxInsns,
-        bytes32 _firstMessage,
-        bytes32 _lastMessage,
-        bytes32 _firstLog,
-        bytes32 _lastLog,
-        uint64  _gas,
-        bytes memory _proof
-    )
-        public
-        asserterAction
-    {
-        bytes32 precondition = Protocol.generatePreconditionHash(
-             _beforeHash,
-             _timeBounds,
-             _beforeInbox
-        );
-        requireMatchesPrevState(
-            ChallengeUtils.executionHash(
-                1,
-                precondition,
-                Protocol.generateAssertionHash(
-                    _afterHash,
-                    _didInboxInsns,
-                    _gas,
-                    _firstMessage,
-                    _lastMessage,
-                    _firstLog,
-                    _lastLog
-                )
-            )
-        );
-
-        uint256 correctProof = OneStepProof.validateProof(
-            _beforeHash,
-            _timeBounds,
-            _beforeInbox,
-            _afterHash,
-            _didInboxInsns,
-            _firstMessage,
-            _lastMessage,
-            _firstLog,
-            _lastLog,
-            _gas,
-            _proof
-        );
-
-        require(correctProof == 0, OSP_PROOF);
-        emit OneStepProofCompleted();
-        _asserterWin();
-    }
-
     function _bisectAssertion(BisectAssertionData memory _data) private {
         uint256 bisectionCount = _data.machineHashes.length - 1;
         require(bisectionCount == _data.didInboxInsns.length, BIS_INPLEN);
@@ -226,6 +170,91 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.gases,
             _data.totalSteps,
             deadlineTicks
+        );
+    }
+
+    function oneStepProof(
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint256 _beforeInboxValueSize,
+        uint128[4] memory _timeBounds,
+        bytes32 _afterHash,
+        bool _didInboxInsns,
+        bytes32 _firstMessage,
+        bytes32 _lastMessage,
+        bytes32 _firstLog,
+        bytes32 _lastLog,
+        uint64  _gas,
+        bytes memory _proof
+    )
+        public
+        asserterAction
+    {
+        verifyPreCondition(_beforeHash,
+                        _timeBounds,
+                        _beforeInbox,
+                        _beforeInboxValueSize,
+                        _afterHash,
+                        _didInboxInsns,
+                        _gas,
+                        _firstMessage,
+                        _lastMessage,
+                        _firstLog,
+                        _lastLog);
+
+        uint256 correctProof = OneStepProof.validateProof(
+            _beforeHash,
+            _timeBounds,
+            _beforeInbox,
+            _beforeInboxValueSize,
+            _afterHash,
+            _didInboxInsns,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog,
+            _gas,
+            _proof
+        );
+
+        require(correctProof == 0, OSP_PROOF);
+        emit OneStepProofCompleted();
+        _asserterWin();
+    }
+
+    function verifyPreCondition(
+        bytes32 _beforeHash,
+        uint128[4] memory _timeBounds,
+        bytes32 _beforeInbox,
+        uint256 _beforeInboxValueSize,
+        bytes32 _afterHash,
+        bool _didInboxInsns,
+        uint64  _gas,
+        bytes32 _firstMessage,
+        bytes32 _lastMessage,
+        bytes32 _firstLog,
+        bytes32 _lastLog) internal view {
+
+        bytes32 beforeInbox = Value.hashTuplePreImage(_beforeInbox, _beforeInboxValueSize);
+        bytes32 precondition = Protocol.generatePreconditionHash(
+             _beforeHash,
+             _timeBounds,
+            beforeInbox
+        );
+        requireMatchesPrevState(
+            ChallengeUtils.executionHash(
+                1,
+                precondition,
+                Protocol.generateAssertionHash(
+                    _afterHash,
+                    _didInboxInsns,
+                    _gas,
+                    _firstMessage,
+                    _lastMessage,
+                    _firstLog,
+                    _lastLog
+                )
+            )
         );
     }
 

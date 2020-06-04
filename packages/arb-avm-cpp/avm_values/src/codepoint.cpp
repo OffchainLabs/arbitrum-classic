@@ -99,10 +99,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
         if (includeVal) {
             ::marshalShallow(*immediate, buf);
         } else {
-            buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(*immediate), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+            marshalStub(*immediate, buf);
         }
     } else {
         buf.push_back(0);

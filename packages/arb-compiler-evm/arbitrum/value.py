@@ -340,6 +340,19 @@ class Tuple:
         new_tup[index] = value
         return Tuple(new_tup)
 
+    def get_size(self):
+        size = 1
+        for i in range(0, len(self.val)):
+            current_val = self.val[i]
+            if isinstance(current_val, int):
+                size += 1
+            if isinstance(current_val, Tuple):
+                size += current_val.get_size()
+            if isinstance(current_val, AVMCodePoint):
+                size += 1
+
+        return size
+
 
 class AVMCodePoint:
     def __init__(self, pc, op, next_hash, path=None):
@@ -365,10 +378,19 @@ def value_hash(val):
         #     [INT_TYPE_CODE, val]
         # ))
     if isinstance(val, Tuple):
-        return eth_utils.keccak(
+
+        size = val.get_size()
+
+        first_hash = eth_utils.keccak(
             encode_single_packed(
                 "(uint8" + ",bytes32" * len(val) + ")",
-                [TUPLE_TYPE_CODE + len(val)] + [value_hash(v) for v in val.val],
+                [len(val)] + [value_hash(v) for v in val.val],
+            )
+        )
+
+        return eth_utils.keccak(
+            encode_single_packed(
+                "(uint8,bytes32,uint256)", [TUPLE_TYPE_CODE] + [first_hash] + [size]
             )
         )
     if isinstance(val, AVMCodePoint):

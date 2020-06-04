@@ -187,12 +187,29 @@ contract Staking is ChallengeType {
         asserter.inChallenge = true;
         challenger.inChallenge = true;
 
+        createChallenge(
+            asserterAddress,
+            challengerAddress,
+            challengerPeriodTicks,
+            challengerDataHash,
+            stakerNodeTypes[1]);
+    }
+
+    function createChallenge(
+        address payable asserterAddress,
+        address payable challengerAddress,
+        uint128 challengerPeriodTicks,
+        bytes32 challengerDataHash,
+        uint256 stakerNodeType
+    ) 
+        internal
+    { 
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
             challengerPeriodTicks,
             challengerDataHash,
-            stakerNodeTypes[1]
+            stakerNodeType
         );
 
         challenges[newChallengeAddr] = true;
@@ -200,7 +217,7 @@ contract Staking is ChallengeType {
         emit RollupChallengeStarted(
             asserterAddress,
             challengerAddress,
-            stakerNodeTypes[1],
+            stakerNodeType,
             newChallengeAddr
         );
     }

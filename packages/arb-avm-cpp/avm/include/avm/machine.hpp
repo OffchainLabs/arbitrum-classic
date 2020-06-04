@@ -34,7 +34,6 @@ struct Assertion {
 
 class Machine {
     MachineState machine_state;
-
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     BlockReason runOne();
 

@@ -214,37 +214,37 @@ contract ArbRollup is NodeGraph, Staking {
     )
         external
     {
-        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(
-            MakeAssertionData(
-                _fields[0],
-                _fields[1],
-                _beforeInboxCount,
+        MakeAssertionData memory assertData = MakeAssertionData(
+            _fields[0],
+            _fields[1],
+            _beforeInboxCount,
 
-                _fields[2],
-                _prevDeadlineTicks,
-                _fields[3],
-                _prevChildType,
+            _fields[2],
+            _prevDeadlineTicks,
+            _fields[3],
+            _prevChildType,
 
-                _numSteps,
-                _timeBounds,
-                _importedMessageCount,
+            _numSteps,
+            _timeBounds,
+            _importedMessageCount,
 
-                _fields[4],
+            _fields[4],
 
-                _fields[5],
+            _fields[5],
 
-                _fields[6],
-                _didInboxInsn,
-                _numArbGas,
-                _fields[7],
-                _fields[8]
-            )
+            _fields[6],
+            _didInboxInsn,
+            _numArbGas,
+            _fields[7],
+            _fields[8]
         );
+
+        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(assertData);
+
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
         updateStakerLocation(msg.sender, newValid);
     }
-
 
     modifier onlyOwner() {
         require(msg.sender == owner, ONLY_OWNER);

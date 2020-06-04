@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -56,14 +57,22 @@ func (c *messagesChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	hashes := hashSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
-		hashSliceToRaw(segmentHashes),
+		hashes,
 		chainLength,
 	)
 	if err != nil {
-		return err
+		return c.contract.BisectCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			hashSliceToRaw(chainHashes),
+			hashes,
+			chainLength)
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
@@ -71,7 +80,7 @@ func (c *messagesChallenge) Bisect(
 func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredTransaction,
 ) error {
 	c.auth.Lock()
@@ -79,7 +88,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.Chain.ToEthAddress(),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -98,7 +108,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredTransactionBatch,
 ) error {
 	c.auth.Lock()
@@ -106,7 +116,8 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	tx, err := c.contract.OneStepProofTransactionBatchMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.Chain.ToEthAddress(),
 		msg.TxData,
 		msg.BlockNum.AsInt(),
@@ -121,7 +132,7 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredEth,
 ) error {
 	c.auth.Lock()
@@ -129,7 +140,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
@@ -137,6 +149,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		msg.Timestamp,
 		msg.MessageNum,
 	)
+
 	if err != nil {
 		return c.contract.OneStepProofEthMessageCall(
 			ctx,
@@ -144,7 +157,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB,
+			lowerHashB.HashImage,
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
@@ -159,7 +172,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredERC20,
 ) error {
 	c.auth.Lock()
@@ -167,7 +180,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -185,7 +199,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredERC721,
 ) error {
 	c.auth.Lock()
@@ -193,7 +207,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -211,7 +226,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
+	lowerHashB value.HashPreImage,
 	msg message.DeliveredContractTransaction,
 ) error {
 	c.auth.Lock()
@@ -219,7 +234,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,

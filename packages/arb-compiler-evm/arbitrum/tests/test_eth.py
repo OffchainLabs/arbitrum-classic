@@ -713,5 +713,5 @@ class TestEVM(TestCase):
         parsed_out0 = output_handler(vm.logs[0])
         self.assertIsInstance(parsed_out0, EVMReturn)
         self.assertEqual(
-            parsed_out0.output_values[0], "0x76b4d51dcf8e85892588d43581540feb1c2d77ba"
+            parsed_out0.output_values[0], "0xef8c0cf8cb9e67b7b5d0ff04d6e26c04e2a591fa"
         )

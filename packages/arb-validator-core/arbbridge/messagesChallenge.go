@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -37,35 +38,35 @@ type MessagesChallenge interface {
 	OneStepProofTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredTransaction,
 	) error
 
 	OneStepProofEthMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredEth,
 	) error
 
 	OneStepProofERC20Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredERC20,
 	) error
 
 	OneStepProofERC721Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredERC721,
 	) error
 
 	OneStepProofContractTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredContractTransaction,
 	) error
 
@@ -80,7 +81,7 @@ type MessagesChallenge interface {
 	OneStepProofTransactionBatchMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
-		lowerHashB common.Hash,
+		lowerHashB value.HashPreImage,
 		msg message.DeliveredTransactionBatch,
 	) error
 }

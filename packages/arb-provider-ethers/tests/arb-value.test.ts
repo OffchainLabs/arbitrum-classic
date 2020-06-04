@@ -30,7 +30,7 @@ const ZEROS_32B = ZEROS_16B + ZEROS_16B
 // const ONES_16B = 'ffffffffffffffffffffffffffffffff'
 // const ONES_32B = ONES_16B + ONES_16B
 const EMPTY_TUPLE_HASH =
-  '0x69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287'
+  '0x5dfd744753c13a6de9cf0e9e3d0164cdf0b1bbdb5efb3660a684d46477176058'
 
 describe('Constructors', function () {
   const nullHash = '0x' + ZEROS_32B
@@ -65,22 +65,15 @@ describe('Constructors', function () {
       EMPTY_TUPLE_HASH
     )
     const preCalc =
-      '0xef59170d416c131f1ef621a562ed682b0787a88eada69ed5edc7aa1af0c851f0'
+      '0xe20558cb3c2dbc788aee4091e5596aa3a86530d82bce979e21365703da522301'
     expect(bopv.hash()).toBe(preCalc)
 
     // Test ImmOp hash value
     const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)))
     const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH)
     const preCalc2 =
-      '0x9f46e8670118b306db7b474dce1fd5dfb8b5d3d6458ded807192f8635e42f356'
+      '0x17ae7e9c5b69861db0759631c54ee3a23ecd04bd57d3d3e2b5579c05c5bd0e8b'
     expect(immv.hash()).toBe(preCalc2)
-  })
-
-  test('HashOnlyValue', function () {
-    const hov = new arb.HashOnlyValue(nullHash, 0)
-    expect(hov.hash()).toBe(nullHash)
-    expect(hov.size).toStrictEqual(ethers.constants.Zero)
-    expect(hov.typeCode()).toBe(2)
   })
 })
 
@@ -115,7 +108,7 @@ describe('TupleValue', function () {
     expect(mtsv.typeCode()).toBe(3 + arb.MAX_TUPLE_SIZE)
     // Pre calculated hash
     const p =
-      '0xbfa3a3ab6c2f6c71c78354b8186a0e206a99b73b9bb6d8e6d45b733466decbf8'
+      '0x50d4ffda29a6d6324f06a725d7df50f897b34d245b2cff697281c437e454c777'
     expect(mtsv.hash()).toBe(p)
   })
 
@@ -230,17 +223,6 @@ describe('Marshaling', function () {
     ).toBe(60)
     expect(revImmValue.nextHash).toEqual(nextHash)
     expect(revImmValue.toString()).toEqual(immTCV.toString())
-  })
-
-  test('marshal and unmarshal HashOnlyValue', function () {
-    // HashOnlyValue should not be used
-    const hv = new arb.HashOnlyValue('0x' + ZEROS_32B, 0)
-    const marshaledBytes = arb.marshal(hv)
-    expect(marshaledBytes.length).toBe(M_HASH_ONLY_SIZE)
-    expect(() => arb.unmarshal(marshaledBytes)).toThrow(
-      'Error unmarshaling: HashOnlyValue was not expected'
-    )
-    expect(hv.toString()).toEqual('HashOnlyValue(' + hv.hash() + ')')
   })
 
   test('marshal and unmarshal TupleValue', function () {

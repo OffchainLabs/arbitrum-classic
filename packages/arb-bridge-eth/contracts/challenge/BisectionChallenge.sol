@@ -21,7 +21,6 @@ import "./IBisectionChallenge.sol";
 
 import "../libraries/MerkleLib.sol";
 
-
 contract BisectionChallenge is Challenge, IBisectionChallenge {
 
     event Continued (

@@ -18,7 +18,6 @@ package valprotocol
 
 import (
 	"fmt"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -28,10 +27,10 @@ import (
 type Precondition struct {
 	BeforeHash  common.Hash
 	TimeBounds  *protocol.TimeBounds
-	BeforeInbox value.Value
+	BeforeInbox value.TupleValue
 }
 
-func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBounds, beforeInbox value.Value) *Precondition {
+func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBounds, beforeInbox value.TupleValue) *Precondition {
 	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
 }
 

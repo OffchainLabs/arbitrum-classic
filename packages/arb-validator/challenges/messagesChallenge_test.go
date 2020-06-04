@@ -45,6 +45,7 @@ func testMessagesChallenge(t *testing.T) {
 			MessageNum: big.NewInt(i),
 		})
 	}
+
 	beforeInbox, err := messageStack.GetHashAtIndex(big.NewInt(2))
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +64,7 @@ func testMessagesChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	importedMessages := inbox.Hash()
+	importedMessages := inbox.Hash().Hash()
 	challengeHash := valprotocol.MessageChallengeDataHash(
 		beforeInbox,
 		afterInbox,

@@ -224,7 +224,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     assertedNodeHash: string,
     messageIndex: string
   ): Promise<VerifyMessageResult | null> {
-    const results = await this.client.getOutputMssage(
+    const results = await this.client.getOutputMessage(
       assertedNodeHash,
       messageIndex
     )

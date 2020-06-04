@@ -36,7 +36,7 @@ class Datastack {
 
    public:
     std::vector<value> values;
-    mutable std::vector<uint256_t> hashes;
+    mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
         values.reserve(1000);
@@ -82,7 +82,7 @@ class Datastack {
         }
     }
 
-    std::pair<uint256_t, std::vector<unsigned char>> marshalForProof(
+    std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
         const std::vector<bool>& stackInfo);
 
     value& peek() {
@@ -96,6 +96,10 @@ class Datastack {
     uint64_t stacksize() { return values.size(); }
 
     uint256_t hash() const;
+
+    HashPreImage getHashPreImage() const;
+
+    uint256_t getTotalValueSize() const;
 
     SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
 

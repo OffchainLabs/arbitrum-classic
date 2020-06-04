@@ -25,7 +25,6 @@ repos:
     rev: '2.0.5' # Use the sha or tag you want to point at
     hooks:
       - id: prettier
-        args: [--config=.prettierrc.js]
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: 'v6.8.0' # Use the sha / tag you want to point at
     hooks:

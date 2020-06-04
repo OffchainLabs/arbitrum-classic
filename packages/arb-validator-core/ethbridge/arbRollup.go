@@ -178,12 +178,10 @@ func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PrunePa
 
 func (vm *arbRollup) MakeAssertion(
 	ctx context.Context,
-
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
 	prevDeadline common.TimeTicks,
 	prevChildType valprotocol.ChildType,
-
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
 	assertionClaim *valprotocol.AssertionClaim,

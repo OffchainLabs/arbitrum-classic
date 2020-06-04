@@ -100,13 +100,13 @@ contract MessageTester {
         pure
         returns(bytes32)
     {
-        return Messages.transactionMessageBatchHashSingle(
+        return Value.hash(Messages.transactionMessageBatchHashSingle(
             start,
             chain,
             transactions,
             blockNum,
             blockTimestamp
-        );
+        ));
     }
 
     function transactionMessageBatchSingleSender(
@@ -129,6 +129,7 @@ contract MessageTester {
 
     function transactionMessageBatchHash(
         bytes32 prev,
+        uint256 prevSize,
         address chain,
         bytes memory transactions,
         uint256 blockNum,
@@ -140,6 +141,7 @@ contract MessageTester {
     {
         return Messages.transactionMessageBatchHash(
             prev,
+            prevSize,
             chain,
             transactions,
             blockNum,
@@ -228,7 +230,7 @@ contract MessageTester {
         pure
         returns(bytes32)
     {
-        return Messages.erc20MessageHash(
+        return Value.hash(Messages.erc20MessageValue(
             to,
             from,
             erc20,
@@ -236,7 +238,7 @@ contract MessageTester {
             blockNumber,
             timestamp,
             messageNum
-        );
+        ));
     }
 
     function erc721Hash(
@@ -276,7 +278,7 @@ contract MessageTester {
         pure
         returns(bytes32)
     {
-        return Messages.erc721MessageHash(
+        return Value.hash(Messages.erc721MessageValue(
             to,
             from,
             erc721,
@@ -284,6 +286,6 @@ contract MessageTester {
             blockNumber,
             timestamp,
             messageNum
-        );
+        ));
     }
 }

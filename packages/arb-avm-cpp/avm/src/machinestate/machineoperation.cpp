@@ -576,20 +576,30 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason send(MachineState& m) {
+bool send(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.outMessage.push_back(std::move(m.stack[0]));
-    m.stack.popClear();
-    ++m.pc;
-    return NotBlocked();
+
+    auto val_size = getSize(m.stack[0]);
+    bool success;
+
+    if (val_size > send_size_limit) {
+        success = false;
+    } else {
+        m.context.outMessage.push_back(std::move(m.stack[0]));
+        m.stack.popClear();
+        ++m.pc;
+
+        success = true;
+    }
+
+    return success;
 }
 
 void getTime(MachineState& m) {
-    Tuple tup(m.pool.get(), 4);
-    tup.set_element(0, m.context.timeBounds.lowerBoundBlock);
-    tup.set_element(1, m.context.timeBounds.upperBoundBlock);
-    tup.set_element(2, m.context.timeBounds.lowerBoundTimestamp);
-    tup.set_element(3, m.context.timeBounds.upperBoundTimestamp);
+    Tuple tup(m.context.timeBounds.lowerBoundBlock,
+              m.context.timeBounds.upperBoundBlock,
+              m.context.timeBounds.lowerBoundTimestamp,
+              m.context.timeBounds.upperBoundTimestamp, m.pool.get());
     m.stack.push(std::move(tup));
     ++m.pc;
 }

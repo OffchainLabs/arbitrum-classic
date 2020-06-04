@@ -1027,16 +1027,24 @@ func insnLog(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
+var send_size_limit int64 = 10000
+
 func insnSend(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)
 	sendData, mods, err := PopStackBox(state, mods)
+
 	if err != nil {
 		return mods, err
-	}
+	} else {
+		if sendData.Size() > send_size_limit {
+			return mods, BlockedError{}
 
-	state.Send(sendData)
-	state.IncrPC()
-	return mods, nil
+		} else {
+			state.Send(sendData)
+			state.IncrPC()
+			return mods, nil
+		}
+	}
 }
 
 func insnGettime(state *Machine) (StackMods, error) {
