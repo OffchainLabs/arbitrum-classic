@@ -47,6 +47,14 @@ type DummyCheckpointer struct {
 	fac *DummyCheckpointerFactory
 }
 
+func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
+	return nil
+}
+
+func (dcp *DummyCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+	return nil
+}
+
 func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }

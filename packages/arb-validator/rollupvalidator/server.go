@@ -49,7 +49,7 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	tracker := newTxTracker(man.RollupAddress)
+	tracker := newTxTracker(man.GetCheckpointStorage(), man.GetConfirmedNodeStore(), man.RollupAddress)
 	man.AddListener(tracker)
 	return &Server{man.RollupAddress, tracker, man, maxCallTime}
 }
