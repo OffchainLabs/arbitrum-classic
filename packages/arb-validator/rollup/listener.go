@@ -37,7 +37,7 @@ const (
 )
 
 type ChainListener interface {
-	RestartingFromLatestValid(context.Context, *ChainObserver)
+	RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node)
 
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
@@ -61,7 +61,7 @@ type ChainListener interface {
 
 type NoopListener struct{}
 
-func (nl *NoopListener) RestartingFromLatestValid(context.Context, *ChainObserver) {
+func (nl *NoopListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
 }
 
 func (NoopListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
@@ -191,7 +191,8 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *Pr
 	)
 }
 
-func (lis *ValidatorChainListener) RestartingFromLatestValid(context.Context, *ChainObserver) {}
+func (lis *ValidatorChainListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
+}
 
 func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *PreparedAssertion) {
 	// Anyone confirm a node

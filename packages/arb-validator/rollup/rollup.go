@@ -222,7 +222,7 @@ func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
 	chain.RLock()
 	defer chain.RUnlock()
 	for _, lis := range chain.listeners {
-		lis.RestartingFromLatestValid(ctx, chain)
+		lis.RestartingFromLatestValid(ctx, chain, chain.calculatedValidNode)
 	}
 }
 

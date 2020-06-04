@@ -18,6 +18,7 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -56,15 +57,17 @@ type assertionInfo struct {
 	LogsAccHashes     []string
 	LogsValHashes     []string
 	OutMessages       []value.Value
-	SequenceNum       uint64
-	BeforeHash        common.Hash
-	OriginalInboxHash common.Hash
 	AssertNodeHash    common.Hash
+	TransactionHashes []common.Hash
 }
 
 type logResponse struct {
 	Log evm.Log
 	Msg evm.EthBridgeMessage
+}
+
+func newAssertionInfo() *assertionInfo {
+	return &assertionInfo{}
 }
 
 func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logResponse {
@@ -94,32 +97,55 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logRe
 	return logs
 }
 
-func newAssertionInfo() *assertionInfo {
-	return &assertionInfo{}
-}
-
 type txTracker struct {
 	*sync.RWMutex
 	rollup.NoopListener
-	txRequestIndex int
-	transactions   map[common.Hash]txInfo
-	assertionInfo  []*assertionInfo
-	assertionMap   map[common.Hash]*assertionInfo
-	accountNonces  map[common.Address]uint64
-	vmID           common.Address
+	transactions  map[common.Hash]txInfo
+	assertionInfo []*assertionInfo
+	assertionMap  map[common.Hash]*assertionInfo
+	chainAddress  common.Address
 }
 
 func newTxTracker(
-	vmID common.Address,
+	chainAddress common.Address,
 ) *txTracker {
 	return &txTracker{
-		txRequestIndex: 0,
-		transactions:   make(map[common.Hash]txInfo),
-		assertionInfo:  make([]*assertionInfo, 0),
-		assertionMap:   make(map[common.Hash]*assertionInfo),
-		accountNonces:  make(map[common.Address]uint64),
-		vmID:           vmID,
+		transactions:  make(map[common.Hash]txInfo),
+		assertionInfo: make([]*assertionInfo, 0),
+		assertionMap:  make(map[common.Hash]*assertionInfo),
+		chainAddress:  chainAddress,
 	}
+}
+
+// Delete assertion and transaction data from the reorged blocks
+func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.ChainObserver, node *structures.Node) {
+	reorgDepth := node.Depth()
+	go func() {
+		tr.Lock()
+		defer tr.Unlock()
+		assertionsToReorg := tr.assertionInfo[reorgDepth:]
+		for _, assertion := range assertionsToReorg {
+			delete(tr.assertionMap, assertion.AssertNodeHash)
+			for _, txHash := range assertion.TransactionHashes {
+				delete(tr.transactions, txHash)
+			}
+		}
+		tr.assertionInfo = tr.assertionInfo[:reorgDepth]
+
+	}()
+}
+
+func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+	go func() {
+		assertionInfo, transactions := processNode(node, tr.chainAddress)
+		tr.Lock()
+		defer tr.Unlock()
+		for _, tx := range transactions {
+			tr.transactions[tx.transactionHash] = tx
+		}
+		tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
+		tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
+	}()
 }
 
 func (tr *txTracker) AssertionCount() int {
@@ -198,7 +224,12 @@ func (tr *txTracker) FindLogs(
 }
 
 func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []txInfo) {
-	info := newAssertionInfo()
+	assertionInfo := newAssertionInfo()
+	assertionInfo.AssertNodeHash = node.Hash()
+
+	if node.LinkType() != valprotocol.ValidChildType {
+		return assertionInfo, nil
+	}
 
 	zero := common.Hash{}
 	logsPreHash := hexutil.Encode(zero[:])
@@ -210,38 +241,38 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 
 	logs := assertion.Logs
 
-	info.OutMessages = assertion.OutMsgs
-	info.AssertNodeHash = node.Hash()
-	info.LogsValHashes = make([]string, 0, len(logs))
-	info.LogsAccHashes = make([]string, 0, len(logs))
+	assertionInfo.OutMessages = assertion.OutMsgs
+	assertionInfo.LogsValHashes = make([]string, 0, len(logs))
+	assertionInfo.LogsAccHashes = make([]string, 0, len(logs))
 
 	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
-		info.LogsValHashes = append(info.LogsValHashes,
+		assertionInfo.LogsValHashes = append(assertionInfo.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
 		acc = hashing.SoliditySHA3(
 			hashing.Bytes32(acc),
 			hashing.Bytes32(logsValHash),
 		)
-		info.LogsAccHashes = append(info.LogsAccHashes,
+		assertionInfo.LogsAccHashes = append(assertionInfo.LogsAccHashes,
 			hexutil.Encode(acc.Bytes()))
 	}
 
 	var logsPostHash string
 	if len(logs) > 0 {
-		logsPostHash = info.LogsAccHashes[len(info.LogsAccHashes)-1]
+		logsPostHash = assertionInfo.LogsAccHashes[len(assertionInfo.LogsAccHashes)-1]
 	} else {
 		logsPostHash = hexutil.Encode(zero[:])
 	}
 
+	assertionInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
 	transactions := make([]txInfo, 0, len(logs))
 
 	for i, logVal := range logs {
 		if i > 0 {
-			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
+			logsPreHash = assertionInfo.LogsAccHashes[i-1] // Previous acc hash
 		}
-		logsValHashes := info.LogsValHashes[i+1:] // log acc hashes after logVal
+		logsValHashes := assertionInfo.LogsValHashes[i+1:] // log acc hashes after logVal
 
 		evmVal, err := evm.ProcessLog(logVal, chain)
 		if err != nil {
@@ -250,9 +281,9 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 		}
 		switch evmVal := evmVal.(type) {
 		case evm.Stop:
-			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
+			assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Return:
-			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
+			assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Revert:
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
@@ -270,22 +301,7 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 			OnChainTxHash:   disputableTxHash,
 		}
 		transactions = append(transactions, info)
+		assertionInfo.TransactionHashes = append(assertionInfo.TransactionHashes, info.transactionHash)
 	}
-	return info, transactions
-}
-
-func (tr *txTracker) RestartingFromLatestValid(context.Context, *rollup.ChainObserver) {
-}
-
-func (tr *txTracker) AdvancedKnownNode(ctx context.Context, chain *rollup.ChainObserver, node *structures.Node) {
-	go func() {
-		assertionInfo, transactions := processNode(node, tr.vmID)
-		tr.Lock()
-		defer tr.Unlock()
-		for _, tx := range transactions {
-			tr.transactions[tx.transactionHash] = tx
-		}
-		tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
-		tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
-	}()
+	return assertionInfo, transactions
 }
