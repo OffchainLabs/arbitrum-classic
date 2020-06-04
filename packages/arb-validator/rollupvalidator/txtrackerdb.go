@@ -63,16 +63,20 @@ func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
 	if err != nil {
 		return err
 	}
+	txdb.deleteNode(node)
+	return nil
+}
+
+func (txdb *txDB) deleteNode(node *nodeInfo) {
 	for _, txHash := range node.TransactionHashes {
 		delete(txdb.transactions, txHash)
 	}
-	delete(txdb.nodeHeightLookup, nodeHeight)
+	delete(txdb.nodeHeightLookup, node.NodeHeight)
 	delete(txdb.nodeHashLookup, node.NodeHash)
 	delete(txdb.nodeInfo, nodeRecordKey{
-		height: nodeHeight,
+		height: node.NodeHeight,
 		hash:   node.NodeHash,
 	})
-	return nil
 }
 
 func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
@@ -93,27 +97,19 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 		return err
 	}
 	for _, txHash := range node.TransactionHashes {
-		if err := txdb.confirmTx(txHash); err != nil {
+		txRecord, ok := txdb.transactions[txHash]
+		if !ok {
+			return errors.New("failed to find transaction while confirming")
+		}
+		data, err := proto.Marshal(txRecord)
+		if err != nil {
 			return err
 		}
+		if !txdb.db.SaveData(txRecordKey(txHash), data) {
+			return errors.New("failed to save tx record")
+		}
 	}
-	return nil
-}
-
-func (txdb *txDB) confirmTx(txHash common.Hash) error {
-	txRecord, ok := txdb.transactions[txHash]
-	if !ok {
-		return errors.New("failed to find transaction while confirming")
-	}
-	data, err := proto.Marshal(txRecord)
-	if err != nil {
-		return err
-	}
-	if !txdb.db.SaveData(txRecordKey(txHash), data) {
-		return errors.New("failed to save tx record")
-	}
-
-	delete(txdb.transactions, txHash)
+	txdb.deleteNode(node)
 	return nil
 }
 
