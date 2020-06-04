@@ -18,11 +18,11 @@ package rollup
 
 import (
 	"context"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type FinalizedAssertion struct {
@@ -32,7 +32,13 @@ type FinalizedAssertion struct {
 }
 
 type AssertionListener struct {
-	CompletedAssertionChan chan FinalizedAssertion
+	AdvancedNodeChan chan *structures.Node
+}
+
+func NewAssertionListener(advancedNodeChan chan *structures.Node) *AssertionListener {
+	return &AssertionListener{
+		AdvancedNodeChan: advancedNodeChan,
+	}
 }
 
 func (al *AssertionListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
@@ -66,10 +72,6 @@ func (al *AssertionListener) OldStakes(context.Context, *ChainObserver, []recove
 
 func (al *AssertionListener) AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash) {
 }
-func (al *AssertionListener) AdvancedKnownAssertion(ctx context.Context, chain *ChainObserver, assertion *protocol.ExecutionAssertion, txHash common.Hash, validNodeHash common.Hash) {
-	al.CompletedAssertionChan <- FinalizedAssertion{
-		Assertion:     assertion,
-		OnChainTxHash: txHash,
-		NodeHash:      validNodeHash,
-	}
+func (al *AssertionListener) AdvancedKnownNode(ctx context.Context, chain *ChainObserver, node *structures.Node) {
+	al.AdvancedNodeChan <- node
 }

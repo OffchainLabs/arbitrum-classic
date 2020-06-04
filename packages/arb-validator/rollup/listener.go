@@ -29,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
@@ -55,8 +54,12 @@ type ChainListener interface {
 	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
 	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
 
-	AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash)
-	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash)
+	AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node)
+}
+
+type attemptedMove struct {
+	nodeHeight uint64
+	nodeHash   common.Hash
 }
 
 type StakingKey struct {
@@ -73,18 +76,16 @@ type ValidatorChainListener struct {
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
 	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
+	broadcastMovedStakes   map[common.Address]attemptedMove
 }
 
 func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
 	ret := &ValidatorChainListener{
-		actor:                  actor,
-		rollupAddress:          rollupAddress,
-		stakingKeys:            make(map[common.Address]*StakingKey),
-		broadcastAssertions:    make(map[common.Hash]*valprotocol.AssertionParams),
-		broadcastConfirmations: make(map[common.Hash]bool),
-		broadcastLeafPrunes:    make(map[common.Hash]bool),
-		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
+		actor:         actor,
+		rollupAddress: rollupAddress,
+		stakingKeys:   make(map[common.Address]*StakingKey),
 	}
+	ret.resetBroadcastCache()
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
 		defer ticker.Stop()
@@ -94,15 +95,20 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 				return
 			case <-ticker.C:
 				ret.Lock()
-				ret.broadcastAssertions = make(map[common.Hash]*valprotocol.AssertionParams)
-				ret.broadcastConfirmations = make(map[common.Hash]bool)
-				ret.broadcastLeafPrunes = make(map[common.Hash]bool)
-				ret.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+				ret.resetBroadcastCache()
 				ret.Unlock()
 			}
 		}
 	}()
 	return ret
+}
+
+func (lis *ValidatorChainListener) resetBroadcastCache() {
+	lis.broadcastAssertions = make(map[common.Hash]*valprotocol.AssertionParams)
+	lis.broadcastConfirmations = make(map[common.Hash]bool)
+	lis.broadcastLeafPrunes = make(map[common.Hash]bool)
+	lis.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+	lis.broadcastMovedStakes = make(map[common.Address]attemptedMove)
 }
 
 func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *StakingKey) error {
@@ -554,18 +560,66 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *Chai
 	}
 }
 
-func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
+func (lis *ValidatorChainListener) AdvancedKnownNode(ctx context.Context, chain *ChainObserver, node *structures.Node) {
+	// TODO: It would be better to rate limit how often the stake can be moved
+	// and just move to the latest position at the end of a delay period
 	for stakingAddress, _ := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
 		if staker == nil {
 			continue
 		}
-		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
-		if newValidNode.Depth() > staker.location.Depth() {
-			proof1 := structures.GeneratePathProof(staker.location, newValidNode)
-			proof2 := structures.GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
-			lis.actor.MoveStake(ctx, proof1, proof2)
+		if node.Depth() <= staker.location.Depth() {
+			continue
 		}
+
+		lis.Lock()
+		prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddress]
+
+		if alreadySent && node.Depth() <= prevMove.nodeHeight {
+			lis.Unlock()
+			continue
+		}
+
+		// If there's already an outstanding transaction moving the stake to an existing
+		// node, make the new move transaction initiate from the position after
+		// that move. Otherwise start the move from the staker's current location
+		stakerLocation := func() *structures.Node {
+			if alreadySent {
+				prevMoveNode, found := chain.nodeGraph.nodeFromHash[prevMove.nodeHash]
+				if found {
+					return prevMoveNode
+				}
+			}
+			return staker.location
+		}()
+
+		move := attemptedMove{
+			nodeHeight: node.Depth(),
+			nodeHash:   node.Hash(),
+		}
+
+		lis.broadcastMovedStakes[stakingAddress] = move
+		lis.Unlock()
+
+		proof1 := structures.GeneratePathProof(stakerLocation, node)
+		proof2 := structures.GeneratePathProof(node, chain.nodeGraph.getLeaf(node))
+		stakingAddr := stakingAddress
+		go func() {
+			err := lis.actor.MoveStake(ctx, proof1, proof2)
+			lis.Lock()
+			if err != nil {
+				log.Println("Failed moving stake", err)
+				delete(lis.broadcastMovedStakes, stakingAddr)
+			} else {
+				prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddr]
+				if alreadySent {
+					if prevMove.nodeHeight <= move.nodeHeight {
+						delete(lis.broadcastMovedStakes, stakingAddr)
+					}
+				}
+			}
+			lis.Unlock()
+		}()
 	}
 }
 
@@ -580,6 +634,4 @@ func (lis *ValidatorChainListener) ConfirmedNode(context.Context, *ChainObserver
 func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
-}
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
 }

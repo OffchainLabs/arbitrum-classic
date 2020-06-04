@@ -141,13 +141,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				chain.Unlock()
 				chain.RLock()
-				if newOpinion == valprotocol.ValidChildType {
-					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.AssertionTxHash(), correctNode.Hash())
-					}
-				}
 				for _, listener := range chain.listeners {
-					listener.AdvancedCalculatedValidNode(ctx, chain, correctNode.Hash())
+					listener.AdvancedKnownNode(ctx, chain, correctNode)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
