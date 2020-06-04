@@ -113,8 +113,6 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
-			log.Println("Starting validator from", man.activeChain.CurrentBlockId())
-
 			man.listenersLock.Lock()
 			man.activeChain = chain
 			man.activeCheckpointer = checkpointer
@@ -123,6 +121,8 @@ func CreateManagerAdvanced(
 				man.activeChain.AddListener(listener)
 			}
 			man.listenersLock.Unlock()
+
+			log.Println("Starting validator from", man.activeChain.CurrentBlockId())
 
 			man.activeChain.RestartFromLatestValid(runCtx)
 
