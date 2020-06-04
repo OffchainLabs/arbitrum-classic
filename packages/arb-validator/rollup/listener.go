@@ -59,6 +59,46 @@ type ChainListener interface {
 	AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node)
 }
 
+type NoopListener struct{}
+
+func (nl *NoopListener) RestartingFromLatestValid(context.Context, *ChainObserver) {
+}
+
+func (NoopListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
+}
+func (NoopListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
+}
+func (NoopListener) StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent) {
+}
+func (NoopListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
+}
+func (NoopListener) ResumedChallenge(context.Context, *ChainObserver, *Challenge) {
+
+}
+func (NoopListener) CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent) {
+}
+func (NoopListener) SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent) {
+}
+func (NoopListener) ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent) {
+}
+func (NoopListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
+}
+func (NoopListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
+}
+
+func (NoopListener) AssertionPrepared(context.Context, *ChainObserver, *PreparedAssertion) {
+}
+func (NoopListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
+}
+func (NoopListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
+}
+func (NoopListener) MootableStakes(context.Context, *ChainObserver, []RecoverStakeMootedParams) {
+}
+func (NoopListener) OldStakes(context.Context, *ChainObserver, []RecoverStakeOldParams) {
+}
+
+func (NoopListener) AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node) {}
+
 type attemptedMove struct {
 	nodeHeight uint64
 	nodeHash   common.Hash
@@ -567,7 +607,7 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *Chai
 func (lis *ValidatorChainListener) AdvancedKnownNode(ctx context.Context, chain *ChainObserver, node *structures.Node) {
 	// TODO: It would be better to rate limit how often the stake can be moved
 	// and just move to the latest position at the end of a delay period
-	for stakingAddress, _ := range lis.stakingKeys {
+	for stakingAddress := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
 		if staker == nil {
 			continue

@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
@@ -50,15 +49,8 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	advancedNodeChan := make(chan *structures.Node)
-	assertionListener := NewAssertionListener(advancedNodeChan)
-	man.AddListener(assertionListener)
-
 	tracker := newTxTracker(man.RollupAddress)
-	go func() {
-		tracker.handleTxResults(assertionListener.AdvancedNodeChan)
-	}()
-
+	man.AddListener(tracker)
 	return &Server{man.RollupAddress, tracker, man, maxCallTime}
 }
 
@@ -87,21 +79,20 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		return nil, err
 	}
 
-	var logsChan <-chan []*validatorserver.LogInfo
+	var logs []*validatorserver.LogInfo
 	if args.ToHeight == "latest" {
-		logsChan = m.tracker.FindLogs(&fromHeight, nil, addressInt, topics)
+		logs = m.tracker.FindLogs(&fromHeight, nil, addressInt, topics)
 	} else {
 		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logsChan = m.tracker.FindLogs(&fromHeight, &toHeight, addressInt, topics)
+		logs = m.tracker.FindLogs(&fromHeight, &toHeight, addressInt, topics)
 	}
 
-	ret := <-logsChan
 	return &validatorserver.FindLogsReply{
-		Logs: ret,
+		Logs: logs,
 	}, nil
 }
 
@@ -113,8 +104,7 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 	assertionHash := common.Hash{}
 	copy(assertionHash[:], assertionHashBytes)
 	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
-	resultChan := m.tracker.OutputMsgVal(assertionHash, msgIndex)
-	outputValue := <-resultChan
+	outputValue := m.tracker.OutputMsgVal(assertionHash, msgIndex)
 
 	if outputValue == nil {
 		return &validatorserver.GetOutputMessageReply{
@@ -138,9 +128,8 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 	}
 	txHash := common.Hash{}
 	copy(txHash[:], txHashBytes)
-	resultChan := m.tracker.TxInfo(txHash)
+	txInfo := m.tracker.TxInfo(txHash)
 
-	txInfo := <-resultChan
 	if !txInfo.Found {
 		return &validatorserver.GetMessageResultReply{
 			Found: false,
@@ -163,7 +152,7 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 func (m *Server) GetAssertionCount(ctx context.Context, args *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
 	req := m.tracker.AssertionCount()
 	return &validatorserver.GetAssertionCountReply{
-		AssertionCount: int32(<-req),
+		AssertionCount: int32(req),
 	}, nil
 }
 
