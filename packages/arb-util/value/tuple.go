@@ -261,22 +261,23 @@ func (tv TupleValue) getPreImage() common.Hash {
 	return firstHash
 }
 
+func (tv TupleValue) hash() {
+	preImageHash := tv.getPreImage()
+	tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
+	tv.cachedHash = tv.cachedPreImage.Hash()
+	tv.deferredHashing = false
+}
+
 func (tv TupleValue) Hash() common.Hash {
 	if tv.deferredHashing {
-		preImageHash := tv.getPreImage()
-		tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
-		tv.cachedHash = tv.cachedPreImage.Hash()
-		tv.deferredHashing = false
+		tv.hash()
 	}
 	return tv.cachedHash
 }
 
 func (tv TupleValue) GetPreImage() HashPreImage {
 	if tv.deferredHashing {
-		preImageHash := tv.getPreImage()
-		tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
-		tv.cachedHash = tv.cachedPreImage.Hash()
-		tv.deferredHashing = false
+		tv.hash()
 	}
 
 	return tv.cachedPreImage
