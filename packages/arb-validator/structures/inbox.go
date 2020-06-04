@@ -30,7 +30,7 @@ import (
 )
 
 type messageStackItem struct {
-	message message.InboxMessage
+	message message.Delivered
 	prev    *messageStackItem
 	next    *messageStackItem
 	hash    common.Hash
@@ -102,14 +102,21 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 	}
 }
 
-func (ms *MessageStack) DeliverMessage(msg message.InboxMessage) {
+func (ms *MessageStack) DeliverMessage(msg message.Received) {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
+	delivered := message.Delivered{
+		Message: msg.Message,
+		DeliveryInfo: message.DeliveryInfo{
+			ChainTime:  msg.ChainTime,
+			MessageNum: newTopCount,
+		},
+	}
 	if ms.newest == nil {
 		item := &messageStackItem{
-			message: msg,
+			message: delivered,
 			prev:    nil,
 			next:    nil,
-			hash:    hash2(ms.hashOfRest, msg.CommitmentHash()),
+			hash:    hash2(ms.hashOfRest, delivered.CommitmentHash()),
 			count:   newTopCount,
 		}
 		ms.newest = item
@@ -117,10 +124,10 @@ func (ms *MessageStack) DeliverMessage(msg message.InboxMessage) {
 		ms.index[item.hash] = item
 	} else {
 		item := &messageStackItem{
-			message: msg,
+			message: delivered,
 			prev:    ms.newest,
 			next:    nil,
-			hash:    hash2(ms.newest.hash, msg.CommitmentHash()),
+			hash:    hash2(ms.newest.hash, delivered.CommitmentHash()),
 			count:   newTopCount,
 		}
 		ms.newest = item
@@ -148,14 +155,11 @@ func hash2(h1, h2 common.Hash) common.Hash {
 }
 
 func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *InboxBuf {
-	var items []*InboxItemBuf
+	var items []*common.HashBuf
 	for item := ms.newest; item != nil; item = item.prev {
 		checkpointVal := item.message.CheckpointValue()
 		ctx.AddValue(checkpointVal)
-		items = append(items, &InboxItemBuf{
-			ValType: uint32(item.message.Type()),
-			ValHash: checkpointVal.Hash().MarshalToBuf(),
-		})
+		items = append(items, checkpointVal.Hash().MarshalToBuf())
 	}
 	var topCount *big.Int
 	if ms.newest == nil {
@@ -174,12 +178,15 @@ func (buf *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*M
 	ret := NewMessageStack()
 	ret.hashOfRest = buf.HashOfRest.Unmarshal()
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(buf.Items[i].ValHash.Unmarshal())
-		msg, err := message.UnmarshalFromCheckpoint(message.MessageType(buf.Items[i].ValType), val)
+		val := ctx.GetValue(buf.Items[i].Unmarshal())
+		msg, err := message.UnmarshalDeliveredFromCheckpoint(val)
 		if err != nil {
 			return nil, err
 		}
-		ret.DeliverMessage(msg)
+		ret.DeliverMessage(message.Received{
+			Message:   msg.Message,
+			ChainTime: msg.ChainTime,
+		})
 	}
 	return ret, nil
 }
@@ -237,10 +244,10 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	return cuts, nil
 }
 
-func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.InboxMessage, error) {
+func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.Delivered, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return nil, errors.New("one step proof startItemHash not found")
+		return message.Delivered{}, errors.New("one step proof startItemHash not found")
 	}
 	return item.message, nil
 }

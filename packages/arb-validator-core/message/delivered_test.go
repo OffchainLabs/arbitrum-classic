@@ -23,43 +23,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateTestERC20() ERC20 {
-	addr1 := common.Address{}
-	addr1[0] = 76
-	addr1[19] = 93
-
-	addr2 := common.Address{}
-	addr2[0] = 43
-	addr2[19] = 12
-
-	addr3 := common.Address{}
-	addr3[0] = 87
-	addr3[19] = 32
-
-	return ERC20{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
-		Value:        big.NewInt(89735406),
+func generateTestDeliveredERC20() Delivered {
+	return Delivered{
+		Message: generateTestERC20(),
+		DeliveryInfo: DeliveryInfo{
+			BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
+			Timestamp:  big.NewInt(65435643),
+			MessageNum: big.NewInt(9675),
+		},
 	}
 }
 
-func TestMarshalERC20(t *testing.T) {
-	msg := generateTestERC20()
+func TestCheckpoint(t *testing.T) {
+	msg := generateTestDeliveredERC20()
 
-	msg2, err := UnmarshalERC20(msg.asInboxValue())
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !msg.Equals(msg2) {
-		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
-	}
-}
-
-func TestCheckpointERC20(t *testing.T) {
-	msg := generateTestERC20()
-	msg2, err := UnmarshalERC20FromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalDeliveredFromCheckpoint(msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

@@ -60,11 +60,21 @@ func (m ContractTransaction) Equals(other Message) bool {
 		bytes.Equal(m.Data, o.Data)
 }
 
-func (m ContractTransaction) Type() MessageType {
+func (m ContractTransaction) Type() Type {
 	return ContractTransactionType
 }
 
-func (m ContractTransaction) asValue() value.Value {
+func (m ContractTransaction) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Uint256(m.Value),
+		m.Data,
+	)
+}
+
+func (m ContractTransaction) asInboxValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -113,68 +123,21 @@ func UnmarshalContractTransaction(val value.Value) (ContractTransaction, error) 
 		Data:  data,
 	}, nil
 }
-
-type DeliveredContractTransaction struct {
-	ContractTransaction
-	BlockNum   *common.TimeBlocks
-	Timestamp  *big.Int
-	MessageNum *big.Int
-}
-
-func (m DeliveredContractTransaction) Equals(other Message) bool {
-	o, ok := other.(DeliveredContractTransaction)
-	if !ok {
-		return false
-	}
-	return m.ContractTransaction.Equals(o.ContractTransaction) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0 &&
-		m.MessageNum.Cmp(o.MessageNum) == 0
-}
-
-func (m DeliveredContractTransaction) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m DeliveredContractTransaction) deliveredTimestamp() *big.Int {
-	return m.Timestamp
-}
-
-func (m DeliveredContractTransaction) CommitmentHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(uint8(m.Type())),
-		hashing.Address(m.To),
-		hashing.Address(m.From),
-		hashing.Uint256(m.Value),
-		m.Data,
-		hashing.Uint256(m.BlockNum.AsInt()),
-		hashing.Uint256(m.Timestamp),
-		hashing.Uint256(m.MessageNum),
-	)
-}
-
-func (m DeliveredContractTransaction) ReceiptHash() common.Hash {
-	return value.NewIntValue(m.MessageNum).ToBytes()
-}
-
-func (m DeliveredContractTransaction) CheckpointValue() value.Value {
+func (m ContractTransaction) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
-		value.NewIntValue(m.MessageNum),
 	})
 	return val
 }
 
-func UnmarshalContractTransactionFromCheckpoint(v value.Value) (DeliveredContractTransaction, error) {
+func UnmarshalContractTransactionFromCheckpoint(v value.Value) (ContractTransaction, error) {
 	tup, ok := v.(value.TupleValue)
-	failRet := DeliveredContractTransaction{}
-	if !ok || tup.Len() != 7 {
-		return failRet, errors.New("tx val must be 7-tuple")
+	failRet := ContractTransaction{}
+	if !ok || tup.Len() != 4 {
+		return failRet, errors.New("tx val must be 4-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
@@ -196,31 +159,11 @@ func UnmarshalContractTransactionFromCheckpoint(v value.Value) (DeliveredContrac
 	if err != nil {
 		return failRet, err
 	}
-	blockNum, _ := tup.GetByInt64(4)
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNum must be int")
-	}
-	timestamp, _ := tup.GetByInt64(5)
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be int")
-	}
-	msgNum, _ := tup.GetByInt64(6)
-	msgNumInt, ok := msgNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("msgNum must be int")
-	}
 
-	return DeliveredContractTransaction{
-		ContractTransaction: ContractTransaction{
-			To:    intValueToAddress(toInt),
-			From:  intValueToAddress(fromInt),
-			Value: valInt.BigInt(),
-			Data:  dataBytes,
-		},
-		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
-		Timestamp:  timestampInt.BigInt(),
-		MessageNum: msgNumInt.BigInt(),
+	return ContractTransaction{
+		To:    intValueToAddress(toInt),
+		From:  intValueToAddress(fromInt),
+		Value: valInt.BigInt(),
+		Data:  dataBytes,
 	}, nil
 }

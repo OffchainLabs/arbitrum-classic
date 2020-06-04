@@ -219,6 +219,12 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 	ethLog types.Log,
 	timestamp *big.Int,
 ) (arbbridge.Event, error) {
+	chainTime := message.ChainTime{
+		BlockNum: common.NewTimeBlocks(
+			new(big.Int).SetUint64(ethLog.BlockNumber),
+		),
+		Timestamp: timestamp,
+	}
 	switch ethLog.Topics[0] {
 	case transactionID:
 		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
@@ -226,8 +232,8 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
-		msg := message.DeliveredTransaction{
-			Transaction: message.Transaction{
+		msg := message.Received{
+			Message: message.Transaction{
 				Chain:       common.NewAddressFromEth(vm.rollupAddress),
 				To:          common.NewAddressFromEth(val.To),
 				From:        common.NewAddressFromEth(val.From),
@@ -235,10 +241,7 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 				Value:       val.Value,
 				Data:        val.Data,
 			},
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(ethLog.BlockNumber),
-			),
-			Timestamp: timestamp,
+			ChainTime: chainTime,
 		}
 
 		return arbbridge.MessageDeliveredEvent{
@@ -265,15 +268,12 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			Message: message.DeliveredTransactionBatch{
-				TransactionBatch: message.TransactionBatch{
+			Message: message.Received{
+				Message: message.TransactionBatch{
 					Chain:  common.NewAddressFromEth(vm.rollupAddress),
 					TxData: args.Transactions,
 				},
-				BlockNum: common.NewTimeBlocks(
-					new(big.Int).SetUint64(ethLog.BlockNumber),
-				),
-				Timestamp: timestamp,
+				ChainTime: chainTime,
 			},
 		}, nil
 	case ethDepositID:
@@ -282,17 +282,13 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
-		msg := message.DeliveredEth{
-			Eth: message.Eth{
+		msg := message.Received{
+			Message: message.Eth{
 				To:    common.NewAddressFromEth(val.To),
 				From:  common.NewAddressFromEth(val.From),
 				Value: val.Value,
 			},
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(ethLog.BlockNumber),
-			),
-			Timestamp:  timestamp,
-			MessageNum: val.MessageNum,
+			ChainTime: chainTime,
 		}
 
 		return arbbridge.MessageDeliveredEvent{
@@ -306,18 +302,14 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
-		msg := message.DeliveredERC20{
-			ERC20: message.ERC20{
+		msg := message.Received{
+			Message: message.ERC20{
 				To:           common.NewAddressFromEth(val.To),
 				From:         common.NewAddressFromEth(val.From),
 				TokenAddress: common.NewAddressFromEth(val.Erc20),
 				Value:        val.Value,
 			},
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(ethLog.BlockNumber),
-			),
-			Timestamp:  timestamp,
-			MessageNum: val.MessageNum,
+			ChainTime: chainTime,
 		}
 
 		return arbbridge.MessageDeliveredEvent{
@@ -331,18 +323,14 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
-		msg := message.DeliveredERC721{
-			ERC721: message.ERC721{
+		msg := message.Received{
+			Message: message.ERC721{
 				To:           common.NewAddressFromEth(val.To),
 				From:         common.NewAddressFromEth(val.From),
 				TokenAddress: common.NewAddressFromEth(val.Erc721),
 				Id:           val.Id,
 			},
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(ethLog.BlockNumber),
-			),
-			Timestamp:  timestamp,
-			MessageNum: val.MessageNum,
+			ChainTime: chainTime,
 		}
 
 		return arbbridge.MessageDeliveredEvent{
@@ -357,18 +345,14 @@ func (vm *ethRollupWatcher) processMessageDeliveredEvents(
 			return nil, err
 		}
 
-		msg := message.DeliveredContractTransaction{
-			ContractTransaction: message.ContractTransaction{
+		msg := message.Received{
+			Message: message.ContractTransaction{
 				To:    common.NewAddressFromEth(val.To),
 				From:  common.NewAddressFromEth(val.From),
 				Value: val.Value,
 				Data:  val.Data,
 			},
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(ethLog.BlockNumber),
-			),
-			Timestamp:  timestamp,
-			MessageNum: val.MessageNum,
+			ChainTime: chainTime,
 		}
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,

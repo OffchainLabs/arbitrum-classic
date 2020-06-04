@@ -141,7 +141,7 @@ type ExecutionBisectionEvent struct {
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	Message message.InboxMessage
+	Message message.Received
 }
 
 type NewTimeEvent struct {

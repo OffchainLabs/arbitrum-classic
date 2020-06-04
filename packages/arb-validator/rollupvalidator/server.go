@@ -198,15 +198,24 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := message.Call{
-		To:        contractAddress,
-		From:      sender,
-		Data:      dataBytes,
-		BlockNum:  m.man.CurrentBlockId().Height,
-		Timestamp: big.NewInt(time.Now().Unix()),
+	callMsg := message.Call{
+		To:   contractAddress,
+		From: sender,
+		Data: dataBytes,
 	}
 
-	inbox := message.AddToPrev(value.NewEmptyTuple(), msg)
+	deliveredMsg := message.Delivered{
+		Message: callMsg,
+		DeliveryInfo: message.DeliveryInfo{
+			ChainTime: message.ChainTime{
+				BlockNum:  m.man.CurrentBlockId().Height,
+				Timestamp: big.NewInt(time.Now().Unix()),
+			},
+			MessageNum: big.NewInt(0),
+		},
+	}
+
+	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
 	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
 
 	log.Println("Executed call for", steps, "steps")
@@ -221,7 +230,7 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		return nil, err
 	}
 	logHash := lastLog.GetEthMsg().TxHash
-	if logHash != msg.ReceiptHash() {
+	if logHash != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

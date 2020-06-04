@@ -26,8 +26,8 @@ import (
 )
 
 func getStack() *MessageStack {
-	msg1 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg1 := message.Delivered{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
@@ -37,8 +37,8 @@ func getStack() *MessageStack {
 		MessageNum: big.NewInt(1),
 	}
 
-	msg2 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg2 := message.Delivered{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
@@ -48,8 +48,8 @@ func getStack() *MessageStack {
 		MessageNum: big.NewInt(2),
 	}
 
-	msg3 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg3 := message.Delivered{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
@@ -59,8 +59,8 @@ func getStack() *MessageStack {
 		MessageNum: big.NewInt(3),
 	}
 
-	msg4 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg4 := message.Delivered{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),

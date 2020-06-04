@@ -33,6 +33,26 @@ library Messages {
     using Value for Value.Data;
     using BytesLib for bytes;
 
+    function deliveredMessageHash(
+        bytes32 messageHash,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 messageNum
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                messageHash,
+                blockNumber,
+                timestamp,
+                messageNum
+            )
+        );
+    }
+
     function transactionHash(
         address chain,
         address to,
@@ -41,24 +61,28 @@ library Messages {
         uint256 value,
         bytes32 dataHash,
         uint256 blockNumber,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 messageNum
     )
         internal
         pure
         returns(bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                TRANSACTION_MSG,
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                dataHash,
-                blockNumber,
-                timestamp
-            )
+        return deliveredMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    TRANSACTION_MSG,
+                    chain,
+                    to,
+                    from,
+                    seqNumber,
+                    value,
+                    dataHash
+                )
+            ),
+            blockNumber,
+            timestamp,
+            messageNum
         );
     }
 
@@ -141,19 +165,23 @@ library Messages {
     function transactionBatchHash(
         bytes memory transactions,
         uint256 blockNum,
-        uint256 blockTimestamp
+        uint256 blockTimestamp,
+        uint256 messageNum
     )
         internal
         pure
         returns(bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                TRANSACTION_BATCH_MSG,
-                transactions,
-                blockNum,
-                blockTimestamp
-            )
+        return deliveredMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    TRANSACTION_BATCH_MSG,
+                    transactions
+                )
+            ),
+            blockNum,
+            blockTimestamp,
+            messageNum
         );
     }
 
@@ -283,16 +311,18 @@ library Messages {
         pure
         returns(bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                ETH_DEPOSIT,
-                to,
-                from,
-                value,
-                blockNumber,
-                timestamp,
-                messageNum
-            )
+        return deliveredMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    ETH_DEPOSIT,
+                    to,
+                    from,
+                    value
+                )
+            ),
+            blockNumber,
+            timestamp,
+            messageNum
         );
     }
 
@@ -462,17 +492,19 @@ library Messages {
         pure
         returns(bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                CONTRACT_TRANSACTION_MSG,
-                to,
-                from,
-                value,
-                data,
-                blockNumber,
-                timestamp,
-                messageNum
-            )
+        return deliveredMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    CONTRACT_TRANSACTION_MSG,
+                    to,
+                    from,
+                    value,
+                    data
+                )
+            ),
+            blockNumber,
+            timestamp,
+            messageNum
         );
     }
 
@@ -522,17 +554,19 @@ library Messages {
         pure
         returns(bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                messageType,
-                to,
-                from,
-                tokenContract,
-                value,
-                blockNumber,
-                timestamp,
-                messageNum
-            )
+        return deliveredMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    messageType,
+                    to,
+                    from,
+                    tokenContract,
+                    value
+                )
+            ),
+            blockNumber,
+            timestamp,
+            messageNum
         );
     }
 

@@ -94,7 +94,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     }
 
     function sendDeserializedMsg(
-        bytes32 nodeHash, 
+        bytes32 nodeHash,
         uint256 messageIndex,
         bytes memory _messages,
         uint256 startOffset,
@@ -155,7 +155,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721, value);
             delete paymentMap[nodeHash][messageIndex][to];
-            
+
             return (true, offset);
         } else {
             return (false, startOffset);
@@ -276,10 +276,15 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         require(msg.sender == tx.origin, "origin only");
         bytes32 messageHash = keccak256(
             abi.encodePacked(
-                TRANSACTION_BATCH_MSG,
-                transactions,
+                keccak256(
+                    abi.encodePacked(
+                        TRANSACTION_BATCH_MSG,
+                        transactions
+                    )
+                ),
                 block.number,
-                block.timestamp
+                block.timestamp,
+                inboxes[chain].count + 1
             )
         );
 
@@ -298,6 +303,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
+        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.transactionHash(
             _chain,
             _to,
@@ -306,7 +312,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _value,
             keccak256(_data),
             block.number,
-            block.timestamp
+            block.timestamp,
+            messageNum
         );
 
         _deliverMessage(_chain, messageHash);

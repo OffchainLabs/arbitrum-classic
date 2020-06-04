@@ -39,19 +39,10 @@ func generateTestEth() Eth {
 	}
 }
 
-func generateTestDeliveredEth() DeliveredEth {
-	return DeliveredEth{
-		Eth:        generateTestEth(),
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(9675),
-	}
-}
-
 func TestMarshalEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEth(msg.asValue())
+	msg2, err := UnmarshalEth(msg.asInboxValue())
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,9 +53,9 @@ func TestMarshalEth(t *testing.T) {
 }
 
 func TestCheckpointEth(t *testing.T) {
-	msg := generateTestDeliveredEth()
+	msg := generateTestEth()
 
-	msg2, err := UnmarshalFromCheckpoint(EthType, msg.CheckpointValue())
+	msg2, err := UnmarshalEthFromCheckpoint(msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

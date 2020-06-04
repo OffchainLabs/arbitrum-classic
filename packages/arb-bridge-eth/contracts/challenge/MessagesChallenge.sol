@@ -98,7 +98,8 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _value,
         bytes memory _data,
         uint256 _blockNumber,
-        uint256 _timestamp
+        uint256 _timestamp,
+        uint256 _messageNum
     )
         public
         asserterAction
@@ -112,7 +113,8 @@ contract MessagesChallenge is BisectionChallenge {
             _value,
             keccak256(_data),
             _blockNumber,
-            _timestamp
+            _timestamp,
+            _messageNum
         );
         Value.Data memory arbMessageHash = Messages.transactionMessage(
             _chain,
@@ -321,7 +323,8 @@ contract MessagesChallenge is BisectionChallenge {
         address chain,
         bytes memory transactions,
         uint256 blockNum,
-        uint256 blockTimestamp
+        uint256 blockTimestamp,
+        uint256 messageNum
     )
         public
         asserterAction
@@ -329,7 +332,8 @@ contract MessagesChallenge is BisectionChallenge {
         bytes32 messageHash = Messages.transactionBatchHash(
             transactions,
             blockNum,
-            blockTimestamp
+            blockTimestamp,
+            messageNum
         );
 
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(

@@ -29,7 +29,8 @@ contract MessageTester {
         uint256 value,
         bytes memory data,
         uint256 blockNumber,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 messageNum
     )
         public
         pure
@@ -43,7 +44,8 @@ contract MessageTester {
             value,
             keccak256(data),
             blockNumber,
-            timestamp
+            timestamp,
+            messageNum
         );
     }
 
@@ -76,7 +78,8 @@ contract MessageTester {
     function transactionBatchHash(
         bytes memory transactions,
         uint256 blockNum,
-        uint256 blockTimestamp
+        uint256 blockTimestamp,
+        uint256 messageNum
     )
         public
         pure
@@ -85,7 +88,8 @@ contract MessageTester {
         return Messages.transactionBatchHash(
             transactions,
             blockNum,
-            blockTimestamp
+            blockTimestamp,
+            messageNum
         );
     }
 
