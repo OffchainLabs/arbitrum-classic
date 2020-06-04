@@ -41,6 +41,9 @@ func NewAssertionListener(advancedNodeChan chan *structures.Node) *AssertionList
 	}
 }
 
+func (al *AssertionListener) RestartingFromLatestValid(context.Context, *ChainObserver) {
+}
+
 func (al *AssertionListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
 }
 func (al *AssertionListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
