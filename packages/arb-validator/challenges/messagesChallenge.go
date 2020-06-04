@@ -222,10 +222,7 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		startHash := preImages[contEv.SegmentIndex.Uint64()].HashImage
-		startHashSize := preImages[contEv.SegmentIndex.Uint64()].Size
-		hashPreImage.Size = startHashSize
-		hashPreImage.HashImage = startHash
+		hashPreImage = preImages[contEv.SegmentIndex.Uint64()]
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())

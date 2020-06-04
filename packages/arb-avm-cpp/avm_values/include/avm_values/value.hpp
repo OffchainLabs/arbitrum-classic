@@ -21,7 +21,7 @@
 
 #include <nonstd/variant.hpp>
 
-enum ValueTypes { NUM, CODEPT, HASH_ONLY, TUPLE };
+enum ValueTypes { NUM, CODEPT, HASH_PRE_IMAGE, TUPLE };
 
 class TuplePool;
 class Tuple;

@@ -34,8 +34,9 @@ var nonePreImage common.Hash
 
 func init() {
 	nonePreImage = hashing.SoliditySHA3(
-		hashing.Uint8(TypeCodeTuple))
+		hashing.Uint8(0))
 	hashOfNone = hashing.SoliditySHA3(
+		hashing.Uint8(TypeCodeTuple),
 		hashing.Bytes32(nonePreImage),
 		hashing.Uint256(big.NewInt(1)),
 	)
@@ -57,6 +58,7 @@ type HashPreImage struct {
 
 func (val HashPreImage) Hash() common.Hash {
 	return hashing.SoliditySHA3(
+		hashing.Uint8(TypeCodeTuple),
 		hashing.Bytes32(val.HashImage),
 		hashing.Uint256(big.NewInt(val.Size)),
 	)
@@ -251,6 +253,7 @@ func (tv TupleValue) String() string {
 
 func (tv TupleValue) HashPreImage(firstHash common.Hash, size int64) common.Hash {
 	return hashing.SoliditySHA3(
+		hashing.Uint8(TypeCodeTuple),
 		hashing.Bytes32(firstHash),
 		hashing.Uint256(big.NewInt(size)),
 	)
@@ -263,7 +266,7 @@ func (tv TupleValue) internalHash() (common.Hash, common.Hash) {
 	}
 
 	firstHash := hashing.SoliditySHA3(
-		hashing.Uint8(tv.InternalTypeCode()),
+		hashing.Uint8(byte(tv.itemCount)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
 

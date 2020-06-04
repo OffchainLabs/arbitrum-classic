@@ -25,7 +25,7 @@ library Value {
 
     uint8 internal constant INT_TYPECODE = 0;
     uint8 internal constant CODE_POINT_TYPECODE = 1;
-    uint8 internal constant HASH_ONLY_TYPECODE = 2;
+    uint8 internal constant HASH_PRE_IMAGE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
@@ -117,21 +117,21 @@ library Value {
     function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
+                uint8(TUPLE_TYPECODE),
                 innerHash,
                 valueSize
             )
         );
     }
 
-    function hashTupleInner(Data memory val) private pure returns (bytes32[] memory){
-        require(isTuple(val), "Must be Tuple type");
-        require(val.tupleVal.length <= 8, "Invalid tuple length");
+    function hashTupleInner(Data[] memory vals) private pure returns (bytes32[] memory){
+        require(vals.length <= 8, "Invalid tuple length");
 
-        bytes32[] memory hashes = new bytes32[](val.tupleVal.length);
+        bytes32[] memory hashes = new bytes32[](vals.length);
 
         uint256 hashCount = hashes.length;
         for (uint256 i = 0; i < hashCount; i++) {
-            bytes32 hashVal = val.tupleVal[i].hash();
+            bytes32 hashVal = vals[i].hash();
             hashes[i] = hashVal;
         }
 
@@ -139,7 +139,7 @@ library Value {
     }
 
     function hashTuplePreImage(Data memory preImage) private pure returns (bytes32) {
-        require(preImage.typeCode == HASH_ONLY_TYPECODE, "Must be PreImageHsh");
+        require(preImage.typeCode == HASH_PRE_IMAGE, "Must be PreImageHsh");
         return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
     }
 
@@ -148,7 +148,7 @@ library Value {
 
         bytes32 firstHash = keccak256(
             abi.encodePacked(
-                uint8(TUPLE_TYPECODE + hashes.length),
+                uint8(hashes.length),
                 hashes
             )
         );
@@ -204,7 +204,7 @@ library Value {
             return hashInt(val.intVal);
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
             return hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint);
-        } else if (val.typeCode == HASH_ONLY_TYPECODE) {
+        } else if (val.typeCode == HASH_PRE_IMAGE) {
             if(val.cpVal.nextCodePoint == bytes32(uint(1))){
                 return bytes32(val.intVal);
             }else{
@@ -269,7 +269,8 @@ library Value {
     }
 
     function getTuplePreImage(Data memory tuple) internal pure returns (Data memory) {
-        bytes32[] memory hashes = hashTupleInner(tuple);
+        require(isTuple(tuple), "Must be Tuple type");
+        bytes32[] memory hashes = hashTupleInner(tuple.tupleVal);
         return newTuplePreImage(hashes, tuple.size);
     }
 
@@ -279,7 +280,7 @@ library Value {
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size) internal pure returns (Data memory){
-        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE, size);
+        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_PRE_IMAGE, size);
     }
 
     function deserializeHashed(
@@ -324,7 +325,7 @@ library Value {
         if (!valid) {
             return (false, startOffset, hashValue);
         }else{
-            hashValue = Data(uint256(hashData), CodePoint(0, bytes32(uint(1)), false, 0), new Data[](0), HASH_ONLY_TYPECODE, 1);
+            hashValue = Data(uint256(hashData), CodePoint(0, bytes32(uint(1)), false, 0), new Data[](0), HASH_PRE_IMAGE, 1);
             return (true, startOffset, hashValue);
         }
     }
@@ -491,7 +492,7 @@ library Value {
         } else if (valType == CODE_POINT_TYPECODE) {
             (valid, offset, cpVal) = deserializeCodePoint(data, offset);
             return (valid, offset, newCodePoint(cpVal));
-        } else if (valType == HASH_ONLY_TYPECODE) {
+        } else if (valType == HASH_PRE_IMAGE) {
             return deserializeHashPreImage(data, offset);
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);

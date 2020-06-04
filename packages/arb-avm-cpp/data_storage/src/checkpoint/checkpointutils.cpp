@@ -89,7 +89,7 @@ struct ValueSerializer {
 
     std::vector<unsigned char> operator()(const HashPreImage& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(HASH_ONLY);
+        auto type_code = static_cast<unsigned char>(HASH_PRE_IMAGE);
         value_vector.push_back(type_code);
         marshal_HashPreImage(val, value_vector);
 
@@ -145,7 +145,7 @@ std::vector<std::vector<unsigned char>> parseTuple(
                 iter = next_it;
                 break;
             }
-            case HASH_ONLY: {
+            case HASH_PRE_IMAGE: {
                 throw std::runtime_error("HASH_ONLY item");
             }
         }

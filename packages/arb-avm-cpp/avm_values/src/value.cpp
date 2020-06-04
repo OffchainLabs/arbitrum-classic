@@ -140,7 +140,7 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 void marshalShallow(const HashPreImage& val, std::vector<unsigned char>& buf) {
-    buf.push_back(HASH_ONLY);
+    buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
 

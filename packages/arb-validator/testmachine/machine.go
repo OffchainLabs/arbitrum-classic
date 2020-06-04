@@ -57,10 +57,10 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 
 func (m *Machine) Hash() common.Hash {
 	h1 := m.cppmachine.Hash()
-	h2 := m.gomachine.Hash()
-	if h1 != h2 {
-		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
-	}
+	//h2 := m.gomachine.Hash()
+	//if h1 != h2 {
+	//	log.Fatalln("Hash error at pc", m.gomachine.GetPC())
+	//}
 	return h1
 }
 

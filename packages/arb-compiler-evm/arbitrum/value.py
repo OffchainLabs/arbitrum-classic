@@ -384,12 +384,14 @@ def value_hash(val):
         first_hash = eth_utils.keccak(
             encode_single_packed(
                 "(uint8" + ",bytes32" * len(val) + ")",
-                [TUPLE_TYPE_CODE + len(val)] + [value_hash(v) for v in val.val],
+                [len(val)] + [value_hash(v) for v in val.val],
             )
         )
 
         return eth_utils.keccak(
-            encode_single_packed("(bytes32,uint256)", [first_hash] + [size])
+            encode_single_packed(
+                "(uint8,bytes32,uint256)", [TUPLE_TYPE_CODE] + [first_hash] + [size]
+            )
         )
     if isinstance(val, AVMCodePoint):
         if hasattr(val.op, "op_code"):

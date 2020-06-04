@@ -21,14 +21,16 @@
 
 uint256_t hashPreImage(std::array<unsigned char, 32> first_hash,
                        uint256_t size) {
-    std::array<unsigned char, 64> tupData2;
+    std::array<unsigned char, 65> tupData2;
+    tupData2[0] = TUPLE;
     auto iter = tupData2.begin();
+    iter++;
 
     iter = std::copy(first_hash.begin(), first_hash.end(), iter);
     to_big_endian(size, iter);
 
     std::array<unsigned char, 32> hashData2;
-    evm::Keccak_256(tupData2.data(), 64, hashData2.data());
+    evm::Keccak_256(tupData2.data(), 65, hashData2.data());
     return from_big_endian(hashData2.begin(), hashData2.end());
 }
 
@@ -212,7 +214,7 @@ void Tuple::computeValueSize() {
 HashPreImage Tuple::getHashPreImage() const {
     std::array<unsigned char, 1 + 8 * 32> tupData;
 
-    tupData[0] = TUPLE + tuple_size();
+    tupData[0] = tuple_size();
     auto oit = tupData.begin();
     ++oit;
 
@@ -242,7 +244,7 @@ uint256_t Tuple::calculateHash() const {
 
 uint256_t zeroHash() {
     std::array<unsigned char, 1> tupData;
-    tupData[0] = TUPLE;
+    tupData[0] = 0;
 
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(tupData.data(), 1, hashData.data());
