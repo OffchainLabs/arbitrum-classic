@@ -30,7 +30,7 @@ uint256_t hashPreImage(std::array<unsigned char, 32> first_hash,
     to_big_endian(size, iter);
 
     std::array<unsigned char, 32> hashData2;
-    evm::Keccak_256(tupData2.data(), 65, hashData2.data());
+    evm::Keccak_256(tupData2.data(), tupData2.size(), hashData2.data());
     return from_big_endian(hashData2.begin(), hashData2.end());
 }
 
