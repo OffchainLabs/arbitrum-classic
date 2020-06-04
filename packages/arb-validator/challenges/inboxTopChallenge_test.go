@@ -32,45 +32,49 @@ import (
 
 func testInboxTopChallenge(t *testing.T) {
 	t.Parallel()
-	msg1 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg1 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(6745),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(1),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
-	msg2 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg2 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(6745),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(2),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
-	msg3 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg3 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(6745),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(3),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
-	msg4 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg4 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(6745),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(4),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 	messageStack := structures.NewMessageStack()
 	messageStack.DeliverMessage(msg1)
