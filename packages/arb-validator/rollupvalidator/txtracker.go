@@ -118,33 +118,43 @@ func newTxTracker(
 
 // Delete assertion and transaction data from the reorged blocks
 func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.ChainObserver, node *structures.Node) {
-	reorgDepth := node.Depth()
+	startDepth := node.Depth()
 	go func() {
 		tr.Lock()
 		defer tr.Unlock()
-		assertionsToReorg := tr.assertionInfo[reorgDepth:]
+
+		// First remove any data from reorged nodes
+		assertionsToReorg := tr.assertionInfo[startDepth:]
+		tr.assertionInfo = tr.assertionInfo[:startDepth]
 		for _, assertion := range assertionsToReorg {
 			delete(tr.assertionMap, assertion.AssertNodeHash)
 			for _, txHash := range assertion.TransactionHashes {
 				delete(tr.transactions, txHash)
 			}
 		}
-		tr.assertionInfo = tr.assertionInfo[:reorgDepth]
 
+		// Next process data for any nodes which have not yet been processed
+		chain.ReplayNodesToLatestValid(tr.processNextNode)
 	}()
 }
 
 func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
-	go func() {
-		assertionInfo, transactions := processNode(node, tr.chainAddress)
-		tr.Lock()
-		defer tr.Unlock()
-		for _, tx := range transactions {
-			tr.transactions[tx.transactionHash] = tx
-		}
-		tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
-		tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
-	}()
+	go tr.processNextNode(node)
+}
+
+func (tr *txTracker) processNextNode(node *structures.Node) {
+	// We must have already processed this node
+	if node.Depth() < uint64(len(tr.assertionInfo)) {
+		return
+	}
+	assertionInfo, transactions := processNode(node, tr.chainAddress)
+	tr.Lock()
+	defer tr.Unlock()
+	for _, tx := range transactions {
+		tr.transactions[tx.transactionHash] = tx
+	}
+	tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
+	tr.assertionMap[assertionInfo.AssertNodeHash] = assertionInfo
 }
 
 func (tr *txTracker) AssertionCount() int {

@@ -226,6 +226,20 @@ func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
 	}
 }
 
+func (chain *ChainObserver) ReplayNodesToLatestValid(callback func(*structures.Node)) {
+	chain.RLock()
+	defer chain.RUnlock()
+	var nodes []*structures.Node
+	for node := chain.calculatedValidNode; node != chain.nodeGraph.latestConfirmed; node = node.Prev() {
+		if node.LinkType() == valprotocol.ValidChildType {
+			nodes = append(nodes, node)
+		}
+	}
+	for i := range nodes {
+		callback(nodes[len(nodes)-1-i])
+	}
+}
+
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
 	chain.inbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {
