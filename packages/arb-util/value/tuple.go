@@ -247,14 +247,6 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func (tv TupleValue) HashPreImage(firstHash common.Hash, size int64) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(TypeCodeTuple),
-		hashing.Bytes32(firstHash),
-		hashing.Uint256(big.NewInt(size)),
-	)
-}
-
 func (tv TupleValue) getPreImage() common.Hash {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
