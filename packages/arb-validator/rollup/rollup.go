@@ -218,6 +218,14 @@ func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 	return mach
 }
 
+func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
+	chain.RLock()
+	defer chain.RUnlock()
+	for _, lis := range chain.listeners {
+		lis.RestartingFromLatestValid(ctx, chain)
+	}
+}
+
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
 	chain.inbox.DeliverMessage(ev.Message)
 	for _, lis := range chain.listeners {

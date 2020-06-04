@@ -29,6 +29,10 @@ type AnnouncerListener struct {
 	Prefix string
 }
 
+func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *ChainObserver) {
+	log.Println("RestartingFromLatestValid")
+}
+
 func (al *AnnouncerListener) StakeCreated(ctx context.Context, observer *ChainObserver, ev arbbridge.StakeCreatedEvent) {
 	log.Printf("%v Staker %v created at %v\n", al.Prefix, ev.Staker, ev.NodeHash)
 }

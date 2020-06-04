@@ -164,6 +164,8 @@ func CreateManagerAdvanced(
 
 			chain.Start(runCtx)
 
+			chain.RestartFromLatestValid(runCtx)
+
 			current, err := clnt.CurrentBlockId(runCtx)
 			if err != nil {
 				log.Fatal(err)

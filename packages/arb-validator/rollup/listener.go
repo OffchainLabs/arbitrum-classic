@@ -37,6 +37,8 @@ const (
 )
 
 type ChainListener interface {
+	RestartingFromLatestValid(context.Context, *ChainObserver)
+
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
 	StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent)
@@ -148,6 +150,8 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *pr
 		proof,
 	)
 }
+
+func (lis *ValidatorChainListener) RestartingFromLatestValid(context.Context, *ChainObserver) {}
 
 func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *preparedAssertion) {
 	// Anyone confirm a node
