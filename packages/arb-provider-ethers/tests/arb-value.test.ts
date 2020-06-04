@@ -75,13 +75,6 @@ describe('Constructors', function () {
       '0x9f46e8670118b306db7b474dce1fd5dfb8b5d3d6458ded807192f8635e42f356'
     expect(immv.hash()).toBe(preCalc2)
   })
-
-  test('HashOnlyValue', function () {
-    const hov = new arb.HashOnlyValue(nullHash, 0)
-    expect(hov.hash()).toBe(nullHash)
-    expect(hov.size).toStrictEqual(ethers.constants.Zero)
-    expect(hov.typeCode()).toBe(2)
-  })
 })
 
 describe('TupleValue', function () {
