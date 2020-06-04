@@ -22,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -34,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 )
@@ -43,18 +41,6 @@ type logsInfo struct {
 	Logs    []evm.Log
 	TxIndex uint64
 	TxHash  common.Hash
-}
-
-type nodeInfo struct {
-	TxLogs            []logsInfo
-	LogsAccHashes     []string
-	LogsValHashes     []string
-	OutLogs           []value.Value
-	OutMessages       []value.Value
-	NodeHash          common.Hash
-	NodeHeight        uint64
-	TransactionHashes []common.Hash
-	OnChainTxHash     string
 }
 
 type txInfo struct {
@@ -320,106 +306,4 @@ func (tr *txTracker) FindLogs(
 		}
 	}
 	return logs
-}
-
-type txRecordInfo struct {
-	record *TxRecord
-	txHash common.Hash
-}
-
-func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRecordInfo) {
-	nodeInfo := newNodeInfo()
-	nodeInfo.NodeHash = node.Hash()
-	nodeInfo.NodeHeight = node.Depth()
-	txHash := node.AssertionTxHash()
-	nodeInfo.OnChainTxHash = hexutil.Encode(txHash[:])
-
-	if node.LinkType() != valprotocol.ValidChildType {
-		return nodeInfo, nil
-	}
-
-	assertion := node.Assertion()
-
-	logs := assertion.Logs
-
-	nodeInfo.OutMessages = assertion.OutMsgs
-	nodeInfo.OutLogs = assertion.Logs
-	nodeInfo.LogsValHashes = make([]string, 0, len(logs))
-	nodeInfo.LogsAccHashes = make([]string, 0, len(logs))
-
-	acc := common.Hash{}
-	for _, logsVal := range logs {
-		logsValHash := logsVal.Hash()
-		nodeInfo.LogsValHashes = append(nodeInfo.LogsValHashes,
-			hexutil.Encode(logsValHash[:]))
-		acc = hashing.SoliditySHA3(
-			hashing.Bytes32(acc),
-			hashing.Bytes32(logsValHash),
-		)
-		nodeInfo.LogsAccHashes = append(nodeInfo.LogsAccHashes,
-			hexutil.Encode(acc.Bytes()))
-	}
-
-	nodeInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
-	transactions := make([]txRecordInfo, 0, len(logs))
-
-	for i, logVal := range logs {
-		evmVal, err := evm.ProcessLog(logVal, chain)
-		if err != nil {
-			log.Printf("VM produced invalid evm result: %v\n", err)
-			continue
-		}
-		msg := evmVal.GetEthMsg()
-		nodeInfo.TxLogs = append(nodeInfo.TxLogs, logsInfo{
-			Logs:    evmVal.GetLogs(),
-			TxIndex: uint64(i),
-			TxHash:  msg.TxHash,
-		})
-
-		if evmVal, ok := evmVal.(evm.Revert); ok {
-			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
-		}
-
-		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
-		record := &TxRecord{
-			NodeHeight:       node.Depth(),
-			NodeHash:         node.Hash().MarshalToBuf(),
-			TransactionIndex: uint64(i),
-		}
-		info := txRecordInfo{
-			record: record,
-			txHash: msg.TxHash,
-		}
-		transactions = append(transactions, info)
-		nodeInfo.TransactionHashes = append(nodeInfo.TransactionHashes, info.txHash)
-	}
-	return nodeInfo, transactions
-}
-
-func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInfo {
-	zero := common.Hash{}
-
-	var logsPostHash string
-	if len(nodeInfo.LogsAccHashes) > 0 {
-		logsPostHash = nodeInfo.LogsAccHashes[len(nodeInfo.LogsAccHashes)-1]
-	} else {
-		logsPostHash = hexutil.Encode(zero[:])
-	}
-
-	logsPreHash := hexutil.Encode(zero[:])
-	if txRecord.TransactionIndex > 0 {
-		logsPreHash = nodeInfo.LogsAccHashes[txRecord.TransactionIndex-1] // Previous acc hash
-	}
-	logsValHashes := nodeInfo.LogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
-
-	return txInfo{
-		Found:           true,
-		transactionHash: txHash,
-		assertionIndex:  txRecord.NodeHeight,
-		RawVal:          nodeInfo.OutLogs[txRecord.TransactionIndex],
-		LogsPreHash:     logsPreHash,
-		LogsPostHash:    logsPostHash,
-		LogsValHashes:   logsValHashes,
-		OnChainTxHash:   nodeInfo.OnChainTxHash,
-	}
 }
