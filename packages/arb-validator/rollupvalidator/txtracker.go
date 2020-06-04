@@ -119,12 +119,16 @@ func newTxTracker(
 	db machine.CheckpointStorage,
 	ns machine.NodeStore,
 	chainAddress common.Address,
-) *txTracker {
+) (*txTracker, error) {
+	txdb, err := newTxDB(db, ns, chainAddress)
+	if err != nil {
+		return nil, err
+	}
 	return &txTracker{
-		txDB:          newTxDB(db, ns, chainAddress),
+		txDB:          txdb,
 		chainAddress:  chainAddress,
 		maxNodeHeight: 0,
-	}
+	}, nil
 }
 
 // Delete assertion and transaction data from the reorged blocks if there are any

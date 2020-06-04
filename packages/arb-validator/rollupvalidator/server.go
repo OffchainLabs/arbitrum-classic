@@ -48,10 +48,13 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	tracker := newTxTracker(man.GetCheckpointStorage(), man.GetConfirmedNodeStore(), man.RollupAddress)
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+	tracker, err := newTxTracker(man.GetCheckpointStorage(), man.GetConfirmedNodeStore(), man.RollupAddress)
+	if err != nil {
+		return nil, err
+	}
 	man.AddListener(tracker)
-	return &Server{man.RollupAddress, tracker, man, maxCallTime}
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query

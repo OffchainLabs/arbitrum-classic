@@ -18,6 +18,9 @@ package rollupvalidator
 
 import (
 	"errors"
+
+	"github.com/hashicorp/golang-lru"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
@@ -36,6 +39,8 @@ type txDB struct {
 	db                 machine.CheckpointStorage
 	confirmedNodeStore machine.NodeStore
 
+	confirmedNodeCache *lru.Cache
+
 	transactions     map[common.Hash]*TxRecord
 	nodeInfo         map[nodeRecordKey]*nodeInfo
 	nodeHashLookup   map[common.Hash]uint64
@@ -43,15 +48,20 @@ type txDB struct {
 	chainAddress     common.Address
 }
 
-func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress common.Address) *txDB {
+func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress common.Address) (*txDB, error) {
+	lru, err := lru.New(500)
+	if err != nil {
+		return nil, err
+	}
 	return &txDB{
 		db:                 db,
 		confirmedNodeStore: ns,
+		confirmedNodeCache: lru,
 		transactions:       make(map[common.Hash]*TxRecord),
 		nodeInfo:           make(map[nodeRecordKey]*nodeInfo),
 		nodeHashLookup:     make(map[common.Hash]uint64),
 		nodeHeightLookup:   make(map[uint64]common.Hash),
-	}
+	}, nil
 }
 
 func txRecordKey(txHash common.Hash) []byte {
@@ -158,9 +168,14 @@ func (txdb *txDB) lookupNodeWithHash(nodeHash common.Hash) (*nodeInfo, error) {
 
 func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*nodeInfo, error) {
 	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
-	nodeInfo, ok := txdb.nodeInfo[key]
+	info, ok := txdb.nodeInfo[key]
 	if ok {
-		return nodeInfo, nil
+		return info, nil
+	}
+
+	nodeInfoCache, ok := txdb.confirmedNodeCache.Get(key)
+	if ok {
+		return nodeInfoCache.(*nodeInfo), nil
 	}
 
 	nodeData, err := txdb.confirmedNodeStore.GetNode(nodeHeight, nodeHash)
@@ -174,7 +189,9 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 	restoreContext := ckptcontext.NewSimpleRestore(txdb.db)
 	node := nodeBuf.UnmarshalFromCheckpoint(restoreContext)
 
-	nodeInfo, _ = processNode(node, txdb.chainAddress)
-	txdb.nodeInfo[key] = nodeInfo
-	return nodeInfo, nil
+	info, _ = processNode(node, txdb.chainAddress)
+	txdb.nodeInfo[key] = info
+
+	txdb.confirmedNodeCache.Add(key, info)
+	return info, nil
 }

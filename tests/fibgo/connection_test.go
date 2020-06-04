@@ -4,6 +4,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"log"
@@ -14,11 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -188,10 +187,13 @@ func setupValidators(
 	manager2.AddListener(validatorListener2)
 
 	go func() {
-		server := rollupvalidator.NewRPCServer(
+		server, err := rollupvalidator.NewRPCServer(
 			manager2,
 			time.Second*60,
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		s := rpc.NewServer()
 		s.RegisterCodec(
 			json.NewCodec(),
@@ -206,8 +208,7 @@ func setupValidators(
 			t.Fatal(err)
 		}
 
-		err := utils.LaunchRPC(s, "1235")
-		if err != nil {
+		if err := utils.LaunchRPC(s, "1235"); err != nil {
 			t.Fatal(err)
 		}
 	}()
