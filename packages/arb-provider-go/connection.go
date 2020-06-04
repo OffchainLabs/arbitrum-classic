@@ -454,15 +454,13 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	var evmLogs []*types.Log
 	if logs != nil {
 		for i, l := range logs {
-			addressBytes := l.ContractID.ToBytes()
-
 			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
 			for j, t := range l.Topics {
 				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
 			}
 
 			evmLogs = append(evmLogs, &types.Log{
-				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
+				Address:     l.Address.ToEthAddress(),
 				Topics:      evmParsedTopics,
 				Data:        l.Data,
 				BlockNumber: ethMsg.BlockNumber.Uint64(),
