@@ -55,13 +55,14 @@ type Manager struct {
 const defaultMaxReorgDepth = 100
 
 func CreateManager(
+	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
 	aoFilePath string,
 	dbPath string,
 ) (*Manager, error) {
 	return CreateManagerAdvanced(
-		context.Background(),
+		ctx,
 		rollupAddr,
 		true,
 		clnt,

@@ -4,6 +4,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
@@ -96,9 +96,6 @@ func setupValidators(
 	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
 	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
-	ckpFac := checkpointing.NewDummyCheckpointerFactory(contract)
-
-	checkpointer1 := ckpFac.New(context.TODO())
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
@@ -113,7 +110,7 @@ func setupValidators(
 		return err
 	}
 
-	mach, err := checkpointer1.GetInitialMachine()
+	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
 		return err
 	}
@@ -144,12 +141,12 @@ func setupValidators(
 		log.Fatal(err)
 	}
 
-	manager1, err := rollupmanager.CreateManagerAdvanced(
+	manager1, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		true,
 		client1,
-		ckpFac,
+		contract,
+		db1,
 	)
 	if err != nil {
 		return err
@@ -167,12 +164,12 @@ func setupValidators(
 	}
 	manager1.AddListener(validatorListener1)
 
-	manager2, err := rollupmanager.CreateManagerAdvanced(
+	manager2, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		true,
 		client2,
-		ckpFac,
+		contract,
+		db2,
 	)
 	if err != nil {
 		return err
