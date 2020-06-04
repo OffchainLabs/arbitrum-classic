@@ -65,7 +65,7 @@ describe('Constructors', function () {
       EMPTY_TUPLE_HASH
     )
     const preCalc =
-      '0xef59170d416c131f1ef621a562ed682b0787a88eada69ed5edc7aa1af0c851f0'
+      '0xe20558cb3c2dbc788aee4091e5596aa3a86530d82bce979e21365703da522301'
     expect(bopv.hash()).toBe(preCalc)
 
     // Test ImmOp hash value
@@ -108,7 +108,7 @@ describe('TupleValue', function () {
     expect(mtsv.typeCode()).toBe(3 + arb.MAX_TUPLE_SIZE)
     // Pre calculated hash
     const p =
-      '0xbfa3a3ab6c2f6c71c78354b8186a0e206a99b73b9bb6d8e6d45b733466decbf8'
+      '0x50d4ffda29a6d6324f06a725d7df50f897b34d245b2cff697281c437e454c777'
     expect(mtsv.hash()).toBe(p)
   })
 
