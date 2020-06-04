@@ -72,7 +72,7 @@ describe('Constructors', function () {
     const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)))
     const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH)
     const preCalc2 =
-      '0x9f46e8670118b306db7b474dce1fd5dfb8b5d3d6458ded807192f8635e42f356'
+      '0x17ae7e9c5b69861db0759631c54ee3a23ecd04bd57d3d3e2b5579c05c5bd0e8b'
     expect(immv.hash()).toBe(preCalc2)
   })
 })
