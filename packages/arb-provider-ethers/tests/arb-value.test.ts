@@ -232,17 +232,6 @@ describe('Marshaling', function () {
     expect(revImmValue.toString()).toEqual(immTCV.toString())
   })
 
-  test('marshal and unmarshal HashOnlyValue', function () {
-    // HashOnlyValue should not be used
-    const hv = new arb.HashOnlyValue('0x' + ZEROS_32B, 0)
-    const marshaledBytes = arb.marshal(hv)
-    expect(marshaledBytes.length).toBe(M_HASH_ONLY_SIZE)
-    expect(() => arb.unmarshal(marshaledBytes)).toThrow(
-      'Error unmarshaling: HashOnlyValue was not expected'
-    )
-    expect(hv.toString()).toEqual('HashOnlyValue(' + hv.hash() + ')')
-  })
-
   test('marshal and unmarshal TupleValue', function () {
     // Empty Tuple
     const etv = new arb.TupleValue([])
