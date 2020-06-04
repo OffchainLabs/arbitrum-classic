@@ -36,6 +36,14 @@ type Result interface {
 	GetEthMsg() EthBridgeMessage
 }
 
+const (
+	RevertCode      = 0
+	InvalidCode     = 1
+	ReturnCode      = 2
+	StopCode        = 3
+	BadSequenceCode = 4
+)
+
 type Return struct {
 	Msg       EthBridgeMessage
 	ReturnVal []byte
@@ -178,14 +186,6 @@ type FuncCall struct {
 	logs   value.Value
 }
 
-const (
-	RevertCode      = 0
-	InvalidCode     = 1
-	ReturnCode      = 2
-	StopCode        = 3
-	BadSequenceCode = 4
-)
-
 type EthBridgeMessage struct {
 	BlockNumber *big.Int
 	Timestamp   *big.Int
@@ -259,17 +259,16 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 	if tup.Len() != 4 {
 		return nil, fmt.Errorf("advise expected tuple of length 4, but recieved %v", tup)
 	}
+	origMsgVal, _ := tup.GetByInt64(0)
+	ethMsg, err := NewEthBridgeMessageFromValue(origMsgVal, chain)
+	if err != nil {
+		return nil, err
+	}
+
 	returnCodeVal, _ := tup.GetByInt64(3)
 	returnCode, ok := returnCodeVal.(value.IntValue)
 	if !ok {
 		return nil, errors.New("return code must be an int")
-	}
-
-	origMsgVal, _ := tup.GetByInt64(0)
-
-	ethMsg, err := NewEthBridgeMessageFromValue(origMsgVal, chain)
-	if err != nil {
-		return nil, err
 	}
 
 	switch returnCode.BigInt().Uint64() {
@@ -310,4 +309,20 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 		// Unknown type
 		return nil, fmt.Errorf("unknown return code %v for message %v", returnCode.BigInt(), val)
 	}
+}
+
+func NewVMResultValue(delivered message.Delivered, returnCode int, data []byte, logs []Log) (value.TupleValue, error) {
+	msg, ok := delivered.Message.(message.SingleMessage)
+	if !ok {
+		return value.TupleValue{}, errors.New("can only make stop from single message")
+	}
+	val := message.DeliveredValue(delivered, msg)
+
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		val,
+		LogsToLogStack(logs),
+		message.BytesToByteStack(data),
+		value.NewInt64Value(int64(returnCode)),
+	})
+	return tup, nil
 }

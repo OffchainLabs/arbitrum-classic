@@ -19,6 +19,7 @@ package evm
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -51,7 +52,7 @@ func (l Log) String() string {
 	return ""
 }
 
-func LogValToLog(val value.Value) (Log, error) {
+func NewLogFromValue(val value.Value) (Log, error) {
 	tupVal, ok := val.(value.TupleValue)
 	if !ok {
 		return Log{}, errors.New("log must be a tuple")
@@ -84,6 +85,18 @@ func LogValToLog(val value.Value) (Log, error) {
 	return Log{address, topics, logData}, nil
 }
 
+func (l Log) AsValue() value.TupleValue {
+	data := []value.Value{
+		l.ContractID,
+		message.BytesToByteStack(l.Data),
+	}
+	for _, topic := range l.Topics {
+		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
+	}
+	val, _ := value.NewTupleFromSlice(data)
+	return val
+}
+
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := message.StackValueToList(val)
 	if err != nil {
@@ -91,11 +104,19 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 	}
 	logs := make([]Log, 0, len(logValues))
 	for _, logVal := range logValues {
-		log, err := LogValToLog(logVal)
+		log, err := NewLogFromValue(logVal)
 		if err != nil {
 			return nil, err
 		}
 		logs = append(logs, log)
 	}
 	return logs, nil
+}
+
+func LogsToLogStack(logs []Log) value.TupleValue {
+	logValues := make([]value.Value, 0, len(logs))
+	for _, log := range logs {
+		logValues = append(logValues, log.AsValue())
+	}
+	return message.ListToStackValue(logValues)
 }
