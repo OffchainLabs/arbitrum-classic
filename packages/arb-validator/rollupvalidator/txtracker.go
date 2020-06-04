@@ -41,17 +41,11 @@ type logsInfo struct {
 	TxHash  common.Hash
 }
 
-type txRecord struct {
-	nodeHeight       uint64
-	transactionIndex uint64
-	transactionHash  common.Hash
-	rawVal           value.Value
-}
-
 type nodeInfo struct {
 	TxLogs            []logsInfo
 	LogsAccHashes     []string
 	LogsValHashes     []string
+	OutLogs           []value.Value
 	OutMessages       []value.Value
 	NodeHash          common.Hash
 	NodeHeight        uint64
@@ -114,7 +108,7 @@ func (a *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []log
 type txTracker struct {
 	*sync.RWMutex
 	rollup.NoopListener
-	transactions  map[common.Hash]*txRecord
+	transactions  map[common.Hash]*TxRecord
 	nodesByHeight map[uint64]*nodeInfo
 	nodesByHash   map[common.Hash]*nodeInfo
 	maxNodeHeight uint64
@@ -125,7 +119,7 @@ func newTxTracker(
 	chainAddress common.Address,
 ) *txTracker {
 	return &txTracker{
-		transactions:  make(map[common.Hash]*txRecord),
+		transactions:  make(map[common.Hash]*TxRecord),
 		nodesByHeight: make(map[uint64]*nodeInfo),
 		nodesByHash:   make(map[common.Hash]*nodeInfo),
 		chainAddress:  chainAddress,
@@ -169,7 +163,7 @@ func (tr *txTracker) processNextNode(node *structures.Node) {
 	tr.Lock()
 	defer tr.Unlock()
 	for _, tx := range transactions {
-		tr.transactions[tx.transactionHash] = tx
+		tr.transactions[tx.txHash] = tx.record
 	}
 	tr.nodesByHeight[node.Depth()] = nodeInfo
 	tr.nodesByHash[node.Hash()] = nodeInfo
@@ -198,8 +192,8 @@ func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 	if !ok {
 		return txInfo{Found: false}
 	}
-	nodeInfo := tr.nodesByHeight[tx.nodeHeight]
-	return getTxInfo(nodeInfo, tx)
+	nodeInfo := tr.nodesByHeight[tx.NodeHeight]
+	return getTxInfo(txHash, nodeInfo, tx)
 }
 
 func (tr *txTracker) FindLogs(
@@ -253,7 +247,12 @@ func (tr *txTracker) FindLogs(
 	return logs
 }
 
-func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []*txRecord) {
+type txRecordInfo struct {
+	record *TxRecord
+	txHash common.Hash
+}
+
+func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRecordInfo) {
 	nodeInfo := newNodeInfo()
 	nodeInfo.NodeHash = node.Hash()
 	nodeInfo.NodeHeight = node.Depth()
@@ -269,6 +268,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []*txR
 	logs := assertion.Logs
 
 	nodeInfo.OutMessages = assertion.OutMsgs
+	nodeInfo.OutLogs = assertion.Logs
 	nodeInfo.LogsValHashes = make([]string, 0, len(logs))
 	nodeInfo.LogsAccHashes = make([]string, 0, len(logs))
 
@@ -286,7 +286,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []*txR
 	}
 
 	nodeInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
-	transactions := make([]*txRecord, 0, len(logs))
+	transactions := make([]txRecordInfo, 0, len(logs))
 
 	for i, logVal := range logs {
 		evmVal, err := evm.ProcessLog(logVal, chain)
@@ -306,19 +306,22 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []*txR
 		}
 
 		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
-		info := &txRecord{
-			nodeHeight:       node.Depth(),
-			transactionIndex: uint64(i),
-			transactionHash:  msg.TxHash,
-			rawVal:           logVal,
+		record := &TxRecord{
+			NodeHeight:       node.Depth(),
+			NodeHash:         node.Hash().MarshalToBuf(),
+			TransactionIndex: uint64(i),
+		}
+		info := txRecordInfo{
+			record: record,
+			txHash: msg.TxHash,
 		}
 		transactions = append(transactions, info)
-		nodeInfo.TransactionHashes = append(nodeInfo.TransactionHashes, info.transactionHash)
+		nodeInfo.TransactionHashes = append(nodeInfo.TransactionHashes, info.txHash)
 	}
 	return nodeInfo, transactions
 }
 
-func getTxInfo(nodeInfo *nodeInfo, txRecord *txRecord) txInfo {
+func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInfo {
 	zero := common.Hash{}
 
 	var logsPostHash string
@@ -329,16 +332,16 @@ func getTxInfo(nodeInfo *nodeInfo, txRecord *txRecord) txInfo {
 	}
 
 	logsPreHash := hexutil.Encode(zero[:])
-	if txRecord.transactionIndex > 0 {
-		logsPreHash = nodeInfo.LogsAccHashes[txRecord.transactionIndex-1] // Previous acc hash
+	if txRecord.TransactionIndex > 0 {
+		logsPreHash = nodeInfo.LogsAccHashes[txRecord.TransactionIndex-1] // Previous acc hash
 	}
-	logsValHashes := nodeInfo.LogsValHashes[txRecord.transactionIndex+1:] // log acc hashes after logVal
+	logsValHashes := nodeInfo.LogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
 
 	return txInfo{
 		Found:           true,
-		transactionHash: txRecord.transactionHash,
-		assertionIndex:  txRecord.nodeHeight,
-		RawVal:          txRecord.rawVal,
+		transactionHash: txHash,
+		assertionIndex:  txRecord.NodeHeight,
+		RawVal:          nodeInfo.OutLogs[txRecord.TransactionIndex],
 		LogsPreHash:     logsPreHash,
 		LogsPostHash:    logsPostHash,
 		LogsValHashes:   logsValHashes,
