@@ -30,7 +30,7 @@ const ZEROS_32B = ZEROS_16B + ZEROS_16B
 // const ONES_16B = 'ffffffffffffffffffffffffffffffff'
 // const ONES_32B = ONES_16B + ONES_16B
 const EMPTY_TUPLE_HASH =
-  '0x69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287'
+  '0x5dfd744753c13a6de9cf0e9e3d0164cdf0b1bbdb5efb3660a684d46477176058'
 
 describe('Constructors', function () {
   const nullHash = '0x' + ZEROS_32B

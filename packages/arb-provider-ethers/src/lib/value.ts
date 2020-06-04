@@ -217,20 +217,29 @@ export class TupleValue {
       throw Error('Error TupleValue: illegal size ' + contents.length)
     }
     this.contents = contents
-    const hashes = this.contents.map((value): string => value.hash())
-    const types = ['uint8'].concat(Array(contents.length).fill('bytes32'))
 
-    const values: any[] = [contents.length]
+    if (contents.length == 0) {
+      const firstHash = ethers.utils.solidityKeccak256(['uint8'], [0])
 
-    const firstHash = ethers.utils.solidityKeccak256(
-      types,
-      values.concat(hashes)
-    )
+      this.cachedHash = ethers.utils.solidityKeccak256(
+        ['uint8', 'bytes32', 'uint256'],
+        [ValueType.Tuple, firstHash, 1]
+      )
+    } else {
+      const hashes = this.contents.map((value): string => value.hash())
+      const types = ['uint8'].concat(Array(contents.length).fill('bytes32'))
+      const values: any[] = [contents.length]
 
-    this.cachedHash = ethers.utils.solidityKeccak256(
-      ['uint8', 'bytes32', 'uint256'],
-      [ValueType.Tuple, firstHash, this.size()]
-    )
+      const firstHash = ethers.utils.solidityKeccak256(
+        types,
+        values.concat(hashes)
+      )
+
+      this.cachedHash = ethers.utils.solidityKeccak256(
+        ['uint8', 'bytes32', 'uint256'],
+        [ValueType.Tuple, firstHash, this.size()]
+      )
+    }
   }
 
   public typeCode(): ValueType {

@@ -29,13 +29,17 @@ import (
 
 const MaxTupleSize = 8
 
-var preImage HashPreImage
-var noneFirst common.Hash
+var zeroHash HashPreImage
 
 func init() {
-	noneFirst = hashing.SoliditySHA3(
+	zeroHash = getZeroHash()
+}
+
+func getZeroHash() HashPreImage {
+	noneFirst := hashing.SoliditySHA3(
 		hashing.Uint8(0))
-	preImage = HashPreImage{noneFirst, 1}
+	preImage := HashPreImage{noneFirst, 1}
+	return preImage
 }
 
 type TupleValue struct {
@@ -61,7 +65,7 @@ func (val HashPreImage) Hash() common.Hash {
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, preImage.Hash(), preImage, 1, false}
+	return TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
@@ -260,24 +264,24 @@ func (tv TupleValue) getPreImage() common.Hash {
 	return firstHash
 }
 
-func (tv TupleValue) hash() common.Hash {
+func (tv TupleValue) hash() (HashPreImage, common.Hash) {
 	preImageHash := tv.getPreImage()
-	tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
-	tv.deferredHashing = false
-	return tv.cachedPreImage.Hash()
-}
-
-func (tv TupleValue) Hash() common.Hash {
-	if tv.deferredHashing {
-		tv.cachedHash = tv.hash()
-	}
-	return tv.cachedHash
+	preImage := HashPreImage{preImageHash, tv.Size()}
+	return preImage, preImage.Hash()
 }
 
 func (tv TupleValue) GetPreImage() HashPreImage {
 	if tv.deferredHashing {
-		tv.cachedHash = tv.hash()
+		tv.cachedPreImage, tv.cachedHash = tv.hash()
+		tv.deferredHashing = false
 	}
-
 	return tv.cachedPreImage
+}
+
+func (tv TupleValue) Hash() common.Hash {
+	if tv.deferredHashing {
+		tv.cachedPreImage, tv.cachedHash = tv.hash()
+		tv.deferredHashing = false
+	}
+	return tv.cachedHash
 }
