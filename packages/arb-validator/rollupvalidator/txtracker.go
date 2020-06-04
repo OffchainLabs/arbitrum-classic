@@ -48,7 +48,7 @@ type txRecord struct {
 	rawVal           value.Value
 }
 
-type assertionInfo struct {
+type nodeInfo struct {
 	TxLogs            []logsInfo
 	LogsAccHashes     []string
 	LogsValHashes     []string
@@ -76,11 +76,11 @@ type logResponse struct {
 	TxHash  common.Hash
 }
 
-func newAssertionInfo() *assertionInfo {
-	return &assertionInfo{}
+func newNodeInfo() *nodeInfo {
+	return &nodeInfo{}
 }
 
-func (a *assertionInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
+func (a *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
 	for _, txLogs := range a.TxLogs {
 		for _, evmLog := range txLogs.Logs {
@@ -115,8 +115,9 @@ type txTracker struct {
 	*sync.RWMutex
 	rollup.NoopListener
 	transactions  map[common.Hash]*txRecord
-	assertionInfo []*assertionInfo
-	assertionMap  map[common.Hash]*assertionInfo
+	nodesByHeight map[uint64]*nodeInfo
+	nodesByHash   map[common.Hash]*nodeInfo
+	maxNodeHeight uint64
 	chainAddress  common.Address
 }
 
@@ -125,8 +126,8 @@ func newTxTracker(
 ) *txTracker {
 	return &txTracker{
 		transactions:  make(map[common.Hash]*txRecord),
-		assertionInfo: make([]*assertionInfo, 0),
-		assertionMap:  make(map[common.Hash]*assertionInfo),
+		nodesByHeight: make(map[uint64]*nodeInfo),
+		nodesByHash:   make(map[common.Hash]*nodeInfo),
 		chainAddress:  chainAddress,
 	}
 }
@@ -137,15 +138,17 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.
 	go func() {
 		tr.Lock()
 		defer tr.Unlock()
-
 		// First remove any data from reorged nodes
-		assertionsToReorg := tr.assertionInfo[startDepth:]
-		tr.assertionInfo = tr.assertionInfo[:startDepth]
-		for _, assertion := range assertionsToReorg {
-			delete(tr.assertionMap, assertion.NodeHash)
-			for _, txHash := range assertion.TransactionHashes {
+		for i := tr.maxNodeHeight; i > startDepth; i-- {
+			node, ok := tr.nodesByHeight[i]
+			if !ok {
+				continue
+			}
+			for _, txHash := range node.TransactionHashes {
 				delete(tr.transactions, txHash)
 			}
+			delete(tr.nodesByHeight, i)
+			delete(tr.nodesByHash, node.NodeHash)
 		}
 
 		// Next process data for any nodes which have not yet been processed
@@ -159,29 +162,29 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 
 func (tr *txTracker) processNextNode(node *structures.Node) {
 	// We must have already processed this node
-	if node.Depth() < uint64(len(tr.assertionInfo)) {
+	if node.Depth() < tr.maxNodeHeight {
 		return
 	}
-	assertionInfo, transactions := processNode(node, tr.chainAddress)
+	nodeInfo, transactions := processNode(node, tr.chainAddress)
 	tr.Lock()
 	defer tr.Unlock()
 	for _, tx := range transactions {
 		tr.transactions[tx.transactionHash] = tx
 	}
-	tr.assertionInfo = append(tr.assertionInfo, assertionInfo)
-	tr.assertionMap[assertionInfo.NodeHash] = assertionInfo
+	tr.nodesByHeight[node.Depth()] = nodeInfo
+	tr.nodesByHash[node.Hash()] = nodeInfo
 }
 
-func (tr *txTracker) AssertionCount() int {
+func (tr *txTracker) AssertionCount() uint64 {
 	tr.RLock()
 	defer tr.RUnlock()
-	return len(tr.assertionInfo) - 1
+	return tr.maxNodeHeight
 }
 
-func (tr *txTracker) OutputMsgVal(assertionHash common.Hash, msgIndex int64) value.Value {
+func (tr *txTracker) OutputMsgVal(nodeHash common.Hash, msgIndex int64) value.Value {
 	tr.RLock()
 	defer tr.RUnlock()
-	assertionVal, ok := tr.assertionMap[assertionHash]
+	assertionVal, ok := tr.nodesByHash[nodeHash]
 	if !ok || msgIndex < 0 || msgIndex >= int64(len(assertionVal.OutMessages)) {
 		return nil
 	}
@@ -195,8 +198,8 @@ func (tr *txTracker) TxInfo(txHash common.Hash) txInfo {
 	if !ok {
 		return txInfo{Found: false}
 	}
-	assertionInfo := tr.assertionInfo[tx.nodeHeight]
-	return getTxInfo(assertionInfo, tx)
+	nodeInfo := tr.nodesByHeight[tx.nodeHeight]
+	return getTxInfo(nodeInfo, tx)
 }
 
 func (tr *txTracker) FindLogs(
@@ -208,7 +211,7 @@ func (tr *txTracker) FindLogs(
 	tr.RLock()
 	defer tr.RUnlock()
 	startHeight := int64(0)
-	endHeight := int64(len(tr.assertionInfo))
+	endHeight := int64(tr.maxNodeHeight)
 	if fromHeight != nil && *fromHeight > int64(0) {
 		startHeight = *fromHeight
 	}
@@ -219,12 +222,15 @@ func (tr *txTracker) FindLogs(
 		}
 	}
 	logs := make([]*validatorserver.LogInfo, 0)
-	if startHeight >= int64(len(tr.assertionInfo)) {
+	if startHeight >= int64(tr.maxNodeHeight) {
 		return logs
 	}
-	assertions := tr.assertionInfo[startHeight:endHeight]
 
-	for _, assertion := range assertions {
+	for i := startHeight; i < endHeight; i++ {
+		assertion, ok := tr.nodesByHeight[uint64(i)]
+		if !ok {
+			continue
+		}
 		assertionLogs := assertion.FindLogs(address, topics)
 		for j, evmLog := range assertionLogs {
 			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
@@ -247,39 +253,39 @@ func (tr *txTracker) FindLogs(
 	return logs
 }
 
-func processNode(node *structures.Node, chain common.Address) (*assertionInfo, []*txRecord) {
-	assertionInfo := newAssertionInfo()
-	assertionInfo.NodeHash = node.Hash()
-	assertionInfo.NodeHeight = node.Depth()
+func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []*txRecord) {
+	nodeInfo := newNodeInfo()
+	nodeInfo.NodeHash = node.Hash()
+	nodeInfo.NodeHeight = node.Depth()
 	txHash := node.AssertionTxHash()
-	assertionInfo.OnChainTxHash = hexutil.Encode(txHash[:])
+	nodeInfo.OnChainTxHash = hexutil.Encode(txHash[:])
 
 	if node.LinkType() != valprotocol.ValidChildType {
-		return assertionInfo, nil
+		return nodeInfo, nil
 	}
 
 	assertion := node.Assertion()
 
 	logs := assertion.Logs
 
-	assertionInfo.OutMessages = assertion.OutMsgs
-	assertionInfo.LogsValHashes = make([]string, 0, len(logs))
-	assertionInfo.LogsAccHashes = make([]string, 0, len(logs))
+	nodeInfo.OutMessages = assertion.OutMsgs
+	nodeInfo.LogsValHashes = make([]string, 0, len(logs))
+	nodeInfo.LogsAccHashes = make([]string, 0, len(logs))
 
 	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
-		assertionInfo.LogsValHashes = append(assertionInfo.LogsValHashes,
+		nodeInfo.LogsValHashes = append(nodeInfo.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
 		acc = hashing.SoliditySHA3(
 			hashing.Bytes32(acc),
 			hashing.Bytes32(logsValHash),
 		)
-		assertionInfo.LogsAccHashes = append(assertionInfo.LogsAccHashes,
+		nodeInfo.LogsAccHashes = append(nodeInfo.LogsAccHashes,
 			hexutil.Encode(acc.Bytes()))
 	}
 
-	assertionInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
+	nodeInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
 	transactions := make([]*txRecord, 0, len(logs))
 
 	for i, logVal := range logs {
@@ -289,7 +295,7 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 			continue
 		}
 		msg := evmVal.GetEthMsg()
-		assertionInfo.TxLogs = append(assertionInfo.TxLogs, logsInfo{
+		nodeInfo.TxLogs = append(nodeInfo.TxLogs, logsInfo{
 			Logs:    evmVal.GetLogs(),
 			TxIndex: uint64(i),
 			TxHash:  msg.TxHash,
@@ -307,27 +313,26 @@ func processNode(node *structures.Node, chain common.Address) (*assertionInfo, [
 			rawVal:           logVal,
 		}
 		transactions = append(transactions, info)
-		assertionInfo.TransactionHashes = append(assertionInfo.TransactionHashes, info.transactionHash)
+		nodeInfo.TransactionHashes = append(nodeInfo.TransactionHashes, info.transactionHash)
 	}
-	return assertionInfo, transactions
+	return nodeInfo, transactions
 }
 
-func getTxInfo(assertionInfo *assertionInfo, txRecord *txRecord) txInfo {
-
+func getTxInfo(nodeInfo *nodeInfo, txRecord *txRecord) txInfo {
 	zero := common.Hash{}
 
 	var logsPostHash string
-	if len(assertionInfo.LogsAccHashes) > 0 {
-		logsPostHash = assertionInfo.LogsAccHashes[len(assertionInfo.LogsAccHashes)-1]
+	if len(nodeInfo.LogsAccHashes) > 0 {
+		logsPostHash = nodeInfo.LogsAccHashes[len(nodeInfo.LogsAccHashes)-1]
 	} else {
 		logsPostHash = hexutil.Encode(zero[:])
 	}
 
 	logsPreHash := hexutil.Encode(zero[:])
 	if txRecord.transactionIndex > 0 {
-		logsPreHash = assertionInfo.LogsAccHashes[txRecord.transactionIndex-1] // Previous acc hash
+		logsPreHash = nodeInfo.LogsAccHashes[txRecord.transactionIndex-1] // Previous acc hash
 	}
-	logsValHashes := assertionInfo.LogsValHashes[txRecord.transactionIndex+1:] // log acc hashes after logVal
+	logsValHashes := nodeInfo.LogsValHashes[txRecord.transactionIndex+1:] // log acc hashes after logVal
 
 	return txInfo{
 		Found:           true,
@@ -337,6 +342,6 @@ func getTxInfo(assertionInfo *assertionInfo, txRecord *txRecord) txInfo {
 		LogsPreHash:     logsPreHash,
 		LogsPostHash:    logsPostHash,
 		LogsValHashes:   logsValHashes,
-		OnChainTxHash:   assertionInfo.OnChainTxHash,
+		OnChainTxHash:   nodeInfo.OnChainTxHash,
 	}
 }
