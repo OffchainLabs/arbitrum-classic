@@ -18,10 +18,9 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
@@ -88,10 +87,6 @@ func (al *AnnouncerListener) OldStakes(context.Context, *ChainObserver, []recove
 	log.Println(al.Prefix, "OldStakes")
 }
 
-func (al *AnnouncerListener) AdvancedCalculatedValidNode(ctx context.Context, observer *ChainObserver, nodeHash common.Hash) {
-	log.Println(al.Prefix, "AdvancedCalculatedValidNode", nodeHash)
-}
-
-func (al *AnnouncerListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
-	log.Println(al.Prefix, "AdvancedKnownAssertion")
+func (al *AnnouncerListener) AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node) {
+	log.Println(al.Prefix, "AdvancedKnownNode")
 }

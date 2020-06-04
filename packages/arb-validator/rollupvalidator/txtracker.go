@@ -17,6 +17,7 @@
 package rollupvalidator
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
@@ -29,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 type validatorRequest interface {
@@ -175,18 +175,21 @@ func (tr *txTracker) FindLogs(
 	return req
 }
 
-func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAssertion) {
+func (tr *txTracker) processNode(node *structures.Node) {
 	info := newAssertionInfo()
 
 	zero := common.Hash{}
 	logsPreHash := hexutil.Encode(zero[:])
 
-	disputableTxHash := hexutil.Encode(assertion.OnChainTxHash[:])
+	txHash := node.AssertionTxHash()
+	disputableTxHash := hexutil.Encode(txHash[:])
 
-	logs := assertion.Assertion.Logs
+	assertion := node.Assertion()
 
-	info.OutMessages = assertion.Assertion.OutMsgs
-	info.AssertNodeHash = assertion.NodeHash
+	logs := assertion.Logs
+
+	info.OutMessages = assertion.OutMsgs
+	info.AssertNodeHash = node.Hash()
 	info.LogsValHashes = make([]string, 0, len(logs))
 	info.LogsAccHashes = make([]string, 0, len(logs))
 
@@ -311,11 +314,11 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 	}
 }
 
-func (tr *txTracker) handleTxResults(completedCalls chan rollup.FinalizedAssertion) {
+func (tr *txTracker) handleTxResults(advancedNodeChan chan *structures.Node) {
 	for {
 		select {
-		case finalizedAssertion := <-completedCalls:
-			tr.processFinalizedAssertion(finalizedAssertion)
+		case node := <-advancedNodeChan:
+			tr.processNode(node)
 		case request := <-tr.requests:
 			tr.processRequest(request)
 		}

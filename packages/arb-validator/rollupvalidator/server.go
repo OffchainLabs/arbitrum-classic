@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
@@ -50,13 +51,13 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	completedAssertionChan := make(chan rollup.FinalizedAssertion)
-	assertionListener := &rollup.AssertionListener{completedAssertionChan}
+	advancedNodeChan := make(chan *structures.Node)
+	assertionListener := rollup.NewAssertionListener(advancedNodeChan)
 	man.AddListener(assertionListener)
 
 	tracker := newTxTracker(man.RollupAddress)
 	go func() {
-		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
+		tracker.handleTxResults(assertionListener.AdvancedNodeChan)
 	}()
 
 	return &Server{man.RollupAddress, tracker, man, maxCallTime}
