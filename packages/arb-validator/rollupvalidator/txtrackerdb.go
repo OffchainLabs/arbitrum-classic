@@ -20,13 +20,14 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/hashicorp/golang-lru"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"google.golang.org/protobuf/proto"
 )
 
 var txRecordPrefix = []byte{53}
