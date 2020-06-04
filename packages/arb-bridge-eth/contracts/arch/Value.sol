@@ -25,7 +25,7 @@ library Value {
 
     uint8 internal constant INT_TYPECODE = 0;
     uint8 internal constant CODE_POINT_TYPECODE = 1;
-    uint8 internal constant HASH_PRE_IMAGE = 2;
+    uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
@@ -139,7 +139,7 @@ library Value {
     }
 
     function hashTuplePreImage(Data memory preImage) private pure returns (bytes32) {
-        require(preImage.typeCode == HASH_PRE_IMAGE, "Must be PreImageHsh");
+        require(preImage.typeCode == HASH_PRE_IMAGE_TYPECODE, "Must be PreImageHsh");
         return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
     }
 
@@ -204,7 +204,7 @@ library Value {
             return hashInt(val.intVal);
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
             return hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint);
-        } else if (val.typeCode == HASH_PRE_IMAGE) {
+        } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
             if(val.cpVal.nextCodePoint == bytes32(uint(1))){
                 return bytes32(val.intVal);
             }else{
@@ -280,7 +280,7 @@ library Value {
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size) internal pure returns (Data memory){
-        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_PRE_IMAGE, size);
+        return Data(uint256(preImageHash), CodePoint(0, 0, false, 0), new Data[](0), HASH_PRE_IMAGE_TYPECODE, size);
     }
 
     function deserializeHashed(
@@ -302,31 +302,6 @@ library Value {
         }else{
             hashData = data.toBytes32(startOffset);
             return (true, startOffset + 32, hashData);
-        }
-    }
-
-    function deserializeHashedOnly(
-        bytes memory data,
-        uint256 startOffset
-    )
-        internal
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            Data memory)
-    {
-        Data memory hashValue;
-        bool valid;
-        bytes32 hashData;
-
-        (valid, startOffset, hashData) = deserializeHashed(data, startOffset);
-
-        if (!valid) {
-            return (false, startOffset, hashValue);
-        }else{
-            hashValue = Data(uint256(hashData), CodePoint(0, bytes32(uint(1)), false, 0), new Data[](0), HASH_PRE_IMAGE, 1);
-            return (true, startOffset, hashValue);
         }
     }
 
@@ -492,7 +467,7 @@ library Value {
         } else if (valType == CODE_POINT_TYPECODE) {
             (valid, offset, cpVal) = deserializeCodePoint(data, offset);
             return (valid, offset, newCodePoint(cpVal));
-        } else if (valType == HASH_PRE_IMAGE) {
+        } else if (valType == HASH_PRE_IMAGE_TYPECODE) {
             return deserializeHashPreImage(data, offset);
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);

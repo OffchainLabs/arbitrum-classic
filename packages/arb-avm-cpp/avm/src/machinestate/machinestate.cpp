@@ -149,7 +149,8 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
 
-    uint256_t_to_buf(code[pc].nextHash, buf);
+    auto next_codepoint = code[pc + 1];
+    ::marshalStub(next_codepoint, buf);
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
     ::marshalStub(registerVal, buf);

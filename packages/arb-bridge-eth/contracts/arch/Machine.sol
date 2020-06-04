@@ -172,7 +172,7 @@ library Machine {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
         bool valid;
-        (valid, offset, m.instructionStack) = Value.deserializeHashedOnly(data, offset);
+        (valid, offset, m.instructionStack) = Value.deserialize(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
