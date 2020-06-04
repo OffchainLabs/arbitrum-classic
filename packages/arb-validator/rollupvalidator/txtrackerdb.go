@@ -17,6 +17,7 @@
 package rollupvalidator
 
 import (
+	"encoding/binary"
 	"errors"
 
 	"github.com/hashicorp/golang-lru"
@@ -29,10 +30,28 @@ import (
 )
 
 var txRecordPrefix = []byte{53}
+var nodeRecordPrefix = []byte{54}
 
 type nodeRecordKey struct {
 	height uint64
 	hash   common.Hash
+}
+
+func txRecordKey(txHash common.Hash) []byte {
+	return append(append([]byte{}, txRecordPrefix...), txHash.Bytes()...)
+}
+
+func nodeMetadataKey(key nodeRecordKey) []byte {
+	encodedHeight := make([]byte, 8)
+	binary.BigEndian.PutUint64(encodedHeight, key.height)
+
+	rawKey := append([]byte{}, nodeRecordPrefix...)
+	rawKey = append(rawKey, encodedHeight...)
+	return append(rawKey, key.hash.Bytes()...)
+}
+
+func newNodeMetadata(node *nodeInfo) *NodeMetadata {
+	return &NodeMetadata{LogBloom: node.calculateBloomFilter().Bytes()}
 }
 
 type txDB struct {
@@ -43,33 +62,36 @@ type txDB struct {
 
 	transactions     map[common.Hash]*TxRecord
 	nodeInfo         map[nodeRecordKey]*nodeInfo
+	nodeMetadata     map[nodeRecordKey]*NodeMetadata
 	nodeHashLookup   map[common.Hash]uint64
 	nodeHeightLookup map[uint64]common.Hash
 	chainAddress     common.Address
 }
 
 func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress common.Address) (*txDB, error) {
-	lru, err := lru.New(500)
+	lruCache, err := lru.New(500)
 	if err != nil {
 		return nil, err
 	}
 	return &txDB{
 		db:                 db,
 		confirmedNodeStore: ns,
-		confirmedNodeCache: lru,
+		confirmedNodeCache: lruCache,
 		transactions:       make(map[common.Hash]*TxRecord),
 		nodeInfo:           make(map[nodeRecordKey]*nodeInfo),
+		nodeMetadata:       make(map[nodeRecordKey]*NodeMetadata),
 		nodeHashLookup:     make(map[common.Hash]uint64),
 		nodeHeightLookup:   make(map[uint64]common.Hash),
+		chainAddress:       chainAddress,
 	}, nil
 }
 
-func txRecordKey(txHash common.Hash) []byte {
-	return append(append([]byte{}, txRecordPrefix...), txHash.Bytes()...)
-}
-
 func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
-	node, err := txdb.lookupNodeWithHeight(nodeHeight)
+	nodeHash, err := txdb.lookupNodeHash(nodeHeight)
+	if err != nil {
+		return err
+	}
+	node, err := txdb.lookupNodeRecord(nodeHeight, nodeHash)
 	if err != nil {
 		return err
 	}
@@ -83,10 +105,12 @@ func (txdb *txDB) deleteNode(node *nodeInfo) {
 	}
 	delete(txdb.nodeHeightLookup, node.NodeHeight)
 	delete(txdb.nodeHashLookup, node.NodeHash)
-	delete(txdb.nodeInfo, nodeRecordKey{
+	key := nodeRecordKey{
 		height: node.NodeHeight,
 		hash:   node.NodeHash,
-	})
+	}
+	delete(txdb.nodeInfo, key)
+	delete(txdb.nodeMetadata, key)
 }
 
 func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
@@ -95,14 +119,35 @@ func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
 	}
 	txdb.nodeHeightLookup[info.NodeHeight] = info.NodeHash
 	txdb.nodeHashLookup[info.NodeHash] = info.NodeHeight
-	txdb.nodeInfo[nodeRecordKey{
+	key := nodeRecordKey{
 		height: info.NodeHeight,
 		hash:   info.NodeHash,
-	}] = info
+	}
+	txdb.nodeInfo[key] = info
+	txdb.nodeMetadata[key] = newNodeMetadata(info)
 }
 
 func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
-	node, err := txdb.lookupNodeWithHash(nodeHash)
+	height, err := txdb.lookupNodeHeight(nodeHash)
+	if err != nil {
+		return err
+	}
+	metadata, err := txdb.lookupNodeMetadata(height, nodeHash)
+	if err != nil {
+		return err
+	}
+	data, err := proto.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+	key := nodeRecordKey{
+		height: height,
+		hash:   nodeHash,
+	}
+	if !txdb.db.SaveData(nodeMetadataKey(key), data) {
+		return errors.New("failed to save node metadata record")
+	}
+	node, err := txdb.lookupNodeRecord(height, nodeHash)
 	if err != nil {
 		return err
 	}
@@ -119,6 +164,7 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 			return errors.New("failed to save tx record")
 		}
 	}
+
 	txdb.deleteNode(node)
 	return nil
 }
@@ -140,49 +186,57 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 	return txRecord, nil
 }
 
-func (txdb *txDB) lookupNodeWithHeight(nodeHeight uint64) (*nodeInfo, error) {
+func (txdb *txDB) lookupNodeHash(nodeHeight uint64) (common.Hash, error) {
 	nodeHash, found := txdb.nodeHeightLookup[nodeHeight]
 	if found {
-		return txdb.lookupNodeRecord(nodeHeight, nodeHash)
+		return nodeHash, nil
 	}
 
 	nodeHash, err := txdb.confirmedNodeStore.GetNodeHash(nodeHeight)
 	if err != nil {
-		return nil, err
+		return common.Hash{}, err
 	}
-	return txdb.lookupNodeRecord(nodeHeight, nodeHash)
+	return nodeHash, nil
 }
 
-func (txdb *txDB) lookupNodeWithHash(nodeHash common.Hash) (*nodeInfo, error) {
+func (txdb *txDB) lookupNodeHeight(nodeHash common.Hash) (uint64, error) {
 	nodeHeight, found := txdb.nodeHashLookup[nodeHash]
 	if found {
-		return txdb.lookupNodeRecord(nodeHeight, nodeHash)
+		return nodeHeight, nil
 	}
 
 	nodeHeight, err := txdb.confirmedNodeStore.GetNodeHeight(nodeHash)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return txdb.lookupNodeRecord(nodeHeight, nodeHash)
+	return nodeHeight, nil
 }
 
-func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*nodeInfo, error) {
-	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
-	info, ok := txdb.nodeInfo[key]
+func (txdb *txDB) getInMemoryNodeData(key nodeRecordKey) (*nodeInfo, error) {
+	infoData, ok := txdb.nodeInfo[key]
 	if ok {
-		return info, nil
+		return infoData, nil
 	}
 
 	nodeInfoCache, ok := txdb.confirmedNodeCache.Get(key)
 	if ok {
 		return nodeInfoCache.(*nodeInfo), nil
 	}
+	return nil, errors.New("not found")
+}
+
+func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*nodeInfo, error) {
+	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
+	info, err := txdb.getInMemoryNodeData(key)
+	if err == nil {
+		return info, nil
+	}
 
 	nodeData, err := txdb.confirmedNodeStore.GetNode(nodeHeight, nodeHash)
 	if err != nil {
 		return nil, err
 	}
-	var nodeBuf *structures.NodeBuf
+	nodeBuf := &structures.NodeBuf{}
 	if err := proto.Unmarshal(nodeData, nodeBuf); err != nil {
 		return nil, err
 	}
@@ -190,8 +244,26 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 	node := nodeBuf.UnmarshalFromCheckpoint(restoreContext)
 
 	info, _ = processNode(node, txdb.chainAddress)
-	txdb.nodeInfo[key] = info
-
 	txdb.confirmedNodeCache.Add(key, info)
 	return info, nil
+}
+
+func (txdb *txDB) lookupNodeMetadata(nodeHeight uint64, nodeHash common.Hash) (*NodeMetadata, error) {
+	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
+	metadata, ok := txdb.nodeMetadata[key]
+	if ok {
+		return metadata, nil
+	}
+
+	metadataRaw := txdb.db.GetData(nodeMetadataKey(key))
+	if len(metadataRaw) == 0 {
+		return nil, errors.New("not found")
+	}
+
+	metadata = &NodeMetadata{}
+	if err := proto.Unmarshal(metadataRaw, metadata); err != nil {
+		return nil, err
+	}
+
+	return metadata, nil
 }

@@ -24,3 +24,7 @@ message TxRecord {
     common.HashBuf nodeHash = 2;
     uint64 transactionIndex = 3;
 }
+
+message NodeMetadata {
+    bytes logBloom = 1;
+}
