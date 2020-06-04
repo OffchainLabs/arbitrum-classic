@@ -29,24 +29,20 @@ import (
 
 const MaxTupleSize = 8
 
-var hashOfNone common.Hash
-var nonePreImage common.Hash
+var preImage HashPreImage
+var noneFirst common.Hash
 
 func init() {
-	nonePreImage = hashing.SoliditySHA3(
+	noneFirst = hashing.SoliditySHA3(
 		hashing.Uint8(0))
-	hashOfNone = hashing.SoliditySHA3(
-		hashing.Uint8(TypeCodeTuple),
-		hashing.Bytes32(nonePreImage),
-		hashing.Uint256(big.NewInt(1)),
-	)
+	preImage = HashPreImage{noneFirst, 1}
 }
 
 type TupleValue struct {
 	contentsArr     [MaxTupleSize]Value
 	itemCount       int8
 	cachedHash      common.Hash
-	cachedPreImage  common.Hash
+	cachedPreImage  HashPreImage
 	size            int64
 	deferredHashing bool
 }
@@ -65,14 +61,14 @@ func (val HashPreImage) Hash() common.Hash {
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, nonePreImage, 1, false}
+	return TupleValue{[MaxTupleSize]Value{}, 0, preImage.Hash(), preImage, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, common.Hash{}, common.Hash{}, 0, true}
+	ret := TupleValue{contents, size, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
@@ -82,7 +78,7 @@ func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
 
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, HashPreImage{}, 0, true}
 	for i := int64(0); i < size; i++ {
 		ret.contentsArr[i] = value
 	}
@@ -102,7 +98,7 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
 }
@@ -259,7 +255,7 @@ func (tv TupleValue) HashPreImage(firstHash common.Hash, size int64) common.Hash
 	)
 }
 
-func (tv TupleValue) internalHash() (common.Hash, common.Hash) {
+func (tv TupleValue) getPreImage() common.Hash {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
@@ -270,15 +266,14 @@ func (tv TupleValue) internalHash() (common.Hash, common.Hash) {
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
 
-	finalHash := tv.HashPreImage(firstHash, tv.internalSize())
-	return finalHash, firstHash
+	return firstHash
 }
 
 func (tv TupleValue) Hash() common.Hash {
 	if tv.deferredHashing {
-		hash, preImageHash := tv.internalHash()
-		tv.cachedHash = hash
-		tv.cachedPreImage = preImageHash
+		preImageHash := tv.getPreImage()
+		tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
+		tv.cachedHash = tv.cachedPreImage.Hash()
 		tv.deferredHashing = false
 	}
 	return tv.cachedHash
@@ -286,11 +281,11 @@ func (tv TupleValue) Hash() common.Hash {
 
 func (tv TupleValue) GetPreImage() HashPreImage {
 	if tv.deferredHashing {
-		hash, preImageHash := tv.internalHash()
-		tv.cachedHash = hash
-		tv.cachedPreImage = preImageHash
+		preImageHash := tv.getPreImage()
+		tv.cachedPreImage = HashPreImage{preImageHash, tv.Size()}
+		tv.cachedHash = tv.cachedPreImage.Hash()
 		tv.deferredHashing = false
 	}
 
-	return HashPreImage{tv.cachedPreImage, tv.Size()}
+	return tv.cachedPreImage
 }
