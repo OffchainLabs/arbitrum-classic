@@ -41,15 +41,23 @@ const (
 )
 
 type Manager struct {
-	// listenersLock is locked when writing listeners or activeChain
+	// listenersLock is should be held whenever listeners is accessed or set
+	// and whenever activeChain is going to be set (but not when it is accessed)
 	listenersLock sync.Mutex
-	// validCallLock is locked when there is not a valid chain caught up to head
+
+	// validCallLock is held by the main loop whenever there is not a non-nil
+	// activeChain running which has caught up to the current L1 block. It is
+	// held by all other functions when they wish to access an update to date
+	// chain state. This means that these functions will block when there isn't
+	// an appropriate way to resolve them
 	validCallLock sync.Mutex
-	RollupAddress common.Address
-	checkpointer  checkpointing.RollupCheckpointer
 
 	listeners   []rollup.ChainListener
 	activeChain *rollup.ChainObserver
+
+	// These variables are only written by the constructor
+	RollupAddress common.Address
+	checkpointer  checkpointing.RollupCheckpointer
 }
 
 const defaultMaxReorgDepth = 100
@@ -120,13 +128,15 @@ func CreateManagerAdvanced(
 			}
 			man.listenersLock.Unlock()
 
-			log.Println("Starting validator from", man.activeChain.CurrentBlockId())
+			currentProcessedBlockId := man.activeChain.CurrentBlockId()
+
+			log.Println("Starting validator from", currentProcessedBlockId)
 
 			man.activeChain.RestartFromLatestValid(runCtx)
 
 			man.activeChain.Start(runCtx)
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, man.activeChain.CurrentBlockId())
+			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, currentProcessedBlockId)
 			if err != nil {
 				log.Println("Error subscribing to block headers", err)
 				cancelFunc()
@@ -145,12 +155,12 @@ func CreateManagerAdvanced(
 				blockId := maybeBlockId.BlockId
 				timestamp := maybeBlockId.Timestamp
 
-				current, err := clnt.CurrentBlockId(runCtx)
+				currentOnChain, err := clnt.CurrentBlockId(runCtx)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				if !caughtUpToL1 && blockId.Height.Cmp(current.Height) >= 0 {
+				if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
 					caughtUpToL1 = true
 					man.activeChain.NowAtHead()
 					log.Println("Now at head")
