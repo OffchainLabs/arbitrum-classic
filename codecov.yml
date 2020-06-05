@@ -24,6 +24,7 @@ ignore:
   - 'packages/arb-validator-core/ethbridge/messagetester/*'
   - 'packages/arb-validator-core/ethbridge/sigutilstester/*'
   - 'packages/arb-validator-core/ethbridge/rollup/*'
+  - 'packages/arb-provider-go/arbsys.go'
   - 'tests/fibgo/fibabi.go'
   - 'packages/arb-provider-ethers/src/lib/abi/*'
   - '**/*.pb.go'
