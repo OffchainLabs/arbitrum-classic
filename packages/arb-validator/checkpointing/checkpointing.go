@@ -24,10 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
-type RollupCheckpointerFactory interface {
-	New(ctx context.Context) RollupCheckpointer
-}
-
 type RollupCheckpointer interface {
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext) error) error

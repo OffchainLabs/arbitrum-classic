@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
@@ -45,11 +44,12 @@ type Manager struct {
 	// listenersLock is locked when writing listeners or activeChain
 	listenersLock sync.Mutex
 	// validCallLock is locked when there is not a valid chain caught up to head
-	validCallLock      sync.Mutex
-	RollupAddress      common.Address
-	listeners          []rollup.ChainListener
-	activeChain        *rollup.ChainObserver
-	activeCheckpointer checkpointing.RollupCheckpointer
+	validCallLock sync.Mutex
+	RollupAddress common.Address
+	checkpointer  checkpointing.RollupCheckpointer
+
+	listeners   []rollup.ChainListener
+	activeChain *rollup.ChainObserver
 }
 
 const defaultMaxReorgDepth = 100
@@ -66,7 +66,7 @@ func CreateManager(
 		rollupAddr,
 		true,
 		clnt,
-		checkpointing.NewIndexedCheckpointerFactory(
+		checkpointing.NewIndexedCheckpointer(
 			rollupAddr,
 			aoFilePath,
 			dbPath,
@@ -81,9 +81,9 @@ func CreateManagerAdvanced(
 	rollupAddr common.Address,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
-	ckpFac checkpointing.RollupCheckpointerFactory,
+	checkpointer checkpointing.RollupCheckpointer,
 ) (*Manager, error) {
-	if err := verifyArbChain(ctx, rollupAddr, clnt, ckpFac); err != nil {
+	if err := verifyArbChain(ctx, rollupAddr, clnt, checkpointer); err != nil {
 		return nil, err
 	}
 
@@ -94,8 +94,6 @@ func CreateManagerAdvanced(
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
-
-			checkpointer := ckpFac.New(runCtx)
 
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
@@ -116,7 +114,6 @@ func CreateManagerAdvanced(
 
 			man.listenersLock.Lock()
 			man.activeChain = chain
-			man.activeCheckpointer = checkpointer
 			// Add manager's listeners
 			for _, listener := range man.listeners {
 				man.activeChain.AddListener(listener)
@@ -183,8 +180,6 @@ func CreateManagerAdvanced(
 			man.activeChain = nil
 			man.listenersLock.Unlock()
 
-			man.activeCheckpointer = nil
-
 			cancelFunc()
 
 			select {
@@ -231,23 +226,15 @@ func (man *Manager) CurrentBlockId() *common.BlockId {
 	return man.activeChain.CurrentBlockId()
 }
 
-func (man *Manager) GetConfirmedNodeStore() machine.NodeStore {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeCheckpointer.GetConfirmedNodeStore()
-}
-
-func (man *Manager) GetCheckpointStorage() machine.CheckpointStorage {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeCheckpointer.GetCheckpointDB()
+func (man *Manager) GetCheckpointer() checkpointing.RollupCheckpointer {
+	return man.checkpointer
 }
 
 func verifyArbChain(
 	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
-	ckpFac checkpointing.RollupCheckpointerFactory,
+	checkpointer checkpointing.RollupCheckpointer,
 ) error {
 	watcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
@@ -271,7 +258,7 @@ func verifyArbChain(
 		return err
 	}
 
-	initialMachine, err := ckpFac.New(ctx).GetInitialMachine()
+	initialMachine, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return err
 	}

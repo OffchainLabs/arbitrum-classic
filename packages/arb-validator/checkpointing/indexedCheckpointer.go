@@ -46,14 +46,14 @@ type IndexedCheckpointer struct {
 	nextCheckpointToWrite *writableCheckpoint
 }
 
-func NewIndexedCheckpointerFactory(
+func NewIndexedCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
-) RollupCheckpointerFactory {
-	ret, err := newIndexedCheckpointerFactory(
+) *IndexedCheckpointer {
+	ret, err := newIndexedCheckpointer(
 		rollupAddr,
 		arbitrumCodeFilePath,
 		databasePath,
@@ -69,10 +69,10 @@ func NewIndexedCheckpointerFactory(
 	return ret
 }
 
-// newIndexedCheckpointerFactory creates the checkpoint factory, but doesn't
+// newIndexedCheckpointerFactory creates the checkpointer, but doesn't
 // launch it's reading and writing threads. This is useful for deterministic
 // testing
-func newIndexedCheckpointerFactory(
+func newIndexedCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
