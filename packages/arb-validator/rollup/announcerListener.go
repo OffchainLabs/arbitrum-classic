@@ -29,6 +29,10 @@ type AnnouncerListener struct {
 	Prefix string
 }
 
+func (al *AnnouncerListener) AddedToChain(context.Context, *ChainObserver) {
+	log.Println("AddedToChain")
+}
+
 func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
 	log.Println("RestartingFromLatestValid")
 }
