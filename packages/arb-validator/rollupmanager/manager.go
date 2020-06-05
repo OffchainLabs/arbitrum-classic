@@ -129,11 +129,6 @@ func CreateManagerAdvanced(
 
 			man.activeChain.Start(runCtx)
 
-			current, err := clnt.CurrentBlockId(runCtx)
-			if err != nil {
-				log.Fatal(err)
-			}
-
 			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, man.activeChain.CurrentBlockId())
 			if err != nil {
 				log.Println("Error subscribing to block headers", err)
@@ -142,7 +137,7 @@ func CreateManagerAdvanced(
 				continue
 			}
 
-			reachedHead := false
+			caughtUpToL1 := false
 		headerLoop:
 			for maybeBlockId := range headersChan {
 				if maybeBlockId.Err != nil {
@@ -153,8 +148,13 @@ func CreateManagerAdvanced(
 				blockId := maybeBlockId.BlockId
 				timestamp := maybeBlockId.Timestamp
 
-				if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
-					reachedHead = true
+				current, err := clnt.CurrentBlockId(runCtx)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				if !caughtUpToL1 && blockId.Height.Cmp(current.Height) >= 0 {
+					caughtUpToL1 = true
 					man.activeChain.NowAtHead()
 					log.Println("Now at head")
 					man.validCallLock.Unlock()
@@ -181,8 +181,9 @@ func CreateManagerAdvanced(
 
 			man.listenersLock.Lock()
 			man.activeChain = nil
-			man.activeCheckpointer = nil
 			man.listenersLock.Unlock()
+
+			man.activeCheckpointer = nil
 
 			cancelFunc()
 
