@@ -83,14 +83,17 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 
 	var logs []*validatorserver.LogInfo
 	if args.ToHeight == "latest" {
-		logs = m.tracker.FindLogs(&fromHeight, nil, address, topics)
+		logs, err = m.tracker.FindLogs(ctx, &fromHeight, nil, address, topics)
 	} else {
 		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logs = m.tracker.FindLogs(&fromHeight, &toHeight, address, topics)
+		logs, err = m.tracker.FindLogs(ctx, &fromHeight, &toHeight, address, topics)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return &validatorserver.FindLogsReply{
@@ -106,12 +109,12 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 	assertionHash := common.Hash{}
 	copy(assertionHash[:], assertionHashBytes)
 	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
-	outputValue := m.tracker.OutputMsgVal(assertionHash, msgIndex)
+	outputValue, err := m.tracker.OutputMsgVal(ctx, assertionHash, msgIndex)
 
-	if outputValue == nil {
+	if outputValue == nil || err != nil {
 		return &validatorserver.GetOutputMessageReply{
 			Found: false,
-		}, nil
+		}, err
 	} else {
 		var buf bytes.Buffer
 		_ = value.MarshalValue(outputValue, &buf)
@@ -130,7 +133,11 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 	}
 	txHash := common.Hash{}
 	copy(txHash[:], txHashBytes)
-	txInfo := m.tracker.TxInfo(txHash)
+	txInfo, err := m.tracker.TxInfo(ctx, txHash)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if !txInfo.Found {
 		return &validatorserver.GetMessageResultReply{
@@ -151,15 +158,18 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 }
 
 // GetAssertionCount returns the total number of finalized assertions
-func (m *Server) GetAssertionCount(ctx context.Context, args *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
-	req := m.tracker.AssertionCount()
+func (m *Server) GetAssertionCount(ctx context.Context, _ *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
+	req, err := m.tracker.AssertionCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &validatorserver.GetAssertionCountReply{
 		AssertionCount: int32(req),
 	}, nil
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetVMInfo(ctx context.Context, args *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
+func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
 	return &validatorserver.GetVMInfoReply{
 		VmID: hexutil.Encode(m.rollupAddress[:]),
 	}, nil
