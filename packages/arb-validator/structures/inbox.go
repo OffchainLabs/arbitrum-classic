@@ -19,15 +19,14 @@ package structures
 import (
 	"errors"
 	"fmt"
+
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 type messageStackItem struct {
@@ -148,7 +147,7 @@ func hash2(h1, h2 common.Hash) common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
 }
 
-func (ms *MessageStack) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *InboxBuf {
+func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *InboxBuf {
 	var items []*InboxItemBuf
 	for item := ms.newest; item != nil; item = item.prev {
 		checkpointVal := item.message.CheckpointValue()
@@ -171,7 +170,7 @@ func (ms *MessageStack) MarshalForCheckpoint(ctx *checkpointing.CheckpointContex
 	}
 }
 
-func (buf *InboxBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) (*MessageStack, error) {
+func (buf *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*MessageStack, error) {
 	ret := NewMessageStack()
 	ret.hashOfRest = buf.HashOfRest.Unmarshal()
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {

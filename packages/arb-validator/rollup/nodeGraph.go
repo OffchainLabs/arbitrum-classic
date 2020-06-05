@@ -18,29 +18,29 @@ package rollup
 
 import (
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type NodeGraph struct {
-	latestConfirmed *Node
+	latestConfirmed *structures.Node
 	leaves          *LeafSet
-	nodeFromHash    map[common.Hash]*Node
-	oldestNode      *Node
+	nodeFromHash    map[common.Hash]*structures.Node
+	oldestNode      *structures.Node
 	params          valprotocol.ChainParams
 }
 
 func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
-	newNode := NewInitialNode(machine)
-	nodeFromHash := make(map[common.Hash]*Node)
-	nodeFromHash[newNode.hash] = newNode
+	newNode := structures.NewInitialNode(machine)
+	nodeFromHash := make(map[common.Hash]*structures.Node)
+	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()
 	leaves.Add(newNode)
 	return &NodeGraph{
@@ -52,64 +52,63 @@ func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *Node
 	}
 }
 
-func (chain *NodeGraph) MarshalForCheckpoint(ctx *checkpointing.CheckpointContext) *NodeGraphBuf {
-	var allNodes []*NodeBuf
-	for _, n := range chain.nodeFromHash {
-		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))
+func (ng *NodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *NodeGraphBuf {
+	var allNodes []*structures.NodeBuf
+	for _, n := range ng.nodeFromHash {
+		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx, true))
 	}
 	var leafHashes []common.Hash
-	chain.leaves.forall(func(node *Node) {
-		leafHashes = append(leafHashes, node.hash)
+	ng.leaves.forall(func(node *structures.Node) {
+		leafHashes = append(leafHashes, node.Hash())
 	})
 	return &NodeGraphBuf{
 		Nodes:               allNodes,
-		OldestNodeHash:      chain.oldestNode.hash.MarshalToBuf(),
-		LatestConfirmedHash: chain.latestConfirmed.hash.MarshalToBuf(),
+		OldestNodeHash:      ng.oldestNode.Hash().MarshalToBuf(),
+		LatestConfirmedHash: ng.latestConfirmed.Hash().MarshalToBuf(),
 		LeafHashes:          common.MarshalSliceOfHashes(leafHashes),
-		Params:              chain.params.MarshalToBuf(),
+		Params:              ng.params.MarshalToBuf(),
 	}
 }
 
-func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *NodeGraph {
+func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *NodeGraph {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
-		nodeFromHash:    make(map[common.Hash]*Node),
+		nodeFromHash:    make(map[common.Hash]*structures.Node),
 		oldestNode:      nil,
-		params:          buf.Params.Unmarshal(),
+		params:          x.Params.Unmarshal(),
 	}
 
 	// unmarshal nodes; their prev/successors will not be set up yet
-	for _, nodeBuf := range buf.Nodes {
-		node := nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
-		chain.nodeFromHash[node.hash] = node
+	for _, nodeBuf := range x.Nodes {
+		nd := nodeBuf.UnmarshalFromCheckpoint(ctx)
+		chain.nodeFromHash[nd.Hash()] = nd
 	}
 	// now set up prevs and successors for all nodes
-	for _, nodeBuf := range buf.Nodes {
-		nodeHash := nodeBuf.Hash.Unmarshal()
-		node := chain.nodeFromHash[nodeHash]
-		if nodeBuf.PrevHash != nil {
-			prevHash := nodeBuf.PrevHash.Unmarshal()
-			prev, ok := chain.nodeFromHash[prevHash]
+	for _, nd := range chain.nodeFromHash {
+		if !nd.IsInitial() {
+			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
-				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", prevHash, nodeHash)
+				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
 			}
-			node.prev = prev
-			prev.successorHashes[node.linkType] = nodeHash
+			if err := structures.Link(nd, prev); err != nil {
+				// This can only fail if prev is not actually the prev of nd
+				log.Fatal(err)
+			}
 		}
 	}
 
-	chain.oldestNode = chain.nodeFromHash[buf.OldestNodeHash.Unmarshal()]
-	for _, leafHashStr := range buf.LeafHashes {
+	chain.oldestNode = chain.nodeFromHash[x.OldestNodeHash.Unmarshal()]
+	for _, leafHashStr := range x.LeafHashes {
 		leafHash := leafHashStr.Unmarshal()
-		node := chain.nodeFromHash[leafHash]
-		if node == nil {
+		nd := chain.nodeFromHash[leafHash]
+		if nd == nil {
 			log.Fatal("unexpected nil node")
 		}
-		chain.leaves.Add(node)
+		chain.leaves.Add(nd)
 	}
 
-	lcHash := buf.LatestConfirmedHash.Unmarshal()
+	lcHash := x.LatestConfirmedHash.Unmarshal()
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
@@ -119,8 +118,8 @@ func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
 	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
 }
 
-func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet, prefix string) string {
-	ret := prefix + strconv.Itoa(int(node.linkType)) + ":" + node.hash.ShortString()
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string) string {
+	ret := prefix + strconv.Itoa(int(node.LinkType())) + ":" + node.Hash().ShortString()
 	if ng.leaves.IsLeaf(node) {
 		ret = ret + " leaf"
 	}
@@ -135,7 +134,7 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *Node, stakers *StakerSet,
 	ret = ret + "\n"
 	subPrefix := prefix + "  "
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
-		succi := node.successorHashes[i]
+		succi := node.SuccessorHashes()[i]
 		if !succi.Equals(common.Hash{}) {
 			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
 		}
@@ -159,31 +158,29 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 	return true
 }
 
-func (chain *NodeGraph) pruneNode(node *Node) {
-	oldNode := node.prev
-	node.prev = nil // so garbage collector doesn't preserve prev anymore
-	if oldNode != nil {
-		oldNode.successorHashes[node.linkType] = zeroBytes32
-		chain.considerPruningNode(oldNode)
+func (ng *NodeGraph) pruneNode(node *structures.Node) {
+	oldNode := node.Prev()
+	if node.UnlinkPrev() {
+		ng.considerPruningNode(oldNode)
 	}
-	delete(chain.nodeFromHash, node.hash)
+	delete(ng.nodeFromHash, node.Hash())
 }
 
-func (chain *NodeGraph) pruneOldestNode(oldest *Node) {
+func (ng *NodeGraph) pruneOldestNode(oldest *structures.Node) {
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
-		succHash := oldest.successorHashes[i]
+		succHash := oldest.SuccessorHashes()[i]
 		if !succHash.Equals(common.Hash{}) {
-			chain.nodeFromHash[succHash].prev = nil
+			ng.nodeFromHash[succHash].ClearPrev()
 		}
 	}
-	delete(chain.nodeFromHash, oldest.hash)
+	delete(ng.nodeFromHash, oldest.Hash())
 }
 
-func (chain *NodeGraph) HasReference(node *Node) bool {
-	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
+func (ng *NodeGraph) HasReference(node *structures.Node) bool {
+	if node.NumStakers() > 0 || ng.leaves.IsLeaf(node) {
 		return true
 	}
-	for _, nodeHash := range node.successorHashes {
+	for _, nodeHash := range node.SuccessorHashes() {
 		if nodeHash != zeroBytes32 {
 			return true
 		}
@@ -191,82 +188,81 @@ func (chain *NodeGraph) HasReference(node *Node) bool {
 	return false
 }
 
-func (chain *NodeGraph) considerPruningNode(node *Node) {
-	if !chain.HasReference(node) {
-		chain.pruneNode(node)
+func (ng *NodeGraph) considerPruningNode(node *structures.Node) {
+	if !ng.HasReference(node) {
+		ng.pruneNode(node)
 	}
 }
 
-func (chain *NodeGraph) getLeaf(node *Node) *Node {
-	for _, successor := range node.successorHashes {
+func (ng *NodeGraph) getLeaf(node *structures.Node) *structures.Node {
+	for _, successor := range node.SuccessorHashes() {
 		if successor != zeroBytes32 {
-			return chain.getLeaf(chain.nodeFromHash[successor])
+			return ng.getLeaf(ng.nodeFromHash[successor])
 		}
 	}
 	return node
 }
 
-func (chain *NodeGraph) CreateNodesOnAssert(
-	prevNode *Node,
+func (ng *NodeGraph) CreateNodesOnAssert(
+	prevNode *structures.Node,
 	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) {
-	if !chain.leaves.IsLeaf(prevNode) {
+	if !ng.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}
-	chain.leaves.Delete(prevNode)
+	ng.leaves.Delete(prevNode)
 
 	// create nodes for invalid branches
 	for kind := valprotocol.ChildType(0); kind <= valprotocol.MaxInvalidChildType; kind++ {
-		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
-		chain.nodeFromHash[newNode.hash] = newNode
-		chain.leaves.Add(newNode)
+		newNode := structures.NewNodeFromInvalidPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		ng.nodeFromHash[newNode.Hash()] = newNode
+		ng.leaves.Add(newNode)
 	}
 
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, chain.params, currentTime, assertionTxHash)
-	chain.nodeFromHash[newNode.hash] = newNode
-	chain.leaves.Add(newNode)
+	newNode := structures.NewNodeFromValidPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	ng.nodeFromHash[newNode.Hash()] = newNode
+	ng.leaves.Add(newNode)
 }
 
-func (chain *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
-	node := chain.nodeFromHash[nodeHash]
-	chain.pruneNode(node)
+func (ng *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
+	nd := ng.nodeFromHash[nodeHash]
+	ng.pruneNode(nd)
 }
 
-func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
-	n1, _, _, _ = chain.GetConflictAncestor(n1, n2)
-	return n1.prev
-}
-
-func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, valprotocol.ChildType, error) {
+func GetConflictAncestor(n1, n2 *structures.Node) (*structures.Node, *structures.Node, valprotocol.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1
 	prevN2 := n2
-	for n1.depth > n2.depth {
+	for n1.Depth() > n2.Depth() {
 		prevN1 = n1
-		n1 = n1.prev
+		n1 = n1.Prev()
 	}
-	for n2.depth > n1.depth {
+	for n2.Depth() > n1.Depth() {
 		prevN2 = n2
-		n2 = n2.prev
+		n2 = n2.Prev()
 	}
 
 	for n1 != n2 {
 		prevN1 = n1
 		prevN2 = n2
-		n1 = n1.prev
-		n2 = n2.prev
+		n1 = n1.Prev()
+		n2 = n2.Prev()
 	}
 
 	if n1 == n1Orig || n1 == n2Orig {
 		return prevN1, prevN2, 0, errors.New("no conflict")
 	}
-	linkType := prevN1.linkType
-	if prevN2.linkType < linkType {
-		linkType = prevN2.linkType
+	linkType := prevN1.LinkType()
+	if prevN2.LinkType() < linkType {
+		linkType = prevN2.LinkType()
 	}
 
 	return prevN1, prevN2, linkType, nil
+}
+
+func (ng *NodeGraph) GetSuccessor(node *structures.Node, kind valprotocol.ChildType) *structures.Node {
+	return ng.nodeFromHash[node.SuccessorHashes()[kind]]
 }

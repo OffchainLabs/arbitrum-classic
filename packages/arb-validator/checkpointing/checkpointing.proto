@@ -17,6 +17,7 @@
 syntax = "proto3";
 package structures;
 import "common/common.proto";
+import "ckptcontext/ckptcontext.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing";
 
 message CheckpointMetadata {
@@ -30,11 +31,6 @@ message CheckpointLinks {
     common.BlockIdBuf prev = 2;
 }
 
-message CheckpointManifest {
-    repeated common.HashBuf values = 1;
-    repeated common.HashBuf machines = 2;
-}
-
 message HeightBoundsBuf {
     common.TimeBlocksBuf lo = 1;
     common.TimeBlocksBuf hi = 2;
@@ -42,5 +38,5 @@ message HeightBoundsBuf {
 
 message CheckpointWithManifest {
     bytes              contents = 1;
-    CheckpointManifest manifest = 2;
+    ckptcontext.CheckpointManifest manifest = 2;
 }

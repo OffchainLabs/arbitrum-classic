@@ -16,7 +16,12 @@
 
 package cmachine
 
+/*
+#include "../cavm/ctypes.h"
+#include <stdlib.h>
+*/
 import "C"
+
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -44,6 +49,14 @@ func hashToData(val common.Hash) unsafe.Pointer {
 	return C.CBytes(lowerBoundBlockBuf.Bytes())
 }
 
+func dataToHash(ptr unsafe.Pointer) common.Hash {
+	defer C.free(ptr)
+	dataBuff := C.GoBytes(ptr, 32)
+	var hash common.Hash
+	copy(hash[:], dataBuff)
+	return hash
+}
+
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)
@@ -55,4 +68,9 @@ func bytesArrayToVals(data []byte, valCount int) []value.Value {
 		vals = append(vals, val)
 	}
 	return vals
+}
+
+func toByteSlice(slice C.ByteSlice) []byte {
+	defer C.free(unsafe.Pointer(slice.data))
+	return C.GoBytes(unsafe.Pointer(slice.data), slice.length)
 }

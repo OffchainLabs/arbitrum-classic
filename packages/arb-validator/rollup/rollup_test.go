@@ -18,6 +18,8 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
 	"time"
@@ -56,7 +58,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
-	ctx := checkpointing.NewCheckpointContext()
+	ctx := ckptcontext.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
 	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if err != nil {
@@ -78,10 +80,13 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
-	doAnAssertion(chain, validTip)
+	if err := doAnAssertion(chain, chain.nodeGraph.latestConfirmed); err != nil {
+		t.Fatal(err)
+	}
+	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
+	if err := doAnAssertion(chain, validTip); err != nil {
+		t.Fatal(err)
+	}
 	if chain.nodeGraph.leaves.NumLeaves() != 7 {
 		t.Fatal("unexpected leaf count")
 	}
@@ -101,17 +106,19 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 		t.Fatal(err)
 	}
 
-	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
+	if err := doAnAssertion(chain, chain.nodeGraph.latestConfirmed); err != nil {
+		t.Fatal(err)
+	}
 	staker1addr := common.Address{1}
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
-	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.ValidChildType)
-	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, valprotocol.InvalidMessagesChildType)
-	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
+	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
+	tip2 := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.InvalidMessagesChildType)
+	n1, _, childType, err := GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	confNode := n1.prev
+	confNode := n1.Prev()
 	if !confNode.Equals(chain.nodeGraph.latestConfirmed) {
 		t.Fatal("unexpected value for conflict ancestor")
 	}
@@ -119,8 +126,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 		t.Fatal("unexpected value for conflict type")
 	}
 
-	createOneStaker(chain, staker1addr, validTip.hash)
-	createOneStaker(chain, staker2addr, tip2.hash)
+	createOneStaker(chain, staker1addr, validTip.Hash())
+	createOneStaker(chain, staker2addr, tip2.Hash())
 	chain.nodeGraph.NewChallenge(&Challenge{
 		blockId:      chain.latestBlockId,
 		logIndex:     0,
@@ -137,8 +144,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	tryMarshalUnmarshal(chain, t)
 }
 
-func doAnAssertion(chain *ChainObserver, baseNode *Node) {
-	theMachine := baseNode.machine
+func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
+	theMachine := baseNode.Machine()
 	timeBounds := &protocol.TimeBounds{
 		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
 		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
@@ -180,7 +187,13 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		common.NewTimeBlocks(big.NewInt(10)),
 		common.Hash{},
 	)
-	chain.nodeGraph.nodeFromHash[baseNode.successorHashes[3]].machine = theMachine
+
+	nextValid := chain.nodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)
+
+	if err := nextValid.UpdateValidOpinion(theMachine, execAssertion); err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestCreateStakers(t *testing.T) {
@@ -236,7 +249,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 
 func createSomeStakers(chain *ChainObserver) {
 	for i := byte(0); i < 5; i++ {
-		createOneStaker(chain, common.Address{i}, chain.nodeGraph.latestConfirmed.hash)
+		createOneStaker(chain, common.Address{i}, chain.nodeGraph.latestConfirmed.Hash())
 	}
 }
 

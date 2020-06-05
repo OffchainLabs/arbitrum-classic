@@ -16,6 +16,7 @@
 
 #include <data_storage/blockstore.hpp>
 #include <data_storage/datastorage.hpp>
+#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>
 
@@ -39,6 +40,8 @@ DataStorage::DataStorage(const std::string& db_path) {
         rocksdb::kDefaultColumnFamilyName, rocksdb::ColumnFamilyOptions()));
     column_families.push_back(rocksdb::ColumnFamilyDescriptor(
         "blocks", rocksdb::ColumnFamilyOptions()));
+    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
+        "nodes", rocksdb::ColumnFamilyOptions()));
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -52,14 +55,16 @@ DataStorage::DataStorage(const std::string& db_path) {
         throw std::exception();
     }
     assert(status.ok());
-    txn_db = std::shared_ptr<rocksdb::TransactionDB>(db);
-    default_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
-    blocks_column = std::shared_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
+    txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
+    default_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
+    blocks_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
+    node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
     blocks_column.reset();
     default_column.reset();
+    node_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
@@ -89,16 +94,4 @@ std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     auto transaction = std::unique_ptr<rocksdb::Transaction>(
         txn_db->BeginTransaction(writeOptions));
     return std::make_unique<Transaction>(std::move(transaction));
-}
-
-std::unique_ptr<KeyValueStore> DataStorage::makeKeyValueStore() {
-    rocksdb::WriteOptions writeOptions;
-    auto transaction = std::unique_ptr<rocksdb::Transaction>(
-        txn_db->BeginTransaction(writeOptions));
-    return std::make_unique<KeyValueStore>(std::move(transaction),
-                                           default_column);
-}
-
-std::unique_ptr<BlockStore> DataStorage::getBlockStore() const {
-    return std::make_unique<BlockStore>(txn_db, blocks_column);
 }

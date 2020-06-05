@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"strconv"
 
@@ -26,7 +27,7 @@ import (
 
 type Staker struct {
 	address      common.Address
-	location     *Node
+	location     *structures.Node
 	creationTime common.TimeTicks
 	challenge    common.Address
 }
@@ -40,7 +41,7 @@ func NewStakerSet() *StakerSet {
 }
 
 func (sl *StakerSet) Add(newStaker *Staker) {
-	newStaker.location.numStakers++
+	newStaker.location.AddStaker()
 	if _, ok := sl.idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
@@ -66,14 +67,14 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	if staker.challenge == emptyAddress {
 		return &StakerBuf{
 			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.hash.MarshalToBuf(),
+			Location:      staker.location.Hash().MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
 			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.hash.MarshalToBuf(),
+			Location:      staker.location.Hash().MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: staker.challenge.MarshallToBuf(),
 		}
@@ -110,7 +111,7 @@ func (ss *StakerSet) DebugString(prefix string) string {
 }
 
 func (s *Staker) DebugString(prefix string) string {
-	ret := prefix + "depth:" + strconv.FormatUint(s.location.depth, 10) + " addr:" + s.address.ShortString() + " created:" + s.creationTime.String() + " loc:" + s.location.hash.ShortString()
+	ret := prefix + "depth:" + strconv.FormatUint(s.location.Depth(), 10) + " addr:" + s.address.ShortString() + " created:" + s.creationTime.String() + " loc:" + s.location.Hash().ShortString()
 	if !s.challenge.IsZero() {
 		ret = ret + " chal:" + s.challenge.ShortString()
 	}
@@ -137,7 +138,7 @@ func (s *Staker) Equals(s2 *Staker) bool {
 	if bytes.Compare(s.address[:], s2.address[:]) != 0 {
 		return false
 	}
-	if s.location.hash != s2.location.hash {
+	if s.location.Hash() != s2.location.Hash() {
 		return false
 	}
 	if !s.creationTime.Equals(s2.creationTime) {

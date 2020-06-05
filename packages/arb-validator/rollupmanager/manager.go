@@ -18,6 +18,7 @@ package rollupmanager
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
 	"sync"
@@ -125,7 +126,7 @@ func CreateManagerAdvanced(
 			}
 
 			if checkpointer.HasCheckpointedState() {
-				err := checkpointer.RestoreLatestState(runCtx, clnt, func(chainObserverBytes []byte, restoreCtx checkpointing.RestoreContext) error {
+				err := checkpointer.RestoreLatestState(runCtx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
 					chainObserverBuf := &rollup.ChainObserverBuf{}
 					if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 						log.Fatal(err)
@@ -213,7 +214,10 @@ func CreateManagerAdvanced(
 						break runLoop
 					}
 					for _, event := range events {
-						chain.HandleNotification(runCtx, event)
+						if err := chain.HandleNotification(runCtx, event); err != nil {
+							log.Println("Manager hit error processing events", err)
+							break runLoop
+						}
 					}
 				case action := <-man.actionChan:
 					action(chain)

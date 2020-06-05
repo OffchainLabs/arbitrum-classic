@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
@@ -27,7 +29,7 @@
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const std::string& contract_path)
-    : datastorage(std::make_unique<DataStorage>(db_path)),
+    : datastorage(std::make_shared<DataStorage>(db_path)),
       pool(std::make_shared<TuplePool>()) {
     initial_state = parseInitialVmValues(contract_path, *pool.get());
 }
@@ -56,9 +58,13 @@ std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
 }
 
 std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {
-    return datastorage->makeKeyValueStore();
+    return std::make_unique<KeyValueStore>(datastorage);
 }
 
 std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
-    return datastorage->getBlockStore();
+    return std::make_unique<BlockStore>(datastorage);
+}
+
+std::unique_ptr<NodeStore> CheckpointStorage::getNodeStore() const {
+    return std::make_unique<NodeStore>(datastorage);
 }

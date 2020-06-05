@@ -14,12 +14,14 @@
 * limitations under the License.
  */
 
-package checkpointing
+package ckptcontext
 
 import (
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"log"
 )
 
 type RestoreContext interface {
@@ -75,4 +77,38 @@ func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
 
 func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
 	return ctx.machines[h]
+}
+
+func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {
+	for _, val := range ckpCtx.Values() {
+		if ok := db.SaveValue(val); !ok {
+			return errors.New("failed to write value to checkpoint db")
+		}
+	}
+	for _, mach := range ckpCtx.Machines() {
+		if ok := mach.Checkpoint(db); !ok {
+			return errors.New("failed to write machine to checkpoint db")
+		}
+	}
+	return nil
+}
+
+type SimpleRestore struct {
+	db machine.CheckpointStorage
+}
+
+func NewSimpleRestore(db machine.CheckpointStorage) *SimpleRestore {
+	return &SimpleRestore{db: db}
+}
+
+func (sr *SimpleRestore) GetValue(h common.Hash) value.Value {
+	return sr.db.GetValue(h)
+}
+
+func (sr *SimpleRestore) GetMachine(h common.Hash) machine.Machine {
+	ret, err := sr.db.GetMachine(h)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ret
 }

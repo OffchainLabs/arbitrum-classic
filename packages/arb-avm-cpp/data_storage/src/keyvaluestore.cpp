@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <data_storage/datastorage.hpp>
 #include <data_storage/keyvaluestore.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
@@ -23,31 +24,23 @@ rocksdb::Status KeyValueStore::saveData(
     const rocksdb::Slice& key,
     const std::vector<unsigned char>& value) {
     std::string value_str(value.begin(), value.end());
-
-    auto save_status = transaction->Put(column.get(), key, value_str);
-
-    if (save_status.ok()) {
-        return transaction->Commit();
-    } else {
-        return save_status;
-    }
+    rocksdb::Slice value_slice(reinterpret_cast<const char*>(value.data()),
+                               value.size());
+    return data_storage->txn_db->Put(rocksdb::WriteOptions(),
+                                     data_storage->default_column.get(), key,
+                                     value_slice);
 }
 
 rocksdb::Status KeyValueStore::deleteData(const rocksdb::Slice& key) {
-    auto delete_status = transaction->Delete(column.get(), key);
-
-    if (delete_status.ok()) {
-        return transaction->Commit();
-    } else {
-        return delete_status;
-    }
+    return data_storage->txn_db->Delete(
+        rocksdb::WriteOptions(), data_storage->default_column.get(), key);
 }
 
 DataResults KeyValueStore::getData(const rocksdb::Slice& key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string stored_value;
-    auto status =
-        transaction->Get(read_options, column.get(), key, &stored_value);
+    auto status = data_storage->txn_db->Get(
+        read_options, data_storage->default_column.get(), key, &stored_value);
     auto data =
         std::vector<unsigned char>(stored_value.begin(), stored_value.end());
 

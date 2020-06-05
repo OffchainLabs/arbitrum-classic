@@ -18,6 +18,7 @@ package rolluptest
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -55,11 +56,11 @@ type evilRollupCheckpointer struct {
 }
 
 func (e evilRollupCheckpointer) GetValue(h common.Hash) value.Value {
-	return e.cp.(checkpointing.RestoreContext).GetValue(h)
+	return e.cp.(ckptcontext.RestoreContext).GetValue(h)
 }
 
 func (e evilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.(checkpointing.RestoreContext).GetMachine(h).(*cmachine.Machine))
+	return NewEvilMachine(e.cp.(ckptcontext.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
 func (fac *EvilRollupCheckpointerFactory) New(ctx context.Context) checkpointing.RollupCheckpointer {
@@ -73,19 +74,19 @@ func (e evilRollupCheckpointer) HasCheckpointedState() bool {
 func (e evilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, checkpointing.RestoreContext) error,
+	unmarshalFunc func([]byte, ckptcontext.RestoreContext) error,
 ) error {
 	return e.cp.RestoreLatestState(
 		ctx,
 		clnt,
-		func(contents []byte, resCtx checkpointing.RestoreContext) error {
+		func(contents []byte, resCtx ckptcontext.RestoreContext) error {
 			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
 		},
 	)
 }
 
 type evilRestoreContext struct {
-	rc checkpointing.RestoreContext
+	rc ckptcontext.RestoreContext
 }
 
 func (erc *evilRestoreContext) GetValue(h common.Hash) value.Value {
@@ -104,6 +105,10 @@ func (e evilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *checkpointing.CheckpointContext) {
+func (e evilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) {
 	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
+}
+
+func (e evilRollupCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
+	return e.cp.CheckpointConfirmedNode(nodeHash, depth, nodeData, cpCtx)
 }

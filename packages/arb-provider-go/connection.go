@@ -361,9 +361,9 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 		defer ticker.Stop()
 		for {
 			select {
-			case <- sub.closeChan:
+			case <-sub.closeChan:
 				return
-			case <- ticker.C:
+			case <-ticker.C:
 				logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
 				if err != nil {
 					sub.errChan <- err

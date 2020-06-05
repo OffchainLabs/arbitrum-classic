@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"sync"
@@ -106,8 +107,8 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 
 func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *StakingKey) error {
 	location := chain.knownValidNode
-	proof1 := GeneratePathProof(chain.nodeGraph.latestConfirmed, location)
-	proof2 := GeneratePathProof(location, chain.nodeGraph.getLeaf(location))
+	proof1 := structures.GeneratePathProof(chain.nodeGraph.latestConfirmed, location)
+	proof2 := structures.GeneratePathProof(location, chain.nodeGraph.getLeaf(location))
 	stakeAmount := chain.nodeGraph.params.StakeRequirement
 
 	log.Println("Placing stake for", stakingKey.client.Address())
@@ -164,7 +165,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 			// stakingKey is not staked
 			continue
 		}
-		proof := GeneratePathProof(stakerPos.location, leaf)
+		proof := structures.GeneratePathProof(stakerPos.location, leaf)
 		if proof == nil {
 			// staker can't move to new asertion
 			continue
@@ -327,7 +328,7 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 	startLogIndex := chal.logIndex - 1
 	asserterKey, ok := lis.stakingKeys[chal.asserter]
 	if ok {
-		switch chal.conflictNode.linkType {
+		switch chal.conflictNode.LinkType() {
 		case valprotocol.InvalidInboxTopChildType:
 			go func() {
 				res, err := challenges.DefendInboxTopClaim(
@@ -337,10 +338,10 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					startBlockId,
 					startLogIndex,
 					chain.inbox.MessageStack,
-					chal.conflictNode.disputable.AssertionClaim.AfterInboxTop,
+					chal.conflictNode.Disputable().AssertionClaim.AfterInboxTop,
 					new(big.Int).Sub(
-						chal.conflictNode.disputable.MaxInboxCount,
-						new(big.Int).Add(chal.conflictNode.prev.vmProtoData.InboxCount, chal.conflictNode.disputable.AssertionParams.ImportedMessageCount),
+						chal.conflictNode.Disputable().MaxInboxCount,
+						new(big.Int).Add(chal.conflictNode.Prev().VMProtoData().InboxCount, chal.conflictNode.Disputable().AssertionParams.ImportedMessageCount),
 					),
 					100,
 				)
@@ -359,8 +360,8 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					startBlockId,
 					startLogIndex,
 					chain.inbox.MessageStack,
-					chal.conflictNode.vmProtoData.InboxTop,
-					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					chal.conflictNode.VMProtoData().InboxTop,
+					chal.conflictNode.Disputable().AssertionParams.ImportedMessageCount,
 					100,
 				)
 				if err != nil {
@@ -378,8 +379,8 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					startBlockId,
 					startLogIndex,
 					chain.executionPrecondition(chal.conflictNode),
-					chal.conflictNode.prev.machine,
-					chal.conflictNode.disputable.AssertionParams.NumSteps,
+					chal.conflictNode.Prev().Machine(),
+					chal.conflictNode.Disputable().AssertionParams.NumSteps,
 					50,
 				)
 				if err != nil {
@@ -395,7 +396,7 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 
 	challenger, ok := lis.stakingKeys[chal.challenger]
 	if ok {
-		switch chal.conflictNode.linkType {
+		switch chal.conflictNode.LinkType() {
 		case valprotocol.InvalidInboxTopChildType:
 			go func() {
 				res, err := challenges.ChallengeInboxTopClaim(
@@ -422,8 +423,8 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					startBlockId,
 					startLogIndex,
 					chain.inbox.MessageStack,
-					chal.conflictNode.vmProtoData.InboxTop,
-					chal.conflictNode.disputable.AssertionParams.ImportedMessageCount,
+					chal.conflictNode.VMProtoData().InboxTop,
+					chal.conflictNode.Disputable().AssertionParams.ImportedMessageCount,
 					false,
 				)
 				if err != nil {
@@ -441,7 +442,7 @@ func (lis *ValidatorChainListener) launchChallenge(ctx context.Context, chain *C
 					startBlockId,
 					startLogIndex,
 					chain.executionPrecondition(chal.conflictNode),
-					chal.conflictNode.prev.machine,
+					chal.conflictNode.Prev().Machine(),
 					false,
 				)
 				if err != nil {
@@ -560,9 +561,9 @@ func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Conte
 			continue
 		}
 		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
-		if newValidNode.depth > staker.location.depth {
-			proof1 := GeneratePathProof(staker.location, newValidNode)
-			proof2 := GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
+		if newValidNode.Depth() > staker.location.Depth() {
+			proof1 := structures.GeneratePathProof(staker.location, newValidNode)
+			proof2 := structures.GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
 			lis.actor.MoveStake(ctx, proof1, proof2)
 		}
 	}
