@@ -68,7 +68,7 @@ func newNodeInfo() *nodeInfo {
 func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
 	ethLogs := make([]*types.Log, 0)
 	logIndex := uint(0)
-	for _, logsInfo := range ni.TxLogs {
+	for _, logsInfo := range ni.EVMLogs {
 		for _, ethLog := range logsInfo.Logs {
 			topics := make([]ethcommon.Hash, 0, len(ethLog.Topics))
 			for _, topic := range ethLog.Topics {
@@ -105,7 +105,7 @@ func (x *NodeMetadata) MaybeMatchesLogQuery(address *common.Address, topics []co
 
 func (ni *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
-	for _, txLogs := range ni.TxLogs {
+	for _, txLogs := range ni.EVMLogs {
 		for _, evmLog := range txLogs.Logs {
 			if address != nil && *address != evmLog.Address {
 				continue
@@ -218,10 +218,10 @@ func (tr *txTracker) OutputMsgVal(ctx context.Context, nodeHash common.Hash, msg
 			return nil
 		}
 
-		if msgIndex < 0 || msgIndex >= int64(len(nodeData.OutMessages)) {
+		if msgIndex < 0 || msgIndex >= int64(len(nodeData.AVMMessages)) {
 			return nil
 		}
-		return nodeData.OutMessages[msgIndex]
+		return nodeData.AVMMessages[msgIndex]
 	})
 	return ret.(value.Value), err
 }
