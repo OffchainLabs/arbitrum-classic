@@ -37,6 +37,7 @@ const (
 )
 
 type ChainListener interface {
+	AddedToChain(context.Context, *ChainObserver)
 	RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node)
 
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
@@ -60,6 +61,9 @@ type ChainListener interface {
 }
 
 type NoopListener struct{}
+
+func (nl *NoopListener) AddedToChain(context.Context, *ChainObserver, *structures.Node) {
+}
 
 func (nl *NoopListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
 }
@@ -189,6 +193,9 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *Pr
 		prepared.claim,
 		proof,
 	)
+}
+
+func (lis *ValidatorChainListener) AddedToChain(context.Context, *ChainObserver) {
 }
 
 func (lis *ValidatorChainListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
@@ -522,7 +529,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observer *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
+func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, _ *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
@@ -546,7 +553,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observe
 	}()
 }
 
-func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []valprotocol.PruneParams) {
+func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, _ *ChainObserver, params []valprotocol.PruneParams) {
 	// Anyone can prune a leaf
 	leavesToPrune := make([]valprotocol.PruneParams, 0, len(params))
 	lis.Lock()
@@ -577,29 +584,31 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 	}()
 }
 
-func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []RecoverStakeMootedParams) {
+func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, _ *ChainObserver, params []RecoverStakeMootedParams) {
 	// Anyone can moot any stake
 	for _, moot := range params {
+		mootCopy := moot
 		go func() {
 			lis.actor.RecoverStakeMooted(
 				ctx,
-				moot.ancestorHash,
-				moot.addr,
-				moot.lcProof,
-				moot.stProof,
+				mootCopy.ancestorHash,
+				mootCopy.addr,
+				mootCopy.lcProof,
+				mootCopy.stProof,
 			)
 		}()
 	}
 }
 
-func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *ChainObserver, params []RecoverStakeOldParams) {
+func (lis *ValidatorChainListener) OldStakes(ctx context.Context, _ *ChainObserver, params []RecoverStakeOldParams) {
 	// Anyone can remove an old stake
 	for _, old := range params {
+		oldCopy := old
 		go func() {
 			lis.actor.RecoverStakeOld(
 				ctx,
-				old.addr,
-				old.proof,
+				oldCopy.addr,
+				oldCopy.proof,
 			)
 		}()
 	}

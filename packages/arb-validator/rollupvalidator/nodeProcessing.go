@@ -29,15 +29,25 @@ import (
 )
 
 type nodeInfo struct {
-	EVMLogs           []logsInfo
-	LogsAccHashes     []string
-	LogsValHashes     []string
-	AVMLogs           []value.Value
-	AVMMessages       []value.Value
-	NodeHash          common.Hash
-	NodeHeight        uint64
-	TransactionHashes []common.Hash
-	OnChainTxHash     string
+	EVMLogs              []logsInfo
+	EVMTransactionHashes []common.Hash
+
+	// These members contain the logs and messages from the assertion in this
+	// node if there was one, otherwise they are empty lists
+	AVMLogs     []value.Value
+	AVMMessages []value.Value
+
+	// These members are generated from the AVMLogs and stored as an
+	// optimization since there are expensive to generate
+	AVMLogsAccHashes []string
+	AVMLogsValHashes []string
+
+	NodeHash   common.Hash
+	NodeHeight uint64
+
+	// This is the transaction hash of the l1 transaction that was responsible
+	// for creating this node
+	L1TxHash string
 }
 
 type txRecordInfo struct {
@@ -68,7 +78,7 @@ func processNodeImpl(
 	nodeInfo.NodeHash = nodeHash
 	nodeInfo.NodeHeight = nodeHeight
 	txHash := assertionTxHash
-	nodeInfo.OnChainTxHash = hexutil.Encode(txHash[:])
+	nodeInfo.L1TxHash = hexutil.Encode(txHash[:])
 
 	if linkType != valprotocol.ValidChildType {
 		return nodeInfo, nil
@@ -78,23 +88,23 @@ func processNodeImpl(
 
 	nodeInfo.AVMMessages = assertion.OutMsgs
 	nodeInfo.AVMLogs = assertion.Logs
-	nodeInfo.LogsValHashes = make([]string, 0, len(logs))
-	nodeInfo.LogsAccHashes = make([]string, 0, len(logs))
+	nodeInfo.AVMLogsValHashes = make([]string, 0, len(logs))
+	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(logs))
 
 	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
-		nodeInfo.LogsValHashes = append(nodeInfo.LogsValHashes,
+		nodeInfo.AVMLogsValHashes = append(nodeInfo.AVMLogsValHashes,
 			hexutil.Encode(logsValHash[:]))
 		acc = hashing.SoliditySHA3(
 			hashing.Bytes32(acc),
 			hashing.Bytes32(logsValHash),
 		)
-		nodeInfo.LogsAccHashes = append(nodeInfo.LogsAccHashes,
+		nodeInfo.AVMLogsAccHashes = append(nodeInfo.AVMLogsAccHashes,
 			hexutil.Encode(acc.Bytes()))
 	}
 
-	nodeInfo.TransactionHashes = make([]common.Hash, 0, len(logs))
+	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(logs))
 	transactions := make([]txRecordInfo, 0, len(logs))
 
 	for i, logVal := range logs {
@@ -125,7 +135,7 @@ func processNodeImpl(
 			txHash: msg.TxHash,
 		}
 		transactions = append(transactions, info)
-		nodeInfo.TransactionHashes = append(nodeInfo.TransactionHashes, info.txHash)
+		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, info.txHash)
 	}
 	return nodeInfo, transactions
 }
@@ -134,17 +144,17 @@ func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInf
 	zero := common.Hash{}
 
 	var logsPostHash string
-	if len(nodeInfo.LogsAccHashes) > 0 {
-		logsPostHash = nodeInfo.LogsAccHashes[len(nodeInfo.LogsAccHashes)-1]
+	if len(nodeInfo.AVMLogsAccHashes) > 0 {
+		logsPostHash = nodeInfo.AVMLogsAccHashes[len(nodeInfo.AVMLogsAccHashes)-1]
 	} else {
 		logsPostHash = hexutil.Encode(zero[:])
 	}
 
 	logsPreHash := hexutil.Encode(zero[:])
 	if txRecord.TransactionIndex > 0 {
-		logsPreHash = nodeInfo.LogsAccHashes[txRecord.TransactionIndex-1] // Previous acc hash
+		logsPreHash = nodeInfo.AVMLogsAccHashes[txRecord.TransactionIndex-1] // Previous acc hash
 	}
-	logsValHashes := nodeInfo.LogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
+	logsValHashes := nodeInfo.AVMLogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
 
 	return txInfo{
 		Found:           true,
@@ -154,6 +164,6 @@ func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInf
 		LogsPreHash:     logsPreHash,
 		LogsPostHash:    logsPostHash,
 		LogsValHashes:   logsValHashes,
-		OnChainTxHash:   nodeInfo.OnChainTxHash,
+		OnChainTxHash:   nodeInfo.L1TxHash,
 	}
 }

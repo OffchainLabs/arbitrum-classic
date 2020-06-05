@@ -134,12 +134,16 @@ func (ni *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []lo
 	return logs
 }
 
+// txTracker is thread safe
 type txTracker struct {
-	sync.RWMutex
 	rollup.NoopListener
+	chainAddress common.Address
+
+	// The RWMutex protects the variables listed below it
+	//
+	sync.RWMutex
 	txDB          *txDB
 	maxNodeHeight uint64
-	chainAddress  common.Address
 }
 
 func newTxTracker(
@@ -159,7 +163,7 @@ func newTxTracker(
 }
 
 // Delete assertion and transaction data from the reorged blocks if there are any
-func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.ChainObserver, node *structures.Node) {
+func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
 	startDepth := node.Depth()
 	go func() {
 		tr.Lock()
@@ -170,16 +174,30 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, chain *rollup.
 				continue
 			}
 		}
-
 		tr.maxNodeHeight = startDepth
+	}()
+}
 
-		// Next process data for any nodes which have not yet been processed
-		chain.ReplayNodesToLatestValid(tr.processNextNode)
+// AddedToChain is called when this listener is initially connected to the
+// chain. It processes all nodes that are valid, but have not yet been
+// confirmed and saved into the longterm db
+func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver) {
+	nodesToProcess := chain.PendingCorrectNodes()
+	go func() {
+		tr.Lock()
+		defer tr.Unlock()
+		for _, node := range nodesToProcess {
+			tr.processNextNode(node)
+		}
 	}()
 }
 
 func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
-	go tr.processNextNode(node)
+	go func() {
+		tr.Lock()
+		defer tr.Unlock()
+		tr.processNextNode(node)
+	}()
 }
 
 func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, ev arbbridge.ConfirmedEvent) {
@@ -194,14 +212,15 @@ func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, e
 	}()
 }
 
+// processNextNode must be called with a write lock
 func (tr *txTracker) processNextNode(node *structures.Node) {
-	// We must have already processed this node
-	if node.Depth() < tr.maxNodeHeight {
+	// We must have already processed this node if it is olded than the latest
+	// node that we've seen
+	sawOldNode := node.Depth() < tr.maxNodeHeight
+	if sawOldNode {
 		return
 	}
 	nodeInfo, transactions := processNode(node, tr.chainAddress)
-	tr.Lock()
-	defer tr.Unlock()
 	tr.txDB.addUnconfirmedNode(nodeInfo, transactions)
 	tr.maxNodeHeight = node.Depth()
 }

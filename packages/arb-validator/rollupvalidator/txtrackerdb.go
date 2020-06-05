@@ -55,6 +55,9 @@ func newNodeMetadata(node *nodeInfo) *NodeMetadata {
 	return &NodeMetadata{LogBloom: node.calculateBloomFilter().Bytes()}
 }
 
+// txDB is not fully thread safe, but can be accessed safely by multiple
+// readers. Each method of this class is labeled with what type
+// of lock its caller requires
 type txDB struct {
 	db                 machine.CheckpointStorage
 	confirmedNodeStore machine.NodeStore
@@ -87,6 +90,7 @@ func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress co
 	}, nil
 }
 
+// removeUnconfirmedNode requires holding a write lock
 func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
 	nodeHash, err := txdb.lookupNodeHash(nodeHeight)
 	if err != nil {
@@ -100,20 +104,7 @@ func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
 	return nil
 }
 
-func (txdb *txDB) deleteNode(node *nodeInfo) {
-	for _, txHash := range node.TransactionHashes {
-		delete(txdb.transactions, txHash)
-	}
-	delete(txdb.nodeHeightLookup, node.NodeHeight)
-	delete(txdb.nodeHashLookup, node.NodeHash)
-	key := nodeRecordKey{
-		height: node.NodeHeight,
-		hash:   node.NodeHash,
-	}
-	delete(txdb.nodeInfo, key)
-	delete(txdb.nodeMetadata, key)
-}
-
+// addUnconfirmedNode requires holding a write lock
 func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
 	for _, tx := range txes {
 		txdb.transactions[tx.txHash] = tx.record
@@ -128,6 +119,7 @@ func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
 	txdb.nodeMetadata[key] = newNodeMetadata(info)
 }
 
+// confirmNode requires holding a write lock
 func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 	height, err := txdb.lookupNodeHeight(nodeHash)
 	if err != nil {
@@ -152,7 +144,7 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 	if err != nil {
 		return err
 	}
-	for _, txHash := range node.TransactionHashes {
+	for _, txHash := range node.EVMTransactionHashes {
 		txRecord, ok := txdb.transactions[txHash]
 		if !ok {
 			return errors.New("failed to find transaction while confirming")
@@ -170,6 +162,7 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 	return nil
 }
 
+// lookupTxRecord requires holding a read lock
 func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 	txRecord, ok := txdb.transactions[txHash]
 	if ok {
@@ -187,6 +180,7 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 	return txRecord, nil
 }
 
+// lookupNodeHash requires holding a read lock
 func (txdb *txDB) lookupNodeHash(nodeHeight uint64) (common.Hash, error) {
 	nodeHash, found := txdb.nodeHeightLookup[nodeHeight]
 	if found {
@@ -200,6 +194,7 @@ func (txdb *txDB) lookupNodeHash(nodeHeight uint64) (common.Hash, error) {
 	return nodeHash, nil
 }
 
+// lookupNodeHeight requires holding a read lock
 func (txdb *txDB) lookupNodeHeight(nodeHash common.Hash) (uint64, error) {
 	nodeHeight, found := txdb.nodeHashLookup[nodeHash]
 	if found {
@@ -213,19 +208,7 @@ func (txdb *txDB) lookupNodeHeight(nodeHash common.Hash) (uint64, error) {
 	return nodeHeight, nil
 }
 
-func (txdb *txDB) getInMemoryNodeData(key nodeRecordKey) (*nodeInfo, error) {
-	infoData, ok := txdb.nodeInfo[key]
-	if ok {
-		return infoData, nil
-	}
-
-	nodeInfoCache, ok := txdb.confirmedNodeCache.Get(key)
-	if ok {
-		return nodeInfoCache.(*nodeInfo), nil
-	}
-	return nil, errors.New("not found")
-}
-
+// lookupNodeRecord requires holding a read lock
 func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*nodeInfo, error) {
 	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
 	info, err := txdb.getInMemoryNodeData(key)
@@ -249,6 +232,7 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 	return info, nil
 }
 
+// lookupNodeMetadata requires holding a read lock
 func (txdb *txDB) lookupNodeMetadata(nodeHeight uint64, nodeHash common.Hash) (*NodeMetadata, error) {
 	key := nodeRecordKey{height: nodeHeight, hash: nodeHash}
 	metadata, ok := txdb.nodeMetadata[key]
@@ -267,4 +251,33 @@ func (txdb *txDB) lookupNodeMetadata(nodeHeight uint64, nodeHash common.Hash) (*
 	}
 
 	return metadata, nil
+}
+
+// getInMemoryNodeData is a private method that should not be called externally
+func (txdb *txDB) getInMemoryNodeData(key nodeRecordKey) (*nodeInfo, error) {
+	infoData, ok := txdb.nodeInfo[key]
+	if ok {
+		return infoData, nil
+	}
+
+	nodeInfoCache, ok := txdb.confirmedNodeCache.Get(key)
+	if ok {
+		return nodeInfoCache.(*nodeInfo), nil
+	}
+	return nil, errors.New("not found")
+}
+
+// deleteNode is a private method that should not be called externally
+func (txdb *txDB) deleteNode(node *nodeInfo) {
+	for _, txHash := range node.EVMTransactionHashes {
+		delete(txdb.transactions, txHash)
+	}
+	delete(txdb.nodeHeightLookup, node.NodeHeight)
+	delete(txdb.nodeHashLookup, node.NodeHash)
+	key := nodeRecordKey{
+		height: node.NodeHeight,
+		hash:   node.NodeHash,
+	}
+	delete(txdb.nodeInfo, key)
+	delete(txdb.nodeMetadata, key)
 }

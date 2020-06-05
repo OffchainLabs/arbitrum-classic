@@ -99,10 +99,13 @@ func (chain *ChainObserver) Start(ctx context.Context) {
 	}
 }
 
-func (chain *ChainObserver) AddListener(listener ChainListener) {
+func (chain *ChainObserver) AddListener(ctx context.Context, listener ChainListener) {
 	chain.Lock()
 	chain.listeners = append(chain.listeners, listener)
 	chain.Unlock()
+	chain.RLock()
+	listener.AddedToChain(ctx, chain)
+	chain.RUnlock()
 }
 
 func (chain *ChainObserver) NowAtHead() {
@@ -129,7 +132,6 @@ func (chain *ChainObserver) marshalToBytes(ctx *ckptcontext.CheckpointContext) (
 }
 
 func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
-	ctx context.Context,
 	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
@@ -226,16 +228,14 @@ func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
 	}
 }
 
-func (chain *ChainObserver) ReplayNodesToLatestValid(callback func(*structures.Node)) {
+func (chain *ChainObserver) PendingCorrectNodes() []*structures.Node {
 	chain.RLock()
 	defer chain.RUnlock()
 	var nodes []*structures.Node
 	for node := chain.calculatedValidNode; node != chain.nodeGraph.latestConfirmed; node = node.Prev() {
 		nodes = append(nodes, node)
 	}
-	for i := range nodes {
-		callback(nodes[len(nodes)-1-i])
-	}
+	return nodes
 }
 
 func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {

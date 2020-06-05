@@ -124,7 +124,7 @@ func CreateManagerAdvanced(
 			man.activeChain = chain
 			// Add manager's listeners
 			for _, listener := range man.listeners {
-				man.activeChain.AddListener(listener)
+				man.activeChain.AddListener(runCtx, listener)
 			}
 			man.listenersLock.Unlock()
 
@@ -208,7 +208,7 @@ func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.listenersLock.Lock()
 	man.listeners = append(man.listeners, listener)
 	if man.activeChain != nil {
-		man.activeChain.AddListener(listener)
+		man.activeChain.AddListener(context.Background(), listener)
 	}
 	man.listenersLock.Unlock()
 }
@@ -219,7 +219,12 @@ func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration
 	latestBlock := man.activeChain.CurrentBlockId().Height
 	man.validCallLock.Unlock()
 	latestTime := big.NewInt(time.Now().Unix())
-	timeBounds := &protocol.TimeBounds{latestBlock, latestBlock, latestTime, latestTime}
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     latestBlock,
+		UpperBoundBlock:     latestBlock,
+		LowerBoundTimestamp: latestTime,
+		UpperBoundTimestamp: latestTime,
+	}
 	assertion, numSteps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
@@ -295,7 +300,7 @@ func initializeChainObserver(
 				return err
 			}
 			var err error
-			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(ctx, restoreCtx, checkpointer)
+			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
 			return err
 		})
 		return chain, err
