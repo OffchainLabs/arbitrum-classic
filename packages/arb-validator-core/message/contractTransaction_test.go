@@ -65,3 +65,9 @@ func TestCheckpointContractTransaction(t *testing.T) {
 		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
 	}
 }
+
+func TestContractTransactionString(t *testing.T) {
+	msg := generateTestContractTransaction()
+	_ = msg.String()
+	_ = msg.GetFuncName()
+}

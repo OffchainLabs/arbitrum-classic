@@ -276,15 +276,8 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         require(msg.sender == tx.origin, "origin only");
         bytes32 messageHash = keccak256(
             abi.encodePacked(
-                keccak256(
-                    abi.encodePacked(
-                        TRANSACTION_BATCH_MSG,
-                        transactions
-                    )
-                ),
-                block.number,
-                block.timestamp,
-                inboxes[chain].count + 1
+                TRANSACTION_BATCH_MSG,
+                transactions
             )
         );
 
@@ -303,17 +296,13 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.transactionHash(
             _chain,
             _to,
             _from,
             _seqNumber,
             _value,
-            keccak256(_data),
-            block.number,
-            block.timestamp,
-            messageNum
+            keccak256(_data)
         );
 
         _deliverMessage(_chain, messageHash);
@@ -336,17 +325,13 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.ethHash(
             _to,
             _from,
-            _value,
-            block.number,
-            block.timestamp,
-            messageNum
+            _value
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.EthDepositMessageDelivered(
             _chain,
@@ -366,18 +351,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc20Hash(
             _to,
             _from,
             _erc20,
-            _value,
-            block.number,
-            block.timestamp,
-            messageNum
+            _value
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ERC20DepositMessageDelivered(
             _chain,
@@ -398,18 +379,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc721Hash(
             _to,
             _from,
             _erc721,
-            _id,
-            block.number,
-            block.timestamp,
-            messageNum
+            _id
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ERC721DepositMessageDelivered(
             _chain,
@@ -430,18 +407,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.contractTransactionHash(
             _to,
             _from,
             _value,
-            _data,
-            block.number,
-            block.timestamp,
-            messageNum
+            _data
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ContractTransactionMessageDelivered(
             _chain,
@@ -453,9 +426,17 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         );
     }
 
-    function _deliverMessage(address _chain, bytes32 _messageHash) private {
+    function _deliverMessage(address _chain, bytes32 _messageHash) private returns(uint256) {
         Inbox storage inbox = inboxes[_chain];
-        inbox.value = Protocol.addMessageToInbox(inbox.value, _messageHash);
-        inbox.count++;
+        uint256 updatedCount = inbox.count + 1;
+        inbox.value = Messages.addMessageToInbox(
+            inbox.value,
+            _messageHash,
+            block.number,
+            block.timestamp,
+            updatedCount
+        );
+        inbox.count = updatedCount;
+        return updatedCount;
     }
 }

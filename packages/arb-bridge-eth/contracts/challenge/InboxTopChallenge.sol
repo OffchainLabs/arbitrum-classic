@@ -19,7 +19,7 @@ pragma solidity ^0.5.3;
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../arch/Protocol.sol";
+import "../Messages.sol";
 
 
 contract InboxTopChallenge is BisectionChallenge {
@@ -80,7 +80,7 @@ contract InboxTopChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.inboxTopHash(
                 _lowerHash,
-                Protocol.addMessageToInbox(_lowerHash, _value),
+                Messages.addDeliveredMessageToInbox(_lowerHash, _value),
                 1
             )
         );

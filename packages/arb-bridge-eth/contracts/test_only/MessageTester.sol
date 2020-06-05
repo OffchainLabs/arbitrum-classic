@@ -27,10 +27,7 @@ contract MessageTester {
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes memory data,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        bytes memory data
     )
         public
         pure
@@ -42,10 +39,7 @@ contract MessageTester {
             from,
             seqNumber,
             value,
-            keccak256(data),
-            blockNumber,
-            timestamp,
-            messageNum
+            keccak256(data)
         );
     }
 
@@ -76,21 +70,13 @@ contract MessageTester {
     }
 
     function transactionBatchHash(
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp,
-        uint256 messageNum
+        bytes memory transactions
     )
         public
         pure
         returns(bytes32)
     {
-        return Messages.transactionBatchHash(
-            transactions,
-            blockNum,
-            blockTimestamp,
-            messageNum
-        );
+        return Messages.transactionBatchHash(transactions);
     }
 
     function transactionMessageBatchHashSingle(
@@ -156,10 +142,7 @@ contract MessageTester {
     function ethHash(
         address to,
         address from,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         public
         pure
@@ -168,10 +151,7 @@ contract MessageTester {
         return Messages.ethHash(
             to,
             from,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
+            value
         );
     }
 
@@ -201,10 +181,7 @@ contract MessageTester {
         address to,
         address from,
         address erc20,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         public
         pure
@@ -214,10 +191,7 @@ contract MessageTester {
             to,
             from,
             erc20,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
+            value
         );
     }
 
@@ -249,10 +223,7 @@ contract MessageTester {
         address to,
         address from,
         address erc721,
-        uint256 id,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 id
     )
         public
         pure
@@ -262,10 +233,7 @@ contract MessageTester {
             to,
             from,
             erc721,
-            id,
-            blockNumber,
-            timestamp,
-            messageNum
+            id
         );
     }
 
@@ -291,5 +259,25 @@ contract MessageTester {
             timestamp,
             messageNum
         ));
+    }
+
+    function addMessageToInbox(
+        bytes32 inboxHash,
+        bytes32 messageHash,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 messageNum
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Messages.addMessageToInbox(
+            inboxHash,
+            messageHash,
+            blockNumber,
+            timestamp,
+            messageNum
+        );
     }
 }

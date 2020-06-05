@@ -58,14 +58,11 @@ func TestTransactionMessage(t *testing.T) {
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != deliveredMsg.CommitmentHash().ToEthHash() {
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
 		t.Error(errHash)
 	}
 
@@ -171,14 +168,11 @@ func TestTransactionBatchMessage(t *testing.T) {
 	bridgeHash, err := tester.TransactionBatchHash(
 		nil,
 		batchTxData,
-		deliveryInfo.BlockNum.AsInt(),
-		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != deliveredBatchMsg.CommitmentHash().ToEthHash() {
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
 		t.Error(errHash)
 	}
 
@@ -239,14 +233,11 @@ func TestEthMessage(t *testing.T) {
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != deliveredMsg.CommitmentHash().ToEthHash() {
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
 		t.Error(errHash)
 	}
 
@@ -291,14 +282,11 @@ func TestERC20Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != deliveredMsg.CommitmentHash().ToEthHash() {
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
 		t.Error(errHash)
 	}
 
@@ -344,6 +332,20 @@ func TestERC721Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
+		t.Error(errHash)
+	}
+
+	messageBridgeHash, err := tester.Erc721MessageHash(
+		nil,
+		msg.To.ToEthAddress(),
+		msg.From.ToEthAddress(),
+		msg.TokenAddress.ToEthAddress(),
+		msg.Id,
 		deliveredMsg.BlockNum.AsInt(),
 		deliveredMsg.Timestamp,
 		deliveredMsg.MessageNum,
@@ -351,7 +353,43 @@ func TestERC721Message(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != deliveredMsg.CommitmentHash().ToEthHash() {
+
+	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+		t.Error(errMsgHash)
+	}
+}
+
+func TestDeliveredMessage(t *testing.T) {
+	msg := message.ERC721{
+		To:           addr1,
+		From:         addr2,
+		TokenAddress: addr3,
+		Id:           big.NewInt(89735406),
+	}
+	deliveryInfo := message.DeliveryInfo{
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp: big.NewInt(35463245),
+		},
+		MessageNum: big.NewInt(98742),
+	}
+	deliveredMsg := message.Delivered{
+		Message:      msg,
+		DeliveryInfo: deliveryInfo,
+	}
+	inboxHash, err := tester.AddMessageToInbox(
+		nil,
+		common.Hash{},
+		msg.CommitmentHash().ToEthHash(),
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.MessageNum,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inboxHash2 := hashing.SoliditySHA3(hashing.Bytes32(common.Hash{}), hashing.Bytes32(deliveredMsg.CommitmentHash()))
+	if inboxHash != inboxHash2 {
 		t.Error(errHash)
 	}
 
