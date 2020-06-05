@@ -37,7 +37,12 @@ const (
 )
 
 type ChainListener interface {
+	// This function is called when a ChainListener is added to a ChainObserver
 	AddedToChain(context.Context, *ChainObserver)
+
+	// This function is called every time ChainObserver starts running. This
+	// includes both the initial run, and after a reorg. The third parameter
+	// is the current calculated valid node
 	RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node)
 
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)

@@ -140,10 +140,10 @@ type txTracker struct {
 	chainAddress common.Address
 
 	// The RWMutex protects the variables listed below it
-	//
 	sync.RWMutex
 	txDB          *txDB
 	maxNodeHeight uint64
+	initialized   bool
 }
 
 func newTxTracker(
@@ -159,6 +159,7 @@ func newTxTracker(
 		txDB:          txdb,
 		chainAddress:  chainAddress,
 		maxNodeHeight: 0,
+		initialized:   false,
 	}, nil
 }
 
@@ -178,10 +179,18 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.Chai
 	}()
 }
 
-// AddedToChain is called when this listener is initially connected to the
-// chain. It processes all nodes that are valid, but have not yet been
-// confirmed and saved into the longterm db
+// AddedToChain is called when this listener is initially added to the
+// chain. If the listener was already added to a previous chain observer, we
+// must be restarting after a reorg and this function does nothing. When this
+// method is called for the first time, it processes all nodes that are valid,
+// but have not yet been confirmed and saved into the longterm db
 func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver) {
+	tr.Lock()
+	defer tr.Unlock()
+	if tr.initialized {
+		return
+	}
+	tr.initialized = true
 	nodesToProcess := chain.PendingCorrectNodes()
 	go func() {
 		tr.Lock()
