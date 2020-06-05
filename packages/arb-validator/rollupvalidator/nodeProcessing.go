@@ -29,11 +29,11 @@ import (
 )
 
 type nodeInfo struct {
-	TxLogs            []logsInfo
+	EVMLogs           []logsInfo
 	LogsAccHashes     []string
 	LogsValHashes     []string
-	OutLogs           []value.Value
-	OutMessages       []value.Value
+	AVMLogs           []value.Value
+	AVMMessages       []value.Value
 	NodeHash          common.Hash
 	NodeHeight        uint64
 	TransactionHashes []common.Hash
@@ -76,8 +76,8 @@ func processNodeImpl(
 
 	logs := assertion.Logs
 
-	nodeInfo.OutMessages = assertion.OutMsgs
-	nodeInfo.OutLogs = assertion.Logs
+	nodeInfo.AVMMessages = assertion.OutMsgs
+	nodeInfo.AVMLogs = assertion.Logs
 	nodeInfo.LogsValHashes = make([]string, 0, len(logs))
 	nodeInfo.LogsAccHashes = make([]string, 0, len(logs))
 
@@ -104,7 +104,7 @@ func processNodeImpl(
 			continue
 		}
 		msg := evmVal.GetEthMsg()
-		nodeInfo.TxLogs = append(nodeInfo.TxLogs, logsInfo{
+		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, logsInfo{
 			Logs:    evmVal.GetLogs(),
 			TxIndex: uint64(i),
 			TxHash:  msg.TxHash,
@@ -150,7 +150,7 @@ func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInf
 		Found:           true,
 		transactionHash: txHash,
 		assertionIndex:  txRecord.NodeHeight,
-		RawVal:          nodeInfo.OutLogs[txRecord.TransactionIndex],
+		RawVal:          nodeInfo.AVMLogs[txRecord.TransactionIndex],
 		LogsPreHash:     logsPreHash,
 		LogsPostHash:    logsPostHash,
 		LogsValHashes:   logsValHashes,
