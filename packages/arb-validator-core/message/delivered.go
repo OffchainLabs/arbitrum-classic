@@ -40,9 +40,22 @@ type Received struct {
 	ChainTime
 }
 
+func (m Received) Equals(o Received) bool {
+	return m.Message.Equals(o.Message) &&
+		m.BlockNum.Cmp(o.BlockNum) == 0 &&
+		m.Timestamp.Cmp(o.Timestamp) == 0
+}
+
 type Delivered struct {
 	Message Message
 	DeliveryInfo
+}
+
+func (m Delivered) GetReceived() Received {
+	return Received{
+		Message:   m.Message,
+		ChainTime: m.ChainTime,
+	}
 }
 
 func (m Delivered) Equals(o Delivered) bool {

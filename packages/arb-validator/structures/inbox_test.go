@@ -26,48 +26,52 @@ import (
 )
 
 func getStack() *MessageStack {
-	msg1 := message.Delivered{
+	msg1 := message.Received{
 		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(1),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
-	msg2 := message.Delivered{
+	msg2 := message.Received{
 		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(2),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
-	msg3 := message.Delivered{
+	msg3 := message.Received{
 		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(3),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
-	msg4 := message.Delivered{
+	msg4 := message.Received{
 		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(4),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
 	messageStack := NewMessageStack()
@@ -121,31 +125,37 @@ func TestInboxInsert(t *testing.T) {
 		t.Error("marshal/unmarshal changes hash of empty inbox")
 	}
 
-	msg1 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg1 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(2868),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64521)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(38653),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
-	msg2 := message.DeliveredEth{
-		Eth: message.Eth{
+	msg2 := message.Received{
+		Message: message.Eth{
 			To:    common.Address{},
 			From:  common.Address{},
 			Value: big.NewInt(8741),
 		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(1735)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(7456),
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(1735)),
+			Timestamp: big.NewInt(5435254),
+		},
 	}
 
 	pi.DeliverMessage(msg1)
-	if !pi.newest.message.Equals(msg1) {
+	msg1Delivered := pi.newest.message
+	if !msg1Delivered.GetReceived().Equals(msg1) {
 		t.Error("newest of Inbox wrong at val1")
+	}
+	if msg1Delivered.MessageNum.Cmp(big.NewInt(1)) != 0 {
+		t.Error("msg 1 messageNum should have been 1, but was", msg1Delivered.MessageNum)
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
@@ -156,8 +166,12 @@ func TestInboxInsert(t *testing.T) {
 	}
 
 	pi.DeliverMessage(msg2)
-	if !pi.newest.message.Equals(msg2) {
+	msg2Delivered := pi.newest.message
+	if !msg2Delivered.GetReceived().Equals(msg2) {
 		t.Error("newest of Inbox wrong at val2")
+	}
+	if msg2Delivered.MessageNum.Cmp(big.NewInt(2)) != 0 {
+		t.Error("msg 2 messageNum should have been 2, but was", msg2Delivered.MessageNum)
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
