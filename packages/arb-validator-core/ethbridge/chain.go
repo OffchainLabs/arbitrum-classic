@@ -56,7 +56,7 @@ func getLogBlockID(ethLog types.Log) *common.BlockId {
 	}
 }
 
-func getTxBlockID(receipt *types.Receipt) *common.BlockId {
+func GetReceiptBlockID(receipt *types.Receipt) *common.BlockId {
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(receipt.BlockNumber),
 		HeaderHash: common.NewHashFromEth(receipt.BlockHash),

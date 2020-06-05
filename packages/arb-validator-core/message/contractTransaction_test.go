@@ -43,7 +43,7 @@ func generateTestContractTransaction() ContractTransaction {
 func TestMarshalContractTransaction(t *testing.T) {
 	msg := generateTestContractTransaction()
 
-	msg2, err := UnmarshalContractTransaction(msg.asInboxValue())
+	msg2, err := UnmarshalContractTransaction(msg.AsInboxValue())
 	if err != nil {
 		t.Error(err)
 	}

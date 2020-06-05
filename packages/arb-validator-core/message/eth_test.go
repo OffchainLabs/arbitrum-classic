@@ -42,7 +42,7 @@ func generateTestEth() Eth {
 func TestMarshalEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEth(msg.asInboxValue())
+	msg2, err := UnmarshalEth(msg.AsInboxValue())
 	if err != nil {
 		t.Error(err)
 	}

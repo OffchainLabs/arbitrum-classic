@@ -173,6 +173,7 @@ github.com/miguelmota/go-solidity-sha3 v0.1.0 h1:RoRqUD/qKqZCZIoAGVJhX6gEHeD6333
 github.com/miguelmota/go-solidity-sha3 v0.1.0/go.mod h1:FuaBKCJUkJcmPqCuKvPFYfzK1auYGr5+8i2evSBIm/Q=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
+github.com/offchainlabs/arbitrum v0.5.0 h1:krXe8jrVzv00XD6EibbTmXPdFJBSD0zCe478UtI7T50=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c h1:1RHs3tNxjXGHeul8z2t6H2N2TlAqpKe5yryJztRx4Jk=

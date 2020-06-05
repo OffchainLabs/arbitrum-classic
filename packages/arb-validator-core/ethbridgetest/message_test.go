@@ -17,6 +17,7 @@
 package ethbridgetest
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -40,16 +41,6 @@ func TestTransactionMessage(t *testing.T) {
 		Value:       big.NewInt(89735406),
 		Data:        []byte{65, 23, 68, 87, 12},
 	}
-	deliveredMsg := message.Delivered{
-		Message: msg,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-				Timestamp: big.NewInt(35463245),
-			},
-			MessageNum: big.NewInt(0),
-		},
-	}
 	bridgeHash, err := tester.TransactionHash(
 		nil,
 		msg.Chain.ToEthAddress(),
@@ -66,7 +57,7 @@ func TestTransactionMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	messageBridgeHash, err := tester.TransactionMessageHash(
+	messageBridgeHash, txReceiptHash, err := tester.TransactionMessageHash(
 		nil,
 		msg.Chain.ToEthAddress(),
 		msg.To.ToEthAddress(),
@@ -74,14 +65,16 @@ func TestTransactionMessage(t *testing.T) {
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
+		t.Error(errMsgHash)
+	}
+
+	if msg.ReceiptHash() != txReceiptHash {
 		t.Error(errMsgHash)
 	}
 }
@@ -150,11 +143,6 @@ func TestTransactionBatchMessage(t *testing.T) {
 		MessageNum: big.NewInt(0),
 	}
 
-	deliveredTx := message.Delivered{
-		Message:      tx,
-		DeliveryInfo: deliveryInfo,
-	}
-
 	msg := message.TransactionBatch{
 		Chain:  addr3,
 		TxData: batchTxData,
@@ -176,19 +164,20 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	txMessageHash, err := tester.TransactionMessageBatchHashSingle(
+	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
 		nil,
 		big.NewInt(0),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
-		deliveryInfo.BlockNum.AsInt(),
-		deliveryInfo.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if txMessageHash != message.DeliveredValue(deliveredTx, tx).Hash() {
+	if txMessageHash != tx.AsInboxValue().Hash() {
 		t.Error("TransactionMessageBatchHashSingle result didn't match")
+	}
+	if txReceiptHash != tx.ReceiptHash() {
+		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
 	}
 
 	tup := value.NewEmptyTuple()
@@ -218,16 +207,6 @@ func TestEthMessage(t *testing.T) {
 		From:  addr2,
 		Value: big.NewInt(89735406),
 	}
-	deliveredMsg := message.Delivered{
-		Message: msg,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-				Timestamp: big.NewInt(35463245),
-			},
-			MessageNum: big.NewInt(98742),
-		},
-	}
 	bridgeHash, err := tester.EthHash(
 		nil,
 		msg.To.ToEthAddress(),
@@ -246,15 +225,12 @@ func TestEthMessage(t *testing.T) {
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
@@ -265,16 +241,6 @@ func TestERC20Message(t *testing.T) {
 		From:         addr2,
 		TokenAddress: addr3,
 		Value:        big.NewInt(89735406),
-	}
-	deliveredMsg := message.Delivered{
-		Message: msg,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-				Timestamp: big.NewInt(35463245),
-			},
-			MessageNum: big.NewInt(98742),
-		},
 	}
 	bridgeHash, err := tester.Erc20Hash(
 		nil,
@@ -296,15 +262,12 @@ func TestERC20Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
@@ -315,16 +278,6 @@ func TestERC721Message(t *testing.T) {
 		From:         addr2,
 		TokenAddress: addr3,
 		Id:           big.NewInt(89735406),
-	}
-	deliveredMsg := message.Delivered{
-		Message: msg,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-				Timestamp: big.NewInt(35463245),
-			},
-			MessageNum: big.NewInt(98742),
-		},
 	}
 	bridgeHash, err := tester.Erc721Hash(
 		nil,
@@ -346,15 +299,12 @@ func TestERC721Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
@@ -393,21 +343,30 @@ func TestDeliveredMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	messageBridgeHash, err := tester.Erc721MessageHash(
+	var msgDataBuf bytes.Buffer
+	if err := msg.AsInboxValue().MarshalForProof(&msgDataBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	inbox := value.NewEmptyTuple()
+	inboxPreImage := inbox.GetPreImage()
+	valPreimage := msg.AsInboxValue().GetPreImage()
+
+	messageBridgeHash, err := tester.AddMessageToVMInboxHash(
 		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.TokenAddress.ToEthAddress(),
-		msg.Id,
-		deliveredMsg.BlockNum.AsInt(),
-		deliveredMsg.Timestamp,
-		deliveredMsg.MessageNum,
+		inboxPreImage.HashImage,
+		big.NewInt(inboxPreImage.Size),
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.MessageNum,
+		valPreimage.HashImage,
+		big.NewInt(valPreimage.Size),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(deliveredMsg, msg).Hash().ToEthHash() {
+	if messageBridgeHash != message.AddToPrev(inbox, deliveredMsg).Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }

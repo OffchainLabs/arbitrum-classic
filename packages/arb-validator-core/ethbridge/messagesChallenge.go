@@ -91,15 +91,16 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 		lowerHashA,
 		lowerHashB.HashImage,
 		big.NewInt(lowerHashB.Size),
-		msg.Chain.ToEthAddress(),
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
+		[3]ethcommon.Address{
+			msg.Chain.ToEthAddress(),
+			msg.To.ToEthAddress(),
+			msg.From.ToEthAddress(),
+		},
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
 	)
 	if err != nil {
 		return err

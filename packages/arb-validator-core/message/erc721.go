@@ -71,7 +71,7 @@ func (m ERC721) CommitmentHash() common.Hash {
 	)
 }
 
-func (m ERC721) asInboxValue() value.Value {
+func (m ERC721) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),

@@ -49,24 +49,23 @@ contract MessageTester {
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes memory data,
-        uint256 blockNumber,
-        uint256 timestamp
+        bytes memory data
     )
         public
         pure
-        returns(bytes32)
+        returns(bytes32, bytes32)
     {
-        return Messages.transactionMessageHash(
+        (Value.Data memory tuple, bytes32 receiptHash) = Messages.transactionMessageValue(
             chain,
             to,
             from,
             seqNumber,
             value,
-            data,
-            blockNumber,
-            timestamp
+            keccak256(data),
+            Value.bytesToBytestackHash(data, 0, data.length)
         );
+
+        return (Value.hash(tuple), receiptHash);
     }
 
     function transactionBatchHash(
@@ -82,21 +81,18 @@ contract MessageTester {
     function transactionMessageBatchHashSingle(
         uint256 start,
         address chain,
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp
+        bytes memory transactions
     )
         public
         pure
-        returns(bytes32)
+        returns(bytes32, bytes32)
     {
-        return Value.hash(Messages.transactionMessageBatchHashSingle(
+        (Value.Data memory message, bytes32 receiptHash) = Messages.transactionMessageBatchHashSingle(
             start,
             chain,
-            transactions,
-            blockNum,
-            blockTimestamp
-        ));
+            transactions
+        );
+        return (Value.hash(message), receiptHash);
     }
 
     function transactionMessageBatchSingleSender(
@@ -158,23 +154,17 @@ contract MessageTester {
     function ethMessageHash(
         address to,
         address from,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         public
         pure
         returns(bytes32)
     {
-        return Messages.ethMessageHash(
+        return Value.hash(Messages.ethMessageValue(
             to,
             from,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
-        );
+            value
+        ));
     }
 
     function erc20Hash(
@@ -199,10 +189,7 @@ contract MessageTester {
         address to,
         address from,
         address erc20,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         public
         pure
@@ -212,10 +199,7 @@ contract MessageTester {
             to,
             from,
             erc20,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
+            value
         ));
     }
 
@@ -241,10 +225,7 @@ contract MessageTester {
         address to,
         address from,
         address erc721,
-        uint256 id,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 id
     )
         public
         pure
@@ -254,10 +235,7 @@ contract MessageTester {
             to,
             from,
             erc721,
-            id,
-            blockNumber,
-            timestamp,
-            messageNum
+            id
         ));
     }
 
@@ -278,6 +256,30 @@ contract MessageTester {
             blockNumber,
             timestamp,
             messageNum
+        );
+    }
+
+    function addMessageToVMInboxHash(
+        bytes32 inboxTuplePreimage,
+        uint256 inboxTupleSize,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 txId,
+        bytes32 messageTuplePreimage,
+        uint256 messageTupleSize
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Value.hash(
+            Messages.addMessageToVMInboxHash(
+                Value.newTuplePreImage(inboxTuplePreimage, inboxTupleSize),
+                blockNumber,
+                timestamp,
+                txId,
+                Value.newTuplePreImage(messageTuplePreimage, messageTupleSize)
+            )
         );
     }
 }

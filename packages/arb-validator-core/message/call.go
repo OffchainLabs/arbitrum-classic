@@ -70,7 +70,7 @@ func (m Call) CommitmentHash() common.Hash {
 	)
 }
 
-func (m Call) asInboxValue() value.Value {
+func (m Call) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		BytesToByteStack(m.Data),

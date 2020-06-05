@@ -104,11 +104,4 @@ library Protocol {
         require(offset == startOffset + length, "value extended past length");
         return (hashVal, msgCount);
     }
-
-    function addMessageToVMInboxHash(Value.Data memory vmInboxHashValue, Value.Data memory messageHashValue) internal pure returns (Value.Data memory) {
-        Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = vmInboxHashValue;
-        vals[1] = messageHashValue;
-        return Value.newTuple(vals);
-    }
 }

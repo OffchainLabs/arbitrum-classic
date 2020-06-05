@@ -47,7 +47,7 @@ func generateTestERC721() ERC721 {
 func TestMarshalERC721(t *testing.T) {
 	msg := generateTestERC721()
 
-	msg2, err := UnmarshalERC721(msg.asInboxValue())
+	msg2, err := UnmarshalERC721(msg.AsInboxValue())
 	if err != nil {
 		t.Error(err)
 	}

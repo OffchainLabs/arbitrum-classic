@@ -74,7 +74,7 @@ func (m ContractTransaction) CommitmentHash() common.Hash {
 	)
 }
 
-func (m ContractTransaction) asInboxValue() value.Value {
+func (m ContractTransaction) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),

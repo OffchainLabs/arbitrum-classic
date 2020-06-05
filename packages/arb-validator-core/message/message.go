@@ -38,7 +38,7 @@ const (
 )
 
 type SingleMessage interface {
-	asInboxValue() value.Value
+	AsInboxValue() value.TupleValue
 }
 
 type ReceiptMessage interface {
@@ -125,7 +125,7 @@ func DeliveredValue(m Delivered, singleMessage SingleMessage) value.Value {
 		value.NewIntValue(m.deliveredHeight().AsInt()),
 		value.NewIntValue(m.deliveredTimestamp()),
 		value.NewIntValue(receiptVal),
-		singleMessage.asInboxValue(),
+		singleMessage.AsInboxValue(),
 	})
 	return msg
 }

@@ -41,7 +41,7 @@ func generateTestCall() Call {
 func TestMarshalCall(t *testing.T) {
 	msg := generateTestCall()
 
-	msg2, err := UnmarshalCall(msg.asInboxValue())
+	msg2, err := UnmarshalCall(msg.AsInboxValue())
 	if err != nil {
 		t.Error(err)
 	}
