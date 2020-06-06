@@ -97,6 +97,7 @@ func CreateManagerAdvanced(
 
 	man := &Manager{
 		RollupAddress: rollupAddr,
+		checkpointer:  checkpointer,
 	}
 	man.validCallLock.Lock()
 	go func() {
