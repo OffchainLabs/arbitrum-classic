@@ -37,7 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 // Server provides an interface for interacting with a a running coordinator
@@ -49,27 +48,23 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	completedAssertionChan := make(chan rollup.FinalizedAssertion)
-	assertionListener := &rollup.AssertionListener{completedAssertionChan}
-	man.AddListener(assertionListener)
-
-	tracker := newTxTracker(man.RollupAddress)
-	go func() {
-		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
-	}()
-
-	return &Server{man.RollupAddress, tracker, man, maxCallTime}
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+	checkpointer := man.GetCheckpointer()
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), man.RollupAddress)
+	if err != nil {
+		return nil, err
+	}
+	man.AddListener(tracker)
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
 func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArgs) (*validatorserver.FindLogsReply, error) {
-	addressBytes, err := hexutil.Decode(args.Address)
-	if err != nil {
-		fmt.Println("FindLogs error1", err)
-		return nil, err
+	var address *common.Address
+	if len(args.Address) > 0 {
+		addr := common.HexToAddress(args.Address)
+		address = &addr
 	}
-	addressInt := new(big.Int).SetBytes(addressBytes[:])
 
 	topics := make([]common.Hash, 0, len(args.Topics))
 	for _, topic := range args.Topics {
@@ -87,21 +82,23 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		return nil, err
 	}
 
-	var logsChan <-chan []*validatorserver.LogInfo
+	var logs []*validatorserver.LogInfo
 	if args.ToHeight == "latest" {
-		logsChan = m.tracker.FindLogs(&fromHeight, nil, addressInt, topics)
+		logs, err = m.tracker.FindLogs(ctx, &fromHeight, nil, address, topics)
 	} else {
 		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logsChan = m.tracker.FindLogs(&fromHeight, &toHeight, addressInt, topics)
+		logs, err = m.tracker.FindLogs(ctx, &fromHeight, &toHeight, address, topics)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	ret := <-logsChan
 	return &validatorserver.FindLogsReply{
-		Logs: ret,
+		Logs: logs,
 	}, nil
 }
 
@@ -113,13 +110,12 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 	assertionHash := common.Hash{}
 	copy(assertionHash[:], assertionHashBytes)
 	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
-	resultChan := m.tracker.OutputMsgVal(assertionHash, msgIndex)
-	outputValue := <-resultChan
+	outputValue, err := m.tracker.OutputMsgVal(ctx, assertionHash, msgIndex)
 
-	if outputValue == nil {
+	if outputValue == nil || err != nil {
 		return &validatorserver.GetOutputMessageReply{
 			Found: false,
-		}, nil
+		}, err
 	} else {
 		var buf bytes.Buffer
 		_ = value.MarshalValue(outputValue, &buf)
@@ -138,9 +134,12 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 	}
 	txHash := common.Hash{}
 	copy(txHash[:], txHashBytes)
-	resultChan := m.tracker.TxInfo(txHash)
+	txInfo, err := m.tracker.TxInfo(ctx, txHash)
 
-	txInfo := <-resultChan
+	if err != nil {
+		return nil, err
+	}
+
 	if !txInfo.Found {
 		return &validatorserver.GetMessageResultReply{
 			Found: false,
@@ -160,15 +159,18 @@ func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.Get
 }
 
 // GetAssertionCount returns the total number of finalized assertions
-func (m *Server) GetAssertionCount(ctx context.Context, args *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
-	req := m.tracker.AssertionCount()
+func (m *Server) GetAssertionCount(ctx context.Context, _ *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
+	req, err := m.tracker.AssertionCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &validatorserver.GetAssertionCountReply{
-		AssertionCount: int32(<-req),
+		AssertionCount: int32(req),
 	}, nil
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetVMInfo(ctx context.Context, args *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
+func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
 	return &validatorserver.GetVMInfoReply{
 		VmID: hexutil.Encode(m.rollupAddress[:]),
 	}, nil

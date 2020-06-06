@@ -34,8 +34,9 @@ type RPCServer struct {
 func NewRPCServer(
 	man *rollupmanager.Manager,
 	maxCallTime time.Duration,
-) *RPCServer {
-	return &RPCServer{Server: NewServer(man, maxCallTime)}
+) (*RPCServer, error) {
+	server, err := NewServer(man, maxCallTime)
+	return &RPCServer{Server: server}, err
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match

@@ -46,14 +46,14 @@ type IndexedCheckpointer struct {
 	nextCheckpointToWrite *writableCheckpoint
 }
 
-func NewIndexedCheckpointerFactory(
+func NewIndexedCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
-) RollupCheckpointerFactory {
-	ret, err := newIndexedCheckpointerFactory(
+) *IndexedCheckpointer {
+	ret, err := newIndexedCheckpointer(
 		rollupAddr,
 		arbitrumCodeFilePath,
 		databasePath,
@@ -69,10 +69,10 @@ func NewIndexedCheckpointerFactory(
 	return ret
 }
 
-// newIndexedCheckpointerFactory creates the checkpoint factory, but doesn't
+// newIndexedCheckpointerFactory creates the checkpointer, but doesn't
 // launch it's reading and writing threads. This is useful for deterministic
 // testing
-func newIndexedCheckpointerFactory(
+func newIndexedCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
@@ -108,6 +108,14 @@ func newIndexedCheckpointerFactory(
 // which acts as both the factory and the checkpointer. So when the factory's New is called, it just returns itself.
 func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
 	return cp
+}
+
+func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
+	return cp.db
+}
+
+func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+	return cp.confirmedNodeStore
 }
 
 // HasCheckpointedState checks whether the block store is empty, which is the table

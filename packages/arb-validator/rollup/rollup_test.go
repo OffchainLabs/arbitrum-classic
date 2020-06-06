@@ -60,7 +60,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := ckptcontext.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2, err := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
+	chain2, err := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -217,11 +217,9 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointFac := checkpointing.NewDummyCheckpointerFactory(contractPath)
-		checkpointer = checkpointFac.New(context.TODO())
+		checkpointer = checkpointing.NewDummyCheckpointer(contractPath)
 	case "fresh_rocksdb":
-		checkpointFac := checkpointing.NewIndexedCheckpointerFactory(rollupAddress, contractPath, "", big.NewInt(1000000), true)
-		checkpointer = checkpointFac.New(context.TODO())
+		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, contractPath, "", big.NewInt(1000000), true)
 	}
 	chain, err := NewChain(
 		dummyAddress,

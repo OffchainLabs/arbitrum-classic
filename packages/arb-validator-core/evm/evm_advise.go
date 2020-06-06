@@ -31,6 +31,7 @@ import (
 
 type Result interface {
 	IsResult()
+	GetLogs() []Log
 
 	GetEthMsg() EthBridgeMessage
 }
@@ -48,6 +49,10 @@ func (e Return) GetEthMsg() EthBridgeMessage {
 }
 
 func (e Return) IsResult() {}
+
+func (e Return) GetLogs() []Log {
+	return e.Logs
+}
 
 func (e Return) String() string {
 	var sb strings.Builder
@@ -79,6 +84,10 @@ func (e Revert) GetEthMsg() EthBridgeMessage {
 
 func (e Revert) IsResult() {}
 
+func (e Revert) GetLogs() []Log {
+	return nil
+}
+
 func (e Revert) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMRevert(func: ")
@@ -101,6 +110,10 @@ func (e Stop) GetEthMsg() EthBridgeMessage {
 }
 
 func (e Stop) IsResult() {}
+
+func (e Stop) GetLogs() []Log {
+	return e.Logs
+}
 
 func (e Stop) String() string {
 	var sb strings.Builder
@@ -129,6 +142,10 @@ func (e BadSequenceNum) GetEthMsg() EthBridgeMessage {
 
 func (e BadSequenceNum) IsResult() {}
 
+func (e BadSequenceNum) GetLogs() []Log {
+	return nil
+}
+
 func (e BadSequenceNum) String() string {
 	var sb strings.Builder
 	sb.WriteString("BadSequenceNum(func: ")
@@ -148,6 +165,10 @@ func (e Invalid) GetEthMsg() EthBridgeMessage {
 }
 
 func (e Invalid) IsResult() {}
+
+func (e Invalid) GetLogs() []Log {
+	return nil
+}
 
 func (e Invalid) String() string {
 	var sb strings.Builder

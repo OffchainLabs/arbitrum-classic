@@ -29,15 +29,15 @@ import (
 )
 
 type Log struct {
-	ContractID value.IntValue
-	Data       []byte
-	Topics     []common.Hash
+	Address common.Address
+	Topics  []common.Hash
+	Data    []byte
 }
 
 func (l Log) String() string {
 	var sb strings.Builder
 	sb.WriteString("Log(contract: ")
-	sb.WriteString(l.ContractID.String())
+	sb.WriteString(l.Address.String())
 	sb.WriteString(", topics: [")
 	for i, topic := range l.Topics {
 		sb.WriteString(hexutil.Encode(topic[:]))
@@ -64,6 +64,9 @@ func LogValToLog(val value.Value) (Log, error) {
 	if !ok {
 		return Log{}, errors.New("log contract id must be an int")
 	}
+	contractIDBytes := contractIDInt.ToBytes()
+	var address common.Address
+	copy(address[:], contractIDBytes[12:])
 	logDataByteVal, _ := tupVal.GetByInt64(1)
 	logData, err := message.ByteStackToHex(logDataByteVal)
 	if err != nil {
@@ -78,7 +81,7 @@ func LogValToLog(val value.Value) (Log, error) {
 		topics = append(topics, topicValInt.ToBytes())
 	}
 
-	return Log{contractIDInt, logData, topics}, nil
+	return Log{address, topics, logData}, nil
 }
 
 func LogStackToLogs(val value.Value) ([]Log, error) {

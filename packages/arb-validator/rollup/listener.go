@@ -29,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
@@ -38,6 +37,14 @@ const (
 )
 
 type ChainListener interface {
+	// This function is called when a ChainListener is added to a ChainObserver
+	AddedToChain(context.Context, *ChainObserver)
+
+	// This function is called every time ChainObserver starts running. This
+	// includes both the initial run, and after a reorg. The third parameter
+	// is the current calculated valid node
+	RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node)
+
 	StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent)
 	StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent)
 	StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent)
@@ -49,14 +56,61 @@ type ChainListener interface {
 	PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent)
 	MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent)
 
-	AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion)
+	AssertionPrepared(context.Context, *ChainObserver, *PreparedAssertion)
 	ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity)
 	PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams)
-	MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams)
-	OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams)
+	MootableStakes(context.Context, *ChainObserver, []RecoverStakeMootedParams)
+	OldStakes(context.Context, *ChainObserver, []RecoverStakeOldParams)
 
-	AdvancedCalculatedValidNode(context.Context, *ChainObserver, common.Hash)
-	AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash)
+	AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node)
+}
+
+type NoopListener struct{}
+
+func (nl *NoopListener) AddedToChain(context.Context, *ChainObserver, *structures.Node) {
+}
+
+func (nl *NoopListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
+}
+
+func (NoopListener) StakeCreated(context.Context, *ChainObserver, arbbridge.StakeCreatedEvent) {
+}
+func (NoopListener) StakeRemoved(context.Context, *ChainObserver, arbbridge.StakeRefundedEvent) {
+}
+func (NoopListener) StakeMoved(context.Context, *ChainObserver, arbbridge.StakeMovedEvent) {
+}
+func (NoopListener) StartedChallenge(context.Context, *ChainObserver, *Challenge) {
+}
+func (NoopListener) ResumedChallenge(context.Context, *ChainObserver, *Challenge) {
+
+}
+func (NoopListener) CompletedChallenge(context.Context, *ChainObserver, arbbridge.ChallengeCompletedEvent) {
+}
+func (NoopListener) SawAssertion(context.Context, *ChainObserver, arbbridge.AssertedEvent) {
+}
+func (NoopListener) ConfirmedNode(context.Context, *ChainObserver, arbbridge.ConfirmedEvent) {
+}
+func (NoopListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
+}
+func (NoopListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
+}
+
+func (NoopListener) AssertionPrepared(context.Context, *ChainObserver, *PreparedAssertion) {
+}
+func (NoopListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
+}
+func (NoopListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
+}
+func (NoopListener) MootableStakes(context.Context, *ChainObserver, []RecoverStakeMootedParams) {
+}
+func (NoopListener) OldStakes(context.Context, *ChainObserver, []RecoverStakeOldParams) {
+}
+
+func (NoopListener) AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node) {}
+
+type attemptedMove struct {
+	nodeHeight uint64
+	nodeHash   common.Hash
 }
 
 type StakingKey struct {
@@ -73,18 +127,16 @@ type ValidatorChainListener struct {
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
 	broadcastCreateStakes  map[common.Address]*common.TimeBlocks
+	broadcastMovedStakes   map[common.Address]attemptedMove
 }
 
 func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address, actor arbbridge.ArbRollup) *ValidatorChainListener {
 	ret := &ValidatorChainListener{
-		actor:                  actor,
-		rollupAddress:          rollupAddress,
-		stakingKeys:            make(map[common.Address]*StakingKey),
-		broadcastAssertions:    make(map[common.Hash]*valprotocol.AssertionParams),
-		broadcastConfirmations: make(map[common.Hash]bool),
-		broadcastLeafPrunes:    make(map[common.Hash]bool),
-		broadcastCreateStakes:  make(map[common.Address]*common.TimeBlocks),
+		actor:         actor,
+		rollupAddress: rollupAddress,
+		stakingKeys:   make(map[common.Address]*StakingKey),
 	}
+	ret.resetBroadcastCache()
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
 		defer ticker.Stop()
@@ -94,15 +146,20 @@ func NewValidatorChainListener(ctx context.Context, rollupAddress common.Address
 				return
 			case <-ticker.C:
 				ret.Lock()
-				ret.broadcastAssertions = make(map[common.Hash]*valprotocol.AssertionParams)
-				ret.broadcastConfirmations = make(map[common.Hash]bool)
-				ret.broadcastLeafPrunes = make(map[common.Hash]bool)
-				ret.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+				ret.resetBroadcastCache()
 				ret.Unlock()
 			}
 		}
 	}()
 	return ret
+}
+
+func (lis *ValidatorChainListener) resetBroadcastCache() {
+	lis.broadcastAssertions = make(map[common.Hash]*valprotocol.AssertionParams)
+	lis.broadcastConfirmations = make(map[common.Hash]bool)
+	lis.broadcastLeafPrunes = make(map[common.Hash]bool)
+	lis.broadcastCreateStakes = make(map[common.Address]*common.TimeBlocks)
+	lis.broadcastMovedStakes = make(map[common.Address]attemptedMove)
 }
 
 func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *StakingKey) error {
@@ -129,7 +186,7 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	return nil
 }
 
-func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *preparedAssertion, proof []common.Hash) error {
+func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *PreparedAssertion, proof []common.Hash) error {
 	return rollup.MakeAssertion(
 		ctx,
 		prepared.prevPrevLeafHash,
@@ -143,7 +200,13 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *pr
 	)
 }
 
-func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *preparedAssertion) {
+func (lis *ValidatorChainListener) AddedToChain(context.Context, *ChainObserver) {
+}
+
+func (lis *ValidatorChainListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
+}
+
+func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain *ChainObserver, prepared *PreparedAssertion) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
@@ -471,7 +534,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(ctx context.Context, chain
 	lis.challengeStakerIfPossible(ctx, chain, ev.Winner)
 }
 
-func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observer *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
+func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, _ *ChainObserver, conf *valprotocol.ConfirmOpportunity) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
@@ -495,7 +558,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, observe
 	}()
 }
 
-func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *ChainObserver, params []valprotocol.PruneParams) {
+func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, _ *ChainObserver, params []valprotocol.PruneParams) {
 	// Anyone can prune a leaf
 	leavesToPrune := make([]valprotocol.PruneParams, 0, len(params))
 	lis.Lock()
@@ -526,46 +589,96 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, observer *
 	}()
 }
 
-func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeMootedParams) {
+func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, _ *ChainObserver, params []RecoverStakeMootedParams) {
 	// Anyone can moot any stake
 	for _, moot := range params {
+		mootCopy := moot
 		go func() {
 			lis.actor.RecoverStakeMooted(
 				ctx,
-				moot.ancestorHash,
-				moot.addr,
-				moot.lcProof,
-				moot.stProof,
+				mootCopy.ancestorHash,
+				mootCopy.addr,
+				mootCopy.lcProof,
+				mootCopy.stProof,
 			)
 		}()
 	}
 }
 
-func (lis *ValidatorChainListener) OldStakes(ctx context.Context, observer *ChainObserver, params []recoverStakeOldParams) {
+func (lis *ValidatorChainListener) OldStakes(ctx context.Context, _ *ChainObserver, params []RecoverStakeOldParams) {
 	// Anyone can remove an old stake
 	for _, old := range params {
+		oldCopy := old
 		go func() {
 			lis.actor.RecoverStakeOld(
 				ctx,
-				old.addr,
-				old.proof,
+				oldCopy.addr,
+				oldCopy.proof,
 			)
 		}()
 	}
 }
 
-func (lis *ValidatorChainListener) AdvancedCalculatedValidNode(ctx context.Context, chain *ChainObserver, nodeHash common.Hash) {
-	for stakingAddress, _ := range lis.stakingKeys {
+func (lis *ValidatorChainListener) AdvancedKnownNode(ctx context.Context, chain *ChainObserver, node *structures.Node) {
+	// TODO: It would be better to rate limit how often the stake can be moved
+	// and just move to the latest position at the end of a delay period
+	for stakingAddress := range lis.stakingKeys {
 		staker := chain.nodeGraph.stakers.idx[stakingAddress]
 		if staker == nil {
 			continue
 		}
-		newValidNode := chain.nodeGraph.nodeFromHash[nodeHash]
-		if newValidNode.Depth() > staker.location.Depth() {
-			proof1 := structures.GeneratePathProof(staker.location, newValidNode)
-			proof2 := structures.GeneratePathProof(newValidNode, chain.nodeGraph.getLeaf(newValidNode))
-			lis.actor.MoveStake(ctx, proof1, proof2)
+		if node.Depth() <= staker.location.Depth() {
+			continue
 		}
+
+		lis.Lock()
+		prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddress]
+
+		if alreadySent && node.Depth() <= prevMove.nodeHeight {
+			lis.Unlock()
+			continue
+		}
+
+		// If there's already an outstanding transaction moving the stake to an existing
+		// node, make the new move transaction initiate from the position after
+		// that move. Otherwise start the move from the staker's current location
+		stakerLocation := func() *structures.Node {
+			if alreadySent {
+				prevMoveNode, found := chain.nodeGraph.nodeFromHash[prevMove.nodeHash]
+				if found {
+					return prevMoveNode
+				}
+			}
+			return staker.location
+		}()
+
+		move := attemptedMove{
+			nodeHeight: node.Depth(),
+			nodeHash:   node.Hash(),
+		}
+
+		lis.broadcastMovedStakes[stakingAddress] = move
+		lis.Unlock()
+
+		proof1 := structures.GeneratePathProof(stakerLocation, node)
+		proof2 := structures.GeneratePathProof(node, chain.nodeGraph.getLeaf(node))
+		stakingAddr := stakingAddress
+		go func() {
+			err := lis.actor.MoveStake(ctx, proof1, proof2)
+			lis.Lock()
+			if err != nil {
+				log.Println("Failed moving stake", err)
+				delete(lis.broadcastMovedStakes, stakingAddr)
+			} else {
+				prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddr]
+				if alreadySent {
+					if prevMove.nodeHeight <= move.nodeHeight {
+						delete(lis.broadcastMovedStakes, stakingAddr)
+					}
+				}
+			}
+			lis.Unlock()
+		}()
 	}
 }
 
@@ -580,6 +693,4 @@ func (lis *ValidatorChainListener) ConfirmedNode(context.Context, *ChainObserver
 func (lis *ValidatorChainListener) PrunedLeaf(context.Context, *ChainObserver, arbbridge.PrunedEvent) {
 }
 func (lis *ValidatorChainListener) MessageDelivered(context.Context, *ChainObserver, arbbridge.MessageDeliveredEvent) {
-}
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash, common.Hash) {
 }

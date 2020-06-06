@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0
+	github.com/hashicorp/golang-lru v0.0.0-20160813221303-0a025b7e63ad
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.5.0 // indirect

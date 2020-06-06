@@ -88,7 +88,7 @@ func TestMain(m *testing.M) {
 
 func TestEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestEmpty(t *testing.T) {
 
 func TestWriteCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestWriteCheckpoint(t *testing.T) {
 
 func TestRestoreEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestRestoreEmpty(t *testing.T) {
 
 func TestRestoreSingleCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 
 func TestRestoreReorg(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +308,7 @@ func TestRestoreReorg(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -360,7 +360,7 @@ func TestCleanup(t *testing.T) {
 
 func TestConfirm(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointerFactory(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}

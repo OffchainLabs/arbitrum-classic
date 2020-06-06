@@ -318,21 +318,21 @@ func (sng *StakedNodeGraph) isConfirmableNode(
 	return stakeCount > 0
 }
 
-func (sng *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {
-	var mootedToDo []recoverStakeMootedParams
-	var oldToDo []recoverStakeOldParams
+func (sng *StakedNodeGraph) generateStakerPruneInfo() ([]RecoverStakeMootedParams, []RecoverStakeOldParams) {
+	var mootedToDo []RecoverStakeMootedParams
+	var oldToDo []RecoverStakeOldParams
 	sng.stakers.forall(func(staker *Staker) {
 		stakerAncestor, _, _, err := GetConflictAncestor(staker.location, sng.latestConfirmed)
 		if err == nil {
 			prev := stakerAncestor.Prev()
-			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
+			mootedToDo = append(mootedToDo, RecoverStakeMootedParams{
 				addr:         staker.address,
 				ancestorHash: prev.Hash(),
 				lcProof:      structures.GeneratePathProof(prev, sng.latestConfirmed),
 				stProof:      structures.GeneratePathProof(prev, staker.location),
 			})
 		} else if staker.location.Depth() < sng.latestConfirmed.Depth() {
-			oldToDo = append(oldToDo, recoverStakeOldParams{
+			oldToDo = append(oldToDo, RecoverStakeOldParams{
 				addr:  staker.address,
 				proof: structures.GeneratePathProof(staker.location, sng.latestConfirmed),
 			})

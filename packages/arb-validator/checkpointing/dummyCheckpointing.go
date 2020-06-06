@@ -27,24 +27,24 @@ import (
 	"log"
 )
 
-type DummyCheckpointerFactory struct {
+type DummyCheckpointer struct {
 	initialMachine machine.Machine
 }
 
-func NewDummyCheckpointerFactory(arbitrumCodefilePath string) RollupCheckpointerFactory {
+func NewDummyCheckpointer(arbitrumCodefilePath string) *DummyCheckpointer {
 	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "test")
 	if err != nil {
 		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
 	}
-	return &DummyCheckpointerFactory{theMachine}
+	return &DummyCheckpointer{theMachine}
 }
 
-func (fac *DummyCheckpointerFactory) New(context.Context) RollupCheckpointer {
-	return &DummyCheckpointer{fac}
+func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
+	return nil
 }
 
-type DummyCheckpointer struct {
-	fac *DummyCheckpointerFactory
+func (dcp *DummyCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+	return nil
 }
 
 func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
@@ -56,7 +56,7 @@ func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.Chai
 }
 
 func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return dcp.fac.initialMachine.Clone(), nil
+	return dcp.initialMachine.Clone(), nil
 }
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) {

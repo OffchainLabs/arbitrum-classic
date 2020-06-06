@@ -24,16 +24,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
-type RollupCheckpointerFactory interface {
-	New(ctx context.Context) RollupCheckpointer
-}
-
 type RollupCheckpointer interface {
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext)
 	CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error
+
+	GetCheckpointDB() machine.CheckpointStorage
+	GetConfirmedNodeStore() machine.NodeStore
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
