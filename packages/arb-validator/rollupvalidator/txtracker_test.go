@@ -18,12 +18,12 @@ package rollupvalidator
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"os"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func TestTxTracker(t *testing.T) {
@@ -50,30 +50,41 @@ func TestTxTracker(t *testing.T) {
 		}
 	}
 
+	findLogsTest := func(t *testing.T) {
+		logs, err := txTracker.FindLogs(context.Background(), nil, nil, nil, []common.Hash{{}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(logs) != 0 {
+			t.Error("wrong logs count")
+		}
+	}
+
+	txInfoTest := func(t *testing.T) {
+		info, err := txTracker.TxInfo(context.Background(), common.Hash{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Found != false {
+			t.Error("found non-existant tx")
+		}
+	}
+
 	for _, node := range nodes {
 		t.Run("AdvancedKnownNode", func(t *testing.T) {
 			txTracker.AdvancedKnownNode(context.Background(), nil, node)
 		})
 
-		t.Run("AssertionCountBeforeConfirm", countTest(node))
-
-		if err := saveNode(checkpointer, ns, node); err != nil {
-			t.Fatal(err)
-		}
-
-		t.Run("ConfirmNode", func(t *testing.T) {
-			txTracker.ConfirmedNode(context.Background(), nil, arbbridge.ConfirmedEvent{
-				ChainInfo: arbbridge.ChainInfo{},
-				NodeHash:  node.Hash(),
-			})
-		})
-
-		t.Run("AssertionCountAfterConfirm", countTest(node))
+		t.Run("AssertionCount", countTest(node))
+		t.Run("FindLogs", findLogsTest)
+		t.Run("TxInfo", txInfoTest)
 	}
 
 	txTracker.RestartingFromLatestValid(context.Background(), nil, nodes[0])
 
 	t.Run("AssertionCountAfterReorg", countTest(nodes[0]))
+	t.Run("FindLogsAfterReorg", findLogsTest)
+	t.Run("TxInfoAfterReorg", txInfoTest)
 
 	checkpointer.CloseCheckpointStorage()
 	if err := os.RemoveAll(dbPath); err != nil {
