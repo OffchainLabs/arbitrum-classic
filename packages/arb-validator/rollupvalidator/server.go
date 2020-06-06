@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"log"
 	"math/big"
 	"strconv"
@@ -82,7 +83,7 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		return nil, err
 	}
 
-	var logs []*validatorserver.LogInfo
+	var logs []evm.FullLog
 	if args.ToHeight == "latest" {
 		logs, err = m.tracker.FindLogs(ctx, &fromHeight, nil, address, topics)
 	} else {
@@ -97,8 +98,13 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		return nil, err
 	}
 
+	logInfos := make([]*evm.FullLogBuf, 0, len(logs))
+	for _, l := range logs {
+		logInfos = append(logInfos, l.Marshal())
+	}
+
 	return &validatorserver.FindLogsReply{
-		Logs: logs,
+		Logs: logInfos,
 	}, nil
 }
 
@@ -128,33 +134,14 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
 func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.GetMessageResultArgs) (*validatorserver.GetMessageResultReply, error) {
-	txHashBytes, err := hexutil.Decode(args.TxHash)
-	if err != nil {
-		return nil, err
-	}
-	txHash := common.Hash{}
-	copy(txHash[:], txHashBytes)
+	txHash := common.NewHashFromEth(ethcommon.HexToHash(args.TxHash))
 	txInfo, err := m.tracker.TxInfo(ctx, txHash)
-
 	if err != nil {
 		return nil, err
 	}
 
-	if !txInfo.Found {
-		return &validatorserver.GetMessageResultReply{
-			Found: false,
-		}, nil
-	}
-
-	var buf bytes.Buffer
-	_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 	return &validatorserver.GetMessageResultReply{
-		Found:         true,
-		RawVal:        hexutil.Encode(buf.Bytes()),
-		LogPreHash:    txInfo.LogsPreHash,
-		LogPostHash:   txInfo.LogsPostHash,
-		LogValHashes:  txInfo.LogsValHashes,
-		OnChainTxHash: txInfo.OnChainTxHash,
+		Tx: txInfo.Marshal(),
 	}, nil
 }
 

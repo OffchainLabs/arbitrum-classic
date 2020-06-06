@@ -46,7 +46,7 @@ type nodeInfo struct {
 
 	// This is the transaction hash of the l1 transaction that was responsible
 	// for creating this node
-	L1TxHash string
+	L1TxHash common.Hash
 }
 
 type txRecordInfo struct {
@@ -59,7 +59,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 	nodeInfo.NodeHash = node.Hash()
 	nodeInfo.NodeHeight = node.Depth()
 	txHash := node.AssertionTxHash()
-	nodeInfo.L1TxHash = hexutil.Encode(txHash[:])
+	nodeInfo.L1TxHash = txHash
 
 	if node.LinkType() != valprotocol.ValidChildType {
 		return nodeInfo, nil
@@ -121,7 +121,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 	return nodeInfo, transactions
 }
 
-func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInfo {
+func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) evm.TxInfo {
 	zero := common.Hash{}
 
 	var logsPostHash string
@@ -137,10 +137,11 @@ func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) txInf
 	}
 	logsValHashes := nodeInfo.AVMLogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
 
-	return txInfo{
+	return evm.TxInfo{
 		Found:           true,
-		transactionHash: txHash,
-		assertionIndex:  txRecord.NodeHeight,
+		TransactionHash: txHash,
+		NodeHeight:      txRecord.NodeHeight,
+		NodeHash:        txRecord.NodeHash.Unmarshal(),
 		RawVal:          nodeInfo.AVMLogs[txRecord.TransactionIndex],
 		LogsPreHash:     logsPreHash,
 		LogsPostHash:    logsPostHash,

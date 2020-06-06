@@ -2,6 +2,7 @@ package goarbitrum
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,10 +18,10 @@ import (
 
 type ValidatorProxy interface {
 	//SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error)
-	GetMessageResult(txHash []byte) (value.Value, bool, error)
+	GetMessageResult(txHash []byte) (evm.TxInfo, error)
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
-	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*validatorserver.LogInfo, error)
+	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]evm.FullLog, error)
 	CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error)
 }
 
@@ -96,29 +97,16 @@ func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, res
 //	return bs, err
 //}
 
-func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool, error) {
+func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (evm.TxInfo, error) {
 	request := &validatorserver.GetMessageResultArgs{
 		TxHash: hexutil.Encode(txHash),
 	}
 	var response validatorserver.GetMessageResultReply
 	if err := vp.doCall("GetMessageResult", request, &response); err != nil {
 		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
-		return nil, false, err
+		return evm.TxInfo{}, err
 	}
-	if response.Found {
-		buf, err := hexutil.Decode(response.RawVal)
-		if err != nil {
-			log.Println("GetMessageResult error:", err)
-			return nil, false, err
-		}
-		val, err := value.UnmarshalValue(bytes.NewReader(buf))
-		if err != nil {
-			log.Println("ValProxy.GetMessageResult: UnmarshalValue returned error:", err)
-		}
-		return val, true, err
-	} else {
-		return nil, false, nil
-	}
+	return response.Tx.Unmarshal()
 }
 
 func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
@@ -139,7 +127,7 @@ func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	return response.VmID, nil
 }
 
-func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*validatorserver.LogInfo, error) {
+func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]evm.FullLog, error) {
 	request := &validatorserver.FindLogsArgs{
 		FromHeight: _encodeInt(fromHeight),
 		ToHeight:   _encodeInt(toHeight),
@@ -150,7 +138,16 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 	if err := vp.doCall("FindLogs", request, &response); err != nil {
 		return nil, err
 	}
-	return response.Logs, nil
+
+	logs := make([]evm.FullLog, 0, len(response.Logs))
+	for _, l := range response.Logs {
+		parsedLog, err := l.Unmarshal()
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, parsedLog)
+	}
+	return logs, nil
 }
 
 func (vp *ValidatorProxyImpl) CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error) {

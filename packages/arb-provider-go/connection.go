@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	errors2 "github.com/pkg/errors"
 	"math"
 	"math/big"
 	"sync"
@@ -13,7 +13,6 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -22,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 )
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -226,19 +224,15 @@ func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.Filter
 	if err != nil {
 		return nil, err
 	}
-	for _, logInfo := range logInfos {
-		outs, err := _decodeLogInfo(logInfo)
-		if err != nil {
-			return nil, err
-		}
+	for _, l := range logInfos {
 		ok := true
 		for i, targetTopic := range topics {
-			if targetTopic != outs.Topics[i] {
+			if targetTopic != l.Topics[i] {
 				ok = false
 			}
 		}
 		if ok {
-			ret = append(ret, *outs)
+			ret = append(ret, *l.ToEVMLog())
 		}
 	}
 	return ret, nil
@@ -284,62 +278,6 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	return
 }
 
-func _decodeLogInfo(ins *validatorserver.LogInfo) (*types.Log, error) {
-	outs := &types.Log{}
-	addr, err := hexutil.Decode(ins.Address)
-	if err != nil {
-		log.Println("_decodeLogInfo error 1:", err)
-		return nil, err
-	}
-	copy(outs.Address[:], addr)
-	outs.Topics = make([]ethcommon.Hash, len(ins.Topics))
-	for i, top := range ins.Topics {
-		decodedTopic, err := hexutil.Decode(top)
-		if err != nil {
-			log.Println("_decodeLogInfo error 2:", err)
-			return nil, err
-		}
-		copy(outs.Topics[i][:], decodedTopic)
-	}
-	outs.Data, err = hexutil.Decode(ins.Data)
-	if err != nil {
-		log.Println("_decodeLogInfo error 3:", err)
-		return nil, err
-	}
-	outs.BlockNumber, err = hexutil.DecodeUint64(ins.BlockNumber)
-	if err != nil {
-		log.Println("_decodeLogInfo error 4:", err)
-		return nil, err
-	}
-	hh, err := hexutil.Decode(ins.Address)
-	if err != nil {
-		log.Println("_decodeLogInfo error 5:", err)
-		return nil, err
-	}
-	copy(outs.TxHash[:], hh)
-	txi64, err := hexutil.DecodeUint64(ins.TransactionIndex)
-	if err != nil {
-		log.Println("_decodeLogInfo error 6:", err)
-		log.Println("value was", ins.TransactionIndex)
-		return nil, err
-	}
-	outs.TxIndex = uint(txi64)
-	hh, err = hexutil.Decode(ins.BlockHash)
-	if err != nil {
-		log.Println("_decodeLogInfo error 7:", err)
-		return nil, err
-	}
-	copy(outs.BlockHash[:], hh)
-	iui, err := hexutil.DecodeUint64(ins.LogIndex)
-	if err != nil {
-		log.Println("_decodeLogInfo error 8:", err)
-		return nil, err
-	}
-	outs.Index = uint(iui)
-	outs.Removed = false
-	return outs, nil
-}
-
 func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
 	address, topics := _extractAddrTopics(query)
 	sub := &subscription{
@@ -369,25 +307,24 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 					sub.errChan <- err
 					return
 				}
-				for _, logInfo := range logInfos {
-					outs, err := _decodeLogInfo(logInfo)
+				for _, l := range logInfos {
 					if err != nil {
 						sub.errChan <- err
 						return
 					}
 					ok := true
 					for i, targetTopic := range topics {
-						if targetTopic != outs.Topics[i] {
+						if targetTopic != l.Topics[i] {
 							ok = false
 						}
 					}
-					if outs.BlockNumber < sub.firstBlockUnseen {
+					if l.NodeHeight < sub.firstBlockUnseen {
 						ok = false
 					}
 					if ok {
-						sub.logChan <- *outs
-						if sub.firstBlockUnseen <= outs.BlockNumber {
-							sub.firstBlockUnseen = outs.BlockNumber + 1
+						sub.logChan <- *l.ToEVMLog()
+						if sub.firstBlockUnseen <= l.NodeHeight {
+							sub.firstBlockUnseen = l.NodeHeight + 1
 						}
 					}
 				}
@@ -422,70 +359,15 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	txInfo, err := conn.proxy.GetMessageResult(txHash.Bytes())
 	if err != nil {
-		log.Println("TransactionReceipt error:", err)
-		return nil, err
-	} else if !ok {
+		return nil, errors2.Wrap(err, "TransactionReceipt error:")
+	}
+	if !txInfo.Found {
 		return nil, ethereum.NotFound
 	}
 
-	processed, err := evm.ProcessLog(result, conn.vmId)
-	if err != nil {
-		log.Println("TransactionReceipt ProcessLog error:", err)
-		return nil, err
-	}
-
-	status := uint64(0)
-	var logs []evm.Log
-	switch res := processed.(type) {
-	case evm.Return:
-		status = 1
-		logs = res.Logs
-	case evm.Stop:
-		status = 1
-		logs = res.Logs
-	default:
-		// Transaction unsuccessful
-	}
-
-	ethMsg := processed.GetEthMsg()
-
-	var evmLogs []*types.Log
-	if logs != nil {
-		for i, l := range logs {
-			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-			for j, t := range l.Topics {
-				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-			}
-
-			evmLogs = append(evmLogs, &types.Log{
-				Address:     l.Address.ToEthAddress(),
-				Topics:      evmParsedTopics,
-				Data:        l.Data,
-				BlockNumber: ethMsg.BlockNumber.Uint64(),
-				TxHash:      txHash,
-				TxIndex:     0,
-				BlockHash:   txHash,
-				Index:       uint(i),
-				Removed:     false,
-			})
-		}
-	}
-
-	return &types.Receipt{
-		PostState:         []byte{0},
-		Status:            status,
-		CumulativeGasUsed: 1,
-		Bloom:             types.BytesToBloom([]byte{0}),
-		Logs:              evmLogs,
-		TxHash:            txHash,
-		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
-		GasUsed:           1,
-		BlockHash:         txHash,
-		BlockNumber:       ethMsg.BlockNumber,
-		TransactionIndex:  0,
-	}, nil
+	return txInfo.ToEthReceipt(conn.vmId)
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {

@@ -16,18 +16,8 @@
 
 syntax = "proto3";
 package validatorserver;
+import "evm/evm.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver";
-
-message LogInfo {
-    string address = 1;
-    string blockHash = 2;
-    string blockNumber = 3;
-    string data = 4;
-    string logIndex = 5;
-    repeated string topics = 6;
-    string transactionIndex = 7;
-    string transactionHash = 8;
-}
 
 message FindLogsArgs {
     string fromHeight = 1;
@@ -37,7 +27,7 @@ message FindLogsArgs {
 }
 
 message FindLogsReply {
-    repeated LogInfo logs = 4;
+    repeated evm.FullLogBuf logs = 4;
 }
 
 message GetOutputMessageArgs {
@@ -55,12 +45,7 @@ message GetMessageResultArgs {
 }
 
 message GetMessageResultReply {
-    bool found = 1;
-    string rawVal = 2;
-    string logPreHash = 3;
-    string logPostHash = 4;
-    repeated string logValHashes = 5;
-    string onChainTxHash = 6;
+    evm.TxInfoBuf tx = 1;
 }
 
 message GetAssertionCountArgs {

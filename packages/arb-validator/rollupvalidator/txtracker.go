@@ -19,35 +19,18 @@ package rollupvalidator
 import (
 	"context"
 	"errors"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
-	"strconv"
 	"sync"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 )
-
-type txInfo struct {
-	Found           bool
-	assertionIndex  uint64
-	transactionHash common.Hash
-	RawVal          value.Value
-	LogsPreHash     string
-	LogsPostHash    string
-	LogsValHashes   []string
-	OnChainTxHash   string
-}
 
 type logResponse struct {
 	Log     evm.Log
@@ -68,22 +51,18 @@ func newNodeInfo() *nodeInfo {
 func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
 	ethLogs := make([]*types.Log, 0)
 	logIndex := uint(0)
-	for _, logsInfo := range ni.EVMLogs {
+	for i, logsInfo := range ni.EVMLogs {
 		for _, ethLog := range logsInfo.Logs {
-			topics := make([]ethcommon.Hash, 0, len(ethLog.Topics))
-			for _, topic := range ethLog.Topics {
-				topics = append(topics, topic.ToEthHash())
-			}
-			ethLogs = append(ethLogs, &types.Log{
-				Address:     ethLog.Address.ToEthAddress(),
-				Topics:      topics,
-				Data:        ethLog.Data,
-				BlockNumber: ni.NodeHeight,
-				TxHash:      logsInfo.TxHash.ToEthHash(),
-				TxIndex:     uint(logsInfo.TxIndex),
-				BlockHash:   ni.NodeHash.ToEthHash(),
-				Index:       logIndex,
-			})
+			l := evm.FullLog{
+				Log:        ethLog,
+				TxIndex:    uint64(i),
+				TxHash:     logsInfo.TxHash,
+				NodeHeight: ni.NodeHeight,
+				NodeHash:   ni.NodeHash,
+			}.ToEVMLog()
+			l.Index = logIndex
+
+			ethLogs = append(ethLogs, l)
 			logIndex++
 		}
 	}
@@ -258,21 +237,21 @@ func (tr *txTracker) OutputMsgVal(ctx context.Context, nodeHash common.Hash, msg
 	return nodeData.AVMMessages[msgIndex], nil
 }
 
-func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (txInfo, error) {
+func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (evm.TxInfo, error) {
 	tr.RLock()
 	defer tr.RUnlock()
 	select {
 	case <-ctx.Done():
-		return txInfo{Found: false}, errors.New("call timed out")
+		return evm.TxInfo{Found: false}, errors.New("call timed out")
 	default:
 	}
 	tx, err := tr.txDB.lookupTxRecord(txHash)
 	if err != nil || tx == nil {
-		return txInfo{Found: false}, err
+		return evm.TxInfo{Found: false}, err
 	}
 	nodeInfo, err := tr.txDB.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
 	if err != nil {
-		return txInfo{Found: false}, nil
+		return evm.TxInfo{Found: false}, nil
 	}
 	return getTxInfo(txHash, nodeInfo, tx), nil
 }
@@ -294,7 +273,7 @@ func (tr *txTracker) FindLogs(
 	toHeight *int64,
 	address *common.Address,
 	topics []common.Hash,
-) ([]*validatorserver.LogInfo, error) {
+) ([]evm.FullLog, error) {
 	tr.RLock()
 	defer tr.RUnlock()
 	select {
@@ -313,7 +292,7 @@ func (tr *txTracker) FindLogs(
 			endHeight = altEndHeight
 		}
 	}
-	logs := make([]*validatorserver.LogInfo, 0)
+	logs := make([]evm.FullLog, 0)
 	if startHeight >= int64(tr.maxNodeHeight) {
 		return logs, nil
 	}
@@ -341,22 +320,13 @@ func (tr *txTracker) FindLogs(
 		if err != nil {
 			continue
 		}
-		assertionLogs := info.FindLogs(address, topics)
-		for j, evmLog := range assertionLogs {
-			topicStrings := make([]string, 0, len(evmLog.Log.Topics))
-			for _, topic := range evmLog.Log.Topics {
-				topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
-			}
-
-			logs = append(logs, &validatorserver.LogInfo{
-				Address:          hexutil.Encode(evmLog.Log.Address[:]),
-				BlockHash:        hexutil.Encode(info.NodeHash.Bytes()),
-				BlockNumber:      "0x" + strconv.FormatInt(int64(info.NodeHeight), 16),
-				Data:             hexutil.Encode(evmLog.Log.Data[:]),
-				LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
-				Topics:           topicStrings,
-				TransactionIndex: "0x" + strconv.FormatInt(int64(evmLog.TxIndex), 16),
-				TransactionHash:  hexutil.Encode(evmLog.TxHash[:]),
+		for _, evmLog := range info.FindLogs(address, topics) {
+			logs = append(logs, evm.FullLog{
+				Log:        evmLog.Log,
+				TxIndex:    evmLog.TxIndex,
+				TxHash:     evmLog.TxHash,
+				NodeHeight: info.NodeHeight,
+				NodeHash:   info.NodeHash,
 			})
 		}
 	}
