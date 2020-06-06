@@ -229,7 +229,7 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash
+	logHash := lastLog.GetEthMsg().TxHash()
 	if logHash != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
