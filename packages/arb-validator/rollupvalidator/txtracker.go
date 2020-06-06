@@ -166,8 +166,8 @@ func newTxTracker(
 // Delete assertion and transaction data from the reorged blocks if there are any
 func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
 	startDepth := node.Depth()
+	tr.Lock()
 	go func() {
-		tr.Lock()
 		defer tr.Unlock()
 		// First remove any data from reorged nodes
 		for i := tr.maxNodeHeight; i > startDepth; i-- {
@@ -186,14 +186,13 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.Chai
 // but have not yet been confirmed and saved into the longterm db
 func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver) {
 	tr.Lock()
-	defer tr.Unlock()
 	if tr.initialized {
+		tr.Unlock()
 		return
 	}
 	tr.initialized = true
 	nodesToProcess := chain.PendingCorrectNodes()
 	go func() {
-		tr.Lock()
 		defer tr.Unlock()
 		for _, node := range nodesToProcess {
 			tr.processNextNode(node)
@@ -210,8 +209,8 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 }
 
 func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, ev arbbridge.ConfirmedEvent) {
+	tr.Lock()
 	go func() {
-		tr.Lock()
 		defer tr.Unlock()
 
 		if err := tr.txDB.confirmNode(ev.NodeHash); err != nil {
@@ -320,6 +319,11 @@ func (tr *txTracker) FindLogs(
 	}
 
 	for i := startHeight; i < endHeight; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("call timed out")
+		default:
+		}
 		nodeHash, err := tr.txDB.lookupNodeHash(uint64(i))
 		if err != nil {
 			continue
