@@ -201,8 +201,8 @@ func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver
 }
 
 func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+	tr.Lock()
 	go func() {
-		tr.Lock()
 		defer tr.Unlock()
 		tr.processNextNode(node)
 	}()
