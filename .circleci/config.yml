@@ -192,7 +192,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.2.1
+      - image: offchainlabs/backend-base:0.2.3
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -275,7 +275,7 @@ jobs:
 
   backend-integration:
     docker:
-      - image: offchainlabs/backend-base:0.2.1
+      - image: offchainlabs/backend-base:0.2.3
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -299,6 +299,7 @@ jobs:
           command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test fibgo
           command: |
