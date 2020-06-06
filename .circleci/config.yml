@@ -60,6 +60,11 @@ workflows:
             - go-deps
             - cpp-avm
             - ethbridge
+      - backend-integration:
+          requires:
+            - go-deps
+            - cpp-avm
+            - ethbridge
 jobs:
   go-deps:
     docker:
@@ -268,6 +273,35 @@ jobs:
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-provider-go
       - run: codecovbash -R /home/user/project -c -F unit
+      - store_test_results:
+          path: *test-path
+
+  backend-integration:
+    docker:
+      - image: offchainlabs/backend-base:0.2.1
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+      - attach_workspace:
+          at: /home/user/workspace
+      - run:
+          command: |
+            echo arbitrum > ~/password.txt
+            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
+            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
+      - restore_cache: *restore_go_cache
+      - run:
+          command: |
+            cd packages/arb-validator
+            export CGO_LDFLAGS="-lgcov --coverage"
+            go install -v ./...
+      - run:
+          name: start geth
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
+          background: true
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
           name: test fibgo
           command: |
