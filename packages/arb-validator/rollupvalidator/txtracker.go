@@ -38,12 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 )
 
-type logsInfo struct {
-	Logs    []evm.Log
-	TxIndex uint64
-	TxHash  common.Hash
-}
-
 type txInfo struct {
 	Found           bool
 	assertionIndex  uint64
@@ -57,6 +51,12 @@ type txInfo struct {
 
 type logResponse struct {
 	Log     evm.Log
+	TxIndex uint64
+	TxHash  common.Hash
+}
+
+type logsInfo struct {
+	Logs    []evm.Log
 	TxIndex uint64
 	TxHash  common.Hash
 }

@@ -107,8 +107,8 @@ func (ms *MessageStack) DeliverMessage(msg message.Received) {
 	delivered := message.Delivered{
 		Message: msg.Message,
 		DeliveryInfo: message.DeliveryInfo{
-			ChainTime:  msg.ChainTime,
-			MessageNum: newTopCount,
+			ChainTime: msg.ChainTime,
+			TxId:      newTopCount,
 		},
 	}
 	if ms.newest == nil {

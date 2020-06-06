@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,7 +33,7 @@ type ChainTime struct {
 
 type DeliveryInfo struct {
 	ChainTime
-	MessageNum *big.Int
+	TxId *big.Int
 }
 
 type Received struct {
@@ -44,6 +45,12 @@ func (m Received) Equals(o Received) bool {
 	return m.Message.Equals(o.Message) &&
 		m.BlockNum.Cmp(o.BlockNum) == 0 &&
 		m.Timestamp.Cmp(o.Timestamp) == 0
+}
+
+func (d DeliveryInfo) TxHash() common.Hash {
+	var hash common.Hash
+	copy(hash[:], d.TxId.Bytes())
+	return hash
 }
 
 type Delivered struct {
@@ -62,7 +69,7 @@ func (m Delivered) Equals(o Delivered) bool {
 	return m.Message.Equals(o.Message) &&
 		m.BlockNum.Cmp(o.BlockNum) == 0 &&
 		m.Timestamp.Cmp(o.Timestamp) == 0 &&
-		m.MessageNum.Cmp(o.MessageNum) == 0
+		m.TxId.Cmp(o.TxId) == 0
 }
 
 func (m Delivered) deliveredHeight() *common.TimeBlocks {
@@ -78,7 +85,7 @@ func (m Delivered) CommitmentHash() common.Hash {
 		hashing.Bytes32(m.Message.CommitmentHash()),
 		hashing.Uint256(m.BlockNum.AsInt()),
 		hashing.Uint256(m.Timestamp),
-		hashing.Uint256(m.MessageNum),
+		hashing.Uint256(m.TxId),
 	)
 }
 
@@ -86,7 +93,81 @@ func (m Delivered) ReceiptHash() common.Hash {
 	if msg, ok := m.Message.(ReceiptMessage); ok {
 		return msg.ReceiptHash()
 	}
-	return value.NewIntValue(m.MessageNum).ToBytes()
+	return value.NewIntValue(m.TxId).ToBytes()
+}
+
+func (m Delivered) AsInboxValue() (value.Value, error) {
+	singleMessage, ok := m.Message.(SingleMessage)
+	if !ok {
+		return nil, errors.New("Only SingleMessages can be delivered")
+	}
+	receiptHash := m.ReceiptHash()
+	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
+	msg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(m.deliveredHeight().AsInt()),
+		value.NewIntValue(m.deliveredTimestamp()),
+		value.NewIntValue(receiptVal),
+		singleMessage.AsInboxValue(),
+	})
+	return msg, nil
+}
+
+func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error) {
+	tup, ok := val.(value.TupleValue)
+	invalid := Delivered{}
+	if !ok {
+		return invalid, errors.New("msg must be tuple value")
+	}
+	if tup.Len() != 4 {
+		return invalid, fmt.Errorf("expected tuple of length 4, but recieved %v", tup)
+	}
+	blockNumberVal, _ := tup.GetByInt64(0)
+	timestampVal, _ := tup.GetByInt64(1)
+	txIdVal, _ := tup.GetByInt64(2)
+	restVal, _ := tup.GetByInt64(3)
+
+	blockNumberInt, ok := blockNumberVal.(value.IntValue)
+	if !ok {
+		return invalid, errors.New("block number must be an int")
+	}
+
+	timestampInt, ok := timestampVal.(value.IntValue)
+	if !ok {
+		return invalid, errors.New("timestamp must be an int")
+	}
+
+	txId, ok := txIdVal.(value.IntValue)
+	if !ok {
+		return invalid, errors.New("tx hash must be an int")
+	}
+
+	restValTup, ok := restVal.(value.TupleValue)
+	if !ok {
+		return invalid, errors.New("message must be a tup")
+	}
+
+	typeVal, _ := restValTup.GetByInt64(0)
+	typeInt, ok := typeVal.(value.IntValue)
+	if !ok {
+		return invalid, errors.New("type must be an int")
+	}
+	typecode := uint8(typeInt.BigInt().Uint64())
+
+	arbMessage, err := UnmarshalExecuted(Type(typecode), restValTup, chain)
+	if err != nil {
+		return invalid, err
+	}
+
+	return Delivered{
+		Message: arbMessage,
+		DeliveryInfo: DeliveryInfo{
+			ChainTime: ChainTime{
+				BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
+				Timestamp: timestampInt.BigInt(),
+			},
+			TxId: txId.BigInt(),
+		},
+	}, nil
 }
 
 func (m Delivered) CheckpointValue() value.Value {
@@ -95,7 +176,7 @@ func (m Delivered) CheckpointValue() value.Value {
 		m.Message.CheckpointValue(),
 		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
 		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
-		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
+		value.NewIntValue(new(big.Int).Set(m.TxId)),
 	})
 	return val
 }
@@ -138,7 +219,23 @@ func UnmarshalDeliveredFromCheckpoint(v value.Value) (Delivered, error) {
 				BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
 				Timestamp: timestampInt.BigInt(),
 			},
-			MessageNum: messageNumInt.BigInt(),
+			TxId: messageNumInt.BigInt(),
 		},
 	}, nil
+}
+
+type SingleDelivered struct {
+	Delivered
+}
+
+func NewSingleDelivered(d Delivered) (SingleDelivered, error) {
+	_, ok := d.Message.(ExecutionMessage)
+	if !ok {
+		return SingleDelivered{}, errors.New("must construct from execution message")
+	}
+	return SingleDelivered{Delivered: d}, nil
+}
+
+func (s SingleDelivered) ExectutedMessage() ExecutionMessage {
+	return s.Message.(ExecutionMessage)
 }

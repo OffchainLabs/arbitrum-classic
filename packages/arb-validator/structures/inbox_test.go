@@ -154,8 +154,8 @@ func TestInboxInsert(t *testing.T) {
 	if !msg1Delivered.GetReceived().Equals(msg1) {
 		t.Error("newest of Inbox wrong at val1")
 	}
-	if msg1Delivered.MessageNum.Cmp(big.NewInt(1)) != 0 {
-		t.Error("msg 1 messageNum should have been 1, but was", msg1Delivered.MessageNum)
+	if msg1Delivered.TxId.Cmp(big.NewInt(1)) != 0 {
+		t.Error("msg 1 messageNum should have been 1, but was", msg1Delivered.TxId)
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
@@ -170,8 +170,8 @@ func TestInboxInsert(t *testing.T) {
 	if !msg2Delivered.GetReceived().Equals(msg2) {
 		t.Error("newest of Inbox wrong at val2")
 	}
-	if msg2Delivered.MessageNum.Cmp(big.NewInt(2)) != 0 {
-		t.Error("msg 2 messageNum should have been 2, but was", msg2Delivered.MessageNum)
+	if msg2Delivered.TxId.Cmp(big.NewInt(2)) != 0 {
+		t.Error("msg 2 messageNum should have been 2, but was", msg2Delivered.TxId)
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {

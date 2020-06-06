@@ -126,7 +126,7 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 		msg.TxData,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		msg.Value,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 
 	if err != nil {
@@ -169,7 +169,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			msg.Value,
 			deliveryInfo.BlockNum.AsInt(),
 			deliveryInfo.Timestamp,
-			deliveryInfo.MessageNum,
+			deliveryInfo.TxId,
 		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProofEthMessage")
@@ -195,7 +195,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		msg.Value,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -223,7 +223,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		msg.Id,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -251,7 +251,7 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		msg.Data,
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err

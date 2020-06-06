@@ -31,8 +31,24 @@ func generateTestDeliveredERC20() Delivered {
 				BlockNum:  common.NewTimeBlocks(big.NewInt(64654)),
 				Timestamp: big.NewInt(65435643),
 			},
-			MessageNum: big.NewInt(9675),
+			TxId: big.NewInt(9675),
 		},
+	}
+}
+
+func TestMarshalDelivered(t *testing.T) {
+	msg := generateTestDeliveredERC20()
+	inboxVal, err := msg.AsInboxValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg2, err := UnmarshalDelivered(inboxVal, generateTestChain())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !msg.Equals(msg2) {
+		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
 	}
 }
 

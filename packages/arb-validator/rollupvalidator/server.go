@@ -211,7 +211,7 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 				BlockNum:  m.man.CurrentBlockId().Height,
 				Timestamp: big.NewInt(time.Now().Unix()),
 			},
-			MessageNum: big.NewInt(0),
+			TxId: big.NewInt(0),
 		},
 	}
 

@@ -140,7 +140,7 @@ func TestTransactionBatchMessage(t *testing.T) {
 			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
 			Timestamp: big.NewInt(35463245),
 		},
-		MessageNum: big.NewInt(0),
+		TxId: big.NewInt(0),
 	}
 
 	msg := message.TransactionBatch{
@@ -321,7 +321,7 @@ func TestDeliveredMessage(t *testing.T) {
 			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
 			Timestamp: big.NewInt(35463245),
 		},
-		MessageNum: big.NewInt(98742),
+		TxId: big.NewInt(98742),
 	}
 	deliveredMsg := message.Delivered{
 		Message:      msg,
@@ -333,7 +333,7 @@ func TestDeliveredMessage(t *testing.T) {
 		msg.CommitmentHash().ToEthHash(),
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -358,7 +358,7 @@ func TestDeliveredMessage(t *testing.T) {
 		big.NewInt(inboxPreImage.Size),
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
-		deliveryInfo.MessageNum,
+		deliveryInfo.TxId,
 		valPreimage.HashImage,
 		big.NewInt(valPreimage.Size),
 	)

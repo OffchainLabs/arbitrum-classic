@@ -118,22 +118,11 @@ func UnmarshalFromCheckpoint(msgType Type, v value.Value) (Message, error) {
 	}
 }
 
-func DeliveredValue(m Delivered, singleMessage SingleMessage) value.Value {
-	receiptHash := m.ReceiptHash()
-	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
-	msg, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(m.deliveredHeight().AsInt()),
-		value.NewIntValue(m.deliveredTimestamp()),
-		value.NewIntValue(receiptVal),
-		singleMessage.AsInboxValue(),
-	})
-	return msg
-}
-
 func AddToPrev(prev value.TupleValue, delivered Delivered) value.TupleValue {
 	switch msg := delivered.Message.(type) {
 	case SingleMessage:
-		return value.NewTuple2(prev, DeliveredValue(delivered, msg))
+		m, _ := delivered.AsInboxValue()
+		return value.NewTuple2(prev, m)
 	case TransactionBatch:
 		ret := prev
 		txes := msg.getTransactions()
@@ -142,7 +131,8 @@ func AddToPrev(prev value.TupleValue, delivered Delivered) value.TupleValue {
 				Message:      tx,
 				DeliveryInfo: delivered.DeliveryInfo,
 			}
-			ret = value.NewTuple2(ret, DeliveredValue(deliveredTx, tx))
+			m, _ := deliveredTx.AsInboxValue()
+			ret = value.NewTuple2(ret, m)
 		}
 		return ret
 	default:
