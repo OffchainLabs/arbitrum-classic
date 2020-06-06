@@ -9,8 +9,9 @@ coverage:
         flags:
           - integration
 
-flags: unit
-  integration
+flags:
+  unit: {}
+  integration: {}
 
 ignore:
   - 'packages/arb-validator-core/ethbridge/arbfactory/*'
