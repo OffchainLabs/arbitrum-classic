@@ -52,7 +52,7 @@ func generateTestTransaction() Transaction {
 func TestMarshalTransaction(t *testing.T) {
 	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalTransaction(msg.AsInboxValue(), generateTestChain())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -65,7 +65,7 @@ func TestMarshalTransaction(t *testing.T) {
 func TestCheckpointTransaction(t *testing.T) {
 	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalTransactionFromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

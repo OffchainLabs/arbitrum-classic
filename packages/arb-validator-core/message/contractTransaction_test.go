@@ -43,7 +43,7 @@ func generateTestContractTransaction() ContractTransaction {
 func TestMarshalContractTransaction(t *testing.T) {
 	msg := generateTestContractTransaction()
 
-	msg2, err := UnmarshalContractTransaction(msg.AsInboxValue())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,7 +56,7 @@ func TestMarshalContractTransaction(t *testing.T) {
 func TestCheckpointContractTransaction(t *testing.T) {
 	msg := generateTestContractTransaction()
 
-	msg2, err := UnmarshalContractTransactionFromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

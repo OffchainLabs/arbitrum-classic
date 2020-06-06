@@ -49,7 +49,7 @@ func generateTestBatch() TransactionBatch {
 func TestCheckpointBatch(t *testing.T) {
 	msg := generateTestBatch()
 
-	msg2, err := UnmarshalTransactionBatchFromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

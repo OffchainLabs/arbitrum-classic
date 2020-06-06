@@ -41,7 +41,7 @@ func generateTestCall() Call {
 func TestMarshalCall(t *testing.T) {
 	msg := generateTestCall()
 
-	msg2, err := UnmarshalCall(msg.AsInboxValue())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +54,7 @@ func TestMarshalCall(t *testing.T) {
 func TestCheckpointCall(t *testing.T) {
 	msg := generateTestCall()
 
-	msg2, err := UnmarshalCallFromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

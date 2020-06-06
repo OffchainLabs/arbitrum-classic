@@ -42,7 +42,7 @@ func generateTestEth() Eth {
 func TestMarshalEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEth(msg.AsInboxValue())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,7 +55,7 @@ func TestMarshalEth(t *testing.T) {
 func TestCheckpointEth(t *testing.T) {
 	msg := generateTestEth()
 
-	msg2, err := UnmarshalEthFromCheckpoint(msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}
