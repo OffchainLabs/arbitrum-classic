@@ -268,7 +268,7 @@ func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (txInfo, er
 	default:
 	}
 	tx, err := tr.txDB.lookupTxRecord(txHash)
-	if err != nil {
+	if err != nil || tx == nil {
 		return txInfo{Found: false}, err
 	}
 	nodeInfo, err := tr.txDB.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())

@@ -163,6 +163,8 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 }
 
 // lookupTxRecord requires holding a read lock
+// If the record is found it returns it. If the record is not found, it
+// returns nil with no error, otherwise it returns an error
 func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 	txRecord, ok := txdb.transactions[txHash]
 	if ok {
@@ -171,7 +173,7 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 
 	txData := txdb.db.GetData(txRecordKey(txHash))
 	if len(txData) == 0 {
-		return nil, errors.New("tx not found")
+		return nil, nil
 	}
 
 	if err := proto.Unmarshal(txData, txRecord); err != nil {
