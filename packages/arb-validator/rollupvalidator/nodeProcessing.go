@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -56,38 +55,20 @@ type txRecordInfo struct {
 }
 
 func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRecordInfo) {
-	return processNodeImpl(
-		node.Hash(),
-		node.Depth(),
-		node.AssertionTxHash(),
-		node.LinkType(),
-		node.Assertion(),
-		chain,
-	)
-}
-
-func processNodeImpl(
-	nodeHash common.Hash,
-	nodeHeight uint64,
-	assertionTxHash common.Hash,
-	linkType valprotocol.ChildType,
-	assertion *protocol.ExecutionAssertion,
-	chain common.Address,
-) (*nodeInfo, []txRecordInfo) {
 	nodeInfo := newNodeInfo()
-	nodeInfo.NodeHash = nodeHash
-	nodeInfo.NodeHeight = nodeHeight
-	txHash := assertionTxHash
+	nodeInfo.NodeHash = node.Hash()
+	nodeInfo.NodeHeight = node.Depth()
+	txHash := node.AssertionTxHash()
 	nodeInfo.L1TxHash = hexutil.Encode(txHash[:])
 
-	if linkType != valprotocol.ValidChildType {
+	if node.LinkType() != valprotocol.ValidChildType {
 		return nodeInfo, nil
 	}
 
-	logs := assertion.Logs
+	logs := node.Assertion().Logs
 
-	nodeInfo.AVMMessages = assertion.OutMsgs
-	nodeInfo.AVMLogs = assertion.Logs
+	nodeInfo.AVMMessages = node.Assertion().OutMsgs
+	nodeInfo.AVMLogs = node.Assertion().Logs
 	nodeInfo.AVMLogsValHashes = make([]string, 0, len(logs))
 	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(logs))
 
@@ -117,22 +98,22 @@ func processNodeImpl(
 		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, logsInfo{
 			Logs:    evmVal.GetLogs(),
 			TxIndex: uint64(i),
-			TxHash:  msg.TxHash,
+			TxHash:  msg.TxHash(),
 		})
 
 		if evmVal, ok := evmVal.(evm.Revert); ok {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
 
-		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
+		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash().Bytes()))
 		record := &TxRecord{
-			NodeHeight:       nodeHeight,
-			NodeHash:         nodeHash.MarshalToBuf(),
+			NodeHeight:       node.Depth(),
+			NodeHash:         node.Hash().MarshalToBuf(),
 			TransactionIndex: uint64(i),
 		}
 		info := txRecordInfo{
 			record: record,
-			txHash: msg.TxHash,
+			txHash: msg.TxHash(),
 		}
 		transactions = append(transactions, info)
 		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, info.txHash)
