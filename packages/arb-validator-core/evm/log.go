@@ -17,6 +17,7 @@
 package evm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -35,6 +36,19 @@ type Log struct {
 	Data    []byte
 }
 
+func (l Log) Equals(o Log) bool {
+	if len(l.Topics) != len(o.Topics) {
+		return false
+	}
+	for i, topic := range l.Topics {
+		if topic != o.Topics[i] {
+			return false
+		}
+	}
+	return l.Address == o.Address &&
+		bytes.Equal(l.Data, o.Data)
+}
+
 func (l Log) String() string {
 	var sb strings.Builder
 	sb.WriteString("Log(contract: ")
@@ -49,7 +63,7 @@ func (l Log) String() string {
 	sb.WriteString("], data:")
 	sb.WriteString(hexutil.Encode(l.Data))
 	sb.WriteString(")")
-	return ""
+	return sb.String()
 }
 
 func NewLogFromValue(val value.Value) (Log, error) {
@@ -87,7 +101,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 
 func (l Log) AsValue() value.TupleValue {
 	data := []value.Value{
-		l.ContractID,
+		value.NewValueFromAddress(l.Address),
 		message.BytesToByteStack(l.Data),
 	}
 	for _, topic := range l.Topics {

@@ -9,6 +9,29 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
+func TestListToStackValue(t *testing.T) {
+	vals := make([]value.Value, 0)
+	for i := int64(0); i < 10; i++ {
+		vals = append(vals, value.NewInt64Value(i))
+	}
+	stackVal := ListToStackValue(vals)
+
+	vals2, err := StackValueToList(stackVal)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(vals) != len(vals2) {
+		t.Fatal("wrong val count")
+	}
+
+	for i, val := range vals {
+		if !value.Eq(val, vals2[i]) {
+			t.Fatal("val not equal")
+		}
+	}
+}
+
 func TestByteStackConversion(t *testing.T) {
 	data := make([]byte, 100)
 	rand.Read(data)

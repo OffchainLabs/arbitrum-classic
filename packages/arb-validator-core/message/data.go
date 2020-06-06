@@ -64,6 +64,11 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 
 		values = append(values, member)
 	}
+
+	for i := len(values)/2 - 1; i >= 0; i-- {
+		opp := len(values) - 1 - i
+		values[i], values[opp] = values[opp], values[i]
+	}
 	return values, nil
 }
 
@@ -107,8 +112,8 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	for i := range byteChunks {
-		buf.Write(byteChunks[len(byteChunks)-1-i][:])
+	for _, chunk := range byteChunks {
+		buf.Write(chunk[:])
 	}
 	return buf.Bytes()[:intLength], nil
 }
