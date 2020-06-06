@@ -18,6 +18,7 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"log"
 	"os"
 	"testing"
@@ -79,6 +80,11 @@ func TestTxTracker(t *testing.T) {
 		t.Run("FindLogs", findLogsTest)
 		t.Run("TxInfo", txInfoTest)
 	}
+
+	txTracker.ConfirmedNode(context.Background(), nil, arbbridge.ConfirmedEvent{
+		ChainInfo: arbbridge.ChainInfo{},
+		NodeHash:  nodes[0].Hash(),
+	})
 
 	txTracker.RestartingFromLatestValid(context.Background(), nil, nodes[0])
 
