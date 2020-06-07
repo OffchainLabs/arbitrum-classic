@@ -265,8 +265,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       logPreHash,
       logPostHash,
       logValHashes,
-      validatorSigs,
-      partialHash,
       onChainTxHash,
       evmVal,
     } = result
@@ -289,18 +287,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Failed to prove val is in logPostHash')
     }
 
-    let validNodeHash = ''
-
     // Step 2: prove that logPostHash is in assertion and assertion is valid
-    if (validatorSigs && validatorSigs.length > 0) {
-      throw Error('Unanimous assertions not supported')
-      // this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
-    } else {
-      validNodeHash = await this.processConfirmedDisputableAssertion(
-        logPostHash,
-        onChainTxHash
-      )
-    }
+    const validNodeHash = await this.processConfirmedDisputableAssertion(
+      logPostHash,
+      onChainTxHash
+    )
 
     return {
       evmVal,
@@ -403,12 +394,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         })
       }
       case 'getLogs': {
-        return this.client.findLogs(
-          params.filter.fromBlock,
-          params.filter.toBlock,
-          params.filter.address,
-          params.filter.topics
-        )
+        return this.client.findLogs(params.filter)
       }
       case 'getBalance': {
         const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this)

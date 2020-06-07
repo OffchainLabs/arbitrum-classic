@@ -319,57 +319,6 @@ function processLog(value: ArbValue.TupleValue): EVMResult {
   }
 }
 
-interface GetVMInfoReply {
-  vmID: string
-}
-
-interface GetValidatorListReply {
-  validators: string[]
-}
-
-interface GetAssertionCountReply {
-  assertionCount: number
-}
-
-interface GetOutputMessageReply {
-  found: boolean
-  rawVal: string
-}
-
-interface GetMessageResultReply {
-  found: boolean
-  rawVal: string
-  logPreHash: string
-  logPostHash: string
-  logValHashes: string[]
-  validatorSigs: string[]
-  partialHash: string
-  onChainTxHash: string
-}
-
-interface SendMessageReply {
-  txHash: string
-}
-
-interface CallMessageReply {
-  rawVal: string
-}
-
-interface LogInfo {
-  address: string
-  blockHash: string
-  blockNumber: string
-  data: string
-  logIndex: string
-  topics: string[]
-  transactionIndex: string
-  transactionHash: string
-}
-
-interface FindLogsReply {
-  logs: LogInfo[]
-}
-
 function _arbClient(managerAddress: string): any {
   const callServer = (request: any, callback: any): void => {
     const options = {
@@ -400,15 +349,38 @@ interface MessageResult {
   logPreHash: string
   logValHashes: string[]
   onChainTxHash: string
-  partialHash: string
   val: ArbValue.Value
-  validatorSigs: string[]
   vmId: string
   evmVal: EVMResult
 }
 
 interface OutputMessage {
   outputMsg: ArbValue.Value
+}
+
+function convertBlockTag(tag?: ethers.providers.BlockTag): string | undefined {
+  if (tag === undefined || typeof tag == 'string') {
+    return tag
+  }
+
+  return ethers.utils.bigNumberify(tag).toHexString()
+}
+
+function convertTopics(
+  topicGroups?: Array<string | Array<string>>
+): Array<validatorserver.TopicGroup> | undefined {
+  if (topicGroups == undefined) {
+    return topicGroups
+  }
+  return topicGroups.map(
+    (topics): validatorserver.TopicGroup => {
+      if (typeof topics == 'string') {
+        return { topics: [topics] }
+      } else {
+        return { topics }
+      }
+    }
+  )
 }
 
 export class ArbClient {
@@ -422,17 +394,20 @@ export class ArbClient {
     AssertionNodeHash: string,
     msgIndex: string
   ): Promise<OutputMessage | null> {
-    const msgResult = await new Promise<GetOutputMessageReply>(
+    const params: validatorserver.GetOutputMessageArgs = {
+      AssertionNodeHash,
+      MsgIndex: msgIndex,
+    }
+    const msgResult = await new Promise<validatorserver.GetOutputMessageReply>(
       (resolve, reject): void => {
         this.client.request(
           'Validator.GetOutputMessage',
-          [
-            {
-              AssertionNodeHash,
-              msgIndex,
-            },
-          ],
-          (err: Error, error: Error, result: GetOutputMessageReply) => {
+          [params],
+          (
+            err: Error,
+            error: Error,
+            result: validatorserver.GetOutputMessageReply
+          ) => {
             if (err) {
               reject(err)
             } else if (error) {
@@ -444,7 +419,7 @@ export class ArbClient {
         )
       }
     )
-    if (msgResult.found) {
+    if (msgResult.found && msgResult.rawVal !== undefined) {
       const val = ArbValue.unmarshal(msgResult.rawVal)
 
       return {
@@ -456,44 +431,60 @@ export class ArbClient {
   }
 
   public async getMessageResult(txHash: string): Promise<MessageResult | null> {
-    const messageResult = await new Promise<GetMessageResultReply>(
-      (resolve, reject): void => {
-        this.client.request(
-          'Validator.GetMessageResult',
-          [
-            {
-              txHash,
-            },
-          ],
-          (err: Error, error: Error, result: GetMessageResultReply) => {
-            if (err) {
-              reject(err)
-            } else if (error) {
-              reject(error)
-            } else {
-              resolve(result)
-            }
+    const params: validatorserver.GetMessageResultArgs = {
+      txHash,
+    }
+    const messageResult = await new Promise<
+      validatorserver.GetMessageResultReply
+    >((resolve, reject): void => {
+      this.client.request(
+        'Validator.GetMessageResult',
+        [params],
+        (
+          err: Error,
+          error: Error,
+          result: validatorserver.GetMessageResultReply
+        ) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(result)
           }
-        )
-      }
-    )
-    if (messageResult.found) {
+        }
+      )
+    })
+    if (messageResult.tx && messageResult.tx.found) {
+      const tx = messageResult.tx
       const vmId = await this.getVmID()
-      const val = ArbValue.unmarshal(messageResult.rawVal)
+      if (tx.rawVal === undefined) {
+        return null
+      }
+      const val = ArbValue.unmarshal(tx.rawVal)
       const evmVal = processLog(val as ArbValue.TupleValue)
-      let logValHashes = messageResult.logValHashes
+      if (tx.logValHashes === undefined) {
+        return null
+      }
+      let logValHashes = tx.logValHashes
       if (!logValHashes) {
         logValHashes = []
       }
 
+      if (
+        tx.logPostHash === undefined ||
+        tx.logPreHash === undefined ||
+        tx.onChainTxHash === undefined
+      ) {
+        return null
+      }
+
       return {
-        logPostHash: messageResult.logPostHash,
-        logPreHash: messageResult.logPreHash,
+        logPostHash: tx.logPostHash,
+        logPreHash: tx.logPreHash,
         logValHashes,
-        onChainTxHash: messageResult.onChainTxHash,
-        partialHash: messageResult.partialHash,
+        onChainTxHash: tx.onChainTxHash,
         val,
-        validatorSigs: messageResult.validatorSigs,
         vmId,
         evmVal,
       }
@@ -508,21 +499,28 @@ export class ArbClient {
     data: string
   ): Promise<Uint8Array> {
     return new Promise((resolve, reject): void => {
+      const params: validatorserver.CallMessageArgs = {
+        contractAddress,
+        data,
+        sender,
+      }
       this.client.request(
         'Validator.CallMessage',
-        [
-          {
-            contractAddress,
-            data,
-            sender,
-          },
-        ],
-        (err: Error, error: Error, result: CallMessageReply) => {
+        [params],
+        (
+          err: Error,
+          error: Error,
+          result: validatorserver.CallMessageReply
+        ) => {
           if (err) {
             reject(err)
           } else if (error) {
             reject(error)
           } else {
+            if (result.rawVal === undefined) {
+              reject('call result empty')
+              return
+            }
             const val = ArbValue.unmarshal(result.rawVal)
             const evmVal = processLog(val as ArbValue.TupleValue)
             switch (evmVal.returnType) {
@@ -542,24 +540,18 @@ export class ArbClient {
     })
   }
 
-  public findLogs(
-    fromBlock: number,
-    toBlock: number,
-    address: string,
-    topics: string[]
-  ): Promise<LogInfo[]> {
+  public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {
     return new Promise((resolve, reject): void => {
+      const params: validatorserver.FindLogsArgs = {
+        address: filter.address,
+        fromHeight: convertBlockTag(filter.fromBlock),
+        toHeight: convertBlockTag(filter.toBlock),
+        topicGroups: convertTopics(filter.topics),
+      }
       return this.client.request(
         'Validator.FindLogs',
-        [
-          {
-            address,
-            fromHeight: fromBlock,
-            toHeight: toBlock,
-            topics,
-          },
-        ],
-        (err: Error, error: Error, result: FindLogsReply) => {
+        [params],
+        (err: Error, error: Error, result: validatorserver.FindLogsReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -573,11 +565,12 @@ export class ArbClient {
   }
 
   public getVmID(): Promise<string> {
+    const params: validatorserver.GetVMInfoArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
         'Validator.GetVMInfo',
-        [],
-        (err: Error, error: Error, result: GetVMInfoReply) => {
+        [params],
+        (err: Error, error: Error, result: validatorserver.GetVMInfoReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -591,35 +584,22 @@ export class ArbClient {
   }
 
   public getAssertionCount(): Promise<number> {
+    const params: validatorserver.GetAssertionCountArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
         'Validator.GetAssertionCount',
-        [],
-        (err: Error, error: Error, result: GetAssertionCountReply) => {
+        [params],
+        (
+          err: Error,
+          error: Error,
+          result: validatorserver.GetAssertionCountReply
+        ) => {
           if (err) {
             reject(err)
           } else if (error) {
             reject(error)
           } else {
             resolve(result.assertionCount)
-          }
-        }
-      )
-    })
-  }
-
-  public getValidatorList(): Promise<string[]> {
-    return new Promise((resolve, reject): void => {
-      this.client.request(
-        'Validator.GetValidatorList',
-        [],
-        (err: Error, error: Error, result: GetValidatorListReply) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(result.validators)
           }
         }
       )

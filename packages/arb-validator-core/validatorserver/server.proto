@@ -19,11 +19,15 @@ package validatorserver;
 import "arb-validator-core/evm/evm.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver";
 
+message TopicGroup {
+    repeated string topics = 1;
+}
+
 message FindLogsArgs {
     string fromHeight = 1;
     string toHeight = 2;
     string address = 3;
-    repeated string topics = 4;
+    repeated TopicGroup topicGroups = 4;
 }
 
 message FindLogsReply {
