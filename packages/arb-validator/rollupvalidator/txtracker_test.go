@@ -18,7 +18,9 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"os"
 	"testing"
@@ -27,11 +29,34 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
+func extractFullLogs(node *structures.Node, results []evm.Result) []evm.FullLog {
+	logs := extractLogResponses(results)
+	ret := make([]evm.FullLog, 0, len(logs))
+	for _, l := range logs {
+		fl := evm.FullLog{
+			Log:        l.Log,
+			TxIndex:    l.TxIndex,
+			TxHash:     l.TxHash,
+			NodeHeight: node.Depth(),
+			NodeHash:   node.Hash(),
+		}
+		ret = append(ret, fl)
+	}
+	return ret
+}
+
 func TestTxTracker(t *testing.T) {
-	checkpointer, nodes, err := setupContext()
+	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	nodes, results, err := setupNodes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logs := extractFullLogs(nodes[1], results)
 
 	ns := checkpointer.GetNodeStore()
 	txTracker, err := newTxTracker(checkpointer, ns, chainAddress)
@@ -45,23 +70,73 @@ func TestTxTracker(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if count != uint64(node.Depth()) {
+			if count != node.Depth() {
 				t.Error("wrong assertion count")
 			}
 		}
 	}
 
-	findLogsTest := func(t *testing.T) {
-		logs, err := txTracker.FindLogs(context.Background(), nil, nil, nil, []common.Hash{{}})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(logs) != 0 {
-			t.Error("wrong logs count")
+	nodeTxInfo := func(node *structures.Node) func(*testing.T) {
+		nodeInfo, txInfos := processNode(node, chainAddress)
+		return func(t *testing.T) {
+			for _, r := range txInfos {
+				info, err := txTracker.TxInfo(context.Background(), r.txHash)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !info.Found {
+					t.Fatal("tx not found")
+				}
+				if !info.Equals(getTxInfo(r.txHash, nodeInfo, r.record)) {
+					t.Error("Got wrong tx info")
+				}
+			}
 		}
 	}
 
-	txInfoTest := func(t *testing.T) {
+	nodeTxInfoMissing := func(node *structures.Node) func(*testing.T) {
+		_, txInfos := processNode(node, chainAddress)
+		return func(t *testing.T) {
+			for _, r := range txInfos {
+				info, err := txTracker.TxInfo(context.Background(), r.txHash)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Found {
+					t.Fatal("tx was found, but shouldn't have been")
+				}
+			}
+		}
+	}
+
+	findLogTest := func(fromHeight *int64, toHeight *int64) func(*testing.T) {
+		return func(t *testing.T) {
+			foundLogs, err := txTracker.FindLogs(context.Background(), nil, nil, []common.Address{logs[0].Address}, [][]common.Hash{{}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(foundLogs) != 1 {
+				t.Fatal("wrong log count", len(foundLogs))
+			}
+			if !foundLogs[0].Equals(logs[0]) {
+				t.Fatal("found wrong log")
+			}
+		}
+	}
+
+	findLogMissingTest := func(fromHeight *int64, toHeight *int64) func(*testing.T) {
+		return func(t *testing.T) {
+			foundLogs, err := txTracker.FindLogs(context.Background(), fromHeight, toHeight, []common.Address{logs[0].Address}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(foundLogs) != 0 {
+				t.Fatal("shouldn't have found log")
+			}
+		}
+	}
+
+	t.Run("UnknownTxInfo", func(t *testing.T) {
 		info, err := txTracker.TxInfo(context.Background(), common.Hash{})
 		if err != nil {
 			t.Fatal(err)
@@ -69,17 +144,27 @@ func TestTxTracker(t *testing.T) {
 		if info.Found != false {
 			t.Error("found non-existant tx")
 		}
-	}
+	})
 
+	t.Run("FindLogsBeforeAdvancing", findLogMissingTest(nil, nil))
 	for _, node := range nodes {
 		t.Run("AdvancedKnownNode", func(t *testing.T) {
 			txTracker.AdvancedKnownNode(context.Background(), nil, node)
 		})
-
 		t.Run("AssertionCount", countTest(node))
-		t.Run("FindLogs", findLogsTest)
-		t.Run("TxInfo", txInfoTest)
+		t.Run("TxInfo", nodeTxInfo(node))
 	}
+
+	height1 := int64(1)
+	height2 := int64(2)
+
+	t.Run("FindLogs", func(t *testing.T) {
+		findLogTest(nil, nil)(t)
+		findLogTest(&height1, nil)(t)
+		findLogTest(&height1, &height2)(t)
+		findLogTest(nil, &height2)(t)
+		findLogMissingTest(nil, &height1)
+	})
 
 	txTracker.ConfirmedNode(context.Background(), nil, arbbridge.ConfirmedEvent{
 		ChainInfo: arbbridge.ChainInfo{},
@@ -89,8 +174,8 @@ func TestTxTracker(t *testing.T) {
 	txTracker.RestartingFromLatestValid(context.Background(), nil, nodes[0])
 
 	t.Run("AssertionCountAfterReorg", countTest(nodes[0]))
-	t.Run("FindLogsAfterReorg", findLogsTest)
-	t.Run("TxInfoAfterReorg", txInfoTest)
+	t.Run("FindLogsAfterReorg", findLogMissingTest(nil, nil))
+	t.Run("TxInfoAfterReorg", nodeTxInfoMissing(nodes[1]))
 
 	checkpointer.CloseCheckpointStorage()
 	if err := os.RemoveAll(dbPath); err != nil {

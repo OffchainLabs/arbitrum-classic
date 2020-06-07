@@ -19,68 +19,28 @@ package evm
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"math/big"
 	"math/rand"
 	"testing"
 )
 
-func generateSampleTxInfo() (TxInfo, error) {
-	var txHash common.Hash
-	var nodeHash common.Hash
-
-	slicesToFill := [][]byte{txHash[:], nodeHash[:]}
-	for _, sl := range slicesToFill {
-		_, err := rand.Read(sl)
-		if err != nil {
-			return TxInfo{}, err
-		}
-	}
-
-	delivered, _ := message.NewSingleDelivered(message.Delivered{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: new(big.Int).SetUint64(rand.Uint64()),
-		},
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(rand.Uint64())),
-				Timestamp: new(big.Int).SetUint64(rand.Uint64()),
-			},
-			TxId: new(big.Int).SetUint64(rand.Uint64()),
-		},
-	})
-
-	val, err := NewVMResultValue(
-		delivered,
-		StopCode,
-		[]byte{},
-		[]Log{},
-	)
-	if err != nil {
-		return TxInfo{}, err
-	}
-
+func newRandomTxInfo(r Result) TxInfo {
 	return TxInfo{
 		Found:            true,
 		NodeHeight:       rand.Uint64(),
-		NodeHash:         nodeHash,
+		NodeHash:         common.RandHash(),
 		TransactionIndex: rand.Uint64(),
-		TransactionHash:  txHash,
-		RawVal:           val,
+		TransactionHash:  common.RandHash(),
+		RawVal:           ResultAsValue(r),
 		LogsPreHash:      "",
 		LogsPostHash:     "",
 		LogsValHashes:    nil,
 		OnChainTxHash:    common.Hash{},
-	}, nil
+	}
 }
 
 func TestTxInfoMarshal(t *testing.T) {
 	rand.Seed(43242)
-	tx, err := generateSampleTxInfo()
-	if err != nil {
-		t.Fatal(err)
-	}
+	tx := newRandomTxInfo(NewRandomStop(message.NewRandomEth(), rand.Int31n(5)))
 
 	txBuf := tx.Marshal()
 
@@ -96,12 +56,8 @@ func TestTxInfoMarshal(t *testing.T) {
 
 func TestTxInfoToEthReceipt(t *testing.T) {
 	rand.Seed(43242)
-	l, err := generateSampleTxInfo()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = l.ToEthReceipt(common.Address{65, 43, 65})
+	l := newRandomTxInfo(NewRandomStop(message.NewRandomEth(), rand.Int31n(5)))
+	_, err := l.ToEthReceipt(common.Address{65, 43, 65})
 	if err != nil {
 		t.Fatal(err)
 	}

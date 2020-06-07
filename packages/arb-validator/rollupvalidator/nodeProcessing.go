@@ -49,6 +49,81 @@ type nodeInfo struct {
 	L1TxHash common.Hash
 }
 
+func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash) []logResponse {
+	logs := make([]logResponse, 0)
+	for _, txLogs := range ni.EVMLogs {
+		for _, evmLog := range txLogs.Logs {
+			if evmLog.MatchesQuery(addresses, topics) {
+				logs = append(logs, logResponse{
+					Log:     evmLog,
+					TxIndex: txLogs.TxIndex,
+					TxHash:  txLogs.TxHash,
+				})
+			}
+		}
+	}
+	return logs
+}
+
+func valueSlicesEqual(a []value.Value, b []value.Value) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, t := range a {
+		if !value.Eq(t, b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func stringSlicesEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, t := range a {
+		if t != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func logSlicesEqual(a []logsInfo, b []logsInfo) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, t := range a {
+		if !t.Equals(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func hashSlicesEqual(a []common.Hash, b []common.Hash) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, t := range a {
+		if t != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *nodeInfo) Equals(o *nodeInfo) bool {
+	return logSlicesEqual(e.EVMLogs, o.EVMLogs) &&
+		hashSlicesEqual(e.EVMTransactionHashes, o.EVMTransactionHashes) &&
+		valueSlicesEqual(e.AVMLogs, o.AVMLogs) &&
+		valueSlicesEqual(e.AVMMessages, o.AVMMessages) &&
+		stringSlicesEqual(e.AVMLogsAccHashes, o.AVMLogsAccHashes) &&
+		stringSlicesEqual(e.AVMLogsValHashes, o.AVMLogsValHashes) &&
+		e.NodeHash == o.NodeHash &&
+		e.NodeHeight == o.NodeHeight
+}
+
 type txRecordInfo struct {
 	record *TxRecord
 	txHash common.Hash
@@ -105,7 +180,6 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
 
-		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash().Bytes()))
 		record := &TxRecord{
 			NodeHeight:       node.Depth(),
 			NodeHash:         node.Hash().MarshalToBuf(),

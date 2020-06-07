@@ -32,6 +32,14 @@ type Eth struct {
 	Value *big.Int
 }
 
+func NewRandomEth() Eth {
+	return Eth{
+		To:    common.RandAddress(),
+		From:  common.RandAddress(),
+		Value: common.RandBigInt(),
+	}
+}
+
 func (m Eth) String() string {
 	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, m.Value)
 }

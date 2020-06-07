@@ -135,7 +135,10 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
-	nodeGraph := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	nodeGraph, err := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	if err != nil {
+		return nil, err
+	}
 	inbox, err := x.Inbox.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
 		return nil, err

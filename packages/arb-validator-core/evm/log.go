@@ -36,6 +36,54 @@ type Log struct {
 	Data    []byte
 }
 
+func NewRandomLog(topicCount int32) Log {
+	topics := make([]common.Hash, 0, topicCount)
+	for i := int32(0); i < topicCount; i++ {
+		topics = append(topics, common.RandHash())
+	}
+	return Log{
+		Address: common.RandAddress(),
+		Topics:  topics,
+		Data:    common.RandBytes(200),
+	}
+}
+
+func (l Log) MatchesQuery(addresses []common.Address, topics [][]common.Hash) bool {
+	if len(addresses) > 0 {
+		match := false
+		for _, addr := range addresses {
+			if l.Address == addr {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	if len(topics) > len(l.Topics) {
+		return false
+	}
+
+	for i, topicGroup := range topics {
+		if len(topicGroup) == 0 {
+			continue
+		}
+		match := false
+		for _, topic := range topicGroup {
+			if l.Topics[i] == topic {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+	return true
+}
+
 func (l Log) Equals(o Log) bool {
 	if len(l.Topics) != len(o.Topics) {
 		return false

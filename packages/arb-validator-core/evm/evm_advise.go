@@ -28,20 +28,34 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
+type ResultType int
+
+const (
+	RevertCode      ResultType = 0
+	InvalidCode                = 1
+	ReturnCode                 = 2
+	StopCode                   = 3
+	BadSequenceCode            = 4
+)
+
 type Result interface {
 	IsResult()
+	GetReturnData() []byte
 	GetLogs() []Log
 
 	GetEthMsg() message.SingleDelivered
+	Type() ResultType
 }
 
-const (
-	RevertCode      = 0
-	InvalidCode     = 1
-	ReturnCode      = 2
-	StopCode        = 3
-	BadSequenceCode = 4
-)
+func ResultAsValue(result Result) value.TupleValue {
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		result.GetEthMsg().AsInboxValue(),
+		LogsToLogStack(result.GetLogs()),
+		message.BytesToByteStack(result.GetReturnData()),
+		value.NewInt64Value(int64(result.Type())),
+	})
+	return tup
+}
 
 type Return struct {
 	Msg       message.SingleDelivered
@@ -49,11 +63,19 @@ type Return struct {
 	Logs      []Log
 }
 
+func (e Return) Type() ResultType {
+	return ReturnCode
+}
+
 func (e Return) GetEthMsg() message.SingleDelivered {
 	return e.Msg
 }
 
 func (e Return) IsResult() {}
+
+func (e Return) GetReturnData() []byte {
+	return e.ReturnVal
+}
 
 func (e Return) GetLogs() []Log {
 	return e.Logs
@@ -82,11 +104,19 @@ type Revert struct {
 	ReturnVal []byte
 }
 
+func (e Revert) Type() ResultType {
+	return RevertCode
+}
+
 func (e Revert) GetEthMsg() message.SingleDelivered {
 	return e.Msg
 }
 
 func (e Revert) IsResult() {}
+
+func (e Revert) GetReturnData() []byte {
+	return e.ReturnVal
+}
 
 func (e Revert) GetLogs() []Log {
 	return nil
@@ -108,11 +138,31 @@ type Stop struct {
 	Logs []Log
 }
 
+func NewRandomStop(msg message.ExecutionMessage, logCount int32) Stop {
+	logs := make([]Log, 0, logCount)
+	for i := int32(0); i < logCount; i++ {
+		logs = append(logs, NewRandomLog(3))
+	}
+
+	return Stop{
+		Msg:  message.NewRandomSingleDelivered(msg),
+		Logs: logs,
+	}
+}
+
+func (e Stop) Type() ResultType {
+	return StopCode
+}
+
 func (e Stop) GetEthMsg() message.SingleDelivered {
 	return e.Msg
 }
 
 func (e Stop) IsResult() {}
+
+func (e Stop) GetReturnData() []byte {
+	return nil
+}
 
 func (e Stop) GetLogs() []Log {
 	return e.Logs
@@ -138,11 +188,19 @@ type BadSequenceNum struct {
 	Msg message.SingleDelivered
 }
 
+func (e BadSequenceNum) Type() ResultType {
+	return BadSequenceCode
+}
+
 func (e BadSequenceNum) GetEthMsg() message.SingleDelivered {
 	return e.Msg
 }
 
 func (e BadSequenceNum) IsResult() {}
+
+func (e BadSequenceNum) GetReturnData() []byte {
+	return nil
+}
 
 func (e BadSequenceNum) GetLogs() []Log {
 	return nil
@@ -161,11 +219,19 @@ type Invalid struct {
 	Msg message.SingleDelivered
 }
 
+func (e Invalid) Type() ResultType {
+	return InvalidCode
+}
+
 func (e Invalid) GetEthMsg() message.SingleDelivered {
 	return e.Msg
 }
 
 func (e Invalid) IsResult() {}
+
+func (e Invalid) GetReturnData() []byte {
+	return nil
+}
 
 func (e Invalid) GetLogs() []Log {
 	return nil
@@ -207,7 +273,7 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 		return nil, errors.New("return code must be an int")
 	}
 
-	switch returnCode.BigInt().Uint64() {
+	switch ResultType(returnCode.BigInt().Uint64()) {
 	case ReturnCode:
 		// EVM Return
 		logVal, _ := tup.GetByInt64(1)
@@ -245,18 +311,4 @@ func ProcessLog(val value.Value, chain common.Address) (Result, error) {
 		// Unknown type
 		return nil, fmt.Errorf("unknown return code %v for message %v", returnCode.BigInt(), val)
 	}
-}
-
-func NewVMResultValue(delivered message.SingleDelivered, returnCode int, data []byte, logs []Log) (value.TupleValue, error) {
-	val, err := delivered.AsInboxValue()
-	if err != nil {
-		return value.TupleValue{}, err
-	}
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		val,
-		LogsToLogStack(logs),
-		message.BytesToByteStack(data),
-		value.NewInt64Value(int64(returnCode)),
-	})
-	return tup, nil
 }

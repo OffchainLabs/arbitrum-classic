@@ -31,6 +31,15 @@ type TimeBounds struct {
 	UpperBoundTimestamp *big.Int
 }
 
+func NewRandomTimeBounds() *TimeBounds {
+	return &TimeBounds{
+		LowerBoundBlock:     common.NewTimeBlocks(common.RandBigInt()),
+		UpperBoundBlock:     common.NewTimeBlocks(common.RandBigInt()),
+		LowerBoundTimestamp: common.RandBigInt(),
+		UpperBoundTimestamp: common.RandBigInt(),
+	}
+}
+
 func (a *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
 		LowerBoundBlock:     a.LowerBoundBlock.Marshal(),

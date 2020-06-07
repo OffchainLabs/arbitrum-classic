@@ -17,46 +17,16 @@
 package evm
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/rand"
 	"testing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
-
-func generateSampleLog() (Log, error) {
-	var address common.Address
-	var topic1 common.Hash
-	var topic2 common.Hash
-	var topic3 common.Hash
-	data := make([]byte, 200)
-
-	slicesToFill := [][]byte{address[:], topic1[:], topic2[:], topic3[:], data}
-	for _, sl := range slicesToFill {
-		_, err := rand.Read(sl)
-		if err != nil {
-			return Log{}, err
-		}
-	}
-	return Log{
-		Address: address,
-		Topics: []common.Hash{
-			topic1,
-			topic2,
-			topic3,
-		},
-		Data: data,
-	}, nil
-}
 
 func TestLog(t *testing.T) {
 	rand.Seed(43242)
 	logs := make([]Log, 0)
 	for i := 0; i < 10; i++ {
-		l, err := generateSampleLog()
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		l := NewRandomLog(3)
 		logVal := l.AsValue()
 		l2, err := NewLogFromValue(logVal)
 		if err != nil {
@@ -84,5 +54,21 @@ func TestLog(t *testing.T) {
 		if !l1.Equals(logs2[i]) {
 			t.Fatalf("logs not equal: %v and %v", l1, logs2[i])
 		}
+	}
+}
+
+func TestLogFilter(t *testing.T) {
+	l := NewRandomLog(3)
+
+	LogMatchTest(
+		t,
+		func(addresses []common.Address, topics [][]common.Hash) bool {
+			return l.MatchesQuery(addresses, topics)
+		},
+		l,
+	)
+
+	if l.MatchesQuery([]common.Address{}, [][]common.Hash{nil, nil, nil, nil}) {
+		t.Error("query with too many topics shouldn't match")
 	}
 }

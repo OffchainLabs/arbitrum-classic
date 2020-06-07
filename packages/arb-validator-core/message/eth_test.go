@@ -17,30 +17,11 @@
 package message
 
 import (
-	"math/big"
 	"testing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateTestEth() Eth {
-	addr1 := common.Address{}
-	addr1[0] = 76
-	addr1[19] = 93
-
-	addr2 := common.Address{}
-	addr2[0] = 43
-	addr2[19] = 12
-
-	return Eth{
-		To:    addr1,
-		From:  addr2,
-		Value: big.NewInt(89735406),
-	}
-}
-
 func TestMarshalEth(t *testing.T) {
-	msg := generateTestEth()
+	msg := NewRandomEth()
 
 	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
@@ -53,7 +34,7 @@ func TestMarshalEth(t *testing.T) {
 }
 
 func TestCheckpointEth(t *testing.T) {
-	msg := generateTestEth()
+	msg := NewRandomEth()
 
 	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {

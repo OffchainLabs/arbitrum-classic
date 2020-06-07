@@ -17,44 +17,27 @@
 package evm
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/rand"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateSampleFullLog() (FullLog, error) {
-	l, err := generateSampleLog()
-	if err != nil {
-		return FullLog{}, err
-	}
-	var txHash common.Hash
-	var nodeHash common.Hash
-
-	slicesToFill := [][]byte{txHash[:], nodeHash[:]}
-	for _, sl := range slicesToFill {
-		_, err := rand.Read(sl)
-		if err != nil {
-			return FullLog{}, err
-		}
-	}
+func newRandomFullLog(topicCount int32) FullLog {
 	return FullLog{
-		Log:        l,
+		Log:        NewRandomLog(topicCount),
 		TxIndex:    rand.Uint64(),
-		TxHash:     txHash,
+		TxHash:     common.RandHash(),
 		NodeHeight: rand.Uint64(),
-		NodeHash:   nodeHash,
+		NodeHash:   common.RandHash(),
 		Index:      rand.Uint64(),
 		Removed:    false,
-	}, nil
+	}
 }
 
 func TestFullLogMarshal(t *testing.T) {
 	rand.Seed(43242)
-	l, err := generateSampleFullLog()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	l := newRandomFullLog(3)
 	lBuf := l.Marshal()
 
 	l2, err := lBuf.Unmarshal()
@@ -69,11 +52,7 @@ func TestFullLogMarshal(t *testing.T) {
 
 func TestFullLogToEVMLog(t *testing.T) {
 	rand.Seed(43242)
-	l, err := generateSampleFullLog()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	l := newRandomFullLog(3)
 	evmLog := l.ToEVMLog()
 	if evmLog == nil {
 		t.Fatal("log was nil")

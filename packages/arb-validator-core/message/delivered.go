@@ -31,9 +31,23 @@ type ChainTime struct {
 	Timestamp *big.Int
 }
 
+func NewRandomChainTime() ChainTime {
+	return ChainTime{
+		BlockNum:  common.NewTimeBlocks(common.RandBigInt()),
+		Timestamp: common.RandBigInt(),
+	}
+}
+
 type DeliveryInfo struct {
 	ChainTime
 	TxId *big.Int
+}
+
+func NewRandomDeliveryInfo() DeliveryInfo {
+	return DeliveryInfo{
+		ChainTime: NewRandomChainTime(),
+		TxId:      common.RandBigInt(),
+	}
 }
 
 type Received struct {
@@ -236,6 +250,20 @@ func NewSingleDelivered(d Delivered) (SingleDelivered, error) {
 	return SingleDelivered{Delivered: d}, nil
 }
 
+func NewRandomSingleDelivered(msg ExecutionMessage) SingleDelivered {
+	return SingleDelivered{
+		Delivered: Delivered{
+			Message:      msg,
+			DeliveryInfo: NewRandomDeliveryInfo(),
+		},
+	}
+}
+
 func (s SingleDelivered) ExectutedMessage() ExecutionMessage {
 	return s.Message.(ExecutionMessage)
+}
+
+func (m SingleDelivered) AsInboxValue() value.Value {
+	val, _ := m.Delivered.AsInboxValue()
+	return val
 }

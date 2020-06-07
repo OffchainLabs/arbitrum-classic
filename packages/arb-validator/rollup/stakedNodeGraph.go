@@ -68,9 +68,13 @@ func (sng *StakedNodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointCont
 	}
 }
 
-func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *StakedNodeGraph {
+func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*StakedNodeGraph, error) {
+	nodeGraph, err := x.NodeGraph.UnmarshalFromCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
 	chain := &StakedNodeGraph{
-		NodeGraph:  x.NodeGraph.UnmarshalFromCheckpoint(ctx),
+		NodeGraph:  nodeGraph,
 		stakers:    NewStakerSet(),
 		challenges: NewChallengeSet(),
 	}
@@ -80,7 +84,7 @@ func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreCont
 	for _, challengeBuf := range x.Challenges {
 		chain.challenges.Add(challengeBuf.Unmarshal(chain.NodeGraph))
 	}
-	return chain
+	return chain, nil
 }
 
 func (sng *StakedNodeGraph) DebugString(prefix string) string {

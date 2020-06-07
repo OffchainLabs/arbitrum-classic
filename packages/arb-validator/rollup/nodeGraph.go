@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"errors"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -70,7 +71,7 @@ func (ng *NodeGraph) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *N
 	}
 }
 
-func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *NodeGraph {
+func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*NodeGraph, error) {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
@@ -81,7 +82,10 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 
 	// unmarshal nodes; their prev/successors will not be set up yet
 	for _, nodeBuf := range x.Nodes {
-		nd := nodeBuf.UnmarshalFromCheckpoint(ctx)
+		nd, err := nodeBuf.UnmarshalFromCheckpoint(ctx)
+		if err != nil {
+			return nil, err
+		}
 		chain.nodeFromHash[nd.Hash()] = nd
 	}
 	// now set up prevs and successors for all nodes
@@ -89,11 +93,11 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 		if !nd.IsInitial() {
 			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
-				log.Fatalf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
+				return nil, fmt.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
 			}
 			if err := structures.Link(nd, prev); err != nil {
 				// This can only fail if prev is not actually the prev of nd
-				log.Fatal(err)
+				return nil, err
 			}
 		}
 	}
@@ -103,7 +107,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 		leafHash := leafHashStr.Unmarshal()
 		nd := chain.nodeFromHash[leafHash]
 		if nd == nil {
-			log.Fatal("unexpected nil node")
+			return nil, errors.New("unexpected nil node")
 		}
 		chain.leaves.Add(nd)
 	}
@@ -111,7 +115,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *
 	lcHash := x.LatestConfirmedHash.Unmarshal()
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
-	return chain
+	return chain, nil
 }
 
 func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {

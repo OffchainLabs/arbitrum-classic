@@ -19,7 +19,7 @@ package rollupvalidator
 import (
 	"encoding/binary"
 	"errors"
-
+	"github.com/ethereum/go-ethereum/core/types"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/hashicorp/golang-lru"
@@ -53,6 +53,40 @@ func nodeMetadataKey(key nodeRecordKey) []byte {
 
 func newNodeMetadata(node *nodeInfo) *NodeMetadata {
 	return &NodeMetadata{LogBloom: node.calculateBloomFilter().Bytes()}
+}
+
+func (x *NodeMetadata) MaybeMatchesLogQuery(addresses []common.Address, topics [][]common.Hash) bool {
+	logFilter := types.BytesToBloom(x.LogBloom)
+
+	if len(addresses) > 0 {
+		match := false
+		for _, addr := range addresses {
+			if logFilter.TestBytes(addr[:]) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	for _, topicGroup := range topics {
+		if len(topicGroup) == 0 {
+			continue
+		}
+		match := false
+		for _, topic := range topicGroup {
+			if logFilter.TestBytes(topic[:]) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+	return true
 }
 
 // txDB is not fully thread safe, but can be accessed safely by multiple
@@ -176,6 +210,7 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 		return nil, nil
 	}
 
+	txRecord = &TxRecord{}
 	if err := proto.Unmarshal(txData, txRecord); err != nil {
 		return nil, err
 	}
@@ -227,7 +262,10 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 		return nil, err
 	}
 	restoreContext := ckptcontext.NewSimpleRestore(txdb.db)
-	node := nodeBuf.UnmarshalFromCheckpoint(restoreContext)
+	node, err := nodeBuf.UnmarshalFromCheckpoint(restoreContext)
+	if err != nil {
+		return nil, err
+	}
 
 	info, _ = processNode(node, txdb.chainAddress)
 	txdb.confirmedNodeCache.Add(key, info)

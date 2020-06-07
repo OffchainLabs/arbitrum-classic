@@ -19,6 +19,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"math/big"
 
@@ -92,6 +93,23 @@ func NewNodeFromValidPrev(
 		disputable.ValidAfterVMProtoData(prev.vmProtoData),
 		assertionTxHash,
 	)
+}
+
+func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
+	assertion := evm.NewRandomEVMAssertion(results)
+	disputableNode := valprotocol.NewRandomDisputableNode(
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+	)
+	nextNode := NewNodeFromValidPrev(
+		prev,
+		disputableNode,
+		valprotocol.NewRandomChainParams(),
+		common.NewTimeBlocks(common.RandBigInt()),
+		common.RandHash(),
+	)
+
+	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	return nextNode
 }
 
 func NewNodeFromInvalidPrev(
@@ -376,7 +394,7 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 	}
 }
 
-func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *Node {
+func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node, error) {
 	var disputableNode *valprotocol.DisputableNode
 	if x.DisputableNode != nil {
 		disputableNode = x.DisputableNode.Unmarshal()
@@ -405,10 +423,14 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *Node 
 
 	if x.Assertion != nil {
 		node.assertion = x.Assertion.UnmarshalFromCheckpoint(ctx)
+		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
+		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
+			return nil, errors.New("assertion doesn't match stub")
+		}
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later
-	return node
+	return node, nil
 }
 
 func GeneratePathProof(from, to *Node) []common.Hash {

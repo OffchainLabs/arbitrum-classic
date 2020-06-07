@@ -19,6 +19,7 @@ package rollupvalidator
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -38,10 +39,29 @@ type logResponse struct {
 	TxHash  common.Hash
 }
 
+func (l logResponse) Equals(o logResponse) bool {
+	return l.Log.Equals(o.Log) &&
+		l.TxIndex == o.TxIndex &&
+		l.TxHash == o.TxHash
+}
+
 type logsInfo struct {
 	Logs    []evm.Log
 	TxIndex uint64
 	TxHash  common.Hash
+}
+
+func (l logsInfo) Equals(o logsInfo) bool {
+	if len(l.Logs) != len(o.Logs) {
+		return false
+	}
+	for i, l := range l.Logs {
+		if !l.Equals(o.Logs[i]) {
+			return false
+		}
+	}
+	return l.TxHash == o.TxHash &&
+		l.TxIndex == o.TxIndex
 }
 
 func newNodeInfo() *nodeInfo {
@@ -67,50 +87,6 @@ func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
 		}
 	}
 	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-}
-
-func (x *NodeMetadata) MaybeMatchesLogQuery(address *common.Address, topics []common.Hash) bool {
-	logFilter := types.BytesToBloom(x.LogBloom)
-	if address != nil && !logFilter.TestBytes(address[:]) {
-		return false
-	}
-	for _, topic := range topics {
-		if !logFilter.TestBytes(topic.Bytes()) {
-			return false
-		}
-	}
-	return true
-}
-
-func (ni *nodeInfo) FindLogs(address *common.Address, topics []common.Hash) []logResponse {
-	logs := make([]logResponse, 0)
-	for _, txLogs := range ni.EVMLogs {
-		for _, evmLog := range txLogs.Logs {
-			if address != nil && *address != evmLog.Address {
-				continue
-			}
-
-			if len(topics) > len(evmLog.Topics) {
-				continue
-			}
-
-			match := true
-			for i, topic := range topics {
-				if topic != evmLog.Topics[i] {
-					match = false
-					break
-				}
-			}
-			if match {
-				logs = append(logs, logResponse{
-					Log:     evmLog,
-					TxIndex: txLogs.TxIndex,
-					TxHash:  txLogs.TxHash,
-				})
-			}
-		}
-	}
-	return logs
 }
 
 // txTracker is thread safe
@@ -208,6 +184,10 @@ func (tr *txTracker) processNextNode(node *structures.Node) {
 		return
 	}
 	nodeInfo, transactions := processNode(node, tr.chainAddress)
+	for _, tx := range transactions {
+		log.Println("Coordinator got response for", hexutil.Encode(tx.txHash.Bytes()))
+	}
+
 	tr.txDB.addUnconfirmedNode(nodeInfo, transactions)
 	tr.maxNodeHeight = node.Depth()
 }
@@ -271,8 +251,8 @@ func (tr *txTracker) FindLogs(
 	ctx context.Context,
 	fromHeight *int64,
 	toHeight *int64,
-	address *common.Address,
-	topics []common.Hash,
+	address []common.Address,
+	topics [][]common.Hash,
 ) ([]evm.FullLog, error) {
 	tr.RLock()
 	defer tr.RUnlock()
@@ -297,7 +277,7 @@ func (tr *txTracker) FindLogs(
 		return logs, nil
 	}
 
-	for i := startHeight; i < endHeight; i++ {
+	for i := startHeight; i <= endHeight; i++ {
 		select {
 		case <-ctx.Done():
 			return nil, errors.New("call timed out")
