@@ -66,10 +66,11 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 		log.Println("ValProxy.doCall: error in json.Enc:", err)
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", vp.url, bytes.NewBuffer(message))
+	req, err := http.NewRequest("POST", vp.url, bytes.NewBuffer(message))
 	if err != nil {
 		return err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	client := new(http.Client)
 	resp, err := client.Do(req)
