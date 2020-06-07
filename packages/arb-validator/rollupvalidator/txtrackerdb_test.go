@@ -17,6 +17,7 @@
 package rollupvalidator
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -125,6 +126,25 @@ func TestTrackerDB(t *testing.T) {
 		}
 	}
 
+	nodeMetadataTest := func(node *structures.Node) func(*testing.T) {
+		return func(t *testing.T) {
+			nodeInfo, _ := processNode(node, chainAddress)
+
+			metadata, err := db.lookupNodeMetadata(node.Depth(), node.Hash())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if metadata == nil {
+				t.Fatal("node info nil")
+			}
+
+			if !bytes.Equal(metadata.LogBloom, newNodeMetadata(nodeInfo).LogBloom) {
+				t.Error("nodeInfo not equal")
+			}
+		}
+	}
+
 	txRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
 			_, txInfos := processNode(node, chainAddress)
@@ -155,6 +175,7 @@ func TestTrackerDB(t *testing.T) {
 		t.Run("UnconfirmedHeightLookup", heightTest(node))
 		t.Run("UnconfirmedHashLookup", hashTest(node))
 		t.Run("UnconfirmedNodeRecord", nodeRecordTest(node))
+		t.Run("UnconfirmedMetadata", nodeMetadataTest(node))
 		t.Run("UnconfirmedTxRecord", txRecordTest(node))
 
 		if err := saveNode(checkpointer, db.confirmedNodeStore, node); err != nil {
@@ -179,7 +200,10 @@ func TestTrackerDB(t *testing.T) {
 		t.Run("ConfirmedHeightLookup", heightTest(node))
 		t.Run("ConfirmedHashLookup", hashTest(node))
 		t.Run("ConfirmedNodeRecord", nodeRecordTest(node))
+		t.Run("ConfirmedMetadata", nodeMetadataTest(node))
 		t.Run("ConfirmedTxRecord", txRecordTest(node))
+
+		t.Run("CachedConfirmedNodeRecord", nodeRecordTest(node))
 	}
 
 	checkpointer.CloseCheckpointStorage()
