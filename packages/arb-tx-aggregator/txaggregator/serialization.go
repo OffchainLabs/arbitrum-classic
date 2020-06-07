@@ -16,4 +16,4 @@
 
 package txaggregator
 
-//go:generate bash -c "protoc -I. --tstypes_out=declare_namespace=false:../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. *.proto"
+//go:generate protoc -I. --tstypes_out=declare_namespace=false:../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. server.proto

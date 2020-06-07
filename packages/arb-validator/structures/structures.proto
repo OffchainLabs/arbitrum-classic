@@ -16,8 +16,8 @@
 
 syntax = "proto3";
 package structures;
-import "common/common.proto";
-import "valprotocol/valprotocol.proto";
+import "arb-util/common/common.proto";
+import "arb-validator-core/valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
 message ExecutionAssertionBuf {

@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 package validatorserver;
-import "evm/evm.proto";
+import "arb-validator-core/evm/evm.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver";
 
 message FindLogsArgs {

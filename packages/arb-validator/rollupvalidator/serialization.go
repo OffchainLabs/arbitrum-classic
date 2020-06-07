@@ -16,7 +16,7 @@
 
 package rollupvalidator
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator-core) -I. -I .. --go_out=paths=source_relative:. *.proto"
+//go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. txtracker.proto
 
 func (x *TxRecord) Equals(o *TxRecord) bool {
 	return x.TransactionIndex == o.TransactionIndex &&

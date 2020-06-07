@@ -16,4 +16,4 @@
 
 package validatorserver
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator-core) -I. --go_out=paths=source_relative:. *.proto"
+//go:generate protoc -I. -I ../.. --tstypes_out=declare_namespace=false:../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. server.proto
