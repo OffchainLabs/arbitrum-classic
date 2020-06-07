@@ -109,7 +109,7 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo, _ := processNode(node, chainAddress)
+			nodeInfo := processNode(node, chainAddress)
 
 			info, err := db.lookupNodeRecord(node.Depth(), node.Hash())
 			if err != nil {
@@ -128,7 +128,7 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeMetadataTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo, _ := processNode(node, chainAddress)
+			nodeInfo := processNode(node, chainAddress)
 
 			metadata, err := db.lookupNodeMetadata(node.Depth(), node.Hash())
 			if err != nil {
@@ -147,10 +147,10 @@ func TestTrackerDB(t *testing.T) {
 
 	txRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			_, txInfos := processNode(node, chainAddress)
+			nodeInfo := processNode(node, chainAddress)
 
-			for _, r := range txInfos {
-				record, err := db.lookupTxRecord(r.txHash)
+			for i, txHash := range nodeInfo.EVMTransactionHashes {
+				record, err := db.lookupTxRecord(txHash)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -159,7 +159,11 @@ func TestTrackerDB(t *testing.T) {
 					t.Fatal("txrecord nil")
 				}
 
-				if !record.Equals(r.record) {
+				if !record.Equals(&TxRecord{
+					NodeHeight:       node.Depth(),
+					NodeHash:         node.Hash().MarshalToBuf(),
+					TransactionIndex: uint64(i),
+				}) {
 					t.Error("Got wrong record")
 				}
 			}
@@ -168,8 +172,8 @@ func TestTrackerDB(t *testing.T) {
 
 	for _, node := range nodes {
 		t.Run("AddUnconfirmedNode", func(t *testing.T) {
-			nodeInfo, transactions := processNode(node, chainAddress)
-			db.addUnconfirmedNode(nodeInfo, transactions)
+			nodeInfo := processNode(node, chainAddress)
+			db.addUnconfirmedNode(nodeInfo)
 		})
 
 		t.Run("UnconfirmedHeightLookup", heightTest(node))
@@ -218,7 +222,7 @@ func TestMetadataLogMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nodeInfo, _ := processNode(nodes[1], chainAddress)
+	nodeInfo := processNode(nodes[1], chainAddress)
 	metadata := newNodeMetadata(nodeInfo)
 	flatLogs := extractLogResponses(results)
 

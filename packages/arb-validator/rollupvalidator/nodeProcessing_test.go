@@ -78,7 +78,7 @@ func TestFindLogs(t *testing.T) {
 
 	initialNode := structures.NewInitialNode(mach)
 	nextNode := structures.NewRandomNodeFromValidPrev(initialNode, results)
-	info, _ := processNode(nextNode, chainAddress)
+	info := processNode(nextNode, chainAddress)
 	flatLogs := extractLogResponses(results)
 
 	if !logListMatches(info.FindLogs(nil, nil), flatLogs) {

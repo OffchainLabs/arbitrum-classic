@@ -93,9 +93,9 @@ func (x *NodeMetadata) MaybeMatchesLogQuery(addresses []common.Address, topics [
 // readers. Each method of this class is labeled with what type
 // of lock its caller requires
 type txDB struct {
+	chainAddress       common.Address
 	db                 machine.CheckpointStorage
 	confirmedNodeStore machine.NodeStore
-
 	confirmedNodeCache *lru.Cache
 
 	transactions     map[common.Hash]*TxRecord
@@ -103,7 +103,6 @@ type txDB struct {
 	nodeMetadata     map[nodeRecordKey]*NodeMetadata
 	nodeHashLookup   map[common.Hash]uint64
 	nodeHeightLookup map[uint64]common.Hash
-	chainAddress     common.Address
 }
 
 func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress common.Address) (*txDB, error) {
@@ -139,9 +138,13 @@ func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
 }
 
 // addUnconfirmedNode requires holding a write lock
-func (txdb *txDB) addUnconfirmedNode(info *nodeInfo, txes []txRecordInfo) {
-	for _, tx := range txes {
-		txdb.transactions[tx.txHash] = tx.record
+func (txdb *txDB) addUnconfirmedNode(info *nodeInfo) {
+	for i, txHash := range info.EVMTransactionHashes {
+		txdb.transactions[txHash] = &TxRecord{
+			NodeHeight:       info.NodeHeight,
+			NodeHash:         info.NodeHash.MarshalToBuf(),
+			TransactionIndex: uint64(i),
+		}
 	}
 	txdb.nodeHeightLookup[info.NodeHeight] = info.NodeHash
 	txdb.nodeHashLookup[info.NodeHash] = info.NodeHeight
@@ -267,7 +270,7 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 		return nil, err
 	}
 
-	info, _ = processNode(node, txdb.chainAddress)
+	info = processNode(node, txdb.chainAddress)
 	txdb.confirmedNodeCache.Add(key, info)
 	return info, nil
 }

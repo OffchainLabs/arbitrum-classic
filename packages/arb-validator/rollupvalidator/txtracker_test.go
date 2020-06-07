@@ -77,17 +77,17 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfo := func(node *structures.Node) func(*testing.T) {
-		nodeInfo, txInfos := processNode(node, chainAddress)
+		nodeInfo := processNode(node, chainAddress)
 		return func(t *testing.T) {
-			for _, r := range txInfos {
-				info, err := txTracker.TxInfo(context.Background(), r.txHash)
+			for i, txHash := range nodeInfo.EVMTransactionHashes {
+				info, err := txTracker.TxInfo(context.Background(), txHash)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if !info.Found {
 					t.Fatal("tx not found")
 				}
-				if !info.Equals(getTxInfo(r.txHash, nodeInfo, r.record)) {
+				if !info.Equals(getTxInfo(txHash, nodeInfo, uint64(i))) {
 					t.Error("Got wrong tx info")
 				}
 			}
@@ -95,10 +95,10 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfoMissing := func(node *structures.Node) func(*testing.T) {
-		_, txInfos := processNode(node, chainAddress)
+		nodeInfo := processNode(node, chainAddress)
 		return func(t *testing.T) {
-			for _, r := range txInfos {
-				info, err := txTracker.TxInfo(context.Background(), r.txHash)
+			for _, txHash := range nodeInfo.EVMTransactionHashes {
+				info, err := txTracker.TxInfo(context.Background(), txHash)
 				if err != nil {
 					t.Fatal(err)
 				}

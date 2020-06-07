@@ -220,12 +220,14 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 
 	// create nodes for invalid branches
 	for kind := valprotocol.ChildType(0); kind <= valprotocol.MaxInvalidChildType; kind++ {
-		newNode := structures.NewNodeFromInvalidPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		newNode := structures.NewInvalidNodeFromPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		_ = prevNode.LinkSuccessor(newNode)
 		ng.nodeFromHash[newNode.Hash()] = newNode
 		ng.leaves.Add(newNode)
 	}
 
-	newNode := structures.NewNodeFromValidPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	newNode := structures.NewValidNodeFromPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	_ = prevNode.LinkSuccessor(newNode)
 	ng.nodeFromHash[newNode.Hash()] = newNode
 	ng.leaves.Add(newNode)
 }

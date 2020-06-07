@@ -77,7 +77,7 @@ func NewInitialNode(mach machine.Machine) *Node {
 	return ret
 }
 
-func NewNodeFromValidPrev(
+func NewValidNodeFromPrev(
 	prev *Node,
 	disputable *valprotocol.DisputableNode,
 	params valprotocol.ChainParams,
@@ -100,7 +100,7 @@ func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)
-	nextNode := NewNodeFromValidPrev(
+	nextNode := NewValidNodeFromPrev(
 		prev,
 		disputableNode,
 		valprotocol.NewRandomChainParams(),
@@ -112,7 +112,7 @@ func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
 	return nextNode
 }
 
-func NewNodeFromInvalidPrev(
+func NewInvalidNodeFromPrev(
 	prev *Node,
 	disputable *valprotocol.DisputableNode,
 	kind valprotocol.ChildType,
@@ -159,8 +159,15 @@ func NewNodeFromPrev(
 		assertionTxHash: assertionTxHash,
 	}
 	ret.setHash(ret.calculateNodeDataHash(params))
-	prev.successorHashes[kind] = ret.hash
 	return ret
+}
+
+func (node *Node) LinkSuccessor(successor *Node) error {
+	if successor.prevHash != node.hash {
+		return errors.New("node is not successor")
+	}
+	node.successorHashes[successor.linkType] = successor.hash
+	return nil
 }
 
 func (node *Node) Hash() common.Hash {

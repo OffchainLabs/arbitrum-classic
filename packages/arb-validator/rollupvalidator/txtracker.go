@@ -19,7 +19,6 @@ package rollupvalidator
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -157,12 +156,8 @@ func (tr *txTracker) processNextNode(node *structures.Node) {
 	if sawOldNode {
 		return
 	}
-	nodeInfo, transactions := processNode(node, tr.chainAddress)
-	for _, tx := range transactions {
-		log.Println("Coordinator got response for", hexutil.Encode(tx.txHash.Bytes()))
-	}
-
-	tr.txDB.addUnconfirmedNode(nodeInfo, transactions)
+	nodeInfo := processNode(node, tr.chainAddress)
+	tr.txDB.addUnconfirmedNode(nodeInfo)
 	tr.maxNodeHeight = node.Depth()
 }
 
@@ -207,7 +202,7 @@ func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (evm.TxInfo
 	if err != nil {
 		return evm.TxInfo{Found: false}, nil
 	}
-	return getTxInfo(txHash, nodeInfo, tx), nil
+	return getTxInfo(txHash, nodeInfo, tx.TransactionIndex), nil
 }
 
 func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {

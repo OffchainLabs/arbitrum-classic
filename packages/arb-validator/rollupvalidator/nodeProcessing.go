@@ -150,12 +150,7 @@ func (ni *nodeInfo) Equals(o *nodeInfo) bool {
 		ni.NodeHeight == o.NodeHeight
 }
 
-type txRecordInfo struct {
-	record *TxRecord
-	txHash common.Hash
-}
-
-func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRecordInfo) {
+func processNode(node *structures.Node, chain common.Address) *nodeInfo {
 	nodeInfo := newNodeInfo()
 	nodeInfo.NodeHash = node.Hash()
 	nodeInfo.NodeHeight = node.Depth()
@@ -163,7 +158,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 	nodeInfo.L1TxHash = txHash
 
 	if node.LinkType() != valprotocol.ValidChildType {
-		return nodeInfo, nil
+		return nodeInfo
 	}
 
 	logs := node.Assertion().Logs
@@ -187,7 +182,6 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 	}
 
 	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(logs))
-	transactions := make([]txRecordInfo, 0, len(logs))
 
 	for i, logVal := range logs {
 		evmVal, err := evm.ProcessLog(logVal, chain)
@@ -205,23 +199,12 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, []txRe
 		if evmVal, ok := evmVal.(evm.Revert); ok {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
-
-		record := &TxRecord{
-			NodeHeight:       node.Depth(),
-			NodeHash:         node.Hash().MarshalToBuf(),
-			TransactionIndex: uint64(i),
-		}
-		info := txRecordInfo{
-			record: record,
-			txHash: msg.TxHash(),
-		}
-		transactions = append(transactions, info)
-		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, info.txHash)
+		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, msg.TxHash())
 	}
-	return nodeInfo, transactions
+	return nodeInfo
 }
 
-func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) evm.TxInfo {
+func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txIndex uint64) evm.TxInfo {
 	zero := common.Hash{}
 
 	var logsPostHash string
@@ -232,20 +215,21 @@ func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txRecord *TxRecord) evm.T
 	}
 
 	logsPreHash := hexutil.Encode(zero[:])
-	if txRecord.TransactionIndex > 0 {
-		logsPreHash = nodeInfo.AVMLogsAccHashes[txRecord.TransactionIndex-1] // Previous acc hash
+	if txIndex > 0 {
+		logsPreHash = nodeInfo.AVMLogsAccHashes[txIndex-1] // Previous acc hash
 	}
-	logsValHashes := nodeInfo.AVMLogsValHashes[txRecord.TransactionIndex+1:] // log acc hashes after logVal
+	logsValHashes := nodeInfo.AVMLogsValHashes[txIndex+1:] // log acc hashes after logVal
 
 	return evm.TxInfo{
-		Found:           true,
-		TransactionHash: txHash,
-		NodeHeight:      txRecord.NodeHeight,
-		NodeHash:        txRecord.NodeHash.Unmarshal(),
-		RawVal:          nodeInfo.AVMLogs[txRecord.TransactionIndex],
-		LogsPreHash:     logsPreHash,
-		LogsPostHash:    logsPostHash,
-		LogsValHashes:   logsValHashes,
-		OnChainTxHash:   nodeInfo.L1TxHash,
+		Found:            true,
+		NodeHeight:       nodeInfo.NodeHeight,
+		NodeHash:         nodeInfo.NodeHash,
+		TransactionHash:  txHash,
+		TransactionIndex: txIndex,
+		RawVal:           nodeInfo.AVMLogs[txIndex],
+		LogsPreHash:      logsPreHash,
+		LogsPostHash:     logsPostHash,
+		LogsValHashes:    logsValHashes,
+		OnChainTxHash:    nodeInfo.L1TxHash,
 	}
 }
