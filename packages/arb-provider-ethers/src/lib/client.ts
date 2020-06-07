@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { EVMCode, EVMResult, processLog } from './message'
+import { EVMCode, processLog } from './message'
 
 import * as ethers from 'ethers'
 
@@ -49,14 +49,16 @@ function _arbClient(managerAddress: string): any {
   return jaysonBrowserClient(callServer, {})
 }
 
-interface MessageResult {
+export interface AVMProof {
   logPostHash: string
   logPreHash: string
   logValHashes: string[]
   onChainTxHash: string
+}
+
+interface RawMessageResult {
   val: ArbValue.Value
-  vmId: string
-  evmVal: EVMResult
+  proof?: AVMProof
 }
 
 interface OutputMessage {
@@ -86,6 +88,31 @@ function convertTopics(
       }
     }
   )
+}
+
+function extractAVMProof(proof?: evm.AVMLogProofBuf): AVMProof | undefined {
+  if (proof === undefined) {
+    return undefined
+  }
+
+  let logValHashes = proof.logValHashes
+  if (!logValHashes) {
+    logValHashes = []
+  }
+
+  if (
+    proof.logPostHash === undefined ||
+    proof.logPreHash === undefined ||
+    proof.onChainTxHash === undefined
+  ) {
+    return undefined
+  }
+  return {
+    logPostHash: proof.logPostHash,
+    logPreHash: proof.logPreHash,
+    logValHashes,
+    onChainTxHash: proof.onChainTxHash,
+  }
 }
 
 export class ArbClient {
@@ -135,7 +162,9 @@ export class ArbClient {
     }
   }
 
-  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
+  public async getMessageResult(
+    txHash: string
+  ): Promise<RawMessageResult | null> {
     const params: validatorserver.GetMessageResultArgs = {
       txHash,
     }
@@ -162,36 +191,13 @@ export class ArbClient {
     })
     if (messageResult.tx && messageResult.tx.found) {
       const tx = messageResult.tx
-      const vmId = await this.getVmID()
       if (tx.rawVal === undefined) {
         return null
       }
       const val = ArbValue.unmarshal(tx.rawVal)
-      const evmVal = processLog(val as ArbValue.TupleValue)
-      if (tx.logValHashes === undefined) {
-        return null
-      }
-      let logValHashes = tx.logValHashes
-      if (!logValHashes) {
-        logValHashes = []
-      }
-
-      if (
-        tx.logPostHash === undefined ||
-        tx.logPreHash === undefined ||
-        tx.onChainTxHash === undefined
-      ) {
-        return null
-      }
-
       return {
-        logPostHash: tx.logPostHash,
-        logPreHash: tx.logPreHash,
-        logValHashes,
-        onChainTxHash: tx.onChainTxHash,
         val,
-        vmId,
-        evmVal,
+        proof: extractAVMProof(tx.proof),
       }
     } else {
       return null

@@ -30,15 +30,19 @@ message FullLogBuf {
     string index = 9;
 }
 
-message TxInfoBuf {
-    bool found = 1;
-    string rawVal = 2;
+message AVMLogProofBuf {
     string logPreHash = 3;
     string logPostHash = 4;
     repeated string logValHashes = 5;
     string onChainTxHash = 6;
-    string txHash = 7;
-    uint64 txIndex = 8;
-    string nodeHash = 9;
-    uint64 nodeHeight = 10;
+}
+
+message TxInfoBuf {
+    bool found = 1;
+    string rawVal = 2;
+    AVMLogProofBuf proof = 3;
+    string txHash = 4;
+    uint64 txIndex = 5;
+    string nodeHash = 6;
+    uint64 nodeHeight = 7;
 }

@@ -13,13 +13,17 @@ declare namespace evm {
     index?: string
   }
 
-  export interface TxInfoBuf {
-    found?: boolean
-    rawVal?: string
+  export interface AVMLogProofBuf {
     logPreHash?: string
     logPostHash?: string
     logValHashes?: Array<string>
     onChainTxHash?: string
+  }
+
+  export interface TxInfoBuf {
+    found?: boolean
+    rawVal?: string
+    proof?: AVMLogProofBuf
     txHash?: string
     txIndex?: number
     nodeHash?: string

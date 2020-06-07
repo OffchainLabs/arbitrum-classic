@@ -28,6 +28,45 @@ import (
 	"math/big"
 )
 
+type AVMLogProof struct {
+	LogsPreHash   string
+	LogsPostHash  string
+	LogsValHashes []string
+	OnChainTxHash common.Hash
+}
+
+func (p *AVMLogProof) Equals(o *AVMLogProof) bool {
+	if len(p.LogsValHashes) != len(o.LogsValHashes) {
+		return false
+	}
+	for i, a := range p.LogsValHashes {
+		if a != o.LogsValHashes[i] {
+			return false
+		}
+	}
+	return p.LogsPreHash == o.LogsPreHash &&
+		p.LogsPostHash == o.LogsPostHash &&
+		p.OnChainTxHash == o.OnChainTxHash
+}
+
+func (p *AVMLogProof) Marshal() *AVMLogProofBuf {
+	return &AVMLogProofBuf{
+		LogPreHash:    p.LogsPreHash,
+		LogPostHash:   p.LogsPostHash,
+		LogValHashes:  p.LogsValHashes,
+		OnChainTxHash: p.OnChainTxHash.String(),
+	}
+}
+
+func (x *AVMLogProofBuf) Unmarshal() *AVMLogProof {
+	return &AVMLogProof{
+		LogsPreHash:   x.LogPreHash,
+		LogsPostHash:  x.LogPostHash,
+		LogsValHashes: x.LogValHashes,
+		OnChainTxHash: common.NewHashFromEth(ethcommon.HexToHash(x.OnChainTxHash)),
+	}
+}
+
 type TxInfo struct {
 	Found            bool
 	NodeHeight       uint64
@@ -35,30 +74,17 @@ type TxInfo struct {
 	TransactionIndex uint64
 	TransactionHash  common.Hash
 	RawVal           value.Value
-	LogsPreHash      string
-	LogsPostHash     string
-	LogsValHashes    []string
-	OnChainTxHash    common.Hash
+	Proof            *AVMLogProof
 }
 
 func (tx TxInfo) Equals(o TxInfo) bool {
-	if len(tx.LogsValHashes) != len(o.LogsValHashes) {
-		return false
-	}
-	for i, a := range tx.LogsValHashes {
-		if a != o.LogsValHashes[i] {
-			return false
-		}
-	}
 	return tx.Found == o.Found &&
 		tx.NodeHeight == o.NodeHeight &&
 		tx.NodeHash == o.NodeHash &&
 		tx.TransactionIndex == o.TransactionIndex &&
 		tx.TransactionHash == o.TransactionHash &&
 		value.Eq(tx.RawVal, o.RawVal) &&
-		tx.LogsPreHash == o.LogsPreHash &&
-		tx.LogsPostHash == o.LogsPostHash &&
-		tx.OnChainTxHash == o.OnChainTxHash
+		tx.Proof.Equals(o.Proof)
 }
 
 func (tx TxInfo) Marshal() *TxInfoBuf {
@@ -69,17 +95,19 @@ func (tx TxInfo) Marshal() *TxInfoBuf {
 	}
 	var buf bytes.Buffer
 	_ = value.MarshalValue(tx.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
+
+	var proof *AVMLogProofBuf
+	if tx.Proof != nil {
+		proof = tx.Proof.Marshal()
+	}
 	return &TxInfoBuf{
-		Found:         true,
-		RawVal:        hexutil.Encode(buf.Bytes()),
-		LogPreHash:    tx.LogsPreHash,
-		LogPostHash:   tx.LogsPostHash,
-		LogValHashes:  tx.LogsValHashes,
-		OnChainTxHash: tx.OnChainTxHash.String(),
-		TxHash:        tx.TransactionHash.String(),
-		TxIndex:       tx.TransactionIndex,
-		NodeHash:      tx.NodeHash.String(),
-		NodeHeight:    tx.NodeHeight,
+		Found:      true,
+		RawVal:     hexutil.Encode(buf.Bytes()),
+		Proof:      proof,
+		TxHash:     tx.TransactionHash.String(),
+		TxIndex:    tx.TransactionIndex,
+		NodeHash:   tx.NodeHash.String(),
+		NodeHeight: tx.NodeHeight,
 	}
 }
 
@@ -96,6 +124,11 @@ func (x *TxInfoBuf) Unmarshal() (TxInfo, error) {
 		return TxInfo{}, errors.Wrap(err, "ValProxy.GetMessageResult: UnmarshalValue returned error")
 	}
 
+	var proof *AVMLogProof
+	if x.Proof != nil {
+		proof = x.Proof.Unmarshal()
+	}
+
 	return TxInfo{
 		Found:            x.Found,
 		NodeHeight:       x.NodeHeight,
@@ -103,10 +136,7 @@ func (x *TxInfoBuf) Unmarshal() (TxInfo, error) {
 		TransactionIndex: x.TxIndex,
 		TransactionHash:  common.NewHashFromEth(ethcommon.HexToHash(x.TxHash)),
 		RawVal:           val,
-		LogsPreHash:      x.LogPreHash,
-		LogsPostHash:     x.LogPostHash,
-		LogsValHashes:    x.LogValHashes,
-		OnChainTxHash:    common.NewHashFromEth(ethcommon.HexToHash(x.OnChainTxHash)),
+		Proof:            proof,
 	}, nil
 }
 
