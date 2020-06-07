@@ -45,8 +45,7 @@ func (nv *NodeView) GetNode(height uint64, hash common.Hash) (*structures.Node, 
 	if err := proto.Unmarshal(nodeData, nodeBuf); err != nil {
 		return nil, err
 	}
-	nd := nodeBuf.UnmarshalFromCheckpoint(nv.sr)
-	return nd, nil
+	return nodeBuf.UnmarshalFromCheckpoint(nv.sr)
 }
 
 func (nv *NodeView) GetNodeHeight(hash common.Hash) (uint64, error) {

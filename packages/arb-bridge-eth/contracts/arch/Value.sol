@@ -706,7 +706,7 @@ library Value {
     function bytesToBytestackHash(bytes memory data) internal pure returns (Data memory) {
         uint dataLength = data.length;
         uint256 startOffset = 0;
-        
+
         return bytesToBytestackHash(data, dataLength, startOffset);
     }
 

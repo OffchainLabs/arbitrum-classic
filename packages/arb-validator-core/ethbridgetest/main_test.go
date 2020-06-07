@@ -12,8 +12,8 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/messagetester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/sigutilstester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/messagetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/sigutilstester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 

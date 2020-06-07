@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 package rollupvalidator;
-import "common/common.proto";
+import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator";
 
 message TxRecord {

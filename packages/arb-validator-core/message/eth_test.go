@@ -17,41 +17,13 @@
 package message
 
 import (
-	"math/big"
 	"testing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateTestEth() Eth {
-	addr1 := common.Address{}
-	addr1[0] = 76
-	addr1[19] = 93
-
-	addr2 := common.Address{}
-	addr2[0] = 43
-	addr2[19] = 12
-
-	return Eth{
-		To:    addr1,
-		From:  addr2,
-		Value: big.NewInt(89735406),
-	}
-}
-
-func generateTestDeliveredEth() DeliveredEth {
-	return DeliveredEth{
-		Eth:        generateTestEth(),
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
-		Timestamp:  big.NewInt(5435254),
-		MessageNum: big.NewInt(9675),
-	}
-}
-
 func TestMarshalEth(t *testing.T) {
-	msg := generateTestEth()
+	msg := NewRandomEth()
 
-	msg2, err := UnmarshalEth(msg.asValue())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,9 +34,9 @@ func TestMarshalEth(t *testing.T) {
 }
 
 func TestCheckpointEth(t *testing.T) {
-	msg := generateTestDeliveredEth()
+	msg := NewRandomEth()
 
-	msg2, err := UnmarshalFromCheckpoint(EthType, msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

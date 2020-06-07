@@ -17,8 +17,10 @@
 package evm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -32,6 +34,67 @@ type Log struct {
 	Address common.Address
 	Topics  []common.Hash
 	Data    []byte
+}
+
+func NewRandomLog(topicCount int32) Log {
+	topics := make([]common.Hash, 0, topicCount)
+	for i := int32(0); i < topicCount; i++ {
+		topics = append(topics, common.RandHash())
+	}
+	return Log{
+		Address: common.RandAddress(),
+		Topics:  topics,
+		Data:    common.RandBytes(200),
+	}
+}
+
+func (l Log) MatchesQuery(addresses []common.Address, topics [][]common.Hash) bool {
+	if len(addresses) > 0 {
+		match := false
+		for _, addr := range addresses {
+			if l.Address == addr {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	if len(topics) > len(l.Topics) {
+		return false
+	}
+
+	for i, topicGroup := range topics {
+		if len(topicGroup) == 0 {
+			continue
+		}
+		match := false
+		for _, topic := range topicGroup {
+			if l.Topics[i] == topic {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+	return true
+}
+
+func (l Log) Equals(o Log) bool {
+	if len(l.Topics) != len(o.Topics) {
+		return false
+	}
+	for i, topic := range l.Topics {
+		if topic != o.Topics[i] {
+			return false
+		}
+	}
+	return l.Address == o.Address &&
+		bytes.Equal(l.Data, o.Data)
 }
 
 func (l Log) String() string {
@@ -48,10 +111,10 @@ func (l Log) String() string {
 	sb.WriteString("], data:")
 	sb.WriteString(hexutil.Encode(l.Data))
 	sb.WriteString(")")
-	return ""
+	return sb.String()
 }
 
-func LogValToLog(val value.Value) (Log, error) {
+func NewLogFromValue(val value.Value) (Log, error) {
 	tupVal, ok := val.(value.TupleValue)
 	if !ok {
 		return Log{}, errors.New("log must be a tuple")
@@ -84,6 +147,18 @@ func LogValToLog(val value.Value) (Log, error) {
 	return Log{address, topics, logData}, nil
 }
 
+func (l Log) AsValue() value.TupleValue {
+	data := []value.Value{
+		value.NewValueFromAddress(l.Address),
+		message.BytesToByteStack(l.Data),
+	}
+	for _, topic := range l.Topics {
+		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
+	}
+	val, _ := value.NewTupleFromSlice(data)
+	return val
+}
+
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := message.StackValueToList(val)
 	if err != nil {
@@ -91,11 +166,19 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 	}
 	logs := make([]Log, 0, len(logValues))
 	for _, logVal := range logValues {
-		log, err := LogValToLog(logVal)
+		log, err := NewLogFromValue(logVal)
 		if err != nil {
 			return nil, err
 		}
 		logs = append(logs, log)
 	}
 	return logs, nil
+}
+
+func LogsToLogStack(logs []Log) value.TupleValue {
+	logValues := make([]value.Value, 0, len(logs))
+	for _, log := range logs {
+		logValues = append(logValues, log.AsValue())
+	}
+	return message.ListToStackValue(logValues)
 }

@@ -16,9 +16,9 @@
 
 syntax = "proto3";
 package valmessage;
-import "valprotocol/valprotocol.proto";
-import "protocol/protocol.proto";
-import "common/common.proto";
+import "arb-validator-core/valprotocol/valprotocol.proto";
+import "arb-util/protocol/protocol.proto";
+import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage";
 
 message TokenTypeBuf {

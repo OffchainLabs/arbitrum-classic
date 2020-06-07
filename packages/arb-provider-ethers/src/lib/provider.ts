@@ -16,7 +16,8 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbClient, EVMCode, EVMResult, TxMessage } from './client'
+import { EVMCode, EVMResult, TxMessage } from './message'
+import { ArbClient } from './client'
 import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
@@ -265,14 +266,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       logPreHash,
       logPostHash,
       logValHashes,
-      validatorSigs,
-      partialHash,
       onChainTxHash,
       evmVal,
     } = result
 
     const vmId = await this.getVmID()
-    const txHashCheck = evmVal.bridgeData.txHash
+    const txHashCheck = evmVal.message.txHash
 
     // Check txHashCheck matches txHash
     if (arbTxHash !== txHashCheck) {
@@ -289,18 +288,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Failed to prove val is in logPostHash')
     }
 
-    let validNodeHash = ''
-
     // Step 2: prove that logPostHash is in assertion and assertion is valid
-    if (validatorSigs && validatorSigs.length > 0) {
-      throw Error('Unanimous assertions not supported')
-      // this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
-    } else {
-      validNodeHash = await this.processConfirmedDisputableAssertion(
-        logPostHash,
-        onChainTxHash
-      )
-    }
+    const validNodeHash = await this.processConfirmedDisputableAssertion(
+      logPostHash,
+      onChainTxHash
+    )
 
     return {
       evmVal,
@@ -346,14 +338,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
           const txReceipt: ethers.providers.TransactionReceipt = {
             blockHash: result.txHash,
-            blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
+            blockNumber: result.evmVal.message.blockNumber.toNumber(),
             confirmations: 1000,
             cumulativeGasUsed: ethers.utils.bigNumberify(1),
-            from: result.evmVal.bridgeData.sender,
+            from: result.evmVal.message.sender,
             gasUsed: ethers.utils.bigNumberify(1),
             logs,
             status,
-            to: result.evmVal.orig.getDest(),
+            to: result.evmVal.message.message.getDest(),
             transactionHash: result.txHash,
             transactionIndex: 0,
             byzantium: true,
@@ -367,20 +359,19 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const getMessageRequest = async (): Promise<ethers.providers.TransactionResponse | null> => {
           const result = await this.getMessageResult(params.transactionHash)
           if (result) {
+            const txMessage = result.evmVal.message.message as TxMessage
             const tx = {
               blockHash: result.txHash,
-              blockNumber: result.evmVal.bridgeData.blockNumber.toNumber(),
+              blockNumber: result.evmVal.message.blockNumber.toNumber(),
               confirmations: 1000,
-              data: ethers.utils.hexlify(
-                (result.evmVal.orig as TxMessage).data
-              ),
-              from: result.evmVal.bridgeData.sender,
+              data: ethers.utils.hexlify(txMessage.data),
+              from: result.evmVal.message.sender,
               gasLimit: ethers.utils.bigNumberify(1),
               gasPrice: ethers.utils.bigNumberify(1),
               hash: result.txHash,
               nonce: 0,
-              to: result.evmVal.orig.getDest(),
-              value: (result.evmVal.orig as TxMessage).amount,
+              to: txMessage.getDest(),
+              value: txMessage.amount,
               chainId: 123456789,
             } as ethers.providers.TransactionResponse
             return this.ethProvider._wrapTransaction(tx)
@@ -403,12 +394,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         })
       }
       case 'getLogs': {
-        return this.client.findLogs(
-          params.filter.fromBlock,
-          params.filter.toBlock,
-          params.filter.address,
-          params.filter.topics
-        )
+        return this.client.findLogs(params.filter)
       }
       case 'getBalance': {
         const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this)

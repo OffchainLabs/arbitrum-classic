@@ -142,23 +142,24 @@ func defendMessages(
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
-				msg, err := inbox.GenerateOneStepProof(startInbox)
+				deliveredMsg, err := inbox.GenerateOneStepProof(startInbox)
 				if err != nil {
 					return 0, err
 				}
 
-				switch msg := msg.(type) {
-				case message.DeliveredTransaction:
-					err = contract.OneStepProofTransactionMessage(ctx, startInbox, hashPreImage, msg)
-				case message.DeliveredEth:
-					err = contract.OneStepProofEthMessage(ctx, startInbox, hashPreImage, msg)
-				case message.DeliveredERC20:
-					err = contract.OneStepProofERC20Message(ctx, startInbox, hashPreImage, msg)
-				case message.DeliveredERC721:
-					err = contract.OneStepProofERC721Message(ctx, startInbox, hashPreImage, msg)
-				case message.DeliveredContractTransaction:
-					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, hashPreImage, msg)
-				case message.DeliveredTransactionBatch:
+				switch msg := deliveredMsg.Message.(type) {
+				case message.Transaction:
+					err = contract.OneStepProofTransactionMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.Eth:
+					err = contract.OneStepProofEthMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ERC20:
+					err = contract.OneStepProofERC20Message(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ERC721:
+					err = contract.OneStepProofERC721Message(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ContractTransaction:
+					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.TransactionBatch:
+					err = contract.OneStepProofTransactionBatchMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")

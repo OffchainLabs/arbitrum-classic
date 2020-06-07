@@ -87,13 +87,16 @@ contract MessagesChallenge is BisectionChallenge {
         );
     }
 
+    // addresses
+    //  chain
+    //  to
+    //  from
+
     function oneStepProofTransactionMessage(
         bytes32 _lowerHashA,
         bytes32 _preImageBHash,
         uint256 _preImageBSize,
-        address _chain,
-        address _to,
-        address _from,
+        address[3] memory _addresses,
         uint256 _seqNumber,
         uint256 _value,
         bytes memory _data,
@@ -105,25 +108,22 @@ contract MessagesChallenge is BisectionChallenge {
     {
 
         bytes32 messageHash = Messages.transactionHash(
-            _chain,
-            _to,
-            _from,
+            _addresses[0],
+            _addresses[1],
+            _addresses[2],
             _seqNumber,
             _value,
-            keccak256(_data),
-            _blockNumber,
-            _timestamp
+            keccak256(_data)
         );
-        Value.Data memory arbMessageHash = Messages.transactionMessage(
-            _chain,
-            _to,
-            _from,
+        Value.Data memory dataValue = Value.bytesToBytestackHash(_data, 0, _data.length);
+        (Value.Data memory arbMessage, bytes32 receiptHash) = Messages.transactionMessageValue(
+            _addresses[0],
+            _addresses[1],
+            _addresses[2],
             _seqNumber,
             _value,
             keccak256(_data),
-            Value.bytesToBytestackHash(_data, 0, _data.length),
-            _blockNumber,
-            _timestamp
+            dataValue
         );
 
         Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
@@ -132,7 +132,10 @@ contract MessagesChallenge is BisectionChallenge {
             _lowerHashA,
             _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            uint256(receiptHash)
         );
     }
 
@@ -154,18 +157,12 @@ contract MessagesChallenge is BisectionChallenge {
         bytes32 messageHash = Messages.ethHash(
             _to,
             _from,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
         Value.Data memory arbMessage = Messages.ethMessageValue(
             _to,
             _from,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
 
        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
@@ -174,7 +171,10 @@ contract MessagesChallenge is BisectionChallenge {
             _lowerHashA,
             _lowerHashBValue,
             messageHash,
-            arbMessage
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
@@ -198,19 +198,13 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _erc20,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
         Value.Data memory arbMessage = Messages.erc20MessageValue(
             _to,
             _from,
             _erc20,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
 
         Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
@@ -219,7 +213,10 @@ contract MessagesChallenge is BisectionChallenge {
             _lowerHashA,
             _lowerHashBValue,
             messageHash,
-            arbMessage
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
@@ -243,19 +240,13 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _erc721,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
         Value.Data memory arbMessage = Messages.erc721MessageValue(
             _to,
             _from,
             _erc721,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
 
         Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
@@ -264,7 +255,10 @@ contract MessagesChallenge is BisectionChallenge {
             _lowerHashA,
             _lowerHashBValue,
             messageHash,
-            arbMessage
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
@@ -288,20 +282,14 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _value,
-            _data,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _data
         );
 
         Value.Data memory arbMessage = Messages.contractTransactionMessageValue(
             _to,
             _from,
             _value,
-            _data,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _data
         );
 
         Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
@@ -310,7 +298,10 @@ contract MessagesChallenge is BisectionChallenge {
             _lowerHashA,
             _lowerHashBValue,
             messageHash,
-            arbMessage
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
@@ -321,17 +312,13 @@ contract MessagesChallenge is BisectionChallenge {
         address chain,
         bytes memory transactions,
         uint256 blockNum,
-        uint256 blockTimestamp
+        uint256 blockTimestamp,
+        uint256 messageNum
     )
         public
         asserterAction
     {
-        bytes32 messageHash = Messages.transactionBatchHash(
-            transactions,
-            blockNum,
-            blockTimestamp
-        );
-
+        bytes32 messageHash = Messages.transactionBatchHash(transactions);
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
             preImageBHash,
             preImageBSize,
@@ -344,7 +331,13 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 lowerHashA,
-                Protocol.addMessageToInbox(lowerHashA, messageHash),
+                Messages.addMessageToInbox(
+                    lowerHashA,
+                    messageHash,
+                    blockNum,
+                    blockTimestamp,
+                    messageNum
+                ),
                 preImageBHash,
                 afterInboxHash,
                 1
@@ -356,19 +349,33 @@ contract MessagesChallenge is BisectionChallenge {
     function oneStepProof(
         bytes32 _lowerHashA,
         Value.Data memory _lowerHashBValue,
-        bytes32 _valueHashA,
-        Value.Data memory _valueB
+        bytes32 _messageHashA,
+        Value.Data memory _messageB,
+        uint256 _blockNum,
+        uint256 _blockTimestamp,
+        uint256 _messageNum
     )
         private
     {
-        bytes32 hashVal = Value.hash(Protocol.addMessageToVMInboxHash(_lowerHashBValue, _valueB));
-        
+        Value.Data memory inbox = Messages.addMessageToVMInboxHash(
+            _lowerHashBValue,
+            _blockNum,
+            _blockTimestamp,
+            _messageNum,
+            _messageB
+        );
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
-                Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
+                Messages.addMessageToInbox(
+                    _lowerHashA,
+                    _messageHashA,
+                    _blockNum,
+                    _blockTimestamp,
+                    _messageNum
+                ),
                 Value.hash(_lowerHashBValue),
-                hashVal,
+                Value.hash(inbox),
                 1
             )
         );

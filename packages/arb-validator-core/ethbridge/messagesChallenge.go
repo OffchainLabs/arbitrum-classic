@@ -81,7 +81,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredTransaction,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Transaction,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -90,14 +91,16 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 		lowerHashA,
 		lowerHashB.HashImage,
 		big.NewInt(lowerHashB.Size),
-		msg.Chain.ToEthAddress(),
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
+		[3]ethcommon.Address{
+			msg.Chain.ToEthAddress(),
+			msg.To.ToEthAddress(),
+			msg.From.ToEthAddress(),
+		},
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
 	)
 	if err != nil {
 		return err
@@ -109,7 +112,8 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredTransactionBatch,
+	deliveryInfo message.DeliveryInfo,
+	msg message.TransactionBatch,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -120,8 +124,9 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 		big.NewInt(lowerHashB.Size),
 		msg.Chain.ToEthAddress(),
 		msg.TxData,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -133,7 +138,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredEth,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Eth,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -145,9 +151,9 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 
 	if err != nil {
@@ -158,12 +164,13 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.contractAddress,
 			lowerHashA,
 			lowerHashB.HashImage,
+			big.NewInt(lowerHashB.Size),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
-			msg.BlockNum.AsInt(),
-			msg.Timestamp,
-			msg.MessageNum,
+			deliveryInfo.BlockNum.AsInt(),
+			deliveryInfo.Timestamp,
+			deliveryInfo.TxId,
 		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProofEthMessage")
@@ -173,7 +180,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredERC20,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC20,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -186,9 +194,9 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -200,7 +208,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredERC721,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC721,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -213,9 +222,9 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -227,7 +236,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	lowerHashB value.HashPreImage,
-	msg message.DeliveredContractTransaction,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ContractTransaction,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -240,9 +250,9 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 		msg.From.ToEthAddress(),
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err

@@ -36,7 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator-core) -I. -I .. --go_out=paths=source_relative:. *.proto"
+//go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. rollup.proto
 
 type ChainObserver struct {
 	*sync.RWMutex
@@ -135,7 +135,10 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
-	nodeGraph := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	nodeGraph, err := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
+	if err != nil {
+		return nil, err
+	}
 	inbox, err := x.Inbox.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
 		return nil, err

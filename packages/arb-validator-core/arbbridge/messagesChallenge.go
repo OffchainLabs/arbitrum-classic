@@ -39,35 +39,40 @@ type MessagesChallenge interface {
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredTransaction,
+		deliveryInfo message.DeliveryInfo,
+		msg message.Transaction,
 	) error
 
 	OneStepProofEthMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredEth,
+		deliveryInfo message.DeliveryInfo,
+		msg message.Eth,
 	) error
 
 	OneStepProofERC20Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredERC20,
+		deliveryInfo message.DeliveryInfo,
+		msg message.ERC20,
 	) error
 
 	OneStepProofERC721Message(
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredERC721,
+		deliveryInfo message.DeliveryInfo,
+		msg message.ERC721,
 	) error
 
 	OneStepProofContractTransactionMessage(
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredContractTransaction,
+		deliveryInfo message.DeliveryInfo,
+		msg message.ContractTransaction,
 	) error
 
 	ChooseSegment(
@@ -82,7 +87,8 @@ type MessagesChallenge interface {
 		ctx context.Context,
 		lowerHashA common.Hash,
 		lowerHashB value.HashPreImage,
-		msg message.DeliveredTransactionBatch,
+		deliveryInfo message.DeliveryInfo,
+		msg message.TransactionBatch,
 	) error
 }
 

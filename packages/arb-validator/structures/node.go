@@ -19,6 +19,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"math/big"
 
@@ -76,7 +77,7 @@ func NewInitialNode(mach machine.Machine) *Node {
 	return ret
 }
 
-func NewNodeFromValidPrev(
+func NewValidNodeFromPrev(
 	prev *Node,
 	disputable *valprotocol.DisputableNode,
 	params valprotocol.ChainParams,
@@ -94,7 +95,24 @@ func NewNodeFromValidPrev(
 	)
 }
 
-func NewNodeFromInvalidPrev(
+func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
+	assertion := evm.NewRandomEVMAssertion(results)
+	disputableNode := valprotocol.NewRandomDisputableNode(
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+	)
+	nextNode := NewValidNodeFromPrev(
+		prev,
+		disputableNode,
+		valprotocol.NewRandomChainParams(),
+		common.NewTimeBlocks(common.RandBigInt()),
+		common.RandHash(),
+	)
+
+	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	return nextNode
+}
+
+func NewInvalidNodeFromPrev(
 	prev *Node,
 	disputable *valprotocol.DisputableNode,
 	kind valprotocol.ChildType,
@@ -141,8 +159,15 @@ func NewNodeFromPrev(
 		assertionTxHash: assertionTxHash,
 	}
 	ret.setHash(ret.calculateNodeDataHash(params))
-	prev.successorHashes[kind] = ret.hash
 	return ret
+}
+
+func (node *Node) LinkSuccessor(successor *Node) error {
+	if successor.prevHash != node.hash {
+		return errors.New("node is not successor")
+	}
+	node.successorHashes[successor.linkType] = successor.hash
+	return nil
 }
 
 func (node *Node) Hash() common.Hash {
@@ -376,7 +401,7 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 	}
 }
 
-func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *Node {
+func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node, error) {
 	var disputableNode *valprotocol.DisputableNode
 	if x.DisputableNode != nil {
 		disputableNode = x.DisputableNode.Unmarshal()
@@ -405,10 +430,14 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *Node 
 
 	if x.Assertion != nil {
 		node.assertion = x.Assertion.UnmarshalFromCheckpoint(ctx)
+		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
+		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
+			return nil, errors.New("assertion doesn't match stub")
+		}
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later
-	return node
+	return node, nil
 }
 
 func GeneratePathProof(from, to *Node) []common.Hash {

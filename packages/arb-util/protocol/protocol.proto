@@ -1,6 +1,6 @@
 syntax = "proto3";
 package protocol;
-import "common/common.proto";
+import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
 message TimeBoundsBlocksBuf {

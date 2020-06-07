@@ -16,8 +16,8 @@
 
 syntax = "proto3";
 package structures;
-import "common/common.proto";
-import "valprotocol/valprotocol.proto";
+import "arb-util/common/common.proto";
+import "arb-validator-core/valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
 message ExecutionAssertionBuf {
@@ -28,14 +28,9 @@ message ExecutionAssertionBuf {
     repeated common.HashBuf logs = 5;
 }
 
-message InboxItemBuf {
-    uint32 valType = 1;
-    common.HashBuf valHash = 2;
-}
-
 message InboxBuf {
     common.BigIntegerBuf topCount = 1;
-    repeated InboxItemBuf items = 2;
+    repeated common.HashBuf items = 2;
     common.HashBuf hashOfRest = 3;
 }
 

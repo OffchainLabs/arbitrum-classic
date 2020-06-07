@@ -17,6 +17,9 @@
 package rollupvalidator
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -31,4 +34,83 @@ func TestProcessNode(t *testing.T) {
 
 	initialNode := structures.NewInitialNode(mach)
 	processNode(initialNode, chainAddress)
+}
+
+func logListMatches(a []logResponse, b []logResponse) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, l := range a {
+		if !l.Equals(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func extractLogResponses(results []evm.Result) []logResponse {
+	flatLogs := make([]logResponse, 0)
+	i := uint64(0)
+	for _, result := range results {
+		for _, l := range result.GetLogs() {
+			flatLogs = append(flatLogs, logResponse{
+				Log:     l,
+				TxIndex: i,
+				TxHash:  result.GetEthMsg().TxHash(),
+			})
+		}
+		i++
+	}
+	return flatLogs
+}
+
+func TestFindLogs(t *testing.T) {
+	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	results := make([]evm.Result, 0, 5)
+	for i := int32(0); i < 5; i++ {
+		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		results = append(results, stop)
+	}
+
+	initialNode := structures.NewInitialNode(mach)
+	nextNode := structures.NewRandomNodeFromValidPrev(initialNode, results)
+	info := processNode(nextNode, chainAddress)
+	flatLogs := extractLogResponses(results)
+
+	if !logListMatches(info.FindLogs(nil, nil), flatLogs) {
+		t.Error("empty query should match everything")
+	}
+
+	if !logListMatches(info.FindLogs(nil, nil), flatLogs) {
+		t.Error("empty query should match everything")
+	}
+
+	if !logListMatches(
+		info.FindLogs(
+			[]common.Address{flatLogs[0].Log.Address},
+			nil,
+		),
+		flatLogs[:1],
+	) {
+		t.Error("query result wrong")
+	}
+
+	if !logListMatches(
+		info.FindLogs(
+			[]common.Address{
+				flatLogs[0].Log.Address,
+				flatLogs[1].Log.Address,
+				flatLogs[2].Log.Address,
+			},
+			nil,
+		),
+		flatLogs[:3],
+	) {
+		t.Error("query result wrong")
+	}
+
 }

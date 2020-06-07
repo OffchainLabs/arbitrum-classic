@@ -152,23 +152,15 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 		LowerBoundTimestamp: big.NewInt(100),
 		UpperBoundTimestamp: big.NewInt(120),
 	}
-	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
-		NumSteps:             1,
+		NumSteps:             numSteps,
 		TimeBounds:           timeBounds,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := &valprotocol.ExecutionAssertionStub{
-		AfterHash:        theMachine.Hash(),
-		DidInboxInsn:     false,
-		NumGas:           uint64(numGas),
-		FirstMessageHash: common.Hash{},
-		LastMessageHash:  common.Hash{},
-		FirstLogHash:     common.Hash{},
-		LastLogHash:      common.Hash{},
-	}
+	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
 	assertionClaim := &valprotocol.AssertionClaim{
 		AfterInboxTop:         chain.inbox.GetTopHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),

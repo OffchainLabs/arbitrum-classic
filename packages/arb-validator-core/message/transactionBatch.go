@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
 
@@ -30,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type TransactionBatch struct {
@@ -112,8 +112,8 @@ func (b BatchTx) ToBytes() []byte {
 
 var DataOffset = 151
 
-func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
-	txes := make([]DeliveredTransaction, 0)
+func (m TransactionBatch) getTransactions() []Transaction {
+	txes := make([]Transaction, 0)
 	offset := 0
 
 	data := m.TxData
@@ -149,11 +149,7 @@ func (m DeliveredTransactionBatch) getTransactions() []DeliveredTransaction {
 			Data:        batch.Data,
 		}
 
-		txes = append(txes, DeliveredTransaction{
-			Transaction: tx,
-			BlockNum:    m.BlockNum,
-			Timestamp:   m.Timestamp,
-		})
+		txes = append(txes, tx)
 		offset += batch.encodedLength()
 	}
 	return txes
@@ -173,58 +169,30 @@ func (m TransactionBatch) Equals(other Message) bool {
 	return m.Chain != o.Chain || bytes.Equal(m.TxData, o.TxData)
 }
 
-func (m TransactionBatch) Type() MessageType {
+func (m TransactionBatch) Type() Type {
 	return TransactionBatchType
 }
 
-type DeliveredTransactionBatch struct {
-	TransactionBatch
-	BlockNum  *common.TimeBlocks
-	Timestamp *big.Int
-}
-
-func (m DeliveredTransactionBatch) Equals(other Message) bool {
-	o, ok := other.(DeliveredTransactionBatch)
-	if !ok {
-		return false
-	}
-	return m.TransactionBatch.Equals(o.TransactionBatch) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0
-}
-
-func (m DeliveredTransactionBatch) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m DeliveredTransactionBatch) deliveredTimestamp() *big.Int {
-	return m.Timestamp
-}
-
-func (m DeliveredTransactionBatch) CommitmentHash() common.Hash {
+func (m TransactionBatch) CommitmentHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),
 		m.TxData,
-		hashing.Uint256(m.BlockNum.AsInt()),
-		hashing.Uint256(m.Timestamp),
 	)
 }
 
-func (m DeliveredTransactionBatch) CheckpointValue() value.Value {
+func (m TransactionBatch) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.Chain),
 		BytesToByteStack(m.TxData),
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 	})
 	return val
 }
 
-func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (DeliveredTransactionBatch, error) {
+func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (TransactionBatch, error) {
 	tup, ok := v.(value.TupleValue)
-	failRet := DeliveredTransactionBatch{}
-	if !ok || tup.Len() != 4 {
-		return failRet, errors.New("tx val must be 7-tuple")
+	failRet := TransactionBatch{}
+	if !ok || tup.Len() != 2 {
+		return failRet, errors.New("tx val must be 2-tuple")
 	}
 	chain, _ := tup.GetByInt64(0)
 	chainInt, ok := chain.(value.IntValue)
@@ -236,23 +204,9 @@ func UnmarshalTransactionBatchFromCheckpoint(v value.Value) (DeliveredTransactio
 	if err != nil {
 		return failRet, err
 	}
-	blockNum, _ := tup.GetByInt64(2)
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNum must be int")
-	}
-	timestamp, _ := tup.GetByInt64(3)
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be int")
-	}
 
-	return DeliveredTransactionBatch{
-		TransactionBatch: TransactionBatch{
-			Chain:  intValueToAddress(chainInt),
-			TxData: dataBytes,
-		},
-		BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
-		Timestamp: timestampInt.BigInt(),
+	return TransactionBatch{
+		Chain:  intValueToAddress(chainInt),
+		TxData: dataBytes,
 	}, nil
 }

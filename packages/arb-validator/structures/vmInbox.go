@@ -40,7 +40,7 @@ func NewVMInbox() *VMInbox {
 	}
 }
 
-func (b *VMInbox) DeliverMessage(msg message.Message) {
+func (b *VMInbox) DeliverMessage(msg message.Delivered) {
 	b.value = message.AddToPrev(b.value, msg)
 
 	hashPreImage := b.value.GetPreImage()

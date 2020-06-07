@@ -30,20 +30,16 @@ import (
 )
 
 type Call struct {
-	To        common.Address
-	From      common.Address
-	Data      []byte
-	BlockNum  *common.TimeBlocks
-	Timestamp *big.Int
+	To   common.Address
+	From common.Address
+	Data []byte
 }
 
 func (m Call) String() string {
-	return fmt.Sprintf("Transaction(to: %v, from: %v, data: %v, blockNum: %v, timestamp: %v)",
+	return fmt.Sprintf("Transaction(to: %v, from: %v, data: %v)",
 		m.To,
 		m.From,
 		m.Data,
-		m.BlockNum.AsInt(),
-		m.Timestamp,
 	)
 }
 
@@ -58,16 +54,23 @@ func (m Call) Equals(other Message) bool {
 	}
 	return m.To == o.To &&
 		m.From == o.From &&
-		bytes.Equal(m.Data, o.Data) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0
+		bytes.Equal(m.Data, o.Data)
 }
 
-func (m Call) Type() MessageType {
+func (m Call) Type() Type {
 	return CallType
 }
 
-func (m Call) asValue() value.Value {
+func (m Call) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
+	)
+}
+
+func (m Call) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		BytesToByteStack(m.Data),
@@ -118,10 +121,40 @@ func (m Call) ReceiptHash() common.Hash {
 	)
 }
 
-func (m Call) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
+func (m Call) CheckpointValue() value.Value {
+	val, _ := value.NewTupleFromSlice([]value.Value{
+		addressToIntValue(m.To),
+		addressToIntValue(m.From),
+		BytesToByteStack(m.Data),
+	})
+	return val
 }
 
-func (m Call) deliveredTimestamp() *big.Int {
-	return m.Timestamp
+func UnmarshalCallFromCheckpoint(v value.Value) (Call, error) {
+	tup, ok := v.(value.TupleValue)
+	failRet := Call{}
+	if !ok || tup.Len() != 3 {
+		return failRet, errors.New("tx val must be 3-tuple")
+	}
+	to, _ := tup.GetByInt64(0)
+	toInt, ok := to.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("to must be int")
+	}
+	from, _ := tup.GetByInt64(1)
+	fromInt, ok := from.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("from must be int")
+	}
+	data, _ := tup.GetByInt64(2)
+	dataBytes, err := ByteStackToHex(data)
+	if err != nil {
+		return failRet, err
+	}
+
+	return Call{
+		To:   intValueToAddress(toInt),
+		From: intValueToAddress(fromInt),
+		Data: dataBytes,
+	}, nil
 }

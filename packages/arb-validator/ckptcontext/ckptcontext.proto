@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 package ckptcontext;
-import "common/common.proto";
+import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext";
 
 message CheckpointManifest {

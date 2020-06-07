@@ -6,4 +6,5 @@ require (
 	github.com/ethereum/go-ethereum v1.9.13
 	github.com/golang/protobuf v1.4.1
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
+	google.golang.org/protobuf v1.22.0
 )

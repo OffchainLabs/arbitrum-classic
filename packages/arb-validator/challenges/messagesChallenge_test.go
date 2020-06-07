@@ -34,15 +34,16 @@ func testMessagesChallenge(t *testing.T) {
 	t.Parallel()
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.DeliveredEth{
-			Eth: message.Eth{
+		messageStack.DeliverMessage(message.Received{
+			Message: message.Eth{
 				To:    common.Address{},
 				From:  common.Address{},
 				Value: big.NewInt(6745),
 			},
-			BlockNum:   common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp:  big.NewInt(5435254),
-			MessageNum: big.NewInt(i),
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
 		})
 	}
 

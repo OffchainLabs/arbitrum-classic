@@ -17,17 +17,15 @@
 package rollupvalidator
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"google.golang.org/protobuf/proto"
 	"log"
-	"math/big"
 	"os"
 	"testing"
-	"time"
-
-	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -39,63 +37,21 @@ var contractPath = "../contract.ao"
 var dbPath = "./testdb"
 var chainAddress = common.Address{65, 87, 32}
 
-func setupContext() (*cmachine.CheckpointStorage, []*structures.Node, error) {
-	cCheckpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mach, err := cCheckpointer.GetInitialMachine()
+func setupNodes() ([]*structures.Node, []evm.Result, error) {
+	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		return nil, nil, err
 	}
 	node := structures.NewInitialNode(mach.Clone())
 
-	tb := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocksInt(0),
-		UpperBoundBlock:     common.NewTimeBlocksInt(0),
-		LowerBoundTimestamp: big.NewInt(0),
-		UpperBoundTimestamp: big.NewInt(0),
+	results := make([]evm.Result, 0, 5)
+	for i := int32(0); i < 5; i++ {
+		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		results = append(results, stop)
 	}
-	assertion, numSteps := mach.ExecuteAssertion(
-		0,
-		tb,
-		value.NewEmptyTuple(),
-		time.Second*10,
-	)
 
-	nextNode := structures.NewNodeFromValidPrev(
-		node,
-		&valprotocol.DisputableNode{
-			AssertionParams: &valprotocol.AssertionParams{
-				NumSteps:             numSteps,
-				TimeBounds:           tb,
-				ImportedMessageCount: big.NewInt(0),
-			},
-			AssertionClaim: &valprotocol.AssertionClaim{
-				AfterInboxTop:         common.Hash{},
-				ImportedMessagesSlice: common.Hash{},
-				AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
-			},
-			MaxInboxTop:   common.Hash{},
-			MaxInboxCount: big.NewInt(0),
-		},
-		valprotocol.ChainParams{
-			StakeRequirement:        nil,
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(100000)},
-			MaxExecutionSteps:       10000,
-			MaxBlockBoundsWidth:     10,
-			MaxTimestampBoundsWidth: 10,
-			ArbGasSpeedLimitPerTick: 10000000,
-		},
-		common.NewTimeBlocksInt(0),
-		common.Hash{54, 87, 23, 65},
-	)
-
-	if err := nextNode.UpdateValidOpinion(mach.Clone(), assertion); err != nil {
-		return nil, nil, err
-	}
-	return cCheckpointer, []*structures.Node{node, nextNode}, nil
+	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
+	return []*structures.Node{node, nextNode}, results, nil
 }
 
 func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.NodeStore, node *structures.Node) error {
@@ -115,7 +71,12 @@ func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.NodeStore, no
 }
 
 func TestTrackerDB(t *testing.T) {
-	checkpointer, nodes, err := setupContext()
+	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nodes, _, err := setupNodes()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,14 +107,80 @@ func TestTrackerDB(t *testing.T) {
 		}
 	}
 
+	nodeRecordTest := func(node *structures.Node) func(*testing.T) {
+		return func(t *testing.T) {
+			nodeInfo := processNode(node, chainAddress)
+
+			info, err := db.lookupNodeRecord(node.Depth(), node.Hash())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if info == nil {
+				t.Fatal("node info nil")
+			}
+
+			if !info.Equals(nodeInfo) {
+				t.Error("nodeInfo not equal")
+			}
+		}
+	}
+
+	nodeMetadataTest := func(node *structures.Node) func(*testing.T) {
+		return func(t *testing.T) {
+			nodeInfo := processNode(node, chainAddress)
+
+			metadata, err := db.lookupNodeMetadata(node.Depth(), node.Hash())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if metadata == nil {
+				t.Fatal("node info nil")
+			}
+
+			if !bytes.Equal(metadata.LogBloom, newNodeMetadata(nodeInfo).LogBloom) {
+				t.Error("nodeInfo not equal")
+			}
+		}
+	}
+
+	txRecordTest := func(node *structures.Node) func(*testing.T) {
+		return func(t *testing.T) {
+			nodeInfo := processNode(node, chainAddress)
+
+			for i, txHash := range nodeInfo.EVMTransactionHashes {
+				record, err := db.lookupTxRecord(txHash)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if record == nil {
+					t.Fatal("txrecord nil")
+				}
+
+				if !record.Equals(&TxRecord{
+					NodeHeight:       node.Depth(),
+					NodeHash:         node.Hash().MarshalToBuf(),
+					TransactionIndex: uint64(i),
+				}) {
+					t.Error("Got wrong record")
+				}
+			}
+		}
+	}
+
 	for _, node := range nodes {
 		t.Run("AddUnconfirmedNode", func(t *testing.T) {
-			nodeInfo, transactions := processNode(node, chainAddress)
-			db.addUnconfirmedNode(nodeInfo, transactions)
+			nodeInfo := processNode(node, chainAddress)
+			db.addUnconfirmedNode(nodeInfo)
 		})
 
 		t.Run("UnconfirmedHeightLookup", heightTest(node))
 		t.Run("UnconfirmedHashLookup", hashTest(node))
+		t.Run("UnconfirmedNodeRecord", nodeRecordTest(node))
+		t.Run("UnconfirmedMetadata", nodeMetadataTest(node))
+		t.Run("UnconfirmedTxRecord", txRecordTest(node))
 
 		if err := saveNode(checkpointer, db.confirmedNodeStore, node); err != nil {
 			t.Fatal(err)
@@ -176,9 +203,34 @@ func TestTrackerDB(t *testing.T) {
 
 		t.Run("ConfirmedHeightLookup", heightTest(node))
 		t.Run("ConfirmedHashLookup", hashTest(node))
+		t.Run("ConfirmedNodeRecord", nodeRecordTest(node))
+		t.Run("ConfirmedMetadata", nodeMetadataTest(node))
+		t.Run("ConfirmedTxRecord", txRecordTest(node))
+
+		t.Run("CachedConfirmedNodeRecord", nodeRecordTest(node))
 	}
+
 	checkpointer.CloseCheckpointStorage()
 	if err := os.RemoveAll(dbPath); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func TestMetadataLogMatch(t *testing.T) {
+	nodes, results, err := setupNodes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nodeInfo := processNode(nodes[1], chainAddress)
+	metadata := newNodeMetadata(nodeInfo)
+	flatLogs := extractLogResponses(results)
+
+	evm.LogMatchTest(
+		t,
+		func(addresses []common.Address, topics [][]common.Hash) bool {
+			return metadata.MaybeMatchesLogQuery(addresses, topics)
+		},
+		flatLogs[0].Log,
+	)
 }

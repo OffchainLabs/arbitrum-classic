@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"log"
 	"math/big"
 	"strconv"
@@ -60,45 +61,52 @@ func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, 
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
 func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArgs) (*validatorserver.FindLogsReply, error) {
-	var address *common.Address
-	if len(args.Address) > 0 {
-		addr := common.HexToAddress(args.Address)
-		address = &addr
+	addresses := make([]common.Address, 0, 1)
+	for _, addr := range args.Addresses {
+		addresses = append(addresses, common.HexToAddress(addr))
 	}
 
-	topics := make([]common.Hash, 0, len(args.Topics))
-	for _, topic := range args.Topics {
-		topicBytes, err := hexutil.Decode(topic)
-		if err == nil {
-			var topic common.Hash
-			copy(topic[:], topicBytes)
-			topics = append(topics, topic)
+	topicGroups := make([][]common.Hash, 0, len(args.TopicGroups))
+	for _, topicGroup := range args.TopicGroups {
+		topics := make([]common.Hash, 0, len(topicGroup.Topics))
+		for _, topic := range topicGroup.Topics {
+			topics = append(topics, common.NewHashFromEth(ethcommon.HexToHash(topic)))
 		}
+		topicGroups = append(topicGroups, topics)
 	}
 
-	fromHeight, err := strconv.ParseInt(args.FromHeight[2:], 16, 64)
-	if err != nil {
-		fmt.Println("FindLogs error, bad fromHeight", err)
-		return nil, err
+	var fromHeight *uint64
+	if len(args.FromHeight) != 0 {
+		intVal, err := strconv.ParseUint(args.FromHeight[2:], 16, 64)
+		if err != nil {
+			fmt.Println("FindLogs error, bad fromHeight", err)
+			return nil, err
+		}
+		fromHeight = &intVal
 	}
 
-	var logs []*validatorserver.LogInfo
-	if args.ToHeight == "latest" {
-		logs, err = m.tracker.FindLogs(ctx, &fromHeight, nil, address, topics)
-	} else {
-		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
+	var toHeight *uint64
+	if len(args.ToHeight) != 0 && args.ToHeight != "latest" {
+		intVal, err := strconv.ParseUint(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logs, err = m.tracker.FindLogs(ctx, &fromHeight, &toHeight, address, topics)
+		toHeight = &intVal
 	}
+
+	logs, err := m.tracker.FindLogs(ctx, fromHeight, toHeight, addresses, topicGroups)
 	if err != nil {
 		return nil, err
 	}
 
+	logInfos := make([]*evm.FullLogBuf, 0, len(logs))
+	for _, l := range logs {
+		logInfos = append(logInfos, l.Marshal())
+	}
+
 	return &validatorserver.FindLogsReply{
-		Logs: logs,
+		Logs: logInfos,
 	}, nil
 }
 
@@ -128,33 +136,14 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
 func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.GetMessageResultArgs) (*validatorserver.GetMessageResultReply, error) {
-	txHashBytes, err := hexutil.Decode(args.TxHash)
-	if err != nil {
-		return nil, err
-	}
-	txHash := common.Hash{}
-	copy(txHash[:], txHashBytes)
+	txHash := common.NewHashFromEth(ethcommon.HexToHash(args.TxHash))
 	txInfo, err := m.tracker.TxInfo(ctx, txHash)
-
 	if err != nil {
 		return nil, err
 	}
 
-	if !txInfo.Found {
-		return &validatorserver.GetMessageResultReply{
-			Found: false,
-		}, nil
-	}
-
-	var buf bytes.Buffer
-	_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 	return &validatorserver.GetMessageResultReply{
-		Found:         true,
-		RawVal:        hexutil.Encode(buf.Bytes()),
-		LogPreHash:    txInfo.LogsPreHash,
-		LogPostHash:   txInfo.LogsPostHash,
-		LogValHashes:  txInfo.LogsValHashes,
-		OnChainTxHash: txInfo.OnChainTxHash,
+		Tx: txInfo.Marshal(),
 	}, nil
 }
 
@@ -198,15 +187,24 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := message.Call{
-		To:        contractAddress,
-		From:      sender,
-		Data:      dataBytes,
-		BlockNum:  m.man.CurrentBlockId().Height,
-		Timestamp: big.NewInt(time.Now().Unix()),
+	callMsg := message.Call{
+		To:   contractAddress,
+		From: sender,
+		Data: dataBytes,
 	}
 
-	inbox := message.AddToPrev(value.NewEmptyTuple(), msg)
+	deliveredMsg := message.Delivered{
+		Message: callMsg,
+		DeliveryInfo: message.DeliveryInfo{
+			ChainTime: message.ChainTime{
+				BlockNum:  m.man.CurrentBlockId().Height,
+				Timestamp: big.NewInt(time.Now().Unix()),
+			},
+			TxId: big.NewInt(0),
+		},
+	}
+
+	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
 	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
 
 	log.Println("Executed call for", steps, "steps")
@@ -220,8 +218,8 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash
-	if logHash != msg.ReceiptHash() {
+	logHash := lastLog.GetEthMsg().TxHash()
+	if logHash != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
