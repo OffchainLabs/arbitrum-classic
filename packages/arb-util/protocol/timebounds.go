@@ -31,11 +31,18 @@ type TimeBounds struct {
 	UpperBoundTimestamp *big.Int
 }
 
+func sortedRandomBigInts() (*big.Int, *big.Int) {
+	a := common.RandBigInt()
+	b := common.RandBigInt()
+	if a.Cmp(b) > 0 {
+		a, b = b, a
+	}
+	return b, a
+}
+
 func NewRandomTimeBounds() *TimeBounds {
-	upperBlockBound := common.RandBigInt()
-	lowerBlockBound := common.RandBigIntBelowBound(upperBlockBound)
-	upperTimestampBound := common.RandBigInt()
-	lowerTimestampBound := common.RandBigIntBelowBound(upperTimestampBound)
+	lowerBlockBound, upperBlockBound := sortedRandomBigInts()
+	lowerTimestampBound, upperTimestampBound := sortedRandomBigInts()
 	return &TimeBounds{
 		LowerBoundBlock:     common.NewTimeBlocks(upperBlockBound),
 		UpperBoundBlock:     common.NewTimeBlocks(lowerBlockBound),
