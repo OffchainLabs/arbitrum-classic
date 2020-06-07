@@ -2,7 +2,6 @@ package goarbitrum
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	"math/big"
@@ -35,7 +34,7 @@ type ArbConnection struct {
 func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
-	vmIdStr, err := proxy.GetVMInfo()
+	vmIdStr, err := proxy.GetVMInfo(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -75,16 +74,15 @@ func (conn *ArbConnection) getCurrentNonce(
 	if err != nil {
 		return nil, err
 	}
-	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	num, err := sysConn.GetTransactionCount(
+		&bind.CallOpts{Context: ctx, Pending: true},
+		account,
+	)
 	if err != nil {
 		return nil, err
 	}
 	conn.sequenceNum = num
 	return num, nil
-}
-
-func _nyiError(funcname string) error {
-	return errors.New("goarbitrum error: " + funcname + " not yet implemented")
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,6 +100,7 @@ func (conn *ArbConnection) CodeAt(
 		return nil, err
 	}
 	return infoCon.GetCode(&bind.CallOpts{
+		Context:     ctx,
 		BlockNumber: blockNumber,
 	}, contract)
 }
@@ -111,7 +110,7 @@ func (conn *ArbConnection) call(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
+	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +154,7 @@ func (conn *ArbConnection) PendingCodeAt(
 		return nil, err
 	}
 	return infoCon.GetCode(&bind.CallOpts{
+		Context: ctx,
 		Pending: true,
 	}, account)
 }
@@ -173,7 +173,7 @@ func (conn *ArbConnection) PendingNonceAt(
 	if err != nil {
 		return 0, err
 	}
-	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Context: ctx, Pending: true}, account)
 	if err != nil {
 		return 0, err
 	}
@@ -214,10 +214,12 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 
 // FilterLogs executes a log filter operation, blocking during execution and
 // returning all the results in one batch.
-//
-// TODO(karalabe): Deprecate when the subscription one can return past data too.
+
+// TODO: Currently FilterLogs does not properly handle reorgs by replaying undone
+// logs with the removed flag set
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
 	logInfos, err := conn.proxy.FindLogs(
+		ctx,
 		_extractQueryHeight(query.FromBlock),
 		_extractQueryHeight(query.ToBlock),
 		query.Addresses,
@@ -240,16 +242,14 @@ func (conn *ArbConnection) SubscribeFilterLogs(
 	query ethereum.FilterQuery,
 	ch chan<- types.Log,
 ) (ethereum.Subscription, error) {
-	return newSubscription(conn, query, ch), nil
+	return newSubscription(ctx, conn, query, ch), nil
 }
 
 const subscriptionPollingInterval = 5 * time.Second
 
 type subscription struct {
-	proxy     ValidatorProxy
 	logChan   chan<- types.Log
 	errChan   chan error
-	query     ethereum.FilterQuery
 	unsubOnce *sync.Once
 	closeChan chan interface{}
 	wg        sync.WaitGroup
@@ -264,16 +264,14 @@ func _extractQueryHeight(val *big.Int) *uint64 {
 	return ret
 }
 
-func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
+func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
 	// We will assume that FromBlock is always non-nil
 	if query.FromBlock == nil {
 		query.FromBlock = big.NewInt(0)
 	}
 	sub := &subscription{
-		conn.proxy,
 		ch,
 		make(chan error, 1),
-		query,
 		&sync.Once{},
 		make(chan interface{}),
 		sync.WaitGroup{},
@@ -288,12 +286,15 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 			select {
 			case <-sub.closeChan:
 				return
+			case <-ctx.Done():
+				return
 			case <-ticker.C:
-				logInfos, err := sub.proxy.FindLogs(
-					_extractQueryHeight(sub.query.FromBlock),
-					_extractQueryHeight(sub.query.ToBlock),
-					sub.query.Addresses,
-					sub.query.Topics,
+				logInfos, err := conn.proxy.FindLogs(
+					ctx,
+					_extractQueryHeight(query.FromBlock),
+					_extractQueryHeight(query.ToBlock),
+					query.Addresses,
+					query.Topics,
 				)
 				if err != nil {
 					sub.errChan <- err
@@ -307,7 +308,7 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 				// Therefore the next query can start with block height one
 				// greater than the last log in the previous query
 				if len(logInfos) > 0 {
-					sub.query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].NodeHeight + 1)
+					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].NodeHeight + 1)
 				}
 			}
 		}
@@ -340,7 +341,7 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	txInfo, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	txInfo, err := conn.proxy.GetMessageResult(ctx, txHash.Bytes())
 	if err != nil {
 		return nil, errors2.Wrap(err, "TransactionReceipt error:")
 	}
