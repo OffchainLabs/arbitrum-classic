@@ -75,23 +75,27 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		topicGroups = append(topicGroups, topics)
 	}
 
-	fromHeight, err := strconv.ParseInt(args.FromHeight[2:], 16, 64)
-	if err != nil {
-		fmt.Println("FindLogs error, bad fromHeight", err)
-		return nil, err
+	var fromHeight *uint64
+	if len(args.FromHeight) != 0 {
+		intVal, err := strconv.ParseUint(args.FromHeight[2:], 16, 64)
+		if err != nil {
+			fmt.Println("FindLogs error, bad fromHeight", err)
+			return nil, err
+		}
+		fromHeight = &intVal
 	}
 
-	var logs []evm.FullLog
-	if args.ToHeight == "latest" {
-		logs, err = m.tracker.FindLogs(ctx, &fromHeight, nil, addresses, topicGroups)
-	} else {
-		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
+	var toHeight *uint64
+	if len(args.ToHeight) != 0 && args.ToHeight != "latest" {
+		intVal, err := strconv.ParseUint(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logs, err = m.tracker.FindLogs(ctx, &fromHeight, &toHeight, addresses, topicGroups)
+		toHeight = &intVal
 	}
+
+	logs, err := m.tracker.FindLogs(ctx, fromHeight, toHeight, addresses, topicGroups)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
-	"math"
 	"math/big"
 	"sync"
 	"time"
@@ -218,24 +217,20 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	var ret []types.Log
-	address, topics := _extractAddrTopics(query)
-	logInfos, err := conn.proxy.FindLogs(0, math.MaxInt32, address[:], topics)
+	logInfos, err := conn.proxy.FindLogs(
+		_extractQueryHeight(query.FromBlock),
+		_extractQueryHeight(query.ToBlock),
+		query.Addresses,
+		query.Topics,
+	)
 	if err != nil {
 		return nil, err
 	}
+	logs := make([]types.Log, 0, len(logInfos))
 	for _, l := range logInfos {
-		ok := true
-		for i, targetTopic := range topics {
-			if targetTopic != l.Topics[i] {
-				ok = false
-			}
-		}
-		if ok {
-			ret = append(ret, *l.ToEVMLog())
-		}
+		logs = append(logs, *l.ToEVMLog())
 	}
-	return ret, nil
+	return logs, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning
@@ -251,42 +246,34 @@ func (conn *ArbConnection) SubscribeFilterLogs(
 const subscriptionPollingInterval = 5 * time.Second
 
 type subscription struct {
-	proxy            ValidatorProxy
-	firstBlockUnseen uint64
-	logChan          chan<- types.Log
-	errChan          chan error
-	address          common.Address
-	topics           [][32]byte
-	unsubOnce        *sync.Once
-	closeChan        chan interface{}
-	wg               sync.WaitGroup
+	proxy     ValidatorProxy
+	logChan   chan<- types.Log
+	errChan   chan error
+	query     ethereum.FilterQuery
+	unsubOnce *sync.Once
+	closeChan chan interface{}
+	wg        sync.WaitGroup
 }
 
-func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics [][32]byte) {
-	if len(query.Addresses) > 1 {
-		panic("GoArbitrum: subscription can't handle more than one contract address")
+func _extractQueryHeight(val *big.Int) *uint64 {
+	var ret *uint64
+	if val != nil {
+		intVal := val.Uint64()
+		ret = &intVal
 	}
-	addr = common.NewAddressFromEth(query.Addresses[0])
-
-	topics = make([][32]byte, len(query.Topics))
-	for i, sl := range query.Topics {
-		if len(sl) > 1 {
-			panic("GoArbitrum: subscription can't handle ORs of topics")
-		}
-		copy(topics[i][:], sl[0][:])
-	}
-	return
+	return ret
 }
 
 func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
-	address, topics := _extractAddrTopics(query)
+	// We will assume that FromBlock is always non-nil
+	if query.FromBlock == nil {
+		query.FromBlock = big.NewInt(0)
+	}
 	sub := &subscription{
 		conn.proxy,
-		0,
 		ch,
 		make(chan error, 1),
-		address,
-		topics,
+		query,
 		&sync.Once{},
 		make(chan interface{}),
 		sync.WaitGroup{},
@@ -302,31 +289,25 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 			case <-sub.closeChan:
 				return
 			case <-ticker.C:
-				logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
+				logInfos, err := sub.proxy.FindLogs(
+					_extractQueryHeight(sub.query.FromBlock),
+					_extractQueryHeight(sub.query.ToBlock),
+					sub.query.Addresses,
+					sub.query.Topics,
+				)
 				if err != nil {
 					sub.errChan <- err
 					return
 				}
 				for _, l := range logInfos {
-					if err != nil {
-						sub.errChan <- err
-						return
-					}
-					ok := true
-					for i, targetTopic := range topics {
-						if targetTopic != l.Topics[i] {
-							ok = false
-						}
-					}
-					if l.NodeHeight < sub.firstBlockUnseen {
-						ok = false
-					}
-					if ok {
-						sub.logChan <- *l.ToEVMLog()
-						if sub.firstBlockUnseen <= l.NodeHeight {
-							sub.firstBlockUnseen = l.NodeHeight + 1
-						}
-					}
+					sub.logChan <- *l.ToEVMLog()
+				}
+				// We will always receive logs in order by block and always
+				// receive all logs from a given block in a single query.
+				// Therefore the next query can start with block height one
+				// greater than the last log in the previous query
+				if len(logInfos) > 0 {
+					sub.query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].NodeHeight + 1)
 				}
 			}
 		}

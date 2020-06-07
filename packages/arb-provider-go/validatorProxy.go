@@ -21,7 +21,7 @@ type ValidatorProxy interface {
 	GetMessageResult(txHash []byte) (evm.TxInfo, error)
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
-	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]evm.FullLog, error)
+	FindLogs(fromHeight, toHeight *uint64, addresses []common.Address, topics [][]common.Hash) ([]evm.FullLog, error)
 	CallMessage(contract common.Address, sender common.Address, data []byte) (value.Value, error)
 }
 
@@ -36,11 +36,23 @@ func NewValidatorProxyImpl(url string) ValidatorProxy {
 	return &ValidatorProxyImpl{url}
 }
 
-func _encodeInt(i int64) string {
-	return "0x" + strconv.FormatInt(i, 16)
+func _encodeInt(i *uint64) string {
+	if i == nil {
+		return ""
+	}
+
+	return "0x" + strconv.FormatUint(*i, 16)
 }
 
-func _encodeByteArraySlice(slice [][32]byte) []string {
+func _encodeByteArraySlice(slice []common.Hash) []string {
+	ret := make([]string, len(slice))
+	for i, arr := range slice {
+		ret[i] = hexutil.Encode(arr[:])
+	}
+	return ret
+}
+
+func _encodeAddressArraySlice(slice []common.Address) []string {
 	ret := make([]string, len(slice))
 	for i, arr := range slice {
 		ret[i] = hexutil.Encode(arr[:])
@@ -127,12 +139,16 @@ func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	return response.VmID, nil
 }
 
-func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]evm.FullLog, error) {
+func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight *uint64, addresses []common.Address, topicGroups [][]common.Hash) ([]evm.FullLog, error) {
+	tgs := make([]*validatorserver.TopicGroup, 0, len(topicGroups))
+	for _, topicGroup := range topicGroups {
+		tgs = append(tgs, &validatorserver.TopicGroup{Topics: _encodeByteArraySlice(topicGroup)})
+	}
 	request := &validatorserver.FindLogsArgs{
-		FromHeight: _encodeInt(fromHeight),
-		ToHeight:   _encodeInt(toHeight),
-		Address:    hexutil.Encode(address),
-		Topics:     _encodeByteArraySlice(topics),
+		FromHeight:  _encodeInt(fromHeight),
+		ToHeight:    _encodeInt(toHeight),
+		Addresses:   _encodeAddressArraySlice(addresses),
+		TopicGroups: tgs,
 	}
 	var response validatorserver.FindLogsReply
 	if err := vp.doCall("FindLogs", request, &response); err != nil {

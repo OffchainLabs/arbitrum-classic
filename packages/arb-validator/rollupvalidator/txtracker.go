@@ -249,8 +249,8 @@ func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {
 
 func (tr *txTracker) FindLogs(
 	ctx context.Context,
-	fromHeight *int64,
-	toHeight *int64,
+	fromHeight *uint64,
+	toHeight *uint64,
 	address []common.Address,
 	topics [][]common.Hash,
 ) ([]evm.FullLog, error) {
@@ -261,9 +261,9 @@ func (tr *txTracker) FindLogs(
 		return nil, errors.New("call timed out")
 	default:
 	}
-	startHeight := int64(0)
-	endHeight := int64(tr.maxNodeHeight)
-	if fromHeight != nil && *fromHeight > int64(0) {
+	startHeight := uint64(0)
+	endHeight := tr.maxNodeHeight
+	if fromHeight != nil && *fromHeight > 0 {
 		startHeight = *fromHeight
 	}
 	if toHeight != nil {
@@ -273,7 +273,7 @@ func (tr *txTracker) FindLogs(
 		}
 	}
 	logs := make([]evm.FullLog, 0)
-	if startHeight >= int64(tr.maxNodeHeight) {
+	if startHeight >= tr.maxNodeHeight {
 		return logs, nil
 	}
 
