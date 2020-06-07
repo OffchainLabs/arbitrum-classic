@@ -50,3 +50,10 @@ func RandBigInt() *big.Int {
 	raw := RandBytes(32)
 	return new(big.Int).SetBytes(raw)
 }
+
+func RandBigIntBelowBound(max *big.Int) *big.Int {
+	x := RandBigInt()
+	for ; x.Cmp(max) >= 0; x = RandBigInt() {
+	}
+	return x
+}
