@@ -109,7 +109,7 @@ func TestTxTracker(t *testing.T) {
 		}
 	}
 
-	findLogTest := func(fromHeight *int64, toHeight *int64) func(*testing.T) {
+	findLogTest := func(fromHeight *uint64, toHeight *uint64) func(*testing.T) {
 		return func(t *testing.T) {
 			foundLogs, err := txTracker.FindLogs(context.Background(), nil, nil, []common.Address{logs[0].Address}, [][]common.Hash{{}})
 			if err != nil {
@@ -124,7 +124,7 @@ func TestTxTracker(t *testing.T) {
 		}
 	}
 
-	findLogMissingTest := func(fromHeight *int64, toHeight *int64) func(*testing.T) {
+	findLogMissingTest := func(fromHeight *uint64, toHeight *uint64) func(*testing.T) {
 		return func(t *testing.T) {
 			foundLogs, err := txTracker.FindLogs(context.Background(), fromHeight, toHeight, []common.Address{logs[0].Address}, nil)
 			if err != nil {
@@ -155,8 +155,8 @@ func TestTxTracker(t *testing.T) {
 		t.Run("TxInfo", nodeTxInfo(node))
 	}
 
-	height1 := int64(1)
-	height2 := int64(2)
+	height1 := uint64(1)
+	height2 := uint64(2)
 
 	t.Run("FindLogs", func(t *testing.T) {
 		findLogTest(nil, nil)(t)

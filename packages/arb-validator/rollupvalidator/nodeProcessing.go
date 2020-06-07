@@ -18,6 +18,7 @@ package rollupvalidator
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -49,6 +50,10 @@ type nodeInfo struct {
 	L1TxHash common.Hash
 }
 
+func newNodeInfo() *nodeInfo {
+	return &nodeInfo{}
+}
+
 func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
 	for _, txLogs := range ni.EVMLogs {
@@ -63,6 +68,27 @@ func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash)
 		}
 	}
 	return logs
+}
+
+func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
+	ethLogs := make([]*types.Log, 0)
+	logIndex := uint(0)
+	for i, logsInfo := range ni.EVMLogs {
+		for _, ethLog := range logsInfo.Logs {
+			l := evm.FullLog{
+				Log:        ethLog,
+				TxIndex:    uint64(i),
+				TxHash:     logsInfo.TxHash,
+				NodeHeight: ni.NodeHeight,
+				NodeHash:   ni.NodeHash,
+			}.ToEVMLog()
+			l.Index = logIndex
+
+			ethLogs = append(ethLogs, l)
+			logIndex++
+		}
+	}
+	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 }
 
 func valueSlicesEqual(a []value.Value, b []value.Value) bool {
@@ -113,15 +139,15 @@ func hashSlicesEqual(a []common.Hash, b []common.Hash) bool {
 	return true
 }
 
-func (e *nodeInfo) Equals(o *nodeInfo) bool {
-	return logSlicesEqual(e.EVMLogs, o.EVMLogs) &&
-		hashSlicesEqual(e.EVMTransactionHashes, o.EVMTransactionHashes) &&
-		valueSlicesEqual(e.AVMLogs, o.AVMLogs) &&
-		valueSlicesEqual(e.AVMMessages, o.AVMMessages) &&
-		stringSlicesEqual(e.AVMLogsAccHashes, o.AVMLogsAccHashes) &&
-		stringSlicesEqual(e.AVMLogsValHashes, o.AVMLogsValHashes) &&
-		e.NodeHash == o.NodeHash &&
-		e.NodeHeight == o.NodeHeight
+func (ni *nodeInfo) Equals(o *nodeInfo) bool {
+	return logSlicesEqual(ni.EVMLogs, o.EVMLogs) &&
+		hashSlicesEqual(ni.EVMTransactionHashes, o.EVMTransactionHashes) &&
+		valueSlicesEqual(ni.AVMLogs, o.AVMLogs) &&
+		valueSlicesEqual(ni.AVMMessages, o.AVMMessages) &&
+		stringSlicesEqual(ni.AVMLogsAccHashes, o.AVMLogsAccHashes) &&
+		stringSlicesEqual(ni.AVMLogsValHashes, o.AVMLogsValHashes) &&
+		ni.NodeHash == o.NodeHash &&
+		ni.NodeHeight == o.NodeHeight
 }
 
 type txRecordInfo struct {

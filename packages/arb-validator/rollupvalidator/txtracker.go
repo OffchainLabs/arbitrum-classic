@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -62,31 +61,6 @@ func (l logsInfo) Equals(o logsInfo) bool {
 	}
 	return l.TxHash == o.TxHash &&
 		l.TxIndex == o.TxIndex
-}
-
-func newNodeInfo() *nodeInfo {
-	return &nodeInfo{}
-}
-
-func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
-	ethLogs := make([]*types.Log, 0)
-	logIndex := uint(0)
-	for i, logsInfo := range ni.EVMLogs {
-		for _, ethLog := range logsInfo.Logs {
-			l := evm.FullLog{
-				Log:        ethLog,
-				TxIndex:    uint64(i),
-				TxHash:     logsInfo.TxHash,
-				NodeHeight: ni.NodeHeight,
-				NodeHash:   ni.NodeHash,
-			}.ToEVMLog()
-			l.Index = logIndex
-
-			ethLogs = append(ethLogs, l)
-			logIndex++
-		}
-	}
-	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 }
 
 // txTracker is thread safe
@@ -283,11 +257,11 @@ func (tr *txTracker) FindLogs(
 			return nil, errors.New("call timed out")
 		default:
 		}
-		nodeHash, err := tr.txDB.lookupNodeHash(uint64(i))
+		nodeHash, err := tr.txDB.lookupNodeHash(i)
 		if err != nil {
 			continue
 		}
-		metadata, err := tr.txDB.lookupNodeMetadata(uint64(i), nodeHash)
+		metadata, err := tr.txDB.lookupNodeMetadata(i, nodeHash)
 		if err != nil {
 			continue
 		}
@@ -296,7 +270,7 @@ func (tr *txTracker) FindLogs(
 			continue
 		}
 
-		info, err := tr.txDB.lookupNodeRecord(uint64(i), nodeHash)
+		info, err := tr.txDB.lookupNodeRecord(i, nodeHash)
 		if err != nil {
 			continue
 		}
