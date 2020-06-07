@@ -164,6 +164,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.contractAddress,
 			lowerHashA,
 			lowerHashB.HashImage,
+			big.NewInt(lowerHashB.Size),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
