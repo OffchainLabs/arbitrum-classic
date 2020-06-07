@@ -247,8 +247,13 @@ export class ArbClient {
 
   public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {
     return new Promise((resolve, reject): void => {
+      const addresses: string[] = []
+      if (filter.address !== undefined) {
+        addresses.push(filter.address)
+      }
+
       const params: validatorserver.FindLogsArgs = {
-        address: filter.address,
+        addresses,
         fromHeight: convertBlockTag(filter.fromBlock),
         toHeight: convertBlockTag(filter.toBlock),
         topicGroups: convertTopics(filter.topics),

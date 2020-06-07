@@ -8,7 +8,7 @@ declare namespace validatorserver {
   export interface FindLogsArgs {
     fromHeight?: string
     toHeight?: string
-    address?: string
+    addresses?: Array<string>
     topicGroups?: Array<TopicGroup>
   }
 
