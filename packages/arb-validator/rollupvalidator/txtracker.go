@@ -179,15 +179,7 @@ func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (*evm.TxInf
 		return nil, errors.New("call timed out")
 	default:
 	}
-	tx, err := tr.txDB.lookupTxRecord(txHash)
-	if err != nil || tx == nil {
-		return nil, err
-	}
-	nodeInfo, err := tr.txDB.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
-	if err != nil {
-		return nil, nil
-	}
-	return nodeInfo.getTxInfo(tx.TransactionIndex), nil
+	return tr.txDB.lookupTxInfo(txHash)
 }
 
 func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {

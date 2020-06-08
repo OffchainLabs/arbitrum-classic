@@ -227,6 +227,18 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 	return txRecord, nil
 }
 
+func (txdb *txDB) lookupTxInfo(txHash common.Hash) (*evm.TxInfo, error) {
+	tx, err := txdb.lookupTxRecord(txHash)
+	if err != nil || tx == nil {
+		return nil, err
+	}
+	nodeInfo, err := txdb.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
+	if err != nil {
+		return nil, nil
+	}
+	return nodeInfo.getTxInfo(tx.TransactionIndex), nil
+}
+
 // lookupNodeHash requires holding a read lock
 func (txdb *txDB) lookupNodeHash(nodeHeight uint64) (common.Hash, error) {
 	nodeHash, found := txdb.nodeHeightLookup[nodeHeight]
