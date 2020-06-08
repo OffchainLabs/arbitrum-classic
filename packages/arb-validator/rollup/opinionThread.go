@@ -51,7 +51,7 @@ func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 }
 
 func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
-	return structures.NewValidNodeFromPrev(
+	node := structures.NewValidNodeFromPrev(
 		pa.prev,
 		valprotocol.NewDisputableNode(
 			pa.params,
@@ -63,6 +63,8 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 		common.BlocksFromSeconds(time.Now().Unix()),
 		common.Hash{},
 	)
+	_ = node.UpdateValidOpinion(pa.machine, pa.assertion)
+	return node
 }
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
