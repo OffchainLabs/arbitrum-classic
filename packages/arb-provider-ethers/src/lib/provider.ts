@@ -21,7 +21,6 @@ import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
-import { Contract } from './contract'
 import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
@@ -305,7 +304,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     // Step 2: prove that logPostHash is in assertion and assertion is valid
-    let assertionReceipt = await this.processConfirmedDisputableAssertion(
+    const { confirmations } = await this.processConfirmedDisputableAssertion(
       nodeInfo,
       proof
     )
@@ -315,7 +314,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       txHash: evmVal.message.txHash,
       nodeInfo: {
         ...nodeInfo,
-        l1Confirmations: assertionReceipt.confirmations,
+        l1Confirmations: confirmations,
       },
     }
   }
@@ -373,8 +372,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           logs = result.evmVal.logs
         }
 
-        let confirmations: number = 0
-        let l1Confs = result.nodeInfo?.l1Confirmations
+        let confirmations = 0
+        const l1Confs = result.nodeInfo?.l1Confirmations
         if (this.deterministicAssertions) {
           confirmations =
             this.ethProvider.blockNumber -
@@ -474,7 +473,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       data = ethers.utils.hexlify(rawData)
     }
 
-    const callLatest = (to: string, from: string, data: string) => {
+    const callLatest = (
+      to: string,
+      from: string,
+      data: string
+    ): Promise<Uint8Array> => {
       if (this.deterministicAssertions) {
         return this.client.pendingCall(to, from, data)
       } else {
