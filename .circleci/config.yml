@@ -106,7 +106,7 @@ jobs:
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT_DIR: ${TEST_RESULTS}
+            JEST_JUNIT_OUTPUT_DIR: *test-path
             JEST_JUNIT_OUTPUT_NAME: arb-provider-ethers.xml
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
@@ -115,7 +115,7 @@ jobs:
             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT_DIR: ${TEST_RESULTS}
+            JEST_JUNIT_OUTPUT_DIR: *test-path
             JEST_JUNIT_OUTPUT_NAME: arb-provider-web3.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
@@ -124,7 +124,7 @@ jobs:
             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT_DIR: ${TEST_RESULTS}
+            JEST_JUNIT_OUTPUT_DIR: *test-path
             JEST_JUNIT_OUTPUT_NAME: arb-provider-truffle.xml
           working_directory: /home/user/project/packages/arb-provider-truffle
       - run:
