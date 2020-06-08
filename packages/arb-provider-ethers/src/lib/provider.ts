@@ -463,7 +463,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       throw Error('Cannot create call without a destination')
     }
     const to = await transaction.to
-    let from = await transaction.from
+    const from = await transaction.from
     const rawData = await transaction.data
     let data = '0x'
     if (rawData) {
