@@ -28,11 +28,11 @@ Here is the interface offered by ArbSys:
         // Send given amount of Eth to dest with from sender.
         function withdrawEth(address dest, uint256 amount) external;
 
-        // Return block when current message was posted on-chain
-        function currentMessageBlock() external view returns(uint);
+        // Return lower bound on the on-chain block number
+        function blockLowerBound() external view returns(uint);
 
-        // Return timestamp when current message was posted on-chain
-        function currentMessageTimestamp() external view returns(uint);
+        // Return lower bound on the on-chain timestamp
+        function timestampLowerBound() external view returns(uint);
 
         // Return upper bound on the on-chain block number
         function blockUpperBound() external view returns(uint);

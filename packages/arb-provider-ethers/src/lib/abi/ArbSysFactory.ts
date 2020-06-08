@@ -70,7 +70,7 @@ const _abi = [
   {
     constant: true,
     inputs: [],
-    name: 'currentMessageBlock',
+    name: 'blockLowerBound',
     outputs: [
       {
         name: '',
@@ -84,7 +84,7 @@ const _abi = [
   {
     constant: true,
     inputs: [],
-    name: 'currentMessageTimestamp',
+    name: 'timestampLowerBound',
     outputs: [
       {
         name: '',
