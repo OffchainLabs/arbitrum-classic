@@ -493,9 +493,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     nodeInfo: NodeInfo,
     proof: AVMProof
   ): Promise<void> {
-    const receipt = await this.ethProvider.waitForTransaction(
-      nodeInfo.onChainTxHash
-    )
+    const receipt = await this.ethProvider.waitForTransaction(nodeInfo.l1TxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
     }
@@ -504,9 +502,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     // DisputableAssertion Event
     const eventIndex = events.findIndex(event => event.name === EB_EVENT_CDA)
     if (eventIndex == -1) {
-      throw Error(
-        'RollupAsserted ' + nodeInfo.onChainTxHash + ' not found on chain'
-      )
+      throw Error('RollupAsserted ' + nodeInfo.l1TxHash + ' not found on chain')
     }
 
     const rawLog = receipt.logs[eventIndex]

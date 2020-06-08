@@ -52,7 +52,7 @@ function _arbClient(managerAddress: string): any {
 export interface NodeInfo {
   nodeHash: string
   nodeHeight: number
-  onChainTxHash: string
+  l1TxHash: string
 }
 
 export interface AVMProof {
@@ -116,18 +116,19 @@ function extractAVMProof(proof?: evm.AVMLogProof): AVMProof | undefined {
   }
 }
 
-function extractNodeInfo(txInfo: evm.TxInfoBuf): NodeInfo | undefined {
+function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
   if (
-    txInfo.nodeHash === undefined ||
-    txInfo.nodeHeight === undefined ||
-    txInfo.onChainTxHash === undefined
+    nodeInfo === undefined ||
+    nodeInfo.nodeHash === undefined ||
+    nodeInfo.nodeHeight === undefined ||
+    nodeInfo.l1TxHash === undefined
   ) {
     return undefined
   }
   return {
-    nodeHash: txInfo.nodeHash,
-    nodeHeight: txInfo.nodeHeight,
-    onChainTxHash: txInfo.onChainTxHash,
+    nodeHash: nodeInfo.nodeHash,
+    nodeHeight: nodeInfo.nodeHeight,
+    l1TxHash: nodeInfo.l1TxHash,
   }
 }
 
@@ -213,6 +214,7 @@ export class ArbClient {
       const val = ArbValue.unmarshal(tx.rawVal)
       return {
         val,
+        nodeInfo: extractNodeInfo(tx.location),
         proof: extractAVMProof(tx.proof),
       }
     } else {
