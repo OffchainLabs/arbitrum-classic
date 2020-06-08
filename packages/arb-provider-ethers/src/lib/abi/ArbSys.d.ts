@@ -24,11 +24,9 @@ interface ArbSysInterface extends Interface {
       encode([dest, amount]: [string, BigNumberish]): string
     }>
 
-    currentMessageBlock: TypedFunctionDescription<{ encode([]: []): string }>
+    blockLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
 
-    currentMessageTimestamp: TypedFunctionDescription<{
-      encode([]: []): string
-    }>
+    timestampLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
 
     blockUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
 
@@ -78,9 +76,9 @@ export class ArbSys extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    currentMessageBlock(): Promise<BigNumber>
+    blockLowerBound(): Promise<BigNumber>
 
-    currentMessageTimestamp(): Promise<BigNumber>
+    timestampLowerBound(): Promise<BigNumber>
 
     blockUpperBound(): Promise<BigNumber>
 
@@ -112,9 +110,9 @@ export class ArbSys extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  currentMessageBlock(): Promise<BigNumber>
+  blockLowerBound(): Promise<BigNumber>
 
-  currentMessageTimestamp(): Promise<BigNumber>
+  timestampLowerBound(): Promise<BigNumber>
 
   blockUpperBound(): Promise<BigNumber>
 
@@ -136,9 +134,9 @@ export class ArbSys extends Contract {
 
     withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>
 
-    currentMessageBlock(): Promise<BigNumber>
+    blockLowerBound(): Promise<BigNumber>
 
-    currentMessageTimestamp(): Promise<BigNumber>
+    timestampLowerBound(): Promise<BigNumber>
 
     blockUpperBound(): Promise<BigNumber>
 

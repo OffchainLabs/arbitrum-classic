@@ -20,7 +20,6 @@ from .types import (
     eth_transfer_message,
     token_transfer_message,
     message,
-    ethbridge_message,
 )
 from . import contract_templates
 
@@ -55,10 +54,10 @@ def perform_precompile_call(vm):
         "withdrawEth": withdraw_eth_interrupt,
         "withdrawERC20": withdraw_erc20_interrupt,
         "withdrawERC721": withdraw_erc721_interrupt,
+        "blockLowerBound": arbsys_block_lower_bound,
+        "timestampLowerBound": arbsys_timestamp_lower_bound,
         "blockUpperBound": arbsys_block_upper_bound,
         "timestampUpperBound": arbsys_timestamp_upper_bound,
-        "currentMessageBlock": arbsys_current_message_block,
-        "currentMessageTimestamp": arbsys_current_message_timestamp,
         "getTransactionCount": transaction_count_interrupt,
         "cloneContract": clone_contract_interrupt,
     }
@@ -192,6 +191,24 @@ def return_one_uint_to_solidity_caller(vm):
 
 
 @modifies_stack([local_exec_state.typ], [value.IntType()])
+def arbsys_block_lower_bound(vm):
+    vm.pop()
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("block_number")(vm)
+    return_one_uint_to_solidity_caller(vm)
+
+
+@modifies_stack([local_exec_state.typ], [value.IntType()])
+def arbsys_timestamp_lower_bound(vm):
+    vm.pop()
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("block_timestamp")(vm)
+    return_one_uint_to_solidity_caller(vm)
+
+
+@modifies_stack([local_exec_state.typ], [value.IntType()])
 def arbsys_block_upper_bound(vm):
     vm.pop()
     vm.gettime()
@@ -204,26 +221,6 @@ def arbsys_timestamp_upper_bound(vm):
     vm.pop()
     vm.gettime()
     vm.tgetn(3)
-    return_one_uint_to_solidity_caller(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_current_message_block(vm):
-    vm.pop()
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("current_msg")(vm)
-    ethbridge_message.get("block_number")(vm)
-    return_one_uint_to_solidity_caller(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_current_message_timestamp(vm):
-    vm.pop()
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("current_msg")(vm)
-    ethbridge_message.get("block_timestamp")(vm)
     return_one_uint_to_solidity_caller(vm)
 
 
