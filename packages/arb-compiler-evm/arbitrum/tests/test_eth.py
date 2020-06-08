@@ -236,7 +236,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageBlock(1, 0)]), 37
+                    value.Tuple([0, address, arbsys_abi.blockLowerBound(1, 0)]), 37
                 )
             ),
         )
@@ -290,7 +290,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageTimestamp(1, 0)]),
+                    value.Tuple([0, address, arbsys_abi.timestampLowerBound(1, 0)]),
                     0,
                     543,
                 )
