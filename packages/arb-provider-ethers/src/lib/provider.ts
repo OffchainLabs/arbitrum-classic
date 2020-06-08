@@ -465,9 +465,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     const to = await transaction.to
     let from = await transaction.from
     const rawData = await transaction.data
-    if (!from) {
-      from = '0x1000000000000000000000000000000000000000'
-    }
     let data = '0x'
     if (rawData) {
       data = ethers.utils.hexlify(rawData)
@@ -475,7 +472,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     const callLatest = (
       to: string,
-      from: string,
+      from: string | undefined,
       data: string
     ): Promise<Uint8Array> => {
       if (this.deterministicAssertions) {
