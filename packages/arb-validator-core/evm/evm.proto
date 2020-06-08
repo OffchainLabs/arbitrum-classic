@@ -18,10 +18,15 @@ syntax = "proto3";
 package evm;
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm";
 
+message NodeLocation {
+    string nodeHash = 1;
+    uint64 nodeHeight = 2;
+    string l1TxHash = 3;
+}
+
 message FullLogBuf {
     string address = 1;
-    string blockHash = 2;
-    string blockNumber = 3;
+    NodeLocation location = 2;
     string data = 4;
     string logIndex = 5;
     repeated string topics = 6;
@@ -30,19 +35,18 @@ message FullLogBuf {
     string index = 9;
 }
 
-message AVMLogProofBuf {
-    string logPreHash = 3;
-    string logPostHash = 4;
-    repeated string logValHashes = 5;
-    string onChainTxHash = 6;
+message AVMLogProof {
+    string logPreHash = 1;
+    string logPostHash = 2;
+    repeated string logValHashes = 3;
 }
 
 message TxInfoBuf {
     bool found = 1;
     string rawVal = 2;
-    AVMLogProofBuf proof = 3;
-    string txHash = 4;
-    uint64 txIndex = 5;
-    string nodeHash = 6;
-    uint64 nodeHeight = 7;
+    string txHash = 3;
+    uint64 txIndex = 4;
+    uint64 startLogIndex = 5;
+    NodeLocation location = 6;
+    AVMLogProof proof = 7;
 }

@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/hashicorp/golang-lru"
@@ -93,7 +94,6 @@ func (x *NodeMetadata) MaybeMatchesLogQuery(addresses []common.Address, topics [
 // readers. Each method of this class is labeled with what type
 // of lock its caller requires
 type txDB struct {
-	chainAddress       common.Address
 	db                 machine.CheckpointStorage
 	confirmedNodeStore machine.NodeStore
 	confirmedNodeCache *lru.Cache
@@ -105,7 +105,7 @@ type txDB struct {
 	nodeHeightLookup map[uint64]common.Hash
 }
 
-func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress common.Address) (*txDB, error) {
+func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore) (*txDB, error) {
 	lruCache, err := lru.New(500)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,6 @@ func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore, chainAddress co
 		nodeMetadata:       make(map[nodeRecordKey]*NodeMetadata),
 		nodeHashLookup:     make(map[common.Hash]uint64),
 		nodeHeightLookup:   make(map[uint64]common.Hash),
-		chainAddress:       chainAddress,
 	}, nil
 }
 
@@ -133,27 +132,34 @@ func (txdb *txDB) removeUnconfirmedNode(nodeHeight uint64) error {
 	if err != nil {
 		return err
 	}
-	txdb.deleteNode(node)
+	txdb.deleteTransactions(node.EVMTransactionHashes)
+	txdb.deleteNode(node.Location)
 	return nil
 }
 
 // addUnconfirmedNode requires holding a write lock
-func (txdb *txDB) addUnconfirmedNode(info *nodeInfo) {
+func (txdb *txDB) addUnconfirmedNode(info *nodeInfo) error {
+	location := info.Location
+	if location == nil {
+		return errors.New("node has no location")
+	}
+	nodeHash := location.NodeHashVal()
 	for i, txHash := range info.EVMTransactionHashes {
 		txdb.transactions[txHash] = &TxRecord{
-			NodeHeight:       info.NodeHeight,
-			NodeHash:         info.NodeHash.MarshalToBuf(),
+			NodeHeight:       location.NodeHeight,
+			NodeHash:         nodeHash.MarshalToBuf(),
 			TransactionIndex: uint64(i),
 		}
 	}
-	txdb.nodeHeightLookup[info.NodeHeight] = info.NodeHash
-	txdb.nodeHashLookup[info.NodeHash] = info.NodeHeight
+	txdb.nodeHeightLookup[location.NodeHeight] = nodeHash
+	txdb.nodeHashLookup[nodeHash] = location.NodeHeight
 	key := nodeRecordKey{
-		height: info.NodeHeight,
-		hash:   info.NodeHash,
+		height: location.NodeHeight,
+		hash:   nodeHash,
 	}
 	txdb.nodeInfo[key] = info
 	txdb.nodeMetadata[key] = newNodeMetadata(info)
+	return nil
 }
 
 // confirmNode requires holding a write lock
@@ -195,7 +201,8 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 		}
 	}
 
-	txdb.deleteNode(node)
+	txdb.deleteTransactions(node.EVMTransactionHashes)
+	txdb.deleteNode(node.Location)
 	return nil
 }
 
@@ -270,7 +277,10 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 		return nil, err
 	}
 
-	info = processNode(node, txdb.chainAddress)
+	info, err = processNode(node)
+	if err != nil {
+		return nil, err
+	}
 	txdb.confirmedNodeCache.Add(key, info)
 	return info, nil
 }
@@ -311,16 +321,21 @@ func (txdb *txDB) getInMemoryNodeData(key nodeRecordKey) (*nodeInfo, error) {
 }
 
 // deleteNode is a private method that should not be called externally
-func (txdb *txDB) deleteNode(node *nodeInfo) {
-	for _, txHash := range node.EVMTransactionHashes {
-		delete(txdb.transactions, txHash)
-	}
-	delete(txdb.nodeHeightLookup, node.NodeHeight)
-	delete(txdb.nodeHashLookup, node.NodeHash)
+func (txdb *txDB) deleteNode(location *evm.NodeLocation) {
+	nodeHash := location.NodeHashVal()
+	delete(txdb.nodeHeightLookup, location.NodeHeight)
+	delete(txdb.nodeHashLookup, nodeHash)
 	key := nodeRecordKey{
-		height: node.NodeHeight,
-		hash:   node.NodeHash,
+		height: location.NodeHeight,
+		hash:   nodeHash,
 	}
 	delete(txdb.nodeInfo, key)
 	delete(txdb.nodeMetadata, key)
+}
+
+// deleteTransactions is a private method that should not be called externally
+func (txdb *txDB) deleteTransactions(txHashes []common.Hash) {
+	for _, txHash := range txHashes {
+		delete(txdb.transactions, txHash)
+	}
 }

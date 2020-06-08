@@ -525,7 +525,7 @@ func (vm *ethRollupWatcher) InboxAddress(
 
 func (con *ethRollupWatcher) GetCreationInfo(
 	ctx context.Context,
-) (*common.BlockId, common.Hash, error) {
+) (common.Hash, *common.BlockId, common.Hash, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(
 		addressIndex[:],
@@ -536,19 +536,20 @@ func (con *ethRollupWatcher) GetCreationInfo(
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	})
 	if err != nil {
-		return nil, common.Hash{}, err
+		return common.Hash{}, nil, common.Hash{}, err
 	}
 	if len(logs) != 1 {
-		return nil,
+		return common.Hash{},
+			nil,
 			common.Hash{},
 			errors.New("more than one chain created with same address")
 	}
 	ev, err := con.ArbRollup.ParseRollupCreated(logs[0])
 	if err != nil {
-		return nil, common.Hash{}, err
+		return common.Hash{}, nil, common.Hash{}, err
 	}
 
-	return getLogBlockID(logs[0]), ev.InitVMHash, nil
+	return common.NewHashFromEth(logs[0].TxHash), getLogBlockID(logs[0]), ev.InitVMHash, nil
 }
 
 func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {

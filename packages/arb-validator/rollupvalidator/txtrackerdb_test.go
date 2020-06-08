@@ -35,14 +35,13 @@ import (
 
 var contractPath = "../contract.ao"
 var dbPath = "./testdb"
-var chainAddress = common.Address{65, 87, 32}
 
-func setupNodes() ([]*structures.Node, []evm.Result, error) {
+func setupNodes() ([]*structures.Node, error) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	node := structures.NewInitialNode(mach.Clone())
+	node := structures.NewInitialNode(mach.Clone(), common.RandHash())
 
 	results := make([]evm.Result, 0, 5)
 	for i := int32(0); i < 5; i++ {
@@ -51,7 +50,7 @@ func setupNodes() ([]*structures.Node, []evm.Result, error) {
 	}
 
 	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
-	return []*structures.Node{node, nextNode}, results, nil
+	return []*structures.Node{node, nextNode}, nil
 }
 
 func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.NodeStore, node *structures.Node) error {
@@ -76,12 +75,12 @@ func TestTrackerDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nodes, _, err := setupNodes()
+	nodes, err := setupNodes()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db, err := newTxDB(checkpointer, checkpointer.GetNodeStore(), chainAddress)
+	db, err := newTxDB(checkpointer, checkpointer.GetNodeStore())
 
 	heightTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
@@ -109,7 +108,10 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo := processNode(node, chainAddress)
+			nodeInfo, err := processNode(node)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			info, err := db.lookupNodeRecord(node.Depth(), node.Hash())
 			if err != nil {
@@ -128,7 +130,10 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeMetadataTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo := processNode(node, chainAddress)
+			nodeInfo, err := processNode(node)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			metadata, err := db.lookupNodeMetadata(node.Depth(), node.Hash())
 			if err != nil {
@@ -147,7 +152,10 @@ func TestTrackerDB(t *testing.T) {
 
 	txRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo := processNode(node, chainAddress)
+			nodeInfo, err := processNode(node)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			for i, txHash := range nodeInfo.EVMTransactionHashes {
 				record, err := db.lookupTxRecord(txHash)
@@ -172,8 +180,13 @@ func TestTrackerDB(t *testing.T) {
 
 	for _, node := range nodes {
 		t.Run("AddUnconfirmedNode", func(t *testing.T) {
-			nodeInfo := processNode(node, chainAddress)
-			db.addUnconfirmedNode(nodeInfo)
+			nodeInfo, err := processNode(node)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := db.addUnconfirmedNode(nodeInfo); err != nil {
+				t.Fatal(err)
+			}
 		})
 
 		t.Run("UnconfirmedHeightLookup", heightTest(node))
@@ -217,14 +230,18 @@ func TestTrackerDB(t *testing.T) {
 }
 
 func TestMetadataLogMatch(t *testing.T) {
-	nodes, results, err := setupNodes()
+	nodes, err := setupNodes()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	nodeInfo := processNode(nodes[1], chainAddress)
+	nodeInfo, err := processNode(nodes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	metadata := newNodeMetadata(nodeInfo)
-	flatLogs := extractLogResponses(results)
+	flatLogs := nodeInfo.fullLogs()
 
 	evm.LogMatchTest(
 		t,

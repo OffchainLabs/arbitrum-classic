@@ -58,12 +58,13 @@ func NewChain(
 	vmParams valprotocol.ChainParams,
 	updateOpinion bool,
 	startBlockId *common.BlockId,
+	creationTxHash common.Hash,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, err
 	}
-	nodeGraph := NewStakedNodeGraph(mach, vmParams)
+	nodeGraph := NewStakedNodeGraph(mach, vmParams, creationTxHash)
 	ret := &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,

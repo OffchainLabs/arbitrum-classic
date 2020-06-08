@@ -49,16 +49,22 @@ function _arbClient(managerAddress: string): any {
   return jaysonBrowserClient(callServer, {})
 }
 
+export interface NodeInfo {
+  nodeHash: string
+  nodeHeight: number
+  onChainTxHash: string
+}
+
 export interface AVMProof {
   logPostHash: string
   logPreHash: string
   logValHashes: string[]
-  onChainTxHash: string
 }
 
 interface RawMessageResult {
   val: ArbValue.Value
   proof?: AVMProof
+  nodeInfo?: NodeInfo
 }
 
 interface OutputMessage {
@@ -90,7 +96,7 @@ function convertTopics(
   )
 }
 
-function extractAVMProof(proof?: evm.AVMLogProofBuf): AVMProof | undefined {
+function extractAVMProof(proof?: evm.AVMLogProof): AVMProof | undefined {
   if (proof === undefined) {
     return undefined
   }
@@ -100,18 +106,28 @@ function extractAVMProof(proof?: evm.AVMLogProofBuf): AVMProof | undefined {
     logValHashes = []
   }
 
-  if (
-    proof.logPostHash === undefined ||
-    proof.logPreHash === undefined ||
-    proof.onChainTxHash === undefined
-  ) {
+  if (proof.logPostHash === undefined || proof.logPreHash === undefined) {
     return undefined
   }
   return {
     logPostHash: proof.logPostHash,
     logPreHash: proof.logPreHash,
     logValHashes,
-    onChainTxHash: proof.onChainTxHash,
+  }
+}
+
+function extractNodeInfo(txInfo: evm.TxInfoBuf): NodeInfo | undefined {
+  if (
+    txInfo.nodeHash === undefined ||
+    txInfo.nodeHeight === undefined ||
+    txInfo.onChainTxHash === undefined
+  ) {
+    return undefined
+  }
+  return {
+    nodeHash: txInfo.nodeHash,
+    nodeHeight: txInfo.nodeHeight,
+    onChainTxHash: txInfo.onChainTxHash,
   }
 }
 

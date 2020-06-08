@@ -308,7 +308,7 @@ func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.Fi
 				// Therefore the next query can start with block height one
 				// greater than the last log in the previous query
 				if len(logInfos) > 0 {
-					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].NodeHeight + 1)
+					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].Location.NodeHeight + 1)
 				}
 			}
 		}
@@ -345,11 +345,11 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, errors2.Wrap(err, "TransactionReceipt error:")
 	}
-	if !txInfo.Found {
+	if txInfo == nil {
 		return nil, ethereum.NotFound
 	}
 
-	return txInfo.ToEthReceipt(conn.vmId)
+	return txInfo.ToEthReceipt()
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {

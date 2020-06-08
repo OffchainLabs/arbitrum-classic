@@ -269,7 +269,7 @@ func verifyArbChain(
 			ethbridgeVersion, ValidEthBridgeVersion)
 	}
 
-	_, initialVMHash, err := watcher.GetCreationInfo(ctx)
+	_, _, initialVMHash, err := watcher.GetCreationInfo(ctx)
 	if err != nil {
 		return err
 	}
@@ -310,10 +310,10 @@ func initializeChainObserver(
 		if err != nil {
 			log.Fatal(err)
 		}
-		blockId, _, err := watcher.GetCreationInfo(ctx)
+		txHash, blockId, _, err := watcher.GetCreationInfo(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
-		return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId)
+		return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, txHash)
 	}
 }

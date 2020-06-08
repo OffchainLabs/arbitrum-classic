@@ -18,7 +18,7 @@ import (
 )
 
 type ValidatorProxy interface {
-	GetMessageResult(ctx context.Context, txHash []byte) (evm.TxInfo, error)
+	GetMessageResult(ctx context.Context, txHash []byte) (*evm.TxInfo, error)
 	GetAssertionCount(ctx context.Context) (int, error)
 	GetVMInfo(ctx context.Context) (string, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topics [][]common.Hash) ([]evm.FullLog, error)
@@ -110,14 +110,14 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 //	return bs, err
 //}
 
-func (vp *ValidatorProxyImpl) GetMessageResult(ctx context.Context, txHash []byte) (evm.TxInfo, error) {
+func (vp *ValidatorProxyImpl) GetMessageResult(ctx context.Context, txHash []byte) (*evm.TxInfo, error) {
 	request := &validatorserver.GetMessageResultArgs{
 		TxHash: hexutil.Encode(txHash),
 	}
 	var response validatorserver.GetMessageResultReply
 	if err := vp.doCall(ctx, "GetMessageResult", request, &response); err != nil {
 		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
-		return evm.TxInfo{}, err
+		return nil, err
 	}
 	return response.Tx.Unmarshal()
 }

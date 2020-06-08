@@ -51,7 +51,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	checkpointer := man.GetCheckpointer()
-	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), man.RollupAddress)
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +214,15 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
+	lastLog, err := evm.ProcessLog(lastLogVal)
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash()
-	if logHash != deliveredMsg.ReceiptHash() {
+	delivered, err := message.UnmarshalRawDelivered(lastLog.GetDeliveredMessage())
+	if err != nil {
+		return nil, err
+	}
+	if delivered.TxHash() != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

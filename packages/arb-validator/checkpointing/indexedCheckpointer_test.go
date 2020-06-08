@@ -380,7 +380,7 @@ func TestConfirm(t *testing.T) {
 		t.Error()
 	}
 
-	nd := structures.NewInitialNode(mach)
+	nd := structures.NewInitialNode(mach, common.Hash{})
 
 	buf := nd.MarshalForCheckpoint(checkpointContext, false)
 	data, err := proto.Marshal(buf)
