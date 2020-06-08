@@ -25,13 +25,12 @@ import (
 
 func newRandomFullLog(topicCount int32) FullLog {
 	return FullLog{
-		Log:        NewRandomLog(topicCount),
-		TxIndex:    rand.Uint64(),
-		TxHash:     common.RandHash(),
-		NodeHeight: rand.Uint64(),
-		NodeHash:   common.RandHash(),
-		Index:      rand.Uint64(),
-		Removed:    false,
+		Log:      NewRandomLog(topicCount),
+		TxIndex:  rand.Uint64(),
+		TxHash:   common.RandHash(),
+		Location: NewRandomNodeLocation(),
+		Index:    rand.Uint64(),
+		Removed:  false,
 	}
 }
 

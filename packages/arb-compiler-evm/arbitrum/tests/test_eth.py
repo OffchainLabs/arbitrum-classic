@@ -236,7 +236,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageBlock(1, 0)]), 37
+                    value.Tuple([0, address, arbsys_abi.blockLowerBound(1, 0)]), 37
                 )
             ),
         )
@@ -264,7 +264,7 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMReturn)
 
         self.assertEqual(parsed_out0.output_values[0], 100000000)
-        self.assertEqual(parsed_out1.output_values[0], 37)
+        self.assertEqual(parsed_out1.output_values[0], 453)
         self.assertEqual(parsed_out2.output_values[0], 100000000)
 
     def test_timestamp(self):
@@ -290,7 +290,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageTimestamp(1, 0)]),
+                    value.Tuple([0, address, arbsys_abi.timestampLowerBound(1, 0)]),
                     0,
                     543,
                 )
