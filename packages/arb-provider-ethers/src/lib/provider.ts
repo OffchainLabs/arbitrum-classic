@@ -449,7 +449,20 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (rawData) {
       data = ethers.utils.hexlify(rawData)
     }
-    const resultData = await this.client.call(to, from, data)
+
+    let resultData: Uint8Array
+    if (blockTag) {
+      const tag = await blockTag
+      if (tag == 'pending') {
+        resultData = await this.client.pendingCall(to, from, data)
+      } else if (tag == 'latest') {
+        resultData = await this.client.call(to, from, data)
+      } else {
+        throw Error('Invalid block tag')
+      }
+    } else {
+      resultData = await this.client.call(to, from, data)
+    }
     return ethers.utils.hexlify(resultData)
   }
 

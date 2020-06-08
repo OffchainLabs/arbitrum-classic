@@ -50,6 +50,7 @@ type ChainObserver struct {
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
 	atHead              bool
+	pendingState        machine.Machine
 }
 
 func NewChain(
@@ -218,16 +219,23 @@ func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 
 func (chain *ChainObserver) ContractAddress() common.Address {
 	chain.RLock()
-	address := chain.rollupAddr
-	chain.RUnlock()
-	return address
+	defer chain.RUnlock()
+	return chain.rollupAddr
 }
 
 func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
 	chain.RLock()
-	mach := chain.calculatedValidNode.Machine().Clone()
-	chain.RUnlock()
-	return mach
+	defer chain.RUnlock()
+	return chain.calculatedValidNode.Machine().Clone()
+}
+
+func (chain *ChainObserver) CurrentPendingMachine() machine.Machine {
+	chain.RLock()
+	defer chain.RUnlock()
+	if chain.pendingState == nil {
+		return chain.calculatedValidNode.Machine().Clone()
+	}
+	return chain.pendingState.Clone()
 }
 
 func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {

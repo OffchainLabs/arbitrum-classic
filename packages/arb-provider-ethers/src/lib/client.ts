@@ -222,7 +222,8 @@ export class ArbClient {
     }
   }
 
-  public call(
+  private _call(
+    callFunc: string,
     contractAddress: string,
     sender: string,
     data: string
@@ -234,7 +235,7 @@ export class ArbClient {
         sender,
       }
       this.client.request(
-        'Validator.CallMessage',
+        callFunc,
         [params],
         (
           err: Error,
@@ -267,6 +268,22 @@ export class ArbClient {
         }
       )
     })
+  }
+
+  public call(
+    contractAddress: string,
+    sender: string,
+    data: string
+  ): Promise<Uint8Array> {
+    return this._call('Validator.CallMessage', contractAddress, sender, data)
+  }
+
+  public pendingCall(
+    contractAddress: string,
+    sender: string,
+    data: string
+  ): Promise<Uint8Array> {
+    return this._call('Validator.PendingCall', contractAddress, sender, data)
   }
 
   public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {

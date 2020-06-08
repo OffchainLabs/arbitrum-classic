@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
@@ -29,8 +30,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -214,26 +213,22 @@ func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.listenersLock.Unlock()
 }
 
-func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration) (*protocol.ExecutionAssertion, uint64) {
+func (man *Manager) GetLatestMachine() machine.Machine {
 	man.validCallLock.Lock()
-	mach := man.activeChain.LatestKnownValidMachine()
-	latestBlock := man.activeChain.CurrentBlockId().Height
-	man.validCallLock.Unlock()
-	latestTime := big.NewInt(time.Now().Unix())
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     latestBlock,
-		UpperBoundBlock:     latestBlock,
-		LowerBoundTimestamp: latestTime,
-		UpperBoundTimestamp: latestTime,
-	}
-	assertion, numSteps := mach.ExecuteAssertion(
-		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
-		10000000000000000,
-		timeBounds,
-		messages,
-		maxTime,
-	)
-	return assertion, numSteps
+	defer man.validCallLock.Unlock()
+	return man.activeChain.LatestKnownValidMachine()
+}
+
+func (man *Manager) GetLatestBlock() *common.BlockId {
+	man.validCallLock.Lock()
+	defer man.validCallLock.Unlock()
+	return man.activeChain.CurrentBlockId()
+}
+
+func (man *Manager) GetPendingMachine() machine.Machine {
+	man.validCallLock.Lock()
+	defer man.validCallLock.Unlock()
+	return man.activeChain.CurrentPendingMachine()
 }
 
 func (man *Manager) CurrentBlockId() *common.BlockId {

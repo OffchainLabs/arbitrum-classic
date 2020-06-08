@@ -113,13 +113,28 @@ func (m *RPCServer) GetVMInfo(
 }
 
 // CallMessage takes a request from a client to process in a temporary context
-//and return the result
+// and return the result
 func (m *RPCServer) CallMessage(
 	_ *http.Request,
 	args *validatorserver.CallMessageArgs,
 	reply *validatorserver.CallMessageReply,
 ) error {
 	ret, err := m.Server.CallMessage(context.Background(), args)
+	if err != nil || ret == nil {
+		return err
+	}
+	reply.RawVal = ret.RawVal
+	return nil
+}
+
+// CallMessage takes a request from a client to process in a temporary context
+// and return the result
+func (m *RPCServer) PendingCall(
+	_ *http.Request,
+	args *validatorserver.CallMessageArgs,
+	reply *validatorserver.CallMessageReply,
+) error {
+	ret, err := m.Server.PendingCall(context.Background(), args)
 	if err != nil || ret == nil {
 		return err
 	}

@@ -41,6 +41,7 @@ type Result interface {
 	IsResult()
 	GetReturnData() []byte
 	GetLogs() []Log
+	Valid() bool
 
 	GetDeliveredMessage() value.Value
 	Type() ResultType
@@ -80,6 +81,10 @@ func (e Return) GetLogs() []Log {
 	return e.Logs
 }
 
+func (e Return) Valid() bool {
+	return true
+}
+
 func (e Return) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMReturn(returnVal: ")
@@ -116,6 +121,10 @@ func (e Revert) GetReturnData() []byte {
 
 func (e Revert) GetLogs() []Log {
 	return nil
+}
+
+func (e Revert) Valid() bool {
+	return false
 }
 
 func (e Revert) String() string {
@@ -161,6 +170,10 @@ func (e Stop) GetLogs() []Log {
 	return e.Logs
 }
 
+func (e Stop) Valid() bool {
+	return true
+}
+
 func (e Stop) String() string {
 	var sb strings.Builder
 	sb.WriteString("EVMStop(logs: [")
@@ -196,6 +209,10 @@ func (e BadSequenceNum) GetLogs() []Log {
 	return nil
 }
 
+func (e BadSequenceNum) Valid() bool {
+	return false
+}
+
 func (e BadSequenceNum) String() string {
 	return "BadSequenceNum()"
 }
@@ -220,6 +237,10 @@ func (e Invalid) GetReturnData() []byte {
 
 func (e Invalid) GetLogs() []Log {
 	return nil
+}
+
+func (e Invalid) Valid() bool {
+	return false
 }
 
 func (e Invalid) String() string {

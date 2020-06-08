@@ -69,7 +69,6 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 		assertionPreparedChan := make(chan *PreparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*PreparedAssertion)
@@ -157,6 +156,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			}
 		}
 
+		ticker := time.NewTicker(time.Second)
 		for {
 			select {
 			case <-ctx.Done():
@@ -198,6 +198,11 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
 						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 && endCushion.Cmp(upperBoundBlock) <= 0 {
+							chain.RUnlock()
+							chain.Lock()
+							chain.pendingState = prepared.machine
+							chain.Unlock()
+							chain.RLock()
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(ctx, chain, prepared.Clone())
 							}

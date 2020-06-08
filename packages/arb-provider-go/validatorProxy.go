@@ -23,6 +23,7 @@ type ValidatorProxy interface {
 	GetVMInfo(ctx context.Context) (string, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topics [][]common.Hash) ([]evm.FullLog, error)
 	CallMessage(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error)
+	PendingCall(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -167,6 +168,14 @@ func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight
 	return logs, nil
 }
 
+func hexToValue(rawVal string) (value.Value, error) {
+	retBuf, err := hexutil.Decode(rawVal)
+	if err != nil {
+		return nil, err
+	}
+	return value.UnmarshalValue(bytes.NewReader(retBuf))
+}
+
 func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error) {
 	request := &validatorserver.CallMessageArgs{
 		ContractAddress: hexutil.Encode(contract[:]),
@@ -177,14 +186,18 @@ func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, contract common.A
 	if err := vp.doCall(ctx, "CallMessage", request, &response); err != nil {
 		return nil, err
 	}
-	retBuf, err := hexutil.Decode(response.RawVal)
-	if err != nil {
-		log.Println("CallMessage error:", err)
+	return hexToValue(response.RawVal)
+}
+
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error) {
+	request := &validatorserver.CallMessageArgs{
+		ContractAddress: hexutil.Encode(contract[:]),
+		Sender:          hexutil.Encode(sender[:]),
+		Data:            hexutil.Encode(data),
+	}
+	var response validatorserver.CallMessageReply
+	if err := vp.doCall(ctx, "PendingCall", request, &response); err != nil {
 		return nil, err
 	}
-	retVal, err := value.UnmarshalValue(bytes.NewReader(retBuf))
-	if err != nil {
-		log.Println("ValProxy.CallMessage: UnmarshalValue returned error:", err)
-	}
-	return retVal, err
+	return hexToValue(response.RawVal)
 }
