@@ -126,7 +126,7 @@ func (m *RPCServer) CallMessage(
 	return nil
 }
 
-// CallMessage takes a request from a client to process in a temporary context
+// PendingCall takes a request from a client to process in a temporary context
 // and return the result
 func (m *RPCServer) PendingCall(
 	_ *http.Request,
