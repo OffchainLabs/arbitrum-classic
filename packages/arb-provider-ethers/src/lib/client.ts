@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { EVMCode, EVMResult, processLog } from './message'
+import { EVMCode, processLog } from './message'
 
 import * as ethers from 'ethers'
 
@@ -49,14 +49,23 @@ function _arbClient(managerAddress: string): any {
   return jaysonBrowserClient(callServer, {})
 }
 
-interface MessageResult {
+export interface NodeInfo {
+  nodeHash: string
+  nodeHeight: number
+  l1TxHash: string
+  l1Confirmations?: number
+}
+
+export interface AVMProof {
   logPostHash: string
   logPreHash: string
   logValHashes: string[]
-  onChainTxHash: string
+}
+
+interface RawMessageResult {
   val: ArbValue.Value
-  vmId: string
-  evmVal: EVMResult
+  proof?: AVMProof
+  nodeInfo?: NodeInfo
 }
 
 interface OutputMessage {
@@ -86,6 +95,42 @@ function convertTopics(
       }
     }
   )
+}
+
+function extractAVMProof(proof?: evm.AVMLogProof): AVMProof | undefined {
+  if (proof === undefined) {
+    return undefined
+  }
+
+  let logValHashes = proof.logValHashes
+  if (!logValHashes) {
+    logValHashes = []
+  }
+
+  if (proof.logPostHash === undefined || proof.logPreHash === undefined) {
+    return undefined
+  }
+  return {
+    logPostHash: proof.logPostHash,
+    logPreHash: proof.logPreHash,
+    logValHashes,
+  }
+}
+
+function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
+  if (
+    nodeInfo === undefined ||
+    nodeInfo.nodeHash === undefined ||
+    nodeInfo.nodeHeight === undefined ||
+    nodeInfo.l1TxHash === undefined
+  ) {
+    return undefined
+  }
+  return {
+    nodeHash: nodeInfo.nodeHash,
+    nodeHeight: nodeInfo.nodeHeight,
+    l1TxHash: nodeInfo.l1TxHash,
+  }
 }
 
 export class ArbClient {
@@ -135,7 +180,9 @@ export class ArbClient {
     }
   }
 
-  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
+  public async getMessageResult(
+    txHash: string
+  ): Promise<RawMessageResult | null> {
     const params: validatorserver.GetMessageResultArgs = {
       txHash,
     }
@@ -162,43 +209,22 @@ export class ArbClient {
     })
     if (messageResult.tx && messageResult.tx.found) {
       const tx = messageResult.tx
-      const vmId = await this.getVmID()
       if (tx.rawVal === undefined) {
         return null
       }
       const val = ArbValue.unmarshal(tx.rawVal)
-      const evmVal = processLog(val as ArbValue.TupleValue)
-      if (tx.logValHashes === undefined) {
-        return null
-      }
-      let logValHashes = tx.logValHashes
-      if (!logValHashes) {
-        logValHashes = []
-      }
-
-      if (
-        tx.logPostHash === undefined ||
-        tx.logPreHash === undefined ||
-        tx.onChainTxHash === undefined
-      ) {
-        return null
-      }
-
       return {
-        logPostHash: tx.logPostHash,
-        logPreHash: tx.logPreHash,
-        logValHashes,
-        onChainTxHash: tx.onChainTxHash,
         val,
-        vmId,
-        evmVal,
+        nodeInfo: extractNodeInfo(tx.location),
+        proof: extractAVMProof(tx.proof),
       }
     } else {
       return null
     }
   }
 
-  public call(
+  private _call(
+    callFunc: string,
     contractAddress: string,
     sender: string,
     data: string
@@ -210,7 +236,7 @@ export class ArbClient {
         sender,
       }
       this.client.request(
-        'Validator.CallMessage',
+        callFunc,
         [params],
         (
           err: Error,
@@ -243,6 +269,22 @@ export class ArbClient {
         }
       )
     })
+  }
+
+  public call(
+    contractAddress: string,
+    sender: string,
+    data: string
+  ): Promise<Uint8Array> {
+    return this._call('Validator.CallMessage', contractAddress, sender, data)
+  }
+
+  public pendingCall(
+    contractAddress: string,
+    sender: string,
+    data: string
+  ): Promise<Uint8Array> {
+    return this._call('Validator.PendingCall', contractAddress, sender, data)
   }
 
   public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {

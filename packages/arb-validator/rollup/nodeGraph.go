@@ -38,8 +38,8 @@ type NodeGraph struct {
 	params          valprotocol.ChainParams
 }
 
-func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
-	newNode := structures.NewInitialNode(machine)
+func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *NodeGraph {
+	newNode := structures.NewInitialNode(machine, creationTxHash)
 	nodeFromHash := make(map[common.Hash]*structures.Node)
 	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()

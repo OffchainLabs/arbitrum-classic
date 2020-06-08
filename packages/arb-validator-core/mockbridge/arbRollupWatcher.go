@@ -227,8 +227,8 @@ func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.Address{}, nil
 }
 
-func (vm *EthRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
-	return nil, common.Hash{}, nil
+func (vm *EthRollupWatcher) GetCreationInfo(ctx context.Context) (common.Hash, *common.BlockId, common.Hash, error) {
+	return common.Hash{}, nil, common.Hash{}, nil
 }
 
 func (vm *EthRollupWatcher) GetVersion(ctx context.Context) (string, error) {
