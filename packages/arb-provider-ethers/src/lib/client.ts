@@ -226,7 +226,7 @@ export class ArbClient {
   private _call(
     callFunc: string,
     contractAddress: string,
-    sender: string,
+    sender: string | undefined,
     data: string
   ): Promise<Uint8Array> {
     return new Promise((resolve, reject): void => {
@@ -273,7 +273,7 @@ export class ArbClient {
 
   public call(
     contractAddress: string,
-    sender: string,
+    sender: string | undefined,
     data: string
   ): Promise<Uint8Array> {
     return this._call('Validator.CallMessage', contractAddress, sender, data)
@@ -281,7 +281,7 @@ export class ArbClient {
 
   public pendingCall(
     contractAddress: string,
-    sender: string,
+    sender: string | undefined,
     data: string
   ): Promise<Uint8Array> {
     return this._call('Validator.PendingCall', contractAddress, sender, data)

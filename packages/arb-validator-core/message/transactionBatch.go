@@ -26,8 +26,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -93,6 +93,15 @@ func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 		Data:   txData,
 		Sig:    sig,
 	}, nil
+}
+
+func (b BatchTx) String() string {
+	return fmt.Sprintf("BatchTx(to: %v, seq: %v, value: %v, data: %v)",
+		b.To,
+		b.SeqNum,
+		b.Value,
+		hexutils.BytesToHex(b.Data),
+	)
 }
 
 func (b BatchTx) encodedLength() int {

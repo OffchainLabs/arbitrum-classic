@@ -129,6 +129,7 @@ func CreateManagerAdvanced(
 			man.listenersLock.Unlock()
 
 			currentProcessedBlockId := man.activeChain.CurrentBlockId()
+			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
 			log.Println("Starting validator from", currentProcessedBlockId)
 
@@ -196,7 +197,7 @@ func CreateManagerAdvanced(
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(10 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
+
 			}
 		}
 	}()
