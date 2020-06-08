@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -50,6 +51,7 @@ func main() {
 
 func createStressedManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	return rollupmanager.CreateManager(
+		context.Background(),
 		rollupAddress,
 		rollupmanager.NewStressTestClient(client, time.Second*10),
 		contractFile,
