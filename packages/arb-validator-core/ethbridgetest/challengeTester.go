@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package ethbridge
+package ethbridgetest
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -26,16 +28,37 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/challengetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/challengetester"
 )
 
 type ChallengeTester struct {
 	contract *challengetester.ChallengeTester
 	client   *ethclient.Client
-	auth     *TransactAuth
+	auth     *bind.TransactOpts
 }
 
-func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*ChallengeTester, error) {
+func DeployChallengeTest(ctx context.Context, client *ethclient.Client, auth *bind.TransactOpts, challengeFactory common.Address) (*ChallengeTester, error) {
+	testerAddress, tx, _, err := challengetester.DeployChallengeTester(auth, client, challengeFactory.ToEthAddress())
+	if err != nil {
+		return nil, err
+	}
+	if _, err := ethbridge.WaitForReceiptWithResults(
+		ctx,
+		client,
+		auth.From,
+		tx,
+		"DeployChallengeTester",
+	); err != nil {
+		return nil, err
+	}
+	tester, err := NewChallengeTester(testerAddress, client, auth)
+	if err != nil {
+		return nil, err
+	}
+	return tester, nil
+}
+
+func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeTester, error) {
 	vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
@@ -51,10 +74,9 @@ func (con *ChallengeTester) StartChallenge(
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, *common.BlockId, error) {
-	con.auth.Lock()
-	defer con.auth.Unlock()
+	con.auth.Context = ctx
 	tx, err := con.contract.StartChallenge(
-		con.auth.getAuth(ctx),
+		con.auth,
 		asserter.ToEthAddress(),
 		challenger.ToEthAddress(),
 		challengePeriod.Val,
@@ -65,7 +87,7 @@ func (con *ChallengeTester) StartChallenge(
 		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
 	}
 
-	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChallenge")
+	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, con.client, con.auth.From, tx, "CreateChallenge")
 	if err != nil {
 		return common.Address{}, nil, err
 	}
@@ -74,5 +96,5 @@ func (con *ChallengeTester) StartChallenge(
 		return common.Address{}, nil, errors2.New("Wrong receipt count")
 	}
 
-	return common.NewAddressFromEth(receipt.Logs[0].Address), getTxBlockID(receipt), nil
+	return common.NewAddressFromEth(receipt.Logs[0].Address), ethbridge.GetReceiptBlockID(receipt), nil
 }

@@ -72,56 +72,44 @@ uint256_t MachineState::hash() const {
     auto oit = data.begin();
     {
         auto val = ::hash(code[pc]);
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
     {
         auto val = stack.hash();
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
     {
         auto val = auxstack.hash();
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
     {
         auto val = ::hash(registerVal);
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
     {
         auto val = ::hash(staticVal);
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
     {
         auto val = ::hash(errpc);
-        std::array<uint64_t, 4> hashInts;
-        to_big_endian(val, hashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
-                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
-        oit += 32;
+        oit = to_big_endian(val, oit);
     }
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(data.data(), 32 * 6, hashData.data());
+    evm::Keccak_256(data.data(), data.size(), hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
+}
+
+uint256_t MachineState::getMachineSize() {
+    uint256_t machine_size = 0;
+
+    machine_size += getSize(staticVal);
+    machine_size += getSize(registerVal);
+    machine_size += getSize(errpc);
+    machine_size += stack.getTotalValueSize();
+    machine_size += auxstack.getTotalValueSize();
+
+    return machine_size;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -136,12 +124,14 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
-    uint256_t_to_buf(code[pc].nextHash, buf);
-    uint256_t_to_buf(stackProof.first, buf);
-    uint256_t_to_buf(auxStackProof.first, buf);
-    uint256_t_to_buf(::hash(registerVal), buf);
-    uint256_t_to_buf(::hash(staticVal), buf);
-    uint256_t_to_buf(::hash(errpc), buf);
+
+    auto next_codepoint = code[pc + 1];
+    ::marshalStub(next_codepoint, buf);
+    stackProof.first.marshal(buf);
+    auxStackProof.first.marshal(buf);
+    ::marshalStub(registerVal, buf);
+    ::marshalStub(staticVal, buf);
+    ::marshalStub(errpc, buf);
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
@@ -436,8 +426,15 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /**********************/
             /*  System Operations */
             /**********************/
-        case OpCode::SEND:
-            return machineoperation::send(*this);
+        case OpCode::SEND: {
+            auto send_results = machineoperation::send(*this);
+
+            if (send_results == false) {
+                std::cerr << "Send failure: over size limit" << std::endl;
+            }
+
+            break;
+        }
         case OpCode::GETTIME:
             machineoperation::getTime(*this);
             break;
@@ -454,5 +451,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
                       << ">" << std::hex << static_cast<int>(opcode);
             state = Status::Error;
     }
+
     return NotBlocked{};
 }

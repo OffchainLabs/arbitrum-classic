@@ -54,11 +54,7 @@ let App = {
       web3Provider = new Web3.providers.HttpProvider('http://localhost:7545')
     }
 
-    let provider = ArbProvider(
-      'http://localhost:1235',
-      web3Provider,
-      'http://localhost:1237'
-    )
+    let provider = ArbProvider('http://localhost:1235', web3Provider)
     App.web3 = new Web3(provider) // eslint-disable-line require-atomic-updates
 
     return App.initContract()

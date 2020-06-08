@@ -52,11 +52,6 @@ TEST_CASE("Value hashing") {
             REQUIRE(givenHash == calcHash);
         }
     }
-
-    //    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1,
-    //    OpCode::SUB); }
-    //
-    //    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB);
 }
 
 TEST_CASE("Value marshaling") {

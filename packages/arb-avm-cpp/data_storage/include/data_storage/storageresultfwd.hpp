@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-env node */
-'use strict'
 
-export interface Contract {
-  code: any
-  address: string
-}
+#ifndef storageresultfwd_h
+#define storageresultfwd_h
+
+#include <vector>
+
+struct GetResults;
+struct SaveResults;
+struct DeleteResults;
+
+template <typename T>
+struct DbResult;
+
+template <typename T>
+struct ValueResult;
+
+using DataResults = ValueResult<std::vector<unsigned char>>;
+
+#endif /* storageresultfwd_h */

@@ -1,3 +1,8 @@
+require('dotenv').config()
+const HDWalletProvider = require('@truffle/hdwallet-provider')
+
+// Deployer address: 0xf6a1b7463D901ADa9Cac196B8C7F9866cF641e43
+
 module.exports = {
   networks: {
     development: {
@@ -11,10 +16,31 @@ module.exports = {
       network_id: '*',
     },
     rinkeby: {
-      host: 'localhost', // Connect to geth on the specified
-      port: 8545,
-      from: '0xf4a7f2c6bbe40a67e74f1b44bed16c6302eb07f6', // default address to use for any transaction Truffle makes during migrations
+      provider: function () {
+        return new HDWalletProvider(
+          process.env['RINKEBY_MNEMONIC'],
+          process.env['RINKEBY_URL']
+        )
+      },
       network_id: 4,
+    },
+    ropsten: {
+      provider: function () {
+        return new HDWalletProvider(
+          process.env['ROPSTEN_MNEMONIC'],
+          process.env['ROPSTEN_URL']
+        )
+      },
+      network_id: 3,
+    },
+    kovan: {
+      provider: function () {
+        return new HDWalletProvider(
+          process.env['KOVAN_MNEMONIC'],
+          process.env['KOVAN_URL']
+        )
+      },
+      network_id: 42,
     },
   },
   mocha: {
@@ -23,10 +49,10 @@ module.exports = {
       currency: 'USD',
     },
   },
-  plugins: ['truffle-security'],
+  plugins: ['truffle-plugin-verify'],
   compilers: {
     solc: {
-      version: '0.5.15',
+      version: '0.5.17',
       // docker: true,
       settings: {
         optimizer: {
@@ -35,5 +61,8 @@ module.exports = {
         },
       },
     },
+  },
+  api_keys: {
+    etherscan: process.env['ETHERSCAN_API_KEY'],
   },
 }

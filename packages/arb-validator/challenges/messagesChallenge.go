@@ -131,32 +131,35 @@ func defendMessages(
 	log.Println("VM inbox", vmInbox)
 
 	startInbox := beforeInbox
-	startMessages := value.NewEmptyTuple().Hash()
 	inboxStartCount := uint64(0)
 
+	tuple := value.NewEmptyTuple()
+	hashPreImage := tuple.GetPreImage()
+
+	preImages := make([]value.HashPreImage, 0)
 	for {
 		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
 			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
-				msg, err := inbox.GenerateOneStepProof(startInbox)
+				deliveredMsg, err := inbox.GenerateOneStepProof(startInbox)
 				if err != nil {
 					return 0, err
 				}
 
-				switch msg := msg.(type) {
-				case message.DeliveredTransaction:
-					err = contract.OneStepProofTransactionMessage(ctx, startInbox, startMessages, msg)
-				case message.DeliveredEth:
-					err = contract.OneStepProofEthMessage(ctx, startInbox, startMessages, msg)
-				case message.DeliveredERC20:
-					err = contract.OneStepProofERC20Message(ctx, startInbox, startMessages, msg)
-				case message.DeliveredERC721:
-					err = contract.OneStepProofERC721Message(ctx, startInbox, startMessages, msg)
-				case message.DeliveredContractTransaction:
-					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, startMessages, msg)
-				case message.DeliveredTransactionBatch:
-
+				switch msg := deliveredMsg.Message.(type) {
+				case message.Transaction:
+					err = contract.OneStepProofTransactionMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.Eth:
+					err = contract.OneStepProofEthMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ERC20:
+					err = contract.OneStepProofERC20Message(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ERC721:
+					err = contract.OneStepProofERC721Message(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.ContractTransaction:
+					err = contract.OneStepProofContractTransactionMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
+				case message.TransactionBatch:
+					err = contract.OneStepProofTransactionBatchMessage(ctx, startInbox, hashPreImage, deliveredMsg.DeliveryInfo, msg)
 				}
 				if err != nil {
 					return 0, errors2.Wrap(err, "failing making one step proof")
@@ -175,17 +178,21 @@ func defendMessages(
 		}
 
 		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+
 		if timedOut {
 			chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
-			inboxHashes, err := vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
+			preImages, err = vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 			if err != nil {
 				return 0, err
 			}
 
-			log.Println("chainHashes", chainHashes)
-			log.Println("inboxHashes", inboxHashes)
+			simpleHashes := make([]common.Hash, 0, len(preImages))
 
-			err = contract.Bisect(ctx, chainHashes, inboxHashes, new(big.Int).SetUint64(messageCount))
+			for _, h := range preImages {
+				simpleHashes = append(simpleHashes, h.Hash())
+			}
+
+			err = contract.Bisect(ctx, chainHashes, simpleHashes, new(big.Int).SetUint64(messageCount))
 			if err != nil {
 				return 0, errors2.Wrap(err, "failing making bisection")
 			}
@@ -216,7 +223,7 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startInbox = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
-		startMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
+		hashPreImage = preImages[contEv.SegmentIndex.Uint64()]
 		inboxStartCount += getSegmentStart(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		log.Println("messageCount", messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
 		messageCount = getSegmentCount(messageCount, uint64(len(ev.ChainHashes))-1, contEv.SegmentIndex.Uint64())
@@ -292,7 +299,8 @@ func challengeMessages(
 				}
 
 				for i := uint64(1); i < uint64(len(vmInboxSegments)); i++ {
-					if vmInboxSegments[i] != ev.SegmentHashes[i] {
+					segmentHash := ev.SegmentHashes[i]
+					if vmInboxSegments[i].Hash() != segmentHash {
 						return i - 1, true
 					}
 				}

@@ -17,6 +17,7 @@
 package ethbridgetest
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -32,17 +33,13 @@ import (
 )
 
 func TestTransactionMessage(t *testing.T) {
-	msg := message.DeliveredTransaction{
-		Transaction: message.Transaction{
-			Chain:       addr3,
-			To:          addr1,
-			From:        addr2,
-			SequenceNum: big.NewInt(74563),
-			Value:       big.NewInt(89735406),
-			Data:        []byte{65, 23, 68, 87, 12},
-		},
-		BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-		Timestamp: big.NewInt(35463245),
+	msg := message.Transaction{
+		Chain:       addr3,
+		To:          addr1,
+		From:        addr2,
+		SequenceNum: big.NewInt(74563),
+		Value:       big.NewInt(89735406),
+		Data:        []byte{65, 23, 68, 87, 12},
 	}
 	bridgeHash, err := tester.TransactionHash(
 		nil,
@@ -52,8 +49,6 @@ func TestTransactionMessage(t *testing.T) {
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +57,7 @@ func TestTransactionMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	messageBridgeHash, err := tester.TransactionMessageHash(
+	messageBridgeHash, txReceiptHash, err := tester.TransactionMessageHash(
 		nil,
 		msg.Chain.ToEthAddress(),
 		msg.To.ToEthAddress(),
@@ -70,14 +65,16 @@ func TestTransactionMessage(t *testing.T) {
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
+		t.Error(errMsgHash)
+	}
+
+	if msg.ReceiptHash() != txReceiptHash {
 		t.Error(errMsgHash)
 	}
 }
@@ -138,26 +135,27 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(sender[:]), "instead of", hexutil.Encode(auth.From[:]))
 	}
 
-	deliveredTx := message.DeliveredTransaction{
-		Transaction: tx,
-		BlockNum:    common.NewTimeBlocks(big.NewInt(87962345)),
-		Timestamp:   big.NewInt(35463245),
+	deliveryInfo := message.DeliveryInfo{
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp: big.NewInt(35463245),
+		},
+		TxId: big.NewInt(0),
 	}
 
-	msg := message.DeliveredTransactionBatch{
-		TransactionBatch: message.TransactionBatch{
-			Chain:  addr3,
-			TxData: batchTxData,
-		},
-		BlockNum:  deliveredTx.BlockNum,
-		Timestamp: deliveredTx.Timestamp,
+	msg := message.TransactionBatch{
+		Chain:  addr3,
+		TxData: batchTxData,
+	}
+
+	deliveredBatchMsg := message.Delivered{
+		Message:      msg,
+		DeliveryInfo: deliveryInfo,
 	}
 
 	bridgeHash, err := tester.TransactionBatchHash(
 		nil,
 		batchTxData,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -166,57 +164,54 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	txMessageHash, err := tester.TransactionMessageBatchHashSingle(
+	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
 		nil,
 		big.NewInt(0),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if txMessageHash != message.DeliveredValue(deliveredTx).Hash() {
+	if txMessageHash != tx.AsInboxValue().Hash() {
 		t.Error("TransactionMessageBatchHashSingle result didn't match")
 	}
+	if txReceiptHash != tx.ReceiptHash() {
+		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
+	}
+
+	tup := value.NewEmptyTuple()
+	preImage := tup.GetPreImage()
 
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
 		nil,
-		value.NewEmptyTuple().Hash(),
+		preImage.HashImage,
+		big.NewInt(preImage.Size),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	valInboxHash := message.AddToPrev(value.NewEmptyTuple(), msg).Hash()
+	valInboxHash := message.AddToPrev(value.NewEmptyTuple(), deliveredBatchMsg).Hash()
 	if bridgeInboxHash != valInboxHash.ToEthHash() {
 		t.Error("TransactionMessageBatchHash result didn't match")
 	}
 }
 
 func TestEthMessage(t *testing.T) {
-	msg := message.DeliveredEth{
-		Eth: message.Eth{
-			To:    addr1,
-			From:  addr2,
-			Value: big.NewInt(89735406),
-		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
-		Timestamp:  big.NewInt(35463245),
-		MessageNum: big.NewInt(98742),
+	msg := message.Eth{
+		To:    addr1,
+		From:  addr2,
+		Value: big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.EthHash(
 		nil,
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -230,30 +225,22 @@ func TestEthMessage(t *testing.T) {
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
 
 func TestERC20Message(t *testing.T) {
-	msg := message.DeliveredERC20{
-		ERC20: message.ERC20{
-			To:           addr1,
-			From:         addr2,
-			TokenAddress: addr3,
-			Value:        big.NewInt(89735406),
-		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
-		Timestamp:  big.NewInt(35463245),
-		MessageNum: big.NewInt(98742),
+	msg := message.ERC20{
+		To:           addr1,
+		From:         addr2,
+		TokenAddress: addr3,
+		Value:        big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.Erc20Hash(
 		nil,
@@ -261,9 +248,6 @@ func TestERC20Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -278,30 +262,22 @@ func TestERC20Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
 
 func TestERC721Message(t *testing.T) {
-	msg := message.DeliveredERC721{
-		ERC721: message.ERC721{
-			To:           addr1,
-			From:         addr2,
-			TokenAddress: addr3,
-			Id:           big.NewInt(89735406),
-		},
-		BlockNum:   common.NewTimeBlocks(big.NewInt(87962345)),
-		Timestamp:  big.NewInt(35463245),
-		MessageNum: big.NewInt(98742),
+	msg := message.ERC721{
+		To:           addr1,
+		From:         addr2,
+		TokenAddress: addr3,
+		Id:           big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.Erc721Hash(
 		nil,
@@ -309,9 +285,6 @@ func TestERC721Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -326,15 +299,74 @@ func TestERC721Message(t *testing.T) {
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if messageBridgeHash != message.DeliveredValue(msg).Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
+		t.Error(errMsgHash)
+	}
+}
+
+func TestDeliveredMessage(t *testing.T) {
+	msg := message.ERC721{
+		To:           addr1,
+		From:         addr2,
+		TokenAddress: addr3,
+		Id:           big.NewInt(89735406),
+	}
+	deliveryInfo := message.DeliveryInfo{
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
+			Timestamp: big.NewInt(35463245),
+		},
+		TxId: big.NewInt(98742),
+	}
+	deliveredMsg := message.Delivered{
+		Message:      msg,
+		DeliveryInfo: deliveryInfo,
+	}
+	inboxHash, err := tester.AddMessageToInbox(
+		nil,
+		common.Hash{},
+		msg.CommitmentHash().ToEthHash(),
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inboxHash2 := hashing.SoliditySHA3(hashing.Bytes32(common.Hash{}), hashing.Bytes32(deliveredMsg.CommitmentHash()))
+	if inboxHash != inboxHash2 {
+		t.Error(errHash)
+	}
+
+	var msgDataBuf bytes.Buffer
+	if err := msg.AsInboxValue().MarshalForProof(&msgDataBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	inbox := value.NewEmptyTuple()
+	inboxPreImage := inbox.GetPreImage()
+	valPreimage := msg.AsInboxValue().GetPreImage()
+
+	messageBridgeHash, err := tester.AddMessageToVMInboxHash(
+		nil,
+		inboxPreImage.HashImage,
+		big.NewInt(inboxPreImage.Size),
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
+		valPreimage.HashImage,
+		big.NewInt(valPreimage.Size),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if messageBridgeHash != message.AddToPrev(inbox, deliveredMsg).Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }

@@ -363,16 +363,8 @@ void ethhash2Op(MachineState& m) {
     auto& bNum = assumeInt(m.stack[1]);
 
     std::array<unsigned char, 64> inData;
-    std::array<uint64_t, 4> anumInts;
-    to_big_endian(aNum, anumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(anumInts.data()),
-              reinterpret_cast<unsigned char*>(anumInts.data()) + 32,
-              inData.begin());
-    std::array<uint64_t, 4> bnumInts;
-    to_big_endian(bNum, bnumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(bnumInts.data()),
-              reinterpret_cast<unsigned char*>(bnumInts.data()) + 32,
-              inData.begin() + 32);
+    auto it = to_big_endian(aNum, inData.begin());
+    to_big_endian(bNum, it);
 
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(inData.data(), 64, hashData.data());
@@ -576,20 +568,30 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason send(MachineState& m) {
+bool send(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.outMessage.push_back(std::move(m.stack[0]));
-    m.stack.popClear();
-    ++m.pc;
-    return NotBlocked();
+
+    auto val_size = getSize(m.stack[0]);
+    bool success;
+
+    if (val_size > send_size_limit) {
+        success = false;
+    } else {
+        m.context.outMessage.push_back(std::move(m.stack[0]));
+        m.stack.popClear();
+        ++m.pc;
+
+        success = true;
+    }
+
+    return success;
 }
 
 void getTime(MachineState& m) {
-    Tuple tup(m.pool.get(), 4);
-    tup.set_element(0, m.context.timeBounds.lowerBoundBlock);
-    tup.set_element(1, m.context.timeBounds.upperBoundBlock);
-    tup.set_element(2, m.context.timeBounds.lowerBoundTimestamp);
-    tup.set_element(3, m.context.timeBounds.upperBoundTimestamp);
+    Tuple tup(m.context.timeBounds.lowerBoundBlock,
+              m.context.timeBounds.upperBoundBlock,
+              m.context.timeBounds.lowerBoundTimestamp,
+              m.context.timeBounds.upperBoundTimestamp, m.pool.get());
     m.stack.push(std::move(tup));
     ++m.pc;
 }

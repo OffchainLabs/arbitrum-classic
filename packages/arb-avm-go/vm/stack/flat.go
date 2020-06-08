@@ -20,9 +20,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -32,7 +29,7 @@ type Flat struct {
 	codePoints []value.CodePointValue
 	hashOnly   []value.HashOnlyValue
 	itemTypes  []byte
-	hashes     []common.Hash
+	hashes     []value.HashOnlyValue
 	size       int64
 }
 
@@ -80,7 +77,7 @@ func (f *Flat) CloneImpl() *Flat {
 	copy(hashOnly, f.hashOnly)
 	itemTypes := make([]byte, len(f.itemTypes))
 	copy(itemTypes, f.itemTypes)
-	hashes := make([]common.Hash, len(f.hashes))
+	hashes := make([]value.HashOnlyValue, len(f.hashes))
 	copy(hashes, f.hashes)
 	newS := &Flat{ints, tuples, codePoints, hashOnly, itemTypes, hashes, f.size}
 	newS.verifyHeight()
@@ -255,7 +252,7 @@ func (f *Flat) StateValue() value.Value {
 	if len(f.itemTypes) == 0 {
 		return value.NewHashOnlyValue(value.NewEmptyTuple().Hash(), 1)
 	}
-	return value.NewHashOnlyValue(f.hashes[len(f.hashes)-1], f.size)
+	return f.hashes[len(f.hashes)-1]
 }
 
 func (f *Flat) ProofValue(stackInfo []byte) value.Value {
@@ -305,18 +302,16 @@ func (f *Flat) FullyExpandedValueImpl() value.Value {
 	return value.NewTuple2(top, f.FullyExpandedValueImpl())
 }
 
-func (f *Flat) addedValueAddHash(itemHash1 common.Hash) {
-	var prevItem common.Hash
+func (f *Flat) addedValueAddHash(itemHash1 value.HashOnlyValue) {
+	var prevItem value.HashOnlyValue
 	if len(f.hashes) > 0 {
 		prevItem = f.hashes[len(f.hashes)-1]
 	} else {
-		prevItem = value.NewEmptyTuple().Hash()
+		prevItem = value.NewHashOnlyValueFromValue(value.NewEmptyTuple())
 	}
-	ret := hashing.SoliditySHA3(
-		hashing.Uint8(value.TypeCodeTuple+2),
-		hashing.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
-	)
-	f.hashes = append(f.hashes, ret)
+
+	tup := value.NewTuple2(itemHash1, prevItem)
+	f.hashes = append(f.hashes, value.NewHashOnlyValueFromValue(tup))
 }
 
 func (f *Flat) countOfType(tipe byte) int {
@@ -334,16 +329,16 @@ func (f *Flat) countOfType(tipe byte) int {
 	}
 }
 
-func (f *Flat) hashOfItem(tipe byte, offset int) common.Hash {
+func (f *Flat) hashOfItem(tipe byte, offset int) value.HashOnlyValue {
 	switch tipe {
 	case value.TypeCodeInt:
-		return f.ints[offset].Hash()
+		return value.NewHashOnlyValueFromValue(f.ints[offset])
 	case value.TypeCodeTuple:
-		return f.tuples[offset].Hash()
+		return value.NewHashOnlyValueFromValue(f.tuples[offset])
 	case value.TypeCodeCodePoint:
-		return f.codePoints[offset].Hash()
+		return value.NewHashOnlyValueFromValue(f.codePoints[offset])
 	case value.TypeCodeHashOnly:
-		return f.hashOnly[offset].Hash()
+		return value.NewHashOnlyValueFromValue(f.hashOnly[offset])
 	default:
 		panic("PopValue: Unhandled type")
 	}
@@ -351,14 +346,14 @@ func (f *Flat) hashOfItem(tipe byte, offset int) common.Hash {
 
 func (f *Flat) addedValue(tipe byte, size int64) {
 	f.itemTypes = append(f.itemTypes, tipe)
-	f.size += size + 1
+	f.size += size
 	if len(f.itemTypes)-len(f.hashes) > 10 {
 		f.updateHashes()
 	}
 }
 
 func (f *Flat) removedValue(size int64) {
-	f.size -= size + 1
+	f.size -= size
 	f.itemTypes = f.itemTypes[:len(f.itemTypes)-1]
 	if len(f.hashes) > len(f.itemTypes) {
 		f.hashes = f.hashes[:len(f.itemTypes)]

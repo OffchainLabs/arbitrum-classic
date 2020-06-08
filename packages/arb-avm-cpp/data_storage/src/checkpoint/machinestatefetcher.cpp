@@ -107,7 +107,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                         values.push_back(code_point);
                         break;
                     }
-                    case HASH_ONLY: {
+                    case HASH_PRE_IMAGE: {
                         throw std::runtime_error("HASH_ONLY item");
                     }
                 }

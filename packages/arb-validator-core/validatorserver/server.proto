@@ -16,28 +16,32 @@
 
 syntax = "proto3";
 package validatorserver;
+import "arb-validator-core/evm/evm.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver";
 
-message LogInfo {
-    string address = 1;
-    string blockHash = 2;
-    string blockNumber = 3;
-    string data = 4;
-    string logIndex = 5;
-    repeated string topics = 6;
-    string transactionIndex = 7;
-    string transactionHash = 8;
+message TopicGroup {
+    repeated string topics = 1;
 }
 
 message FindLogsArgs {
     string fromHeight = 1;
     string toHeight = 2;
-    string address = 3;
-    repeated string topics = 4;
+    repeated string addresses = 3;
+    repeated TopicGroup topicGroups = 4;
 }
 
 message FindLogsReply {
-    repeated LogInfo logs = 4;
+    repeated evm.FullLogBuf logs = 4;
+}
+
+message GetOutputMessageArgs {
+    string AssertionNodeHash = 1;
+    string MsgIndex = 2;
+}
+
+message GetOutputMessageReply {
+    bool found = 1;
+    string rawVal = 2;
 }
 
 message GetMessageResultArgs {
@@ -45,12 +49,7 @@ message GetMessageResultArgs {
 }
 
 message GetMessageResultReply {
-    bool found = 1;
-    string rawVal = 2;
-    string logPreHash = 3;
-    string logPostHash = 4;
-    repeated string logValHashes = 5;
-    string onChainTxHash = 6;
+    evm.TxInfoBuf tx = 1;
 }
 
 message GetAssertionCountArgs {
@@ -80,6 +79,7 @@ message CallMessageReply {
 }
 
 service RollupValidator {
+    rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
     rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
     rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
     rpc FindLogs (FindLogsArgs) returns (FindLogsReply);

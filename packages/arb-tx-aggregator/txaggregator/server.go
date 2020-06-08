@@ -102,10 +102,6 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	for _, tx := range txes {
-		log.Println("tx: ", tx)
-	}
-
 	err := m.globalInbox.DeliverTransactionBatchNoWait(
 		ctx,
 		m.rollupAddress,
@@ -147,7 +143,7 @@ func (m *Server) SendTransaction(
 		return nil, errors2.Wrap(err, "error decoding data")
 	}
 
-	pubkey, err := hexutil.Decode(args.Pubkey)
+	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
 	if err != nil {
 		return nil, errors2.Wrap(err, "error decoding pubkey")
 	}
@@ -179,11 +175,30 @@ func (m *Server) SendTransaction(
 	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
 
 	if !crypto.VerifySignature(
-		pubkey,
+		pubkeyBytes,
 		messageHash[:],
 		signature[:len(signature)-1],
 	) {
 		return nil, errors.New("Invalid signature")
+	}
+
+	var sigData [signatureLength]byte
+	copy(sigData[:], signature)
+
+	tx := message.BatchTx{
+		To:     to,
+		SeqNum: sequenceNum,
+		Value:  valueInt,
+		Data:   data,
+		Sig:    sigData,
+	}
+
+	pubkey, err := crypto.DecompressPubkey(pubkeyBytes)
+	if err == nil {
+		sender := crypto.PubkeyToAddress(*pubkey)
+		log.Println("Got tx: ", tx, "from", hexutil.Encode(sender[:]))
+	} else {
+		log.Println("Got tx: ", tx, "from pubkey", hexutil.Encode(pubkeyBytes))
 	}
 
 	m.Lock()
@@ -193,16 +208,7 @@ func (m *Server) SendTransaction(
 		return nil, errors.New("Tx aggregator is not running")
 	}
 
-	var sigData [signatureLength]byte
-	copy(sigData[:], signature)
-
-	m.transactions = append(m.transactions, message.BatchTx{
-		To:     to,
-		SeqNum: sequenceNum,
-		Value:  valueInt,
-		Data:   data,
-		Sig:    sigData,
-	})
+	m.transactions = append(m.transactions, tx)
 
 	return &SendTransactionReply{}, nil
 }

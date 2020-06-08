@@ -18,11 +18,6 @@
 
 import * as ethers from 'ethers'
 
-import {
-  SendTransactionArgs,
-  SendTransactionReply,
-} from './abi/txaggregator.server'
-
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
@@ -67,7 +62,7 @@ export class AggregatorClient {
     signature: string
   ): Promise<{}> {
     return new Promise<{}>((resolve, reject): void => {
-      const params: SendTransactionArgs = {
+      const params: txaggregator.SendTransactionArgs = {
         to,
         sequenceNum: sequenceNum.toString(),
         value: value.toString(),
@@ -78,7 +73,11 @@ export class AggregatorClient {
       this.client.request(
         'TxAggregator.SendTransaction',
         [params],
-        (err: Error, error: Error, result: SendTransactionReply) => {
+        (
+          err: Error,
+          error: Error,
+          result: txaggregator.SendTransactionReply
+        ) => {
           if (err) {
             reject(err)
           } else if (error) {

@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -359,7 +358,7 @@ func (_SigUtilsTester *SigUtilsTesterTransactorRaw) Transact(opts *bind.Transact
 
 // ParseSignature is a free data retrieval call binding the contract method 0xb31d63cc.
 //
-// Solidity: function parseSignature(bytes _data, uint256 _start) constant returns(uint8 v, bytes32 r, bytes32 s)
+// Solidity: function parseSignature(bytes _data, uint256 _start) pure returns(uint8 v, bytes32 r, bytes32 s)
 func (_SigUtilsTester *SigUtilsTesterCaller) ParseSignature(opts *bind.CallOpts, _data []byte, _start *big.Int) (struct {
 	V uint8
 	R [32]byte
@@ -377,7 +376,7 @@ func (_SigUtilsTester *SigUtilsTesterCaller) ParseSignature(opts *bind.CallOpts,
 
 // ParseSignature is a free data retrieval call binding the contract method 0xb31d63cc.
 //
-// Solidity: function parseSignature(bytes _data, uint256 _start) constant returns(uint8 v, bytes32 r, bytes32 s)
+// Solidity: function parseSignature(bytes _data, uint256 _start) pure returns(uint8 v, bytes32 r, bytes32 s)
 func (_SigUtilsTester *SigUtilsTesterSession) ParseSignature(_data []byte, _start *big.Int) (struct {
 	V uint8
 	R [32]byte
@@ -388,7 +387,7 @@ func (_SigUtilsTester *SigUtilsTesterSession) ParseSignature(_data []byte, _star
 
 // ParseSignature is a free data retrieval call binding the contract method 0xb31d63cc.
 //
-// Solidity: function parseSignature(bytes _data, uint256 _start) constant returns(uint8 v, bytes32 r, bytes32 s)
+// Solidity: function parseSignature(bytes _data, uint256 _start) pure returns(uint8 v, bytes32 r, bytes32 s)
 func (_SigUtilsTester *SigUtilsTesterCallerSession) ParseSignature(_data []byte, _start *big.Int) (struct {
 	V uint8
 	R [32]byte
@@ -399,7 +398,7 @@ func (_SigUtilsTester *SigUtilsTesterCallerSession) ParseSignature(_data []byte,
 
 // RecoverAddressFromData is a free data retrieval call binding the contract method 0xd4916333.
 //
-// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) constant returns(address)
+// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) pure returns(address)
 func (_SigUtilsTester *SigUtilsTesterCaller) RecoverAddressFromData(opts *bind.CallOpts, _messageHash [32]byte, _data []byte, _offset *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -411,14 +410,14 @@ func (_SigUtilsTester *SigUtilsTesterCaller) RecoverAddressFromData(opts *bind.C
 
 // RecoverAddressFromData is a free data retrieval call binding the contract method 0xd4916333.
 //
-// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) constant returns(address)
+// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) pure returns(address)
 func (_SigUtilsTester *SigUtilsTesterSession) RecoverAddressFromData(_messageHash [32]byte, _data []byte, _offset *big.Int) (common.Address, error) {
 	return _SigUtilsTester.Contract.RecoverAddressFromData(&_SigUtilsTester.CallOpts, _messageHash, _data, _offset)
 }
 
 // RecoverAddressFromData is a free data retrieval call binding the contract method 0xd4916333.
 //
-// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) constant returns(address)
+// Solidity: function recoverAddressFromData(bytes32 _messageHash, bytes _data, uint256 _offset) pure returns(address)
 func (_SigUtilsTester *SigUtilsTesterCallerSession) RecoverAddressFromData(_messageHash [32]byte, _data []byte, _offset *big.Int) (common.Address, error) {
 	return _SigUtilsTester.Contract.RecoverAddressFromData(&_SigUtilsTester.CallOpts, _messageHash, _data, _offset)
 }

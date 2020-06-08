@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -56,14 +57,22 @@ func (c *messagesChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	hashes := hashSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
-		hashSliceToRaw(segmentHashes),
+		hashes,
 		chainLength,
 	)
 	if err != nil {
-		return err
+		return c.contract.BisectCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			hashSliceToRaw(chainHashes),
+			hashes,
+			chainLength)
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
@@ -71,23 +80,27 @@ func (c *messagesChallenge) Bisect(
 func (c *messagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredTransaction,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Transaction,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
-		msg.Chain.ToEthAddress(),
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
+		[3]ethcommon.Address{
+			msg.Chain.ToEthAddress(),
+			msg.To.ToEthAddress(),
+			msg.From.ToEthAddress(),
+		},
 		msg.SequenceNum,
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
 	)
 	if err != nil {
 		return err
@@ -98,19 +111,22 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredTransactionBatch,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.TransactionBatch,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofTransactionBatchMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.Chain.ToEthAddress(),
 		msg.TxData,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -121,22 +137,25 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 func (c *messagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredEth,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Eth,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
+
 	if err != nil {
 		return c.contract.OneStepProofEthMessageCall(
 			ctx,
@@ -144,13 +163,14 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB,
+			lowerHashB.HashImage,
+			big.NewInt(lowerHashB.Size),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
-			msg.BlockNum.AsInt(),
-			msg.Timestamp,
-			msg.MessageNum,
+			deliveryInfo.BlockNum.AsInt(),
+			deliveryInfo.Timestamp,
+			deliveryInfo.TxId,
 		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProofEthMessage")
@@ -159,22 +179,24 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 func (c *messagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredERC20,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC20,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Value,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -185,22 +207,24 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 func (c *messagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredERC721,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC721,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
 		msg.Id,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err
@@ -211,22 +235,24 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredContractTransaction,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ContractTransaction,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB,
+		lowerHashB.HashImage,
+		big.NewInt(lowerHashB.Size),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
 		msg.Data,
-		msg.BlockNum.AsInt(),
-		msg.Timestamp,
-		msg.MessageNum,
+		deliveryInfo.BlockNum.AsInt(),
+		deliveryInfo.Timestamp,
+		deliveryInfo.TxId,
 	)
 	if err != nil {
 		return err

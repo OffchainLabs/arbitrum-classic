@@ -21,6 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 	"strconv"
@@ -37,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 // Server provides an interface for interacting with a a running coordinator
@@ -49,109 +51,123 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) *Server {
-	completedAssertionChan := make(chan rollup.FinalizedAssertion)
-	assertionListener := &rollup.AssertionListener{completedAssertionChan}
-	man.AddListener(assertionListener)
-
-	tracker := newTxTracker(man.RollupAddress)
-	go func() {
-		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
-	}()
-
-	return &Server{man.RollupAddress, tracker, man, maxCallTime}
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+	checkpointer := man.GetCheckpointer()
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
+	if err != nil {
+		return nil, err
+	}
+	man.AddListener(tracker)
+	return &Server{man.RollupAddress, tracker, man, maxCallTime}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
 func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArgs) (*validatorserver.FindLogsReply, error) {
-	addressBytes, err := hexutil.Decode(args.Address)
-	if err != nil {
-		fmt.Println("FindLogs error1", err)
-		return nil, err
+	addresses := make([]common.Address, 0, 1)
+	for _, addr := range args.Addresses {
+		addresses = append(addresses, common.HexToAddress(addr))
 	}
-	addressInt := new(big.Int).SetBytes(addressBytes[:])
 
-	topics := make([]common.Hash, 0, len(args.Topics))
-	for _, topic := range args.Topics {
-		topicBytes, err := hexutil.Decode(topic)
-		if err == nil {
-			var topic common.Hash
-			copy(topic[:], topicBytes)
-			topics = append(topics, topic)
+	topicGroups := make([][]common.Hash, 0, len(args.TopicGroups))
+	for _, topicGroup := range args.TopicGroups {
+		topics := make([]common.Hash, 0, len(topicGroup.Topics))
+		for _, topic := range topicGroup.Topics {
+			topics = append(topics, common.NewHashFromEth(ethcommon.HexToHash(topic)))
 		}
+		topicGroups = append(topicGroups, topics)
 	}
 
-	fromHeight, err := strconv.ParseInt(args.FromHeight[2:], 16, 64)
-	if err != nil {
-		fmt.Println("FindLogs error, bad fromHeight", err)
-		return nil, err
+	var fromHeight *uint64
+	if len(args.FromHeight) != 0 {
+		intVal, err := strconv.ParseUint(args.FromHeight[2:], 16, 64)
+		if err != nil {
+			fmt.Println("FindLogs error, bad fromHeight", err)
+			return nil, err
+		}
+		fromHeight = &intVal
 	}
 
-	var logsChan <-chan []*validatorserver.LogInfo
-	if args.ToHeight == "latest" {
-		logsChan = m.tracker.FindLogs(&fromHeight, nil, addressInt, topics)
-	} else {
-		toHeight, err := strconv.ParseInt(args.ToHeight[2:], 16, 64)
+	var toHeight *uint64
+	if len(args.ToHeight) != 0 && args.ToHeight != "latest" {
+		intVal, err := strconv.ParseUint(args.ToHeight[2:], 16, 64)
 		if err != nil {
 			fmt.Println("FindLogs error4", err)
 			return nil, err
 		}
-		logsChan = m.tracker.FindLogs(&fromHeight, &toHeight, addressInt, topics)
+		toHeight = &intVal
 	}
 
-	ret := <-logsChan
+	logs, err := m.tracker.FindLogs(ctx, fromHeight, toHeight, addresses, topicGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	logInfos := make([]*evm.FullLogBuf, 0, len(logs))
+	for _, l := range logs {
+		logInfos = append(logInfos, l.Marshal())
+	}
+
 	return &validatorserver.FindLogsReply{
-		Logs: ret,
+		Logs: logInfos,
 	}, nil
+}
+
+func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
+	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
+	if err != nil {
+		return nil, err
+	}
+	assertionHash := common.Hash{}
+	copy(assertionHash[:], assertionHashBytes)
+	msgIndex, err := strconv.ParseInt(args.MsgIndex, 16, 64)
+	outputValue, err := m.tracker.OutputMsgVal(ctx, assertionHash, msgIndex)
+
+	if outputValue == nil || err != nil {
+		return &validatorserver.GetOutputMessageReply{
+			Found: false,
+		}, err
+	} else {
+		var buf bytes.Buffer
+		_ = value.MarshalValue(outputValue, &buf)
+		return &validatorserver.GetOutputMessageReply{
+			Found:  true,
+			RawVal: hexutil.Encode(buf.Bytes()),
+		}, nil
+	}
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
 func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.GetMessageResultArgs) (*validatorserver.GetMessageResultReply, error) {
-	txHashBytes, err := hexutil.Decode(args.TxHash)
+	txHash := common.NewHashFromEth(ethcommon.HexToHash(args.TxHash))
+	txInfo, err := m.tracker.TxInfo(ctx, txHash)
 	if err != nil {
 		return nil, err
 	}
-	txHash := common.Hash{}
-	copy(txHash[:], txHashBytes)
-	resultChan := m.tracker.TxInfo(txHash)
 
-	txInfo := <-resultChan
-	if !txInfo.Found {
-		return &validatorserver.GetMessageResultReply{
-			Found: false,
-		}, nil
-	}
-
-	var buf bytes.Buffer
-	_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 	return &validatorserver.GetMessageResultReply{
-		Found:         true,
-		RawVal:        hexutil.Encode(buf.Bytes()),
-		LogPreHash:    txInfo.LogsPreHash,
-		LogPostHash:   txInfo.LogsPostHash,
-		LogValHashes:  txInfo.LogsValHashes,
-		OnChainTxHash: txInfo.OnChainTxHash,
+		Tx: txInfo.Marshal(),
 	}, nil
 }
 
 // GetAssertionCount returns the total number of finalized assertions
-func (m *Server) GetAssertionCount(ctx context.Context, args *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
-	req := m.tracker.AssertionCount()
+func (m *Server) GetAssertionCount(ctx context.Context, _ *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
+	req, err := m.tracker.AssertionCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &validatorserver.GetAssertionCountReply{
-		AssertionCount: int32(<-req),
+		AssertionCount: int32(req),
 	}, nil
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetVMInfo(ctx context.Context, args *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
+func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
 	return &validatorserver.GetVMInfoReply{
 		VmID: hexutil.Encode(m.rollupAddress[:]),
 	}, nil
 }
 
-// CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	log.Println("CallMessage", args.Data)
+func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
@@ -164,23 +180,49 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	var contractAddress common.Address
 	copy(contractAddress[:], contractAddressBytes)
 
-	senderBytes, err := hexutil.Decode(args.Sender)
-	if err != nil {
-		return nil, err
-	}
 	var sender common.Address
-	copy(sender[:], senderBytes)
-
-	msg := message.Call{
-		To:        contractAddress,
-		From:      sender,
-		Data:      dataBytes,
-		BlockNum:  m.man.CurrentBlockId().Height,
-		Timestamp: big.NewInt(time.Now().Unix()),
+	if len(args.Sender) > 0 {
+		senderBytes, err := hexutil.Decode(args.Sender)
+		if err != nil {
+			return nil, err
+		}
+		copy(sender[:], senderBytes)
 	}
 
-	inbox := message.AddToPrev(value.NewEmptyTuple(), msg)
-	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
+	callMsg := message.Call{
+		To:   contractAddress,
+		From: sender,
+		Data: dataBytes,
+	}
+
+	deliveredMsg := message.Delivered{
+		Message: callMsg,
+		DeliveryInfo: message.DeliveryInfo{
+			ChainTime: message.ChainTime{
+				BlockNum:  m.man.CurrentBlockId().Height,
+				Timestamp: big.NewInt(time.Now().Unix()),
+			},
+			TxId: big.NewInt(0),
+		},
+	}
+
+	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
+
+	latestBlock := m.man.CurrentBlockId()
+	latestTime := big.NewInt(time.Now().Unix())
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     latestBlock.Height,
+		UpperBoundBlock:     latestBlock.Height,
+		LowerBoundTimestamp: latestTime,
+		UpperBoundTimestamp: latestTime,
+	}
+	assertion, steps := mach.ExecuteAssertion(
+		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
+		10000000000000000,
+		timeBounds,
+		inbox,
+		m.maxCallTime,
+	)
 
 	log.Println("Executed call for", steps, "steps")
 
@@ -189,12 +231,15 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
+	lastLog, err := evm.ProcessLog(lastLogVal)
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash
-	if logHash != msg.ReceiptHash() {
+	delivered, err := message.UnmarshalRawDelivered(lastLog.GetDeliveredMessage())
+	if err != nil {
+		return nil, err
+	}
+	if delivered.TxHash() != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
@@ -205,4 +250,14 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	return &validatorserver.CallMessageReply{
 		RawVal: hexutil.Encode(buf.Bytes()),
 	}, nil
+}
+
+// CallMessage takes a request from a client to process in a temporary context and return the result
+func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	return m.executeCall(m.man.GetLatestMachine(), args)
+}
+
+// PendingCall takes a request from a client to process in a temporary context and return the result
+func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	return m.executeCall(m.man.GetPendingMachine(), args)
 }

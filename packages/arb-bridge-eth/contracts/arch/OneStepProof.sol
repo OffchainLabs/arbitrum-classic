@@ -21,15 +21,16 @@ import "./Machine.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-
 library OneStepProof {
     using Machine for Machine.Data;
     using Value for Value.Data;
 
+    uint256 constant send_size_limit = 10000;
+
     struct ValidateProofData {
         bytes32 beforeHash;
         uint128[4] timeBounds;
-        bytes32 beforeInbox;
+        Value.Data beforeInbox;
         bytes32 afterHash;
         bool    didInboxInsn;
         bytes32 firstMessage;
@@ -44,6 +45,7 @@ library OneStepProof {
         bytes32 beforeHash,
         uint128[4] memory timeBounds,
         bytes32 beforeInbox,
+        uint256 beforeInboxValueSize,
         bytes32 afterHash,
         bool    didInboxInsn,
         bytes32 firstMessage,
@@ -61,7 +63,9 @@ library OneStepProof {
             ValidateProofData(
                 beforeHash,
                 timeBounds,
-                beforeInbox,
+                Value.newTuplePreImage(
+                    beforeInbox, 
+                    beforeInboxValueSize),
                 afterHash,
                 didInboxInsn,
                 firstMessage,
@@ -417,7 +421,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(Value.newBoolean(val1.hash().hash == val2.hash().hash));
+        machine.addDataStackValue(Value.newBoolean(val1.hash() == val2.hash()));
         return true;
     }
 
@@ -582,7 +586,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackInt(uint256(val1.hash().hash));
+        machine.addDataStackInt(uint256(val1.hash()));
         return true;
     }
 
@@ -638,7 +642,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.staticHash);
+        machine.addDataStackValue(machine.staticVal);
         return true;
     }
 
@@ -649,7 +653,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.registerHash);
+        machine.addDataStackValue(machine.registerVal);
         return true;
     }
 
@@ -661,7 +665,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.registerHash = val1.hash();
+        machine.registerVal = val1;
         return true;
     }
 
@@ -673,7 +677,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.instructionStackHash = val1.hash();
+        machine.instructionStack = val1;
         return true;
     }
 
@@ -693,7 +697,7 @@ library OneStepProof {
             return false;
         }
         if (val2.intVal != 0) {
-            machine.instructionStackHash = val1.hash();
+            machine.instructionStack = val1;
         }
         return true;
     }
@@ -706,20 +710,20 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.dataStackHash.hash == Value.newNone().hash().hash)
+            Value.newBoolean(Value.hash(machine.dataStack) == Value.hashEmptyTuple())
         );
         return true;
     }
 
     function executePcpushInsn(
         Machine.Data memory machine,
-        Value.HashOnly memory pc
+        Value.Data memory pc
     )
         internal
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(pc);
+        machine.addDataStackValue(pc);
         return true;
     }
 
@@ -743,7 +747,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.auxStackHash.hash == Value.newNone().hash().hash)
+            Value.newBoolean(Value.hash(machine.auxStack) == Value.hashEmptyTuple())
         );
         return true;
     }
@@ -755,7 +759,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackHashValue(machine.errHandler);
+        machine.addDataStackValue(machine.errHandler);
         return true;
     }
 
@@ -770,7 +774,7 @@ library OneStepProof {
         if (!val.isCodePoint()) {
             return false;
         }
-        machine.errHandler = val.hash();
+        machine.errHandler = val;
         return true;
     }
 
@@ -893,8 +897,10 @@ library OneStepProof {
         if (val1.intVal >= val2.valLength()) {
             return false;
         }
-        val2.tupleVal[val1.intVal] = val3;
-        machine.addDataStackValue(val2);
+        Value.Data[] memory tuple_vals = val2.tupleVal;
+        tuple_vals[val1.intVal] = val3;
+
+        machine.addDataStackValue(Value.newTuple(tuple_vals));
         return true;
     }
 
@@ -927,8 +933,7 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        Value.HashOnly memory hashVal = val1.hash();
-        return (true, hashVal.hash);
+        return (true, val1.hash());
     }
 
     // System operations
@@ -941,13 +946,18 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        return (true, val1.hash().hash);
+
+        if(val1.size <= send_size_limit){
+            return (true, val1.hash());
+        }else{
+            return (true, 0);
+        }
     }
 
     function executeInboxInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
-        Value.HashOnly memory beforeInbox,
+        Value.Data memory beforeInbox,
         uint lowerTimeBound
     )
         internal
@@ -957,9 +967,9 @@ library OneStepProof {
         if (! val1.isInt()) {
             return false;
         }
-        require(lowerTimeBound<val1.intVal && beforeInbox.hash==Value.hashEmptyTuple(),
+        require(lowerTimeBound<val1.intVal && Value.hash(beforeInbox) == Value.hashEmptyTuple(),
             "Inbox instruction was blocked");
-        machine.addDataStackHashValue(beforeInbox);
+        machine.addDataStackValue(beforeInbox);
         return true;
     }
 
@@ -1143,7 +1153,7 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return (0, 0);
         } else {
-            require(false, "Invalid opcode");
+            require(false, "Invalid opcode: opInfo()");
         }
     }
 
@@ -1264,7 +1274,7 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return 10;
         } else {
-            require(false, "Invalid opcode");
+            require(false, "Invalid opcode: opGasCost()");
         }
     }
 
@@ -1286,6 +1296,9 @@ library OneStepProof {
         Machine.Data memory startMachine;
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
+
+        require (valid, "loadMachine(): invalid machine");
+        
         Machine.Data memory endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
         uint8 opCode = uint8(_data.proof[offset + 1]);
@@ -1295,10 +1308,10 @@ library OneStepProof {
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointBasic(
+            startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
-                startMachine.instructionStackHash.hash
-            ));
+                Value.hash(startMachine.instructionStack)
+            );
         } else {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
@@ -1310,11 +1323,11 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointImmediate(
+            startMachine.instructionStack = Value.newCodePoint(
                 uint8(opCode),
-                immediateVal.hash().hash,
-                startMachine.instructionStackHash.hash
-            ));
+                Value.hash(startMachine.instructionStack),
+                Value.hash(immediateVal)
+            );
         }
 
         uint i = 0;
@@ -1339,6 +1352,7 @@ library OneStepProof {
         )
     );
 
+
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
         bool valid;
@@ -1347,6 +1361,7 @@ library OneStepProof {
         Machine.Data memory startMachine;
         Machine.Data memory endMachine;
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
+
         bool correct = true;
         bytes32 messageHash;
         require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
@@ -1427,7 +1442,7 @@ library OneStepProof {
         } else if (opCode == OP_STACKEMPTY) {
             correct = executeStackemptyInsn(endMachine);
         } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
+            correct = executePcpushInsn(endMachine, startMachine.instructionStack);
         } else if (opCode == OP_AUXPUSH) {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
@@ -1496,20 +1511,25 @@ library OneStepProof {
         } else if (opCode == OP_SEND) {
             (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstMessage,
-                            messageHash
-                        )
-                    ) == _data.lastMessage,
-                    "sent message doesn't match output message"
-                );
+                if(messageHash == 0){
+                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, no message should be sent");
+                }else{
+                    require(
+                        keccak256(
+                            abi.encodePacked(
+                                _data.firstMessage,
+                                messageHash
+                            )
+                        ) == _data.lastMessage,
+                        "sent message doesn't match output message"
+                    );
 
-                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                }
             } else {
                 messageHash = 0;
             }
+            
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](4);
             contents[0] = Value.newInt(_data.timeBounds[0]);
@@ -1518,7 +1538,11 @@ library OneStepProof {
             contents[3] = Value.newInt(_data.timeBounds[3]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBounds[0]);
+            correct = executeInboxInsn(
+                endMachine, 
+                stackVals[0], 
+                _data.beforeInbox,
+                _data.timeBounds[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {
@@ -1531,24 +1555,26 @@ library OneStepProof {
         }
 
         if (!correct) {
-            if (endMachine.errHandler.hash == CODE_POINT_ERROR) {
+            if (Value.hash(endMachine.errHandler) == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
-                endMachine.instructionStackHash = endMachine.errHandler;
+                endMachine.instructionStack = endMachine.errHandler;
             }
         }
 
+        require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
+        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
+
         // require(
         //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
+        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
+        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
         // );
-        require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
         // require(
         //     _data.afterHash == endMachine.hash(),
         //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
         //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
         // );
-        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;
     }

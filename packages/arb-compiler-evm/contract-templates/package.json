@@ -14,7 +14,8 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "build": "truffle compile"
+    "build": "truffle compile",
+    "update-templates": "truffle migrate --network arbitrum && cp -f build/contracts/ArbSys.json ../arbitrum/evm && cp -f compiled.json ../arbitrum/evm/contract-templates.json"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^2.5.0",

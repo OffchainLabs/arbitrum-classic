@@ -20,17 +20,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
-func MarshalAssertionForCheckpoint(ctx checkpointing.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
+func MarshalAssertionForCheckpoint(ctx *ckptcontext.CheckpointContext, a *protocol.ExecutionAssertion) *ExecutionAssertionBuf {
 	messages := make([]*common.HashBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
 		ctx.AddValue(msg)
 		messages = append(messages, msg.Hash().MarshalToBuf())
 	}
 	logs := make([]*common.HashBuf, 0, len(a.Logs))
-	for _, msg := range a.OutMsgs {
+	for _, msg := range a.Logs {
 		ctx.AddValue(msg)
 		logs = append(logs, msg.Hash().MarshalToBuf())
 	}
@@ -43,22 +43,22 @@ func MarshalAssertionForCheckpoint(ctx checkpointing.CheckpointContext, a *proto
 	}
 }
 
-func (a *ExecutionAssertionBuf) UnmarshalFromCheckpoint(ctx checkpointing.RestoreContext) *protocol.ExecutionAssertion {
-	messages := make([]value.Value, 0, len(a.Logs))
-	for _, valLog := range a.Messages {
+func (x *ExecutionAssertionBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) *protocol.ExecutionAssertion {
+	messages := make([]value.Value, 0, len(x.Logs))
+	for _, valLog := range x.Messages {
 		val := ctx.GetValue(valLog.Unmarshal())
 		messages = append(messages, val)
 	}
 
-	logs := make([]value.Value, 0, len(a.Logs))
-	for _, valLog := range a.Logs {
+	logs := make([]value.Value, 0, len(x.Logs))
+	for _, valLog := range x.Logs {
 		val := ctx.GetValue(valLog.Unmarshal())
 		logs = append(logs, val)
 	}
 	return &protocol.ExecutionAssertion{
-		AfterHash:    a.AfterHash.Unmarshal(),
-		DidInboxInsn: a.DidInboxInsn,
-		NumGas:       a.NumGas,
+		AfterHash:    x.AfterHash.Unmarshal(),
+		DidInboxInsn: x.DidInboxInsn,
+		NumGas:       x.NumGas,
 		OutMsgs:      messages,
 		Logs:         logs,
 	}

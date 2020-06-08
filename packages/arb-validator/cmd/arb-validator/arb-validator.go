@@ -115,5 +115,5 @@ func createRollupChain() error {
 }
 
 func createManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
-	return rollupmanager.CreateManager(rollupAddress, client, contractFile, dbPath)
+	return rollupmanager.CreateManager(context.Background(), rollupAddress, client, contractFile, dbPath)
 }

@@ -20,8 +20,10 @@ from .types import (
     eth_transfer_message,
     token_transfer_message,
     message,
-    ethbridge_message,
 )
+from . import contract_templates
+
+from eth_utils import function_abi_to_4byte_selector
 
 WITHDRAW_ETH_TYPECODE = 1
 WITHDRAW_ERC20_TYPECODE = 2
@@ -46,76 +48,45 @@ def perform_precompile_call(vm):
     vm.push(224)
     vm.swap1()
     std.bitwise.shift_right(vm)
-    vm.dup0()
-    vm.push(0x1B9A91A4)
-    vm.eq()
-    vm.ifelse(
-        lambda vm: [vm.pop(), withdraw_eth_interrupt(vm)],
-        lambda vm: [
-            vm.dup0(),
-            vm.push(0xA1DB9782),
-            vm.eq(),
+
+    arbsys = contract_templates.get_arbsys()
+    implementations = {
+        "withdrawEth": withdraw_eth_interrupt,
+        "withdrawERC20": withdraw_erc20_interrupt,
+        "withdrawERC721": withdraw_erc721_interrupt,
+        "blockLowerBound": arbsys_block_lower_bound,
+        "timestampLowerBound": arbsys_timestamp_lower_bound,
+        "blockUpperBound": arbsys_block_upper_bound,
+        "timestampUpperBound": arbsys_timestamp_upper_bound,
+        "getTransactionCount": transaction_count_interrupt,
+        "cloneContract": clone_contract_interrupt,
+    }
+
+    def match_selector(func_abi, next_check):
+        def method(vm):
+            vm.dup0()
+            vm.push(
+                int.from_bytes(
+                    function_abi_to_4byte_selector(func_abi), byteorder="big"
+                )
+            )
+            vm.eq()
             vm.ifelse(
-                lambda vm: [vm.pop(), withdraw_erc20_interrupt(vm)],
-                lambda vm: [
-                    vm.dup0(),
-                    vm.push(0xF3E414F8),
-                    vm.eq(),
-                    vm.ifelse(
-                        lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],
-                        lambda vm: [
-                            vm.dup0(),
-                            vm.push(0xBDE19776),
-                            vm.eq(),
-                            vm.ifelse(
-                                lambda vm: [vm.pop(), arbsys_time_upper_bound(vm)],
-                                lambda vm: [
-                                    vm.dup0(),
-                                    vm.push(0x44F50653),
-                                    vm.eq(),
-                                    vm.ifelse(
-                                        lambda vm: [
-                                            vm.pop(),
-                                            arbsys_current_message_time(vm),
-                                        ],
-                                        lambda vm: [
-                                            vm.dup0(),
-                                            vm.push(0x23CA0CD2),
-                                            vm.eq(),
-                                            vm.ifelse(
-                                                lambda vm: [
-                                                    vm.pop(),
-                                                    transaction_count_interrupt(vm),
-                                                ],
-                                                lambda vm: [
-                                                    vm.dup0(),
-                                                    vm.push(0x474ED9C0),
-                                                    vm.eq(),
-                                                    vm.ifelse(
-                                                        lambda vm: [
-                                                            vm.pop(),
-                                                            clone_contract_interrupt(
-                                                                vm
-                                                            ),
-                                                        ],
-                                                        lambda vm: [
-                                                            vm.pop(),
-                                                            vm.pop(),
-                                                            vm.push(0),
-                                                        ],
-                                                    ),
-                                                ],
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
+                lambda vm: [vm.pop(), implementations[func_abi["name"]](vm)], next_check
+            )
+
+        return method
+
+    def no_match(vm):
+        vm.pop()
+        vm.pop()
+        vm.push(0)
+
+    match_func = no_match
+    for func_abi in [x for x in arbsys["abi"] if x["type"] == "function"]:
+        match_func = match_selector(func_abi, match_func)
+
+    match_func(vm)
 
 
 @modifies_stack([local_exec_state.typ], [value.IntType()] * 3)
@@ -220,7 +191,25 @@ def return_one_uint_to_solidity_caller(vm):
 
 
 @modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_time_upper_bound(vm):
+def arbsys_block_lower_bound(vm):
+    vm.pop()
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("block_number")(vm)
+    return_one_uint_to_solidity_caller(vm)
+
+
+@modifies_stack([local_exec_state.typ], [value.IntType()])
+def arbsys_timestamp_lower_bound(vm):
+    vm.pop()
+    os.get_chain_state(vm)
+    os.chain_state.get("global_exec_state")(vm)
+    os.global_exec_state.get("block_timestamp")(vm)
+    return_one_uint_to_solidity_caller(vm)
+
+
+@modifies_stack([local_exec_state.typ], [value.IntType()])
+def arbsys_block_upper_bound(vm):
     vm.pop()
     vm.gettime()
     vm.tgetn(1)
@@ -228,12 +217,10 @@ def arbsys_time_upper_bound(vm):
 
 
 @modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_current_message_time(vm):
+def arbsys_timestamp_upper_bound(vm):
     vm.pop()
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("current_msg")(vm)
-    ethbridge_message.get("block_number")(vm)
+    vm.gettime()
+    vm.tgetn(3)
     return_one_uint_to_solidity_caller(vm)
 
 

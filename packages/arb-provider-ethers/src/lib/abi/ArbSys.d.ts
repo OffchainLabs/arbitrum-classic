@@ -24,9 +24,13 @@ interface ArbSysInterface extends Interface {
       encode([dest, amount]: [string, BigNumberish]): string
     }>
 
-    currentMessageTime: TypedFunctionDescription<{ encode([]: []): string }>
+    blockLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
 
-    timeUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
+    timestampLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
+
+    blockUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
+
+    timestampUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
 
     getTransactionCount: TypedFunctionDescription<{
       encode([account]: [string]): string
@@ -72,9 +76,13 @@ export class ArbSys extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    currentMessageTime(): Promise<BigNumber>
+    blockLowerBound(): Promise<BigNumber>
 
-    timeUpperBound(): Promise<BigNumber>
+    timestampLowerBound(): Promise<BigNumber>
+
+    blockUpperBound(): Promise<BigNumber>
+
+    timestampUpperBound(): Promise<BigNumber>
 
     getTransactionCount(account: string): Promise<BigNumber>
 
@@ -102,9 +110,13 @@ export class ArbSys extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  currentMessageTime(): Promise<BigNumber>
+  blockLowerBound(): Promise<BigNumber>
 
-  timeUpperBound(): Promise<BigNumber>
+  timestampLowerBound(): Promise<BigNumber>
+
+  blockUpperBound(): Promise<BigNumber>
+
+  timestampUpperBound(): Promise<BigNumber>
 
   getTransactionCount(account: string): Promise<BigNumber>
 
@@ -122,9 +134,13 @@ export class ArbSys extends Contract {
 
     withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>
 
-    currentMessageTime(): Promise<BigNumber>
+    blockLowerBound(): Promise<BigNumber>
 
-    timeUpperBound(): Promise<BigNumber>
+    timestampLowerBound(): Promise<BigNumber>
+
+    blockUpperBound(): Promise<BigNumber>
+
+    timestampUpperBound(): Promise<BigNumber>
 
     getTransactionCount(account: string): Promise<BigNumber>
 

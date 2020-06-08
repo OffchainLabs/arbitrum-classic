@@ -31,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/challengetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
@@ -207,29 +206,6 @@ func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbrid
 
 func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
 	return newInboxTopChallenge(address.ToEthAddress(), c.client, c.auth)
-}
-
-func (c *EthArbAuthClient) DeployChallengeTest(ctx context.Context, challengeFactory common.Address) (*ChallengeTester, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth.auth, c.client, challengeFactory.ToEthAddress())
-	if err != nil {
-		return nil, err
-	}
-	if err := waitForReceipt(
-		ctx,
-		c.client,
-		c.auth.auth.From,
-		tx,
-		"DeployChallengeTester",
-	); err != nil {
-		return nil, err
-	}
-	tester, err := NewChallengeTester(testerAddress, c.client, c.auth)
-	if err != nil {
-		return nil, err
-	}
-	return tester, nil
 }
 
 func (c *EthArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {

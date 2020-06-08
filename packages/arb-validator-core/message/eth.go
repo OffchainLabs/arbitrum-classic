@@ -19,10 +19,10 @@ package message
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -30,6 +30,14 @@ type Eth struct {
 	To    common.Address
 	From  common.Address
 	Value *big.Int
+}
+
+func NewRandomEth() Eth {
+	return Eth{
+		To:    common.RandAddress(),
+		From:  common.RandAddress(),
+		Value: common.RandBigInt(),
+	}
 }
 
 func (m Eth) String() string {
@@ -46,7 +54,7 @@ func (m Eth) Equals(other Message) bool {
 		m.Value.Cmp(o.Value) == 0
 }
 
-func (m Eth) Type() MessageType {
+func (m Eth) Type() Type {
 	return EthType
 }
 
@@ -54,7 +62,16 @@ func (m Eth) GetFuncName() string {
 	return "EthTransfer"
 }
 
-func (m Eth) asValue() value.Value {
+func (m Eth) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Uint256(m.Value),
+	)
+}
+
+func (m Eth) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
@@ -96,65 +113,20 @@ func UnmarshalEth(val value.Value) (Eth, error) {
 	}, nil
 }
 
-type DeliveredEth struct {
-	Eth
-	BlockNum   *common.TimeBlocks
-	Timestamp  *big.Int
-	MessageNum *big.Int
-}
-
-func (m DeliveredEth) Equals(other Message) bool {
-	o, ok := other.(DeliveredEth)
-	if !ok {
-		return false
-	}
-	return m.Eth.Equals(o.Eth) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0 &&
-		m.MessageNum.Cmp(o.MessageNum) == 0
-}
-
-func (m DeliveredEth) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m DeliveredEth) deliveredTimestamp() *big.Int {
-	return m.Timestamp
-}
-
-func (m DeliveredEth) CommitmentHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(uint8(m.Type())),
-		hashing.Address(m.To),
-		hashing.Address(m.From),
-		hashing.Uint256(m.Value),
-		hashing.Uint256(m.BlockNum.AsInt()),
-		hashing.Uint256(m.Timestamp),
-		hashing.Uint256(m.MessageNum),
-	)
-}
-
-func (m DeliveredEth) ReceiptHash() common.Hash {
-	return value.NewIntValue(m.MessageNum).ToBytes()
-}
-
-func (m DeliveredEth) CheckpointValue() value.Value {
+func (m Eth) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
-		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
 	return val
 }
 
-func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
+func UnmarshalEthFromCheckpoint(v value.Value) (Eth, error) {
 	tup, ok := v.(value.TupleValue)
-	failRet := DeliveredEth{}
-	if !ok || tup.Len() != 6 {
-		return failRet, errors.New("tx val must be 6-tuple")
+	failRet := Eth{}
+	if !ok || tup.Len() != 3 {
+		return failRet, errors.New("tx val must be 3-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
@@ -171,30 +143,10 @@ func UnmarshalEthFromCheckpoint(v value.Value) (DeliveredEth, error) {
 	if !ok {
 		return failRet, errors.New("chain must be int")
 	}
-	blockNum, _ := tup.GetByInt64(3)
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNum must be int")
-	}
-	timestamp, _ := tup.GetByInt64(4)
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be int")
-	}
-	messageNum, _ := tup.GetByInt64(5)
-	messageNumInt, ok := messageNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("messageNum must be int")
-	}
 
-	return DeliveredEth{
-		Eth: Eth{
-			To:    intValueToAddress(toInt),
-			From:  intValueToAddress(fromInt),
-			Value: valInt.BigInt(),
-		},
-		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
-		Timestamp:  timestampInt.BigInt(),
-		MessageNum: messageNumInt.BigInt(),
+	return Eth{
+		To:    intValueToAddress(toInt),
+		From:  intValueToAddress(fromInt),
+		Value: valInt.BigInt(),
 	}, nil
 }

@@ -14,52 +14,53 @@
  * limitations under the License.
  */
 
-var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
+var OneStepProof = artifacts.require('./arch/OneStepProof.sol')
 
-var MessagesChallenge = artifacts.require("./challenge/MessagesChallenge.sol");
-var InboxTopChallenge = artifacts.require("./challenge/InboxTopChallenge.sol");
-var ExecutionChallenge = artifacts.require(
-  "./challenge/ExecutionChallenge.sol"
-);
-var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
+var MessagesChallenge = artifacts.require('./challenge/MessagesChallenge.sol')
+var InboxTopChallenge = artifacts.require('./challenge/InboxTopChallenge.sol')
+var ExecutionChallenge = artifacts.require('./challenge/ExecutionChallenge.sol')
+var ChallengeFactory = artifacts.require('./factories/ChallengeFactory.sol')
 
-var ArbRollup = artifacts.require("./vm/ArbRollup.sol");
-var ArbFactory = artifacts.require("./vm/ArbFactory.sol");
+var ArbRollup = artifacts.require('./vm/ArbRollup.sol')
+var ArbFactory = artifacts.require('./vm/ArbFactory.sol')
 
-var Value = artifacts.require("./arch/Value.sol");
+var Value = artifacts.require('./arch/Value.sol')
 
-var GlobalInbox = artifacts.require("./GlobalInbox.sol");
+var GlobalInbox = artifacts.require('./GlobalInbox.sol')
 
-module.exports = async function(deployer, network, accounts) {
-  deployer.deploy(OneStepProof);
-  deployer.link(OneStepProof, [ExecutionChallenge]);
+module.exports = async function (deployer, network, accounts) {
+  deployer.deploy(OneStepProof)
+  deployer.link(OneStepProof, [ExecutionChallenge])
 
-  deployer.deploy(Value);
-  deployer.link(Value, [GlobalInbox]);
+  deployer.deploy(Value)
+  deployer.link(Value, [GlobalInbox])
 
-  await deployer.deploy(GlobalInbox);
+  let contractPromises1 = []
+  contractPromises1.push(deployer.deploy(MessagesChallenge))
+  contractPromises1.push(deployer.deploy(InboxTopChallenge))
+  contractPromises1.push(deployer.deploy(ExecutionChallenge))
+  contractPromises1.push(deployer.deploy(ArbRollup))
+  contractPromises1.push(deployer.deploy(GlobalInbox))
 
-  await deployer.deploy(MessagesChallenge);
-  await deployer.deploy(InboxTopChallenge);
-  await deployer.deploy(ExecutionChallenge);
+  await Promise.all(contractPromises1)
+
   await deployer.deploy(
     ChallengeFactory,
     MessagesChallenge.address,
     InboxTopChallenge.address,
     ExecutionChallenge.address
-  );
+  )
 
-  await deployer.deploy(ArbRollup);
   await deployer.deploy(
     ArbFactory,
     ArbRollup.address,
     GlobalInbox.address,
     ChallengeFactory.address
-  );
+  )
 
-  const fs = require("fs");
+  const fs = require('fs')
   let addresses = {
-    ArbFactory: ArbFactory.address
-  };
-  fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
-};
+    ArbFactory: ArbFactory.address,
+  }
+  fs.writeFileSync('bridge_eth_addresses.json', JSON.stringify(addresses))
+}

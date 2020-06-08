@@ -44,19 +44,10 @@ func generateTestERC20() ERC20 {
 	}
 }
 
-func generateTestDeliveredERC20() DeliveredERC20 {
-	return DeliveredERC20{
-		ERC20:      generateTestERC20(),
-		BlockNum:   common.NewTimeBlocks(big.NewInt(64654)),
-		Timestamp:  big.NewInt(65435643),
-		MessageNum: big.NewInt(9675),
-	}
-}
-
 func TestMarshalERC20(t *testing.T) {
 	msg := generateTestERC20()
 
-	msg2, err := UnmarshalERC20(msg.asValue())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -67,9 +58,8 @@ func TestMarshalERC20(t *testing.T) {
 }
 
 func TestCheckpointERC20(t *testing.T) {
-	msg := generateTestDeliveredERC20()
-
-	msg2, err := UnmarshalFromCheckpoint(ERC20Type, msg.CheckpointValue())
+	msg := generateTestERC20()
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

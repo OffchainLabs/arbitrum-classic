@@ -32,7 +32,7 @@ class TransactionDB;
 
 class CheckpointStorage {
    private:
-    std::unique_ptr<DataStorage> datastorage;
+    std::shared_ptr<DataStorage> datastorage;
     InitialVmValues initial_state;
 
    public:
@@ -45,6 +45,8 @@ class CheckpointStorage {
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
+    std::unique_ptr<BlockStore> getBlockStore() const;
+    std::unique_ptr<NodeStore> getNodeStore() const;
 };
 
 #endif /* checkpointstorage_hpp */

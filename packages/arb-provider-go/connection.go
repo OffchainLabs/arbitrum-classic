@@ -2,10 +2,9 @@ package goarbitrum
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
-	"math"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
@@ -13,7 +12,6 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -22,7 +20,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 )
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -38,7 +35,7 @@ type ArbConnection struct {
 func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
-	vmIdStr, err := proxy.GetVMInfo()
+	vmIdStr, err := proxy.GetVMInfo(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -78,16 +75,15 @@ func (conn *ArbConnection) getCurrentNonce(
 	if err != nil {
 		return nil, err
 	}
-	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	num, err := sysConn.GetTransactionCount(
+		&bind.CallOpts{Context: ctx, Pending: true},
+		account,
+	)
 	if err != nil {
 		return nil, err
 	}
 	conn.sequenceNum = num
 	return num, nil
-}
-
-func _nyiError(funcname string) error {
-	return errors.New("goarbitrum error: " + funcname + " not yet implemented")
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -105,34 +101,20 @@ func (conn *ArbConnection) CodeAt(
 		return nil, err
 	}
 	return infoCon.GetCode(&bind.CallOpts{
+		Context:     ctx,
 		BlockNumber: blockNumber,
 	}, contract)
 }
 
-func (conn *ArbConnection) call(
-	ctx context.Context,
-	call ethereum.CallMsg,
-	blockNumber *big.Int,
-) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(*call.To, call.From, call.Data)
+func processCallRet(retValue value.Value) ([]byte, error) {
+	logVal, err := evm.ProcessLog(retValue)
 	if err != nil {
 		return nil, err
 	}
-
-	logVal, err := evm.ProcessLog(retValue, conn.vmId)
-	if err != nil {
-		return nil, err
+	if !logVal.Valid() {
+		return nil, fmt.Errorf("call reverted %v", logVal)
 	}
-	switch logVal := logVal.(type) {
-	case evm.Return:
-		return logVal.ReturnVal, nil
-	case evm.Stop:
-		return []byte{}, nil
-	case evm.Revert:
-		return nil, fmt.Errorf("call reverted with result %v", string(logVal.ReturnVal))
-	default:
-		return nil, fmt.Errorf("call reverted")
-	}
+	return logVal.GetReturnData(), nil
 }
 
 // CallContract executes an Ethereum contract call with the specified data as the
@@ -142,7 +124,11 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	return conn.call(ctx, call, blockNumber)
+	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
+	if err != nil {
+		return nil, err
+	}
+	return processCallRet(retValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -158,13 +144,18 @@ func (conn *ArbConnection) PendingCodeAt(
 		return nil, err
 	}
 	return infoCon.GetCode(&bind.CallOpts{
+		Context: ctx,
 		Pending: true,
 	}, account)
 }
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
 func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
-	return conn.call(ctx, call, nil)
+	retValue, err := conn.proxy.PendingCall(ctx, *call.To, call.From, call.Data)
+	if err != nil {
+		return nil, err
+	}
+	return processCallRet(retValue)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -176,7 +167,7 @@ func (conn *ArbConnection) PendingNonceAt(
 	if err != nil {
 		return 0, err
 	}
-	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Pending: true}, account)
+	num, err := sysConn.GetTransactionCount(&bind.CallOpts{Context: ctx, Pending: true}, account)
 	if err != nil {
 		return 0, err
 	}
@@ -217,31 +208,25 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 
 // FilterLogs executes a log filter operation, blocking during execution and
 // returning all the results in one batch.
-//
-// TODO(karalabe): Deprecate when the subscription one can return past data too.
+
+// TODO: Currently FilterLogs does not properly handle reorgs by replaying undone
+// logs with the removed flag set
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	var ret []types.Log
-	address, topics := _extractAddrTopics(query)
-	logInfos, err := conn.proxy.FindLogs(0, math.MaxInt32, address[:], topics)
+	logInfos, err := conn.proxy.FindLogs(
+		ctx,
+		_extractQueryHeight(query.FromBlock),
+		_extractQueryHeight(query.ToBlock),
+		query.Addresses,
+		query.Topics,
+	)
 	if err != nil {
 		return nil, err
 	}
-	for _, logInfo := range logInfos {
-		outs, err := _decodeLogInfo(logInfo)
-		if err != nil {
-			return nil, err
-		}
-		ok := true
-		for i, targetTopic := range topics {
-			if targetTopic != outs.Topics[i] {
-				ok = false
-			}
-		}
-		if ok {
-			ret = append(ret, *outs)
-		}
+	logs := make([]types.Log, 0, len(logInfos))
+	for _, l := range logInfos {
+		logs = append(logs, *l.ToEVMLog())
 	}
-	return ret, nil
+	return logs, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning
@@ -251,104 +236,36 @@ func (conn *ArbConnection) SubscribeFilterLogs(
 	query ethereum.FilterQuery,
 	ch chan<- types.Log,
 ) (ethereum.Subscription, error) {
-	return newSubscription(conn, query, ch), nil
+	return newSubscription(ctx, conn, query, ch), nil
 }
 
 const subscriptionPollingInterval = 5 * time.Second
 
 type subscription struct {
-	proxy            ValidatorProxy
-	firstBlockUnseen uint64
-	logChan          chan<- types.Log
-	errChan          chan error
-	address          common.Address
-	topics           [][32]byte
-	unsubOnce        *sync.Once
-	closeChan        chan interface{}
-	wg               sync.WaitGroup
+	logChan   chan<- types.Log
+	errChan   chan error
+	unsubOnce *sync.Once
+	closeChan chan interface{}
+	wg        sync.WaitGroup
 }
 
-func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics [][32]byte) {
-	if len(query.Addresses) > 1 {
-		panic("GoArbitrum: subscription can't handle more than one contract address")
+func _extractQueryHeight(val *big.Int) *uint64 {
+	var ret *uint64
+	if val != nil {
+		intVal := val.Uint64()
+		ret = &intVal
 	}
-	addr = common.NewAddressFromEth(query.Addresses[0])
-
-	topics = make([][32]byte, len(query.Topics))
-	for i, sl := range query.Topics {
-		if len(sl) > 1 {
-			panic("GoArbitrum: subscription can't handle ORs of topics")
-		}
-		copy(topics[i][:], sl[0][:])
-	}
-	return
+	return ret
 }
 
-func _decodeLogInfo(ins *validatorserver.LogInfo) (*types.Log, error) {
-	outs := &types.Log{}
-	addr, err := hexutil.Decode(ins.Address)
-	if err != nil {
-		log.Println("_decodeLogInfo error 1:", err)
-		return nil, err
+func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
+	// We will assume that FromBlock is always non-nil
+	if query.FromBlock == nil {
+		query.FromBlock = big.NewInt(0)
 	}
-	copy(outs.Address[:], addr)
-	outs.Topics = make([]ethcommon.Hash, len(ins.Topics))
-	for i, top := range ins.Topics {
-		decodedTopic, err := hexutil.Decode(top)
-		if err != nil {
-			log.Println("_decodeLogInfo error 2:", err)
-			return nil, err
-		}
-		copy(outs.Topics[i][:], decodedTopic)
-	}
-	outs.Data, err = hexutil.Decode(ins.Data)
-	if err != nil {
-		log.Println("_decodeLogInfo error 3:", err)
-		return nil, err
-	}
-	outs.BlockNumber, err = hexutil.DecodeUint64(ins.BlockNumber)
-	if err != nil {
-		log.Println("_decodeLogInfo error 4:", err)
-		return nil, err
-	}
-	hh, err := hexutil.Decode(ins.Address)
-	if err != nil {
-		log.Println("_decodeLogInfo error 5:", err)
-		return nil, err
-	}
-	copy(outs.TxHash[:], hh)
-	txi64, err := hexutil.DecodeUint64(ins.TransactionIndex)
-	if err != nil {
-		log.Println("_decodeLogInfo error 6:", err)
-		log.Println("value was", ins.TransactionIndex)
-		return nil, err
-	}
-	outs.TxIndex = uint(txi64)
-	hh, err = hexutil.Decode(ins.BlockHash)
-	if err != nil {
-		log.Println("_decodeLogInfo error 7:", err)
-		return nil, err
-	}
-	copy(outs.BlockHash[:], hh)
-	iui, err := hexutil.DecodeUint64(ins.LogIndex)
-	if err != nil {
-		log.Println("_decodeLogInfo error 8:", err)
-		return nil, err
-	}
-	outs.Index = uint(iui)
-	outs.Removed = false
-	return outs, nil
-}
-
-func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- types.Log) *subscription {
-	address, topics := _extractAddrTopics(query)
 	sub := &subscription{
-		conn.proxy,
-		0,
 		ch,
 		make(chan error, 1),
-		address,
-		topics,
 		&sync.Once{},
 		make(chan interface{}),
 		sync.WaitGroup{},
@@ -361,35 +278,31 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 		defer ticker.Stop()
 		for {
 			select {
-			case <- sub.closeChan:
+			case <-sub.closeChan:
 				return
-			case <- ticker.C:
-				logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				logInfos, err := conn.proxy.FindLogs(
+					ctx,
+					_extractQueryHeight(query.FromBlock),
+					_extractQueryHeight(query.ToBlock),
+					query.Addresses,
+					query.Topics,
+				)
 				if err != nil {
 					sub.errChan <- err
 					return
 				}
-				for _, logInfo := range logInfos {
-					outs, err := _decodeLogInfo(logInfo)
-					if err != nil {
-						sub.errChan <- err
-						return
-					}
-					ok := true
-					for i, targetTopic := range topics {
-						if targetTopic != outs.Topics[i] {
-							ok = false
-						}
-					}
-					if outs.BlockNumber < sub.firstBlockUnseen {
-						ok = false
-					}
-					if ok {
-						sub.logChan <- *outs
-						if sub.firstBlockUnseen <= outs.BlockNumber {
-							sub.firstBlockUnseen = outs.BlockNumber + 1
-						}
-					}
+				for _, l := range logInfos {
+					sub.logChan <- *l.ToEVMLog()
+				}
+				// We will always receive logs in order by block and always
+				// receive all logs from a given block in a single query.
+				// Therefore the next query can start with block height one
+				// greater than the last log in the previous query
+				if len(logInfos) > 0 {
+					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].Location.NodeHeight + 1)
 				}
 			}
 		}
@@ -422,72 +335,15 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	txInfo, err := conn.proxy.GetMessageResult(ctx, txHash.Bytes())
 	if err != nil {
-		log.Println("TransactionReceipt error:", err)
-		return nil, err
-	} else if !ok {
+		return nil, errors2.Wrap(err, "TransactionReceipt error:")
+	}
+	if txInfo == nil {
 		return nil, ethereum.NotFound
 	}
 
-	processed, err := evm.ProcessLog(result, conn.vmId)
-	if err != nil {
-		log.Println("TransactionReceipt ProcessLog error:", err)
-		return nil, err
-	}
-
-	status := uint64(0)
-	var logs []evm.Log
-	switch res := processed.(type) {
-	case evm.Return:
-		status = 1
-		logs = res.Logs
-	case evm.Stop:
-		status = 1
-		logs = res.Logs
-	default:
-		// Transaction unsuccessful
-	}
-
-	ethMsg := processed.GetEthMsg()
-
-	var evmLogs []*types.Log
-	if logs != nil {
-		for i, l := range logs {
-			addressBytes := l.ContractID.ToBytes()
-
-			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-			for j, t := range l.Topics {
-				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-			}
-
-			evmLogs = append(evmLogs, &types.Log{
-				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
-				Topics:      evmParsedTopics,
-				Data:        l.Data,
-				BlockNumber: ethMsg.BlockNumber.Uint64(),
-				TxHash:      txHash,
-				TxIndex:     0,
-				BlockHash:   txHash,
-				Index:       uint(i),
-				Removed:     false,
-			})
-		}
-	}
-
-	return &types.Receipt{
-		PostState:         []byte{0},
-		Status:            status,
-		CumulativeGasUsed: 1,
-		Bloom:             types.BytesToBloom([]byte{0}),
-		Logs:              evmLogs,
-		TxHash:            txHash,
-		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
-		GasUsed:           1,
-		BlockHash:         txHash,
-		BlockNumber:       ethMsg.BlockNumber,
-		TransactionIndex:  0,
-	}, nil
+	return txInfo.ToEthReceipt()
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {

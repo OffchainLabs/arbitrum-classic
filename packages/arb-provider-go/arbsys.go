@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -28,14 +27,16 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentMessageTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"timeUpperBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"blockLowerBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"blockUpperBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"timestampLowerBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"timestampUpperBound\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
+	"d8541077": "blockLowerBound()",
+	"4baa4a24": "blockUpperBound()",
 	"474ed9c0": "cloneContract(address)",
-	"44f50653": "currentMessageTime()",
 	"23ca0cd2": "getTransactionCount(address)",
-	"bde19776": "timeUpperBound()",
+	"c87fcabb": "timestampLowerBound()",
+	"f5e71ccd": "timestampUpperBound()",
 	"a1db9782": "withdrawERC20(address,uint256)",
 	"f3e414f8": "withdrawERC721(address,uint256)",
 	"1b9a91a4": "withdrawEth(address,uint256)",
@@ -183,35 +184,61 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _ArbSys.Contract.contract.Transact(opts, method, params...)
 }
 
-// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+// BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function currentMessageTime() constant returns(uint256)
-func (_ArbSys *ArbSysCaller) CurrentMessageTime(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function blockLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysCaller) BlockLowerBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _ArbSys.contract.Call(opts, out, "currentMessageTime")
+	err := _ArbSys.contract.Call(opts, out, "blockLowerBound")
 	return *ret0, err
 }
 
-// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+// BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function currentMessageTime() constant returns(uint256)
-func (_ArbSys *ArbSysSession) CurrentMessageTime() (*big.Int, error) {
-	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.CallOpts)
+// Solidity: function blockLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysSession) BlockLowerBound() (*big.Int, error) {
+	return _ArbSys.Contract.BlockLowerBound(&_ArbSys.CallOpts)
 }
 
-// CurrentMessageTime is a free data retrieval call binding the contract method 0x44f50653.
+// BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function currentMessageTime() constant returns(uint256)
-func (_ArbSys *ArbSysCallerSession) CurrentMessageTime() (*big.Int, error) {
-	return _ArbSys.Contract.CurrentMessageTime(&_ArbSys.CallOpts)
+// Solidity: function blockLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysCallerSession) BlockLowerBound() (*big.Int, error) {
+	return _ArbSys.Contract.BlockLowerBound(&_ArbSys.CallOpts)
+}
+
+// BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
+//
+// Solidity: function blockUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysCaller) BlockUpperBound(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ArbSys.contract.Call(opts, out, "blockUpperBound")
+	return *ret0, err
+}
+
+// BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
+//
+// Solidity: function blockUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysSession) BlockUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.BlockUpperBound(&_ArbSys.CallOpts)
+}
+
+// BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
+//
+// Solidity: function blockUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysCallerSession) BlockUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.BlockUpperBound(&_ArbSys.CallOpts)
 }
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) constant returns(uint256)
+// Solidity: function getTransactionCount(address account) view returns(uint256)
 func (_ArbSys *ArbSysCaller) GetTransactionCount(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -223,42 +250,68 @@ func (_ArbSys *ArbSysCaller) GetTransactionCount(opts *bind.CallOpts, account co
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) constant returns(uint256)
+// Solidity: function getTransactionCount(address account) view returns(uint256)
 func (_ArbSys *ArbSysSession) GetTransactionCount(account common.Address) (*big.Int, error) {
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) constant returns(uint256)
+// Solidity: function getTransactionCount(address account) view returns(uint256)
 func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) (*big.Int, error) {
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
-// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+// TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timeUpperBound() constant returns(uint256)
-func (_ArbSys *ArbSysCaller) TimeUpperBound(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function timestampLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysCaller) TimestampLowerBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _ArbSys.contract.Call(opts, out, "timeUpperBound")
+	err := _ArbSys.contract.Call(opts, out, "timestampLowerBound")
 	return *ret0, err
 }
 
-// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+// TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timeUpperBound() constant returns(uint256)
-func (_ArbSys *ArbSysSession) TimeUpperBound() (*big.Int, error) {
-	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.CallOpts)
+// Solidity: function timestampLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysSession) TimestampLowerBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimestampLowerBound(&_ArbSys.CallOpts)
 }
 
-// TimeUpperBound is a free data retrieval call binding the contract method 0xbde19776.
+// TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timeUpperBound() constant returns(uint256)
-func (_ArbSys *ArbSysCallerSession) TimeUpperBound() (*big.Int, error) {
-	return _ArbSys.Contract.TimeUpperBound(&_ArbSys.CallOpts)
+// Solidity: function timestampLowerBound() view returns(uint256)
+func (_ArbSys *ArbSysCallerSession) TimestampLowerBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimestampLowerBound(&_ArbSys.CallOpts)
+}
+
+// TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
+//
+// Solidity: function timestampUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysCaller) TimestampUpperBound(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ArbSys.contract.Call(opts, out, "timestampUpperBound")
+	return *ret0, err
+}
+
+// TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
+//
+// Solidity: function timestampUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysSession) TimestampUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimestampUpperBound(&_ArbSys.CallOpts)
+}
+
+// TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
+//
+// Solidity: function timestampUpperBound() view returns(uint256)
+func (_ArbSys *ArbSysCallerSession) TimestampUpperBound() (*big.Int, error) {
+	return _ArbSys.Contract.TimestampUpperBound(&_ArbSys.CallOpts)
 }
 
 // CloneContract is a paid mutator transaction binding the contract method 0x474ed9c0.

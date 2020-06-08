@@ -20,6 +20,7 @@ import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 import "../Messages.sol";
 
 
@@ -86,12 +87,16 @@ contract MessagesChallenge is BisectionChallenge {
         );
     }
 
+    // addresses
+    //  chain
+    //  to
+    //  from
+
     function oneStepProofTransactionMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        address _chain,
-        address _to,
-        address _from,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
+        address[3] memory _addresses,
         uint256 _seqNumber,
         uint256 _value,
         bytes memory _data,
@@ -103,37 +108,41 @@ contract MessagesChallenge is BisectionChallenge {
     {
 
         bytes32 messageHash = Messages.transactionHash(
-            _chain,
-            _to,
-            _from,
+            _addresses[0],
+            _addresses[1],
+            _addresses[2],
+            _seqNumber,
+            _value,
+            keccak256(_data)
+        );
+        Value.Data memory dataValue = Value.bytesToBytestackHash(_data, 0, _data.length);
+        (Value.Data memory arbMessage, bytes32 receiptHash) = Messages.transactionMessageValue(
+            _addresses[0],
+            _addresses[1],
+            _addresses[2],
             _seqNumber,
             _value,
             keccak256(_data),
-            _blockNumber,
-            _timestamp
+            dataValue
         );
-        bytes32 arbMessageHash = Messages.transactionMessageHash(
-            _chain,
-            _to,
-            _from,
-            _seqNumber,
-            _value,
-            _data,
-            _blockNumber,
-            _timestamp
-        );
+
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            uint256(receiptHash)
         );
     }
 
     function oneStepProofEthMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -148,31 +157,31 @@ contract MessagesChallenge is BisectionChallenge {
         bytes32 messageHash = Messages.ethHash(
             _to,
             _from,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
-        bytes32 arbMessageHash = Messages.ethMessageHash(
+        Value.Data memory arbMessage = Messages.ethMessageValue(
             _to,
             _from,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
+
+       Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
     function oneStepProofERC20Message(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         address _erc20,
@@ -189,32 +198,32 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _erc20,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
-        bytes32 arbMessageHash = Messages.erc20MessageHash(
+        Value.Data memory arbMessage = Messages.erc20MessageValue(
             _to,
             _from,
             _erc20,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
+
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
     function oneStepProofERC721Message(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         address _erc721,
@@ -231,32 +240,32 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _erc721,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
-        bytes32 arbMessageHash = Messages.erc721MessageHash(
+        Value.Data memory arbMessage = Messages.erc721MessageValue(
             _to,
             _from,
             _erc721,
-            _value,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _value
         );
+
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
     function oneStepProofContractTransactionMessage(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
         address _to,
         address _from,
         uint256 _value,
@@ -273,48 +282,46 @@ contract MessagesChallenge is BisectionChallenge {
             _to,
             _from,
             _value,
-            _data,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _data
         );
-        bytes32 arbMessageHash = Messages.contractTransactionMessageHash(
+
+        Value.Data memory arbMessage = Messages.contractTransactionMessageValue(
             _to,
             _from,
             _value,
-            _data,
-            _blockNumber,
-            _timestamp,
-            _messageNum
+            _data
         );
+
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
 
         oneStepProof(
             _lowerHashA,
-            _lowerHashB,
+            _lowerHashBValue,
             messageHash,
-            arbMessageHash
+            arbMessage,
+            _blockNumber,
+            _timestamp,
+            _messageNum
         );
     }
 
     function oneStepProofTransactionBatchMessage(
         bytes32 lowerHashA,
-        bytes32 lowerHashB,
+        bytes32 preImageBHash,
+        uint256 preImageBSize,
         address chain,
         bytes memory transactions,
         uint256 blockNum,
-        uint256 blockTimestamp
+        uint256 blockTimestamp,
+        uint256 messageNum
     )
         public
         asserterAction
     {
-        bytes32 messageHash = Messages.transactionBatchHash(
-            transactions,
-            blockNum,
-            blockTimestamp
-        );
-
+        bytes32 messageHash = Messages.transactionBatchHash(transactions);
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
-            lowerHashB,
+            preImageBHash,
+            preImageBSize,
             chain,
             transactions,
             blockNum,
@@ -324,8 +331,14 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 lowerHashA,
-                Protocol.addMessageToInbox(lowerHashA, messageHash),
-                lowerHashB,
+                Messages.addMessageToInbox(
+                    lowerHashA,
+                    messageHash,
+                    blockNum,
+                    blockTimestamp,
+                    messageNum
+                ),
+                preImageBHash,
                 afterInboxHash,
                 1
             )
@@ -335,18 +348,34 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProof(
         bytes32 _lowerHashA,
-        bytes32 _lowerHashB,
-        bytes32 _valueHashA,
-        bytes32 _valueHashB
+        Value.Data memory _lowerHashBValue,
+        bytes32 _messageHashA,
+        Value.Data memory _messageB,
+        uint256 _blockNum,
+        uint256 _blockTimestamp,
+        uint256 _messageNum
     )
         private
     {
+        Value.Data memory inbox = Messages.addMessageToVMInboxHash(
+            _lowerHashBValue,
+            _blockNum,
+            _blockTimestamp,
+            _messageNum,
+            _messageB
+        );
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _lowerHashA,
-                Protocol.addMessageToInbox(_lowerHashA, _valueHashA),
-                _lowerHashB,
-                Protocol.addMessageToVMInbox(_lowerHashB, _valueHashB),
+                Messages.addMessageToInbox(
+                    _lowerHashA,
+                    _messageHashA,
+                    _blockNum,
+                    _blockTimestamp,
+                    _messageNum
+                ),
+                Value.hash(_lowerHashBValue),
+                Value.hash(inbox),
                 1
             )
         );

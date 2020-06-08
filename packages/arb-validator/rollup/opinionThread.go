@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"time"
@@ -29,13 +30,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-type preparedAssertion struct {
-	leafHash         common.Hash
-	prevPrevLeafHash common.Hash
-	prevDataHash     common.Hash
-	prevDeadline     common.TimeTicks
-	prevChildType    valprotocol.ChildType
-
+type PreparedAssertion struct {
+	prev        *structures.Node
 	beforeState *valprotocol.VMProtoData
 	params      *valprotocol.AssertionParams
 	claim       *valprotocol.AssertionClaim
@@ -43,36 +39,47 @@ type preparedAssertion struct {
 	machine     machine.Machine
 }
 
-func (pa *preparedAssertion) Clone() *preparedAssertion {
-	return &preparedAssertion{
-		leafHash:         pa.leafHash,
-		prevPrevLeafHash: pa.prevPrevLeafHash,
-		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     pa.prevDeadline.Clone(),
-		prevChildType:    pa.prevChildType,
-		beforeState:      pa.beforeState.Clone(),
-		params:           pa.params.Clone(),
-		claim:            pa.claim.Clone(),
-		assertion:        pa.assertion,
-		machine:          pa.machine,
+func (pa *PreparedAssertion) Clone() *PreparedAssertion {
+	return &PreparedAssertion{
+		prev:        pa.prev,
+		beforeState: pa.beforeState.Clone(),
+		params:      pa.params.Clone(),
+		claim:       pa.claim.Clone(),
+		assertion:   pa.assertion,
+		machine:     pa.machine,
 	}
+}
+
+func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
+	node := structures.NewValidNodeFromPrev(
+		pa.prev,
+		valprotocol.NewDisputableNode(
+			pa.params,
+			pa.claim,
+			common.Hash{},
+			big.NewInt(0),
+		),
+		chainParams,
+		common.BlocksFromSeconds(time.Now().Unix()),
+		common.Hash{},
+	)
+	_ = node.UpdateValidOpinion(pa.machine, pa.assertion)
+	return node
 }
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
-		assertionPreparedChan := make(chan *preparedAssertion, 20)
+		assertionPreparedChan := make(chan *PreparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
-		preparedAssertions := make(map[common.Hash]*preparedAssertion)
+		preparedAssertions := make(map[common.Hash]*PreparedAssertion)
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
-			currentHash := currentOpinion.hash
+			currentHash := currentOpinion.Hash()
 			log.Println("Building opinion on top of", currentHash)
-			successorHashes := [4]common.Hash{}
-			copy(successorHashes[:], currentOpinion.successorHashes[:])
-			successor := func() *Node {
-				for _, successor := range currentOpinion.successorHashes {
+			successorHashes := currentOpinion.SuccessorHashes()
+			successor := func() *structures.Node {
+				for _, successor := range successorHashes {
 					if successor != zeroBytes32 {
 						return chain.nodeGraph.nodeFromHash[successor]
 					}
@@ -89,76 +96,73 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			var validExecution *protocol.ExecutionAssertion
 			prepped, found := preparedAssertions[currentHash]
 
-			if successor.disputable == nil {
+			disputable := successor.Disputable()
+
+			if disputable == nil {
 				panic("Node was created with disputable assertion")
 			}
 
 			if found &&
-				prepped.params.Equals(successor.disputable.AssertionParams) &&
-				prepped.claim.Equals(successor.disputable.AssertionClaim) {
+				prepped.params.Equals(disputable.AssertionParams) &&
+				prepped.claim.Equals(disputable.AssertionClaim) {
 				newOpinion = valprotocol.ValidChildType
 				nextMachine = prepped.machine
 				validExecution = prepped.assertion
 				chain.RUnlock()
 			} else {
-				params := successor.disputable.AssertionParams.Clone()
-				claim := successor.disputable.AssertionClaim.Clone()
-				prevInboxCount := new(big.Int).Set(currentOpinion.vmProtoData.InboxCount)
+				params := disputable.AssertionParams.Clone()
+				claim := disputable.AssertionClaim.Clone()
+				prevInboxCount := new(big.Int).Set(currentOpinion.VMProtoData().InboxCount)
 				afterInboxTopHeight := new(big.Int).Add(prevInboxCount, params.ImportedMessageCount)
 				afterInboxTopVal, err := chain.inbox.GetHashAtIndex(afterInboxTopHeight)
 				var afterInboxTop *common.Hash
 				if err == nil {
 					afterInboxTop = &afterInboxTopVal
 				}
-				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
+				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
-				nextMachine = currentOpinion.machine.Clone()
+				nextMachine = currentOpinion.Machine().Clone()
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
-			preparedAssertions = make(map[common.Hash]*preparedAssertion)
+			preparedAssertions = make(map[common.Hash]*PreparedAssertion)
 
 			chain.RLock()
-			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
-			if ok {
+			correctNode := chain.nodeGraph.GetSuccessor(currentOpinion, newOpinion)
+			if correctNode != nil {
 				chain.RUnlock()
 				chain.Lock()
 				if newOpinion == valprotocol.ValidChildType {
-					correctNode.machine = nextMachine
-					correctNode.assertion = validExecution
+					_ = correctNode.UpdateValidOpinion(nextMachine, validExecution)
 				} else {
-					correctNode.machine = currentOpinion.machine.Clone()
+					_ = correctNode.UpdateInvalidOpinion()
 				}
-				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.machine.Hash())
+				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.Machine().Hash())
 				chain.calculatedValidNode = correctNode
-				if correctNode.depth > chain.knownValidNode.depth {
+				if correctNode.Depth() > chain.knownValidNode.Depth() {
 					chain.knownValidNode = correctNode
 				}
 				chain.Unlock()
 				chain.RLock()
-				if newOpinion == valprotocol.ValidChildType {
-					for _, lis := range chain.listeners {
-						lis.AdvancedKnownAssertion(ctx, chain, validExecution, correctNode.assertionTxHash)
-					}
-				}
 				for _, listener := range chain.listeners {
-					listener.AdvancedCalculatedValidNode(ctx, chain, correctNode.hash)
+					listener.AdvancedKnownNode(ctx, chain, correctNode)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
 			}
 		}
 
+		ticker := time.NewTicker(time.Second)
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case prepped := <-assertionPreparedChan:
-				preparedAssertions[prepped.leafHash] = prepped
+				preparedAssertions[prepped.prev.Hash()] = prepped
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
@@ -177,31 +181,36 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					break
 				}
 				// Prepare next assertion
-				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
+				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
 				if !isPreparing {
-					newMessages := chain.calculatedValidNode.vmProtoData.InboxTop != chain.inbox.GetTopHash()
-					if chain.calculatedValidNode.machine != nil &&
-						chain.calculatedValidNode.machine.IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
-						preparingAssertions[chain.calculatedValidNode.hash] = true
+					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.inbox.GetTopHash()
+					if chain.calculatedValidNode.Machine() != nil &&
+						chain.calculatedValidNode.Machine().IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
+						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
 							assertionPreparedChan <- chain.prepareAssertion()
 						}()
 					}
 				} else {
-					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
+					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						lowerBoundBlock := prepared.params.TimeBounds.LowerBoundBlock
 						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
 						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 && endCushion.Cmp(upperBoundBlock) <= 0 {
+							chain.RUnlock()
+							chain.Lock()
+							chain.pendingState = prepared.machine
+							chain.Unlock()
+							chain.RLock()
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(ctx, chain, prepared.Clone())
 							}
 						} else {
 							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", lowerBoundBlock.AsInt(), upperBoundBlock.AsInt(), chain.latestBlockId.Height.AsInt())
 							// Prepared assertion is out of date
-							delete(preparingAssertions, chain.calculatedValidNode.hash)
-							delete(preparedAssertions, chain.calculatedValidNode.hash)
+							delete(preparingAssertions, chain.calculatedValidNode.Hash())
+							delete(preparedAssertions, chain.calculatedValidNode.Hash())
 						}
 					}
 				}
@@ -212,15 +221,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
+func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
-	currentOpinionHash := currentOpinion.hash
-	prevPrevLeafHash := currentOpinion.PrevHash()
-	prevDataHash := currentOpinion.nodeDataHash
-	prevDeadline := common.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
-	prevChildType := currentOpinion.linkType
-	beforeState := currentOpinion.vmProtoData.Clone()
+	beforeState := currentOpinion.VMProtoData().Clone()
 	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
 		return nil
 	}
@@ -230,7 +234,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 
 	inbox, _ := chain.inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
-	mach := currentOpinion.machine.Clone()
+	mach := currentOpinion.Machine().Clone()
 	timeBounds := chain.currentTimeBounds()
 	log.Println("timeBounds: ", timeBounds.LowerBoundBlock.String(), timeBounds.UpperBoundBlock.String())
 	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
@@ -257,7 +261,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		blockReason,
 		timeBounds.LowerBoundBlock.AsInt(),
 		timeBounds.UpperBoundBlock.AsInt(),
-		currentOpinionHash,
+		currentOpinion.Hash(),
 	)
 
 	var params *valprotocol.AssertionParams
@@ -270,7 +274,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
-			ImportedMessagesSlice: inbox.Hash(),
+			ImportedMessagesSlice: inbox.Hash().Hash(),
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
@@ -285,17 +289,13 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	}
-	return &preparedAssertion{
-		leafHash:         currentOpinionHash,
-		prevPrevLeafHash: prevPrevLeafHash,
-		prevDataHash:     prevDataHash,
-		prevDeadline:     prevDeadline,
-		prevChildType:    prevChildType,
-		beforeState:      beforeState,
-		params:           params,
-		claim:            claim,
-		assertion:        assertion,
-		machine:          mach,
+	return &PreparedAssertion{
+		prev:        currentOpinion,
+		beforeState: beforeState,
+		params:      params,
+		claim:       claim,
+		assertion:   assertion,
+		machine:     mach,
 	}
 }
 

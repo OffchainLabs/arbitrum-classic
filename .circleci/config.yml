@@ -60,6 +60,11 @@ workflows:
             - go-deps
             - cpp-avm
             - ethbridge
+      - backend-integration:
+          requires:
+            - go-deps
+            - cpp-avm
+            - ethbridge
 jobs:
   go-deps:
     docker:
@@ -93,12 +98,7 @@ jobs:
       - run:
           name: test arb-compiler-evm
           command: |
-            python3 setup.py nosetests --processes=2 --process-timeout=60 --with-coverage --cover-package=arbitrum
-          # cd tests/sol-syscall
-          # truffle migrate --reset --compile-all --network arbitrum
-          # coverage run --source=/home/user/project truffle_runner.py compiled.json
-          # cd ../..
-          # coverage combine .coverage tests/sol-syscall/.coverage
+            python3 setup.py nosetests --processes=2 --process-timeout=120 --with-coverage --cover-package=arbitrum --with-xunit --xunit-file=${TEST_RESULTS}/arb-compiler-evm.xml
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
           name: test arb-provider-ethers
@@ -106,7 +106,8 @@ jobs:
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-ethers.xml"
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-ethers.xml
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
           name: test arb-provider-web3
@@ -114,7 +115,8 @@ jobs:
             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-web3.xml"
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-web3.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
           name: test arb-provider-truffle
@@ -122,9 +124,13 @@ jobs:
             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-truffle.xml
           working_directory: /home/user/project/packages/arb-provider-truffle
-      - run: codecovbash -R /home/user/project
+      - run:
+          name: Upload Coverage to Codecov
+          command: codecovbash
+          working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
   ethbridge:
@@ -135,7 +141,7 @@ jobs:
       - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
       - run:
           command: |
-            yarn --production
+            yarn
             echo arbitrum > ~/password.txt
             mkdir data
             geth --datadir data init geth/ethbridge.json
@@ -145,6 +151,7 @@ jobs:
           command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/arb-bridge-eth
+      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test arb-bridge-eth
           command: |
@@ -191,7 +198,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.2.1
+      - image: offchainlabs/backend-base:0.2.3
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -215,6 +222,7 @@ jobs:
           command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test arb-util
           command: |
@@ -267,6 +275,37 @@ jobs:
             cd arb-provider-go
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-provider-go
+      - run: codecovbash -R /home/user/project -c -F unit
+      - store_test_results:
+          path: *test-path
+
+  backend-integration:
+    docker:
+      - image: offchainlabs/backend-base:0.2.3
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+      - attach_workspace:
+          at: /home/user/workspace
+      - run:
+          command: |
+            echo arbitrum > ~/password.txt
+            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
+            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
+      - restore_cache: *restore_go_cache
+      - run:
+          command: |
+            cd packages/arb-validator
+            export CGO_LDFLAGS="-lgcov --coverage"
+            go install -v ./...
+      - run:
+          name: start geth
+          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
+          background: true
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test fibgo
           command: |
@@ -275,6 +314,6 @@ jobs:
             cd ../tests/fibgo
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/fibgo.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages
-      - run: codecovbash -R /home/user/project
+      - run: codecovbash -R /home/user/project -c -F integration
       - store_test_results:
           path: *test-path

@@ -22,25 +22,27 @@
 #include <vector>
 
 #include <data_storage/keyvaluestore.hpp>
+#include <data_storage/storageresultfwd.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-struct GetResults;
+class BlockStore;
+class NodeStore;
 
 class DataStorage {
-   private:
+   public:
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> default_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> node_column;
 
-   public:
     DataStorage(const std::string& db_path);
-    ~DataStorage();
     rocksdb::Status closeDb();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
-    std::unique_ptr<KeyValueStore> makeKeyValueStore();
 };
 
 #endif /* datastorage_hpp */

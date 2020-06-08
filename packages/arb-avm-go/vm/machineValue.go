@@ -41,7 +41,7 @@ func (r *MachineValue) Clone() *MachineValue {
 	return &MachineValue{r.value.Clone(), r.size}
 }
 
-func (r *MachineValue) ProofValue() value.Value {
+func (r *MachineValue) ProofValue() value.HashOnlyValue {
 	return value.NewHashOnlyValueFromValue(r.value)
 }
 

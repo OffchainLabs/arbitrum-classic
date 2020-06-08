@@ -49,18 +49,10 @@ func generateTestTransaction() Transaction {
 	}
 }
 
-func generateTestDeliveredTransaction() DeliveredTransaction {
-	return DeliveredTransaction{
-		Transaction: generateTestTransaction(),
-		BlockNum:    common.NewTimeBlocks(big.NewInt(64654)),
-		Timestamp:   big.NewInt(65435643),
-	}
-}
-
 func TestMarshalTransaction(t *testing.T) {
 	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalTransaction(msg.asValue(), generateTestChain())
+	msg2, err := UnmarshalExecuted(msg.Type(), msg.AsInboxValue(), generateTestChain())
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,9 +63,9 @@ func TestMarshalTransaction(t *testing.T) {
 }
 
 func TestCheckpointTransaction(t *testing.T) {
-	msg := generateTestDeliveredTransaction()
+	msg := generateTestTransaction()
 
-	msg2, err := UnmarshalFromCheckpoint(TransactionType, msg.CheckpointValue())
+	msg2, err := UnmarshalFromCheckpoint(msg.Type(), msg.CheckpointValue())
 	if err != nil {
 		t.Error(err)
 	}

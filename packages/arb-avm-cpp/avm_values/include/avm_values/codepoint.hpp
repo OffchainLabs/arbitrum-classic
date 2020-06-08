@@ -60,6 +60,7 @@ struct CodePoint {
         return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
                 (nextHash != 0));
     }
+    int getSize() const { return 1; }
 };
 
 CodePoint getErrCodePoint();

@@ -17,278 +17,251 @@
 package rollupvalidator
 
 import (
+	"context"
+	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
-	"math/big"
-	"strconv"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
-type validatorRequest interface {
-}
-
-type assertionCountRequest struct {
-	resultChan chan<- int
-}
-
-type txRequest struct {
-	txHash     common.Hash
-	resultChan chan<- txInfo
-}
-
-type findLogsRequest struct {
-	fromHeight *int64
-	toHeight   *int64
-	address    *big.Int
-	topics     []common.Hash
-
-	resultChan chan<- []*validatorserver.LogInfo
-}
-
-type logsInfo struct {
-	msg  evm.EthBridgeMessage
-	Logs []evm.Log
-}
-
-type txInfo struct {
-	Found          bool
-	assertionIndex int
-	RawVal         value.Value
-	LogsPreHash    string
-	LogsPostHash   string
-	LogsValHashes  []string
-	OnChainTxHash  string
-}
-
-type assertionInfo struct {
-	TxLogs            []logsInfo
-	LogsAccHashes     []string
-	LogsValHashes     []string
-	SequenceNum       uint64
-	BeforeHash        common.Hash
-	OriginalInboxHash common.Hash
-}
-
 type logResponse struct {
-	Log evm.Log
-	Msg evm.EthBridgeMessage
+	Log     evm.Log
+	TxIndex uint64
+	TxHash  common.Hash
 }
 
-func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logResponse {
-	logs := make([]logResponse, 0)
-	for _, txLogs := range a.TxLogs {
-		for _, evmLog := range txLogs.Logs {
-			if address != nil && !value.NewIntValue(address).Equal(evmLog.ContractID) {
-				continue
-			}
-
-			if len(topics) > len(evmLog.Topics) {
-				continue
-			}
-
-			match := true
-			for i, topic := range topics {
-				if topic != evmLog.Topics[i] {
-					match = false
-					break
-				}
-			}
-			if match {
-				logs = append(logs, logResponse{evmLog, txLogs.msg})
-			}
-		}
-	}
-	return logs
+func (l logResponse) Equals(o logResponse) bool {
+	return l.Log.Equals(o.Log) &&
+		l.TxIndex == o.TxIndex &&
+		l.TxHash == o.TxHash
 }
 
-func newAssertionInfo() *assertionInfo {
-	return &assertionInfo{}
-}
-
+// txTracker is thread safe
 type txTracker struct {
-	txRequestIndex int
-	transactions   map[common.Hash]txInfo
-	assertionInfo  []*assertionInfo
-	accountNonces  map[common.Address]uint64
-	vmID           common.Address
-	requests       chan validatorRequest
+	rollup.NoopListener
+	chainAddress common.Address
+
+	// The RWMutex protects the variables listed below it
+	sync.RWMutex
+	txDB          *txDB
+	maxNodeHeight uint64
+	initialized   bool
 }
 
 func newTxTracker(
-	vmID common.Address,
-) *txTracker {
-	requests := make(chan validatorRequest, 100)
-	return &txTracker{
-		txRequestIndex: 0,
-		transactions:   make(map[common.Hash]txInfo),
-		assertionInfo:  make([]*assertionInfo, 0),
-		accountNonces:  make(map[common.Address]uint64),
-		vmID:           vmID,
-		requests:       requests,
+	db machine.CheckpointStorage,
+	ns machine.NodeStore,
+) (*txTracker, error) {
+	txdb, err := newTxDB(db, ns)
+	if err != nil {
+		return nil, err
 	}
+	return &txTracker{
+		txDB:          txdb,
+		maxNodeHeight: 0,
+		initialized:   false,
+	}, nil
 }
 
-func (tr *txTracker) AssertionCount() <-chan int {
-	req := make(chan int, 1)
-	tr.requests <- assertionCountRequest{req}
-	return req
+// Delete assertion and transaction data from the reorged blocks if there are any
+func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+	startDepth := node.Depth()
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+		tr.txDB.pendingTransactions = make(map[common.Hash]*evm.TxInfo)
+		// First remove any data from reorged nodes
+		for i := tr.maxNodeHeight; i > startDepth; i-- {
+			if err := tr.txDB.removeUnconfirmedNode(i); err != nil {
+				continue
+			}
+		}
+		tr.maxNodeHeight = startDepth
+	}()
 }
 
-func (tr *txTracker) TxInfo(txHash common.Hash) <-chan txInfo {
-	req := make(chan txInfo, 1)
-	tr.requests <- txRequest{txHash, req}
-	return req
+// AddedToChain is called when this listener is initially added to the
+// chain. If the listener was already added to a previous chain observer, we
+// must be restarting after a reorg and this function does nothing. When this
+// method is called for the first time, it processes all nodes that are valid,
+// but have not yet been confirmed and saved into the longterm db
+func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver) {
+	tr.Lock()
+	if tr.initialized {
+		tr.Unlock()
+		return
+	}
+	tr.initialized = true
+	nodesToProcess := chain.PendingCorrectNodes()
+	go func() {
+		defer tr.Unlock()
+		for _, node := range nodesToProcess {
+			_ = tr.processNextNode(node)
+		}
+	}()
+}
+
+func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+		_ = tr.processNextNode(node)
+	}()
+}
+
+func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObserver, prepared *rollup.PreparedAssertion) {
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
+		nodeInfo, err := processNode(possibleNode)
+		if err != nil {
+			log.Println("Prepared assertion with invalid data", err)
+			return
+		}
+		tr.txDB.addPendingNode(nodeInfo)
+	}()
+}
+
+func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, ev arbbridge.ConfirmedEvent) {
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+
+		if err := tr.txDB.confirmNode(ev.NodeHash); err != nil {
+			log.Println(err)
+			return
+		}
+	}()
+}
+
+// processNextNode must be called with a write lock
+func (tr *txTracker) processNextNode(node *structures.Node) error {
+	// We must have already processed this node if it is olded than the latest
+	// node that we've seen
+	sawOldNode := node.Depth() < tr.maxNodeHeight
+	if sawOldNode {
+		return nil
+	}
+	nodeInfo, err := processNode(node)
+	if err != nil {
+		return err
+	}
+	if err := tr.txDB.addUnconfirmedNode(nodeInfo); err != nil {
+		return err
+	}
+	tr.maxNodeHeight = node.Depth()
+	return nil
+}
+
+func (tr *txTracker) OutputMsgVal(ctx context.Context, nodeHash common.Hash, msgIndex int64) (value.Value, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+
+	height, err := tr.txDB.lookupNodeHeight(nodeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeData, err := tr.txDB.lookupNodeRecord(height, nodeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if msgIndex < 0 || msgIndex >= int64(len(nodeData.AVMMessages)) {
+		return nil, err
+	}
+	return nodeData.AVMMessages[msgIndex], nil
+}
+
+func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (*evm.TxInfo, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	return tr.txDB.lookupTxInfo(txHash)
+}
+
+func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return 0, errors.New("call timed out")
+	default:
+	}
+	return tr.maxNodeHeight, nil
 }
 
 func (tr *txTracker) FindLogs(
-	fromHeight *int64,
-	toHeight *int64,
-	address *big.Int,
-	topics []common.Hash,
-) <-chan []*validatorserver.LogInfo {
-	req := make(chan []*validatorserver.LogInfo, 1)
-	tr.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
-	return req
-}
-
-func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAssertion) {
-	info := newAssertionInfo()
-
-	zero := common.Hash{}
-	logsPreHash := hexutil.Encode(zero[:])
-
-	disputableTxHash := hexutil.Encode(assertion.OnChainTxHash[:])
-
-	logs := assertion.Assertion.Logs
-	info.LogsValHashes = make([]string, 0, len(logs))
-	info.LogsAccHashes = make([]string, 0, len(logs))
-	acc := common.Hash{}
-	for _, logsVal := range logs {
-		logsValHash := logsVal.Hash()
-		info.LogsValHashes = append(info.LogsValHashes,
-			hexutil.Encode(logsValHash[:]))
-		acc = hashing.SoliditySHA3(
-			hashing.Bytes32(acc),
-			hashing.Bytes32(logsValHash),
-		)
-		info.LogsAccHashes = append(info.LogsAccHashes,
-			hexutil.Encode(acc.Bytes()))
+	ctx context.Context,
+	fromHeight *uint64,
+	toHeight *uint64,
+	address []common.Address,
+	topics [][]common.Hash,
+) ([]evm.FullLog, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	startHeight := uint64(0)
+	endHeight := tr.maxNodeHeight
+	if fromHeight != nil && *fromHeight > 0 {
+		startHeight = *fromHeight
+	}
+	if toHeight != nil {
+		altEndHeight := *toHeight + 1
+		if endHeight > altEndHeight {
+			endHeight = altEndHeight
+		}
+	}
+	logs := make([]evm.FullLog, 0)
+	if startHeight >= tr.maxNodeHeight {
+		return logs, nil
 	}
 
-	var logsPostHash string
-	if len(logs) > 0 {
-		logsPostHash = info.LogsAccHashes[len(info.LogsAccHashes)-1]
-	} else {
-		logsPostHash = hexutil.Encode(zero[:])
-	}
-
-	for i, logVal := range logs {
-		if i > 0 {
-			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
+	for i := startHeight; i <= endHeight; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("call timed out")
+		default:
 		}
-		logsValHashes := info.LogsValHashes[i+1:] // log acc hashes after logVal
-
-		txInfo := txInfo{
-			Found:          true,
-			assertionIndex: len(tr.assertionInfo),
-			RawVal:         logVal,
-			LogsPreHash:    logsPreHash,
-			LogsPostHash:   logsPostHash,
-			LogsValHashes:  logsValHashes,
-			OnChainTxHash:  disputableTxHash,
-		}
-
-		evmVal, err := evm.ProcessLog(logVal, tr.vmID)
+		nodeHash, err := tr.txDB.lookupNodeHash(i)
 		if err != nil {
-			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue
 		}
-		switch evmVal := evmVal.(type) {
-		case evm.Stop:
-			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
-		case evm.Return:
-			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
-		case evm.Revert:
-			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
+		metadata, err := tr.txDB.lookupNodeMetadata(i, nodeHash)
+		if err != nil {
+			continue
 		}
 
-		msg := evmVal.GetEthMsg()
-		log.Println("Coordinator got response for", hexutil.Encode(msg.TxHash[:]))
-		tr.transactions[msg.TxHash] = txInfo
+		if !metadata.MaybeMatchesLogQuery(address, topics) {
+			continue
+		}
+
+		info, err := tr.txDB.lookupNodeRecord(i, nodeHash)
+		if err != nil {
+			continue
+		}
+		logs = append(logs, info.FindLogs(address, topics)...)
 	}
-	tr.assertionInfo = append(tr.assertionInfo, info)
-}
-
-func (tr *txTracker) processRequest(request validatorRequest) {
-	switch request := request.(type) {
-	case assertionCountRequest:
-		request.resultChan <- len(tr.assertionInfo) - 1
-	case txRequest:
-		tx, ok := tr.transactions[request.txHash]
-		if ok {
-			request.resultChan <- tx
-		} else {
-			request.resultChan <- txInfo{Found: false}
-		}
-	case findLogsRequest:
-		startHeight := int64(0)
-		endHeight := int64(len(tr.assertionInfo))
-		if request.fromHeight != nil && *request.fromHeight > int64(0) {
-			startHeight = *request.fromHeight
-		}
-		if request.toHeight != nil {
-			altEndHeight := *request.toHeight + 1
-			if endHeight > altEndHeight {
-				endHeight = altEndHeight
-			}
-		}
-		logs := make([]*validatorserver.LogInfo, 0)
-		if startHeight >= int64(len(tr.assertionInfo)) {
-			request.resultChan <- logs
-			break
-		}
-		assertions := tr.assertionInfo[startHeight:endHeight]
-
-		for i, assertion := range assertions {
-			assertionLogs := assertion.FindLogs(request.address, request.topics)
-			for j, evmLog := range assertionLogs {
-				addressBytes := evmLog.Log.ContractID.ToBytes()
-				topicStrings := make([]string, 0, len(evmLog.Log.Topics))
-				for _, topic := range evmLog.Log.Topics {
-					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
-				}
-
-				logs = append(logs, &validatorserver.LogInfo{
-					Address:          hexutil.Encode(addressBytes[12:]),
-					BlockHash:        hexutil.Encode(evmLog.Msg.TxHash[:]),
-					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
-					Data:             hexutil.Encode(evmLog.Log.Data[:]),
-					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
-					Topics:           topicStrings,
-					TransactionIndex: "0x0",
-					TransactionHash:  hexutil.Encode(evmLog.Msg.TxHash[:]),
-				})
-			}
-		}
-		request.resultChan <- logs
-	}
-}
-
-func (tr *txTracker) handleTxResults(completedCalls chan rollup.FinalizedAssertion) {
-	for {
-		select {
-		case finalizedAssertion := <-completedCalls:
-			tr.processFinalizedAssertion(finalizedAssertion)
-		case request := <-tr.requests:
-			tr.processRequest(request)
-		}
-	}
+	return logs, nil
 }

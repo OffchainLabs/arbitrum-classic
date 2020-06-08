@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -99,7 +100,7 @@ func testChallenge(
 		return errors2.Wrap(err, "Error getting challenge factory address")
 	}
 
-	tester, err := client1.DeployChallengeTest(context.Background(), challengeFactoryAddress)
+	tester, err := ethbridgetest.DeployChallengeTest(context.Background(), ethclint1, auth1, challengeFactoryAddress)
 	if err != nil {
 		return errors2.Wrap(err, "Error deploying challenge")
 	}
@@ -173,7 +174,7 @@ func testChallenge(
 		select {
 		case challengeState := <-asserterEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("Asserter Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
@@ -181,7 +182,7 @@ func testChallenge(
 			}
 		case challengeState := <-challengerEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter challenge ended with %v", challengeState)
+				return fmt.Errorf("Challenger Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
