@@ -27,20 +27,18 @@ import (
 
 type FullLog struct {
 	Log
-	TxIndex    uint64
-	TxHash     common.Hash
-	NodeHeight uint64
-	NodeHash   common.Hash
-	Index      uint64
-	Removed    bool
+	TxIndex  uint64
+	TxHash   common.Hash
+	Location *NodeLocation
+	Index    uint64
+	Removed  bool
 }
 
 func (l FullLog) Equals(o FullLog) bool {
 	return l.Log.Equals(o.Log) &&
 		l.TxIndex == o.TxIndex &&
 		l.TxHash == o.TxHash &&
-		l.NodeHeight == o.NodeHeight &&
-		l.NodeHash == o.NodeHash &&
+		l.Location.Equals(o.Location) &&
 		l.Index == o.Index &&
 		l.Removed == o.Removed
 }
@@ -51,14 +49,22 @@ func (l FullLog) ToEVMLog() *types.Log {
 		evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
 	}
 
+	var blockHash ethcommon.Hash
+	var blockNumber uint64
+	if l.Location != nil {
+		location := l.Location
+		blockHash = ethcommon.HexToHash(location.NodeHash)
+		blockNumber = location.NodeHeight
+	}
+
 	return &types.Log{
 		Address:     l.Address.ToEthAddress(),
 		Topics:      evmParsedTopics,
 		Data:        l.Data,
-		BlockNumber: l.NodeHeight,
+		BlockNumber: blockNumber,
 		TxHash:      l.TxHash.ToEthHash(),
 		TxIndex:     uint(l.TxIndex),
-		BlockHash:   l.NodeHash.ToEthHash(),
+		BlockHash:   blockHash,
 		Index:       uint(l.Index),
 		Removed:     l.Removed,
 	}
@@ -71,8 +77,7 @@ func (l FullLog) Marshal() *FullLogBuf {
 	}
 	return &FullLogBuf{
 		Address:          l.Address.Hex(),
-		BlockHash:        l.NodeHash.String(),
-		BlockNumber:      "0x" + strconv.FormatUint(l.NodeHeight, 16),
+		Location:         l.Location,
 		Data:             hexutil.Encode(l.Data),
 		LogIndex:         "0x" + strconv.FormatUint(0, 16),
 		Topics:           topicStrings,
@@ -99,11 +104,7 @@ func (x *FullLogBuf) Unmarshal() (FullLog, error) {
 		return ret, err
 	}
 	ret.TxHash = common.NewHashFromEth(ethcommon.HexToHash(x.TransactionHash))
-	ret.NodeHeight, err = hexutil.DecodeUint64(x.BlockNumber)
-	if err != nil {
-		return ret, err
-	}
-	ret.NodeHash = common.NewHashFromEth(ethcommon.HexToHash(x.BlockHash))
+	ret.Location = x.Location
 	ret.Index, err = hexutil.DecodeUint64(x.Index)
 	if err != nil {
 		return ret, err

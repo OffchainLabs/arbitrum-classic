@@ -32,11 +32,14 @@ func TestProcessNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initialNode := structures.NewInitialNode(mach)
-	processNode(initialNode, chainAddress)
+	initialNode := structures.NewInitialNode(mach, common.Hash{})
+	_, err = processNode(initialNode)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
-func logListMatches(a []logResponse, b []logResponse) bool {
+func logListMatches(a []evm.FullLog, b []evm.FullLog) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -46,22 +49,6 @@ func logListMatches(a []logResponse, b []logResponse) bool {
 		}
 	}
 	return true
-}
-
-func extractLogResponses(results []evm.Result) []logResponse {
-	flatLogs := make([]logResponse, 0)
-	i := uint64(0)
-	for _, result := range results {
-		for _, l := range result.GetLogs() {
-			flatLogs = append(flatLogs, logResponse{
-				Log:     l,
-				TxIndex: i,
-				TxHash:  result.GetEthMsg().TxHash(),
-			})
-		}
-		i++
-	}
-	return flatLogs
 }
 
 func TestFindLogs(t *testing.T) {
@@ -76,10 +63,13 @@ func TestFindLogs(t *testing.T) {
 		results = append(results, stop)
 	}
 
-	initialNode := structures.NewInitialNode(mach)
+	initialNode := structures.NewInitialNode(mach, common.Hash{})
 	nextNode := structures.NewRandomNodeFromValidPrev(initialNode, results)
-	info := processNode(nextNode, chainAddress)
-	flatLogs := extractLogResponses(results)
+	info, err := processNode(nextNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flatLogs := info.fullLogs()
 
 	if !logListMatches(info.FindLogs(nil, nil), flatLogs) {
 		t.Error("empty query should match everything")

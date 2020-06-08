@@ -189,10 +189,10 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *PreparedAssertion, proof []common.Hash) error {
 	return rollup.MakeAssertion(
 		ctx,
-		prepared.prevPrevLeafHash,
-		prepared.prevDataHash,
-		prepared.prevDeadline,
-		prepared.prevChildType,
+		prepared.prev.PrevHash(),
+		prepared.prev.NodeDataHash(),
+		prepared.prev.Deadline(),
+		prepared.prev.LinkType(),
 		prepared.beforeState,
 		prepared.params,
 		prepared.claim,
@@ -210,15 +210,9 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
-	prevParams, alreadySent := lis.broadcastAssertions[prepared.leafHash]
+	prevParams, alreadySent := lis.broadcastAssertions[prepared.prev.Hash()]
 	lis.Unlock()
 	if alreadySent && prevParams.Equals(prepared.params) {
-		return
-	}
-
-	leaf, ok := chain.nodeGraph.nodeFromHash[prepared.leafHash]
-	if !ok {
-		log.Println("Prepared assertion on top of invalid node")
 		return
 	}
 
@@ -228,13 +222,13 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 			// stakingKey is not staked
 			continue
 		}
-		proof := structures.GeneratePathProof(stakerPos.location, leaf)
+		proof := structures.GeneratePathProof(stakerPos.location, prepared.prev)
 		if proof == nil {
 			// staker can't move to new asertion
 			continue
 		}
 		lis.Lock()
-		lis.broadcastAssertions[prepared.leafHash] = prepared.params
+		lis.broadcastAssertions[prepared.prev.Hash()] = prepared.params
 		lis.Unlock()
 		log.Printf("%v is making an assertion\n", stakingAddress)
 		go func() {
@@ -242,7 +236,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 			if err != nil {
 				log.Println("Error making assertion", err)
 				lis.Lock()
-				delete(lis.broadcastAssertions, prepared.leafHash)
+				delete(lis.broadcastAssertions, prepared.prev.Hash())
 				lis.Unlock()
 			} else {
 				log.Println("Successfully made assertion")

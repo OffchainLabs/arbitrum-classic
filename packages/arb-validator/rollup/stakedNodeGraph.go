@@ -42,9 +42,9 @@ type StakedNodeGraph struct {
 	challenges *ChallengeSet
 }
 
-func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
+func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *StakedNodeGraph {
 	return &StakedNodeGraph{
-		NodeGraph:  NewNodeGraph(machine, params),
+		NodeGraph:  NewNodeGraph(machine, params, creationTxHash),
 		stakers:    NewStakerSet(),
 		challenges: NewChallengeSet(),
 	}

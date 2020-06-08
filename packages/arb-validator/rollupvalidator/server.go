@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 	"strconv"
@@ -51,7 +53,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	checkpointer := man.GetCheckpointer()
-	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), man.RollupAddress)
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +167,7 @@ func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) 
 	}, nil
 }
 
-// CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	log.Println("CallMessage", args.Data)
+func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
@@ -205,7 +205,22 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	}
 
 	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
-	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
+
+	latestBlock := m.man.CurrentBlockId()
+	latestTime := big.NewInt(time.Now().Unix())
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     latestBlock.Height,
+		UpperBoundBlock:     latestBlock.Height,
+		LowerBoundTimestamp: latestTime,
+		UpperBoundTimestamp: latestTime,
+	}
+	assertion, steps := mach.ExecuteAssertion(
+		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
+		10000000000000000,
+		timeBounds,
+		inbox,
+		m.maxCallTime,
+	)
 
 	log.Println("Executed call for", steps, "steps")
 
@@ -214,12 +229,15 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
+	lastLog, err := evm.ProcessLog(lastLogVal)
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash()
-	if logHash != deliveredMsg.ReceiptHash() {
+	delivered, err := message.UnmarshalRawDelivered(lastLog.GetDeliveredMessage())
+	if err != nil {
+		return nil, err
+	}
+	if delivered.TxHash() != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
@@ -230,4 +248,14 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	return &validatorserver.CallMessageReply{
 		RawVal: hexutil.Encode(buf.Bytes()),
 	}, nil
+}
+
+// CallMessage takes a request from a client to process in a temporary context and return the result
+func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	return m.executeCall(m.man.GetLatestMachine(), args)
+}
+
+// PendingCall takes a request from a client to process in a temporary context and return the result
+func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	return m.executeCall(m.man.GetPendingMachine(), args)
 }
