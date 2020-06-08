@@ -135,7 +135,7 @@ jobs:
       - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
       - run:
           command: |
-            yarn --production
+            yarn
             echo arbitrum > ~/password.txt
             mkdir data
             geth --datadir data init geth/ethbridge.json
