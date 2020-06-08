@@ -115,7 +115,7 @@ func (conn *ArbConnection) call(
 		return nil, err
 	}
 
-	logVal, err := evm.ProcessLog(retValue, conn.vmId)
+	logVal, err := evm.ProcessLog(retValue)
 	if err != nil {
 		return nil, err
 	}
