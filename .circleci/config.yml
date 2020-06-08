@@ -98,7 +98,7 @@ jobs:
       - run:
           name: test arb-compiler-evm
           command: |
-            python3 setup.py nosetests --processes=2 --process-timeout=120 --with-coverage --cover-package=arbitrum
+            python3 setup.py nosetests --processes=2 --process-timeout=120 --with-coverage --cover-package=arbitrum --with-xunit --xunit-file=${TEST_RESULTS}/arb-compiler-evm.xml
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
           name: test arb-provider-ethers
@@ -106,7 +106,8 @@ jobs:
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: '${TEST_RESULTS}/arb-provider-ethers.xml'
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-ethers.xml
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
           name: test arb-provider-web3
@@ -114,7 +115,8 @@ jobs:
             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: '${TEST_RESULTS}/arb-provider-web3.xml'
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-web3.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
           name: test arb-provider-truffle
@@ -122,9 +124,13 @@ jobs:
             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
           environment:
-            JEST_JUNIT_OUTPUT: '${TEST_RESULTS}/arb-provider-truffle.xml'
+            JEST_JUNIT_OUTPUT_DIR: *test-path
+            JEST_JUNIT_OUTPUT_NAME: arb-provider-truffle.xml
           working_directory: /home/user/project/packages/arb-provider-truffle
-      - run: codecovbash -R /home/user/project
+      - run:
+          name: Upload Coverage to Codecov
+          command: codecovbash
+          working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
   ethbridge:
