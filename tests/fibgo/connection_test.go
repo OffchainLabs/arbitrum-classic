@@ -190,7 +190,6 @@ func setupValidators(
 		server, err := rollupvalidator.NewRPCServer(
 			manager2,
 			time.Second*60,
-			true,
 		)
 		if err != nil {
 			t.Fatal(err)

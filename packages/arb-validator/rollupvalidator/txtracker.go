@@ -50,26 +50,23 @@ type txTracker struct {
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex
-	txDB             *txDB
-	maxNodeHeight    uint64
-	initialized      bool
-	serveUnconfirmed bool
+	txDB          *txDB
+	maxNodeHeight uint64
+	initialized   bool
 }
 
 func newTxTracker(
 	db machine.CheckpointStorage,
 	ns machine.NodeStore,
-	serveUnconfirmed bool,
 ) (*txTracker, error) {
 	txdb, err := newTxDB(db, ns)
 	if err != nil {
 		return nil, err
 	}
 	return &txTracker{
-		txDB:             txdb,
-		maxNodeHeight:    0,
-		initialized:      false,
-		serveUnconfirmed: serveUnconfirmed,
+		txDB:          txdb,
+		maxNodeHeight: 0,
+		initialized:   false,
 	}, nil
 }
 
@@ -123,10 +120,6 @@ func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObs
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
-		if !tr.serveUnconfirmed {
-			return
-		}
-
 		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
 		nodeInfo, err := processNode(possibleNode)
 		if err != nil {

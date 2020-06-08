@@ -82,6 +82,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public client: ArbClient
   public aggregator?: AggregatorClient
 
+  private deterministicAssertions: boolean
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
@@ -90,12 +91,19 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   constructor(
     validatorUrl: string,
     provider: ethers.providers.JsonRpcProvider,
-    aggregatorUrl?: string
+    aggregatorUrl?: string,
+    deterministicAssertions?: boolean
   ) {
     super(123456789)
     this.chainId = 123456789
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
+    if (deterministicAssertions) {
+      this.deterministicAssertions = deterministicAssertions
+    } else {
+      this.deterministicAssertions = false
+    }
+
     if (aggregatorUrl) {
       this.aggregator = new AggregatorClient(aggregatorUrl)
     }
@@ -297,12 +305,18 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     // Step 2: prove that logPostHash is in assertion and assertion is valid
-    await this.processConfirmedDisputableAssertion(nodeInfo, proof)
+    let assertionReceipt = await this.processConfirmedDisputableAssertion(
+      nodeInfo,
+      proof
+    )
 
     return {
       evmVal,
       txHash: evmVal.message.txHash,
-      nodeInfo,
+      nodeInfo: {
+        ...nodeInfo,
+        l1Confirmations: assertionReceipt.confirmations,
+      },
     }
   }
 
@@ -359,10 +373,20 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           logs = result.evmVal.logs
         }
 
+        let confirmations: number = 0
+        let l1Confs = result.nodeInfo?.l1Confirmations
+        if (this.deterministicAssertions) {
+          confirmations =
+            this.ethProvider.blockNumber -
+            result.evmVal.message.blockNumber.toNumber()
+        } else if (l1Confs !== undefined) {
+          confirmations = l1Confs
+        }
+
         const txReceipt: ethers.providers.TransactionReceipt = {
           blockHash: result.nodeInfo?.nodeHash,
           blockNumber: result.nodeInfo?.nodeHeight,
-          confirmations: 1000,
+          confirmations: confirmations,
           cumulativeGasUsed: ethers.utils.bigNumberify(1),
           from: result.evmVal.message.sender,
           gasUsed: ethers.utils.bigNumberify(1),
@@ -450,18 +474,26 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       data = ethers.utils.hexlify(rawData)
     }
 
+    const callLatest = (to: string, from: string, data: string) => {
+      if (this.deterministicAssertions) {
+        return this.client.pendingCall(to, from, data)
+      } else {
+        return this.client.call(to, from, data)
+      }
+    }
+
     let resultData: Uint8Array
     if (blockTag) {
       const tag = await blockTag
       if (tag == 'pending') {
         resultData = await this.client.pendingCall(to, from, data)
       } else if (tag == 'latest') {
-        resultData = await this.client.call(to, from, data)
+        resultData = await callLatest(to, from, data)
       } else {
         throw Error('Invalid block tag')
       }
     } else {
-      resultData = await this.client.call(to, from, data)
+      resultData = await callLatest(to, from, data)
     }
     return ethers.utils.hexlify(resultData)
   }
@@ -505,7 +537,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   private async processConfirmedDisputableAssertion(
     nodeInfo: NodeInfo,
     proof: AVMProof
-  ): Promise<void> {
+  ): Promise<ethers.providers.TransactionReceipt> {
     const receipt = await this.ethProvider.waitForTransaction(nodeInfo.l1TxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
@@ -550,7 +582,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       )
     }
 
-    // DisputableAssertion is correct
-    // TODO: must wait for finality (past the re-org period)
+    return receipt
   }
 }

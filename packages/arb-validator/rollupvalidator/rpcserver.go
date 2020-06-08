@@ -34,9 +34,8 @@ type RPCServer struct {
 func NewRPCServer(
 	man *rollupmanager.Manager,
 	maxCallTime time.Duration,
-	serveUnconfirmed bool,
 ) (*RPCServer, error) {
-	server, err := NewServer(man, maxCallTime, serveUnconfirmed)
+	server, err := NewServer(man, maxCallTime)
 	return &RPCServer{Server: server}, err
 }
 

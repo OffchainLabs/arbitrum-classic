@@ -53,6 +53,7 @@ export interface NodeInfo {
   nodeHash: string
   nodeHeight: number
   l1TxHash: string
+  l1Confirmations?: number
 }
 
 export interface AVMProof {
