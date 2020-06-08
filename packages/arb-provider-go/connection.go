@@ -3,6 +3,7 @@ package goarbitrum
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -105,30 +106,15 @@ func (conn *ArbConnection) CodeAt(
 	}, contract)
 }
 
-func (conn *ArbConnection) call(
-	ctx context.Context,
-	call ethereum.CallMsg,
-	blockNumber *big.Int,
-) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
+func processCallRet(retValue value.Value) ([]byte, error) {
+	logVal, err := evm.ProcessLog(retValue)
 	if err != nil {
 		return nil, err
 	}
-
-	logVal, err := evm.ProcessLog(retValue, conn.vmId)
-	if err != nil {
-		return nil, err
+	if !logVal.Valid() {
+		return nil, fmt.Errorf("call reverted %v", logVal)
 	}
-	switch logVal := logVal.(type) {
-	case evm.Return:
-		return logVal.ReturnVal, nil
-	case evm.Stop:
-		return []byte{}, nil
-	case evm.Revert:
-		return nil, fmt.Errorf("call reverted with result %v", string(logVal.ReturnVal))
-	default:
-		return nil, fmt.Errorf("call reverted")
-	}
+	return logVal.GetReturnData(), nil
 }
 
 // CallContract executes an Ethereum contract call with the specified data as the
@@ -138,7 +124,11 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	return conn.call(ctx, call, blockNumber)
+	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
+	if err != nil {
+		return nil, err
+	}
+	return processCallRet(retValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,7 +151,11 @@ func (conn *ArbConnection) PendingCodeAt(
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
 func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
-	return conn.call(ctx, call, nil)
+	retValue, err := conn.proxy.PendingCall(ctx, *call.To, call.From, call.Data)
+	if err != nil {
+		return nil, err
+	}
+	return processCallRet(retValue)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -308,7 +302,7 @@ func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.Fi
 				// Therefore the next query can start with block height one
 				// greater than the last log in the previous query
 				if len(logInfos) > 0 {
-					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].NodeHeight + 1)
+					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].Location.NodeHeight + 1)
 				}
 			}
 		}
@@ -345,11 +339,11 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, errors2.Wrap(err, "TransactionReceipt error:")
 	}
-	if !txInfo.Found {
+	if txInfo == nil {
 		return nil, ethereum.NotFound
 	}
 
-	return txInfo.ToEthReceipt(conn.vmId)
+	return txInfo.ToEthReceipt()
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {

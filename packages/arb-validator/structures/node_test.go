@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
@@ -33,7 +34,7 @@ func TestMarshalNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone())
+	node := NewInitialNode(mach.Clone(), common.Hash{})
 
 	results := make([]evm.Result, 0, 5)
 	for i := int32(0); i < 5; i++ {

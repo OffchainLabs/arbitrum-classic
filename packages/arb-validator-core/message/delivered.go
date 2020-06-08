@@ -126,9 +126,15 @@ func (m Delivered) AsInboxValue() (value.Value, error) {
 	return msg, nil
 }
 
-func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error) {
+type RawDelivered struct {
+	Type    Type
+	Message value.Value
+	DeliveryInfo
+}
+
+func UnmarshalRawDelivered(val value.Value) (RawDelivered, error) {
 	tup, ok := val.(value.TupleValue)
-	invalid := Delivered{}
+	invalid := RawDelivered{}
 	if !ok {
 		return invalid, errors.New("msg must be tuple value")
 	}
@@ -167,13 +173,9 @@ func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error
 	}
 	typecode := uint8(typeInt.BigInt().Uint64())
 
-	arbMessage, err := UnmarshalExecuted(Type(typecode), restValTup, chain)
-	if err != nil {
-		return invalid, err
-	}
-
-	return Delivered{
-		Message: arbMessage,
+	return RawDelivered{
+		Type:    Type(typecode),
+		Message: restValTup,
 		DeliveryInfo: DeliveryInfo{
 			ChainTime: ChainTime{
 				BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
@@ -181,6 +183,23 @@ func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error
 			},
 			TxId: txId.BigInt(),
 		},
+	}, nil
+}
+
+func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error) {
+	invalid := Delivered{}
+	rawDelivered, err := UnmarshalRawDelivered(val)
+	if err != nil {
+		return invalid, err
+	}
+	arbMessage, err := UnmarshalExecuted(rawDelivered.Type, rawDelivered.Message, chain)
+	if err != nil {
+		return invalid, err
+	}
+
+	return Delivered{
+		Message:      arbMessage,
+		DeliveryInfo: rawDelivered.DeliveryInfo,
 	}, nil
 }
 

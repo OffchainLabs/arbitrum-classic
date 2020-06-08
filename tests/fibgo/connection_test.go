@@ -288,7 +288,8 @@ func RunValidators(
 	fibonacciSession := &FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
-			From: auth.From,
+			From:    auth.From,
+			Pending: true,
 		},
 		TransactOpts: *auth,
 	}
@@ -368,14 +369,14 @@ func waitForReceipt(
 			context.Background(),
 			txhash.ToEthHash(),
 		)
-		if err == nil {
-			return receipt, nil
+		if err != nil {
+			if err.Error() == "not found" {
+				continue
+			}
+			log.Println("GetMessageResult error:", err)
+			return nil, err
 		}
-		if err.Error() == "not found" {
-			continue
-		}
-		log.Println("GetMessageResult error:", err)
-		return nil, err
+		return receipt, nil
 	}
 }
 

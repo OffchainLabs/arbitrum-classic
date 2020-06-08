@@ -23,18 +23,18 @@ import (
 	"testing"
 )
 
-func newRandomTxInfo(r Result) TxInfo {
-	return TxInfo{
-		Found:            true,
-		NodeHeight:       rand.Uint64(),
-		NodeHash:         common.RandHash(),
+func newRandomTxInfo(r Result) *TxInfo {
+	return &TxInfo{
 		TransactionIndex: rand.Uint64(),
 		TransactionHash:  common.RandHash(),
 		RawVal:           ResultAsValue(r),
-		LogsPreHash:      "",
-		LogsPostHash:     "",
-		LogsValHashes:    nil,
-		OnChainTxHash:    common.Hash{},
+		StartLogIndex:    rand.Uint64(),
+		Location:         NewRandomNodeLocation(),
+		Proof: &AVMLogProof{
+			LogPreHash:   "",
+			LogPostHash:  "",
+			LogValHashes: nil,
+		},
 	}
 }
 
@@ -57,7 +57,7 @@ func TestTxInfoMarshal(t *testing.T) {
 func TestTxInfoToEthReceipt(t *testing.T) {
 	rand.Seed(43242)
 	l := newRandomTxInfo(NewRandomStop(message.NewRandomEth(), rand.Int31n(5)))
-	_, err := l.ToEthReceipt(common.Address{65, 43, 65})
+	_, err := l.ToEthReceipt()
 	if err != nil {
 		t.Fatal(err)
 	}

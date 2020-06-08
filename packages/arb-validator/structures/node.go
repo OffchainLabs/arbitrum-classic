@@ -58,7 +58,7 @@ func (node *Node) String() string {
 	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", node.linkType, node.disputable, node.deadline.Val, node.vmProtoData)
 }
 
-func NewInitialNode(mach machine.Machine) *Node {
+func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
 	ret := &Node{
 		prevHash:   common.Hash{},
 		prev:       nil,
@@ -70,8 +70,9 @@ func NewInitialNode(mach machine.Machine) *Node {
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
-		machine: mach,
-		depth:   0,
+		machine:         mach,
+		depth:           0,
+		assertionTxHash: creationTxHash,
 	}
 	ret.setHash(common.Hash{})
 	return ret
