@@ -49,9 +49,9 @@ type Server struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
+func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration, serveUnconfirmed bool) (*Server, error) {
 	checkpointer := man.GetCheckpointer()
-	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), serveUnconfirmed)
 	if err != nil {
 		return nil, err
 	}

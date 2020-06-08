@@ -36,20 +36,22 @@ import (
 var contractPath = "../contract.ao"
 var dbPath = "./testdb"
 
+func generateResults() []evm.Result {
+	results := make([]evm.Result, 0, 5)
+	for i := int32(0); i < 5; i++ {
+		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		results = append(results, stop)
+	}
+	return results
+}
+
 func setupNodes() ([]*structures.Node, error) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		return nil, err
 	}
 	node := structures.NewInitialNode(mach.Clone(), common.RandHash())
-
-	results := make([]evm.Result, 0, 5)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
+	nextNode := structures.NewRandomNodeFromValidPrev(node, generateResults())
 	return []*structures.Node{node, nextNode}, nil
 }
 
@@ -250,4 +252,69 @@ func TestMetadataLogMatch(t *testing.T) {
 		},
 		flatLogs[0].Log,
 	)
+}
+
+func TestUnconfirmedDB(t *testing.T) {
+	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nodes, err := setupNodes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	results := generateResults()
+
+	nodeA := structures.NewRandomNodeFromValidPrev(nodes[0], results)
+
+	nodeB := structures.NewRandomNodeFromValidPrev(nodes[0], results)
+
+	nodeInfoA, err := processNode(nodeA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nodeInfoB, err := processNode(nodeB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := newTxDB(checkpointer, checkpointer.GetNodeStore())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Clear location to emulate a pending node
+	nodeInfoA.Location = nil
+
+	db.addPendingNode(nodeInfoA)
+
+	txInfoA, err := db.lookupTxInfo(nodeInfoA.EVMTransactionHashes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !nodeInfoA.getTxInfo(1).Equals(txInfoA) {
+		t.Error("wrong tx")
+	}
+
+	if err := db.addUnconfirmedNode(nodeInfoB); err != nil {
+		t.Fatal(err)
+	}
+
+	txInfoB, err := db.lookupTxInfo(nodeInfoA.EVMTransactionHashes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !nodeInfoB.getTxInfo(1).Equals(txInfoB) {
+		t.Error("wrong tx")
+	}
+
+	checkpointer.CloseCheckpointStorage()
+	if err := os.RemoveAll(dbPath); err != nil {
+		log.Fatal(err)
+	}
 }

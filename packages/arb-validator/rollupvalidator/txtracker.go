@@ -50,23 +50,26 @@ type txTracker struct {
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex
-	txDB          *txDB
-	maxNodeHeight uint64
-	initialized   bool
+	txDB             *txDB
+	maxNodeHeight    uint64
+	initialized      bool
+	serveUnconfirmed bool
 }
 
 func newTxTracker(
 	db machine.CheckpointStorage,
 	ns machine.NodeStore,
+	serveUnconfirmed bool,
 ) (*txTracker, error) {
 	txdb, err := newTxDB(db, ns)
 	if err != nil {
 		return nil, err
 	}
 	return &txTracker{
-		txDB:          txdb,
-		maxNodeHeight: 0,
-		initialized:   false,
+		txDB:             txdb,
+		maxNodeHeight:    0,
+		initialized:      false,
+		serveUnconfirmed: serveUnconfirmed,
 	}, nil
 }
 
@@ -76,6 +79,7 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.Chai
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
+		tr.txDB.pendingTransactions = make(map[common.Hash]*evm.TxInfo)
 		// First remove any data from reorged nodes
 		for i := tr.maxNodeHeight; i > startDepth; i-- {
 			if err := tr.txDB.removeUnconfirmedNode(i); err != nil {
@@ -112,6 +116,24 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 	go func() {
 		defer tr.Unlock()
 		_ = tr.processNextNode(node)
+	}()
+}
+
+func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObserver, prepared *rollup.PreparedAssertion) {
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+		if !tr.serveUnconfirmed {
+			return
+		}
+
+		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
+		nodeInfo, err := processNode(possibleNode)
+		if err != nil {
+			log.Println("Prepared assertion with invalid data", err)
+			return
+		}
+		tr.txDB.addPendingNode(nodeInfo)
 	}()
 }
 

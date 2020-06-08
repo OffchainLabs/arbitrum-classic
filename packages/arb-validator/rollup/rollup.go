@@ -115,6 +115,12 @@ func (chain *ChainObserver) NowAtHead() {
 	chain.Unlock()
 }
 
+func (chain *ChainObserver) GetChainParams() valprotocol.ChainParams {
+	chain.RLock()
+	defer chain.RUnlock()
+	return chain.nodeGraph.params
+}
+
 func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),

@@ -31,12 +31,7 @@ import (
 )
 
 type PreparedAssertion struct {
-	leafHash         common.Hash
-	prevPrevLeafHash common.Hash
-	prevDataHash     common.Hash
-	prevDeadline     common.TimeTicks
-	prevChildType    valprotocol.ChildType
-
+	prev        *structures.Node
 	beforeState *valprotocol.VMProtoData
 	params      *valprotocol.AssertionParams
 	claim       *valprotocol.AssertionClaim
@@ -46,17 +41,28 @@ type PreparedAssertion struct {
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 	return &PreparedAssertion{
-		leafHash:         pa.leafHash,
-		prevPrevLeafHash: pa.prevPrevLeafHash,
-		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     pa.prevDeadline.Clone(),
-		prevChildType:    pa.prevChildType,
-		beforeState:      pa.beforeState.Clone(),
-		params:           pa.params.Clone(),
-		claim:            pa.claim.Clone(),
-		assertion:        pa.assertion,
-		machine:          pa.machine,
+		prev:        pa.prev,
+		beforeState: pa.beforeState.Clone(),
+		params:      pa.params.Clone(),
+		claim:       pa.claim.Clone(),
+		assertion:   pa.assertion,
+		machine:     pa.machine,
 	}
+}
+
+func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
+	return structures.NewValidNodeFromPrev(
+		pa.prev,
+		valprotocol.NewDisputableNode(
+			pa.params,
+			pa.claim,
+			common.Hash{},
+			big.NewInt(0),
+		),
+		chainParams,
+		common.BlocksFromSeconds(time.Now().Unix()),
+		common.Hash{},
+	)
 }
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
@@ -154,7 +160,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case prepped := <-assertionPreparedChan:
-				preparedAssertions[prepped.leafHash] = prepped
+				preparedAssertions[prepped.prev.Hash()] = prepped
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
@@ -211,11 +217,6 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
-	currentOpinionHash := currentOpinion.Hash()
-	prevPrevLeafHash := currentOpinion.PrevHash()
-	prevDataHash := currentOpinion.NodeDataHash()
-	prevDeadline := common.TimeTicks{Val: new(big.Int).Set(currentOpinion.Deadline().Val)}
-	prevChildType := currentOpinion.LinkType()
 	beforeState := currentOpinion.VMProtoData().Clone()
 	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
 		return nil
@@ -253,7 +254,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		blockReason,
 		timeBounds.LowerBoundBlock.AsInt(),
 		timeBounds.UpperBoundBlock.AsInt(),
-		currentOpinionHash,
+		currentOpinion.Hash(),
 	)
 
 	var params *valprotocol.AssertionParams
@@ -282,16 +283,12 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		}
 	}
 	return &PreparedAssertion{
-		leafHash:         currentOpinionHash,
-		prevPrevLeafHash: prevPrevLeafHash,
-		prevDataHash:     prevDataHash,
-		prevDeadline:     prevDeadline,
-		prevChildType:    prevChildType,
-		beforeState:      beforeState,
-		params:           params,
-		claim:            claim,
-		assertion:        assertion,
-		machine:          mach,
+		prev:        currentOpinion,
+		beforeState: beforeState,
+		params:      params,
+		claim:       claim,
+		assertion:   assertion,
+		machine:     mach,
 	}
 }
 

@@ -55,6 +55,7 @@ func ValidateRollupChain(
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddFlags(validateCmd)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	servePending := validateCmd.Bool("serve-pending", false, "serve-pending")
 	blocktime := validateCmd.Int64(
 		"blocktime",
 		2,
@@ -134,7 +135,7 @@ func ValidateRollupChain(
 	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
-		validatorServer, err := rollupvalidator.NewRPCServer(manager, time.Second*60)
+		validatorServer, err := rollupvalidator.NewRPCServer(manager, time.Second*60, *servePending)
 		if err != nil {
 			log.Fatal(err)
 		}

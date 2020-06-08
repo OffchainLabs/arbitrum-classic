@@ -103,6 +103,8 @@ type txDB struct {
 	nodeMetadata     map[nodeRecordKey]*NodeMetadata
 	nodeHashLookup   map[common.Hash]uint64
 	nodeHeightLookup map[uint64]common.Hash
+
+	pendingTransactions map[common.Hash]*evm.TxInfo
 }
 
 func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore) (*txDB, error) {
@@ -111,14 +113,15 @@ func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore) (*txDB, error) 
 		return nil, err
 	}
 	return &txDB{
-		db:                 db,
-		confirmedNodeStore: ns,
-		confirmedNodeCache: lruCache,
-		transactions:       make(map[common.Hash]*TxRecord),
-		nodeInfo:           make(map[nodeRecordKey]*nodeInfo),
-		nodeMetadata:       make(map[nodeRecordKey]*NodeMetadata),
-		nodeHashLookup:     make(map[common.Hash]uint64),
-		nodeHeightLookup:   make(map[uint64]common.Hash),
+		db:                  db,
+		confirmedNodeStore:  ns,
+		confirmedNodeCache:  lruCache,
+		transactions:        make(map[common.Hash]*TxRecord),
+		nodeInfo:            make(map[nodeRecordKey]*nodeInfo),
+		nodeMetadata:        make(map[nodeRecordKey]*NodeMetadata),
+		nodeHashLookup:      make(map[common.Hash]uint64),
+		nodeHeightLookup:    make(map[uint64]common.Hash),
+		pendingTransactions: make(map[common.Hash]*evm.TxInfo),
 	}, nil
 }
 
@@ -150,6 +153,8 @@ func (txdb *txDB) addUnconfirmedNode(info *nodeInfo) error {
 			NodeHash:         nodeHash.MarshalToBuf(),
 			TransactionIndex: uint64(i),
 		}
+		// If we had a pending result for this transaction, delete it
+		delete(txdb.pendingTransactions, txHash)
 	}
 	txdb.nodeHeightLookup[location.NodeHeight] = nodeHash
 	txdb.nodeHashLookup[nodeHash] = location.NodeHeight
@@ -160,6 +165,14 @@ func (txdb *txDB) addUnconfirmedNode(info *nodeInfo) error {
 	txdb.nodeInfo[key] = info
 	txdb.nodeMetadata[key] = newNodeMetadata(info)
 	return nil
+}
+
+// addUnconfirmedNode requires holding a write lock
+func (txdb *txDB) addPendingNode(info *nodeInfo) {
+	for i := range info.EVMTransactionHashes {
+		info := info.getTxInfo(uint64(i))
+		txdb.pendingTransactions[info.TransactionHash] = info
+	}
 }
 
 // confirmNode requires holding a write lock
@@ -206,6 +219,22 @@ func (txdb *txDB) confirmNode(nodeHash common.Hash) error {
 	return nil
 }
 
+func (txdb *txDB) lookupTxInfo(txHash common.Hash) (*evm.TxInfo, error) {
+	pendingInfo, found := txdb.pendingTransactions[txHash]
+	if found {
+		return pendingInfo, nil
+	}
+	tx, err := txdb.lookupTxRecord(txHash)
+	if err != nil || tx == nil {
+		return nil, err
+	}
+	nodeInfo, err := txdb.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
+	if err != nil {
+		return nil, nil
+	}
+	return nodeInfo.getTxInfo(tx.TransactionIndex), nil
+}
+
 // lookupTxRecord requires holding a read lock
 // If the record is found it returns it. If the record is not found, it
 // returns nil with no error, otherwise it returns an error
@@ -225,18 +254,6 @@ func (txdb *txDB) lookupTxRecord(txHash common.Hash) (*TxRecord, error) {
 		return nil, err
 	}
 	return txRecord, nil
-}
-
-func (txdb *txDB) lookupTxInfo(txHash common.Hash) (*evm.TxInfo, error) {
-	tx, err := txdb.lookupTxRecord(txHash)
-	if err != nil || tx == nil {
-		return nil, err
-	}
-	nodeInfo, err := txdb.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
-	if err != nil {
-		return nil, nil
-	}
-	return nodeInfo.getTxInfo(tx.TransactionIndex), nil
 }
 
 // lookupNodeHash requires holding a read lock

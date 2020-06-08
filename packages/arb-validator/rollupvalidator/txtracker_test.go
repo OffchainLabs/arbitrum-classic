@@ -46,7 +46,7 @@ func TestTxTracker(t *testing.T) {
 
 	logs := info.fullLogs()
 	ns := checkpointer.GetNodeStore()
-	txTracker, err := newTxTracker(checkpointer, ns)
+	txTracker, err := newTxTracker(checkpointer, ns, true)
 	if err != nil {
 		t.Fatal(err)
 	}
