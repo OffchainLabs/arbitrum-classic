@@ -264,7 +264,7 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMReturn)
 
         self.assertEqual(parsed_out0.output_values[0], 100000000)
-        self.assertEqual(parsed_out1.output_values[0], 37)
+        self.assertEqual(parsed_out1.output_values[0], 453)
         self.assertEqual(parsed_out2.output_values[0], 100000000)
 
     def test_timestamp(self):
