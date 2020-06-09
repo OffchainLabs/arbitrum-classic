@@ -103,6 +103,7 @@ jobs:
       - run:
           name: test arb-provider-ethers
           command: |
+            yarn
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
           environment:
