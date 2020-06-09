@@ -193,12 +193,20 @@ func (m *Server) SendTransaction(
 		Sig:    sigData,
 	}
 
+	txHash := message.BatchTxHash(
+		m.rollupAddress,
+		tx.To,
+		tx.SeqNum,
+		tx.Value,
+		tx.Data,
+	)
+
 	pubkey, err := crypto.DecompressPubkey(pubkeyBytes)
 	if err == nil {
 		sender := crypto.PubkeyToAddress(*pubkey)
-		log.Println("Got tx: ", tx, "from", hexutil.Encode(sender[:]))
+		log.Println("Got tx: ", tx, "with hash", txHash, "from", hexutil.Encode(sender[:]))
 	} else {
-		log.Println("Got tx: ", tx, "from pubkey", hexutil.Encode(pubkeyBytes))
+		log.Println("Got tx: ", tx, "with hash", txHash, "from pubkey", hexutil.Encode(pubkeyBytes))
 	}
 
 	m.Lock()
