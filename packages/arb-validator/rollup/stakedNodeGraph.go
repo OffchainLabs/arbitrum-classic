@@ -285,6 +285,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
 		if staker.creationTime.Cmp(deadline) >= 0 {
+			proofs = append(proofs, []common.Hash{})
 			continue
 		}
 		subProof := structures.GeneratePathProof(confirmingNode, staker.location)
