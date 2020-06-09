@@ -27,6 +27,15 @@ export enum EVMCode {
   BadSequenceCode = 4,
 }
 
+function intValueToAddress(value: ArbValue.IntValue): string {
+  return ethers.utils.getAddress(
+    ethers.utils.hexZeroPad(
+      (value as ArbValue.IntValue).bignum.toHexString(),
+      20
+    )
+  )
+}
+
 function logValToLog(
   val: ArbValue.Value,
   index: number,
@@ -70,12 +79,7 @@ export class TxCall {
   public data: Uint8Array
 
   constructor(value: ArbValue.TupleValue) {
-    this.to = ethers.utils.getAddress(
-      ethers.utils.hexZeroPad(
-        (value.get(0) as ArbValue.IntValue).bignum.toHexString(),
-        20
-      )
-    )
+    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
     this.data = ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue)
   }
 
@@ -91,12 +95,7 @@ export class TxMessage {
   public data: Uint8Array
 
   constructor(value: ArbValue.TupleValue) {
-    this.to = ethers.utils.getAddress(
-      ethers.utils.hexZeroPad(
-        (value.get(0) as ArbValue.IntValue).bignum.toHexString(),
-        20
-      )
-    )
+    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
     this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum
     this.amount = (value.get(2) as ArbValue.IntValue).bignum
     this.data = ArbValue.bytestackToBytes(value.get(3) as ArbValue.TupleValue)
@@ -113,12 +112,7 @@ export class ContractTxMessage {
   public data: Uint8Array
 
   constructor(value: ArbValue.TupleValue) {
-    this.to = ethers.utils.getAddress(
-      ethers.utils.hexZeroPad(
-        (value.get(0) as ArbValue.IntValue).bignum.toHexString(),
-        20
-      )
-    )
+    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
     this.amount = (value.get(1) as ArbValue.IntValue).bignum
     this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue)
   }
@@ -133,9 +127,7 @@ class EthTransferMessage {
   public amount: ethers.utils.BigNumber
 
   constructor(value: ArbValue.TupleValue) {
-    this.dest = ethers.utils.getAddress(
-      (value.get(0) as ArbValue.IntValue).bignum.toHexString()
-    )
+    this.dest = intValueToAddress(value.get(0) as ArbValue.IntValue)
     this.amount = (value.get(1) as ArbValue.IntValue).bignum
   }
 
@@ -149,12 +141,8 @@ class TokenTransferMessage {
   public amount: ethers.utils.BigNumber
 
   constructor(value: ArbValue.TupleValue) {
-    this.tokenAddress = ethers.utils.getAddress(
-      (value.get(0) as ArbValue.IntValue).bignum.toHexString()
-    )
-    this.dest = ethers.utils.getAddress(
-      (value.get(1) as ArbValue.IntValue).bignum.toHexString()
-    )
+    this.tokenAddress = intValueToAddress(value.get(0) as ArbValue.IntValue)
+    this.dest = intValueToAddress(value.get(1) as ArbValue.IntValue)
     this.amount = (value.get(2) as ArbValue.IntValue).bignum
   }
 
@@ -209,9 +197,7 @@ class EthBridgeMessage {
     )
     const restVal = value.get(3) as ArbValue.TupleValue
     const typecode = (restVal.get(0) as ArbValue.IntValue).bignum.toNumber()
-    this.sender = ethers.utils.getAddress(
-      (restVal.get(1) as ArbValue.IntValue).bignum.toHexString()
-    )
+    this.sender = intValueToAddress(restVal.get(1) as ArbValue.IntValue)
 
     this.message = unmarshalExecutedMessage(
       typecode,
