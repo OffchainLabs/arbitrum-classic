@@ -140,3 +140,29 @@ func (m *RPCServer) PendingCall(
 	reply.RawVal = ret.RawVal
 	return nil
 }
+
+func (m *RPCServer) GetLatestNodeLocation(
+	_ *http.Request,
+	args *validatorserver.GetLatestNodeLocationArgs,
+	reply *validatorserver.GetLatestNodeLocationReply,
+) error {
+	ret, err := m.Server.GetLatestNodeLocation(context.Background(), args)
+	if err != nil || ret == nil {
+		return err
+	}
+	reply.Location = ret.Location
+	return nil
+}
+
+func (m *RPCServer) GetLatestPendingNodeLocation(
+	_ *http.Request,
+	args *validatorserver.GetLatestNodeLocationArgs,
+	reply *validatorserver.GetLatestNodeLocationReply,
+) error {
+	ret, err := m.Server.GetLatestPendingNodeLocation(context.Background(), args)
+	if err != nil || ret == nil {
+		return err
+	}
+	reply.Location = ret.Location
+	return nil
+}

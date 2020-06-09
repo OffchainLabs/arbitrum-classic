@@ -86,6 +86,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
   private vmIdCache?: string
+  private latestLocation?: NodeInfo
 
   constructor(
     validatorUrl: string,
@@ -272,6 +273,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     const result = await this.client.getMessageResult(arbTxHash)
 
+    console.log('Got result from client', result)
     if (!result) {
       return null
     }
@@ -291,7 +293,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       )
     }
 
-    if (nodeInfo == undefined || proof === undefined) {
+    if (nodeInfo === undefined || proof === undefined) {
       return {
         evmVal,
         txHash: evmVal.message.txHash,
@@ -340,7 +342,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
   public async perform(method: string, params: any): Promise<any> {
-    // console.log('perform', method, params);
+    console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -448,6 +450,24 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       case 'getBalance': {
         const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this)
         return arbInfo.getBalance(params.address)
+      }
+      case 'getBlockNumber': {
+        let location: NodeInfo
+        if (this.deterministicAssertions) {
+          location = await this.client.getLatestPendingNodeLocation()
+        } else {
+          location = await this.client.getLatestNodeLocation()
+        }
+        if (
+          this.latestLocation &&
+          (this.latestLocation.nodeHeight !== location.nodeHeight ||
+            this.latestLocation.nodeHash !== location.nodeHash)
+        ) {
+          console.log('Resetting events block')
+          this.resetEventsBlock(location.nodeHeight)
+        }
+        this.latestLocation = location
+        return location.nodeHeight
       }
     }
     const forwardResponse = this.ethProvider.perform(method, params)

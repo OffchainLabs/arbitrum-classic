@@ -78,6 +78,13 @@ message CallMessageReply {
     string rawVal = 1;
 }
 
+message GetLatestNodeLocationArgs {
+}
+
+message GetLatestNodeLocationReply {
+    evm.NodeLocation location = 1;
+}
+
 service RollupValidator {
     rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
     rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
@@ -85,4 +92,6 @@ service RollupValidator {
     rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
     rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
     rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
+    rpc GetLatestNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
+    rpc GetLatestPendingNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
 }

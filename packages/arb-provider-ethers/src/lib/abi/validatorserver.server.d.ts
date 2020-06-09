@@ -2,7 +2,7 @@
 
 import { evm } from './evm.evm.d'
 
-export namespace validatorserver {
+declare namespace validatorserver {
   export interface TopicGroup {
     topics?: Array<string>
   }
@@ -58,6 +58,12 @@ export namespace validatorserver {
     rawVal?: string
   }
 
+  export interface GetLatestNodeLocationArgs {}
+
+  export interface GetLatestNodeLocationReply {
+    location?: evm.NodeLocation
+  }
+
   export interface RollupValidatorService {
     GetOutputMessage: (r: GetOutputMessageArgs) => GetOutputMessageReply
     GetMessageResult: (r: GetMessageResultArgs) => GetMessageResultReply
@@ -65,5 +71,11 @@ export namespace validatorserver {
     FindLogs: (r: FindLogsArgs) => FindLogsReply
     GetAssertionCount: (r: GetAssertionCountArgs) => GetAssertionCountReply
     GetVMInfo: (r: GetVMInfoArgs) => GetVMInfoReply
+    GetLatestNodeLocation: (
+      r: GetLatestNodeLocationArgs
+    ) => GetLatestNodeLocationReply
+    GetLatestPendingNodeLocation: (
+      r: GetLatestNodeLocationArgs
+    ) => GetLatestNodeLocationReply
   }
 }

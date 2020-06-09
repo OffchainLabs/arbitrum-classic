@@ -261,3 +261,21 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
 	return m.executeCall(m.man.GetPendingMachine(), args)
 }
+
+func (m *Server) GetLatestNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+}
+
+func (m *Server) GetLatestPendingNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestPendingNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+}

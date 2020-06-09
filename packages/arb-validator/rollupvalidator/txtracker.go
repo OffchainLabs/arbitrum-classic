@@ -50,9 +50,10 @@ type txTracker struct {
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex
-	txDB          *txDB
-	maxNodeHeight uint64
-	initialized   bool
+	txDB            *txDB
+	latestLocation  *evm.NodeLocation
+	pendingLocation *evm.NodeLocation
+	initialized     bool
 }
 
 func newTxTracker(
@@ -64,26 +65,35 @@ func newTxTracker(
 		return nil, err
 	}
 	return &txTracker{
-		txDB:          txdb,
-		maxNodeHeight: 0,
-		initialized:   false,
+		txDB:           txdb,
+		latestLocation: &evm.NodeLocation{NodeHeight: 0},
+		initialized:    false,
 	}, nil
+}
+
+func getNodeLocation(node *structures.Node) *evm.NodeLocation {
+	return &evm.NodeLocation{
+		NodeHash:   node.Hash().String(),
+		NodeHeight: node.Depth(),
+		L1TxHash:   node.AssertionTxHash().String(),
+	}
 }
 
 // Delete assertion and transaction data from the reorged blocks if there are any
 func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
 	startDepth := node.Depth()
+	location := getNodeLocation(node)
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
 		tr.txDB.pendingTransactions = make(map[common.Hash]*evm.TxInfo)
 		// First remove any data from reorged nodes
-		for i := tr.maxNodeHeight; i > startDepth; i-- {
+		for i := tr.latestLocation.NodeHeight; i > startDepth; i-- {
 			if err := tr.txDB.removeUnconfirmedNode(i); err != nil {
 				continue
 			}
 		}
-		tr.maxNodeHeight = startDepth
+		tr.latestLocation = location
 	}()
 }
 
@@ -127,6 +137,7 @@ func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObs
 			return
 		}
 		tr.txDB.addPendingNode(nodeInfo)
+		tr.pendingLocation = getNodeLocation(possibleNode)
 	}()
 }
 
@@ -146,7 +157,7 @@ func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, e
 func (tr *txTracker) processNextNode(node *structures.Node) error {
 	// We must have already processed this node if it is olded than the latest
 	// node that we've seen
-	sawOldNode := node.Depth() < tr.maxNodeHeight
+	sawOldNode := node.Depth() < tr.latestLocation.NodeHeight
 	if sawOldNode {
 		return nil
 	}
@@ -157,7 +168,7 @@ func (tr *txTracker) processNextNode(node *structures.Node) error {
 	if err := tr.txDB.addUnconfirmedNode(nodeInfo); err != nil {
 		return err
 	}
-	tr.maxNodeHeight = node.Depth()
+	tr.latestLocation = getNodeLocation(node)
 	return nil
 }
 
@@ -205,7 +216,29 @@ func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {
 		return 0, errors.New("call timed out")
 	default:
 	}
-	return tr.maxNodeHeight, nil
+	return tr.latestLocation.NodeHeight, nil
+}
+
+func (tr *txTracker) GetLatestNodeLocation(ctx context.Context) (*evm.NodeLocation, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	return tr.latestLocation, nil
+}
+
+func (tr *txTracker) GetLatestPendingNodeLocation(ctx context.Context) (*evm.NodeLocation, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	return tr.pendingLocation, nil
 }
 
 func (tr *txTracker) FindLogs(
@@ -223,7 +256,7 @@ func (tr *txTracker) FindLogs(
 	default:
 	}
 	startHeight := uint64(0)
-	endHeight := tr.maxNodeHeight
+	endHeight := tr.latestLocation.NodeHeight
 	if fromHeight != nil && *fromHeight > 0 {
 		startHeight = *fromHeight
 	}
@@ -234,7 +267,7 @@ func (tr *txTracker) FindLogs(
 		}
 	}
 	logs := make([]evm.FullLog, 0)
-	if startHeight >= tr.maxNodeHeight {
+	if startHeight >= tr.latestLocation.NodeHeight {
 		return logs, nil
 	}
 
