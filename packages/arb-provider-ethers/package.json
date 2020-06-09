@@ -31,7 +31,7 @@
     "promise-poller": "^1.9.1"
   },
   "peerDependencies": {
-    "ethers": "^4.0.47"
+    "ethers": "~4.0.47"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",
