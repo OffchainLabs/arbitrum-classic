@@ -144,14 +144,14 @@ func TestTransactionBatchSingleSender(t *testing.T) {
 	}
 }
 
-func TestTransactionBatchSingle(t *testing.T) {
+func TestTransactionBatchSingleValid(t *testing.T) {
 	chain := addr3
 	batchTx, sender, err := generateRandomBatchTx(chain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
+	txMessageHash, txReceiptHash, valid, err := tester.TransactionMessageBatchHashSingle(
 		nil,
 		big.NewInt(0),
 		chain.ToEthAddress(),
@@ -159,6 +159,10 @@ func TestTransactionBatchSingle(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Fatal("message should have been valid")
 	}
 
 	tx := message.Transaction{
@@ -182,6 +186,29 @@ func TestTransactionBatchSingle(t *testing.T) {
 	}
 	if txReceiptHash != tx.ReceiptHash() {
 		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
+	}
+}
+
+func TestTransactionBatchSingleInvalid(t *testing.T) {
+	chain := addr3
+	batchTx, _, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	batchTx.Sig[0]++
+
+	_, _, valid, err := tester.TransactionMessageBatchHashSingle(
+		nil,
+		big.NewInt(0),
+		chain.ToEthAddress(),
+		batchTx.ToBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if valid {
+		t.Fatal("message should have been valid")
 	}
 }
 

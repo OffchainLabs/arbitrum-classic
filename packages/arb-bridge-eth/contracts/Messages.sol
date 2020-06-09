@@ -211,19 +211,21 @@ library Messages {
                 return Value.hash(prevVal);
             }
 
-            (Value.Data memory message, bytes32 receiptHash) = transactionMessageBatchHashSingle(
+            (Value.Data memory message, bytes32 receiptHash, bool valid) = transactionMessageBatchHashSingle(
                 start,
                 chain,
                 transactions
             );
 
-            prevVal = addMessageToVMInboxHash(
-                prevVal,
-                blockNum,
-                blockTimestamp,
-                uint256(receiptHash),
-                message
-            );
+            if (valid) {
+                prevVal = addMessageToVMInboxHash(
+                    prevVal,
+                    blockNum,
+                    blockTimestamp,
+                    uint256(receiptHash),
+                    message
+                );
+            }
             start += DATA_OFFSET + dataLength;
         }
         return Value.hash(prevVal);
@@ -236,7 +238,7 @@ library Messages {
     )
         internal
         pure
-        returns(Value.Data memory, bytes32)
+        returns(Value.Data memory message, bytes32 receiptHash, bool valid)
     {
         bytes32 dataHash = keccak256Subset(
             transactions,
@@ -250,7 +252,12 @@ library Messages {
             dataHash,
             transactions
         );
-        require(from != address(0), "invalid sig");
+        valid = from != address(0);
+        if (!valid) {
+            // Signature was invalid so we'll ignore this message and keep processing
+            return (message, receiptHash, valid);
+        }
+
 
         Value.Data memory dataVal = Value.bytesToBytestackHash(
             transactions,
@@ -258,7 +265,7 @@ library Messages {
             transactions.toUint16(start)
         );
 
-        return transactionMessageValue(
+        (message, receiptHash) = transactionMessageValue(
             chain,
             transactions.toAddress(start + TO_OFFSET),
             from,
@@ -267,6 +274,7 @@ library Messages {
             dataHash,
             dataVal
         );
+        return (message, receiptHash, valid);
     }
 
     function transactionMessageBatchSingleSender(

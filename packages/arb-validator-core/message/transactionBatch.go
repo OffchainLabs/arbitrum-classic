@@ -159,10 +159,8 @@ func (m TransactionBatch) getTransactions() []Transaction {
 		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
 		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
 		if err != nil {
-			// TODO: Is this possible? If so we need to handle it
-			// What are the possible failure conditions and how do they relate
-			// to ecrecover's behavior
-			log.Fatalln("Invalid sig", err)
+			// Signature was invalid so we'll skip
+			continue
 		}
 
 		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
