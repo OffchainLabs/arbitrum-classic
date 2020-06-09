@@ -214,25 +214,20 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 
 func TestTransactionBatchMessage(t *testing.T) {
 	chain := addr3
-	batchTx1, _, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	batchTx2, _, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	batchTx3, _, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	batchTxData := make([]byte, 0)
-	batchTxData = append(batchTxData, batchTx1.ToBytes()...)
-	batchTxData = append(batchTxData, batchTx2.ToBytes()...)
-	batchTxData = append(batchTxData, batchTx3.ToBytes()...)
+	for i := 0; i < 10; i++ {
+		batchTx, _, err := generateRandomBatchTx(chain)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i%3 == 0 {
+			batchTx.Sig[0]++
+		}
+		batchTxData = append(batchTxData, batchTx.ToBytes()...)
+	}
+
+	// Append some random junk
+	batchTxData = append(batchTxData, []byte{54, 76, 23, 87, 34, 32, 87, 32}...)
 
 	deliveryInfo := message.DeliveryInfo{
 		ChainTime: message.ChainTime{
