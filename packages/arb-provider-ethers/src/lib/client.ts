@@ -21,6 +21,9 @@ import { EVMCode, processLog } from './message'
 
 import * as ethers from 'ethers'
 
+import { evm } from './abi/evm.evm.d'
+import { validatorserver } from './abi/validatorserver.server.d'
+
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
