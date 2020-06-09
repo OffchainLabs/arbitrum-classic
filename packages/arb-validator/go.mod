@@ -7,10 +7,10 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/rpc v1.2.0
 	github.com/hashicorp/golang-lru v0.0.0-20160813221303-0a025b7e63ad
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.0
-	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.0
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.0
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.0
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.4
+	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.4
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.4
+	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.4
 	github.com/pkg/errors v0.9.1
 	google.golang.org/protobuf v1.24.0
 )
