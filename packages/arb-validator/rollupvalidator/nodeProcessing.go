@@ -195,14 +195,17 @@ func (ni *nodeInfo) getTxInfo(txIndex uint64) *evm.TxInfo {
 func processNode(node *structures.Node) (*nodeInfo, error) {
 	nodeInfo := newNodeInfo()
 
+	l1TxHashString := ""
 	l1TxHash := node.AssertionTxHash()
 	emtpyHash := common.Hash{}
 	if l1TxHash != emtpyHash {
-		nodeInfo.Location = &evm.NodeLocation{
-			NodeHeight: node.Depth(),
-			NodeHash:   node.Hash().String(),
-			L1TxHash:   l1TxHash.String(),
-		}
+		l1TxHashString = l1TxHash.String()
+	}
+
+	nodeInfo.Location = &evm.NodeLocation{
+		NodeHeight: node.Depth(),
+		NodeHash:   node.Hash().String(),
+		L1TxHash:   l1TxHashString,
 	}
 
 	if node.LinkType() != valprotocol.ValidChildType {
