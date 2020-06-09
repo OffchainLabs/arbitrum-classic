@@ -43,7 +43,7 @@ module.exports = {
         )
       },
       network_id: 42,
-      confirmations: 2,
+      confirmations: 4,
     },
   },
   mocha: {
