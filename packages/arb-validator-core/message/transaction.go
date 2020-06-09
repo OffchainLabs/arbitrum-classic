@@ -45,7 +45,7 @@ func (m Transaction) String() string {
 		m.From,
 		m.SequenceNum,
 		m.Value,
-		m.Data,
+		hexutil.Encode(m.Data),
 	)
 }
 

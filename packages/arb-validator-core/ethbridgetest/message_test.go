@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,61 +79,133 @@ func TestTransactionMessage(t *testing.T) {
 	}
 }
 
-func TestTransactionBatchMessage(t *testing.T) {
-	tx := message.Transaction{
-		Chain:       addr3,
-		To:          addr1,
-		From:        common.NewAddressFromEth(auth.From),
-		SequenceNum: big.NewInt(74563),
-		Value:       big.NewInt(89735406),
-		Data:        []byte{65, 23, 68, 87, 12},
-	}
+func generateRandomBatchTx(chain common.Address) (message.BatchTx, common.Address, error) {
+	to := common.RandAddress()
+	seq := common.RandBigInt()
+	val := common.RandBigInt()
+	data := common.RandBytes(200)
 
 	offchainHash := message.BatchTxHash(
-		tx.Chain,
-		tx.To,
-		tx.SequenceNum,
-		tx.Value,
-		tx.Data,
+		chain,
+		to,
+		seq,
+		val,
+		data,
 	)
 	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
 
 	privateKey, err := crypto.HexToECDSA(privHex)
 	if err != nil {
-		t.Fatal(err)
+		return message.BatchTx{}, common.Address{}, err
 	}
 
 	sigBytes, err := crypto.Sign(messageHash.Bytes(), privateKey)
 	if err != nil {
-		t.Fatal(err)
+		return message.BatchTx{}, common.Address{}, err
 	}
+
 	var sig [65]byte
 	copy(sig[:], sigBytes)
 
-	batchTx := message.BatchTx{
-		To:     tx.To,
-		SeqNum: tx.SequenceNum,
-		Value:  tx.Value,
-		Data:   tx.Data,
+	sender := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	return message.BatchTx{
+		To:     to,
+		SeqNum: seq,
+		Value:  val,
+		Data:   data,
 		Sig:    sig,
+	}, common.NewAddressFromEth(sender), nil
+}
+
+func TestTransactionBatchSingleSender(t *testing.T) {
+	chain := addr3
+	batchTx, sender, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	batchTxData := batchTx.ToBytes()
-
-	sender, err := tester.TransactionMessageBatchSingleSender(
+	calculatedSender, err := tester.TransactionMessageBatchSingleSender(
 		nil,
 		big.NewInt(0),
-		tx.Chain.ToEthAddress(),
-		hashing.SoliditySHA3(tx.Data),
-		batchTxData,
+		chain.ToEthAddress(),
+		hashing.SoliditySHA3(batchTx.Data),
+		batchTx.ToBytes(),
 	)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if sender != auth.From {
-		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(sender[:]), "instead of", hexutil.Encode(auth.From[:]))
+	if err != nil {
+		t.Error(err)
 	}
+
+	if calculatedSender != sender.ToEthAddress() {
+		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(calculatedSender[:]), "instead of", hexutil.Encode(sender[:]))
+	}
+}
+
+func TestTransactionBatchSingle(t *testing.T) {
+	chain := addr3
+	batchTx, sender, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
+		nil,
+		big.NewInt(0),
+		chain.ToEthAddress(),
+		batchTx.ToBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := message.Transaction{
+		Chain:       chain,
+		To:          batchTx.To,
+		From:        sender,
+		SequenceNum: batchTx.SeqNum,
+		Value:       batchTx.Value,
+		Data:        batchTx.Data,
+	}
+
+	txValueHash := tx.AsInboxValue().Hash()
+
+	t.Log("tx was", tx)
+
+	t.Log("txMessageHash", hexutil.Encode(txMessageHash[:]))
+	t.Log("txValueHash", hexutil.Encode(txValueHash[:]))
+
+	if txMessageHash != tx.AsInboxValue().Hash() {
+		t.Error("TransactionMessageBatchHashSingle result didn't match")
+	}
+	if txReceiptHash != tx.ReceiptHash() {
+		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
+	}
+}
+
+func TestTransactionBatchMessage(t *testing.T) {
+	chain := addr3
+	batchTx1, _, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	batchTx2, _, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	batchTx3, _, err := generateRandomBatchTx(chain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	batchTxData := make([]byte, 0)
+	batchTxData = append(batchTxData, batchTx1.ToBytes()...)
+	batchTxData = append(batchTxData, batchTx2.ToBytes()...)
+	batchTxData = append(batchTxData, batchTx3.ToBytes()...)
 
 	deliveryInfo := message.DeliveryInfo{
 		ChainTime: message.ChainTime{
@@ -162,22 +234,6 @@ func TestTransactionBatchMessage(t *testing.T) {
 	}
 	if bridgeHash != msg.CommitmentHash().ToEthHash() {
 		t.Error(errHash)
-	}
-
-	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
-		nil,
-		big.NewInt(0),
-		msg.Chain.ToEthAddress(),
-		batchTxData,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if txMessageHash != tx.AsInboxValue().Hash() {
-		t.Error("TransactionMessageBatchHashSingle result didn't match")
-	}
-	if txReceiptHash != tx.ReceiptHash() {
-		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
 	}
 
 	tup := value.NewEmptyTuple()

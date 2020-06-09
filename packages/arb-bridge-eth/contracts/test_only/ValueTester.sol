@@ -82,4 +82,17 @@ contract ValueTester {
     {
         return Value.getEthMsgData(data, startOffset);
     }
+
+    function bytesToBytestackHash(
+        bytes memory data,
+        uint256 startOffset,
+        uint256 dataLength
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
+    }
+
 }
