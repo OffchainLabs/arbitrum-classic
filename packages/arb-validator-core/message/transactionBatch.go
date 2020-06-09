@@ -141,6 +141,7 @@ func (m TransactionBatch) getBatchTransactions() []BatchTx {
 			break
 		}
 		txes = append(txes, batch)
+		offset += batch.encodedLength()
 	}
 	return txes
 }
