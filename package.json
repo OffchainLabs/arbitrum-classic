@@ -23,7 +23,8 @@
     "docker:build:geth": "yarn workspace arb-bridge-eth docker:build:geth",
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
-    "docker:geth": "yarn workspace arb-bridge-eth docker:geth"
+    "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
+    "prepare": "yarn workspace arb-provider-ethers prepare"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
