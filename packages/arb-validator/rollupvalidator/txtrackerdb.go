@@ -173,7 +173,6 @@ func (txdb *txDB) addPendingNode(info *nodeInfo) {
 		info := info.getTxInfo(uint64(i))
 		txdb.pendingTransactions[info.TransactionHash] = info
 	}
-	txdb.pendingLocation = info.Location
 }
 
 // confirmNode requires holding a write lock
