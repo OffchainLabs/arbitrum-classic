@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateTestBatch() TransactionBatch {
+func generateBatchTx() BatchTx {
 	addr1 := common.Address{}
 	addr1[0] = 76
 	addr1[19] = 93
@@ -32,7 +32,7 @@ func generateTestBatch() TransactionBatch {
 	addr2[0] = 43
 	addr2[19] = 12
 
-	tx := BatchTx{
+	return BatchTx{
 		To:     addr2,
 		SeqNum: big.NewInt(2),
 		Value:  big.NewInt(43423),
@@ -40,9 +40,30 @@ func generateTestBatch() TransactionBatch {
 		Sig:    [65]byte{87, 42, 56, 98},
 	}
 
+}
+
+func generateTestBatch() TransactionBatch {
+	addr1 := common.Address{}
+	addr1[0] = 76
+	addr1[19] = 93
+
+	tx := generateBatchTx()
 	return TransactionBatch{
 		Chain:  addr1,
 		TxData: tx.ToBytes(),
+	}
+}
+
+func TestMarshalBatch(t *testing.T) {
+	tx := generateBatchTx()
+	data := tx.ToBytes()
+	tx2, err := NewBatchTxFromData(data, 0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !tx.Equals(tx2) {
+		t.Error("unmarshaled tx not equal")
 	}
 }
 
@@ -56,5 +77,31 @@ func TestCheckpointBatch(t *testing.T) {
 
 	if !msg.Equals(msg2) {
 		t.Error("Unmarshalling didn't reverse marshalling", msg, msg2)
+	}
+}
+
+func TestGetTransactions(t *testing.T) {
+	addr1 := common.Address{}
+	addr1[0] = 76
+	addr1[19] = 93
+
+	tx1 := generateBatchTx()
+	tx2 := generateBatchTx()
+	batch := TransactionBatch{
+		Chain:  addr1,
+		TxData: append(tx1.ToBytes(), tx2.ToBytes()...),
+	}
+
+	txes := batch.getBatchTransactions()
+	if len(txes) != 2 {
+		t.Fatal("didn't get back 2 txes")
+	}
+
+	if !txes[0].Equals(tx1) {
+		t.Error("unmarshaled tx not equal")
+	}
+
+	if !txes[1].Equals(tx2) {
+		t.Error("unmarshaled tx not equal")
 	}
 }

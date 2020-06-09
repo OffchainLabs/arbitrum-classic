@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
@@ -64,10 +65,18 @@ type BatchTx struct {
 	Sig    [65]byte
 }
 
+func (b BatchTx) Equals(o BatchTx) bool {
+	return b.To == o.To &&
+		b.SeqNum.Cmp(o.SeqNum) == 0 &&
+		b.Value.Cmp(o.Value) == 0 &&
+		bytes.Equal(b.Data, o.Data) &&
+		b.Sig == o.Sig
+}
+
 func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 	dataLength := int(binary.BigEndian.Uint16(data[offset : offset+2]))
-	if offset+DataOffset+dataLength < len(data) {
-		return BatchTx{}, errors.New("not enough data remaining")
+	if offset+DataOffset+dataLength > len(data) {
+		return BatchTx{}, fmt.Errorf("not enough data remaining (offset: %v, DataOffset: %v, dataLength: %v, totalLength: %v)", offset, DataOffset, dataLength, len(data))
 	}
 	offset += 2
 	toRaw := data[offset : offset+20]
@@ -121,26 +130,33 @@ func (b BatchTx) ToBytes() []byte {
 
 var DataOffset = 151
 
-func (m TransactionBatch) getTransactions() []Transaction {
-	txes := make([]Transaction, 0)
+func (m TransactionBatch) getBatchTransactions() []BatchTx {
+	txes := make([]BatchTx, 0)
 	offset := 0
-
 	data := m.TxData
 	for offset+DataOffset < len(data) {
 		batch, err := NewBatchTxFromData(data, offset)
 		if err != nil {
+			log.Println("Transaction batch", hexutil.Encode(data), "at offset", offset, "included invalid tx", err)
 			break
 		}
+		txes = append(txes, batch)
+	}
+	return txes
+}
 
+func (m TransactionBatch) getTransactions() []Transaction {
+	txes := make([]Transaction, 0)
+	for _, tx := range m.getBatchTransactions() {
 		batchTxHash := BatchTxHash(
 			m.Chain,
-			batch.To,
-			batch.SeqNum,
-			batch.Value,
-			batch.Data,
+			tx.To,
+			tx.SeqNum,
+			tx.Value,
+			tx.Data,
 		)
 		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
-		pubkey, err := crypto.SigToPub(messageHash.Bytes(), batch.Sig[:])
+		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
 		if err != nil {
 			// TODO: Is this possible? If so we need to handle it
 			// What are the possible failure conditions and how do they relate
@@ -149,17 +165,15 @@ func (m TransactionBatch) getTransactions() []Transaction {
 		}
 
 		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-		tx := Transaction{
+		fullTx := Transaction{
 			Chain:       m.Chain,
-			To:          batch.To,
+			To:          tx.To,
 			From:        from,
-			SequenceNum: batch.SeqNum,
-			Value:       batch.Value,
-			Data:        batch.Data,
+			SequenceNum: tx.SeqNum,
+			Value:       tx.Value,
+			Data:        tx.Data,
 		}
-
-		txes = append(txes, tx)
-		offset += batch.encodedLength()
+		txes = append(txes, fullTx)
 	}
 	return txes
 }
