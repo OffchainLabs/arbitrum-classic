@@ -134,7 +134,7 @@ func (m TransactionBatch) getBatchTransactions() []BatchTx {
 	txes := make([]BatchTx, 0)
 	offset := 0
 	data := m.TxData
-	for offset+DataOffset < len(data) {
+	for offset+DataOffset <= len(data) {
 		batch, err := NewBatchTxFromData(data, offset)
 		if err != nil {
 			log.Println("Transaction batch", hexutil.Encode(data), "at offset", offset, "included invalid tx", err)
@@ -159,6 +159,7 @@ func (m TransactionBatch) getTransactions() []Transaction {
 		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
 		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
 		if err != nil {
+			log.Println("skipping tx with invalid sig:", err)
 			// Signature was invalid so we'll skip
 			continue
 		}
