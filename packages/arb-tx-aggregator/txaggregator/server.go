@@ -17,10 +17,14 @@
 package txaggregator
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"errors"
 	"log"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -40,13 +44,18 @@ const maxTransactions = 200
 const signatureLength = 65
 const recoverBitPos = signatureLength - 1
 
+type DecodedBatchTx struct {
+	tx     message.BatchTx
+	pubkey []byte
+}
+
 type Server struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
 
 	sync.Mutex
 	valid        bool
-	transactions []message.BatchTx
+	transactions []DecodedBatchTx
 }
 
 // NewServer returns a new instance of the Server class
@@ -89,7 +98,7 @@ func NewServer(
 }
 
 func (m *Server) sendBatch(ctx context.Context) {
-	var txes []message.BatchTx
+	var txes []DecodedBatchTx
 
 	if len(m.transactions) > maxTransactions {
 		txes = m.transactions[:maxTransactions]
@@ -102,10 +111,22 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
+	sort.SliceStable(txes, func(i, j int) bool {
+		if bytes.Equal(txes[i].pubkey, txes[j].pubkey) {
+			return false
+		}
+		return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
+	})
+
+	batchTxes := make([]message.BatchTx, 0, len(txes))
+	for _, tx := range txes {
+		batchTxes = append(batchTxes, tx.tx)
+	}
+
 	err := m.globalInbox.DeliverTransactionBatchNoWait(
 		ctx,
 		m.rollupAddress,
-		txes,
+		batchTxes,
 	)
 
 	m.Lock()
@@ -201,12 +222,20 @@ func (m *Server) SendTransaction(
 		tx.Data,
 	)
 
-	pubkey, err := crypto.DecompressPubkey(pubkeyBytes)
-	if err == nil {
+	var pubkey *ecdsa.PublicKey
+	var pubkeyErr error
+	if len(pubkeyBytes) == 33 {
+		pubkey, pubkeyErr = crypto.DecompressPubkey(pubkeyBytes)
+	} else {
+		x, y := elliptic.Unmarshal(crypto.S256(), pubkeyBytes)
+		pubkey = &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}
+	}
+
+	if pubkeyErr != nil || pubkey.X == nil || pubkey.Y == nil {
+		log.Println("Got tx: ", tx, "with hash", txHash, "from pubkey", hexutil.Encode(pubkeyBytes))
+	} else {
 		sender := crypto.PubkeyToAddress(*pubkey)
 		log.Println("Got tx: ", tx, "with hash", txHash, "from", hexutil.Encode(sender[:]))
-	} else {
-		log.Println("Got tx: ", tx, "with hash", txHash, "from pubkey", hexutil.Encode(pubkeyBytes))
 	}
 
 	m.Lock()
@@ -216,7 +245,10 @@ func (m *Server) SendTransaction(
 		return nil, errors.New("Tx aggregator is not running")
 	}
 
-	m.transactions = append(m.transactions, tx)
+	m.transactions = append(m.transactions, DecodedBatchTx{
+		tx:     tx,
+		pubkey: pubkeyBytes,
+	})
 
 	return &SendTransactionReply{}, nil
 }
