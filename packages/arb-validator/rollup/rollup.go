@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
@@ -151,13 +152,23 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	if err != nil {
 		return nil, err
 	}
+	knownValidNode := nodeGraph.nodeFromHash[x.KnownValidNode.Unmarshal()]
+	if knownValidNode == nil {
+		return nil, fmt.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
+	}
+
+	calculatedValidNode := nodeGraph.nodeFromHash[x.CalculatedValidNode.Unmarshal()]
+	if calculatedValidNode == nil {
+		return nil, fmt.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
+	}
+
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          x.ContractAddress.Unmarshal(),
 		inbox:               &structures.Inbox{MessageStack: inbox},
-		knownValidNode:      nodeGraph.nodeFromHash[x.KnownValidNode.Unmarshal()],
-		calculatedValidNode: nodeGraph.nodeFromHash[x.CalculatedValidNode.Unmarshal()],
+		knownValidNode:      knownValidNode,
+		calculatedValidNode: calculatedValidNode,
 		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
