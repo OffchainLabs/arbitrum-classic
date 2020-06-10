@@ -43,6 +43,7 @@ type ArbClient interface {
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewGlobalInboxWatcher(address common.Address, rollupAddress common.Address) (GlobalInboxWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)

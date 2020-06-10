@@ -22,8 +22,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -37,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -51,20 +48,9 @@ var rollupStakeMovedID ethcommon.Hash
 var rollupAssertedID ethcommon.Hash
 var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
-var transactionID ethcommon.Hash
-var transactionBatchID ethcommon.Hash
-var ethDepositID ethcommon.Hash
-var depositERC20ID ethcommon.Hash
-var depositERC721ID ethcommon.Hash
-var contractTxID ethcommon.Hash
-var transactionBatchTxCallABI abi.Method
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
-	if err != nil {
-		panic(err)
-	}
-	inbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
@@ -78,23 +64,12 @@ func init() {
 	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID()
 	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
 	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
-
-	transactionID = inbox.Events["TransactionMessageDelivered"].ID()
-	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID()
-	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID()
-	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID()
-	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID()
-	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID()
-
-	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
 }
 
 type ethRollupWatcher struct {
-	ArbRollup   *rollup.ArbRollup
-	GlobalInbox *rollup.IGlobalInbox
+	ArbRollup *rollup.ArbRollup
 
 	rollupAddress ethcommon.Address
-	inboxAddress  ethcommon.Address
 	client        *ethclient.Client
 }
 
@@ -107,28 +82,9 @@ func newRollupWatcher(
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
 
-	globalInboxAddress, err := arbitrumRollupContract.GlobalInbox(
-		&bind.CallOpts{
-			Pending: false,
-			Context: context.Background(),
-		},
-	)
-	if err != nil {
-		return nil, errors2.Wrap(err, "failed to get inbox")
-	}
-	globalInboxContract, err := rollup.NewIGlobalInbox(
-		globalInboxAddress,
-		client,
-	)
-	if err != nil {
-		return nil, errors2.Wrap(err, "failed to connect to inbox")
-	}
-
 	return &ethRollupWatcher{
 		ArbRollup:     arbitrumRollupContract,
-		GlobalInbox:   globalInboxContract,
 		rollupAddress: rollupAddress,
-		inboxAddress:  globalInboxAddress,
 		client:        client,
 	}, nil
 }
@@ -136,7 +92,7 @@ func newRollupWatcher(
 func (vm *ethRollupWatcher) GetEvents(
 	ctx context.Context,
 	blockId *common.BlockId,
-	timestamp *big.Int,
+	_ *big.Int,
 ) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	addressIndex := ethcommon.Hash{}
@@ -144,24 +100,7 @@ func (vm *ethRollupWatcher) GetEvents(
 		addressIndex[:],
 		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
 	)
-	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: &bh,
-		Addresses: []ethcommon.Address{vm.inboxAddress},
-		Topics: [][]ethcommon.Hash{
-			{
-				transactionID,
-				transactionBatchID,
-				ethDepositID,
-				depositERC20ID,
-				depositERC721ID,
-			}, {
-				addressIndex,
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+
 	rollupLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{vm.rollupAddress},
@@ -183,27 +122,11 @@ func (vm *ethRollupWatcher) GetEvents(
 		return nil, err
 	}
 
-	events := make([]arbbridge.Event, 0, len(inboxLogs)+len(rollupLogs))
-
-	for _, evmLog := range inboxLogs {
-		event, err := vm.processEvents(
-			ctx,
-			getLogChainInfo(evmLog),
-			evmLog,
-			timestamp,
-		)
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, event)
-	}
-
+	events := make([]arbbridge.Event, 0, len(rollupLogs))
 	for _, evmLog := range rollupLogs {
 		event, err := vm.processEvents(
-			ctx,
 			getLogChainInfo(evmLog),
 			evmLog,
-			timestamp,
 		)
 		if err != nil {
 			return nil, err
@@ -213,161 +136,9 @@ func (vm *ethRollupWatcher) GetEvents(
 	return events, nil
 }
 
-func (vm *ethRollupWatcher) processMessageDeliveredEvents(
-	ctx context.Context,
-	chainInfo arbbridge.ChainInfo,
-	ethLog types.Log,
-	timestamp *big.Int,
-) (arbbridge.Event, error) {
-	chainTime := message.ChainTime{
-		BlockNum: common.NewTimeBlocks(
-			new(big.Int).SetUint64(ethLog.BlockNumber),
-		),
-		Timestamp: timestamp,
-	}
-	switch ethLog.Topics[0] {
-	case transactionID:
-		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		msg := message.Received{
-			Message: message.Transaction{
-				Chain:       common.NewAddressFromEth(vm.rollupAddress),
-				To:          common.NewAddressFromEth(val.To),
-				From:        common.NewAddressFromEth(val.From),
-				SequenceNum: val.SeqNumber,
-				Value:       val.Value,
-				Data:        val.Data,
-			},
-			ChainTime: chainTime,
-		}
-
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message:   msg,
-		}, nil
-
-	case transactionBatchID:
-		tx, _, err := vm.client.TransactionByHash(ctx, ethLog.TxHash)
-		if err != nil {
-			return nil, err
-		}
-
-		type TransactionBatchTxCallArgs struct {
-			Chain        ethcommon.Address
-			Transactions []byte
-		}
-
-		var args TransactionBatchTxCallArgs
-		err = transactionBatchTxCallABI.Inputs.Unpack(&args, tx.Data()[4:])
-		if err != nil {
-			return nil, err
-		}
-
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message: message.Received{
-				Message: message.TransactionBatch{
-					Chain:  common.NewAddressFromEth(vm.rollupAddress),
-					TxData: args.Transactions,
-				},
-				ChainTime: chainTime,
-			},
-		}, nil
-	case ethDepositID:
-		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		msg := message.Received{
-			Message: message.Eth{
-				To:    common.NewAddressFromEth(val.To),
-				From:  common.NewAddressFromEth(val.From),
-				Value: val.Value,
-			},
-			ChainTime: chainTime,
-		}
-
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message:   msg,
-		}, nil
-
-	case depositERC20ID:
-		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		msg := message.Received{
-			Message: message.ERC20{
-				To:           common.NewAddressFromEth(val.To),
-				From:         common.NewAddressFromEth(val.From),
-				TokenAddress: common.NewAddressFromEth(val.Erc20),
-				Value:        val.Value,
-			},
-			ChainTime: chainTime,
-		}
-
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message:   msg,
-		}, nil
-
-	case depositERC721ID:
-		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		msg := message.Received{
-			Message: message.ERC721{
-				To:           common.NewAddressFromEth(val.To),
-				From:         common.NewAddressFromEth(val.From),
-				TokenAddress: common.NewAddressFromEth(val.Erc721),
-				Id:           val.Id,
-			},
-			ChainTime: chainTime,
-		}
-
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message:   msg,
-		}, nil
-	case contractTxID:
-		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(
-			ethLog,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		msg := message.Received{
-			Message: message.ContractTransaction{
-				To:    common.NewAddressFromEth(val.To),
-				From:  common.NewAddressFromEth(val.From),
-				Value: val.Value,
-				Data:  val.Data,
-			},
-			ChainTime: chainTime,
-		}
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message:   msg,
-		}, nil
-	default:
-		return nil, errors2.New("unknown arbitrum event type")
-	}
-}
-
 func (vm *ethRollupWatcher) processEvents(
-	ctx context.Context,
 	chainInfo arbbridge.ChainInfo,
 	ethLog types.Log,
-	timestamp *big.Int,
 ) (arbbridge.Event, error) {
 	switch ethLog.Topics[0] {
 	case stakeCreatedID:
@@ -448,10 +219,10 @@ func (vm *ethRollupWatcher) processEvents(
 			Params: &valprotocol.AssertionParams{
 				NumSteps: eventVal.NumSteps,
 				TimeBounds: &protocol.TimeBounds{
-					common.NewTimeBlocks(eventVal.TimeBounds[0]),
-					common.NewTimeBlocks(eventVal.TimeBounds[1]),
-					eventVal.TimeBounds[2],
-					eventVal.TimeBounds[3],
+					LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
+					UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
+					LowerBoundTimestamp: eventVal.TimeBounds[2],
+					UpperBoundTimestamp: eventVal.TimeBounds[3],
 				},
 				ImportedMessageCount: eventVal.ImportedMessageCount,
 			},
@@ -489,18 +260,19 @@ func (vm *ethRollupWatcher) processEvents(
 			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
 	default:
-		return vm.processMessageDeliveredEvents(ctx, chainInfo, ethLog, timestamp)
+		return nil, errors2.New("unknown arbitrum event type")
 	}
 }
 
 func (vm *ethRollupWatcher) GetParams(
 	ctx context.Context,
 ) (valprotocol.ChainParams, error) {
-	rawParams, err := vm.ArbRollup.VmParams(nil)
+	callOpts := &bind.CallOpts{Context: ctx}
+	rawParams, err := vm.ArbRollup.VmParams(callOpts)
 	if err != nil {
 		return valprotocol.ChainParams{}, err
 	}
-	stakeRequired, err := vm.ArbRollup.GetStakeRequired(nil)
+	stakeRequired, err := vm.ArbRollup.GetStakeRequired(callOpts)
 	if err != nil {
 		return valprotocol.ChainParams{}, err
 	}
@@ -519,20 +291,20 @@ func (vm *ethRollupWatcher) GetParams(
 func (vm *ethRollupWatcher) InboxAddress(
 	ctx context.Context,
 ) (common.Address, error) {
-	addr, err := vm.ArbRollup.GlobalInbox(nil)
+	addr, err := vm.ArbRollup.GlobalInbox(&bind.CallOpts{Context: ctx})
 	return common.NewAddressFromEth(addr), err
 }
 
-func (con *ethRollupWatcher) GetCreationInfo(
+func (vm *ethRollupWatcher) GetCreationInfo(
 	ctx context.Context,
 ) (common.Hash, *common.BlockId, common.Hash, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(
 		addressIndex[:],
-		ethcommon.LeftPadBytes(con.rollupAddress.Bytes(), 32),
+		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
 	)
-	logs, err := con.client.FilterLogs(ctx, ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{con.rollupAddress},
+	logs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{vm.rollupAddress},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	})
 	if err != nil {
@@ -544,7 +316,7 @@ func (con *ethRollupWatcher) GetCreationInfo(
 			common.Hash{},
 			errors.New("more than one chain created with same address")
 	}
-	ev, err := con.ArbRollup.ParseRollupCreated(logs[0])
+	ev, err := vm.ArbRollup.ParseRollupCreated(logs[0])
 	if err != nil {
 		return common.Hash{}, nil, common.Hash{}, err
 	}
@@ -552,6 +324,6 @@ func (con *ethRollupWatcher) GetCreationInfo(
 	return common.NewHashFromEth(logs[0].TxHash), getLogBlockID(logs[0]), ev.InitVMHash, nil
 }
 
-func (con *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
-	return con.ArbRollup.VERSION(&bind.CallOpts{Context: ctx})
+func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
+	return vm.ArbRollup.VERSION(&bind.CallOpts{Context: ctx})
 }

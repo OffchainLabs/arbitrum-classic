@@ -103,7 +103,17 @@ func CreateManagerAdvanced(
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			watcher, err := clnt.NewRollupWatcher(rollupAddr)
+			rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			inboxAddr, err := rollupWatcher.InboxAddress(runCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -113,7 +123,7 @@ func CreateManagerAdvanced(
 				rollupAddr,
 				updateOpinion,
 				clnt,
-				watcher,
+				rollupWatcher,
 				checkpointer,
 			)
 			if err != nil {
@@ -171,11 +181,26 @@ func CreateManagerAdvanced(
 				man.activeChain.NotifyNewBlock(blockId.Clone())
 				log.Print(man.activeChain.DebugString("== "))
 
-				events, err := watcher.GetEvents(runCtx, blockId, timestamp)
+				inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
 				if err != nil {
 					log.Println("Manager hit error getting events", err)
 					break
 				}
+
+				events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
+				if err != nil {
+					log.Println("Manager hit error getting events", err)
+					break
+				}
+
+				for _, event := range inboxEvents {
+					err := man.activeChain.HandleNotification(runCtx, event)
+					if err != nil {
+						log.Println("Manager hit error processing event", err)
+						break headerLoop
+					}
+				}
+
 				for _, event := range events {
 					err := man.activeChain.HandleNotification(runCtx, event)
 					if err != nil {

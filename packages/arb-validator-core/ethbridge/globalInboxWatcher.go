@@ -1,0 +1,241 @@
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ethbridge
+
+import (
+	"context"
+	"math/big"
+	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
+
+	errors2 "github.com/pkg/errors"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+)
+
+var transactionID ethcommon.Hash
+var transactionBatchID ethcommon.Hash
+var ethDepositID ethcommon.Hash
+var depositERC20ID ethcommon.Hash
+var depositERC721ID ethcommon.Hash
+var contractTxID ethcommon.Hash
+var transactionBatchTxCallABI abi.Method
+
+func init() {
+	inbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
+	if err != nil {
+		panic(err)
+	}
+	transactionID = inbox.Events["TransactionMessageDelivered"].ID()
+	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID()
+	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID()
+	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID()
+	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID()
+	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID()
+	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
+}
+
+type globalInboxWatcher struct {
+	GlobalInbox *rollup.IGlobalInbox
+
+	rollupAddress ethcommon.Address
+	inboxAddress  ethcommon.Address
+	client        *ethclient.Client
+}
+
+func newGlobalInboxWatcher(
+	globalInboxAddress ethcommon.Address,
+	rollupAddress ethcommon.Address,
+	client *ethclient.Client,
+) (*globalInboxWatcher, error) {
+	globalInboxContract, err := rollup.NewIGlobalInbox(
+		globalInboxAddress,
+		client,
+	)
+	if err != nil {
+		return nil, errors2.Wrap(err, "failed to connect to inbox")
+	}
+
+	return &globalInboxWatcher{
+		GlobalInbox:   globalInboxContract,
+		rollupAddress: rollupAddress,
+		inboxAddress:  globalInboxAddress,
+		client:        client,
+	}, nil
+}
+
+func (vm *globalInboxWatcher) GetEvents(
+	ctx context.Context,
+	blockId *common.BlockId,
+	timestamp *big.Int,
+) ([]arbbridge.Event, error) {
+	bh := blockId.HeaderHash.ToEthHash()
+	addressIndex := ethcommon.Hash{}
+	copy(
+		addressIndex[:],
+		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
+	)
+	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &bh,
+		Addresses: []ethcommon.Address{vm.inboxAddress},
+		Topics: [][]ethcommon.Hash{
+			{
+				transactionID,
+				transactionBatchID,
+				ethDepositID,
+				depositERC20ID,
+				depositERC721ID,
+			}, {
+				addressIndex,
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	events := make([]arbbridge.Event, 0, len(inboxLogs))
+	for _, evmLog := range inboxLogs {
+		msg, err := vm.processMessageDeliveredEvents(ctx, evmLog)
+
+		event := arbbridge.MessageDeliveredEvent{
+			ChainInfo: getLogChainInfo(evmLog),
+			Message: message.Received{
+				Message: msg,
+				ChainTime: message.ChainTime{
+					BlockNum: common.NewTimeBlocks(
+						new(big.Int).SetUint64(evmLog.BlockNumber),
+					),
+					Timestamp: timestamp,
+				},
+			},
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, nil
+}
+
+func (vm *globalInboxWatcher) processMessageDeliveredEvents(
+	ctx context.Context,
+	ethLog types.Log,
+) (message.Message, error) {
+	switch ethLog.Topics[0] {
+	case transactionID:
+		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		return message.Transaction{
+			Chain:       common.NewAddressFromEth(vm.rollupAddress),
+			To:          common.NewAddressFromEth(val.To),
+			From:        common.NewAddressFromEth(val.From),
+			SequenceNum: val.SeqNumber,
+			Value:       val.Value,
+			Data:        val.Data,
+		}, nil
+
+	case transactionBatchID:
+		tx, _, err := vm.client.TransactionByHash(ctx, ethLog.TxHash)
+		if err != nil {
+			return nil, err
+		}
+
+		type TransactionBatchTxCallArgs struct {
+			Chain        ethcommon.Address
+			Transactions []byte
+		}
+
+		var args TransactionBatchTxCallArgs
+		err = transactionBatchTxCallABI.Inputs.Unpack(&args, tx.Data()[4:])
+		if err != nil {
+			return nil, err
+		}
+
+		return message.TransactionBatch{
+			Chain:  common.NewAddressFromEth(vm.rollupAddress),
+			TxData: args.Transactions,
+		}, nil
+	case ethDepositID:
+		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		return message.Eth{
+			To:    common.NewAddressFromEth(val.To),
+			From:  common.NewAddressFromEth(val.From),
+			Value: val.Value,
+		}, nil
+
+	case depositERC20ID:
+		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		return message.ERC20{
+			To:           common.NewAddressFromEth(val.To),
+			From:         common.NewAddressFromEth(val.From),
+			TokenAddress: common.NewAddressFromEth(val.Erc20),
+			Value:        val.Value,
+		}, nil
+
+	case depositERC721ID:
+		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		return message.ERC721{
+			To:           common.NewAddressFromEth(val.To),
+			From:         common.NewAddressFromEth(val.From),
+			TokenAddress: common.NewAddressFromEth(val.Erc721),
+			Id:           val.Id,
+		}, nil
+	case contractTxID:
+		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(
+			ethLog,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		return message.ContractTransaction{
+			To:    common.NewAddressFromEth(val.To),
+			From:  common.NewAddressFromEth(val.From),
+			Value: val.Value,
+			Data:  val.Data,
+		}, nil
+	default:
+		return nil, errors2.New("unknown arbitrum event type")
+	}
+}
