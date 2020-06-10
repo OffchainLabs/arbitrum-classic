@@ -2,9 +2,8 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -22,5 +21,13 @@ func NewGlobalInboxWatcher(client arbbridge.ArbClient) (*EthRollupWatcher, error
 }
 
 func (vm *GlobalInboxWatcher) GetEvents(ctx context.Context, blockId *common.BlockId, timestamp *big.Int) ([]arbbridge.Event, error) {
+	return nil, nil
+}
+
+func (vm *GlobalInboxWatcher) GetAllReceived(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]message.Received, error) {
 	return nil, nil
 }

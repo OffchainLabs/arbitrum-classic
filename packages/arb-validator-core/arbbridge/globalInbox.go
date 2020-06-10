@@ -25,6 +25,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type GlobalInboxWatcher interface {
+	ContractWatcher
+
+	GetAllReceived(
+		ctx context.Context,
+		fromBlock *big.Int,
+		toBlock *big.Int,
+	) ([]message.Received, error)
+}
+
 type GlobalInbox interface {
 	SendTransactionMessage(
 		ctx context.Context,

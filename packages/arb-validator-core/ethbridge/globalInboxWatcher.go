@@ -88,31 +88,35 @@ func newGlobalInboxWatcher(
 	}, nil
 }
 
+func (vm *globalInboxWatcher) generateTopics() [][]ethcommon.Hash {
+	addressIndex := ethcommon.Hash{}
+	copy(
+		addressIndex[:],
+		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
+	)
+	return [][]ethcommon.Hash{
+		{
+			transactionID,
+			transactionBatchID,
+			ethDepositID,
+			depositERC20ID,
+			depositERC721ID,
+		}, {
+			addressIndex,
+		},
+	}
+}
+
 func (vm *globalInboxWatcher) GetEvents(
 	ctx context.Context,
 	blockId *common.BlockId,
 	timestamp *big.Int,
 ) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
-	addressIndex := ethcommon.Hash{}
-	copy(
-		addressIndex[:],
-		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
-	)
 	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{vm.inboxAddress},
-		Topics: [][]ethcommon.Hash{
-			{
-				transactionID,
-				transactionBatchID,
-				ethDepositID,
-				depositERC20ID,
-				depositERC721ID,
-			}, {
-				addressIndex,
-			},
-		},
+		Topics:    vm.generateTopics(),
 	})
 	if err != nil {
 		return nil, err
@@ -120,27 +124,67 @@ func (vm *globalInboxWatcher) GetEvents(
 
 	events := make([]arbbridge.Event, 0, len(inboxLogs))
 	for _, evmLog := range inboxLogs {
-		msg, err := vm.processMessageDeliveredEvents(ctx, evmLog)
-
-		event := arbbridge.MessageDeliveredEvent{
-			ChainInfo: getLogChainInfo(evmLog),
-			Message: message.Received{
-				Message: msg,
-				ChainTime: message.ChainTime{
-					BlockNum: common.NewTimeBlocks(
-						new(big.Int).SetUint64(evmLog.BlockNumber),
-					),
-					Timestamp: timestamp,
-				},
-			},
+		msg, err := vm.processLog(ctx, evmLog, timestamp)
+		if err != nil {
+			return nil, err
 		}
+		events = append(events, arbbridge.MessageDeliveredEvent{
+			ChainInfo: getLogChainInfo(evmLog),
+			Message:   msg,
+		})
+	}
+	return events, nil
+}
 
+func (vm *globalInboxWatcher) GetAllReceived(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]message.Received, error) {
+	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+		Addresses: []ethcommon.Address{vm.inboxAddress},
+		Topics:    vm.generateTopics(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	events := make([]message.Received, 0, len(inboxLogs))
+	for _, evmLog := range inboxLogs {
+		blockHeader, err := vm.client.HeaderByHash(ctx, evmLog.BlockHash)
+		if err != nil {
+			return nil, err
+		}
+		event, err := vm.processLog(ctx, evmLog, new(big.Int).SetUint64(blockHeader.Time))
 		if err != nil {
 			return nil, err
 		}
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+func (vm *globalInboxWatcher) processLog(
+	ctx context.Context,
+	evmLog types.Log,
+	timestamp *big.Int,
+) (message.Received, error) {
+	msg, err := vm.processMessageDeliveredEvents(ctx, evmLog)
+	if err != nil {
+		return message.Received{}, err
+	}
+
+	return message.Received{
+		Message: msg,
+		ChainTime: message.ChainTime{
+			BlockNum: common.NewTimeBlocks(
+				new(big.Int).SetUint64(evmLog.BlockNumber),
+			),
+			Timestamp: timestamp,
+		},
+	}, nil
 }
 
 func (vm *globalInboxWatcher) processMessageDeliveredEvents(
