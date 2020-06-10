@@ -273,7 +273,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     const result = await this.client.getMessageResult(arbTxHash)
 
-    console.log('Got result from client', result)
     if (!result) {
       return null
     }
@@ -326,7 +325,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
   public async perform(method: string, params: any): Promise<any> {
-    console.log('perform', method, params)
+    // console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -345,11 +344,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       }
       case 'getTransactionReceipt': {
         const result = await this.getMessageResult(params.transactionHash)
-        console.log('Getting tx receipt for', params.transactionHash)
         if (!result) {
           return null
         }
-        console.log('Got tx receipt for', params.transactionHash)
+
         let status = 0
         let logs: ethers.providers.Log[] = []
         if (
@@ -369,8 +367,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         } else if (l1Confs !== undefined) {
           confirmations = l1Confs
         }
-
-        console.log('Receipt has confirmations', confirmations)
 
         const txReceipt: ethers.providers.TransactionReceipt = {
           blockHash: result.nodeInfo.nodeHash,
@@ -451,7 +447,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           (this.latestLocation.nodeHeight !== location.nodeHeight ||
             this.latestLocation.nodeHash !== location.nodeHash)
         ) {
-          console.log('Resetting events block')
           this.resetEventsBlock(location.nodeHeight)
         }
         this.latestLocation = location

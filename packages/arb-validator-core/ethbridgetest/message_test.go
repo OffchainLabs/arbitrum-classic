@@ -79,51 +79,11 @@ func TestTransactionMessage(t *testing.T) {
 	}
 }
 
-func generateRandomBatchTx(chain common.Address) (message.BatchTx, common.Address, error) {
-	to := common.RandAddress()
-	seq := common.RandBigInt()
-	val := common.RandBigInt()
-	data := common.RandBytes(200)
-
-	offchainHash := message.BatchTxHash(
-		chain,
-		to,
-		seq,
-		val,
-		data,
-	)
-	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
-
-	privateKey, err := crypto.HexToECDSA(privHex)
-	if err != nil {
-		return message.BatchTx{}, common.Address{}, err
-	}
-
-	sigBytes, err := crypto.Sign(messageHash.Bytes(), privateKey)
-	if err != nil {
-		return message.BatchTx{}, common.Address{}, err
-	}
-
-	var sig [65]byte
-	copy(sig[:], sigBytes)
-
-	sender := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	return message.BatchTx{
-		To:     to,
-		SeqNum: seq,
-		Value:  val,
-		Data:   data,
-		Sig:    sig,
-	}, common.NewAddressFromEth(sender), nil
-}
-
 func TestTransactionBatchSingleSender(t *testing.T) {
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
 	chain := addr3
-	batchTx, sender, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
 	calculatedSender, err := tester.TransactionMessageBatchSingleSender(
 		nil,
 		big.NewInt(0),
@@ -145,11 +105,10 @@ func TestTransactionBatchSingleSender(t *testing.T) {
 }
 
 func TestTransactionBatchSingleValid(t *testing.T) {
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
 	chain := addr3
-	batchTx, sender, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
 
 	txMessageHash, txReceiptHash, valid, err := tester.TransactionMessageBatchHashSingle(
 		nil,
@@ -190,11 +149,9 @@ func TestTransactionBatchSingleValid(t *testing.T) {
 }
 
 func TestTransactionBatchSingleInvalid(t *testing.T) {
+	privateKey, _ := crypto.HexToECDSA(privHex)
 	chain := addr3
-	batchTx, _, err := generateRandomBatchTx(chain)
-	if err != nil {
-		t.Fatal(err)
-	}
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
 
 	batchTx.Sig[0]++
 
@@ -213,13 +170,11 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 }
 
 func TestTransactionBatchMessage(t *testing.T) {
+	privateKey, _ := crypto.HexToECDSA(privHex)
 	chain := addr3
 	batchTxData := make([]byte, 0)
 	for i := 0; i < 10; i++ {
-		batchTx, _, err := generateRandomBatchTx(chain)
-		if err != nil {
-			t.Fatal(err)
-		}
+		batchTx := message.NewRandomBatchTx(chain, privateKey)
 		if i%3 == 0 {
 			batchTx.Sig[0]++
 		}

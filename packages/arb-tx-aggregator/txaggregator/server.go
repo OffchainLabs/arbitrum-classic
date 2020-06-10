@@ -49,6 +49,13 @@ type DecodedBatchTx struct {
 	pubkey []byte
 }
 
+func NewDecodedBatchTx(tx message.BatchTx, key ecdsa.PublicKey) DecodedBatchTx {
+	return DecodedBatchTx{
+		tx:     tx,
+		pubkey: elliptic.Marshal(crypto.S256(), key.X, key.Y),
+	}
+}
+
 type Server struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
@@ -97,6 +104,21 @@ func NewServer(
 	return server
 }
 
+func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
+	sort.SliceStable(txes, func(i, j int) bool {
+		if !bytes.Equal(txes[i].pubkey, txes[j].pubkey) {
+			return true
+		}
+		return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
+	})
+
+	batchTxes := make([]message.BatchTx, 0, len(txes))
+	for _, tx := range txes {
+		batchTxes = append(batchTxes, tx.tx)
+	}
+	return batchTxes
+}
+
 func (m *Server) sendBatch(ctx context.Context) {
 	var txes []DecodedBatchTx
 
@@ -111,22 +133,10 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	sort.SliceStable(txes, func(i, j int) bool {
-		if bytes.Equal(txes[i].pubkey, txes[j].pubkey) {
-			return false
-		}
-		return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
-	})
-
-	batchTxes := make([]message.BatchTx, 0, len(txes))
-	for _, tx := range txes {
-		batchTxes = append(batchTxes, tx.tx)
-	}
-
 	err := m.globalInbox.DeliverTransactionBatchNoWait(
 		ctx,
 		m.rollupAddress,
-		batchTxes,
+		prepareTransactions(txes),
 	)
 
 	m.Lock()

@@ -18,6 +18,7 @@ package message
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -102,6 +103,34 @@ func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 		Data:   txData,
 		Sig:    sig,
 	}, nil
+}
+
+func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
+	to := common.RandAddress()
+	seq := common.RandBigInt()
+	val := common.RandBigInt()
+	data := common.RandBytes(200)
+
+	offchainHash := BatchTxHash(
+		chain,
+		to,
+		seq,
+		val,
+		data,
+	)
+	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
+	sigBytes, _ := crypto.Sign(messageHash.Bytes(), privKey)
+
+	var sig [65]byte
+	copy(sig[:], sigBytes)
+
+	return BatchTx{
+		To:     to,
+		SeqNum: seq,
+		Value:  val,
+		Data:   data,
+		Sig:    sig,
+	}
 }
 
 func (b BatchTx) String() string {
