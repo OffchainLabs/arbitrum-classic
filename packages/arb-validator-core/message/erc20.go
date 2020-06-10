@@ -57,6 +57,10 @@ func (m ERC20) Type() Type {
 	return ERC20Type
 }
 
+func (m ERC20) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m ERC20) GetFuncName() string {
 	return "ERC20Transfer"
 }

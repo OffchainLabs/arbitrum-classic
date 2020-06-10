@@ -38,6 +38,7 @@ const (
 )
 
 type SingleMessage interface {
+	Message
 	AsInboxValue() value.TupleValue
 }
 
@@ -52,10 +53,11 @@ type Message interface {
 
 	CommitmentHash() common.Hash
 	CheckpointValue() value.Value
+
+	VMInboxMessages() []SingleMessage
 }
 
 type ExecutionMessage interface {
-	Message
 	SingleMessage
 	GetFuncName() string
 }
@@ -119,25 +121,11 @@ func UnmarshalFromCheckpoint(msgType Type, v value.Value) (Message, error) {
 }
 
 func AddToPrev(prev value.TupleValue, delivered Delivered) value.TupleValue {
-	switch msg := delivered.Message.(type) {
-	case SingleMessage:
-		m, _ := delivered.AsInboxValue()
-		return value.NewTuple2(prev, m)
-	case TransactionBatch:
-		ret := prev
-		txes := msg.getTransactions()
-		for _, tx := range txes {
-			deliveredTx := Delivered{
-				Message:      tx,
-				DeliveryInfo: delivered.DeliveryInfo,
-			}
-			m, _ := deliveredTx.AsInboxValue()
-			ret = value.NewTuple2(ret, m)
-		}
-		return ret
-	default:
-		panic("Bad message type")
+	ret := prev
+	for _, msg := range delivered.VMInboxMessages() {
+		ret = value.NewTuple2(ret, msg.AsInboxValue())
 	}
+	return ret
 }
 
 func unmarshalTxWrapped(val value.Value, msgType Type) (common.Address, value.TupleValue, error) {

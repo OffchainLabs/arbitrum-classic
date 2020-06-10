@@ -58,6 +58,10 @@ func (m Eth) Type() Type {
 	return EthType
 }
 
+func (m Eth) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m Eth) GetFuncName() string {
 	return "EthTransfer"
 }

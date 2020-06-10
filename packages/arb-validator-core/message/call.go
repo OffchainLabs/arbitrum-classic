@@ -61,6 +61,10 @@ func (m Call) Type() Type {
 	return CallType
 }
 
+func (m Call) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m Call) CommitmentHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),

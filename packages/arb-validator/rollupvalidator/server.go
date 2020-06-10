@@ -195,7 +195,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		Data: dataBytes,
 	}
 
-	deliveredMsg := message.Delivered{
+	deliveredMsg := message.SingleDelivered{
 		Message: callMsg,
 		DeliveryInfo: message.DeliveryInfo{
 			ChainTime: message.ChainTime{
@@ -205,8 +205,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 			TxId: big.NewInt(0),
 		},
 	}
-
-	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
+	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
 
 	latestBlock := m.man.CurrentBlockId()
 	latestTime := big.NewInt(time.Now().Unix())

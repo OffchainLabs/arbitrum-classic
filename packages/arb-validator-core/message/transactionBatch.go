@@ -55,6 +55,38 @@ func (m TransactionBatch) String() string {
 	return sb.String()
 }
 
+func (m TransactionBatch) VMInboxMessages() []SingleMessage {
+	txes := make([]SingleMessage, 0)
+	for _, tx := range m.getBatchTransactions() {
+		batchTxHash := BatchTxHash(
+			m.Chain,
+			tx.To,
+			tx.SeqNum,
+			tx.Value,
+			tx.Data,
+		)
+		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
+		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
+		if err != nil {
+			log.Println("skipping tx with invalid sig:", err)
+			// Signature was invalid so we'll skip
+			continue
+		}
+
+		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
+		fullTx := Transaction{
+			Chain:       m.Chain,
+			To:          tx.To,
+			From:        from,
+			SequenceNum: tx.SeqNum,
+			Value:       tx.Value,
+			Data:        tx.Data,
+		}
+		txes = append(txes, fullTx)
+	}
+	return txes
+}
+
 // BatchTxHash hashes the transaction data. This hash is signed by users
 // who submit transactions as part of a batch
 func BatchTxHash(
@@ -186,38 +218,6 @@ func (m TransactionBatch) getBatchTransactions() []BatchTx {
 		}
 		txes = append(txes, batch)
 		offset += batch.encodedLength()
-	}
-	return txes
-}
-
-func (m TransactionBatch) getTransactions() []Transaction {
-	txes := make([]Transaction, 0)
-	for _, tx := range m.getBatchTransactions() {
-		batchTxHash := BatchTxHash(
-			m.Chain,
-			tx.To,
-			tx.SeqNum,
-			tx.Value,
-			tx.Data,
-		)
-		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
-		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
-		if err != nil {
-			log.Println("skipping tx with invalid sig:", err)
-			// Signature was invalid so we'll skip
-			continue
-		}
-
-		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-		fullTx := Transaction{
-			Chain:       m.Chain,
-			To:          tx.To,
-			From:        from,
-			SequenceNum: tx.SeqNum,
-			Value:       tx.Value,
-			Data:        tx.Data,
-		}
-		txes = append(txes, fullTx)
 	}
 	return txes
 }

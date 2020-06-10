@@ -64,6 +64,10 @@ func (m ContractTransaction) Type() Type {
 	return ContractTransactionType
 }
 
+func (m ContractTransaction) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m ContractTransaction) CommitmentHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),

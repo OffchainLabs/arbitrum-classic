@@ -57,6 +57,10 @@ func (m ERC721) Type() Type {
 	return ERC721Type
 }
 
+func (m ERC721) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m ERC721) GetFuncName() string {
 	return "ERC721Transfer"
 }

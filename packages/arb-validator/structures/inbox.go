@@ -294,6 +294,14 @@ func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]messa
 	return msgs, nil
 }
 
+func (ms *MessageStack) GetAllMessages() []message.Delivered {
+	msgs := make([]message.Delivered, 0)
+	for item := ms.oldest; item != nil; item = item.next {
+		msgs = append(msgs, item.message)
+	}
+	return msgs
+}
+
 type Inbox struct {
 	*MessageStack
 }
