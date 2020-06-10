@@ -210,7 +210,10 @@ func CreateManagerAdvanced(
 				}
 			}
 
-			man.validCallLock.Lock()
+			// If we're not caught up to the l1 then the call lock is already held
+			if caughtUpToL1 {
+				man.validCallLock.Lock()
+			}
 
 			man.listenersLock.Lock()
 			man.activeChain = nil
@@ -232,11 +235,11 @@ func CreateManagerAdvanced(
 
 func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.listenersLock.Lock()
+	defer man.listenersLock.Unlock()
 	man.listeners = append(man.listeners, listener)
 	if man.activeChain != nil {
 		man.activeChain.AddListener(context.Background(), listener)
 	}
-	man.listenersLock.Unlock()
 }
 
 func (man *Manager) GetLatestMachine() machine.Machine {
