@@ -324,7 +324,7 @@ func initializeChainObserver(
 			var err error
 			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
 			return err
-		}); err != nil {
+		}); err == nil {
 			return chain, nil
 		}
 	}
