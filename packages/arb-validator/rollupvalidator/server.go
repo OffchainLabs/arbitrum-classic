@@ -216,6 +216,10 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		LowerBoundTimestamp: latestTime,
 		UpperBoundTimestamp: latestTime,
 	}
+	if br := mach.IsBlocked(latestBlock.Height, true); br != nil {
+		log.Println("can't produce solution since machine is blocked", br)
+		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
+	}
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
