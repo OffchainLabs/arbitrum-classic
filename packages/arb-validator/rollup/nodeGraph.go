@@ -118,18 +118,21 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 	return chain, nil
 }
 
-func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
-	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
+func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string, labels map[*structures.Node][]string) string {
+	labels[ng.latestConfirmed] = append(labels[ng.latestConfirmed], "latestConfirmed")
+	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix, labels)
 }
 
-func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string) string {
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string, labels map[*structures.Node][]string) string {
 	ret := prefix + strconv.Itoa(int(node.LinkType())) + ":" + node.Hash().ShortString()
 	if ng.leaves.IsLeaf(node) {
 		ret = ret + " leaf"
 	}
-	if node == ng.latestConfirmed {
-		ret = ret + " latestConfirmed"
+
+	for _, label := range labels[node] {
+		ret = ret + " " + label
 	}
+
 	stakers.forall(func(s *Staker) {
 		if s.location.Equals(node) {
 			ret = ret + " stake:" + s.address.ShortString()
@@ -140,7 +143,7 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers 
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succi := node.SuccessorHashes()[i]
 		if !succi.Equals(common.Hash{}) {
-			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
+			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix, labels)
 		}
 	}
 	return ret

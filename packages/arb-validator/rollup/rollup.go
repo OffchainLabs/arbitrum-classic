@@ -180,7 +180,10 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 func (chain *ChainObserver) DebugString(prefix string) string {
 	chain.Lock()
 	defer chain.Unlock()
-	return chain.nodeGraph.DebugString(prefix)
+	labels := make(map[*structures.Node][]string)
+	labels[chain.calculatedValidNode] = append(labels[chain.calculatedValidNode], "calculatedValidNode")
+	labels[chain.knownValidNode] = append(labels[chain.knownValidNode], "knownValidNode")
+	return chain.nodeGraph.DebugString(prefix, labels)
 }
 
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {

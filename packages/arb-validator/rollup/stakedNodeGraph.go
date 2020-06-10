@@ -85,9 +85,9 @@ func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreCont
 	return chain, nil
 }
 
-func (sng *StakedNodeGraph) DebugString(prefix string) string {
+func (sng *StakedNodeGraph) DebugString(prefix string, labels map[*structures.Node][]string) string {
 	subPrefix := prefix + "  "
-	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix) + sng.stakers.DebugString(prefix)
+	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix, labels) + sng.stakers.DebugString(prefix)
 }
 
 func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {

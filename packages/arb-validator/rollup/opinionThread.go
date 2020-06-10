@@ -122,6 +122,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.Machine().Clone()
+				log.Println("Forming opinion on", successor.Hash().ShortString())
 
 				chain.RUnlock()
 
@@ -308,9 +309,11 @@ func getNodeOpinion(
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
 	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
+		log.Println("Saw node with invalid after inbox top claim", claim.AfterInboxTop)
 		return valprotocol.InvalidInboxTopChildType, nil
 	}
 	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
+		log.Println("Saw node with invalid imported messages claim", claim.ImportedMessagesSlice)
 		return valprotocol.InvalidMessagesChildType, nil
 	}
 
@@ -321,6 +324,7 @@ func getNodeOpinion(
 		0,
 	)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
+		log.Println("Saw node with invalid execution claim")
 		return valprotocol.InvalidExecutionChildType, nil
 	}
 
