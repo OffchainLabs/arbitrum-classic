@@ -273,6 +273,27 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 	return inbox, nil
 }
 
+func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]message.Delivered, error) {
+	if count == 0 {
+		return nil, nil
+	}
+	oldItem, ok := ms.itemAfterHash(olderAcc)
+	if !ok {
+		return nil, errors.New("olderAcc not found")
+	}
+
+	item := oldItem
+	msgs := make([]message.Delivered, 0)
+	for i := uint64(0); i < count; i++ {
+		if item == nil {
+			return nil, errors.New("Not enough Messages in inbox")
+		}
+		msgs = append(msgs, item.message)
+		item = item.next
+	}
+	return msgs, nil
+}
+
 type Inbox struct {
 	*MessageStack
 }

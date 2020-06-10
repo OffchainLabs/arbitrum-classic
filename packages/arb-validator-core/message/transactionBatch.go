@@ -26,6 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -38,6 +39,20 @@ import (
 type TransactionBatch struct {
 	Chain  common.Address
 	TxData []byte
+}
+
+func (m TransactionBatch) String() string {
+	var sb strings.Builder
+	sb.WriteString("TransactionBatch(txes: [")
+	txes := m.getBatchTransactions()
+	for i, batchTx := range m.getBatchTransactions() {
+		sb.WriteString(batchTx.String())
+		if i != len(txes)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString("])")
+	return sb.String()
 }
 
 // BatchTxHash hashes the transaction data. This hash is signed by users
@@ -205,10 +220,6 @@ func (m TransactionBatch) getTransactions() []Transaction {
 		txes = append(txes, fullTx)
 	}
 	return txes
-}
-
-func (m TransactionBatch) String() string {
-	return fmt.Sprintf("TransactionBatch()")
 }
 
 // Equals check for equality between this object and any other message by

@@ -120,9 +120,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					afterInboxTop = &afterInboxTopVal
 				}
 				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
+				messages, _ := chain.inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.Machine().Clone()
-				log.Println("Forming opinion on", successor.Hash().ShortString())
+				log.Println("Forming opinion on", successor.Hash().ShortString(), "which imported", messages, "messages")
 
 				chain.RUnlock()
 
