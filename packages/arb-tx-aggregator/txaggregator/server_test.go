@@ -17,14 +17,13 @@
 package txaggregator
 
 import (
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 	"testing"
 )
-
-var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
 func TestPrepareTransactions(t *testing.T) {
 	type testCase struct {
@@ -34,16 +33,23 @@ func TestPrepareTransactions(t *testing.T) {
 	}
 
 	chain := common.RandAddress()
-	privateKey, _ := crypto.HexToECDSA(privHex)
+	keys := make([]*ecdsa.PrivateKey, 0)
+	for i := 0; i < 10; i++ {
+		pk, err := crypto.GenerateKey()
+		if err != nil {
+			t.Fatal()
+		}
+		keys = append(keys, pk)
+	}
 
 	cases := make([]testCase, 0)
 	cases = append(cases, func() testCase {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.BatchTx, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, privateKey)
+			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.SeqNum = big.NewInt(int64(i))
-			decoded := NewDecodedBatchTx(batchTx, privateKey.PublicKey)
+			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
 			decodedTxes = append(decodedTxes, decoded)
 			sortedTxes = append(sortedTxes, decoded.tx)
 		}
@@ -57,9 +63,9 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.BatchTx, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, privateKey)
+			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.SeqNum = big.NewInt(9 - int64(i))
-			decoded := NewDecodedBatchTx(batchTx, privateKey.PublicKey)
+			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
 			decodedTxes = append(decodedTxes, decoded)
 		}
 		for i := range decodedTxes {
@@ -69,6 +75,23 @@ func TestPrepareTransactions(t *testing.T) {
 			raw:    decodedTxes,
 			sorted: sortedTxes,
 			label:  "reverse",
+		}
+	}())
+
+	cases = append(cases, func() testCase {
+		decodedTxes := make([]DecodedBatchTx, 0)
+		sortedTxes := make([]message.BatchTx, 0)
+		for i := 0; i < 10; i++ {
+			batchTx := message.NewRandomBatchTx(chain, keys[i])
+			batchTx.SeqNum = big.NewInt(9 - int64(i))
+			decoded := NewDecodedBatchTx(batchTx, keys[i].PublicKey)
+			decodedTxes = append(decodedTxes, decoded)
+			sortedTxes = append(sortedTxes, decoded.tx)
+		}
+		return testCase{
+			raw:    decodedTxes,
+			sorted: sortedTxes,
+			label:  "reverseDifferentKeys",
 		}
 	}())
 

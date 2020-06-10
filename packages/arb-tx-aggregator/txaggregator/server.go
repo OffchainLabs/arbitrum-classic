@@ -107,7 +107,7 @@ func NewServer(
 func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
 	sort.SliceStable(txes, func(i, j int) bool {
 		if !bytes.Equal(txes[i].pubkey, txes[j].pubkey) {
-			return true
+			return false
 		}
 		return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
 	})
