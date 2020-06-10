@@ -214,7 +214,7 @@ export class ArbClient {
       if (tx.rawVal === undefined) {
         return null
       }
-      let nodeInfo = extractNodeInfo(tx.location)
+      const nodeInfo = extractNodeInfo(tx.location)
       if (nodeInfo === undefined) {
         return null
       }
@@ -381,7 +381,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            let location = extractNodeInfo(result.location)
+            const location = extractNodeInfo(result.location)
             if (location) {
               resolve(location)
             } else {
