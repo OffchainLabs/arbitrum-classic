@@ -34,7 +34,7 @@
     "ethers": "~4.0.47"
   },
   "devDependencies": {
-    "@types/jest": "^25.1.1",
+    "@types/jest": "^26.0.0",
     "install-peers-cli": "^2.2.0",
     "jest": "^25.1.0",
     "jest-junit": "^10.0.0",
