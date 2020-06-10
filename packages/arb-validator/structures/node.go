@@ -193,13 +193,14 @@ func (node *Node) Prev() *Node {
 
 func (node *Node) ClearPrev() {
 	node.prev = nil
+	node.prevHash = zeroBytes32
 }
 
 func (node *Node) UnlinkPrev() bool {
 	hasPrev := node.prev != nil
 	if hasPrev {
 		node.prev.successorHashes[node.LinkType()] = zeroBytes32
-		node.prev = nil
+		node.ClearPrev()
 	}
 	return hasPrev
 }
@@ -265,9 +266,9 @@ func (node *Node) RemoveStaker() {
 	node.numStakers--
 }
 
-func (node *Node) IsInitial() bool {
+func (node *Node) HasAncestor() bool {
 	emptyHash := common.Hash{}
-	return node.prevHash == emptyHash
+	return node.prevHash != emptyHash
 }
 
 func (node *Node) Equals(node2 *Node) bool {

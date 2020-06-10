@@ -90,7 +90,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 	}
 	// now set up prevs and successors for all nodes
 	for _, nd := range chain.nodeFromHash {
-		if !nd.IsInitial() {
+		if nd.HasAncestor() {
 			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
 				return nil, fmt.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
