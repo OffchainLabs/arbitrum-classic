@@ -282,7 +282,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     const txHashCheck = evmVal.message.txHash
 
     // Check txHashCheck matches txHash
-    if (txHash !== txHashCheck) {
+    if (arbTxHash !== txHashCheck) {
       throw Error(
         'txHash did not match its queried transaction ' +
           arbTxHash +
