@@ -143,7 +143,7 @@ func setupValidators(
 	manager1, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		client1,
+		rollupmanager.NewStressTestClient(client1, time.Second*10),
 		contract,
 		db1,
 	)
@@ -166,7 +166,7 @@ func setupValidators(
 	manager2, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		client2,
+		rollupmanager.NewStressTestClient(client2, time.Second*10),
 		contract,
 		db2,
 	)
