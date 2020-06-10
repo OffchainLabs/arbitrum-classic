@@ -316,7 +316,7 @@ func initializeChainObserver(
 ) (*rollup.ChainObserver, error) {
 	if checkpointer.HasCheckpointedState() {
 		var chain *rollup.ChainObserver
-		err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
 			chainObserverBuf := &rollup.ChainObserverBuf{}
 			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 				return err
@@ -324,17 +324,19 @@ func initializeChainObserver(
 			var err error
 			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
 			return err
-		})
-		return chain, err
-	} else {
-		params, err := watcher.GetParams(ctx)
-		if err != nil {
-			log.Fatal(err)
+		}); err != nil {
+			return chain, nil
 		}
-		txHash, blockId, _, err := watcher.GetCreationInfo(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, txHash)
 	}
+
+	log.Println("No valid checkpoints so starting from fresh state")
+	params, err := watcher.GetParams(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	txHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, txHash)
 }
