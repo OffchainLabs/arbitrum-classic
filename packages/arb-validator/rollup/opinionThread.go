@@ -197,8 +197,14 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						lowerBoundBlock := prepared.params.TimeBounds.LowerBoundBlock
 						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
+						lowerBoundTime := prepared.params.TimeBounds.LowerBoundTimestamp
+						upperBoundTime := prepared.params.TimeBounds.UpperBoundTimestamp
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
-						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 && endCushion.Cmp(upperBoundBlock) <= 0 {
+
+						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
+							endCushion.Cmp(upperBoundBlock) <= 0 &&
+							time.Now().Unix() >= lowerBoundTime.Int64() &&
+							time.Now().Unix() <= upperBoundTime.Int64() {
 							chain.RUnlock()
 							chain.Lock()
 							chain.pendingState = prepared.machine
