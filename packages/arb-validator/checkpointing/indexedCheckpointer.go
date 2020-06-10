@@ -198,8 +198,11 @@ func restoreLatestState(
 			// If something went wrong, try the next block
 			continue
 		}
-		return unmarshalFunc(ckpWithMan.Contents, &restoreContextLocked{db})
-
+		if err := unmarshalFunc(ckpWithMan.Contents, &restoreContextLocked{db}); err != nil {
+			log.Println("Failed load checkpoint at height", height, "with error", err)
+			continue
+		}
+		return nil
 	}
 	return errNoMatchingCheckpoint
 }
