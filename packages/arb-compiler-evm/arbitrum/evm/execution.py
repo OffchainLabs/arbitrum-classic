@@ -88,7 +88,16 @@ def _perform_real_call(vm, call_num):
     vm.dup2()
     local_exec_state.get("value")(vm)
     std.comparison.lte(vm)
-    vm.ifelse(lambda vm: [_execute_call(vm, call_num)], lambda vm: [vm.push(0)])
+    vm.ifelse(
+        lambda vm: [_execute_call(vm, call_num)],
+        lambda vm: [
+            os.get_call_frame(vm),
+            call_frame.spawn_child(vm),
+            os.set_call_frame(vm),
+            vm.push(0),
+        ],
+    )
+    _complete_call(vm, call_num)
 
 
 @noreturn
@@ -125,8 +134,6 @@ def _execute_call(vm, call_num):
     call_frame.call_frame.get("account_state")(vm)
     account_state.get("code_point")(vm)
     _enter_exec(vm, call_num)
-
-    _complete_call(vm, call_num)
 
 
 @noreturn

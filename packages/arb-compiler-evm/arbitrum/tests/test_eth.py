@@ -22,6 +22,7 @@ from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 from arbitrum import messagestack
 from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn, EVMInvalidSequence
 from arbitrum.evm import contract_templates
+from arbitrum.std import bytestack_frombytes
 
 CALL_TX_TYPE = 5
 
@@ -715,3 +716,33 @@ class TestEVM(TestCase):
         self.assertEqual(
             parsed_out0.output_values[0], "0xef8c0cf8cb9e67b7b5d0ff04d6e26c04e2a591fa"
         )
+
+    def test_insuffient_balance(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler([contract_a])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            value.Tuple(
+                                [dest_address, 0, 10000, bytestack_frombytes(b"")]
+                            ),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 1)
+        parsed_out0 = output_handler(vm.logs[0])
+
+        self.assertIsInstance(parsed_out0, EVMRevert)
+        self.assertEqual(len(vm.sent_messages), 0)

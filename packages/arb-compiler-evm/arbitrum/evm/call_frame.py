@@ -110,6 +110,15 @@ def merge(vm):
     # parent_frame
 
 
+@modifies_stack([call_frame.typ], [call_frame.typ])
+def spawn_child(vm):
+    vm.dup0()
+    call_frame.set_val("parent_frame")(vm)
+    std.sized_byterange.new(vm)
+    vm.swap1()
+    call_frame.set_val("memory")(vm)
+
+
 # update:
 #   contractID
 #   message
@@ -125,11 +134,7 @@ def merge(vm):
 )
 def spawn(vm):
     # parent_frame local_exec_state contractID ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.set_val("memory")(vm)
+    spawn_child(vm)
 
     # subtract sent funds from balance
     # frame local_exec_state contractID ret_pc
@@ -180,11 +185,7 @@ def spawn(vm):
 )
 def spawn_callcode(vm):
     # parent_frame local_exec_state contractID ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.set_val("memory")(vm)
+    spawn_child(vm)
 
     # subtract sent funds from balance
     # frame local_exec_state contractID ret_pc
@@ -249,11 +250,7 @@ def spawn_callcode(vm):
 )
 def spawn_delegatecall(vm):
     # parent_frame local_exec_state ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
-    vm.swap1()
-    call_frame.set_val("memory")(vm)
+    spawn_child(vm)
     # frame local_exec_state ret_pc
 
     # frame local_exec_state ret_pc
