@@ -2,7 +2,8 @@ import * as Hashing from '../src/lib/hashing'
 import * as ethers from 'ethers'
 
 //helper:
-const randHexString = () => '0x' + Math.random().toString().substring(2, 15)
+const randHexString = (): string =>
+  '0x' + Math.random().toString().substring(2, 15)
 
 describe('calculateTransactionHash tests', function () {
   test('works with precalucated hash', function () {
