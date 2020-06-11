@@ -17,9 +17,15 @@
 package ethbridgetest
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 )
 
@@ -41,5 +47,52 @@ func TestBytesToBytestackHash(t *testing.T) {
 			t.Error("hash not equal with data length", len(data))
 		}
 	}
+}
 
+type TestCase struct {
+	Value string `json:"value"`
+	Hash  string `json:"hash"`
+	Name  string `json:"name"`
+}
+
+func TestDeserialize(t *testing.T) {
+	jsonFile, err := os.Open("../../arb-util/value/test_cases.json")
+	if err != nil {
+		t.Error(err)
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var testCases []TestCase
+	err = json.Unmarshal(byteValue, &testCases)
+	if err != nil {
+		t.Error(err)
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			if testCase.Name == "simple codepoint" || testCase.Name == "immediate codepoint" {
+				return
+			}
+			valBytes, err := hexutil.Decode("0x" + testCase.Value)
+			if err != nil {
+				t.Error(err)
+			}
+			val, err := value.UnmarshalValue(bytes.NewReader(valBytes))
+			if err != nil {
+				t.Error(err)
+			}
+
+			valid, offset, valHash, err := valueTester.DeserializeHash(nil, valBytes, big.NewInt(0))
+			if err != nil {
+				t.Error(err)
+			}
+			if !valid {
+				t.Error("value was invalid")
+			}
+			if offset.Cmp(big.NewInt(int64(len(valBytes)))) != 0 {
+				t.Errorf("offset was incorrect, was %v, should have been %v", offset, len(valBytes))
+			}
+			if valHash != val.Hash() {
+				t.Error("Incorrect hash")
+			}
+		})
+	}
 }
