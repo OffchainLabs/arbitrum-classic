@@ -1,3 +1,5 @@
+/* eslint-env node, jest */
+
 import * as Hashing from '../src/lib/hashing'
 import * as ethers from 'ethers'
 
