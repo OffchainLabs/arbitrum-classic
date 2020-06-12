@@ -202,6 +202,12 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						upperBoundTime := prepared.params.TimeBounds.UpperBoundTimestamp
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
 
+						// We're predicting what the timestamp will be when we
+						// submit which is likely to be close to the current
+						// time rather than the time of the previous block. This
+						// doesn't effect correctness since the failure modes
+						// are dropping a valid assertion or submitting an
+						// assertion that will be rejected.
 						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
 							endCushion.Cmp(upperBoundBlock) <= 0 &&
 							time.Now().Unix() >= lowerBoundTime.Int64() &&
