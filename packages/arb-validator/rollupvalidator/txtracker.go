@@ -131,6 +131,9 @@ func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObs
 	go func() {
 		defer tr.Unlock()
 		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
+		if tr.pendingLocation != nil && tr.pendingLocation.NodeHash == possibleNode.Hash().String() {
+			return
+		}
 		nodeInfo, err := processNode(possibleNode)
 		if err != nil {
 			log.Println("Prepared assertion with invalid data", err)
