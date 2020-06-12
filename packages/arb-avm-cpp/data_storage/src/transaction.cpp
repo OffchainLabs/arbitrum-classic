@@ -64,8 +64,7 @@ rocksdb::Status Transaction::rollBack() {
     return transaction->Rollback();
 }
 
-SaveResults Transaction::incrementReference(
-    const std::vector<unsigned char>& hash_key) {
+SaveResults Transaction::incrementReference(const rocksdb::Slice& hash_key) {
     auto results = getData(hash_key);
 
     if (results.status.ok()) {
@@ -77,7 +76,7 @@ SaveResults Transaction::incrementReference(
     }
 }
 
-SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
+SaveResults Transaction::saveData(const rocksdb::Slice& hash_key,
                                   const std::vector<unsigned char>& value) {
     auto results = getData(hash_key);
     int ref_count;
@@ -85,7 +84,8 @@ SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
     if (results.status.ok()) {
         if (results.stored_value != value) {
             std::cout << "Different value for key: ";
-            boost::algorithm::hex(hash_key.begin(), hash_key.end(),
+            boost::algorithm::hex(hash_key.data(),
+                                  hash_key.data() + hash_key.size(),
                                   std::ostream_iterator<char>{std::cout, ""});
             std::cout << "\nPrevious value: ";
             boost::algorithm::hex(results.stored_value.begin(),
@@ -104,8 +104,7 @@ SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
     return saveValueWithRefCount(ref_count, hash_key, value);
 }
 
-DeleteResults Transaction::deleteData(
-    const std::vector<unsigned char>& hash_key) {
+DeleteResults Transaction::deleteData(const rocksdb::Slice& hash_key) {
     auto results = getData(hash_key);
 
     if (results.status.ok()) {
@@ -124,12 +123,10 @@ DeleteResults Transaction::deleteData(
     }
 }
 
-GetResults Transaction::getData(
-    const std::vector<unsigned char>& hash_key) const {
+GetResults Transaction::getData(const rocksdb::Slice& hash_key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
-    std::string key_str(hash_key.begin(), hash_key.end());
-    auto get_status = transaction->Get(read_options, key_str, &return_value);
+    auto get_status = transaction->Get(read_options, hash_key, &return_value);
 
     if (get_status.ok()) {
         auto parsed_values = parseCountAndValue(return_value);
@@ -146,7 +143,7 @@ GetResults Transaction::getData(
 // private ------------------------------------------------------------------
 SaveResults Transaction::saveValueWithRefCount(
     uint32_t updated_ref_count,
-    const std::vector<unsigned char>& hash_key,
+    const rocksdb::Slice& hash_key,
     const std::vector<unsigned char>& value) {
     auto updated_entry = serializeCountAndValue(updated_ref_count, value);
 
@@ -160,15 +157,13 @@ SaveResults Transaction::saveValueWithRefCount(
 }
 
 rocksdb::Status Transaction::saveKeyValuePair(
-    const std::vector<unsigned char>& key,
+    const rocksdb::Slice& key,
     const std::vector<unsigned char>& value) {
     std::string value_str(value.begin(), value.end());
-    std::string key_str(key.begin(), key.end());
-    return transaction->Put(key_str, value_str);
+    return transaction->Put(key, value_str);
 }
 
 rocksdb::Status Transaction::deleteKeyValuePair(
-    const std::vector<unsigned char>& key) {
-    std::string key_str(key.begin(), key.end());
-    return transaction->Delete(key_str);
+    const rocksdb::Slice& hash_key) {
+    return transaction->Delete(hash_key);
 }

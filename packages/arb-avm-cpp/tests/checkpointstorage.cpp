@@ -40,7 +40,9 @@ void saveVal(CheckpointStorage& storage,
              int expected_ref_count,
              bool expected_status) {
     auto trans = storage.makeTransaction();
-    auto results = trans->saveData(hash_key, val);
+    rocksdb::Slice key{reinterpret_cast<const char*>(hash_key.data()),
+                       hash_key.size()};
+    auto results = trans->saveData(key, val);
     auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
@@ -54,7 +56,9 @@ void getVal(CheckpointStorage& storage,
             bool expected_status,
             std::vector<unsigned char> expected_val) {
     auto trans = storage.makeTransaction();
-    auto results = trans->getData(hash_key);
+    rocksdb::Slice key{reinterpret_cast<const char*>(hash_key.data()),
+                       hash_key.size()};
+    auto results = trans->getData(key);
     auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
@@ -68,7 +72,9 @@ void incrementRef(CheckpointStorage& storage,
                   int expected_ref_count,
                   bool expected_status) {
     auto trans = storage.makeTransaction();
-    auto results = trans->incrementReference(hash_key);
+    rocksdb::Slice key{reinterpret_cast<const char*>(hash_key.data()),
+                       hash_key.size()};
+    auto results = trans->incrementReference(key);
     auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
@@ -81,7 +87,9 @@ void deleteVal(CheckpointStorage& storage,
                int expected_ref_count,
                bool expected_status) {
     auto trans = storage.makeTransaction();
-    auto results = trans->deleteData(hash_key);
+    rocksdb::Slice key{reinterpret_cast<const char*>(hash_key.data()),
+                       hash_key.size()};
+    auto results = trans->deleteData(key);
     auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 

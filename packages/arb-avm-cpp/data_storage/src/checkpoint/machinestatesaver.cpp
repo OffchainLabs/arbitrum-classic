@@ -29,6 +29,12 @@ MachineStateSaver::MachineStateSaver(
     transaction = std::move(transaction_);
 }
 
+namespace {
+rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
+    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
+}
+}  // namespace
+
 SaveResults MachineStateSaver::saveValue(const value& val) {
     auto serialized_value = checkpoint::utils::serializeValue(val);
     auto type = static_cast<ValueTypes>(serialized_value[0]);
@@ -38,18 +44,20 @@ SaveResults MachineStateSaver::saveValue(const value& val) {
         return saveTuple(tuple);
     } else {
         auto hash_key = GetHashKey(val);
-        return transaction->saveData(hash_key, serialized_value);
+        auto key = vecToSlice(hash_key);
+        return transaction->saveData(key, serialized_value);
     }
 }
 
 SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     auto hash_key = GetHashKey(val);
-    auto results = transaction->getData(hash_key);
+    auto key = vecToSlice(hash_key);
+    auto results = transaction->getData(key);
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
     if (incr_ref_count) {
-        return transaction->incrementReference(hash_key);
+        return transaction->incrementReference(key);
     } else {
         std::vector<unsigned char> value_vector{
             static_cast<unsigned char>(TUPLE)};
@@ -68,7 +76,7 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
                 auto tuple_save_results = saveTuple(tup_val);
             }
         }
-        return transaction->saveData(hash_key, value_vector);
+        return transaction->saveData(key, value_vector);
     }
 }
 
@@ -77,7 +85,8 @@ SaveResults MachineStateSaver::saveMachineState(
     const std::vector<unsigned char>& checkpoint_name) {
     auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
 
-    return transaction->saveData(checkpoint_name, serialized_state);
+    auto key = vecToSlice(checkpoint_name);
+    return transaction->saveData(key, serialized_state);
 }
 
 rocksdb::Status MachineStateSaver::commitTransaction() {

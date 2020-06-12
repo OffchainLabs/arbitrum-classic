@@ -20,16 +20,22 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
+namespace {
+rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
+    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
+}
+}  // namespace
+
 class MachineStateDeleter {
    private:
     std::unique_ptr<Transaction> transaction;
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
+    DeleteResults deleteTuple(const rocksdb::Slice& hash_key,
                               GetResults results);
 
    public:
     MachineStateDeleter(std::unique_ptr<Transaction> transaction_);
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
+    DeleteResults deleteTuple(const rocksdb::Slice& hash_key);
+    DeleteResults deleteValue(const rocksdb::Slice& hash_key);
     rocksdb::Status commitTransaction();
     rocksdb::Status rollBackTransaction();
 };
@@ -39,9 +45,8 @@ MachineStateDeleter::MachineStateDeleter(
     transaction = std::move(transaction_);
 }
 
-DeleteResults MachineStateDeleter::deleteTuple(
-    const std::vector<unsigned char>& hash_key,
-    GetResults results) {
+DeleteResults MachineStateDeleter::deleteTuple(const rocksdb::Slice& hash_key,
+                                               GetResults results) {
     if (!results.status.ok()) {
         return DeleteResults{0, results.status};
     }
@@ -50,24 +55,24 @@ DeleteResults MachineStateDeleter::deleteTuple(
         auto value_vectors =
             checkpoint::utils::parseTuple(results.stored_value);
 
-        for (auto& vector : value_vectors) {
-            if (static_cast<ValueTypes>(vector[0]) == TUPLE) {
-                vector.erase(vector.begin());
-                auto delete_status = deleteTuple(vector);
+        for (const auto& vec : value_vectors) {
+            if (static_cast<ValueTypes>(vec[0]) == TUPLE) {
+                rocksdb::Slice tupKey{
+                    reinterpret_cast<const char*>(vec.data()) + 1,
+                    vec.size() - 1};
+                auto delete_status = deleteTuple(tupKey);
             }
         }
     }
     return transaction->deleteData(hash_key);
 }
 
-DeleteResults MachineStateDeleter::deleteTuple(
-    const std::vector<unsigned char>& hash_key) {
+DeleteResults MachineStateDeleter::deleteTuple(const rocksdb::Slice& hash_key) {
     auto results = transaction->getData(hash_key);
     return deleteTuple(hash_key, results);
 }
 
-DeleteResults MachineStateDeleter::deleteValue(
-    const std::vector<unsigned char>& hash_key) {
+DeleteResults MachineStateDeleter::deleteValue(const rocksdb::Slice& hash_key) {
     auto results = transaction->getData(hash_key);
 
     if (!results.status.ok()) {
@@ -101,20 +106,23 @@ DeleteResults deleteCheckpoint(
         return DeleteResults{0, results.status};
     }
 
-    auto delete_results = deleter.deleteValue(checkpoint_name);
+    auto key = vecToSlice(checkpoint_name);
+    auto delete_results = deleter.deleteValue(key);
 
     if (delete_results.reference_count < 1) {
         auto parsed_state =
             checkpoint::utils::extractStateKeys(results.stored_value);
 
-        auto delete_register_res =
-            deleter.deleteValue(parsed_state.register_val_key);
-        auto delete_cp_key = deleter.deleteValue(parsed_state.pc_key);
-        auto delete_err_pc = deleter.deleteValue(parsed_state.err_pc_key);
-        auto delete_datastack_res =
-            deleter.deleteTuple(parsed_state.datastack_key);
-        auto delete_auxstack_res =
-            deleter.deleteTuple(parsed_state.auxstack_key);
+        auto register_key = vecToSlice(parsed_state.register_val_key);
+        auto delete_register_res = deleter.deleteValue(register_key);
+        auto pc_key = vecToSlice(parsed_state.pc_key);
+        auto delete_cp_key = deleter.deleteValue(pc_key);
+        auto err_pc_key = vecToSlice(parsed_state.err_pc_key);
+        auto delete_err_pc = deleter.deleteValue(err_pc_key);
+        auto datastack_key = vecToSlice(parsed_state.datastack_key);
+        auto delete_datastack_res = deleter.deleteTuple(datastack_key);
+        auto auxstack_key = vecToSlice(parsed_state.auxstack_key);
+        auto delete_auxstack_res = deleter.deleteTuple(auxstack_key);
 
         if (!(delete_register_res.status.ok() && delete_cp_key.status.ok() &&
               delete_datastack_res.status.ok() &&
@@ -130,5 +138,6 @@ DeleteResults deleteCheckpoint(
 DeleteResults deleteValue(CheckpointStorage& checkpoint_storage,
                           const std::vector<unsigned char>& hash_key) {
     auto deleter = MachineStateDeleter(checkpoint_storage.makeTransaction());
-    return deleter.deleteValue(hash_key);
+    auto key = vecToSlice(hash_key);
+    return deleter.deleteValue(key);
 }

@@ -34,22 +34,21 @@ class Transaction {
    private:
     std::unique_ptr<rocksdb::Transaction> transaction;
 
-    rocksdb::Status saveKeyValuePair(const std::vector<unsigned char>& key,
+    rocksdb::Status saveKeyValuePair(const rocksdb::Slice& hash_key,
                                      const std::vector<unsigned char>& value);
-    rocksdb::Status deleteKeyValuePair(const std::vector<unsigned char>& key);
-    SaveResults saveValueWithRefCount(
-        uint32_t updated_ref_count,
-        const std::vector<unsigned char>& hash_key,
-        const std::vector<unsigned char>& value);
+    rocksdb::Status deleteKeyValuePair(const rocksdb::Slice& key);
+    SaveResults saveValueWithRefCount(uint32_t updated_ref_count,
+                                      const rocksdb::Slice& hash_key,
+                                      const std::vector<unsigned char>& value);
 
    public:
     Transaction(std::unique_ptr<rocksdb::Transaction> transaction_);
     ~Transaction();
-    SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
-    SaveResults saveData(const std::vector<unsigned char>& hash_key,
+    SaveResults incrementReference(const rocksdb::Slice& hash_key);
+    SaveResults saveData(const rocksdb::Slice& hash_key,
                          const std::vector<unsigned char>& value);
-    GetResults getData(const std::vector<unsigned char>& hash_key) const;
-    DeleteResults deleteData(const std::vector<unsigned char>& hash_key);
+    GetResults getData(const rocksdb::Slice& hash_key) const;
+    DeleteResults deleteData(const rocksdb::Slice& hash_key);
     rocksdb::Status commit();
     rocksdb::Status rollBack();
 };
