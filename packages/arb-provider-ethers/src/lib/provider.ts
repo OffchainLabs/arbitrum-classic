@@ -436,20 +436,22 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return arbInfo.getBalance(params.address)
       }
       case 'getBlockNumber': {
-        let location: NodeInfo
+        let location: NodeInfo | undefined
         if (this.deterministicAssertions) {
           location = await this.client.getLatestPendingNodeLocation()
         } else {
           location = await this.client.getLatestNodeLocation()
         }
-        if (
-          this.latestLocation &&
-          (this.latestLocation.nodeHeight !== location.nodeHeight ||
-            this.latestLocation.nodeHash !== location.nodeHash)
-        ) {
-          this.resetEventsBlock(location.nodeHeight)
+        if (location) {
+          if (
+            this.latestLocation &&
+            (this.latestLocation.nodeHeight !== location.nodeHeight ||
+              this.latestLocation.nodeHash !== location.nodeHash)
+          ) {
+            this.resetEventsBlock(location.nodeHeight)
+          }
+          this.latestLocation = location
         }
-        this.latestLocation = location
         return this.ethProvider.getBlockNumber()
       }
     }

@@ -390,17 +390,11 @@ export class ArbClient {
     })
   }
 
-  public async getLatestNodeLocation(): Promise<NodeInfo> {
-    const nodeInfo = await this.getNodeLocation(
-      'Validator.GetLatestNodeLocation'
-    )
-    if (!nodeInfo) {
-      throw Error('node location not set')
-    }
-    return nodeInfo
+  public async getLatestNodeLocation(): Promise<NodeInfo | undefined> {
+    return await this.getNodeLocation('Validator.GetLatestNodeLocation')
   }
 
-  public async getLatestPendingNodeLocation(): Promise<NodeInfo> {
+  public async getLatestPendingNodeLocation(): Promise<NodeInfo | undefined> {
     const nodeInfo = await this.getNodeLocation(
       'Validator.GetLatestPendingNodeLocation'
     )
