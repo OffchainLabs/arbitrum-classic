@@ -720,8 +720,48 @@ class TestEVM(TestCase):
     def test_insuffient_balance(self):
         contract_a = make_contract("", "uint256")
         vm = create_evm_vm([contract_a], False, False)
-        output_handler = create_output_handler([contract_a])
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
         inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([address, 5000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
         inbox = messagestack.addMessage(
             inbox,
             value.Tuple(
@@ -738,11 +778,51 @@ class TestEVM(TestCase):
                 )
             ),
         )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
 
         vm.env.messages = inbox
         run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        parsed_out0 = output_handler(vm.logs[0])
+        self.assertEqual(len(vm.logs), 6)
+        parsed_outs = [output_handler(log) for log in vm.logs]
 
-        self.assertIsInstance(parsed_out0, EVMRevert)
+        self.assertIsInstance(parsed_outs[0], EVMStop)
+        self.assertIsInstance(parsed_outs[1], EVMReturn)
+        self.assertIsInstance(parsed_outs[2], EVMReturn)
+        self.assertIsInstance(parsed_outs[3], EVMRevert)
+        self.assertIsInstance(parsed_outs[4], EVMReturn)
+        self.assertIsInstance(parsed_outs[5], EVMReturn)
         self.assertEqual(len(vm.sent_messages), 0)
+
+        self.assertEqual(
+            parsed_outs[1].output_values[0], parsed_outs[4].output_values[0]
+        )
+        self.assertEqual(
+            parsed_outs[2].output_values[0], parsed_outs[5].output_values[0]
+        )
