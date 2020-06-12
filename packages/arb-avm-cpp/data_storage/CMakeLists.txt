@@ -22,7 +22,7 @@ project (data_storage LANGUAGES CXX)
 set(LIB_HEADERS
   include/data_storage/blockstore.hpp
   include/data_storage/datastorage.hpp
-  include/data_storage/nodestore.hpp
+  include/data_storage/confirmednodestore.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/transaction.hpp
@@ -37,7 +37,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/blockstore.cpp
   src/datastorage.cpp
-  src/nodestore.cpp
+  src/confirmednodestore.cpp
   src/transaction.cpp
   src/keyvaluestore.cpp
   src/checkpoint/machinestatesaver.cpp

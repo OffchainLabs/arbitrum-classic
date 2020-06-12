@@ -42,7 +42,7 @@ type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
 	bs                    machine.BlockStore
-	confirmedNodeStore    machine.NodeStore
+	confirmedNodeStore    machine.ConfirmedNodeStore
 	nextCheckpointToWrite *writableCheckpoint
 }
 
@@ -96,7 +96,7 @@ func newIndexedCheckpointer(
 		new(sync.Mutex),
 		cCheckpointer,
 		cCheckpointer.GetBlockStore(),
-		cCheckpointer.GetNodeStore(),
+		cCheckpointer.GetConfirmedNodeStore(),
 		nil,
 	}, nil
 }
@@ -114,7 +114,7 @@ func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return cp.db
 }
 
-func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
 	return cp.confirmedNodeStore
 }
 

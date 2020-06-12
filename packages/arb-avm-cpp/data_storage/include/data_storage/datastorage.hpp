@@ -29,7 +29,7 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 class BlockStore;
-class NodeStore;
+class ConfirmedNodeStore;
 
 class DataStorage {
    public:

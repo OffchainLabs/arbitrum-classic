@@ -32,7 +32,7 @@ type RollupCheckpointer interface {
 	CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error
 
 	GetCheckpointDB() machine.CheckpointStorage
-	GetConfirmedNodeStore() machine.NodeStore
+	GetConfirmedNodeStore() machine.ConfirmedNodeStore
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"

@@ -16,7 +16,7 @@
 
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/nodestore.hpp>
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
@@ -65,6 +65,7 @@ std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
     return std::make_unique<BlockStore>(datastorage);
 }
 
-std::unique_ptr<NodeStore> CheckpointStorage::getNodeStore() const {
-    return std::make_unique<NodeStore>(datastorage);
+std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
+    const {
+    return std::make_unique<ConfirmedNodeStore>(datastorage);
 }

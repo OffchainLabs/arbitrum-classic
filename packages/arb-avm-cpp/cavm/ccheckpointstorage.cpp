@@ -22,7 +22,7 @@
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>
-#include <data_storage/nodestore.hpp>
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm/machine.hpp>
@@ -65,9 +65,9 @@ CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr) {
     return storage->getBlockStore().release();
 }
 
-CNodeStore* createNodeStore(CCheckpointStorage* storage_ptr) {
+CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    return storage->getNodeStore().release();
+    return storage->getConfirmedNodeStore().release();
 }
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {

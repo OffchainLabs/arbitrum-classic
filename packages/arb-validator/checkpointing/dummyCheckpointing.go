@@ -43,7 +43,7 @@ func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return nil
 }
 
-func (dcp *DummyCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+func (dcp *DummyCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
 	return nil
 }
 

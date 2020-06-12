@@ -63,7 +63,7 @@ func (e *EvilRollupCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return e.cp.GetCheckpointDB()
 }
 
-func (e *EvilRollupCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+func (e *EvilRollupCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
 	return e.cp.GetConfirmedNodeStore()
 }
 

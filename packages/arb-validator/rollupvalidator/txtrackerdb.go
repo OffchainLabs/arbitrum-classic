@@ -95,7 +95,7 @@ func (x *NodeMetadata) MaybeMatchesLogQuery(addresses []common.Address, topics [
 // of lock its caller requires
 type txDB struct {
 	db                 machine.CheckpointStorage
-	confirmedNodeStore machine.NodeStore
+	confirmedNodeStore machine.ConfirmedNodeStore
 	confirmedNodeCache *lru.Cache
 
 	transactions     map[common.Hash]*TxRecord
@@ -107,7 +107,7 @@ type txDB struct {
 	pendingTransactions map[common.Hash]*evm.TxInfo
 }
 
-func newTxDB(db machine.CheckpointStorage, ns machine.NodeStore) (*txDB, error) {
+func newTxDB(db machine.CheckpointStorage, ns machine.ConfirmedNodeStore) (*txDB, error) {
 	lruCache, err := lru.New(500)
 	if err != nil {
 		return nil, err

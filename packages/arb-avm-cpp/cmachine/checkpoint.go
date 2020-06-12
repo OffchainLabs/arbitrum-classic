@@ -179,8 +179,8 @@ func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
 	return NewBlockStore(bs)
 }
 
-func (checkpoint *CheckpointStorage) GetNodeStore() machine.NodeStore {
-	bs := C.createNodeStore(checkpoint.c)
+func (checkpoint *CheckpointStorage) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
+	bs := C.createConfirmedNodeStore(checkpoint.c)
 
-	return NewNodeStore(bs)
+	return NewConfirmedNodeStore(bs)
 }

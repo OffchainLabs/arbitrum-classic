@@ -15,15 +15,15 @@
  */
 
 #include <data_storage/blockstore.hpp>
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/datastorage.hpp>
-#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>
 
+#include <rocksdb/options.h>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 
-#include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 

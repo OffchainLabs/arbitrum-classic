@@ -21,13 +21,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-// NodeStore provides a mechanism for recording data base rollup nodes indexed
+// ConfirmedNodeStore provides a mechanism for recording data base rollup nodes indexed
 // by their height and hash. The intention of this interface is to be used exclusively
 // for recording nodes that will not be removed in the future. As such the only
 // current usage is for recording confirmed nodes. This limitation is because
 // the GetNodeHeight function described below relies on the assumption that the
 // most recently recorded node at a given height is the correct/relevant one
-type NodeStore interface {
+type ConfirmedNodeStore interface {
 	// PutNode records a record into the database with the given height, hash, and data
 	PutNode(height uint64, hash common.Hash, data []byte) error
 
