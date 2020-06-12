@@ -17,7 +17,6 @@
 package txaggregator
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -104,17 +103,28 @@ func NewServer(
 	return server
 }
 
+// prepareTransactions reorders the transactions such that the position of each
+// user is maintained, but the transactions of that user are swapped to be in
+// sequence number order
 func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
-	sort.SliceStable(txes, func(i, j int) bool {
-		if !bytes.Equal(txes[i].pubkey, txes[j].pubkey) {
-			return false
-		}
-		return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
-	})
+	transactionsBySender := make(map[string][]DecodedBatchTx)
+	for _, tx := range txes {
+		senderPubkey := hexutil.Encode(tx.pubkey)
+		transactionsBySender[senderPubkey] = append(transactionsBySender[senderPubkey], tx)
+	}
+
+	for _, txes := range transactionsBySender {
+		sort.SliceStable(txes, func(i, j int) bool {
+			return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
+		})
+	}
 
 	batchTxes := make([]message.BatchTx, 0, len(txes))
 	for _, tx := range txes {
-		batchTxes = append(batchTxes, tx.tx)
+		senderPubkey := hexutil.Encode(tx.pubkey)
+		nextTx := transactionsBySender[senderPubkey][0]
+		transactionsBySender[senderPubkey] = transactionsBySender[senderPubkey][1:]
+		batchTxes = append(batchTxes, nextTx.tx)
 	}
 	return batchTxes
 }
