@@ -1550,6 +1550,8 @@ library OneStepProof {
             correct = false;
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
+        } else {
+            correct = false;
         }
 
         if (messageHash == 0) {
