@@ -19,34 +19,14 @@
 
 #include <vector>
 
-#include <avm_values/tuple.hpp>
-#include <avm_values/value.hpp>
-
 struct DeleteResults;
 class CheckpointStorage;
-struct GetResults;
-class Transaction;
-
-namespace rocksdb {
-class Status;
-}
 
 DeleteResults deleteCheckpoint(
     CheckpointStorage& checkpoint_storage,
     const std::vector<unsigned char>& checkpoint_name);
 
-class MachineStateDeleter {
-   private:
-    std::unique_ptr<Transaction> transaction;
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
-                              GetResults results);
-
-   public:
-    MachineStateDeleter(std::unique_ptr<Transaction> transaction_);
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
-    rocksdb::Status commitTransaction();
-    rocksdb::Status rollBackTransaction();
-};
+DeleteResults deleteValue(CheckpointStorage& checkpoint_storage,
+                          const std::vector<unsigned char>& hash_key);
 
 #endif /* checkpointdeleter_h */

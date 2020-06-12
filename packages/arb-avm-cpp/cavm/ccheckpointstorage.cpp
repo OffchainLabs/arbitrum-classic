@@ -152,19 +152,13 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto deleter = MachineStateDeleter(storage->makeTransaction());
     auto hash = receiveUint256(hash_key);
 
     std::vector<unsigned char> hash_key_vector;
     marshal_value(hash, hash_key_vector);
 
-    auto results = deleter.deleteValue(hash_key_vector);
-
-    if (!results.status.ok()) {
-        return false;
-    }
-
-    return deleter.commitTransaction().ok();
+    auto results = deleteValue(*storage, hash_key_vector);
+    return results.status.ok();
 }
 
 int saveData(CCheckpointStorage* storage_ptr,
