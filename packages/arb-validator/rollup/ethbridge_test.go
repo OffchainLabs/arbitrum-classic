@@ -252,7 +252,8 @@ func TestConfirmAssertion(t *testing.T) {
 			if nd.Disputable().AssertionClaim.AssertionStub.LastLogHash != nodeOpp.LogsAcc {
 				t.Fatal("incorrect logs acc in proof")
 			}
-			if nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash != valprotocol.AccumulatedValuesHash(nodeOpp.Messages) {
+
+			if nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash != valprotocol.BytesArrayAccumHash(nodeOpp.MessagesData, nodeOpp.MessageCount) {
 				t.Fatal("incorrect messages acc in proof")
 			}
 			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(

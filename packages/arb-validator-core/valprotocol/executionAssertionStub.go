@@ -17,6 +17,7 @@
 package valprotocol
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
@@ -36,25 +37,30 @@ type ExecutionAssertionStub struct {
 	LastLogHash      common.Hash
 }
 
-func AccumulatedValuesHash(vals []value.Value) common.Hash {
-	var accumHash common.Hash
-	for _, msg := range vals {
-		accumHash = hashing.SoliditySHA3(
-			hashing.Bytes32(accumHash),
-			hashing.Bytes32(msg.Hash()))
+func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
+	var lastMsgHash common.Hash
+	rd := bytes.NewReader(data)
+	for i := uint64(0); i < valCount; i++ {
+		val, err := value.UnmarshalValue(rd)
+		if err != nil {
+			panic(err)
+		}
+		lastMsgHash = hashing.SoliditySHA3(
+			hashing.Bytes32(lastMsgHash),
+			hashing.Bytes32(val.Hash()))
 	}
-	return accumHash
+	return lastMsgHash
 }
 
 func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        a.AfterHash,
+		AfterHash:        a.AfterHash.Unmarshal(),
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
 		FirstMessageHash: common.Hash{},
-		LastMessageHash:  AccumulatedValuesHash(a.OutMsgs),
+		LastMessageHash:  BytesArrayAccumHash(a.OutMsgsData, a.OutMsgsCount),
 		FirstLogHash:     common.Hash{},
-		LastLogHash:      AccumulatedValuesHash(a.Logs),
+		LastLogHash:      BytesArrayAccumHash(a.LogsData, a.LogsCount),
 	}
 }
 

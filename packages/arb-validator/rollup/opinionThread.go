@@ -280,6 +280,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 
 	var params *valprotocol.AssertionParams
 	var claim *valprotocol.AssertionClaim
+	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	if assertion.DidInboxInsn {
 		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
@@ -289,7 +290,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
 			ImportedMessagesSlice: inbox.Hash().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	} else {
 		params = &valprotocol.AssertionParams{
@@ -300,7 +301,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         beforeInboxTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	}
 	return &PreparedAssertion{

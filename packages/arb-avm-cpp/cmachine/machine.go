@@ -159,15 +159,15 @@ func (m *Machine) ExecuteAssertion(
 
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
-	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
-	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
 	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
 		uint64(assertion.numGas),
-		outMessageVals,
-		logVals,
+		outMessagesRaw,
+		uint64(assertion.outMessageCount),
+		logsRaw,
+		uint64(assertion.logCount),
 	), uint64(assertion.numSteps)
 }
 

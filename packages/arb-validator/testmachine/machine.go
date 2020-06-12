@@ -109,11 +109,9 @@ func (m *Machine) ExecuteAssertion(
 	startTime := time.Now()
 	timeLeft := maxWallTime
 	a := &protocol.ExecutionAssertion{
-		AfterHash:    m.cppmachine.Hash(),
+		AfterHash:    m.cppmachine.Hash().MarshalToBuf(),
 		DidInboxInsn: false,
 		NumGas:       0,
-		OutMsgs:      nil,
-		Logs:         nil,
 	}
 	totalSteps := uint64(0)
 	stepIncrease := uint64(5000)
@@ -146,8 +144,10 @@ func (m *Machine) ExecuteAssertion(
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps1
 		a.NumGas += a1.NumGas
-		a.Logs = append(a.Logs, a1.Logs...)
-		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
+		a.LogsData = append(a.LogsData, a1.LogsData...)
+		a.LogsCount += a1.LogsCount
+		a.OutMsgsData = append(a.OutMsgsData, a1.OutMsgsData...)
+		a.OutMsgsCount += a1.OutMsgsCount
 		a.DidInboxInsn = a.DidInboxInsn || a1.DidInboxInsn
 		if a1.DidInboxInsn {
 			inbox = value.NewEmptyTuple()

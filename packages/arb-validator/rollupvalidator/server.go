@@ -234,7 +234,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 
 	log.Println("Executed call for", steps, "steps")
 
-	results := assertion.Logs
+	results := assertion.ParseLogs()
 	if len(results) == 0 {
 		return nil, errors.New("call produced no output")
 	}

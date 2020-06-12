@@ -381,10 +381,6 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 		disputableNodeBuf = node.disputable.MarshalToBuf()
 	}
 
-	var assertion *ExecutionAssertionBuf
-	if node.assertion != nil {
-		assertion = MarshalAssertionForCheckpoint(ctx, node.assertion)
-	}
 	return &NodeBuf{
 		PrevHash:        node.prevHash.MarshalToBuf(),
 		Deadline:        node.deadline.MarshalToBuf(),
@@ -392,7 +388,7 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 		LinkType:        uint32(node.linkType),
 		VmProtoData:     node.vmProtoData.MarshalToBuf(),
 		MachineHash:     machineHash,
-		Assertion:       assertion,
+		Assertion:       node.assertion,
 		Depth:           node.depth,
 		NodeDataHash:    node.nodeDataHash.MarshalToBuf(),
 		InnerHash:       node.innerHash.MarshalToBuf(),
@@ -415,7 +411,7 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 		linkType:        valprotocol.ChildType(x.LinkType),
 		vmProtoData:     x.VmProtoData.Unmarshal(),
 		machine:         nil,
-		assertion:       nil,
+		assertion:       x.Assertion,
 		depth:           x.Depth,
 		nodeDataHash:    x.NodeDataHash.Unmarshal(),
 		innerHash:       x.InnerHash.Unmarshal(),
@@ -429,7 +425,6 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 	}
 
 	if x.Assertion != nil {
-		node.assertion = x.Assertion.UnmarshalFromCheckpoint(ctx)
 		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
 		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
 			return nil, errors.New("assertion doesn't match stub")

@@ -29,14 +29,13 @@ func NewRandomEVMAssertion(results []Result, messages []value.Value) *protocol.E
 	for _, result := range results {
 		logs = append(logs, ResultAsValue(result))
 	}
-
-	return &protocol.ExecutionAssertion{
-		AfterHash:    common.RandHash(),
-		DidInboxInsn: false,
-		NumGas:       rand.Uint64(),
-		OutMsgs:      messages,
-		Logs:         logs,
-	}
+	return protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		false,
+		rand.Uint64(),
+		messages,
+		logs,
+	)
 }
 
 func LogMatchTest(

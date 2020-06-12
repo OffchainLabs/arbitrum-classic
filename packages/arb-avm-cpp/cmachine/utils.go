@@ -57,19 +57,6 @@ func dataToHash(ptr unsafe.Pointer) common.Hash {
 	return hash
 }
 
-func bytesArrayToVals(data []byte, valCount int) []value.Value {
-	rd := bytes.NewReader(data)
-	vals := make([]value.Value, 0, valCount)
-	for i := 0; i < valCount; i++ {
-		val, err := value.UnmarshalValue(rd)
-		if err != nil {
-			panic(err)
-		}
-		vals = append(vals, val)
-	}
-	return vals
-}
-
 func toByteSlice(slice C.ByteSlice) []byte {
 	defer C.free(unsafe.Pointer(slice.data))
 	return C.GoBytes(unsafe.Pointer(slice.data), slice.length)

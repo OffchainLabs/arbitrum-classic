@@ -220,7 +220,8 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 					}
 					confOpp = valprotocol.ConfirmValidOpportunity{
 						DeadlineTicks:    nd.Deadline(),
-						Messages:         assertion.OutMsgs,
+						MessagesData:     assertion.OutMsgsData,
+						MessageCount:     assertion.OutMsgsCount,
 						LogsAcc:          nd.Disputable().AssertionClaim.AssertionStub.LastLogHash,
 						VMProtoStateHash: nd.VMProtoData().Hash(),
 					}

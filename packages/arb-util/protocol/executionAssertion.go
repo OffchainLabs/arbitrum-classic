@@ -17,39 +17,85 @@
 package protocol
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type ExecutionAssertion struct {
-	AfterHash    common.Hash
-	DidInboxInsn bool
-	NumGas       uint64
-	OutMsgs      []value.Value
-	Logs         []value.Value
+func NewExecutionAssertion(
+	afterHash common.Hash,
+	didInboxInsn bool,
+	numGas uint64,
+	outMsgsData []byte,
+	outMsgsCount uint64,
+	logsData []byte,
+	logsCount uint64,
+) *ExecutionAssertion {
+	return &ExecutionAssertion{
+		AfterHash:    afterHash.MarshalToBuf(),
+		DidInboxInsn: didInboxInsn,
+		NumGas:       numGas,
+		OutMsgsData:  outMsgsData,
+		OutMsgsCount: outMsgsCount,
+		LogsData:     logsData,
+		LogsCount:    logsCount,
+	}
 }
 
-func NewExecutionAssertion(afterHash common.Hash, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
-	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
+func valuesToRaw(values []value.Value) []byte {
+	var buf bytes.Buffer
+	for _, val := range values {
+		_ = value.MarshalValue(val, &buf)
+	}
+	return buf.Bytes()
+}
+
+func NewExecutionAssertionFromValues(
+	afterHash common.Hash,
+	didInboxInsn bool,
+	numGas uint64,
+	outMsgs []value.Value,
+	logs []value.Value,
+) *ExecutionAssertion {
+	return &ExecutionAssertion{
+		AfterHash:    afterHash.MarshalToBuf(),
+		DidInboxInsn: didInboxInsn,
+		NumGas:       numGas,
+		OutMsgsData:  valuesToRaw(outMsgs),
+		OutMsgsCount: uint64(len(outMsgs)),
+		LogsData:     valuesToRaw(logs),
+		LogsCount:    uint64(len(logs)),
+	}
 }
 
 func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
-	if a.AfterHash != b.AfterHash ||
-		a.DidInboxInsn != b.DidInboxInsn ||
-		a.NumGas != b.NumGas ||
-		len(a.OutMsgs) != len(b.OutMsgs) ||
-		len(a.Logs) != len(b.Logs) {
-		return false
-	}
-	for i, ao := range a.OutMsgs {
-		if !value.Eq(ao, b.OutMsgs[i]) {
-			return false
+	return a.AfterHash == b.AfterHash &&
+		a.DidInboxInsn != b.DidInboxInsn &&
+		a.NumGas != b.NumGas &&
+		a.OutMsgsCount != b.OutMsgsCount &&
+		bytes.Equal(a.OutMsgsData, b.OutMsgsData) &&
+		a.LogsCount != b.LogsCount &&
+		bytes.Equal(a.LogsData, b.LogsData)
+
+}
+
+func (a *ExecutionAssertion) ParseOutMessages() []value.Value {
+	return bytesArrayToVals(a.OutMsgsData, a.OutMsgsCount)
+}
+
+func (a *ExecutionAssertion) ParseLogs() []value.Value {
+	return bytesArrayToVals(a.LogsData, a.LogsCount)
+}
+
+func bytesArrayToVals(data []byte, valCount uint64) []value.Value {
+	rd := bytes.NewReader(data)
+	vals := make([]value.Value, 0, valCount)
+	for i := uint64(0); i < valCount; i++ {
+		val, err := value.UnmarshalValue(rd)
+		if err != nil {
+			panic(err)
 		}
+		vals = append(vals, val)
 	}
-	for i, ao := range a.Logs {
-		if !value.Eq(ao, b.Logs[i]) {
-			return false
-		}
-	}
-	return true
+	return vals
 }

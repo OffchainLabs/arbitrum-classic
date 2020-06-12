@@ -17,24 +17,25 @@
 package valprotocol
 
 import (
-	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 )
 
 type ConfirmValidOpportunity struct {
 	DeadlineTicks    common.TimeTicks
-	Messages         []value.Value
+	MessagesData     []byte
+	MessageCount     uint64
 	LogsAcc          common.Hash
 	VMProtoStateHash common.Hash
 }
 
 func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {
-	messages := append([]value.Value{}, opp.Messages...)
+	messagesData := make([]byte, 0, len(opp.MessagesData))
+	messagesData = append(messagesData, opp.MessagesData...)
 	return ConfirmValidOpportunity{
 		DeadlineTicks:    opp.DeadlineTicks.Clone(),
-		Messages:         messages,
+		MessagesData:     messagesData,
+		MessageCount:     opp.MessageCount,
 		LogsAcc:          opp.LogsAcc,
 		VMProtoStateHash: opp.VMProtoStateHash,
 	}
@@ -53,12 +54,7 @@ func (opp ConfirmValidOpportunity) StateHash() common.Hash {
 }
 
 func (opp ConfirmValidOpportunity) ProofSize() int {
-	totalSize := 3
-	for _, val := range opp.Messages {
-		buf := value.MarshalValueToBytes(val)
-		totalSize += len(buf)
-	}
-	return totalSize
+	return 3 + len(opp.MessagesData)
 }
 
 type ConfirmInvalidOpportunity struct {
@@ -148,9 +144,8 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	challengeNodeData := make([]common.Hash, 0)
 	logsAcc := make([]common.Hash, 0)
 	vmProtoStateHashes := make([]common.Hash, 0)
-
 	messageCounts := make([]*big.Int, 0)
-	var messageData bytes.Buffer
+	messageData := make([]byte, 0)
 
 	for _, opp := range nodeOpps {
 		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
@@ -160,17 +155,13 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 		case ConfirmValidOpportunity:
 			logsAcc = append(logsAcc, opp.LogsAcc)
 			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
-
-			for _, msg := range opp.Messages {
-				_ = value.MarshalValue(msg, &messageData)
-			}
-			messageCounts = append(messageCounts, big.NewInt(int64(len(opp.Messages))))
+			messageData = append(messageData, opp.MessagesData...)
+			messageCounts = append(messageCounts, new(big.Int).SetUint64(opp.MessageCount))
 		case ConfirmInvalidOpportunity:
 			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
 		}
 	}
 
-	messages := messageData.Bytes()
 	combinedProofs := make([]common.Hash, 0)
 	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
 	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
@@ -187,7 +178,7 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 		LogsAcc:              common.HashSliceToRaw(logsAcc),
 		VMProtoStateHashes:   common.HashSliceToRaw(vmProtoStateHashes),
 		MessageCounts:        messageCounts,
-		Messages:             messages,
+		Messages:             messageData,
 		CombinedProofs:       common.HashSliceToRaw(combinedProofs),
 		StakerProofOffsets:   stakerProofOffsets,
 	}
