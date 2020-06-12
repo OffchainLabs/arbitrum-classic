@@ -19,7 +19,9 @@ package ethbridgetest
 import (
 	"bytes"
 	"math/big"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -32,7 +34,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
+func setupRand(t *testing.T) {
+	currentTime := time.Now().Unix()
+	t.Log("seed:", currentTime)
+	rand.Seed(currentTime)
+}
+
 func TestTransactionMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.Transaction{
 		Chain:       addr3,
 		To:          addr1,
@@ -80,6 +89,7 @@ func TestTransactionMessage(t *testing.T) {
 }
 
 func TestTransactionBatchSingleSender(t *testing.T) {
+	setupRand(t)
 	privateKey, _ := crypto.HexToECDSA(privHex)
 	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
 	chain := addr3
@@ -105,6 +115,7 @@ func TestTransactionBatchSingleSender(t *testing.T) {
 }
 
 func TestTransactionBatchSingleValid(t *testing.T) {
+	setupRand(t)
 	privateKey, _ := crypto.HexToECDSA(privHex)
 	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
 	chain := addr3
@@ -149,6 +160,10 @@ func TestTransactionBatchSingleValid(t *testing.T) {
 }
 
 func TestTransactionBatchSingleInvalid(t *testing.T) {
+	setupRand(t)
+	currentTime := time.Now().Unix()
+	t.Log("seed:", currentTime)
+	rand.Seed(currentTime)
 	privateKey, _ := crypto.HexToECDSA(privHex)
 	chain := addr3
 	batchTx := message.NewRandomBatchTx(chain, privateKey)
@@ -170,6 +185,7 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 }
 
 func TestTransactionBatchMessage(t *testing.T) {
+	setupRand(t)
 	privateKey, _ := crypto.HexToECDSA(privHex)
 	chain := addr3
 	batchTxData := make([]byte, 0)
@@ -235,6 +251,7 @@ func TestTransactionBatchMessage(t *testing.T) {
 }
 
 func TestEthMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.Eth{
 		To:    addr1,
 		From:  addr2,
@@ -269,6 +286,7 @@ func TestEthMessage(t *testing.T) {
 }
 
 func TestERC20Message(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC20{
 		To:           addr1,
 		From:         addr2,
@@ -306,6 +324,7 @@ func TestERC20Message(t *testing.T) {
 }
 
 func TestERC721Message(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC721{
 		To:           addr1,
 		From:         addr2,
@@ -343,6 +362,7 @@ func TestERC721Message(t *testing.T) {
 }
 
 func TestDeliveredMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC721{
 		To:           addr1,
 		From:         addr2,
