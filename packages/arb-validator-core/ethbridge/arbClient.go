@@ -192,8 +192,8 @@ func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollu
 	return newRollup(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
-	return newGlobalInbox(address.ToEthAddress(), c.client, c.auth)
+func (c *EthArbAuthClient) NewGlobalInbox(address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
+	return newGlobalInbox(address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {

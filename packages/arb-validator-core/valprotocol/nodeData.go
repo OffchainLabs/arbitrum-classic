@@ -259,11 +259,6 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	)
 }
 
-func (dn *DisputableNode) CheckTime(params ChainParams) common.TimeTicks {
-	checkTimeRaw := dn.AssertionClaim.AssertionStub.NumGas / params.ArbGasSpeedLimitPerTick
-	return common.TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
-}
-
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
 		dn.AssertionClaim.AssertionStub.AfterHash,

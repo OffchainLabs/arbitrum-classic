@@ -186,7 +186,7 @@ func (sng *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valproto
 
 func (sng *StakedNodeGraph) generateNextConfProof(
 	currentTime common.TimeTicks,
-) *valprotocol.ConfirmOpportunity {
+) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
@@ -243,7 +243,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	}
 
 	if len(nodeOps) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	nodeLimit := len(nodeOps)
@@ -266,7 +266,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
 				StakerAddresses:        stakerAddrs,
 				StakerProofs:           proofs,
-			}
+			}, confNodes
 		}
 	}
 	panic("Unreachable code")

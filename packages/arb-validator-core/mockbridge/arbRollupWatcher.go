@@ -234,3 +234,7 @@ func (vm *EthRollupWatcher) GetCreationInfo(ctx context.Context) (common.Hash, *
 func (vm *EthRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 	return "1", nil
 }
+
+func (vm *EthRollupWatcher) IsStaked(address common.Address) (bool, error) {
+	return false, nil
+}

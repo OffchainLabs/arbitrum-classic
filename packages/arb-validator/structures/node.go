@@ -97,7 +97,7 @@ func NewValidNodeFromPrev(
 }
 
 func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
-	assertion := evm.NewRandomEVMAssertion(results)
+	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)
@@ -141,14 +141,12 @@ func NewNodeFromPrev(
 	vmProtoData *valprotocol.VMProtoData,
 	assertionTxHash common.Hash,
 ) *Node {
-	checkTime := disputable.CheckTime(params)
-	deadlineTicks := common.TicksFromBlockNum(currentTime).Add(params.GracePeriod)
-	if deadlineTicks.Cmp(prev.deadline) >= 0 {
-		deadlineTicks = deadlineTicks.Add(checkTime)
-	} else {
-		deadlineTicks = prev.deadline.Add(checkTime)
-	}
-
+	deadlineTicks := valprotocol.CalculateNodeDeadline(
+		disputable.AssertionClaim.AssertionStub,
+		params,
+		prev.deadline,
+		common.TicksFromBlockNum(currentTime),
+	)
 	ret := &Node{
 		prevHash:        prev.hash,
 		prev:            prev,
@@ -335,7 +333,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			node.executionPreconditionHash(),
 			node.disputable.AssertionClaim.AssertionStub.Hash(),
 		)
-		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
+		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)

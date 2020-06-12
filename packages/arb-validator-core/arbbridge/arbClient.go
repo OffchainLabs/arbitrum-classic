@@ -57,7 +57,7 @@ type ArbAuthClient interface {
 	Address() common.Address
 	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
-	NewGlobalInbox(address common.Address) (GlobalInbox, error)
+	NewGlobalInbox(address common.Address, rollupAddress common.Address) (GlobalInbox, error)
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)

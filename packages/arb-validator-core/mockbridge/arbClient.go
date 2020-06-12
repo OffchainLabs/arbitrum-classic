@@ -67,7 +67,7 @@ func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepPr
 	return NewOneStepProof(address, c.client)
 }
 
-func (c *ArbClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+func (c *ArbClient) NewGlobalInbox(address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
 	return NewGlobalInbox(address, c.client)
 }
 

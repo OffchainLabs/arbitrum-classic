@@ -31,3 +31,23 @@ func (vm *GlobalInboxWatcher) GetAllReceived(
 ) ([]message.Received, error) {
 	return nil, nil
 }
+
+func (vm *GlobalInboxWatcher) GetEthBalance(
+	ctx context.Context,
+	user common.Address,
+) (*big.Int, error) {
+	return nil, nil
+}
+
+func (con *GlobalInboxWatcher) GetERC20Balance(
+	ctx context.Context,
+	user common.Address,
+	tokenContract common.Address,
+) (*big.Int, error) {
+	//return con.GlobalInbox.GetERC20Balance(
+	//	auth,
+	//	tokenContract,
+	//	user,
+	//)
+	return big.NewInt(0), nil
+}

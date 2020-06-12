@@ -101,7 +101,7 @@ func createRollupChain() error {
 		return err
 	}
 
-	address, err := factory.CreateRollup(
+	address, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
 		rollup.DefaultChainParams(),

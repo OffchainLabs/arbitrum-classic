@@ -116,7 +116,7 @@ func setupValidators(
 
 	ctx := context.Background()
 
-	rollupAddress, err := factory.CreateRollup(
+	rollupAddress, _, err := factory.CreateRollup(
 		ctx,
 		mach.Hash(),
 		config,

@@ -213,34 +213,38 @@ func (vm *ethRollupWatcher) processEvents(
 		if err != nil {
 			return nil, err
 		}
+		params := &valprotocol.AssertionParams{
+			NumSteps: eventVal.NumSteps,
+			TimeBounds: &protocol.TimeBounds{
+				LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
+				UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
+				LowerBoundTimestamp: eventVal.TimeBounds[2],
+				UpperBoundTimestamp: eventVal.TimeBounds[3],
+			},
+			ImportedMessageCount: eventVal.ImportedMessageCount,
+		}
+		claim := &valprotocol.AssertionClaim{
+			AfterInboxTop:         eventVal.Fields[2],
+			ImportedMessagesSlice: eventVal.Fields[3],
+			AssertionStub: &valprotocol.ExecutionAssertionStub{
+				AfterHash:        eventVal.Fields[4],
+				DidInboxInsn:     eventVal.DidInboxInsn,
+				NumGas:           eventVal.NumArbGas,
+				FirstMessageHash: [32]byte{},
+				LastMessageHash:  eventVal.Fields[5],
+				FirstLogHash:     [32]byte{},
+				LastLogHash:      eventVal.Fields[6],
+			},
+		}
 		return arbbridge.AssertedEvent{
 			ChainInfo:    chainInfo,
 			PrevLeafHash: eventVal.Fields[0],
-			Params: &valprotocol.AssertionParams{
-				NumSteps: eventVal.NumSteps,
-				TimeBounds: &protocol.TimeBounds{
-					LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
-					UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
-					LowerBoundTimestamp: eventVal.TimeBounds[2],
-					UpperBoundTimestamp: eventVal.TimeBounds[3],
-				},
-				ImportedMessageCount: eventVal.ImportedMessageCount,
-			},
-			Claim: &valprotocol.AssertionClaim{
-				AfterInboxTop:         eventVal.Fields[2],
-				ImportedMessagesSlice: eventVal.Fields[3],
-				AssertionStub: &valprotocol.ExecutionAssertionStub{
-					AfterHash:        eventVal.Fields[4],
-					DidInboxInsn:     eventVal.DidInboxInsn,
-					NumGas:           eventVal.NumArbGas,
-					FirstMessageHash: [32]byte{},
-					LastMessageHash:  eventVal.Fields[5],
-					FirstLogHash:     [32]byte{},
-					LastLogHash:      eventVal.Fields[6],
-				},
-			},
-			MaxInboxTop:   eventVal.Fields[1],
-			MaxInboxCount: eventVal.InboxCount,
+			Disputable: valprotocol.NewDisputableNode(
+				params,
+				claim,
+				eventVal.Fields[1],
+				eventVal.InboxCount,
+			),
 		}, nil
 	case rollupConfirmedID:
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
@@ -326,4 +330,8 @@ func (vm *ethRollupWatcher) GetCreationInfo(
 
 func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 	return vm.ArbRollup.VERSION(&bind.CallOpts{Context: ctx})
+}
+
+func (vm *ethRollupWatcher) IsStaked(address common.Address) (bool, error) {
+	return vm.ArbRollup.IsStaked(nil, address.ToEthAddress())
 }

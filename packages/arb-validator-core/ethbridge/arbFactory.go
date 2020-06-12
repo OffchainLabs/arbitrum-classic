@@ -49,7 +49,7 @@ func (con *arbFactory) CreateRollup(
 	vmState common.Hash,
 	params valprotocol.ChainParams,
 	owner common.Address,
-) (common.Address, error) {
+) (common.Address, *common.BlockId, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.contract.CreateRollup(
@@ -63,20 +63,20 @@ func (con *arbFactory) CreateRollup(
 		owner.ToEthAddress(),
 	)
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
+		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChain")
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
 	if len(receipt.Logs) != 2 {
-		return common.Address{}, errors2.New("Wrong receipt count")
+		return common.Address{}, nil, errors2.New("Wrong receipt count")
 	}
 	event, err := con.contract.ParseRollupCreated(*receipt.Logs[1])
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
-	return common.NewAddressFromEth(event.VmAddress), nil
+	return common.NewAddressFromEth(event.VmAddress), GetReceiptBlockID(receipt), nil
 }
 
 type arbFactoryWatcher struct {

@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"math/big"
 	"strings"
 
@@ -33,7 +34,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
@@ -60,7 +60,7 @@ func init() {
 }
 
 type globalInboxWatcher struct {
-	GlobalInbox *rollup.IGlobalInbox
+	GlobalInbox *globalinbox.GlobalInbox
 
 	rollupAddress ethcommon.Address
 	inboxAddress  ethcommon.Address
@@ -72,7 +72,7 @@ func newGlobalInboxWatcher(
 	rollupAddress ethcommon.Address,
 	client *ethclient.Client,
 ) (*globalInboxWatcher, error) {
-	globalInboxContract, err := rollup.NewIGlobalInbox(
+	globalInboxContract, err := globalinbox.NewGlobalInbox(
 		globalInboxAddress,
 		client,
 	)
@@ -282,4 +282,26 @@ func (vm *globalInboxWatcher) processMessageDeliveredEvents(
 	default:
 		return nil, errors2.New("unknown arbitrum event type")
 	}
+}
+
+func (con *globalInboxWatcher) GetERC20Balance(
+	ctx context.Context,
+	user common.Address,
+	tokenContract common.Address,
+) (*big.Int, error) {
+	return con.GlobalInbox.GetERC20Balance(
+		&bind.CallOpts{Context: ctx},
+		tokenContract.ToEthAddress(),
+		user.ToEthAddress(),
+	)
+}
+
+func (con *globalInboxWatcher) GetEthBalance(
+	ctx context.Context,
+	user common.Address,
+) (*big.Int, error) {
+	return con.GlobalInbox.GetEthBalance(
+		&bind.CallOpts{Context: ctx},
+		user.ToEthAddress(),
+	)
 }

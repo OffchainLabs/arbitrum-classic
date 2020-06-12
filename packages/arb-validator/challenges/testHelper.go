@@ -18,15 +18,12 @@ package challenges
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -48,23 +45,13 @@ func testChallenge(
 	asserterKey, challengerKey string,
 	asserterFunc, challengerFunc ChallengeFunc,
 ) error {
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
 	ethURL := test.GetEthUrl()
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	rand.Seed(seed)
-	jsonFile, err := os.Open(bridge_eth_addresses)
+	factoryAddress, err := test.GetFactoryAddress()
 	if err != nil {
-		return err
-	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		return err
-	}
-
-	var connectionInfo ethbridge.ArbAddresses
-	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
 		return err
 	}
 
@@ -90,7 +77,7 @@ func testChallenge(
 	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
 	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
-	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
+	factory, err := client1.NewArbFactoryWatcher(factoryAddress)
 	if err != nil {
 		return err
 	}

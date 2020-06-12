@@ -205,7 +205,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ctx, ev)
 	case arbbridge.AssertedEvent:
-		return chain.notifyAssert(ctx, ev)
+		chain.notifyAssert(ctx, ev)
 	case arbbridge.ConfirmedEvent:
 		return chain.confirmNode(ctx, ev)
 	}
@@ -396,23 +396,16 @@ func (chain *ChainObserver) updateOldest() {
 	}
 }
 
-func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
-	disputableNode := valprotocol.NewDisputableNode(
-		ev.Params,
-		ev.Claim,
-		ev.MaxInboxTop,
-		ev.MaxInboxCount,
-	)
+func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) {
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
-		disputableNode,
+		ev.Disputable,
 		ev.BlockId.Height,
 		ev.TxHash,
 	)
 	for _, listener := range chain.listeners {
 		listener.SawAssertion(ctx, chain, ev)
 	}
-	return nil
 }
 
 func (chain *ChainObserver) equals(co2 *ChainObserver) bool {

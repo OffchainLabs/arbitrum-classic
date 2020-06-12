@@ -30,4 +30,5 @@ type ArbRollupWatcher interface {
 	InboxAddress(ctx context.Context) (common.Address, error)
 	GetCreationInfo(ctx context.Context) (common.Hash, *common.BlockId, common.Hash, error)
 	GetVersion(ctx context.Context) (string, error)
+	IsStaked(address common.Address) (bool, error)
 }

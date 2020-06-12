@@ -18,6 +18,8 @@ package valprotocol
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -34,28 +36,25 @@ type ExecutionAssertionStub struct {
 	LastLogHash      common.Hash
 }
 
-func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
-	var lastMsgHash common.Hash
-	for _, msg := range a.OutMsgs {
-		lastMsgHash = hashing.SoliditySHA3(
-			hashing.Bytes32(lastMsgHash),
+func AccumulatedValuesHash(vals []value.Value) common.Hash {
+	var accumHash common.Hash
+	for _, msg := range vals {
+		accumHash = hashing.SoliditySHA3(
+			hashing.Bytes32(accumHash),
 			hashing.Bytes32(msg.Hash()))
 	}
-	var lastLogHash common.Hash
-	for _, logVal := range a.Logs {
-		lastLogHash = hashing.SoliditySHA3(
-			hashing.Bytes32(lastLogHash),
-			hashing.Bytes32(logVal.Hash()))
-	}
+	return accumHash
+}
 
+func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
 		AfterHash:        a.AfterHash,
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
 		FirstMessageHash: common.Hash{},
-		LastMessageHash:  lastMsgHash,
+		LastMessageHash:  AccumulatedValuesHash(a.OutMsgs),
 		FirstLogHash:     common.Hash{},
-		LastLogHash:      lastLogHash,
+		LastLogHash:      AccumulatedValuesHash(a.Logs),
 	}
 }
 
@@ -128,4 +127,24 @@ func (a *ExecutionAssertionStub) Hash() common.Hash {
 		hashing.Bytes32(a.FirstLogHash),
 		hashing.Bytes32(a.LastLogHash),
 	)
+}
+
+func (dn *ExecutionAssertionStub) CheckTime(params ChainParams) common.TimeTicks {
+	checkTimeRaw := dn.NumGas / params.ArbGasSpeedLimitPerTick
+	return common.TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
+}
+
+func CalculateNodeDeadline(
+	assertion *ExecutionAssertionStub,
+	params ChainParams,
+	prevDeadline common.TimeTicks,
+	assertionTime common.TimeTicks,
+) common.TimeTicks {
+	checkTime := assertion.CheckTime(params)
+	deadlineTicks := assertionTime.Add(params.GracePeriod)
+	if deadlineTicks.Cmp(prevDeadline) >= 0 {
+		return deadlineTicks.Add(checkTime)
+	} else {
+		return prevDeadline.Add(checkTime)
+	}
 }

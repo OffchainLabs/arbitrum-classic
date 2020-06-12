@@ -48,7 +48,7 @@ func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*Arb
 	if err != nil {
 		return nil, err
 	}
-	globalInbox, err := client.NewGlobalInbox(inboxAddr)
+	globalInbox, err := client.NewGlobalInbox(inboxAddr, vmId)
 	if err != nil {
 		return nil, err
 	}

@@ -215,7 +215,8 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
-) {
+) []*structures.Node {
+	newNodes := make([]*structures.Node, 0, 4)
 	if !ng.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}
@@ -227,12 +228,15 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 		_ = prevNode.LinkSuccessor(newNode)
 		ng.nodeFromHash[newNode.Hash()] = newNode
 		ng.leaves.Add(newNode)
+		newNodes = append(newNodes, newNode)
 	}
 
 	newNode := structures.NewValidNodeFromPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
 	_ = prevNode.LinkSuccessor(newNode)
 	ng.nodeFromHash[newNode.Hash()] = newNode
 	ng.leaves.Add(newNode)
+	newNodes = append(newNodes, newNode)
+	return newNodes
 }
 
 func (ng *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {

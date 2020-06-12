@@ -17,8 +17,10 @@
 package valprotocol
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"math/big"
 )
 
 type ConfirmValidOpportunity struct {
@@ -106,21 +108,87 @@ type ConfirmOpportunity struct {
 	StakerProofs           [][]common.Hash
 }
 
-func (c *ConfirmOpportunity) Clone() *ConfirmOpportunity {
-	nodes := make([]ConfirmNodeOpportunity, 0, len(c.Nodes))
-	for _, node := range c.Nodes {
+func (opp *ConfirmOpportunity) Clone() *ConfirmOpportunity {
+	nodes := make([]ConfirmNodeOpportunity, 0, len(opp.Nodes))
+	for _, node := range opp.Nodes {
 		nodes = append(nodes, node.Clone())
 	}
-	stakerAddresses := append([]common.Address{}, c.StakerAddresses...)
-	stakerProofs := make([][]common.Hash, 0, len(c.StakerProofs))
-	for _, proof := range c.StakerProofs {
+	stakerAddresses := append([]common.Address{}, opp.StakerAddresses...)
+	stakerProofs := make([][]common.Hash, 0, len(opp.StakerProofs))
+	for _, proof := range opp.StakerProofs {
 		stakerProofs = append(stakerProofs, append([]common.Hash{}, proof...))
 	}
 
 	return &ConfirmOpportunity{
 		Nodes:                  nodes,
-		CurrentLatestConfirmed: c.CurrentLatestConfirmed,
+		CurrentLatestConfirmed: opp.CurrentLatestConfirmed,
 		StakerAddresses:        stakerAddresses,
 		StakerProofs:           stakerProofs,
+	}
+}
+
+type ConfirmProof struct {
+	InitalProtoStateHash common.Hash
+	BranchesNums         []*big.Int
+	DeadlineTicks        []*big.Int
+	ChallengeNodeData    [][32]byte
+	LogsAcc              [][32]byte
+	VMProtoStateHashes   [][32]byte
+	MessageCounts        []*big.Int
+	Messages             []byte
+	CombinedProofs       [][32]byte
+	StakerProofOffsets   []*big.Int
+}
+
+func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
+	nodeOpps := opp.Nodes
+	initalProtoStateHash := nodeOpps[0].StateHash()
+	branchesNums := make([]*big.Int, 0, len(nodeOpps))
+	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
+	challengeNodeData := make([]common.Hash, 0)
+	logsAcc := make([]common.Hash, 0)
+	vmProtoStateHashes := make([]common.Hash, 0)
+
+	messageCounts := make([]*big.Int, 0)
+	var messageData bytes.Buffer
+
+	for _, opp := range nodeOpps {
+		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
+		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
+
+		switch opp := opp.(type) {
+		case ConfirmValidOpportunity:
+			logsAcc = append(logsAcc, opp.LogsAcc)
+			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
+
+			for _, msg := range opp.Messages {
+				_ = value.MarshalValue(msg, &messageData)
+			}
+			messageCounts = append(messageCounts, big.NewInt(int64(len(opp.Messages))))
+		case ConfirmInvalidOpportunity:
+			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
+		}
+	}
+
+	messages := messageData.Bytes()
+	combinedProofs := make([]common.Hash, 0)
+	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
+	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
+	for _, proof := range opp.StakerProofs {
+		combinedProofs = append(combinedProofs, proof...)
+		stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
+	}
+
+	return ConfirmProof{
+		InitalProtoStateHash: initalProtoStateHash,
+		BranchesNums:         branchesNums,
+		DeadlineTicks:        deadlineTicks,
+		ChallengeNodeData:    common.HashSliceToRaw(challengeNodeData),
+		LogsAcc:              common.HashSliceToRaw(logsAcc),
+		VMProtoStateHashes:   common.HashSliceToRaw(vmProtoStateHashes),
+		MessageCounts:        messageCounts,
+		Messages:             messages,
+		CombinedProofs:       common.HashSliceToRaw(combinedProofs),
+		StakerProofOffsets:   stakerProofOffsets,
 	}
 }

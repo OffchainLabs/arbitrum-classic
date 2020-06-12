@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-func NewRandomEVMAssertion(results []Result) *protocol.ExecutionAssertion {
+func NewRandomEVMAssertion(results []Result, messages []value.Value) *protocol.ExecutionAssertion {
 	logs := make([]value.Value, 0, len(results))
 	for _, result := range results {
 		logs = append(logs, ResultAsValue(result))
@@ -34,7 +34,7 @@ func NewRandomEVMAssertion(results []Result) *protocol.ExecutionAssertion {
 		AfterHash:    common.RandHash(),
 		DidInboxInsn: false,
 		NumGas:       rand.Uint64(),
-		OutMsgs:      []value.Value{},
+		OutMsgs:      messages,
 		Logs:         logs,
 	}
 }

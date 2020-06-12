@@ -16,8 +16,117 @@
 
 pragma solidity ^0.5.3;
 
+import "../arch/Protocol.sol";
+import "../libraries/RollupTime.sol";
+
 
 library RollupUtils {
+
+    uint256 constant VALID_CHILD_TYPE = 3;
+
+    event ConfirmedValidAssertion(
+        bytes32 indexed nodeHash
+    );
+
+    struct ConfirmData {
+        bytes32 initalProtoStateHash;
+        uint256[] branches;
+        uint256[] deadlineTicks;
+        bytes32[] challengeNodeData;
+        bytes32[] logsAcc;
+        bytes32[] vmProtoStateHashes;
+        uint256[] messageCounts;
+        bytes messages;
+    }
+
+    function confirm(
+        RollupUtils.ConfirmData memory data,
+        bytes32 confNode
+    )
+        internal
+        pure
+        returns(bytes32[] memory validNodeHashes, bytes32 lastNode)
+    {
+        uint256 nodeCount = data.branches.length;
+        _verifyDataLength(data);
+        uint256 validNum = 0;
+        uint256 invalidNum = 0;
+        uint256 messagesOffset = 0;
+
+        validNodeHashes = new bytes32[](nodeCount);
+
+        bytes32 vmProtoStateHash = data.initalProtoStateHash;
+
+        for (uint256 i = 0; i < nodeCount; i++) {
+            uint256 branchType = data.branches[i];
+            bytes32 nodeDataHash;
+            if (branchType == VALID_CHILD_TYPE) {
+                (messagesOffset, nodeDataHash, vmProtoStateHash) = processValidNode(data, validNum, messagesOffset);
+                validNum++;
+            } else {
+                nodeDataHash = data.challengeNodeData[invalidNum];
+                invalidNum++;
+            }
+
+            confNode = childNodeHash(
+                confNode,
+                data.deadlineTicks[i],
+                nodeDataHash,
+                branchType,
+                vmProtoStateHash
+            );
+
+            if (branchType == VALID_CHILD_TYPE) {
+                validNodeHashes[validNum - 1] = confNode;
+            }
+        }
+        return (validNodeHashes, confNode);
+    }
+
+    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 count) internal pure returns (bytes32, uint256) {
+        bool valid;
+        bytes32 hashVal = 0x00;
+        Value.Data memory messageVal;
+        uint256 offset = startOffset;
+        for (uint256 i = 0; i < count; i++) {
+            (valid, offset, messageVal) = Value.deserialize(messages, offset);
+            require(valid, "Invalid output message");
+            hashVal = keccak256(abi.encodePacked(hashVal, Value.hash(messageVal)));
+        }
+        return (hashVal, offset);
+    }
+
+    function processValidNode(
+        RollupUtils.ConfirmData memory data,
+        uint256 validNum,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(uint256, bytes32, bytes32)
+    {
+        (bytes32 lastMsgHash, uint256 messagesOffset) = generateLastMessageHash(
+            data.messages,
+            startOffset,
+            data.messageCounts[validNum]
+        );
+        bytes32 nodeDataHash = validDataHash(
+            lastMsgHash,
+            data.logsAcc[validNum]
+        );
+        bytes32 vmProtoStateHash = data.vmProtoStateHashes[validNum];
+        return (messagesOffset, nodeDataHash, vmProtoStateHash);
+    }
+
+    function _verifyDataLength(RollupUtils.ConfirmData memory data) private pure{
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messageCounts.length;
+        require(data.vmProtoStateHashes.length == validNodeCount);
+        require(data.logsAcc.length == validNodeCount);
+        require(data.deadlineTicks.length == nodeCount);
+        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+    }
+
     function protoStateHash(
         bytes32 machineHash,
         bytes32 inboxTop,
