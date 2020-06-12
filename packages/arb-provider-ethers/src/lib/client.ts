@@ -365,7 +365,9 @@ export class ArbClient {
     })
   }
 
-  private async getNodeLocation(funcType: string): Promise<NodeInfo> {
+  private async getNodeLocation(
+    funcType: string
+  ): Promise<NodeInfo | undefined> {
     const params: validatorserver.GetLatestNodeLocationArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
@@ -381,12 +383,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            const location = extractNodeInfo(result.location)
-            if (location) {
-              resolve(location)
-            } else {
-              reject(Error('node location not set'))
-            }
+            resolve(extractNodeInfo(result.location))
           }
         }
       )
@@ -394,10 +391,22 @@ export class ArbClient {
   }
 
   public async getLatestNodeLocation(): Promise<NodeInfo> {
-    return this.getNodeLocation('Validator.GetLatestNodeLocation')
+    const nodeInfo = await this.getNodeLocation(
+      'Validator.GetLatestNodeLocation'
+    )
+    if (!nodeInfo) {
+      throw Exception('node location not set')
+    }
+    return nodeInfo
   }
 
   public async getLatestPendingNodeLocation(): Promise<NodeInfo> {
-    return this.getNodeLocation('Validator.GetLatestPendingNodeLocation')
+    const nodeInfo = this.getNodeLocation(
+      'Validator.GetLatestPendingNodeLocation'
+    )
+    if (!nodeInfo) {
+      return this.getLatestNodeLocation()
+    }
+    return nodeInfo
   }
 }
