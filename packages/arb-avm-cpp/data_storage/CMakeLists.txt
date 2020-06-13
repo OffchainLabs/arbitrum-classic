@@ -28,9 +28,7 @@ set(LIB_HEADERS
   include/data_storage/transaction.hpp
   include/data_storage/keyvaluestore.hpp
   include/data_storage/checkpoint/machine.hpp
-  include/data_storage/checkpoint/machinestatesaver.hpp
-  include/data_storage/checkpoint/machinestatefetcher.hpp
-  include/data_storage/checkpoint/machinestatedeleter.hpp
+  include/data_storage/checkpoint/value.hpp
   include/data_storage/checkpoint/checkpointstorage.hpp
   include/data_storage/checkpoint/checkpointutils.hpp
 )
@@ -42,9 +40,7 @@ set(LIB_SOURCES
   src/transaction.cpp
   src/keyvaluestore.cpp
   src/checkpoint/machine.cpp
-  src/checkpoint/machinestatesaver.cpp
-  src/checkpoint/machinestatefetcher.cpp
-  src/checkpoint/machinestatedeleter.cpp
+  src/checkpoint/value.cpp
   src/checkpoint/checkpointstorage.cpp
   src/checkpoint/checkpointutils.cpp
 )

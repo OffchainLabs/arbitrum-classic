@@ -22,9 +22,7 @@
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/checkpoint/machine.hpp>
-#include <data_storage/checkpoint/machinestatedeleter.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
+#include <data_storage/checkpoint/value.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <catch2/catch.hpp>
@@ -46,16 +44,12 @@ void saveValue(Transaction& transaction,
 void getValue(const Transaction& transaction,
               const value& value,
               int expected_ref_count,
-              ValueTypes expected_value_type,
               bool expected_status) {
     TuplePool pool;
     auto results = getValue(transaction, hash_value(value), &pool);
-    auto serialized_val = checkpoint::utils::serializeValue(results.data);
-    auto type = (ValueTypes)serialized_val[0];
 
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(type == expected_value_type);
     REQUIRE(hash_value(results.data) == hash_value(value));
 }
 
@@ -169,7 +163,7 @@ TEST_CASE("Save and get value") {
         uint256_t num = 1;
 
         saveValue(*transaction, num, 1, true);
-        getValue(*transaction, num, 1, NUM, true);
+        getValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
         DBDeleter deleter;
@@ -179,7 +173,7 @@ TEST_CASE("Save and get value") {
         auto transaction = storage.makeTransaction();
 
         saveValue(*transaction, code_point_stub, 1, true);
-        getValue(*transaction, code_point_stub, 1, CODEPT, true);
+        getValue(*transaction, code_point_stub, 1, true);
     }
     SECTION("save err codepoint") {
         DBDeleter deleter;
@@ -189,7 +183,7 @@ TEST_CASE("Save and get value") {
         auto transaction = storage.makeTransaction();
 
         saveValue(*transaction, code_point_stub, 1, true);
-        getValue(*transaction, code_point_stub, 1, CODEPT, true);
+        getValue(*transaction, code_point_stub, 1, true);
     }
 }
 

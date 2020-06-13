@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef checkpointdeleter_hpp
-#define checkpointdeleter_hpp
+#ifndef checkpoint_value_hpp
+#define checkpoint_value_hpp
 
-#include <vector>
+#include <avm_values/value.hpp>
 
 struct DeleteResults;
+struct SaveResults;
 class Transaction;
 
+template <typename T>
+struct DbResult;
+
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         TuplePool* pool);
+SaveResults saveValue(Transaction& transaction, const value& val);
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 
-#endif /* checkpointdeleter_h */
+#endif /* value_hpp */

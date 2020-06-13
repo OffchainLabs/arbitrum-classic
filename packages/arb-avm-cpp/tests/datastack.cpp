@@ -20,8 +20,7 @@
 #include <avm/machinestate/datastack.hpp>
 
 #include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
+#include <data_storage/checkpoint/value.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
