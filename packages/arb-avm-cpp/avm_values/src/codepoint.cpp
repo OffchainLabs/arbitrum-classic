@@ -80,24 +80,13 @@ void Operation::marshal(std::vector<unsigned char>& buf) const {
     }
 }
 
-void Operation::marshalShallow(std::vector<unsigned char>& buf) const {
-    if (immediate) {
-        buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
-        ::marshalShallow(*immediate, buf);
-    } else {
-        buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
-    }
-}
-
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 bool includeVal) const {
     if (immediate) {
         buf.push_back(1);
         buf.push_back((uint8_t)opcode);
         if (includeVal) {
-            ::marshalShallow(*immediate, buf);
+            ::marshalForProof(*immediate, buf);
         } else {
             marshalStub(*immediate, buf);
         }

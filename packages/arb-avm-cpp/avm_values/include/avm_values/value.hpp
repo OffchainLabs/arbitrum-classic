@@ -48,7 +48,7 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
 void marshal_HashPreImage(const HashPreImage& val,
                           std::vector<unsigned char>& buf);
 
-void marshalShallow(const value& val, std::vector<unsigned char>& buf);
+void marshalForProof(const value& val, std::vector<unsigned char>& buf);
 
 template <typename T>
 static T shrink(uint256_t i) {

@@ -181,7 +181,7 @@ void Tuple::marshal(std::vector<unsigned char>& buf) const {
 }
 
 // marshalForProof does not use this
-// see similar functionality in value.marshalShallow
+// see similar functionality in value.marshalForProof
 value Tuple::clone_shallow() {
     Tuple tup(tuplePool, tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {

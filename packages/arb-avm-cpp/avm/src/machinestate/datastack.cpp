@@ -51,7 +51,7 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     for (auto const& si : stackInfo) {
         value val = c.pop();
         if (si) {
-            marshalShallow(val, buf);
+            ::marshalForProof(val, buf);
         } else {
             marshalStub(val, buf);
         }

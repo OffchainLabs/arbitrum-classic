@@ -120,15 +120,15 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
 void marshalStub(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val)) {
         auto tup = nonstd::get<Tuple>(val);
-        marshalShallow(tup.getHashPreImage(), buf);
+        marshalForProof(tup.getHashPreImage(), buf);
     } else {
-        marshalShallow(val, buf);
+        marshalForProof(val, buf);
     }
 }
 
 namespace {
 // see similar functionality in tuple.cloneShallow and tuple.marshal
-void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
+void marshalForProof(const Tuple& val, std::vector<unsigned char>& buf) {
     buf.push_back(TUPLE + val.tuple_size());
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto itemval = val.get_element(i);
@@ -136,7 +136,7 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
     }
 }
 
-void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
+void marshalForProof(const CodePoint& val, std::vector<unsigned char>& buf) {
     buf.push_back(CODEPT);
     val.op.marshalForProof(buf, false);
     std::array<unsigned char, 32> hashVal;
@@ -144,19 +144,19 @@ void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), hashVal.begin(), hashVal.end());
 }
 
-void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
+void marshalForProof(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
 
-void marshalShallow(const HashPreImage& val, std::vector<unsigned char>& buf) {
+void marshalForProof(const HashPreImage& val, std::vector<unsigned char>& buf) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
 }  // namespace
 
-void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
-    return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
+void marshalForProof(const value& val, std::vector<unsigned char>& buf) {
+    return nonstd::visit([&](const auto& v) { return marshalForProof(v, buf); },
                          val);
 }
 
