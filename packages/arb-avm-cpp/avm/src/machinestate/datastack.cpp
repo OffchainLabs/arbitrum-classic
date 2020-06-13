@@ -91,29 +91,18 @@ bool Datastack::initializeDataStack(const Transaction& transaction,
 }
 
 Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
-    if (values.empty()) {
-        return Tuple();
-    } else {
-        auto current_tuple = Tuple(values[0], pool);
-
-        for (size_t i = 1; i < values.size(); i++) {
-            auto new_tuple = Tuple(values[i], current_tuple, pool);
-            current_tuple = new_tuple;
-        }
-        return current_tuple;
+    Tuple rep;
+    for (size_t i = 0; i < values.size(); i++) {
+        rep = Tuple(values[values.size() - 1 - i], rep, pool);
     }
+    return rep;
 }
 
 void Datastack::initializeDataStack(const Tuple& tuple) {
-    if (tuple.tuple_size() == 1) {
-        push(tuple.get_element(0));
-    } else if (tuple.tuple_size() == 2) {
-        // catch exception if not tuple?
-        auto inner_tuple = nonstd::get<Tuple>(tuple.get_element(1));
-        initializeDataStack(inner_tuple);
-
-        auto current_val = tuple.get_element(0);
-        push(tuple.get_element(0));
+    Tuple ret = tuple;
+    while (ret.tuple_size() == 2) {
+        push(ret.get_element(0));
+        ret = nonstd::get<Tuple>(ret.get_element(1));
     }
 }
 

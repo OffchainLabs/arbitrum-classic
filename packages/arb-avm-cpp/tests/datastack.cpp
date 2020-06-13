@@ -224,8 +224,9 @@ TEST_CASE("Save datastack") {
         datastack.push(num);
         datastack.push(tuple);
 
-        auto tup1 = Tuple(num, &pool);
-        auto tup_rep = Tuple(tuple, tup1, &pool);
+        Tuple tup0;
+        auto tup1 = Tuple(tuple, tup0, &pool);
+        auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
@@ -244,8 +245,9 @@ TEST_CASE("Save datastack") {
         datastack.push(num);
         datastack.push(tuple);
 
-        auto tup1 = Tuple(num, &pool);
-        auto tup_rep = Tuple(tuple, tup1, &pool);
+        Tuple tup0;
+        auto tup1 = Tuple(tuple, tup0, &pool);
+        auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
@@ -271,8 +273,9 @@ TEST_CASE("Save and get datastack") {
         datastack.push(num);
         datastack.push(tuple);
 
-        auto tup1 = Tuple(num, &pool);
-        auto tup_rep = Tuple(tuple, tup1, &pool);
+        Tuple tup0;
+        auto tup1 = Tuple(tuple, tup0, &pool);
+        auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
@@ -296,8 +299,9 @@ TEST_CASE("Save and get datastack") {
         datastack.push(num);
         datastack.push(tuple);
 
-        auto tup1 = Tuple(num, &pool);
-        auto tup_rep = Tuple(tuple, tup1, &pool);
+        Tuple tup0;
+        auto tup1 = Tuple(tuple, tup0, &pool);
+        auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
