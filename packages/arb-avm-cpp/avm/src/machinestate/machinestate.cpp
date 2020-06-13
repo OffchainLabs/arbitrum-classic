@@ -22,6 +22,7 @@
 #include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
@@ -32,38 +33,66 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()),
-      pc(0, false),
-      errpc(0, true),
-      context({0, 0, 0, 0}, Tuple()) {}
-
-MachineState::MachineState(const Code& code_,
-                           const value& static_val_,
-                           std::shared_ptr<TuplePool> pool_)
-    : pool(std::move(pool_)), context({0, 0, 0, 0}, Tuple()) {
-    code = code_;
-    staticVal = static_val_;
-
-    errpc = CodePointRef{0, true};
-    pc = CodePointRef{0, false};
-}
-
-bool MachineState::initialize_machinestate(
+std::pair<MachineState, bool> MachineState::loadFromFile(
     const std::string& contract_filename) {
+    auto pool = std::make_shared<TuplePool>();
     auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
 
-    if (initial_state.valid_state) {
-        code = initial_state.code;
-        staticVal = initial_state.staticVal;
-
-        errpc = CodePointRef{0, true};
-        pc = CodePointRef{0, false};
-
-        return true;
-    } else {
-        return false;
+    if (!initial_state.valid_state) {
+        return std::make_pair(MachineState{}, false);
     }
+
+    return std::make_pair(
+        MachineState{initial_state.code, initial_state.staticVal,
+                     std::move(pool)},
+        true);
+}
+
+std::pair<MachineState, bool> MachineState::loadFromCheckpoint(
+    const CheckpointStorage& storage,
+    const std::vector<unsigned char>& checkpoint_key) {
+    auto transaction = storage.makeConstTransaction();
+    auto results = getMachineState(*transaction, checkpoint_key);
+
+    auto initial_values = storage.getInitialVmValues();
+    if (!initial_values.valid_state) {
+        return std::make_pair(MachineState{}, false);
+    }
+
+    if (!results.status.ok()) {
+        return std::make_pair(MachineState{}, false);
+    }
+
+    auto state_data = results.data;
+
+    auto register_results =
+        getValue(*transaction, state_data.register_val_key, storage.pool.get());
+    if (!register_results.status.ok()) {
+        return std::make_pair(MachineState{}, false);
+    }
+
+    Datastack stack;
+    if (!stack.initializeDataStack(*transaction, state_data.datastack_key,
+                                   storage.pool.get())) {
+        return std::make_pair(MachineState{}, false);
+    }
+
+    Datastack auxstack;
+    if (!auxstack.initializeDataStack(*transaction, state_data.auxstack_key,
+                                      storage.pool.get())) {
+        return std::make_pair(MachineState{}, false);
+    }
+
+    MachineState machine_state{storage.pool,
+                               initial_values.code,
+                               initial_values.staticVal,
+                               std::move(register_results.data),
+                               std::move(stack),
+                               std::move(auxstack),
+                               static_cast<Status>(state_data.status_char),
+                               CodePointRef(state_data.pc),
+                               CodePointRef(state_data.err_pc)};
+    return std::make_pair(std::move(machine_state), true);
 }
 
 uint256_t MachineState::hash() const {
@@ -174,46 +203,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     } else {
         return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
     }
-}
-
-bool MachineState::restoreCheckpoint(
-    const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    auto transaction = storage.makeConstTransaction();
-    auto results = getMachineState(*transaction, checkpoint_key);
-
-    auto initial_values = storage.getInitialVmValues();
-    if (!initial_values.valid_state) {
-        return false;
-    }
-
-    code = initial_values.code;
-    staticVal = initial_values.staticVal;
-    pool = storage.pool;
-
-    if (results.status.ok()) {
-        auto state_data = results.data;
-
-        auto register_results =
-            getValue(*transaction, state_data.register_val_key, pool.get());
-        registerVal = register_results.data;
-
-        pc = CodePointRef(state_data.pc);
-        errpc = CodePointRef(state_data.err_pc);
-
-        if (!stack.initializeDataStack(*transaction, state_data.datastack_key,
-                                       pool.get())) {
-            return false;
-        }
-
-        if (!auxstack.initializeDataStack(*transaction, state_data.auxstack_key,
-                                          pool.get())) {
-            return false;
-        }
-
-        state = static_cast<Status>(state_data.status_char);
-    }
-    return results.status.ok();
 }
 
 BlockReason MachineState::isBlocked(uint256_t currentTime,

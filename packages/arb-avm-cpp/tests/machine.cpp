@@ -19,6 +19,7 @@
 
 #include <avm/machine.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -60,12 +61,9 @@ void deleteCheckpoint(Transaction& transaction,
 void restoreCheckpoint(CheckpointStorage& storage,
                        Machine& expected_machine,
                        const std::vector<unsigned char>& checkpoint_key) {
-    Machine machine;
-    machine.initializeMachine(test_contract_path);
-    auto success = machine.restoreCheckpoint(storage, checkpoint_key);
-
-    REQUIRE(success);
-    REQUIRE(machine.hash() == expected_machine.hash());
+    auto ret = Machine::loadFromCheckpoint(storage, checkpoint_key);
+    REQUIRE(ret.second);
+    REQUIRE(ret.first.hash() == expected_machine.hash());
 }
 
 TEST_CASE("Checkpoint State") {
@@ -73,45 +71,42 @@ TEST_CASE("Checkpoint State") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-        Machine machine;
+        auto ret = Machine::loadFromFile(test_contract_path);
+        REQUIRE(ret.second);
 
-        bool initialized = machine.initializeMachine(test_contract_path);
-        REQUIRE(initialized);
-
-        checkpointState(storage, machine);
+        checkpointState(storage, ret.first);
     }
     SECTION("save twice") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-        Machine machine;
-        machine.initializeMachine(test_contract_path);
+        auto ret = Machine::loadFromFile(test_contract_path);
+        REQUIRE(ret.second);
 
-        checkpointStateTwice(storage, machine);
+        checkpointStateTwice(storage, ret.first);
     }
     SECTION("assert machine hash") {
         DBDeleter deleter;
-        Machine machine;
-        machine.initializeMachine(test_contract_path);
+        auto ret = Machine::loadFromFile(test_contract_path);
+        REQUIRE(ret.second);
+        auto machine = std::move(ret.first);
 
         CheckpointStorage storage(dbpath, test_contract_path);
         auto initial_machine = storage.getInitialVmValues();
-        MachineState machine_state(initial_machine.code,
-                                   initial_machine.staticVal, storage.pool);
-
-        auto machine2 = new Machine();
-        machine2->initializeMachine(machine_state);
+        Machine machine2(initial_machine.code, initial_machine.staticVal,
+                         storage.pool);
 
         auto hash1 = machine.hash();
-        auto hash2 = machine2->hash();
+        auto hash2 = machine2.hash();
 
         machine.checkpoint(storage);
 
         std::vector<unsigned char> hash_vector;
         marshal_uint256_t(hash1, hash_vector);
 
-        Machine machine3;
-        machine3.restoreCheckpoint(storage, hash_vector);
+        auto ret2 = Machine::loadFromCheckpoint(storage, hash_vector);
+        REQUIRE(ret2.second);
+        auto machine3 = std::move(ret2.first);
 
         auto hash3 = machine3.hash();
 
@@ -125,11 +120,11 @@ TEST_CASE("Delete machine checkpoint") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-        Machine machine;
-        machine.initializeMachine(test_contract_path);
-        auto results = machine.checkpoint(storage);
+        auto ret = Machine::loadFromFile(test_contract_path);
+        REQUIRE(ret.second);
+        auto results = ret.first.checkpoint(storage);
         auto transaction = storage.makeTransaction();
-        deleteCheckpoint(*transaction, machine, results.storage_key);
+        deleteCheckpoint(*transaction, ret.first, results.storage_key);
         REQUIRE(transaction->commit().ok());
     }
 }
@@ -139,10 +134,10 @@ TEST_CASE("Restore checkpoint") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-        Machine machine;
-        machine.initializeMachine(test_contract_path);
-        auto results = machine.checkpoint(storage);
+        auto ret = Machine::loadFromFile(test_contract_path);
+        REQUIRE(ret.second);
+        auto results = ret.first.checkpoint(storage);
 
-        restoreCheckpoint(storage, machine, results.storage_key);
+        restoreCheckpoint(storage, ret.first, results.storage_key);
     }
 }

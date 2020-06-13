@@ -24,6 +24,7 @@
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <catch2/catch.hpp>
 

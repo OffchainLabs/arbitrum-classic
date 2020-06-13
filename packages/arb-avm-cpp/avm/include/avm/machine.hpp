@@ -19,6 +19,7 @@
 
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
+#include <data_storage/storageresultfwd.hpp>
 
 #include <chrono>
 #include <memory>
@@ -37,9 +38,34 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     BlockReason runOne();
 
+    Machine() = default;
+    Machine(MachineState machine_state_)
+        : machine_state(std::move(machine_state_)) {}
+
    public:
-    bool initializeMachine(const std::string& filename);
-    void initializeMachine(const MachineState& initial_state);
+    Machine(const Code& code_,
+            const value& static_val_,
+            std::shared_ptr<TuplePool> pool_)
+        : machine_state(code_, static_val_, std::move(pool_)) {}
+
+    static std::pair<Machine, bool> loadFromFile(
+        const std::string& contract_filename) {
+        auto result = MachineState::loadFromFile(contract_filename);
+        if (!result.second) {
+            return std::make_pair(Machine{}, false);
+        }
+        return std::make_pair(Machine{std::move(result.first)}, true);
+    }
+
+    static std::pair<Machine, bool> loadFromCheckpoint(
+        const CheckpointStorage& storage,
+        const std::vector<unsigned char>& checkpoint_key) {
+        auto result = MachineState::loadFromCheckpoint(storage, checkpoint_key);
+        if (!result.second) {
+            return std::make_pair(Machine{}, false);
+        }
+        return std::make_pair(Machine{std::move(result.first)}, true);
+    }
 
     Assertion run(uint64_t stepCount,
                   const TimeBounds& timeBounds,
@@ -58,8 +84,6 @@ class Machine {
     TuplePool& getPool() { return *machine_state.pool; }
 
     SaveResults checkpoint(CheckpointStorage& storage);
-    bool restoreCheckpoint(const CheckpointStorage& storage,
-                           const std::vector<unsigned char>& checkpoint_key);
     DeleteResults deleteCheckpoint(Transaction& transaction);
 
     void marshal_value(const value& val, std::vector<unsigned char>& buf) {

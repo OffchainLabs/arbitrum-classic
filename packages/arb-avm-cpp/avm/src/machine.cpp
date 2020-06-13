@@ -24,6 +24,7 @@
 #include <bigint_utils.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
+#include <data_storage/storageresult.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
@@ -39,14 +40,6 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
     return os;
-}
-
-bool Machine::initializeMachine(const std::string& filename) {
-    return machine_state.initialize_machinestate(filename);
-}
-
-void Machine::initializeMachine(const MachineState& initial_state) {
-    machine_state = initial_state;
 }
 
 Assertion Machine::run(uint64_t stepCount,
@@ -143,12 +136,6 @@ BlockReason Machine::runOne() {
 
 SaveResults Machine::checkpoint(CheckpointStorage& storage) {
     return machine_state.checkpointState(storage);
-}
-
-bool Machine::restoreCheckpoint(
-    const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    return machine_state.restoreCheckpoint(storage, checkpoint_key);
 }
 
 DeleteResults Machine::deleteCheckpoint(Transaction& transaction) {

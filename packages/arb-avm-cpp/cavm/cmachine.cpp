@@ -30,14 +30,11 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto machine = new Machine();
-    auto sucess = machine->initializeMachine(filename);
-
-    if (sucess) {
-        return machine;
-    } else {
+    auto ret = Machine::loadFromFile(filename);
+    if (!ret.second) {
         return nullptr;
     }
+    return new Machine(std::move(ret.first));
 }
 
 // cmachine_t *machine_create(char *data)
