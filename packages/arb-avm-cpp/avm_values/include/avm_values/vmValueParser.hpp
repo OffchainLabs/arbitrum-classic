@@ -22,7 +22,7 @@
 
 struct InitialVmValues {
     bool valid_state;
-    std::vector<CodePoint> code;
+    Code code;
     value staticVal;
 };
 

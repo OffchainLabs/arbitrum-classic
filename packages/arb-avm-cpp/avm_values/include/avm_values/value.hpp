@@ -28,17 +28,14 @@ class Tuple;
 struct Operation;
 struct CodePoint;
 class HashPreImage;
-
-struct CodePointRef {
-    uint64_t pc;
-    bool is_err;
-};
+class Code;
+struct CodePointStub;
 
 // Note: uint256_t is actually 48 bytes long
-using value = nonstd::variant<Tuple, uint256_t, CodePoint, HashPreImage>;
+using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-uint256_t hash(const value& value);
+uint256_t hash_value(const value& value);
 
 uint256_t deserializeUint256t(const char*& srccode);
 Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
@@ -46,9 +43,20 @@ value deserialize_value(const char*& srccode, TuplePool& pool);
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
 
-void marshal_value(const value& val, std::vector<unsigned char>& buf);
-void marshalForProof(const value& val, std::vector<unsigned char>& buf);
-void marshalStub(const value& val, std::vector<unsigned char>& buf);
+void marshal_value(const value& val,
+                   std::vector<unsigned char>& buf,
+                   const Code& code);
+
+void marshalForProof(const CodePoint& cp,
+                     std::vector<unsigned char>& buf,
+                     const Code& code);
+
+void marshalForProof(const value& val,
+                     std::vector<unsigned char>& buf,
+                     const Code& code);
+void marshalStub(const value& val,
+                 std::vector<unsigned char>& buf,
+                 const Code& code);
 
 template <typename T>
 static T shrink(uint256_t i) {

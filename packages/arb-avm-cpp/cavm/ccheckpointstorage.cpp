@@ -144,9 +144,10 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
     auto hash = receiveUint256(hash_key);
 
     std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash, hash_key_vector);
+    auto code = storage->getInitialVmValues().code;
+    marshal_value(hash, hash_key_vector, code);
 
-    return returnValueResult(fetcher.getValue(hash_key_vector));
+    return returnValueResult(fetcher.getValue(hash_key_vector), code);
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
@@ -154,7 +155,7 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     auto hash = receiveUint256(hash_key);
 
     std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash, hash_key_vector);
+    marshal_value(hash, hash_key_vector, storage->getInitialVmValues().code);
 
     auto results = deleteValue(*storage, hash_key_vector);
     return results.status.ok();

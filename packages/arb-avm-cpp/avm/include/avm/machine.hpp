@@ -61,6 +61,10 @@ class Machine {
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
     DeleteResults deleteCheckpoint(CheckpointStorage& storage);
+
+    void marshal_value(const value& val, std::vector<unsigned char>& buf) {
+        return ::marshal_value(val, buf, machine_state.code);
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

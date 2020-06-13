@@ -60,18 +60,18 @@ struct AssertionContext {
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
-    std::vector<CodePoint> code;
+    Code code;
     value staticVal;
     value registerVal;
     Datastack stack;
     Datastack auxstack;
     Status state = Status::Extensive;
-    uint64_t pc = 0;
-    CodePoint errpc;
+    CodePointRef pc;
+    CodePointRef errpc;
     AssertionContext context;
 
     MachineState();
-    MachineState(const std::vector<CodePoint>& code_,
+    MachineState(const Code& code_,
                  const value& static_val_,
                  std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);

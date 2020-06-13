@@ -114,7 +114,7 @@ struct ReasonConverter {
 
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(val.timout, inboxDataVec);
+        marshal_uint256_t(val.timout, inboxDataVec);
         return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
     }
 };
@@ -162,11 +162,11 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        marshal_value(outMsg, outMsgData);
+        mach->marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
+        mach->marshal_value(log, logData);
     }
 
     return {returnCharVector(outMsgData),

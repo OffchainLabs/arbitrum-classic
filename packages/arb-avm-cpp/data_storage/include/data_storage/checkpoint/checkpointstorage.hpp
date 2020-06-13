@@ -36,6 +36,7 @@ class CheckpointStorage {
     InitialVmValues initial_state;
 
    public:
+    const Code& getCode() const { return initial_state.code; }
     std::shared_ptr<TuplePool> pool;
     CheckpointStorage(const std::string& db_path,
                       const std::string& contract_path);

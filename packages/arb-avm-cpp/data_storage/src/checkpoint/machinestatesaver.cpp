@@ -39,8 +39,8 @@ SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
     if (incr_ref_count) {
         return transaction.incrementReference(key);
     } else {
-        std::vector<unsigned char> value_vector{
-            static_cast<unsigned char>(TUPLE)};
+        std::vector<unsigned char> value_vector;
+        value_vector.push_back(TUPLE + val.tuple_size());
 
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto current_val = val.get_element(i);
@@ -62,13 +62,11 @@ SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
 }  // namespace
 
 SaveResults saveValue(Transaction& transaction, const value& val) {
-    auto serialized_value = checkpoint::utils::serializeValue(val);
-    auto type = static_cast<ValueTypes>(serialized_value[0]);
-
-    if (type == TUPLE) {
+    if (nonstd::holds_alternative<Tuple>(val)) {
         auto tuple = nonstd::get<Tuple>(val);
         return saveTuple(transaction, tuple);
     } else {
+        auto serialized_value = checkpoint::utils::serializeValue(val);
         auto hash_key = checkpoint::utils::GetHashKey(val);
         auto key = vecToSlice(hash_key);
         return transaction.saveData(key, serialized_value);

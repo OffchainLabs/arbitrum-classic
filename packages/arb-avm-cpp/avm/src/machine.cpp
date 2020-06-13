@@ -30,9 +30,9 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
-    os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash(val.staticVal)) << "\n";
-    os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
+    os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
+    os << "staticHash " << to_hex_str(hash_value(val.staticVal)) << "\n";
+    os << "errHandlerHash " << to_hex_str(hash(val.code[val.errpc])) << "\n";
     return os;
 }
 
@@ -75,10 +75,6 @@ Assertion Machine::run(uint64_t stepCount,
             machine_state.context.didInboxInsn};
 }
 
-bool isErrorCodePoint(const CodePoint& cp) {
-    return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
-}
-
 BlockReason Machine::runOne() {
     if (machine_state.state == Status::Error) {
         return ErrorBlocked();
@@ -95,8 +91,8 @@ BlockReason Machine::runOne() {
     if (!isValidOpcode(instruction.op.opcode)) {
         machine_state.state = Status::Error;
         machine_state.context.numSteps++;
-        if (!isErrorCodePoint(machine_state.errpc)) {
-            machine_state.pc = machine_state.errpc.pc;
+        if (!machine_state.errpc.is_err) {
+            machine_state.pc = machine_state.errpc;
             machine_state.state = Status::Extensive;
         }
         return NotBlocked();
@@ -137,8 +133,8 @@ BlockReason Machine::runOne() {
             machine_state.stack.popClear();
         }
 
-        if (!isErrorCodePoint(machine_state.errpc)) {
-            machine_state.pc = machine_state.errpc.pc;
+        if (!machine_state.errpc.is_err) {
+            machine_state.pc = machine_state.errpc;
             machine_state.state = Status::Extensive;
         }
         return blockReason;

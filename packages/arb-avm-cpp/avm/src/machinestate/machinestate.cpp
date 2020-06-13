@@ -32,17 +32,20 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()), context({0, 0}, Tuple()) {}
+    : pool(std::make_unique<TuplePool>()),
+      pc(0, false),
+      errpc(0, true),
+      context({0, 0, 0, 0}, Tuple()) {}
 
-MachineState::MachineState(const std::vector<CodePoint>& code_,
+MachineState::MachineState(const Code& code_,
                            const value& static_val_,
                            std::shared_ptr<TuplePool> pool_)
-    : pool(std::move(pool_)), context({0, 0}, Tuple()) {
+    : pool(std::move(pool_)), context({0, 0, 0, 0}, Tuple()) {
     code = code_;
     staticVal = static_val_;
 
-    errpc = getErrCodePoint();
-    pc = 0;
+    errpc = CodePointRef{0, true};
+    pc = CodePointRef{0, false};
 }
 
 bool MachineState::initialize_machinestate(
@@ -53,8 +56,8 @@ bool MachineState::initialize_machinestate(
         code = initial_state.code;
         staticVal = initial_state.staticVal;
 
-        errpc = getErrCodePoint();
-        pc = 0;
+        errpc = CodePointRef{0, true};
+        pc = CodePointRef{0, false};
 
         return true;
     } else {
@@ -83,15 +86,15 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(registerVal);
+        auto val = ::hash_value(registerVal);
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(staticVal);
+        auto val = ::hash_value(staticVal);
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(errpc);
+        auto val = ::hash(code[errpc]);
         oit = to_big_endian(val, oit);
     }
 
@@ -105,7 +108,6 @@ uint256_t MachineState::getMachineSize() {
 
     machine_size += getSize(staticVal);
     machine_size += getSize(registerVal);
-    machine_size += getSize(errpc);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
 
@@ -122,17 +124,16 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         stackPops.erase(stackPops.begin());
     }
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
-    auto stackProof = stack.marshalForProof(stackPops);
-    auto auxStackProof = auxstack.marshalForProof(auxStackPops);
+    auto stackProof = stack.marshalForProof(stackPops, code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, code);
 
-    auto next_codepoint = code[pc + 1];
-    ::marshalStub(next_codepoint, buf);
+    ::marshalStub(CodePointStub{code[pc + 1]}, buf, code);
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
-    ::marshalStub(registerVal, buf);
-    ::marshalStub(staticVal, buf);
-    ::marshalStub(errpc, buf);
-    code[pc].op.marshalForProof(buf, includeImmediateVal);
+    ::marshalStub(registerVal, buf, code);
+    ::marshalStub(staticVal, buf, code);
+    ::marshalStub(CodePointStub{code[errpc]}, buf, code);
+    code[pc].op.marshalForProof(buf, includeImmediateVal, code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
@@ -147,8 +148,8 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto auxstack_results = auxstack.checkpointState(*transaction, pool.get());
 
     auto register_val_results = saveValue(*transaction, registerVal);
-    auto err_code_point = saveValue(*transaction, errpc);
-    auto pc_results = saveValue(*transaction, code[pc]);
+    auto err_pc_stub = CodePointStub{code[errpc]};
+    auto pc_stub = CodePointStub{code[pc]};
 
     auto status_str = static_cast<unsigned char>(state);
 
@@ -156,12 +157,14 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     marshal_uint256_t(hash(), hash_key);
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        register_val_results.status.ok() && pc_results.status.ok() &&
-        err_code_point.status.ok()) {
-        auto machine_state_data = MachineStateKeys{
-            register_val_results.storage_key, datastack_results.storage_key,
-            auxstack_results.storage_key,     pc_results.storage_key,
-            err_code_point.storage_key,       status_str};
+        register_val_results.status.ok()) {
+        auto machine_state_data =
+            MachineStateKeys{register_val_results.storage_key,
+                             datastack_results.storage_key,
+                             auxstack_results.storage_key,
+                             pc_stub,
+                             err_pc_stub,
+                             status_str};
 
         auto results =
             saveMachineState(*transaction, machine_state_data, hash_key);
@@ -194,18 +197,8 @@ bool MachineState::restoreCheckpoint(
             stateFetcher.getValue(state_data.register_val_key);
         registerVal = register_results.data;
 
-        auto pc_results = stateFetcher.getValue(state_data.pc_key);
-        if (!nonstd::holds_alternative<CodePoint>(pc_results.data)) {
-            return false;
-        }
-        pc = nonstd::get<CodePoint>(pc_results.data).pc;
-
-        auto err_pc_results = stateFetcher.getValue(state_data.err_pc_key);
-        if (!nonstd::holds_alternative<CodePoint>(err_pc_results.data)) {
-            return false;
-        }
-
-        errpc = nonstd::get<CodePoint>(err_pc_results.data);
+        pc = CodePointRef(state_data.pc);
+        errpc = CodePointRef(state_data.err_pc);
 
         if (!stack.initializeDataStack(stateFetcher,
                                        state_data.datastack_key)) {

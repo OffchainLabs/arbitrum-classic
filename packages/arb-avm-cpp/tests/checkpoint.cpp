@@ -41,45 +41,32 @@ void saveValue(Transaction& transaction,
 }
 
 void getValue(MachineStateFetcher& fetcher,
-              std::vector<unsigned char>& hash_key,
+              const value& value,
               int expected_ref_count,
-              uint256_t& expected_hash,
               ValueTypes expected_value_type,
               bool expected_status) {
-    auto results = fetcher.getValue(hash_key);
+    auto results = fetcher.getValue(GetHashKey(value));
     auto serialized_val = checkpoint::utils::serializeValue(results.data);
     auto type = (ValueTypes)serialized_val[0];
 
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(type == expected_value_type);
-    REQUIRE(hash(results.data) == expected_hash);
-}
-
-void saveTuple(Transaction& transaction,
-               const Tuple& tup,
-               int expected_ref_count,
-               bool expected_status) {
-    auto results = saveValue(transaction, tup);
-    transaction.commit();
-    REQUIRE(results.status.ok() == expected_status);
-    REQUIRE(results.reference_count == expected_ref_count);
+    REQUIRE(hash_value(results.data) == hash_value(value));
 }
 
 void getTuple(MachineStateFetcher& fetcher,
-              std::vector<unsigned char>& hash_key,
+              const Tuple& tuple,
               int expected_ref_count,
-              uint256_t& expected_hash,
-              int expected_tuple_size,
               bool expected_status) {
-    auto results = fetcher.getValue(hash_key);
+    auto results = fetcher.getValue(GetHashKey(tuple));
 
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
-    auto tuple = nonstd::get<Tuple>(results.data);
+    auto loadedTuple = nonstd::get<Tuple>(results.data);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(tuple.calculateHash() == expected_hash);
-    REQUIRE(tuple.tuple_size() == expected_tuple_size);
+    REQUIRE(loadedTuple.calculateHash() == tuple.calculateHash());
+    REQUIRE(loadedTuple.tuple_size() == tuple.tuple_size());
     REQUIRE(results.status.ok() == expected_status);
 }
 
@@ -93,7 +80,7 @@ void getTupleValues(MachineStateFetcher& fetcher,
     REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
-        REQUIRE(hash(tuple.get_element(i)) == value_hashes[i]);
+        REQUIRE(hash_value(tuple.get_element(i)) == value_hashes[i]);
     }
 }
 
@@ -113,7 +100,7 @@ TEST_CASE("Save value") {
         saveValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        auto code_point = CodePoint(1, Operation(), 0);
+        auto code_point = CodePointStub(1, 654546);
         saveValue(*transaction, code_point, 1, true);
     }
 }
@@ -128,20 +115,20 @@ TEST_CASE("Save tuple") {
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save 2, 1 num tuples") {
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        saveTuple(*transaction, tuple, 1, true);
-        saveTuple(*transaction, tuple, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 2, true);
     }
     SECTION("saved tuple in tuple") {
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        saveTuple(*transaction, tuple, 1, true);
-        saveTuple(*transaction, tuple, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 2, true);
     }
 }
 
@@ -153,11 +140,9 @@ TEST_CASE("Save and get value") {
         auto fetcher = MachineStateFetcher(storage);
 
         auto tuple = Tuple();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
 
         saveValue(*transaction, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
+        getTuple(fetcher, tuple, 1, true);
     }
     SECTION("save tuple") {
         DBDeleter deleter;
@@ -168,11 +153,9 @@ TEST_CASE("Save and get value") {
         uint256_t num = 1;
         TuplePool pool;
         auto tuple = Tuple(num, &pool);
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
 
         saveValue(*transaction, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
+        getTuple(fetcher, tuple, 1, true);
     }
     SECTION("save num") {
         DBDeleter deleter;
@@ -181,37 +164,31 @@ TEST_CASE("Save and get value") {
         auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
-        auto hash_key = GetHashKey(num);
-        auto num_hash = hash(num);
 
         saveValue(*transaction, num, 1, true);
-        getValue(fetcher, hash_key, 1, num_hash, NUM, true);
+        getValue(fetcher, num, 1, NUM, true);
     }
     SECTION("save codepoint") {
         DBDeleter deleter;
         CheckpointStorage storage(dbpath, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
-        auto hash_key = GetHashKey(code_point);
-        auto cp_hash = hash(code_point);
-        saveValue(*transaction, code_point, 1, true);
-        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
+        saveValue(*transaction, code_point_stub, 1, true);
+        getValue(fetcher, code_point_stub, 1, CODEPT, true);
     }
     SECTION("save err codepoint") {
         DBDeleter deleter;
         CheckpointStorage storage(dbpath, test_contract_path);
-        auto code_point = getErrCodePoint();
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
-        auto hash_key = GetHashKey(code_point);
-        auto cp_hash = hash(code_point);
-        saveValue(*transaction, code_point, 1, true);
-        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
+        saveValue(*transaction, code_point_stub, 1, true);
+        getValue(fetcher, code_point_stub, 1, CODEPT, true);
     }
 }
 
@@ -226,7 +203,7 @@ TEST_CASE("Save and get tuple values") {
         TuplePool pool;
         auto tuple = Tuple(num, &pool);
 
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(num)};
         auto hash_key = GetHashKey(tuple);
 
@@ -235,16 +212,16 @@ TEST_CASE("Save and get tuple values") {
     SECTION("save codepoint tuple") {
         DBDeleter deleter;
         CheckpointStorage storage(dbpath, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[1];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         TuplePool pool;
-        auto tuple = Tuple(code_point, &pool);
+        auto tuple = Tuple(code_point_stub, &pool);
 
-        saveTuple(*transaction, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(code_point)};
+        saveValue(*transaction, tuple, 1, true);
+        std::vector<uint256_t> hashes{hash(code_point_stub)};
         auto hash_key = GetHashKey(tuple);
 
         getTupleValues(fetcher, hash_key, hashes);
@@ -252,16 +229,16 @@ TEST_CASE("Save and get tuple values") {
     SECTION("save codepoint tuple") {
         DBDeleter deleter;
         CheckpointStorage storage(dbpath, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         TuplePool pool;
-        auto tuple = Tuple(code_point, &pool);
+        auto tuple = Tuple(code_point_stub, &pool);
 
         saveValue(*transaction, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(code_point)};
+        std::vector<uint256_t> hashes{hash(code_point_stub)};
         auto hash_key = GetHashKey(tuple);
 
         getTupleValues(fetcher, hash_key, hashes);
@@ -277,7 +254,7 @@ TEST_CASE("Save and get tuple values") {
         TuplePool pool;
         auto tuple = Tuple(inner_tuple, &pool);
 
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple)};
         auto hash_key = GetHashKey(tuple);
 
@@ -287,18 +264,18 @@ TEST_CASE("Save and get tuple values") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         auto inner_tuple = Tuple();
         uint256_t num = 1;
-        auto tuple = Tuple(inner_tuple, num, code_point, &pool);
+        auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
 
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
-                                      hash(code_point)};
+                                      hash(code_point_stub)};
         auto hash_key = GetHashKey(tuple);
 
         getTupleValues(fetcher, hash_key, hashes);
@@ -307,19 +284,18 @@ TEST_CASE("Save and get tuple values") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[2];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         auto inner_tuple = Tuple();
         uint256_t num = 1;
-        auto tuple = Tuple(inner_tuple, num, code_point, &pool);
+        auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
 
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
-                                      hash(code_point)};
+                                      hash(code_point_stub)};
         auto hash_key = GetHashKey(tuple);
 
         getTupleValues(fetcher, hash_key, hashes);
@@ -337,28 +313,24 @@ TEST_CASE("Save And Get Tuple") {
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
 
-        saveTuple(*transaction, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(fetcher, tuple, 1, true);
     }
     SECTION("save codepoint in tuple") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        auto code_point = storage.getInitialVmValues().code[0];
+        CodePointStub code_point_stub(1, 654546);
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
-        auto tuple = Tuple(code_point, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
+        auto tuple = Tuple(code_point_stub, &pool);
 
-        saveTuple(*transaction, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(fetcher, tuple, 1, true);
     }
     SECTION("save 1 num tuple twice") {
         DBDeleter deleter;
@@ -371,12 +343,10 @@ TEST_CASE("Save And Get Tuple") {
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
 
-        saveTuple(*transaction, tuple, 1, true);
-        saveTuple(*transaction2, tuple, 2, true);
-        getTuple(fetcher, hash_key, 2, tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction2, tuple, 2, true);
+        getTuple(fetcher, tuple, 2, true);
     }
     SECTION("save 2 num tuple") {
         DBDeleter deleter;
@@ -389,11 +359,9 @@ TEST_CASE("Save And Get Tuple") {
         uint256_t num = 1;
         uint256_t num2 = 2;
         auto tuple = Tuple(num, num2, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
 
-        saveTuple(*transaction, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(fetcher, tuple, 1, true);
     }
     SECTION("save tuple in tuple") {
         DBDeleter deleter;
@@ -406,15 +374,10 @@ TEST_CASE("Save And Get Tuple") {
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
 
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
+        getTuple(fetcher, tuple, 1, true);
+        getTuple(fetcher, inner_tuple, 1, true);
     }
     SECTION("save 2 tuples in tuple") {
         DBDeleter deleter;
@@ -429,18 +392,11 @@ TEST_CASE("Save And Get Tuple") {
         uint256_t num2 = 2;
         auto inner_tuple2 = Tuple(num2, &pool);
         auto tuple = Tuple(inner_tuple, inner_tuple2, &pool);
-        saveTuple(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
 
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto inner_hash_key2 = GetHashKey(inner_tuple2);
-        auto inner_tup_hash2 = inner_tuple2.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key2, 1, inner_tup_hash2, 1, true);
+        getTuple(fetcher, tuple, 1, true);
+        getTuple(fetcher, inner_tuple, 1, true);
+        getTuple(fetcher, inner_tuple2, 1, true);
     }
     SECTION("save saved tuple in tuple") {
         DBDeleter deleter;
@@ -454,16 +410,12 @@ TEST_CASE("Save And Get Tuple") {
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
 
-        saveTuple(*transaction, inner_tuple, 1, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
-        saveTuple(*transaction2, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key, 2, inner_tup_hash, 1, true);
+        saveValue(*transaction, inner_tuple, 1, true);
+        getTuple(fetcher, inner_tuple, 1, true);
+        saveValue(*transaction2, tuple, 1, true);
+        getTuple(fetcher, tuple, 1, true);
+        getTuple(fetcher, inner_tuple, 2, true);
     }
 }
 
@@ -490,7 +442,7 @@ void getSavedState(MachineStateFetcher& fetcher,
     auto data = results.data;
 
     REQUIRE(data.status_char == expected_data.status_char);
-    REQUIRE(data.pc_key == expected_data.pc_key);
+    REQUIRE(data.pc == expected_data.pc);
     REQUIRE(data.datastack_key == expected_data.datastack_key);
     REQUIRE(data.auxstack_key == expected_data.auxstack_key);
     REQUIRE(data.register_val_key == expected_data.register_val_key);
@@ -565,8 +517,8 @@ MachineStateKeys makeStorageData(Transaction& transaction,
                                  Datastack stack,
                                  Datastack auxstack,
                                  Status state,
-                                 CodePoint pc,
-                                 CodePoint err_pc,
+                                 CodePointStub pc,
+                                 CodePointStub err_pc,
                                  BlockReason blockReason) {
     TuplePool pool;
 
@@ -574,15 +526,15 @@ MachineStateKeys makeStorageData(Transaction& transaction,
     auto auxstack_results = auxstack.checkpointState(transaction, &pool);
 
     auto register_val_results = saveValue(transaction, registerVal);
-    auto pc_results = saveValue(transaction, pc);
-    auto err_pc_results = saveValue(transaction, err_pc);
 
     auto status_str = (unsigned char)state;
 
-    return MachineStateKeys{
-        register_val_results.storage_key, datastack_results.storage_key,
-        auxstack_results.storage_key,     pc_results.storage_key,
-        err_pc_results.storage_key,       status_str};
+    return MachineStateKeys{register_val_results.storage_key,
+                            datastack_results.storage_key,
+                            auxstack_results.storage_key,
+                            pc,
+                            err_pc,
+                            status_str};
 }
 
 MachineStateKeys getStateValues(Transaction& transaction) {
@@ -590,25 +542,25 @@ MachineStateKeys getStateValues(Transaction& transaction) {
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), &pool);
 
-    auto code_point = CodePoint(1, Operation(), 0);
+    CodePointStub code_point_stub(1, 654546);
     auto tup1 = Tuple(register_val, &pool);
-    auto tup2 = Tuple(code_point, tup1, &pool);
+    auto tup2 = Tuple(code_point_stub, tup1, &pool);
 
     Datastack data_stack;
     data_stack.push(register_val);
     Datastack aux_stack;
     aux_stack.push(register_val);
-    aux_stack.push(code_point);
+    aux_stack.push(code_point_stub);
 
-    CodePoint pc_codepoint(0, Operation(), 0);
-    CodePoint err_pc_codepoint(0, Operation(), 0);
+    CodePointStub pc_codepoint_stub(0, 645357);
+    CodePointStub err_codepoint_stub(0, 968769876);
     Status state = Status::Extensive;
 
     auto inbox_blocked = InboxBlocked(0);
 
     auto saved_data =
         makeStorageData(transaction, register_val, data_stack, aux_stack, state,
-                        pc_codepoint, err_pc_codepoint, inbox_blocked);
+                        pc_codepoint_stub, err_codepoint_stub, inbox_blocked);
 
     return saved_data;
 }
@@ -620,10 +572,11 @@ MachineStateKeys getDefaultValues(Transaction& transaction) {
     auto aux_stack = Tuple();
 
     Status state = Status::Extensive;
-    CodePoint code_point(0, Operation(), 0);
+    CodePointStub code_point_stub(1, 654546);
 
-    auto data = makeStorageData(transaction, Tuple(), Datastack(), Datastack(),
-                                state, code_point, code_point, NotBlocked());
+    auto data =
+        makeStorageData(transaction, Tuple(), Datastack(), Datastack(), state,
+                        code_point_stub, code_point_stub, NotBlocked());
 
     return data;
 }
@@ -633,8 +586,6 @@ std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
 
     hash_keys.push_back(data.auxstack_key);
     hash_keys.push_back(data.datastack_key);
-    hash_keys.push_back(data.pc_key);
-    hash_keys.push_back(data.err_pc_key);
     hash_keys.push_back(data.register_val_key);
 
     return hash_keys;
@@ -646,8 +597,6 @@ TEST_CASE("Save Machinestatedata") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
         auto transaction = storage.makeTransaction();
         auto data_values = getDefaultValues(*transaction);
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
@@ -658,9 +607,6 @@ TEST_CASE("Save Machinestatedata") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
 
         auto transaction = storage.makeTransaction();
         auto state_data = getStateValues(*transaction);
@@ -676,8 +622,6 @@ TEST_CASE("Get Machinestate data") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
@@ -695,9 +639,6 @@ TEST_CASE("Get Machinestate data") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
@@ -718,8 +659,6 @@ TEST_CASE("Delete checkpoint") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
         auto data_values = getDefaultValues(*transaction);
@@ -736,9 +675,6 @@ TEST_CASE("Delete checkpoint") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[2];
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
@@ -757,9 +693,6 @@ TEST_CASE("Delete checkpoint") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
-
         auto fetcher = MachineStateFetcher(storage);
         auto transaction = storage.makeTransaction();
         auto data_values = getStateValues(*transaction);
@@ -777,9 +710,6 @@ TEST_CASE("Delete checkpoint") {
         DBDeleter deleter;
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
 
         auto fetcher = MachineStateFetcher(storage);
         auto transaction = storage.makeTransaction();

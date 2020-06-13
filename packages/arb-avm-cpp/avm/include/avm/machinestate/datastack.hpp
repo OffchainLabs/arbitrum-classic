@@ -83,7 +83,8 @@ class Datastack {
     }
 
     std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
-        const std::vector<bool>& stackInfo);
+        const std::vector<bool>& stackInfo,
+        const Code& code);
 
     value& peek() {
         if (values.size() == 0) {

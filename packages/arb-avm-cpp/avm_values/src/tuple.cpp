@@ -173,10 +173,10 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool)
     }
 }
 
-void Tuple::marshal(std::vector<unsigned char>& buf) const {
+void Tuple::marshal(std::vector<unsigned char>& buf, const Code& code) const {
     buf.push_back(TUPLE + tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {
-        marshal_value(get_element(i), buf);
+        marshal_value(get_element(i), buf, code);
     }
 }
 
@@ -189,7 +189,7 @@ value Tuple::clone_shallow() {
         if (nonstd::holds_alternative<uint256_t>(val)) {
             tup.set_element(i, val);
         } else {
-            auto valHash = hash(get_element(i));
+            auto valHash = hash_value(get_element(i));
             tup.set_element(i, valHash);
         }
     }
@@ -220,7 +220,7 @@ HashPreImage Tuple::getHashPreImage() const {
 
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
-        auto valHash = hash(get_element(i));
+        auto valHash = hash_value(get_element(i));
         std::array<uint64_t, 4> valHashInts;
         to_big_endian(valHash, valHashInts.begin());
         std::copy(

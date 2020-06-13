@@ -115,18 +115,14 @@ DeleteResults deleteCheckpoint(
 
         auto register_key = vecToSlice(parsed_state.register_val_key);
         auto delete_register_res = deleter.deleteValue(register_key);
-        auto pc_key = vecToSlice(parsed_state.pc_key);
-        auto delete_cp_key = deleter.deleteValue(pc_key);
-        auto err_pc_key = vecToSlice(parsed_state.err_pc_key);
-        auto delete_err_pc = deleter.deleteValue(err_pc_key);
         auto datastack_key = vecToSlice(parsed_state.datastack_key);
         auto delete_datastack_res = deleter.deleteTuple(datastack_key);
         auto auxstack_key = vecToSlice(parsed_state.auxstack_key);
         auto delete_auxstack_res = deleter.deleteTuple(auxstack_key);
 
-        if (!(delete_register_res.status.ok() && delete_cp_key.status.ok() &&
+        if (!(delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
-              delete_auxstack_res.status.ok() && delete_err_pc.status.ok())) {
+              delete_auxstack_res.status.ok())) {
             std::cout << "error deleting checkpoint" << std::endl;
         }
     }

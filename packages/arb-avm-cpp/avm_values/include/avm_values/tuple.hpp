@@ -158,7 +158,7 @@ class Tuple {
         return tpl->data[pos];
     }
 
-    void marshal(std::vector<unsigned char>& buf) const;
+    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
     value clone_shallow();
 
     HashPreImage getHashPreImage() const;

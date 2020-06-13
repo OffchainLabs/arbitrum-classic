@@ -44,16 +44,17 @@ HashPreImage Datastack::getHashPreImage() const {
 }
 
 std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
-    const std::vector<bool>& stackInfo) {
+    const std::vector<bool>& stackInfo,
+    const Code& code) {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
         if (si) {
-            ::marshalForProof(val, buf);
+            ::marshalForProof(val, buf, code);
         } else {
-            marshalStub(val, buf);
+            marshalStub(val, buf, code);
         }
     }
     return std::make_pair(c.getHashPreImage(), std::move(buf));

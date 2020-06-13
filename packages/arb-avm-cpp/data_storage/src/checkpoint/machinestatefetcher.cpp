@@ -61,12 +61,6 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
         auto value_type = static_cast<ValueTypes>(current_vector[0]);
 
         switch (value_type) {
-            case TUPLE: {
-                current_vector.erase(current_vector.begin());
-                auto tuple = getTuple(current_vector).data;
-                values.push_back(tuple);
-                break;
-            }
             case NUM: {
                 auto num =
                     checkpoint::utils::deserializeUint256_t(current_vector);
@@ -74,14 +68,25 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                 break;
             }
             case CODEPT: {
-                auto code_point = checkpoint::utils::deserializeCodepoint(
-                    current_vector,
-                    checkpoint_storage.getInitialVmValues().code);
+                auto code_point =
+                    checkpoint::utils::deserializeCodePointStub(current_vector);
                 values.push_back(code_point);
                 break;
             }
             case HASH_PRE_IMAGE: {
                 throw std::runtime_error("HASH_ONLY item");
+            }
+            default: {
+                auto tup_size = value_type - TUPLE;
+                if (tup_size > 8) {
+                    throw std::runtime_error(
+                        "tried to get value inside tuple with invalid "
+                        "typecode");
+                }
+                current_vector.erase(current_vector.begin());
+                auto tuple = getTuple(current_vector).data;
+                values.push_back(tuple);
+                break;
             }
         }
     }
@@ -103,11 +108,6 @@ DbResult<value> MachineStateFetcher::getValue(
     auto value_type = static_cast<ValueTypes>(results.stored_value[0]);
 
     switch (value_type) {
-        case TUPLE: {
-            auto tuple_res = getTuple(hash_key);
-            return DbResult<value>{tuple_res.status, tuple_res.reference_count,
-                                   tuple_res.data};
-        }
         case NUM: {
             auto val =
                 checkpoint::utils::deserializeUint256_t(results.stored_value);
@@ -115,15 +115,22 @@ DbResult<value> MachineStateFetcher::getValue(
                                    val};
         }
         case CODEPT: {
-            auto code_point = checkpoint::utils::deserializeCodepoint(
-                results.stored_value,
-                checkpoint_storage.getInitialVmValues().code);
+            auto code_point = checkpoint::utils::deserializeCodePointStub(
+                results.stored_value);
             return DbResult<value>{results.status, results.reference_count,
                                    code_point};
         }
-        default: {
+        case HASH_PRE_IMAGE: {
             throw std::runtime_error("HASH_ONLY item");
             return DbResult<value>();
+        }
+        default: {
+            if (value_type - TUPLE > 8) {
+                throw std::runtime_error("can't get value with invalid type");
+            }
+            auto tuple_res = getTuple(hash_key);
+            return DbResult<value>{tuple_res.status, tuple_res.reference_count,
+                                   tuple_res.data};
         }
     }
 }

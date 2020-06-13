@@ -156,15 +156,14 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
+        CodePointStub code_point_stub{0, 3452345};
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
         uint256_t num = 1;
-        auto tuple = Tuple(code_point, &pool);
+        auto tuple = Tuple(code_point_stub, &pool);
 
         data_stack.push(num);
         data_stack.push(tuple);
@@ -180,8 +179,7 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
+        CodePointStub code_point_stub{0, 3452345};
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
@@ -191,7 +189,7 @@ TEST_CASE("Initialize datastack") {
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
 
-        data_stack.push(code_point2);
+        data_stack.push(code_point_stub);
         data_stack.push(tuple);
 
         auto results = data_stack.checkpointState(*transaction, &pool);
@@ -207,7 +205,7 @@ TEST_CASE("Save datastack") {
     SECTION("save empty") {
         Datastack datastack;
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(Tuple().calculateHash(), hash_key_vector);
+        marshal_uint256_t(Tuple().calculateHash(), hash_key_vector);
 
         saveDataStack(datastack, hash_key_vector);
     }
@@ -215,7 +213,7 @@ TEST_CASE("Save datastack") {
     SECTION("save empty twice") {
         Datastack datastack;
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(Tuple().calculateHash(), hash_key_vector);
+        marshal_uint256_t(Tuple().calculateHash(), hash_key_vector);
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
@@ -224,8 +222,8 @@ TEST_CASE("Save datastack") {
         TuplePool pool;
 
         uint256_t num = 1;
-        auto code_point = CodePoint(1, Operation(), 0);
-        auto tuple = Tuple(code_point, &pool);
+        uint256_t intVal = 5435;
+        auto tuple = Tuple(intVal, &pool);
 
         Datastack datastack;
         datastack.push(num);
@@ -235,7 +233,7 @@ TEST_CASE("Save datastack") {
         auto tup_rep = Tuple(tuple, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
         saveDataStack(datastack, hash_key_vector);
     }
@@ -244,8 +242,8 @@ TEST_CASE("Save datastack") {
         TuplePool pool;
 
         uint256_t num = 1;
-        auto code_point = CodePoint(1, Operation(), 0);
-        auto tuple = Tuple(code_point, &pool);
+        uint256_t intVal = 5435;
+        auto tuple = Tuple(intVal, &pool);
 
         Datastack datastack;
         datastack.push(num);
@@ -255,7 +253,7 @@ TEST_CASE("Save datastack") {
         auto tup_rep = Tuple(tuple, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
@@ -267,13 +265,13 @@ TEST_CASE("Save and get datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        auto code_point = storage.getInitialVmValues().code[0];
+        uint256_t intVal = 5435;
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
-        auto tuple = Tuple(code_point, &pool);
+        auto tuple = Tuple(intVal, &pool);
 
         Datastack datastack;
         datastack.push(num);
@@ -283,7 +281,7 @@ TEST_CASE("Save and get datastack") {
         auto tup_rep = Tuple(tuple, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
         saveAndGetDataStack(*transaction, fetcher, datastack, hash_key_vector,
                             tup_rep.calculateHash());
@@ -293,13 +291,13 @@ TEST_CASE("Save and get datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath, test_contract_path);
 
-        auto code_point = storage.getInitialVmValues().code[0];
+        uint256_t intVal = 5435;
 
         auto transaction = storage.makeTransaction();
         auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
-        auto tuple = Tuple(code_point, &pool);
+        auto tuple = Tuple(intVal, &pool);
 
         Datastack datastack;
         datastack.push(num);
@@ -309,7 +307,7 @@ TEST_CASE("Save and get datastack") {
         auto tup_rep = Tuple(tuple, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_value(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
         saveTwiceAndGetDataStack(*transaction, fetcher, datastack,
                                  hash_key_vector, tup_rep.calculateHash());
