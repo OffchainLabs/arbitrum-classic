@@ -21,12 +21,14 @@
 
 struct DeleteResults;
 class CheckpointStorage;
+class Transaction;
+class TuplePool;
 
 DeleteResults deleteCheckpoint(
-    CheckpointStorage& checkpoint_storage,
+    Transaction& transaction,
     const std::vector<unsigned char>& checkpoint_name);
 
-DeleteResults deleteValue(CheckpointStorage& checkpoint_storage,
+DeleteResults deleteValue(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key);
 
 #endif /* checkpointdeleter_h */

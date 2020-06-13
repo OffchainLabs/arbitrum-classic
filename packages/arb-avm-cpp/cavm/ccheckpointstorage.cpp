@@ -116,9 +116,13 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     std::vector<unsigned char> hash_vector;
     marshal_uint256_t(hash, hash_vector);
 
-    auto result = deleteCheckpoint(*storage, hash_vector);
-
-    return result.status.ok();
+    auto transaction = storage->makeTransaction();
+    auto result = deleteCheckpoint(*transaction, hash_vector);
+    if (!result.status.ok()) {
+        transaction->rollBack();
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
@@ -158,8 +162,13 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     std::vector<unsigned char> hash_key_vector;
     marshal_value(hash, hash_key_vector, storage->getInitialVmValues().code);
 
-    auto results = deleteValue(*storage, hash_key_vector);
-    return results.status.ok();
+    auto transaction = storage->makeTransaction();
+    auto result = deleteValue(*transaction, hash_key_vector);
+    if (!result.status.ok()) {
+        transaction->rollBack();
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 int saveData(CCheckpointStorage* storage_ptr,

@@ -49,10 +49,10 @@ void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
     REQUIRE(results2.storage_key == hash_vector);
 }
 
-void deleteCheckpoint(CheckpointStorage& storage,
+void deleteCheckpoint(Transaction& transaction,
                       Machine& machine,
                       const std::vector<unsigned char>& checkpoint_key) {
-    auto results = machine.deleteCheckpoint(storage);
+    auto results = machine.deleteCheckpoint(transaction);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 0);
 }
@@ -128,8 +128,9 @@ TEST_CASE("Delete machine checkpoint") {
         Machine machine;
         machine.initializeMachine(test_contract_path);
         auto results = machine.checkpoint(storage);
-
-        deleteCheckpoint(storage, machine, results.storage_key);
+        auto transaction = storage.makeTransaction();
+        deleteCheckpoint(*transaction, machine, results.storage_key);
+        REQUIRE(transaction->commit().ok());
     }
 }
 

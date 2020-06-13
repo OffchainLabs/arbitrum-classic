@@ -60,7 +60,7 @@ class Machine {
     SaveResults checkpoint(CheckpointStorage& storage);
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
-    DeleteResults deleteCheckpoint(CheckpointStorage& storage);
+    DeleteResults deleteCheckpoint(Transaction& transaction);
 
     void marshal_value(const value& val, std::vector<unsigned char>& buf) {
         return ::marshal_value(val, buf, machine_state.code);

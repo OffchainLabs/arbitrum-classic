@@ -440,12 +440,11 @@ void getSavedState(const Transaction& transaction,
     }
 }
 
-void deleteCheckpoint(CheckpointStorage& storage,
-                      const Transaction& transaction,
+void deleteCheckpoint(Transaction& transaction,
                       std::vector<unsigned char> checkpoint_name,
                       std::vector<std::vector<unsigned char>> deleted_values) {
     TuplePool pool;
-    auto res = deleteCheckpoint(storage, checkpoint_name);
+    auto res = deleteCheckpoint(transaction, checkpoint_name);
     auto results = getMachineState(transaction, checkpoint_name);
     REQUIRE(results.status.ok() == false);
 
@@ -456,12 +455,11 @@ void deleteCheckpoint(CheckpointStorage& storage,
 }
 
 void deleteCheckpointSavedTwice(
-    CheckpointStorage& storage,
-    const Transaction& transaction,
+    Transaction& transaction,
     std::vector<unsigned char> checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
-    auto res = deleteCheckpoint(storage, checkpoint_name);
-    auto res2 = deleteCheckpoint(storage, checkpoint_name);
+    auto res = deleteCheckpoint(transaction, checkpoint_name);
+    auto res2 = deleteCheckpoint(transaction, checkpoint_name);
     auto results = getMachineState(transaction, checkpoint_name);
 
     TuplePool pool;
@@ -475,8 +473,7 @@ void deleteCheckpointSavedTwice(
 }
 
 void deleteCheckpointSavedTwiceReordered(
-    CheckpointStorage& storage,
-    const Transaction& transaction,
+    Transaction& transaction,
     std::vector<unsigned char> checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
     TuplePool pool;
@@ -485,7 +482,7 @@ void deleteCheckpointSavedTwiceReordered(
         auto res = getValue(transaction, hash_key, &pool);
         REQUIRE(res.status.ok());
     }
-    auto res = deleteCheckpoint(storage, checkpoint_name);
+    auto res = deleteCheckpoint(transaction, checkpoint_name);
     auto results = getMachineState(transaction, checkpoint_name);
     REQUIRE(results.status.ok() == true);
 
@@ -493,7 +490,7 @@ void deleteCheckpointSavedTwiceReordered(
         auto res = getValue(transaction, hash_key, &pool);
         REQUIRE(res.status.ok());
     }
-    auto res2 = deleteCheckpoint(storage, checkpoint_name);
+    auto res2 = deleteCheckpoint(transaction, checkpoint_name);
     auto results2 = getMachineState(transaction, checkpoint_name);
     REQUIRE(results2.status.ok() == false);
 
@@ -657,7 +654,7 @@ TEST_CASE("Delete checkpoint") {
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(storage, *transaction, checkpoint_key, hash_keys);
+        deleteCheckpoint(*transaction, checkpoint_key, hash_keys);
     }
     SECTION("with actual state values") {
         DBDeleter deleter;
@@ -673,7 +670,7 @@ TEST_CASE("Delete checkpoint") {
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(storage, *transaction, checkpoint_key, hash_keys);
+        deleteCheckpoint(*transaction, checkpoint_key, hash_keys);
     }
     SECTION("delete checkpoint saved twice") {
         DBDeleter deleter;
@@ -690,8 +687,7 @@ TEST_CASE("Delete checkpoint") {
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwice(storage, *transaction, checkpoint_key,
-                                   hash_keys);
+        deleteCheckpointSavedTwice(*transaction, checkpoint_key, hash_keys);
     }
     SECTION("delete checkpoint saved twice, reordered") {
         DBDeleter deleter;
@@ -710,7 +706,7 @@ TEST_CASE("Delete checkpoint") {
         transaction2->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwiceReordered(storage, *transaction,
-                                            checkpoint_key, hash_keys);
+        deleteCheckpointSavedTwiceReordered(*transaction, checkpoint_key,
+                                            hash_keys);
     }
 }
