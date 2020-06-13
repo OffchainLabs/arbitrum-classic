@@ -21,12 +21,12 @@
 #include <avm_values/tuple.hpp>
 
 struct InitialVmValues {
-    bool valid_state;
     Code code;
     value staticVal;
 };
 
-InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     TuplePool& pool);
+std::pair<InitialVmValues, bool> parseInitialVmValues(
+    const std::string& contract_filename,
+    TuplePool& pool);
 
 #endif /* vmValueParser_hpp */

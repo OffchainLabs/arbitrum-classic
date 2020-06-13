@@ -36,7 +36,11 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const std::string& contract_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
       pool(std::make_shared<TuplePool>()) {
-    initial_state = parseInitialVmValues(contract_path, *pool.get());
+    auto ret = parseInitialVmValues(contract_path, *pool.get());
+    if (!ret.second) {
+        throw std::runtime_error("invalid initial values");
+    }
+    initial_state = ret.first;
 }
 
 bool CheckpointStorage::closeCheckpointStorage() {
@@ -76,10 +80,6 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
     auto results = getMachineState(*transaction, machineHash);
 
     auto initial_values = getInitialVmValues();
-    if (!initial_values.valid_state) {
-        return std::make_pair(Machine{}, false);
-    }
-
     if (!results.status.ok()) {
         return std::make_pair(Machine{}, false);
     }

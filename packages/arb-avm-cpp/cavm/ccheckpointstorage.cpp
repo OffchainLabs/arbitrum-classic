@@ -37,12 +37,7 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     try {
         auto storage =
             new CheckpointStorage(string_filename, string_contract_path);
-
-        if (storage->getInitialVmValues().valid_state) {
-            return static_cast<void*>(storage);
-        } else {
-            return nullptr;
-        }
+        return static_cast<void*>(storage);
     } catch (const std::exception& exp) {
         return nullptr;
     }
@@ -72,11 +67,6 @@ CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto state = storage->getInitialVmValues();
-
-    if (!state.valid_state) {
-        return nullptr;
-    }
-
     auto machine = new Machine(state.code, state.staticVal, storage->pool);
     return static_cast<void*>(machine);
 }

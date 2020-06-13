@@ -32,15 +32,14 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 std::pair<MachineState, bool> MachineState::loadFromFile(
     const std::string& contract_filename) {
     auto pool = std::make_shared<TuplePool>();
-    auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
+    auto ret = parseInitialVmValues(contract_filename, *pool.get());
 
-    if (!initial_state.valid_state) {
+    if (!ret.second) {
         return std::make_pair(MachineState{}, false);
     }
 
     return std::make_pair(
-        MachineState{initial_state.code, initial_state.staticVal,
-                     std::move(pool)},
+        MachineState{ret.first.code, ret.first.staticVal, std::move(pool)},
         true);
 }
 
