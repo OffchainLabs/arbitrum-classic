@@ -18,11 +18,11 @@
 #include "utils.hpp"
 
 #include <data_storage/blockstore.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machine.hpp>
-#include <data_storage/checkpoint/value.hpp>
+#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
+#include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 #include <avm_values/value.hpp>

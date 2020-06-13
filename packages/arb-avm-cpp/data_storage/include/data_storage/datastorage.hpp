@@ -23,7 +23,7 @@
 
 #include <data_storage/keyvaluestore.hpp>
 #include <data_storage/storageresultfwd.hpp>
-#include <data_storage/transaction.hpp>
+#include <data_storage/value/transaction.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>

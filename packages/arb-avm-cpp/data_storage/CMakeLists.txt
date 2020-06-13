@@ -21,28 +21,28 @@ project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/data_storage/blockstore.hpp
-  include/data_storage/datastorage.hpp
+  include/data_storage/valuestorage.hpp
   include/data_storage/confirmednodestore.hpp
+  include/data_storage/datastorage.hpp
+  include/data_storage/keyvaluestore.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
-  include/data_storage/transaction.hpp
-  include/data_storage/keyvaluestore.hpp
-  include/data_storage/checkpoint/machine.hpp
-  include/data_storage/checkpoint/value.hpp
-  include/data_storage/checkpoint/checkpointstorage.hpp
-  include/data_storage/checkpoint/checkpointutils.hpp
+  include/data_storage/value/checkpointutils.hpp
+  include/data_storage/value/machine.hpp
+  include/data_storage/value/transaction.hpp
+  include/data_storage/value/value.hpp
 )
 
 set(LIB_SOURCES
   src/blockstore.cpp
   src/datastorage.cpp
+  src/checkpointstorage.cpp
   src/confirmednodestore.cpp
-  src/transaction.cpp
   src/keyvaluestore.cpp
-  src/checkpoint/machine.cpp
-  src/checkpoint/value.cpp
-  src/checkpoint/checkpointstorage.cpp
-  src/checkpoint/checkpointutils.cpp
+  src/value/checkpointutils.cpp
+  src/value/machine.cpp
+  src/value/transaction.cpp
+  src/value/value.cpp
 )
 
 add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})

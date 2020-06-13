@@ -19,8 +19,8 @@
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machine.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/value/machine.hpp>
 
 #include <sys/stat.h>
 #include <fstream>

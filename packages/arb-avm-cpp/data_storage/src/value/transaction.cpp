@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+#include <data_storage/value/transaction.hpp>
+
 #include <data_storage/storageresult.hpp>
-#include <data_storage/transaction.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
 

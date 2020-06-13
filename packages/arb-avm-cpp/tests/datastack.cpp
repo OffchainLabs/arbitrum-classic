@@ -17,12 +17,12 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <avm/machinestate/datastack.hpp>
-
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/value.hpp>
+#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/transaction.hpp>
+#include <data_storage/value/transaction.hpp>
+#include <data_storage/value/value.hpp>
+
+#include <avm/machinestate/datastack.hpp>
 
 #include <rocksdb/status.h>
 

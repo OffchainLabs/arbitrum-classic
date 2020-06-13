@@ -17,11 +17,11 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/checkpointutils.hpp>
-#include <data_storage/checkpoint/machine.hpp>
-#include <data_storage/checkpoint/value.hpp>
+#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/checkpointutils.hpp>
+#include <data_storage/value/machine.hpp>
+#include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
