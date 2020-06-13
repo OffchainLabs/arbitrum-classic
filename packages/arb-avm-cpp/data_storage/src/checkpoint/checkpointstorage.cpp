@@ -48,11 +48,6 @@ InitialVmValues CheckpointStorage::getInitialVmValues() const {
     return initial_state;
 }
 
-GetResults CheckpointStorage::getValue(
-    const std::vector<unsigned char>& hash_key) const {
-    return datastorage->getValue(hash_key);
-}
-
 std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
     return datastorage->makeTransaction();
 }

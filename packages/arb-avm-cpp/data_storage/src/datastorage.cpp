@@ -70,25 +70,6 @@ rocksdb::Status DataStorage::closeDb() {
     return s;
 }
 
-GetResults DataStorage::getValue(
-    const std::vector<unsigned char>& hash_key) const {
-    auto read_options = rocksdb::ReadOptions();
-    std::string return_value;
-    std::string key_str(hash_key.begin(), hash_key.end());
-    auto get_status = txn_db->Get(read_options, key_str, &return_value);
-
-    if (get_status.ok()) {
-        auto tuple = parseCountAndValue(return_value);
-        auto stored_val = std::get<1>(tuple);
-        auto ref_count = std::get<0>(tuple);
-
-        return GetResults{ref_count, get_status, stored_val};
-    } else {
-        auto unsuccessful = rocksdb::Status().NotFound();
-        return GetResults{0, unsuccessful, std::vector<unsigned char>()};
-    }
-}
-
 std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
     auto transaction = std::unique_ptr<rocksdb::Transaction>(
