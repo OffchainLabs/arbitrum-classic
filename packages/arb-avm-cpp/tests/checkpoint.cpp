@@ -28,6 +28,8 @@
 
 #include <boost/filesystem.hpp>
 
+using namespace checkpoint::utils;
+
 void saveValue(Transaction& transaction,
                const value& val,
                int expected_ref_count,

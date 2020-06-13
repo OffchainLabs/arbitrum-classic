@@ -209,11 +209,3 @@ struct ValuePrinter {
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
 }
-
-std::vector<unsigned char> GetHashKey(const value& val) {
-    auto hash_key = hash(val);
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash_key, hash_key_vector);
-
-    return hash_key_vector;
-}

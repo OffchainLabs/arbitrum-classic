@@ -55,7 +55,6 @@ static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
 
-std::vector<unsigned char> GetHashKey(const value& val);
 uint256_t getSize(const value& val);
 void marshalStub(const value& val, std::vector<unsigned char>& buf);
 

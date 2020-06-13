@@ -111,6 +111,14 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 
 namespace utils {
 
+std::vector<unsigned char> GetHashKey(const value& val) {
+    auto hash_key = hash(val);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash_key, hash_key_vector);
+
+    return hash_key_vector;
+}
+
 std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data) {
     std::vector<std::vector<unsigned char>> return_vector;

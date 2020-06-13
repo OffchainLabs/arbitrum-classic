@@ -30,7 +30,7 @@ rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
 }
 
 SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
-    auto hash_key = GetHashKey(val);
+    auto hash_key = checkpoint::utils::GetHashKey(val);
     auto key = vecToSlice(hash_key);
     auto results = transaction.getData(key);
 
@@ -69,7 +69,7 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
         auto tuple = nonstd::get<Tuple>(val);
         return saveTuple(transaction, tuple);
     } else {
-        auto hash_key = GetHashKey(val);
+        auto hash_key = checkpoint::utils::GetHashKey(val);
         auto key = vecToSlice(hash_key);
         return transaction.saveData(key, serialized_value);
     }

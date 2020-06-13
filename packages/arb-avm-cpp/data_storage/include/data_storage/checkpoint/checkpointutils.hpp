@@ -43,6 +43,7 @@ MachineStateKeys extractStateKeys(
     const std::vector<unsigned char>& stored_state);
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data);
+std::vector<unsigned char> GetHashKey(const value& val);
 }  // namespace utils
 }  // namespace checkpoint
 
