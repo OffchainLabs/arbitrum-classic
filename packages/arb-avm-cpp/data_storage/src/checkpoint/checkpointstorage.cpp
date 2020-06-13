@@ -17,6 +17,7 @@
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/checkpointutils.hpp>
+#include <data_storage/checkpoint/machine.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>

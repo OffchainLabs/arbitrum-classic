@@ -26,6 +26,12 @@ rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
     return {reinterpret_cast<const char*>(vec.data()), vec.size()};
 }
 
+CodePointStub deserializeCodePointStub(const char*& bufptr) {
+    auto pc_val = checkpoint::utils::deserialize_uint64(bufptr);
+    auto hash_val = deserializeUint256t(bufptr);
+    return {pc_val, hash_val};
+}
+
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
                          TuplePool* pool);
@@ -64,8 +70,7 @@ DbResult<value> getTuple(const Transaction& transaction,
                 break;
             }
             case CODEPT: {
-                auto code_point =
-                    checkpoint::utils::deserializeCodePointStub(buf);
+                auto code_point = deserializeCodePointStub(buf);
                 values.push_back(code_point);
                 break;
             }
@@ -115,7 +120,7 @@ DbResult<value> getValue(const Transaction& transaction,
                                    val};
         }
         case CODEPT: {
-            auto code_point = checkpoint::utils::deserializeCodePointStub(buf);
+            auto code_point = deserializeCodePointStub(buf);
             return DbResult<value>{results.status, results.reference_count,
                                    code_point};
         }
@@ -130,22 +135,4 @@ DbResult<value> getValue(const Transaction& transaction,
             return getTuple(transaction, results, pool);
         }
     }
-}
-
-DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
-                                           uint256_t machineHash) {
-    std::vector<unsigned char> checkpoint_name;
-    marshal_uint256_t(machineHash, checkpoint_name);
-    auto key = vecToSlice(checkpoint_name);
-    auto results = transaction.getData(key);
-
-    if (!results.status.ok()) {
-        return DbResult<MachineStateKeys>{
-            results.status, results.reference_count, MachineStateKeys()};
-    }
-    auto parsed_state =
-        checkpoint::utils::extractStateKeys(results.stored_value);
-
-    return DbResult<MachineStateKeys>{results.status, results.reference_count,
-                                      parsed_state};
 }

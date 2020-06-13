@@ -25,7 +25,6 @@
 #include <bigint_utils.hpp>
 
 constexpr int UINT64_SIZE = 8;
-constexpr int HASH_KEY_LENGTH = 32;
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 41;
@@ -38,26 +37,12 @@ std::unordered_map<int, int> blockreason_type_length = {{0, 1},
 
 namespace checkpoint {
 
-uint64_t deserialize_uint64(const char*& bufptr) {
-    uint64_t ret_value;
-    memcpy(&ret_value, bufptr, UINT64_SIZE);
-    auto val = boost::endian::big_to_native(ret_value);
-    bufptr += sizeof(uint64_t);
-    return val;
-}
-
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     auto big_endian_val = boost::endian::native_to_big(val);
     std::array<unsigned char, UINT64_SIZE> tmpbuf;
     memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
 
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-void serializeCodePointStub(const CodePointStub& val,
-                            std::vector<unsigned char>& value_vector) {
-    marshal_uint64_t(val.pc, value_vector);
-    marshal_uint256_t(val.hash, value_vector);
 }
 
 struct ValueSerializer {
@@ -82,7 +67,7 @@ struct ValueSerializer {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(CODEPT);
         value_vector.push_back(type_code);
-        serializeCodePointStub(val, value_vector);
+        utils::serializeCodePointStub(val, value_vector);
         return value_vector;
     }
 
@@ -98,12 +83,18 @@ struct ValueSerializer {
 
 namespace utils {
 
-std::vector<unsigned char> GetHashKey(const value& val) {
-    auto hash_key = hash_value(val);
-    std::vector<unsigned char> hash_key_vector;
-    marshal_uint256_t(hash_key, hash_key_vector);
+void serializeCodePointStub(const CodePointStub& val,
+                            std::vector<unsigned char>& value_vector) {
+    marshal_uint64_t(val.pc, value_vector);
+    marshal_uint256_t(val.hash, value_vector);
+}
 
-    return hash_key_vector;
+uint64_t deserialize_uint64(const char*& bufptr) {
+    uint64_t ret_value;
+    memcpy(&ret_value, bufptr, UINT64_SIZE);
+    auto val = boost::endian::big_to_native(ret_value);
+    bufptr += sizeof(uint64_t);
+    return val;
 }
 
 std::vector<std::vector<unsigned char>> parseTuple(
@@ -151,77 +142,8 @@ std::vector<std::vector<unsigned char>> parseTuple(
     return return_vector;
 }
 
-CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    auto pc_val = deserialize_uint64(bufptr);
-    auto hash_val = deserializeUint256t(bufptr);
-    return {pc_val, hash_val};
-}
-
-uint256_t deserializeUint256_t(const std::vector<unsigned char>& val) {
-    auto buff = reinterpret_cast<const char*>(&val[1]);
-    return deserializeUint256t(buff);
-}
-
 std::vector<unsigned char> serializeValue(const value& val) {
     return nonstd::visit(ValueSerializer{}, val);
-}
-
-using iterator = std::vector<unsigned char>::const_iterator;
-
-unsigned char extractStatus(iterator& iter) {
-    auto status = (unsigned char)(*iter);
-    ++iter;
-
-    return status;
-}
-
-std::vector<unsigned char> extractHashKey(iterator& iter) {
-    auto end_iter = iter + HASH_KEY_LENGTH;
-    std::vector<unsigned char> hash_key(iter, end_iter);
-    iter = end_iter;
-
-    return hash_key;
-}
-
-uint256_t extractUint256(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto int_val = deserializeUint256t(ptr);
-    iter += 32;
-    return int_val;
-}
-
-CodePointStub extractCodePointStub(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto pc_val = deserialize_uint64(ptr);
-    auto hash_val = deserializeUint256t(ptr);
-    iter += sizeof(pc_val) + 32;
-    return {pc_val, hash_val};
-}
-
-MachineStateKeys extractStateKeys(
-    const std::vector<unsigned char>& stored_state) {
-    auto current_iter = stored_state.begin();
-    auto status = extractStatus(current_iter);
-    auto register_hash = extractUint256(current_iter);
-    auto datastack_hash = extractUint256(current_iter);
-    auto auxstack_hash = extractUint256(current_iter);
-    auto pc = extractCodePointStub(current_iter);
-    auto err_pc = extractCodePointStub(current_iter);
-
-    return MachineStateKeys{register_hash, datastack_hash, auxstack_hash, pc,
-                            err_pc,        status};
-}
-
-std::vector<unsigned char> serializeStateKeys(
-    const MachineStateKeys& state_data) {
-    std::vector<unsigned char> state_data_vector;
-    state_data_vector.push_back(state_data.status_char);
-    marshal_uint256_t(state_data.register_hash, state_data_vector);
-    marshal_uint256_t(state_data.datastack_hash, state_data_vector);
-    marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
-    serializeCodePointStub(state_data.pc, state_data_vector);
-    serializeCodePointStub(state_data.err_pc, state_data_vector);
-    return state_data_vector;
 }
 }  // namespace utils
 }  // namespace checkpoint

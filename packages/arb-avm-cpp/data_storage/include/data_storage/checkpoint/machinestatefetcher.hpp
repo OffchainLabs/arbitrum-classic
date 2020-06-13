@@ -19,9 +19,7 @@
 
 #include <avm_values/value.hpp>
 
-class CheckpointStorage;
 class Transaction;
-struct MachineStateKeys;
 
 template <typename T>
 struct DbResult;
@@ -29,7 +27,5 @@ struct DbResult;
 DbResult<value> getValue(const Transaction& transaction,
                          uint256_t value_hash,
                          TuplePool* pool);
-DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
-                                           uint256_t machineHash);
 
 #endif /* machinestatefetcher_hpp */

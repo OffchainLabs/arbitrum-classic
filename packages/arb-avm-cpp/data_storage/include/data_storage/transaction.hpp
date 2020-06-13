@@ -25,6 +25,7 @@
 namespace rocksdb {
 class Transaction;
 class Status;
+struct Slice;
 }  // namespace rocksdb
 
 std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(

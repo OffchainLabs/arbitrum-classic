@@ -81,35 +81,3 @@ DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
     auto key = vecToSlice(hash_key);
     return deleteValue(transaction, key);
 }
-
-DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
-    std::vector<unsigned char> checkpoint_name;
-    marshal_uint256_t(machine_hash, checkpoint_name);
-    auto key = vecToSlice(checkpoint_name);
-    auto results = transaction.getData(key);
-
-    if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
-    }
-
-    auto delete_results = deleteValue(transaction, key);
-
-    if (delete_results.reference_count < 1) {
-        auto parsed_state =
-            checkpoint::utils::extractStateKeys(results.stored_value);
-
-        auto delete_register_res =
-            deleteValue(transaction, parsed_state.register_hash);
-        auto delete_datastack_res =
-            deleteValue(transaction, parsed_state.datastack_hash);
-        auto delete_auxstack_res =
-            deleteValue(transaction, parsed_state.auxstack_hash);
-
-        if (!(delete_register_res.status.ok() &&
-              delete_datastack_res.status.ok() &&
-              delete_auxstack_res.status.ok())) {
-            std::cout << "error deleting checkpoint" << std::endl;
-        }
-    }
-    return delete_results;
-}

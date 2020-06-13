@@ -19,6 +19,7 @@
 
 #include <avm/machine.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machine.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/storageresult.hpp>
 

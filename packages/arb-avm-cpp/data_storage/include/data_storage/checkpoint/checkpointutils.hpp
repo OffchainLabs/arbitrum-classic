@@ -20,29 +20,16 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 
-struct MachineStateKeys {
-    uint256_t register_hash;
-    uint256_t datastack_hash;
-    uint256_t auxstack_hash;
-    CodePointStub pc;
-    CodePointStub err_pc;
-    unsigned char status_char;
-};
-
 extern std::unordered_map<int, int> blockreason_type_length;
 
 namespace checkpoint {
 namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);
-CodePointStub deserializeCodePointStub(const char*& bufptr);
-uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
+uint64_t deserialize_uint64(const char*& bufptr);
+void serializeCodePointStub(const CodePointStub& val,
+                            std::vector<unsigned char>& value_vector);
 std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data);
-MachineStateKeys extractStateKeys(
-    const std::vector<unsigned char>& stored_state);
-std::vector<unsigned char> serializeStateKeys(
-    const MachineStateKeys& state_data);
-std::vector<unsigned char> GetHashKey(const value& val);
 }  // namespace utils
 }  // namespace checkpoint
 

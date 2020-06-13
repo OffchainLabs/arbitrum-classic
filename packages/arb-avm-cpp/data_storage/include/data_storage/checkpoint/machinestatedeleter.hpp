@@ -20,11 +20,8 @@
 #include <vector>
 
 struct DeleteResults;
-class CheckpointStorage;
 class Transaction;
-class TuplePool;
 
-DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash);
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 
 #endif /* checkpointdeleter_h */

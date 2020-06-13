@@ -26,8 +26,16 @@ rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
     return {reinterpret_cast<const char*>(vec.data()), vec.size()};
 }
 
+std::vector<unsigned char> getHashKey(const value& val) {
+    auto hash_key = hash_value(val);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_uint256_t(hash_key, hash_key_vector);
+
+    return hash_key_vector;
+}
+
 SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
-    auto hash_key = checkpoint::utils::GetHashKey(val);
+    auto hash_key = getHashKey(val);
     auto key = vecToSlice(hash_key);
     auto results = transaction.getData(key);
 
@@ -64,18 +72,8 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
         return saveTuple(transaction, tuple);
     } else {
         auto serialized_value = checkpoint::utils::serializeValue(val);
-        auto hash_key = checkpoint::utils::GetHashKey(val);
+        auto hash_key = getHashKey(val);
         auto key = vecToSlice(hash_key);
         return transaction.saveData(key, serialized_value);
     }
-}
-
-SaveResults saveMachineState(Transaction& transaction,
-                             const MachineStateKeys& state_data,
-                             uint256_t machineHash) {
-    std::vector<unsigned char> checkpoint_name;
-    marshal_uint256_t(machineHash, checkpoint_name);
-    auto key = vecToSlice(checkpoint_name);
-    auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
-    return transaction.saveData(key, serialized_state);
 }

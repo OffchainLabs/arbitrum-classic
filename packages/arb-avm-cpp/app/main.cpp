@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     auto ret = Machine::loadFromFile(filename);
     if (!ret.second) {
         std::cerr << "Failed to load machine";
-        return;
+        return -1;
     }
     Machine mach = std::move(ret.first);
 
