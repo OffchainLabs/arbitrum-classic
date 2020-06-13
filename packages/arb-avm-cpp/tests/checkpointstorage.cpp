@@ -135,30 +135,22 @@ TEST_CASE("Checkpointstorage initialize") {
 
 TEST_CASE("Save and get values") {
     DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+
     SECTION("save and get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         getVal(storage, hash_key1, 1, true, value1);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("db cleared") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, increment, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
         getVal(storage, hash_key1, 2, true, value1);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, delete, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -167,10 +159,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
         getVal(storage, hash_key2, 1, true, value2);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, increment, delete, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -180,10 +169,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 1, true, value1);
         getVal(storage, hash_key2, 1, true, value2);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, increment, delete, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -194,10 +180,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 2, true, value1);
         getVal(storage, hash_key2, 1, true, value2);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, increment, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
         deleteVal(storage, hash_key1, 1, true);
@@ -205,10 +188,7 @@ TEST_CASE("Save and get values") {
         incrementRef(storage, hash_key1, 3, true);
         getVal(storage, hash_key1, 3, true, value1);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save, delete, increment, get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         deleteVal(storage, hash_key1, 0, true);
         incrementRef(storage, hash_key1, 0, false);

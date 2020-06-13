@@ -118,185 +118,115 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
 }
 
 TEST_CASE("Initialize datastack") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+    Datastack data_stack;
+
     SECTION("default") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
-        auto transaction = storage.makeTransaction();
-
-        Datastack data_stack;
-
         auto tuple_ret = data_stack.getTupleRepresentation(&pool);
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             0);
     }
-    boost::filesystem::remove_all(dbpath);
-
     SECTION("push empty tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
-        auto transaction = storage.makeTransaction();
-
-        Datastack data_stack;
         Tuple tuple;
         data_stack.push(tuple);
-
         auto tuple_ret = data_stack.getTupleRepresentation(&pool);
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             1);
     }
-    boost::filesystem::remove_all(dbpath);
-
     SECTION("push num, tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
         CodePointStub code_point_stub{0, 3452345};
-
-        auto transaction = storage.makeTransaction();
-
-        Datastack data_stack;
         uint256_t num = 1;
         auto tuple = Tuple(code_point_stub, &pool);
-
         data_stack.push(num);
         data_stack.push(tuple);
-
         auto tuple_ret = data_stack.getTupleRepresentation(&pool);
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             2);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
         CodePointStub code_point_stub{0, 3452345};
-
-        auto transaction = storage.makeTransaction();
-
-        Datastack data_stack;
-
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
-
         auto tuple_ret = data_stack.getTupleRepresentation(&pool);
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             2);
     }
-    boost::filesystem::remove_all(dbpath);
 }
 
 TEST_CASE("Save datastack") {
-    SECTION("save empty") {
-        Datastack datastack;
-        saveDataStack(datastack);
-    }
-    boost::filesystem::remove_all(dbpath);
-    SECTION("save empty twice") {
-        Datastack datastack;
-        saveDataStackTwice(datastack);
-    }
-    boost::filesystem::remove_all(dbpath);
+    DBDeleter deleter;
+    Datastack datastack;
+    TuplePool pool;
+
+    SECTION("save empty") { saveDataStack(datastack); }
+    SECTION("save empty twice") { saveDataStackTwice(datastack); }
     SECTION("save with values") {
-        TuplePool pool;
-
         uint256_t num = 1;
         uint256_t intVal = 5435;
         auto tuple = Tuple(intVal, &pool);
-
-        Datastack datastack;
         datastack.push(num);
         datastack.push(tuple);
-
         Tuple tup0;
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
-
         saveDataStack(datastack);
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save with values, twice") {
-        TuplePool pool;
-
         uint256_t num = 1;
         uint256_t intVal = 5435;
         auto tuple = Tuple(intVal, &pool);
-
-        Datastack datastack;
         datastack.push(num);
         datastack.push(tuple);
-
         Tuple tup0;
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
-
         saveDataStackTwice(datastack);
     }
-    boost::filesystem::remove_all(dbpath);
 }
 
 TEST_CASE("Save and get datastack") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    Datastack datastack;
+
     SECTION("save datastack and get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
         uint256_t intVal = 5435;
-
         auto transaction = storage.makeTransaction();
-
         uint256_t num = 1;
         auto tuple = Tuple(intVal, &pool);
-
-        Datastack datastack;
         datastack.push(num);
         datastack.push(tuple);
-
         Tuple tup0;
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
-
         saveAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
-    boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
-        TuplePool pool;
-        CheckpointStorage storage(dbpath, test_contract_path);
-
         uint256_t intVal = 5435;
-
         auto transaction = storage.makeTransaction();
-
         uint256_t num = 1;
         auto tuple = Tuple(intVal, &pool);
-
-        Datastack datastack;
         datastack.push(num);
         datastack.push(tuple);
-
         Tuple tup0;
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
-
         saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
-    boost::filesystem::remove_all(dbpath);
 }
 
 TEST_CASE("Initial VM Values") {

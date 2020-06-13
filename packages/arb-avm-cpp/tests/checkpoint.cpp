@@ -111,7 +111,6 @@ TEST_CASE("Save tuple") {
     DBDeleter deleter;
     CheckpointStorage storage(dbpath, test_contract_path);
     auto transaction = storage.makeTransaction();
-
     TuplePool pool;
 
     SECTION("save 1 num tuple") {
