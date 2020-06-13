@@ -30,8 +30,6 @@ class Datastack {
 
     void addHash() const;
     void calculateAllHashes() const;
-    void initializeDataStack(const Tuple& tuple);
-    Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
     std::vector<value> values;
@@ -41,6 +39,10 @@ class Datastack {
         values.reserve(1000);
         hashes.reserve(1000);
     }
+
+    Datastack(Tuple tuple_rep);
+
+    Tuple getTupleRepresentation(TuplePool* pool) const;
 
     void push(value&& newdata) {
         values.push_back(std::move(newdata));
@@ -100,12 +102,6 @@ class Datastack {
     HashPreImage getHashPreImage() const;
 
     uint256_t getTotalValueSize() const;
-
-    SaveResults checkpointState(Transaction& transaction, TuplePool* pool);
-
-    bool initializeDataStack(const Transaction& transaction,
-                             const std::vector<unsigned char>& hash_key,
-                             TuplePool* pool);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

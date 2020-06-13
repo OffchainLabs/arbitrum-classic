@@ -183,6 +183,13 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
     return hash_key;
 }
 
+uint256_t extractUint256(iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
+}
+
 CodePointStub extractCodePointStub(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto pc_val = deserialize_uint64(ptr);
@@ -194,36 +201,24 @@ CodePointStub extractCodePointStub(iterator& iter) {
 MachineStateKeys extractStateKeys(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
-
     auto status = extractStatus(current_iter);
-
-    auto register_val = extractHashKey(current_iter);
-    auto datastack = extractHashKey(current_iter);
-    auto auxstack = extractHashKey(current_iter);
+    auto register_hash = extractUint256(current_iter);
+    auto datastack_hash = extractUint256(current_iter);
+    auto auxstack_hash = extractUint256(current_iter);
     auto pc = extractCodePointStub(current_iter);
     auto err_pc = extractCodePointStub(current_iter);
 
-    return MachineStateKeys{register_val, datastack, auxstack,
-                            pc,           err_pc,    status};
+    return MachineStateKeys{register_hash, datastack_hash, auxstack_hash, pc,
+                            err_pc,        status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.register_val_key.begin(),
-                             state_data.register_val_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.datastack_key.begin(),
-                             state_data.datastack_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.auxstack_key.begin(),
-                             state_data.auxstack_key.end());
-
+    marshal_uint256_t(state_data.register_hash, state_data_vector);
+    marshal_uint256_t(state_data.datastack_hash, state_data_vector);
+    marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
     serializeCodePointStub(state_data.pc, state_data_vector);
     serializeCodePointStub(state_data.err_pc, state_data_vector);
     return state_data_vector;

@@ -71,9 +71,6 @@ struct MachineState {
     CodePointRef errpc;
     AssertionContext context;
 
-    static std::pair<MachineState, bool> loadFromCheckpoint(
-        const CheckpointStorage& storage,
-        const std::vector<unsigned char>& checkpoint_key);
     static std::pair<MachineState, bool> loadFromFile(
         const std::string& contract_filename);
 
@@ -113,7 +110,6 @@ struct MachineState {
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
     BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
-    SaveResults checkpointState(CheckpointStorage& storage);
 };
 
 #endif /* machinestate_hpp */

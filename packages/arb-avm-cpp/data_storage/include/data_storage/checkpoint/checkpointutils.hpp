@@ -21,9 +21,9 @@
 #include <avm_values/tuple.hpp>
 
 struct MachineStateKeys {
-    std::vector<unsigned char> register_val_key;
-    std::vector<unsigned char> datastack_key;
-    std::vector<unsigned char> auxstack_key;
+    uint256_t register_hash;
+    uint256_t datastack_hash;
+    uint256_t auxstack_hash;
     CodePointStub pc;
     CodePointStub err_pc;
     unsigned char status_char;

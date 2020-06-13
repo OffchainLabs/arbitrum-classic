@@ -35,12 +35,16 @@ std::string dbpath =
     boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void initializeDatastack(const Transaction& transaction,
-                         std::vector<unsigned char> hash_key,
+                         uint256_t tuple_hash,
                          uint256_t expected_hash,
                          int expected_size) {
     TuplePool pool;
-    Datastack data_stack;
-    data_stack.initializeDataStack(transaction, hash_key, &pool);
+
+    auto results = ::getValue(transaction, tuple_hash, &pool);
+    REQUIRE(results.status.ok());
+    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+
+    Datastack data_stack(nonstd::get<Tuple>(results.data));
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
@@ -53,7 +57,8 @@ void saveDataStack(Datastack data_stack,
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
-    auto results = data_stack.checkpointState(*transaction, &pool);
+    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto results = saveValue(*transaction, tuple_ret);
     transaction->commit();
 
     REQUIRE(results.status.ok());
@@ -68,8 +73,9 @@ void saveDataStackTwice(Datastack data_stack,
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
-    auto results = data_stack.checkpointState(*transaction, &pool);
-    auto results2 = data_stack.checkpointState(*transaction, &pool);
+    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto results = saveValue(*transaction, tuple_ret);
+    auto results2 = saveValue(*transaction, tuple_ret);
 
     transaction->commit();
 
@@ -80,13 +86,14 @@ void saveDataStackTwice(Datastack data_stack,
 
 void saveAndGetDataStack(Transaction& transaction,
                          Datastack data_stack,
-                         std::vector<unsigned char> hash_key,
                          uint256_t expected_hash) {
     TuplePool pool;
-    data_stack.checkpointState(transaction, &pool);
+    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto results = saveValue(transaction, tuple_ret);
+    REQUIRE(results.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, hash_key, &pool);
+    auto get_results = getValue(transaction, expected_hash, &pool);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -97,15 +104,17 @@ void saveAndGetDataStack(Transaction& transaction,
 
 void saveTwiceAndGetDataStack(Transaction& transaction,
                               Datastack data_stack,
-                              std::vector<unsigned char> hash_key,
                               uint256_t expected_hash) {
     TuplePool pool;
 
-    data_stack.checkpointState(transaction, &pool);
-    data_stack.checkpointState(transaction, &pool);
+    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto results = saveValue(transaction, tuple_ret);
+    auto results2 = saveValue(transaction, tuple_ret);
+    REQUIRE(results.status.ok());
+    REQUIRE(results2.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, hash_key, &pool);
+    auto get_results = getValue(transaction, expected_hash, &pool);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -123,11 +132,12 @@ TEST_CASE("Initialize datastack") {
 
         Datastack data_stack;
 
-        auto results = data_stack.checkpointState(*transaction, &pool);
+        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-        auto stack_hash = data_stack.hash();
 
-        initializeDatastack(*transaction, results.storage_key, stack_hash, 0);
+        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
+                            0);
     }
     boost::filesystem::remove_all(dbpath);
 
@@ -141,11 +151,12 @@ TEST_CASE("Initialize datastack") {
         Tuple tuple;
         data_stack.push(tuple);
 
-        auto results = data_stack.checkpointState(*transaction, &pool);
+        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-        auto stack_hash = data_stack.hash();
 
-        initializeDatastack(*transaction, results.storage_key, stack_hash, 1);
+        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
+                            1);
     }
     boost::filesystem::remove_all(dbpath);
 
@@ -164,11 +175,12 @@ TEST_CASE("Initialize datastack") {
         data_stack.push(num);
         data_stack.push(tuple);
 
-        auto results = data_stack.checkpointState(*transaction, &pool);
+        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-        auto stack_hash = data_stack.hash();
 
-        initializeDatastack(*transaction, results.storage_key, stack_hash, 2);
+        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
+                            2);
     }
     boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
@@ -187,11 +199,12 @@ TEST_CASE("Initialize datastack") {
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
 
-        auto results = data_stack.checkpointState(*transaction, &pool);
+        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
-        auto stack_hash = data_stack.hash();
 
-        initializeDatastack(*transaction, results.storage_key, stack_hash, 2);
+        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
+                            2);
     }
     boost::filesystem::remove_all(dbpath);
 }
@@ -200,7 +213,7 @@ TEST_CASE("Save datastack") {
     SECTION("save empty") {
         Datastack datastack;
         std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(Tuple().calculateHash(), hash_key_vector);
+        marshal_uint256_t(hash(Tuple()), hash_key_vector);
 
         saveDataStack(datastack, hash_key_vector);
     }
@@ -208,7 +221,7 @@ TEST_CASE("Save datastack") {
     SECTION("save empty twice") {
         Datastack datastack;
         std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(Tuple().calculateHash(), hash_key_vector);
+        marshal_uint256_t(hash(Tuple()), hash_key_vector);
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
@@ -229,7 +242,7 @@ TEST_CASE("Save datastack") {
         auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(hash(tup_rep), hash_key_vector);
 
         saveDataStack(datastack, hash_key_vector);
     }
@@ -250,7 +263,7 @@ TEST_CASE("Save datastack") {
         auto tup_rep = Tuple(num, tup1, &pool);
 
         std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
+        marshal_uint256_t(hash(tup_rep), hash_key_vector);
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
@@ -277,11 +290,7 @@ TEST_CASE("Save and get datastack") {
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
 
-        std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
-
-        saveAndGetDataStack(*transaction, datastack, hash_key_vector,
-                            tup_rep.calculateHash());
+        saveAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
     boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
@@ -303,11 +312,7 @@ TEST_CASE("Save and get datastack") {
         auto tup1 = Tuple(tuple, tup0, &pool);
         auto tup_rep = Tuple(num, tup1, &pool);
 
-        std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
-
-        saveTwiceAndGetDataStack(*transaction, datastack, hash_key_vector,
-                                 tup_rep.calculateHash());
+        saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
     boost::filesystem::remove_all(dbpath);
 }

@@ -70,12 +70,12 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
     }
 }
 
-SaveResults saveMachineState(
-    Transaction& transaction,
-    const MachineStateKeys& state_data,
-    const std::vector<unsigned char>& checkpoint_name) {
-    auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
-
+SaveResults saveMachineState(Transaction& transaction,
+                             const MachineStateKeys& state_data,
+                             uint256_t machineHash) {
+    std::vector<unsigned char> checkpoint_name;
+    marshal_uint256_t(machineHash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
+    auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
     return transaction.saveData(key, serialized_state);
 }

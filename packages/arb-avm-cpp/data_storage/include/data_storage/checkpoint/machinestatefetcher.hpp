@@ -27,10 +27,9 @@ template <typename T>
 struct DbResult;
 
 DbResult<value> getValue(const Transaction& transaction,
-                         const std::vector<unsigned char>& hash_key,
+                         uint256_t value_hash,
                          TuplePool* pool);
-DbResult<MachineStateKeys> getMachineState(
-    const Transaction& transaction,
-    const std::vector<unsigned char>& checkpoint_name);
+DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
+                                           uint256_t machineHash);
 
 #endif /* machinestatefetcher_hpp */

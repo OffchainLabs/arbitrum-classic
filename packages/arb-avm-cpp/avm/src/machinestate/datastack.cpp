@@ -16,11 +16,6 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
-#include <data_storage/storageresult.hpp>
-#include <data_storage/transaction.hpp>
-
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
@@ -72,25 +67,7 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     return os;
 }
 
-// can speed up by not creating tuple/save directly
-SaveResults Datastack::checkpointState(Transaction& transaction,
-                                       TuplePool* pool) {
-    auto tuple = getTupleRepresentation(pool);
-    return saveValue(transaction, tuple);
-}
-
-bool Datastack::initializeDataStack(const Transaction& transaction,
-                                    const std::vector<unsigned char>& hash_key,
-                                    TuplePool* pool) {
-    auto results = getValue(transaction, hash_key, pool);
-    if (!nonstd::holds_alternative<Tuple>(results.data)) {
-        return false;
-    }
-    initializeDataStack(nonstd::get<Tuple>(results.data));
-    return results.status.ok();
-}
-
-Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
+Tuple Datastack::getTupleRepresentation(TuplePool* pool) const {
     Tuple rep;
     for (size_t i = 0; i < values.size(); i++) {
         rep = Tuple(values[values.size() - 1 - i], rep, pool);
@@ -98,8 +75,8 @@ Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
     return rep;
 }
 
-void Datastack::initializeDataStack(const Tuple& tuple) {
-    Tuple ret = tuple;
+Datastack::Datastack(Tuple tuple_rep) : Datastack() {
+    Tuple ret = tuple_rep;
     while (ret.tuple_size() == 2) {
         push(ret.get_element(0));
         ret = nonstd::get<Tuple>(ret.get_element(1));

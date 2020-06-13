@@ -75,15 +75,16 @@ DeleteResults deleteValue(Transaction& transaction,
     }
 }
 
-DeleteResults deleteValue(Transaction& transaction,
-                          const std::vector<unsigned char>& hash_key) {
+DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
+    std::vector<unsigned char> hash_key;
+    marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
     return deleteValue(transaction, key);
 }
 
-DeleteResults deleteCheckpoint(
-    Transaction& transaction,
-    const std::vector<unsigned char>& checkpoint_name) {
+DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
+    std::vector<unsigned char> checkpoint_name;
+    marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
     auto results = transaction.getData(key);
 
@@ -97,12 +98,12 @@ DeleteResults deleteCheckpoint(
         auto parsed_state =
             checkpoint::utils::extractStateKeys(results.stored_value);
 
-        auto register_key = vecToSlice(parsed_state.register_val_key);
-        auto delete_register_res = deleteValue(transaction, register_key);
-        auto datastack_key = vecToSlice(parsed_state.datastack_key);
-        auto delete_datastack_res = deleteTuple(transaction, datastack_key);
-        auto auxstack_key = vecToSlice(parsed_state.auxstack_key);
-        auto delete_auxstack_res = deleteTuple(transaction, auxstack_key);
+        auto delete_register_res =
+            deleteValue(transaction, parsed_state.register_hash);
+        auto delete_datastack_res =
+            deleteValue(transaction, parsed_state.datastack_hash);
+        auto delete_auxstack_res =
+            deleteValue(transaction, parsed_state.auxstack_hash);
 
         if (!(delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&

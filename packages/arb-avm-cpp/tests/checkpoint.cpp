@@ -48,7 +48,7 @@ void getValue(const Transaction& transaction,
               ValueTypes expected_value_type,
               bool expected_status) {
     TuplePool pool;
-    auto results = getValue(transaction, GetHashKey(value), &pool);
+    auto results = getValue(transaction, hash_value(value), &pool);
     auto serialized_val = checkpoint::utils::serializeValue(results.data);
     auto type = (ValueTypes)serialized_val[0];
 
@@ -63,7 +63,7 @@ void getTuple(const Transaction& transaction,
               int expected_ref_count,
               bool expected_status) {
     TuplePool pool;
-    auto results = getValue(transaction, GetHashKey(tuple), &pool);
+    auto results = getValue(transaction, hash(tuple), &pool);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
@@ -75,10 +75,10 @@ void getTuple(const Transaction& transaction,
 }
 
 void getTupleValues(const Transaction& transaction,
-                    std::vector<unsigned char>& hash_key,
+                    uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes) {
     TuplePool pool;
-    auto results = getValue(transaction, hash_key, &pool);
+    auto results = getValue(transaction, tuple_hash, &pool);
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
     auto tuple = nonstd::get<Tuple>(results.data);
@@ -204,9 +204,8 @@ TEST_CASE("Save and get tuple values") {
 
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(num)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
         DBDeleter deleter;
@@ -220,9 +219,8 @@ TEST_CASE("Save and get tuple values") {
 
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
         DBDeleter deleter;
@@ -236,9 +234,8 @@ TEST_CASE("Save and get tuple values") {
 
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save nested tuple") {
         DBDeleter deleter;
@@ -252,9 +249,8 @@ TEST_CASE("Save and get tuple values") {
 
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple") {
         DBDeleter deleter;
@@ -271,9 +267,8 @@ TEST_CASE("Save and get tuple values") {
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
                                       hash(code_point_stub)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple, saveValue()") {
         DBDeleter deleter;
@@ -290,9 +285,8 @@ TEST_CASE("Save and get tuple values") {
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
                                       hash(code_point_stub)};
-        auto hash_key = GetHashKey(tuple);
 
-        getTupleValues(*transaction, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
 }
 
@@ -408,8 +402,8 @@ TEST_CASE("Save And Get Tuple") {
 
 void saveState(Transaction& transaction,
                MachineStateKeys storage_data,
-               std::vector<unsigned char> checkpoint_name) {
-    auto results = saveMachineState(transaction, storage_data, checkpoint_name);
+               uint256_t machine_hash) {
+    auto results = saveMachineState(transaction, storage_data, machine_hash);
     auto status = transaction.commit();
 
     REQUIRE(results.reference_count == 1);
@@ -417,12 +411,12 @@ void saveState(Transaction& transaction,
 }
 
 void getSavedState(const Transaction& transaction,
-                   std::vector<unsigned char> checkpoint_name,
+                   uint256_t machine_hash,
                    MachineStateKeys expected_data,
                    int expected_ref_count,
-                   std::vector<std::vector<unsigned char>> keys) {
+                   std::vector<uint256_t> keys) {
     TuplePool pool;
-    auto results = getMachineState(transaction, checkpoint_name);
+    auto results = getMachineState(transaction, machine_hash);
 
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
@@ -431,22 +425,22 @@ void getSavedState(const Transaction& transaction,
 
     REQUIRE(data.status_char == expected_data.status_char);
     REQUIRE(data.pc == expected_data.pc);
-    REQUIRE(data.datastack_key == expected_data.datastack_key);
-    REQUIRE(data.auxstack_key == expected_data.auxstack_key);
-    REQUIRE(data.register_val_key == expected_data.register_val_key);
+    REQUIRE(data.datastack_hash == expected_data.datastack_hash);
+    REQUIRE(data.auxstack_hash == expected_data.auxstack_hash);
+    REQUIRE(data.register_hash == expected_data.register_hash);
 
-    for (auto& key : keys) {
+    for (const auto& key : keys) {
         auto res = getValue(transaction, key, &pool);
         REQUIRE(res.status.ok());
     }
 }
 
 void deleteCheckpoint(Transaction& transaction,
-                      std::vector<unsigned char> checkpoint_name,
-                      std::vector<std::vector<unsigned char>> deleted_values) {
+                      uint256_t machine_hash,
+                      std::vector<uint256_t> deleted_values) {
     TuplePool pool;
-    auto res = deleteCheckpoint(transaction, checkpoint_name);
-    auto results = getMachineState(transaction, checkpoint_name);
+    auto res = deleteMachine(transaction, machine_hash);
+    auto results = getMachineState(transaction, machine_hash);
     REQUIRE(results.status.ok() == false);
 
     for (auto& hash_key : deleted_values) {
@@ -455,13 +449,12 @@ void deleteCheckpoint(Transaction& transaction,
     }
 }
 
-void deleteCheckpointSavedTwice(
-    Transaction& transaction,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
-    auto res = deleteCheckpoint(transaction, checkpoint_name);
-    auto res2 = deleteCheckpoint(transaction, checkpoint_name);
-    auto results = getMachineState(transaction, checkpoint_name);
+void deleteCheckpointSavedTwice(Transaction& transaction,
+                                uint256_t machine_hash,
+                                std::vector<uint256_t> deleted_values) {
+    auto res = deleteMachine(transaction, machine_hash);
+    auto res2 = deleteMachine(transaction, machine_hash);
+    auto results = getMachineState(transaction, machine_hash);
 
     TuplePool pool;
 
@@ -475,24 +468,24 @@ void deleteCheckpointSavedTwice(
 
 void deleteCheckpointSavedTwiceReordered(
     Transaction& transaction,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
+    uint256_t machine_hash,
+    std::vector<uint256_t> deleted_values) {
     TuplePool pool;
-    auto resultsx = getMachineState(transaction, checkpoint_name);
+    auto resultsx = getMachineState(transaction, machine_hash);
     for (auto& hash_key : deleted_values) {
         auto res = getValue(transaction, hash_key, &pool);
         REQUIRE(res.status.ok());
     }
-    auto res = deleteCheckpoint(transaction, checkpoint_name);
-    auto results = getMachineState(transaction, checkpoint_name);
+    auto res = deleteMachine(transaction, machine_hash);
+    auto results = getMachineState(transaction, machine_hash);
     REQUIRE(results.status.ok() == true);
 
     for (auto& hash_key : deleted_values) {
         auto res = getValue(transaction, hash_key, &pool);
         REQUIRE(res.status.ok());
     }
-    auto res2 = deleteCheckpoint(transaction, checkpoint_name);
-    auto results2 = getMachineState(transaction, checkpoint_name);
+    auto res2 = deleteMachine(transaction, machine_hash);
+    auto results2 = getMachineState(transaction, machine_hash);
     REQUIRE(results2.status.ok() == false);
 
     for (auto& hash_key : deleted_values) {
@@ -510,17 +503,17 @@ MachineStateKeys makeStorageData(Transaction& transaction,
                                  CodePointStub err_pc,
                                  BlockReason blockReason) {
     TuplePool pool;
-
-    auto datastack_results = stack.checkpointState(transaction, &pool);
-    auto auxstack_results = auxstack.checkpointState(transaction, &pool);
-
     auto register_val_results = saveValue(transaction, registerVal);
+    auto stack_tuple = stack.getTupleRepresentation(&pool);
+    auto datastack_results = saveValue(transaction, stack_tuple);
+    auto auxstack_tuple = auxstack.getTupleRepresentation(&pool);
+    auto auxstack_results = saveValue(transaction, auxstack_tuple);
 
     auto status_str = (unsigned char)state;
 
-    return MachineStateKeys{register_val_results.storage_key,
-                            datastack_results.storage_key,
-                            auxstack_results.storage_key,
+    return MachineStateKeys{hash_value(registerVal),
+                            hash(stack_tuple),
+                            hash(auxstack_tuple),
                             pc,
                             err_pc,
                             status_str};
@@ -570,12 +563,12 @@ MachineStateKeys getDefaultValues(Transaction& transaction) {
     return data;
 }
 
-std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
-    std::vector<std::vector<unsigned char>> hash_keys;
+std::vector<uint256_t> getHashKeys(MachineStateKeys data) {
+    std::vector<uint256_t> hash_keys;
 
-    hash_keys.push_back(data.auxstack_key);
-    hash_keys.push_back(data.datastack_key);
-    hash_keys.push_back(data.register_val_key);
+    hash_keys.push_back(data.auxstack_hash);
+    hash_keys.push_back(data.datastack_hash);
+    hash_keys.push_back(data.register_hash);
 
     return hash_keys;
 }
@@ -588,9 +581,10 @@ TEST_CASE("Save Machinestatedata") {
 
         auto transaction = storage.makeTransaction();
         auto data_values = getDefaultValues(*transaction);
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
 
-        saveState(*transaction, data_values, checkpoint_key);
+        uint256_t machine_hash = 5445765;
+
+        saveState(*transaction, data_values, machine_hash);
     }
     SECTION("with values") {
         DBDeleter deleter;
@@ -600,9 +594,9 @@ TEST_CASE("Save Machinestatedata") {
         auto transaction = storage.makeTransaction();
         auto state_data = getStateValues(*transaction);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 5445765;
 
-        saveState(*transaction, state_data, checkpoint_key);
+        saveState(*transaction, state_data, machine_hash);
     }
 }
 
@@ -617,11 +611,11 @@ TEST_CASE("Get Machinestate data") {
         auto data_values = getDefaultValues(*transaction);
         auto keys = getHashKeys(data_values);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveMachineState(*transaction, data_values, checkpoint_key);
+        saveMachineState(*transaction, data_values, machine_hash);
         transaction->commit();
-        getSavedState(*transaction, checkpoint_key, data_values, 1, keys);
+        getSavedState(*transaction, machine_hash, data_values, 1, keys);
     }
     SECTION("with values") {
         DBDeleter deleter;
@@ -633,10 +627,10 @@ TEST_CASE("Get Machinestate data") {
         auto state_data = getStateValues(*transaction);
         auto keys = getHashKeys(state_data);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveState(*transaction, state_data, checkpoint_key);
-        getSavedState(*transaction, checkpoint_key, state_data, 1, keys);
+        saveState(*transaction, state_data, machine_hash);
+        getSavedState(*transaction, machine_hash, state_data, 1, keys);
     }
 }
 
@@ -649,13 +643,13 @@ TEST_CASE("Delete checkpoint") {
         auto transaction = storage.makeTransaction();
         auto data_values = getDefaultValues(*transaction);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveMachineState(*transaction, data_values, checkpoint_key);
+        saveMachineState(*transaction, data_values, machine_hash);
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(*transaction, checkpoint_key, hash_keys);
+        deleteCheckpoint(*transaction, machine_hash, hash_keys);
     }
     SECTION("with actual state values") {
         DBDeleter deleter;
@@ -665,13 +659,13 @@ TEST_CASE("Delete checkpoint") {
         auto transaction = storage.makeTransaction();
         auto data_values = getStateValues(*transaction);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveMachineState(*transaction, data_values, checkpoint_key);
+        saveMachineState(*transaction, data_values, machine_hash);
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(*transaction, checkpoint_key, hash_keys);
+        deleteCheckpoint(*transaction, machine_hash, hash_keys);
     }
     SECTION("delete checkpoint saved twice") {
         DBDeleter deleter;
@@ -681,14 +675,14 @@ TEST_CASE("Delete checkpoint") {
         auto transaction = storage.makeTransaction();
         auto data_values = getStateValues(*transaction);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveMachineState(*transaction, data_values, checkpoint_key);
-        saveMachineState(*transaction, data_values, checkpoint_key);
+        saveMachineState(*transaction, data_values, machine_hash);
+        saveMachineState(*transaction, data_values, machine_hash);
         transaction->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwice(*transaction, checkpoint_key, hash_keys);
+        deleteCheckpointSavedTwice(*transaction, machine_hash, hash_keys);
     }
     SECTION("delete checkpoint saved twice, reordered") {
         DBDeleter deleter;
@@ -699,15 +693,15 @@ TEST_CASE("Delete checkpoint") {
         auto transaction2 = storage.makeTransaction();
         auto data_values = getStateValues(*transaction);
 
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+        uint256_t machine_hash = 6546457;
 
-        saveMachineState(*transaction, data_values, checkpoint_key);
+        saveMachineState(*transaction, data_values, machine_hash);
         transaction->commit();
-        saveMachineState(*transaction2, data_values, checkpoint_key);
+        saveMachineState(*transaction2, data_values, machine_hash);
         transaction2->commit();
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwiceReordered(*transaction, checkpoint_key,
+        deleteCheckpointSavedTwiceReordered(*transaction, machine_hash,
                                             hash_keys);
     }
 }

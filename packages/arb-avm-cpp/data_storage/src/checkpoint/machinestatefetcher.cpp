@@ -92,8 +92,10 @@ DbResult<value> getTuple(const Transaction& transaction,
 }  // namespace
 
 DbResult<value> getValue(const Transaction& transaction,
-                         const std::vector<unsigned char>& hash_key,
+                         uint256_t value_hash,
                          TuplePool* pool) {
+    std::vector<unsigned char> hash_key;
+    marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
     auto results = transaction.getData(key);
 
@@ -130,9 +132,10 @@ DbResult<value> getValue(const Transaction& transaction,
     }
 }
 
-DbResult<MachineStateKeys> getMachineState(
-    const Transaction& transaction,
-    const std::vector<unsigned char>& checkpoint_name) {
+DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
+                                           uint256_t machineHash) {
+    std::vector<unsigned char> checkpoint_name;
+    marshal_uint256_t(machineHash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
     auto results = transaction.getData(key);
 

@@ -26,6 +26,6 @@ struct SaveResults;
 SaveResults saveValue(Transaction& transaction, const value& val);
 SaveResults saveMachineState(Transaction& transaction,
                              const MachineStateKeys& state_data,
-                             const std::vector<unsigned char>& checkpoint_name);
+                             uint256_t machineHash);
 
 #endif /* machinestatesaver_hpp */

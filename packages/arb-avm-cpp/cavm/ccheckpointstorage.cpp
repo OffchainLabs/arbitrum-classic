@@ -87,10 +87,8 @@ CMachine* getMachine(const CCheckpointStorage* storage_ptr,
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
 
     auto hash = receiveUint256(machine_hash);
-    std::vector<unsigned char> machine_vector;
-    marshal_uint256_t(hash, machine_vector);
 
-    auto ret = Machine::loadFromCheckpoint(*storage, machine_vector);
+    auto ret = storage->getMachine(hash);
     if (!ret.second) {
         return nullptr;
     }
@@ -102,17 +100,7 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
-
-    std::vector<unsigned char> hash_vector;
-    marshal_uint256_t(hash, hash_vector);
-
-    auto transaction = storage->makeTransaction();
-    auto result = deleteCheckpoint(*transaction, hash_vector);
-    if (!result.status.ok()) {
-        transaction->rollBack();
-        return false;
-    }
-    return transaction->commit().ok();
+    return storage->deleteMachine(hash).status.ok();
 }
 
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
@@ -136,24 +124,17 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto transaction = storage->makeConstTransaction();
     auto hash = receiveUint256(hash_key);
-
-    std::vector<unsigned char> hash_key_vector;
     auto code = storage->getInitialVmValues().code;
-    marshal_value(hash, hash_key_vector, code);
-
-    return returnValueResult(
-        getValue(*transaction, hash_key_vector, storage->pool.get()), code);
+    return returnValueResult(getValue(*transaction, hash, storage->pool.get()),
+                             code);
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
 
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash, hash_key_vector, storage->getInitialVmValues().code);
-
     auto transaction = storage->makeTransaction();
-    auto result = deleteValue(*transaction, hash_key_vector);
+    auto result = deleteValue(*transaction, hash);
     if (!result.status.ok()) {
         transaction->rollBack();
         return false;

@@ -16,8 +16,14 @@
 
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatesaver.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
+
+#include <avm/machine.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
@@ -68,4 +74,101 @@ std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
 std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
     const {
     return std::make_unique<ConfirmedNodeStore>(datastorage);
+}
+
+std::pair<Machine, bool> CheckpointStorage::getMachine(
+    uint256_t machineHash) const {
+    auto transaction = makeConstTransaction();
+    auto results = getMachineState(*transaction, machineHash);
+
+    auto initial_values = getInitialVmValues();
+    if (!initial_values.valid_state) {
+        return std::make_pair(Machine{}, false);
+    }
+
+    if (!results.status.ok()) {
+        return std::make_pair(Machine{}, false);
+    }
+
+    auto state_data = results.data;
+
+    auto register_results =
+        ::getValue(*transaction, state_data.register_hash, pool.get());
+    if (!register_results.status.ok()) {
+        return std::make_pair(Machine{}, false);
+    }
+
+    auto stack_results =
+        ::getValue(*transaction, state_data.datastack_hash, pool.get());
+    if (!stack_results.status.ok() ||
+        !nonstd::holds_alternative<Tuple>(stack_results.data)) {
+        return std::make_pair(Machine{}, false);
+    }
+
+    auto auxstack_results =
+        ::getValue(*transaction, state_data.auxstack_hash, pool.get());
+    if (!auxstack_results.status.ok() ||
+        !nonstd::holds_alternative<Tuple>(auxstack_results.data)) {
+        return std::make_pair(Machine{}, false);
+    }
+
+    MachineState machine_state{
+        pool,
+        initial_values.code,
+        initial_values.staticVal,
+        std::move(register_results.data),
+        Datastack(nonstd::get<Tuple>(stack_results.data)),
+        Datastack(nonstd::get<Tuple>(auxstack_results.data)),
+        static_cast<Status>(state_data.status_char),
+        CodePointRef(state_data.pc),
+        CodePointRef(state_data.err_pc)};
+    return std::make_pair(std::move(machine_state), true);
+}
+
+SaveResults CheckpointStorage::saveMachine(const Machine& machine) {
+    auto transaction = makeTransaction();
+
+    auto& machinestate = machine.machine_state;
+
+    auto register_val_results =
+        saveValue(*transaction, machinestate.registerVal);
+    auto datastack_tup = machinestate.stack.getTupleRepresentation(pool.get());
+    auto datastack_results = saveValue(*transaction, datastack_tup);
+    auto auxstack_tup =
+        machinestate.auxstack.getTupleRepresentation(pool.get());
+    auto auxstack_results = saveValue(*transaction, auxstack_tup);
+    auto err_pc_stub = CodePointStub{initial_state.code[machinestate.errpc]};
+    auto pc_stub = CodePointStub{initial_state.code[machinestate.pc]};
+
+    auto status_str = static_cast<unsigned char>(machinestate.state);
+
+    std::vector<unsigned char> hash_key;
+    marshal_uint256_t(machine.hash(), hash_key);
+
+    if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
+        !register_val_results.status.ok()) {
+        return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
+    }
+    auto machine_state_data =
+        MachineStateKeys{hash_value(machinestate.registerVal),
+                         hash(datastack_tup),
+                         hash(auxstack_tup),
+                         pc_stub,
+                         err_pc_stub,
+                         status_str};
+
+    auto results =
+        saveMachineState(*transaction, machine_state_data, machine.hash());
+    results.status = transaction->commit();
+    return results;
+}
+
+DeleteResults CheckpointStorage::deleteMachine(uint256_t machineHash) {
+    auto transaction = makeTransaction();
+    auto results = ::deleteMachine(*transaction, machineHash);
+    if (!results.status.ok()) {
+        return results;
+    }
+    results.status = transaction->commit();
+    return results;
 }

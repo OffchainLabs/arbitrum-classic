@@ -18,11 +18,7 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/checkpointutils.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
-#include <data_storage/storageresult.hpp>
+#include <avm_values/vmValueParser.hpp>
 
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
@@ -46,53 +42,6 @@ std::pair<MachineState, bool> MachineState::loadFromFile(
         MachineState{initial_state.code, initial_state.staticVal,
                      std::move(pool)},
         true);
-}
-
-std::pair<MachineState, bool> MachineState::loadFromCheckpoint(
-    const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    auto transaction = storage.makeConstTransaction();
-    auto results = getMachineState(*transaction, checkpoint_key);
-
-    auto initial_values = storage.getInitialVmValues();
-    if (!initial_values.valid_state) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    if (!results.status.ok()) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    auto state_data = results.data;
-
-    auto register_results =
-        getValue(*transaction, state_data.register_val_key, storage.pool.get());
-    if (!register_results.status.ok()) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    Datastack stack;
-    if (!stack.initializeDataStack(*transaction, state_data.datastack_key,
-                                   storage.pool.get())) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    Datastack auxstack;
-    if (!auxstack.initializeDataStack(*transaction, state_data.auxstack_key,
-                                      storage.pool.get())) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    MachineState machine_state{storage.pool,
-                               initial_values.code,
-                               initial_values.staticVal,
-                               std::move(register_results.data),
-                               std::move(stack),
-                               std::move(auxstack),
-                               static_cast<Status>(state_data.status_char),
-                               CodePointRef(state_data.pc),
-                               CodePointRef(state_data.err_pc)};
-    return std::make_pair(std::move(machine_state), true);
 }
 
 uint256_t MachineState::hash() const {
@@ -169,40 +118,6 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
     return buf;
-}
-
-SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto transaction = storage.makeTransaction();
-
-    auto datastack_results = stack.checkpointState(*transaction, pool.get());
-    auto auxstack_results = auxstack.checkpointState(*transaction, pool.get());
-
-    auto register_val_results = saveValue(*transaction, registerVal);
-    auto err_pc_stub = CodePointStub{code[errpc]};
-    auto pc_stub = CodePointStub{code[pc]};
-
-    auto status_str = static_cast<unsigned char>(state);
-
-    std::vector<unsigned char> hash_key;
-    marshal_uint256_t(hash(), hash_key);
-
-    if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        register_val_results.status.ok()) {
-        auto machine_state_data =
-            MachineStateKeys{register_val_results.storage_key,
-                             datastack_results.storage_key,
-                             auxstack_results.storage_key,
-                             pc_stub,
-                             err_pc_stub,
-                             status_str};
-
-        auto results =
-            saveMachineState(*transaction, machine_state_data, hash_key);
-        results.status = transaction->commit();
-        return results;
-    } else {
-        return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
-    }
 }
 
 BlockReason MachineState::isBlocked(uint256_t currentTime,

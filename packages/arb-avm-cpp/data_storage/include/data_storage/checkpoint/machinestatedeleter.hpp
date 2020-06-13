@@ -24,11 +24,7 @@ class CheckpointStorage;
 class Transaction;
 class TuplePool;
 
-DeleteResults deleteCheckpoint(
-    Transaction& transaction,
-    const std::vector<unsigned char>& checkpoint_name);
-
-DeleteResults deleteValue(Transaction& transaction,
-                          const std::vector<unsigned char>& hash_key);
+DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash);
+DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 
 #endif /* checkpointdeleter_h */

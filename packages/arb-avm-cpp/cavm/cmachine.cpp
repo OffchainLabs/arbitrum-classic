@@ -49,11 +49,10 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
+int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
     auto machine = static_cast<Machine*>(m);
-    auto result =
-        machine->checkpoint(*(static_cast<CheckpointStorage*>(storage)));
-
+    auto storage = static_cast<CheckpointStorage*>(s);
+    auto result = storage->saveMachine(*machine);
     return result.status.ok();
 }
 
