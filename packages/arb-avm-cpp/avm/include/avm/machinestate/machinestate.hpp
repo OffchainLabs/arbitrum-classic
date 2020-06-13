@@ -17,6 +17,7 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
+#include <avm/avmfwd.hpp>
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm_values/value.hpp>
@@ -24,16 +25,12 @@
 #include <memory>
 #include <vector>
 
-enum class Status { Extensive, Halted, Error };
-
 struct TimeBounds {
     uint256_t lowerBoundBlock;
     uint256_t upperBoundBlock;
     uint256_t lowerBoundTimestamp;
     uint256_t upperBoundTimestamp;
 };
-
-class CheckpointStorage;
 
 struct AssertionContext {
     TimeBounds timeBounds;

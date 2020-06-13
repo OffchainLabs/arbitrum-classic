@@ -19,6 +19,7 @@
 
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machine.hpp>
 #include <data_storage/checkpoint/value.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
@@ -98,7 +99,12 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
-    return storage->deleteMachine(hash).status.ok();
+    auto transaction = storage->makeTransaction();
+    auto results = deleteMachine(*transaction, hash);
+    if (!results.status.ok()) {
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {

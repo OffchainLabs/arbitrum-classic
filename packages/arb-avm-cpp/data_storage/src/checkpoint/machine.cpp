@@ -21,6 +21,8 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
+#include <avm/machine.hpp>
+
 namespace {
 rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
     return {reinterpret_cast<const char*>(vec.data()), vec.size()};
@@ -46,7 +48,7 @@ uint256_t extractUint256(iterator& iter) {
 MachineStateKeys extractStateKeys(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
-    auto status = (unsigned char)(*current_iter);
+    auto status = static_cast<Status>(*current_iter);
     ++current_iter;
     auto register_hash = extractUint256(current_iter);
     auto datastack_hash = extractUint256(current_iter);
@@ -61,7 +63,7 @@ MachineStateKeys extractStateKeys(
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
-    state_data_vector.push_back(state_data.status_char);
+    state_data_vector.push_back(static_cast<unsigned char>(state_data.status));
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
@@ -120,12 +122,39 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
                                       parsed_state};
 }
 
-SaveResults saveMachineState(Transaction& transaction,
-                             const MachineStateKeys& state_data,
-                             uint256_t machineHash) {
+SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     std::vector<unsigned char> checkpoint_name;
-    marshal_uint256_t(machineHash, checkpoint_name);
+    marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto serialized_state = serializeStateKeys(state_data);
+
+    auto currentResult = transaction.getData(key);
+    if (currentResult.status.ok()) {
+        // Already saved so just increment refence count
+        return transaction.saveData(key, currentResult.stored_value);
+    }
+
+    auto& machinestate = machine.machine_state;
+    auto pool = machinestate.pool.get();
+    auto register_val_results =
+        saveValue(transaction, machinestate.registerVal);
+    auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
+    auto datastack_results = saveValue(transaction, datastack_tup);
+    auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
+    auto auxstack_results = saveValue(transaction, auxstack_tup);
+    auto err_pc_stub = CodePointStub{machinestate.code[machinestate.errpc]};
+    auto pc_stub = CodePointStub{machinestate.code[machinestate.pc]};
+
+    if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
+        !register_val_results.status.ok()) {
+        return SaveResults{0, rocksdb::Status().Aborted()};
+    }
+    auto machine_state_data =
+        MachineStateKeys{hash_value(machinestate.registerVal),
+                         hash(datastack_tup),
+                         hash(auxstack_tup),
+                         pc_stub,
+                         err_pc_stub,
+                         machinestate.state};
+    auto serialized_state = serializeStateKeys(machine_state_data);
     return transaction.saveData(key, serialized_state);
 }

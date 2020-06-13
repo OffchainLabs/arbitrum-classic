@@ -20,6 +20,7 @@
 
 #include <avm/machine.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machine.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -52,8 +53,12 @@ void machineDestroy(CMachine* m) {
 int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
     auto machine = static_cast<Machine*>(m);
     auto storage = static_cast<CheckpointStorage*>(s);
-    auto result = storage->saveMachine(*machine);
-    return result.status.ok();
+    auto transaction = storage->makeTransaction();
+    auto result = saveMachine(*transaction, *machine);
+    if (!result.status.ok()) {
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 void machineHash(CMachine* m, void* ret) {

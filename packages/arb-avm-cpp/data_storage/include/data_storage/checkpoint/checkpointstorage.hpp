@@ -51,8 +51,6 @@ class CheckpointStorage {
     std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
 
     std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
-    SaveResults saveMachine(const Machine& machine);
-    DeleteResults deleteMachine(uint256_t machineHash);
 };
 
 #endif /* checkpointstorage_hpp */

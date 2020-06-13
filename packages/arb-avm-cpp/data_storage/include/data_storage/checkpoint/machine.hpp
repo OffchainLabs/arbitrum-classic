@@ -17,6 +17,8 @@
 #ifndef checkpoint_machine_hpp
 #define checkpoint_machine_hpp
 
+#include <avm/avmfwd.hpp>
+
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepoint.hpp>
 
@@ -28,20 +30,20 @@ struct DbResult;
 struct SaveResults;
 struct DeleteResults;
 
+class Machine;
+
 struct MachineStateKeys {
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     CodePointStub pc;
     CodePointStub err_pc;
-    unsigned char status_char;
+    Status status;
 };
 
 DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
                                            uint256_t machineHash);
-SaveResults saveMachineState(Transaction& transaction,
-                             const MachineStateKeys& state_data,
-                             uint256_t machineHash);
+SaveResults saveMachine(Transaction& transaction, const Machine& machine);
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash);
 
 #endif /* checkpoint_machine_hpp */

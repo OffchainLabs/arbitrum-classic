@@ -118,53 +118,8 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         std::move(register_results.data),
         Datastack(nonstd::get<Tuple>(stack_results.data)),
         Datastack(nonstd::get<Tuple>(auxstack_results.data)),
-        static_cast<Status>(state_data.status_char),
+        state_data.status,
         CodePointRef(state_data.pc),
         CodePointRef(state_data.err_pc)};
     return std::make_pair(std::move(machine_state), true);
-}
-
-SaveResults CheckpointStorage::saveMachine(const Machine& machine) {
-    auto transaction = makeTransaction();
-
-    auto& machinestate = machine.machine_state;
-
-    auto register_val_results =
-        saveValue(*transaction, machinestate.registerVal);
-    auto datastack_tup = machinestate.stack.getTupleRepresentation(pool.get());
-    auto datastack_results = saveValue(*transaction, datastack_tup);
-    auto auxstack_tup =
-        machinestate.auxstack.getTupleRepresentation(pool.get());
-    auto auxstack_results = saveValue(*transaction, auxstack_tup);
-    auto err_pc_stub = CodePointStub{initial_state.code[machinestate.errpc]};
-    auto pc_stub = CodePointStub{initial_state.code[machinestate.pc]};
-
-    auto status_str = static_cast<unsigned char>(machinestate.state);
-
-    if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
-        !register_val_results.status.ok()) {
-        return SaveResults{0, rocksdb::Status().Aborted()};
-    }
-    auto machine_state_data =
-        MachineStateKeys{hash_value(machinestate.registerVal),
-                         hash(datastack_tup),
-                         hash(auxstack_tup),
-                         pc_stub,
-                         err_pc_stub,
-                         status_str};
-
-    auto results =
-        saveMachineState(*transaction, machine_state_data, machine.hash());
-    results.status = transaction->commit();
-    return results;
-}
-
-DeleteResults CheckpointStorage::deleteMachine(uint256_t machineHash) {
-    auto transaction = makeTransaction();
-    auto results = ::deleteMachine(*transaction, machineHash);
-    if (!results.status.ok()) {
-        return results;
-    }
-    results.status = transaction->commit();
-    return results;
 }

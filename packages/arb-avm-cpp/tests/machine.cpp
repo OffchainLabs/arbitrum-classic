@@ -30,21 +30,25 @@
 auto execution_path = boost::filesystem::current_path();
 
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
-    auto results = storage.saveMachine(machine);
-
+    auto transaction = storage.makeTransaction();
+    auto results = saveMachine(*transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
+    REQUIRE(transaction->commit().ok());
 }
 
 void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
-    auto results = storage.saveMachine(machine);
-    auto results2 = storage.saveMachine(machine);
-
+    auto transaction1 = storage.makeTransaction();
+    auto results = saveMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
+    REQUIRE(transaction1->commit().ok());
 
+    auto transaction2 = storage.makeTransaction();
+    auto results2 = saveMachine(*transaction2, machine);
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
+    REQUIRE(transaction2->commit().ok());
 }
 
 void deleteCheckpoint(Transaction& transaction, Machine& machine) {
@@ -92,7 +96,10 @@ TEST_CASE("Checkpoint State") {
         auto hash1 = machine.hash();
         auto hash2 = machine2.hash();
 
-        storage.saveMachine(machine);
+        auto transaction = storage.makeTransaction();
+        auto results = saveMachine(*transaction, machine);
+        REQUIRE(results.status.ok());
+        REQUIRE(transaction->commit().ok());
 
         auto ret2 = storage.getMachine(hash1);
         REQUIRE(ret2.second);
@@ -112,8 +119,8 @@ TEST_CASE("Delete machine checkpoint") {
         CheckpointStorage storage(dbpath, test_contract_path);
         auto ret = Machine::loadFromFile(test_contract_path);
         REQUIRE(ret.second);
-        auto results = storage.saveMachine(ret.first);
         auto transaction = storage.makeTransaction();
+        auto results = saveMachine(*transaction, ret.first);
         deleteCheckpoint(*transaction, ret.first);
         REQUIRE(transaction->commit().ok());
     }
@@ -126,8 +133,11 @@ TEST_CASE("Restore checkpoint") {
         CheckpointStorage storage(dbpath, test_contract_path);
         auto ret = Machine::loadFromFile(test_contract_path);
         REQUIRE(ret.second);
-        auto results = storage.saveMachine(ret.first);
 
+        auto transaction = storage.makeTransaction();
+        auto results = saveMachine(*transaction, ret.first);
+        REQUIRE(results.status.ok());
+        REQUIRE(transaction->commit().ok());
         restoreCheckpoint(storage, ret.first);
     }
 }
