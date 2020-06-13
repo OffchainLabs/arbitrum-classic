@@ -26,6 +26,32 @@
 
 #define UINT256_SIZE 32
 
+namespace {
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
+    Tuple tup;
+    if (size > 0) {
+        tup = Tuple(&pool, size);
+        for (int i = 0; i < size; i++) {
+            tup.set_element(i, deserialize_value(bufptr, pool));
+        }
+    }
+
+    return tup;
+}
+
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
+    CodePoint ret;
+    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
+    bufptr += sizeof(ret.pc);
+    ret.pc = boost::endian::big_to_native(ret.pc);
+    ret.op = deserializeOperation(bufptr, pool);
+    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
+    bufptr += UINT256_SIZE;
+
+    return ret;
+}
+}  // namespace
+
 uint256_t deserializeUint256t(const char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
@@ -47,40 +73,28 @@ Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     }
 }
 
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
-    CodePoint ret;
-    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
-    bufptr += sizeof(ret.pc);
-    ret.pc = boost::endian::big_to_native(ret.pc);
-    ret.op = deserializeOperation(bufptr, pool);
-    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
-
-    return ret;
-}
-
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup;
-    if (size > 0) {
-        tup = Tuple(&pool, size);
-        for (int i = 0; i < size; i++) {
-            tup.set_element(i, deserialize_value(bufptr, pool));
-        }
+value deserialize_value(const char*& bufptr, TuplePool& pool) {
+    uint8_t valType;
+    memcpy(&valType, bufptr, sizeof(valType));
+    bufptr += sizeof(valType);
+    switch (valType) {
+        case NUM:
+            return deserializeUint256t(bufptr);
+        case CODEPT:
+            return deserializeCodePoint(bufptr, pool);
+        default:
+            if (valType >= TUPLE && valType <= TUPLE + 8) {
+                return deserializeTuple(bufptr, valType - TUPLE, pool);
+            } else {
+                std::printf("in deserialize_value, unhandled type = %X\n",
+                            valType);
+                throw std::runtime_error("Tried to deserialize unhandled type");
+            }
     }
-
-    return tup;
 }
 
 void marshal_HashPreImage(const HashPreImage& val,
                           std::vector<unsigned char>& buf) {
-    val.marshal(buf);
-}
-
-void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
-    val.marshal(buf);
-}
-
-void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf) {
     val.marshal(buf);
 }
 
@@ -92,12 +106,12 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val)) {
-        marshal_Tuple(nonstd::get<Tuple>(val), buf);
+        nonstd::get<Tuple>(val).marshal(buf);
     } else if (nonstd::holds_alternative<uint256_t>(val)) {
         buf.push_back(NUM);
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
     } else if (nonstd::holds_alternative<CodePoint>(val)) {
-        marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
+        nonstd::get<CodePoint>(val).marshal(buf);
     } else if (nonstd::holds_alternative<HashPreImage>(val)) {
         marshal_HashPreImage(nonstd::get<HashPreImage>(val), buf);
     }
@@ -112,11 +126,7 @@ void marshalStub(const value& val, std::vector<unsigned char>& buf) {
     }
 }
 
-void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
-    return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
-                         val);
-}
-
+namespace {
 // see similar functionality in tuple.cloneShallow and tuple.marshal
 void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
     buf.push_back(TUPLE + val.tuple_size());
@@ -143,32 +153,11 @@ void marshalShallow(const HashPreImage& val, std::vector<unsigned char>& buf) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
+}  // namespace
 
-value deserialize_value(const char*& bufptr, TuplePool& pool) {
-    uint8_t valType;
-    memcpy(&valType, bufptr, sizeof(valType));
-    bufptr += sizeof(valType);
-    switch (valType) {
-        case NUM:
-            return deserializeUint256t(bufptr);
-        case CODEPT:
-            return deserializeCodePoint(bufptr, pool);
-        default:
-            if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserializeTuple(bufptr, valType - TUPLE, pool);
-            } else {
-                std::printf("in deserialize_value, unhandled type = %X\n",
-                            valType);
-                throw std::runtime_error("Tried to deserialize unhandled type");
-            }
-    }
-}
-
-int get_tuple_size(char*& bufptr) {
-    uint8_t valType;
-    memcpy(&valType, bufptr, sizeof(valType));
-
-    return valType - TUPLE;
+void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
+    return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
+                         val);
 }
 
 uint256_t hash(const value& value) {
