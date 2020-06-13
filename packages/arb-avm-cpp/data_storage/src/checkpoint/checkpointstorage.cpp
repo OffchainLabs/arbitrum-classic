@@ -142,12 +142,9 @@ SaveResults CheckpointStorage::saveMachine(const Machine& machine) {
 
     auto status_str = static_cast<unsigned char>(machinestate.state);
 
-    std::vector<unsigned char> hash_key;
-    marshal_uint256_t(machine.hash(), hash_key);
-
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok()) {
-        return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
+        return SaveResults{0, rocksdb::Status().Aborted()};
     }
     auto machine_state_data =
         MachineStateKeys{hash_value(machinestate.registerVal),

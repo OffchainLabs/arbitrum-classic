@@ -31,23 +31,6 @@ struct GetResults {
 struct SaveResults {
     uint32_t reference_count;
     rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
-
-    SaveResults(uint32_t reference_count_,
-                rocksdb::Status status_,
-                const rocksdb::Slice& key)
-        : reference_count(reference_count_), status(status_) {
-        storage_key.reserve(key.size());
-        std::copy(key.data(), key.data() + key.size(),
-                  std::back_inserter(storage_key));
-    }
-
-    SaveResults(uint32_t reference_count_,
-                rocksdb::Status status_,
-                std::vector<unsigned char> storage_key_)
-        : reference_count(reference_count_),
-          status(status_),
-          storage_key(std::move(storage_key_)) {}
 };
 
 struct DeleteResults {

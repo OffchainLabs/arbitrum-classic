@@ -31,29 +31,22 @@ auto execution_path = boost::filesystem::current_path();
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
     auto results = storage.saveMachine(machine);
 
-    std::vector<unsigned char> hash_vector;
-    marshal_uint256_t(machine.hash(), hash_vector);
-
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
-    REQUIRE(results.storage_key == hash_vector);
 }
 
 void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
     auto results = storage.saveMachine(machine);
     auto results2 = storage.saveMachine(machine);
 
-    std::vector<unsigned char> hash_vector;
-    marshal_uint256_t(machine.hash(), hash_vector);
+    REQUIRE(results.status.ok());
+    REQUIRE(results.reference_count == 1);
 
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
-    REQUIRE(results2.storage_key == hash_vector);
 }
 
-void deleteCheckpoint(Transaction& transaction,
-                      Machine& machine,
-                      const std::vector<unsigned char>& checkpoint_key) {
+void deleteCheckpoint(Transaction& transaction, Machine& machine) {
     auto results = deleteMachine(transaction, machine.hash());
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 0);
@@ -120,7 +113,7 @@ TEST_CASE("Delete machine checkpoint") {
         REQUIRE(ret.second);
         auto results = storage.saveMachine(ret.first);
         auto transaction = storage.makeTransaction();
-        deleteCheckpoint(*transaction, ret.first, results.storage_key);
+        deleteCheckpoint(*transaction, ret.first);
         REQUIRE(transaction->commit().ok());
     }
 }

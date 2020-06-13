@@ -67,7 +67,7 @@ SaveResults Transaction::incrementReference(const rocksdb::Slice& hash_key) {
         return saveValueWithRefCount(updated_count, hash_key,
                                      results.stored_value);
     } else {
-        return SaveResults{0, results.status, hash_key};
+        return SaveResults{0, results.status};
     }
 }
 
@@ -145,9 +145,9 @@ SaveResults Transaction::saveValueWithRefCount(
     auto status = saveKeyValuePair(hash_key, updated_entry);
 
     if (status.ok()) {
-        return SaveResults{updated_ref_count, status, hash_key};
+        return SaveResults{updated_ref_count, status};
     } else {
-        return SaveResults{0, status, hash_key};
+        return SaveResults{0, status};
     }
 }
 
