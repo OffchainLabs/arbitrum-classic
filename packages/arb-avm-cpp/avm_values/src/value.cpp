@@ -93,15 +93,9 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
     }
 }
 
-void marshal_HashPreImage(const HashPreImage& val,
-                          std::vector<unsigned char>& buf) {
-    val.marshal(buf);
-}
-
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+    buf.reserve(buf.size() + 32);
+    to_big_endian(val, std::back_inserter(buf));
 }
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
@@ -113,7 +107,7 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     } else if (nonstd::holds_alternative<CodePoint>(val)) {
         nonstd::get<CodePoint>(val).marshal(buf);
     } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-        marshal_HashPreImage(nonstd::get<HashPreImage>(val), buf);
+        nonstd::get<HashPreImage>(val).marshal(buf);
     }
 }
 

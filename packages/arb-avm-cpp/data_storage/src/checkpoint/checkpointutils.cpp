@@ -86,7 +86,7 @@ struct ValueSerializer {
         std::vector<unsigned char> value_vector;
         auto type_code = static_cast<unsigned char>(HASH_PRE_IMAGE);
         value_vector.push_back(type_code);
-        marshal_HashPreImage(val, value_vector);
+        val.marshal(value_vector);
 
         return value_vector;
     }

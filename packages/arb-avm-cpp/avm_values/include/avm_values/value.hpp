@@ -43,12 +43,12 @@ uint256_t hash(const value& value);
 uint256_t deserializeUint256t(const char*& srccode);
 Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
 value deserialize_value(const char*& srccode, TuplePool& pool);
-void marshal_value(const value& val, std::vector<unsigned char>& buf);
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
-void marshal_HashPreImage(const HashPreImage& val,
-                          std::vector<unsigned char>& buf);
 
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
+
+void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshalForProof(const value& val, std::vector<unsigned char>& buf);
+void marshalStub(const value& val, std::vector<unsigned char>& buf);
 
 template <typename T>
 static T shrink(uint256_t i) {
@@ -56,6 +56,5 @@ static T shrink(uint256_t i) {
 }
 
 uint256_t getSize(const value& val);
-void marshalStub(const value& val, std::vector<unsigned char>& buf);
 
 #endif /* value_hpp */
