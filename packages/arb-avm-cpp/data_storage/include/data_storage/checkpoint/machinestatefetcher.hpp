@@ -18,23 +18,19 @@
 #define machinestatefetcher_hpp
 
 #include <avm_values/value.hpp>
-#include <data_storage/checkpoint/checkpointutils.hpp>
 
 class CheckpointStorage;
+class Transaction;
+struct MachineStateKeys;
 
 template <typename T>
 struct DbResult;
 
-class MachineStateFetcher {
-   private:
-    const CheckpointStorage& checkpoint_storage;
-    DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key) const;
-
-   public:
-    MachineStateFetcher(const CheckpointStorage& checkpoint_storage);
-    DbResult<value> getValue(const std::vector<unsigned char>& hash_key) const;
-    DbResult<MachineStateKeys> getMachineState(
-        const std::vector<unsigned char>& checkpoint_name) const;
-};
+DbResult<value> getValue(const Transaction& transaction,
+                         const std::vector<unsigned char>& hash_key,
+                         TuplePool* pool);
+DbResult<MachineStateKeys> getMachineState(
+    const Transaction& transaction,
+    const std::vector<unsigned char>& checkpoint_name);
 
 #endif /* machinestatefetcher_hpp */

@@ -51,11 +51,6 @@ std::vector<unsigned char> serializeCountAndValue(
 Transaction::Transaction(std::unique_ptr<rocksdb::Transaction> transaction_)
     : transaction(std::move(transaction_)) {}
 
-Transaction::~Transaction() {
-    assert(transaction->GetState() == rocksdb::Transaction::COMMITED ||
-           transaction->GetState() == rocksdb::Transaction::ROLLEDBACK);
-}
-
 rocksdb::Status Transaction::commit() {
     return transaction->Commit();
 }

@@ -34,12 +34,13 @@
 std::string dbpath =
     boost::filesystem::current_path().generic_string() + "/machineDb";
 
-void initializeDatastack(MachineStateFetcher& fetcher,
+void initializeDatastack(const Transaction& transaction,
                          std::vector<unsigned char> hash_key,
                          uint256_t expected_hash,
                          int expected_size) {
+    TuplePool pool;
     Datastack data_stack;
-    data_stack.initializeDataStack(fetcher, hash_key);
+    data_stack.initializeDataStack(transaction, hash_key, &pool);
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
@@ -78,7 +79,6 @@ void saveDataStackTwice(Datastack data_stack,
 }
 
 void saveAndGetDataStack(Transaction& transaction,
-                         MachineStateFetcher& fetcher,
                          Datastack data_stack,
                          std::vector<unsigned char> hash_key,
                          uint256_t expected_hash) {
@@ -86,7 +86,7 @@ void saveAndGetDataStack(Transaction& transaction,
     data_stack.checkpointState(transaction, &pool);
     transaction.commit();
 
-    auto get_results = fetcher.getValue(hash_key);
+    auto get_results = getValue(transaction, hash_key, &pool);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -96,7 +96,6 @@ void saveAndGetDataStack(Transaction& transaction,
 }
 
 void saveTwiceAndGetDataStack(Transaction& transaction,
-                              MachineStateFetcher& fetcher,
                               Datastack data_stack,
                               std::vector<unsigned char> hash_key,
                               uint256_t expected_hash) {
@@ -106,7 +105,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
     data_stack.checkpointState(transaction, &pool);
     transaction.commit();
 
-    auto get_results = fetcher.getValue(hash_key);
+    auto get_results = getValue(transaction, hash_key, &pool);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -121,7 +120,6 @@ TEST_CASE("Initialize datastack") {
         CheckpointStorage storage(dbpath, test_contract_path);
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
 
@@ -129,7 +127,7 @@ TEST_CASE("Initialize datastack") {
         transaction->commit();
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(fetcher, results.storage_key, stack_hash, 0);
+        initializeDatastack(*transaction, results.storage_key, stack_hash, 0);
     }
     boost::filesystem::remove_all(dbpath);
 
@@ -138,7 +136,6 @@ TEST_CASE("Initialize datastack") {
         CheckpointStorage storage(dbpath, test_contract_path);
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
         Tuple tuple;
@@ -148,7 +145,7 @@ TEST_CASE("Initialize datastack") {
         transaction->commit();
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(fetcher, results.storage_key, stack_hash, 1);
+        initializeDatastack(*transaction, results.storage_key, stack_hash, 1);
     }
     boost::filesystem::remove_all(dbpath);
 
@@ -159,7 +156,6 @@ TEST_CASE("Initialize datastack") {
         CodePointStub code_point_stub{0, 3452345};
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
         uint256_t num = 1;
@@ -172,7 +168,7 @@ TEST_CASE("Initialize datastack") {
         transaction->commit();
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(fetcher, results.storage_key, stack_hash, 2);
+        initializeDatastack(*transaction, results.storage_key, stack_hash, 2);
     }
     boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
@@ -182,7 +178,6 @@ TEST_CASE("Initialize datastack") {
         CodePointStub code_point_stub{0, 3452345};
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
 
@@ -196,7 +191,7 @@ TEST_CASE("Initialize datastack") {
         transaction->commit();
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(fetcher, results.storage_key, stack_hash, 2);
+        initializeDatastack(*transaction, results.storage_key, stack_hash, 2);
     }
     boost::filesystem::remove_all(dbpath);
 }
@@ -268,7 +263,6 @@ TEST_CASE("Save and get datastack") {
         uint256_t intVal = 5435;
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
         auto tuple = Tuple(intVal, &pool);
@@ -283,7 +277,7 @@ TEST_CASE("Save and get datastack") {
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
-        saveAndGetDataStack(*transaction, fetcher, datastack, hash_key_vector,
+        saveAndGetDataStack(*transaction, datastack, hash_key_vector,
                             tup_rep.calculateHash());
     }
     boost::filesystem::remove_all(dbpath);
@@ -294,7 +288,6 @@ TEST_CASE("Save and get datastack") {
         uint256_t intVal = 5435;
 
         auto transaction = storage.makeTransaction();
-        auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
         auto tuple = Tuple(intVal, &pool);
@@ -309,8 +302,8 @@ TEST_CASE("Save and get datastack") {
         std::vector<unsigned char> hash_key_vector;
         marshal_uint256_t(tup_rep.calculateHash(), hash_key_vector);
 
-        saveTwiceAndGetDataStack(*transaction, fetcher, datastack,
-                                 hash_key_vector, tup_rep.calculateHash());
+        saveTwiceAndGetDataStack(*transaction, datastack, hash_key_vector,
+                                 tup_rep.calculateHash());
     }
     boost::filesystem::remove_all(dbpath);
 }

@@ -23,7 +23,6 @@
 #include <vector>
 
 class Transaction;
-class MachineStateFetcher;
 struct SaveResults;
 
 class Datastack {
@@ -104,8 +103,9 @@ class Datastack {
 
     SaveResults checkpointState(Transaction& transaction, TuplePool* pool);
 
-    bool initializeDataStack(const MachineStateFetcher& fetcher,
-                             const std::vector<unsigned char>& hash_key);
+    bool initializeDataStack(const Transaction& transaction,
+                             const std::vector<unsigned char>& hash_key,
+                             TuplePool* pool);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

@@ -19,31 +19,22 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
-MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage)
-    : checkpoint_storage(storage) {}
-
-DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
-    const std::vector<unsigned char>& checkpoint_name) const {
-    auto results = checkpoint_storage.getValue(checkpoint_name);
-
-    if (!results.status.ok()) {
-        return DbResult<MachineStateKeys>{
-            results.status, results.reference_count, MachineStateKeys()};
-    }
-    auto parsed_state =
-        checkpoint::utils::extractStateKeys(results.stored_value);
-
-    return DbResult<MachineStateKeys>{results.status, results.reference_count,
-                                      parsed_state};
+namespace {
+rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
+    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
 }
 
-DbResult<Tuple> MachineStateFetcher::getTuple(
-    const std::vector<unsigned char>& hash_key) const {
+DbResult<Tuple> getTuple(const Transaction& transaction,
+                         const std::vector<unsigned char>& hash_key,
+                         TuplePool* pool) {
+    auto key = vecToSlice(hash_key);
     std::vector<value> values;
-    auto results = checkpoint_storage.getValue(hash_key);
+
+    auto results = transaction.getData(key);
 
     if (!results.status.ok()) {
         return DbResult<Tuple>{results.status, results.reference_count,
@@ -84,19 +75,22 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                         "typecode");
                 }
                 current_vector.erase(current_vector.begin());
-                auto tuple = getTuple(current_vector).data;
+                auto tuple = getTuple(transaction, current_vector, pool).data;
                 values.push_back(tuple);
                 break;
             }
         }
     }
-    auto tuple = Tuple(values, checkpoint_storage.pool.get());
+    auto tuple = Tuple(values, pool);
     return DbResult<Tuple>{results.status, results.reference_count, tuple};
 }
+}  // namespace
 
-DbResult<value> MachineStateFetcher::getValue(
-    const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage.getValue(hash_key);
+DbResult<value> getValue(const Transaction& transaction,
+                         const std::vector<unsigned char>& hash_key,
+                         TuplePool* pool) {
+    auto key = vecToSlice(hash_key);
+    auto results = transaction.getData(key);
 
     if (!results.status.ok()) {
         auto error_res = DbResult<value>();
@@ -128,9 +122,26 @@ DbResult<value> MachineStateFetcher::getValue(
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            auto tuple_res = getTuple(hash_key);
+            auto tuple_res = getTuple(transaction, hash_key, pool);
             return DbResult<value>{tuple_res.status, tuple_res.reference_count,
                                    tuple_res.data};
         }
     }
+}
+
+DbResult<MachineStateKeys> getMachineState(
+    const Transaction& transaction,
+    const std::vector<unsigned char>& checkpoint_name) {
+    auto key = vecToSlice(checkpoint_name);
+    auto results = transaction.getData(key);
+
+    if (!results.status.ok()) {
+        return DbResult<MachineStateKeys>{
+            results.status, results.reference_count, MachineStateKeys()};
+    }
+    auto parsed_state =
+        checkpoint::utils::extractStateKeys(results.stored_value);
+
+    return DbResult<MachineStateKeys>{results.status, results.reference_count,
+                                      parsed_state};
 }

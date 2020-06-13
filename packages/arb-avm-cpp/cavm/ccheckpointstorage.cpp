@@ -140,14 +140,15 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto fetcher = MachineStateFetcher(*storage);
+    auto transaction = storage->makeConstTransaction();
     auto hash = receiveUint256(hash_key);
 
     std::vector<unsigned char> hash_key_vector;
     auto code = storage->getInitialVmValues().code;
     marshal_value(hash, hash_key_vector, code);
 
-    return returnValueResult(fetcher.getValue(hash_key_vector), code);
+    return returnValueResult(
+        getValue(*transaction, hash_key_vector, storage->pool.get()), code);
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {

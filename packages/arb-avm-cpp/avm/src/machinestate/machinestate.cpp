@@ -19,6 +19,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>
 
@@ -178,8 +179,8 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(storage);
-    auto results = stateFetcher.getMachineState(checkpoint_key);
+    auto transaction = storage.makeConstTransaction();
+    auto results = getMachineState(*transaction, checkpoint_key);
 
     auto initial_values = storage.getInitialVmValues();
     if (!initial_values.valid_state) {
@@ -194,19 +195,19 @@ bool MachineState::restoreCheckpoint(
         auto state_data = results.data;
 
         auto register_results =
-            stateFetcher.getValue(state_data.register_val_key);
+            getValue(*transaction, state_data.register_val_key, pool.get());
         registerVal = register_results.data;
 
         pc = CodePointRef(state_data.pc);
         errpc = CodePointRef(state_data.err_pc);
 
-        if (!stack.initializeDataStack(stateFetcher,
-                                       state_data.datastack_key)) {
+        if (!stack.initializeDataStack(*transaction, state_data.datastack_key,
+                                       pool.get())) {
             return false;
         }
 
-        if (!auxstack.initializeDataStack(stateFetcher,
-                                          state_data.auxstack_key)) {
+        if (!auxstack.initializeDataStack(*transaction, state_data.auxstack_key,
+                                          pool.get())) {
             return false;
         }
 

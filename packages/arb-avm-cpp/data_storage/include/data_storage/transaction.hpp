@@ -43,7 +43,6 @@ class Transaction {
 
    public:
     Transaction(std::unique_ptr<rocksdb::Transaction> transaction_);
-    ~Transaction();
     SaveResults incrementReference(const rocksdb::Slice& hash_key);
     SaveResults saveData(const rocksdb::Slice& hash_key,
                          const std::vector<unsigned char>& value);

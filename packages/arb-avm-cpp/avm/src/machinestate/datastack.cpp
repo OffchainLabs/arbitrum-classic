@@ -79,10 +79,10 @@ SaveResults Datastack::checkpointState(Transaction& transaction,
     return saveValue(transaction, tuple);
 }
 
-bool Datastack::initializeDataStack(
-    const MachineStateFetcher& fetcher,
-    const std::vector<unsigned char>& hash_key) {
-    auto results = fetcher.getValue(hash_key);
+bool Datastack::initializeDataStack(const Transaction& transaction,
+                                    const std::vector<unsigned char>& hash_key,
+                                    TuplePool* pool) {
+    auto results = getValue(transaction, hash_key, pool);
     if (!nonstd::holds_alternative<Tuple>(results.data)) {
         return false;
     }
