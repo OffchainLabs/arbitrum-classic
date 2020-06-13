@@ -22,7 +22,7 @@
 
 #include <vector>
 
-class MachineStateSaver;
+class Transaction;
 class MachineStateFetcher;
 struct SaveResults;
 
@@ -101,7 +101,7 @@ class Datastack {
 
     uint256_t getTotalValueSize() const;
 
-    SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
+    SaveResults checkpointState(Transaction& transaction, TuplePool* pool);
 
     bool initializeDataStack(const MachineStateFetcher& fetcher,
                              const std::vector<unsigned char>& hash_key);

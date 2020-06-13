@@ -17,31 +17,15 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
 struct MachineStateKeys;
-
 class Transaction;
 struct SaveResults;
 
-namespace rocksdb {
-class Status;
-}
-
-class MachineStateSaver {
-   private:
-    std::unique_ptr<Transaction> transaction;
-
-   public:
-    MachineStateSaver(std::unique_ptr<Transaction> transaction_);
-    SaveResults saveTuple(const Tuple& val);
-    SaveResults saveValue(const value& val);
-    SaveResults saveMachineState(
-        const MachineStateKeys& state_data,
-        const std::vector<unsigned char>& checkpoint_name);
-    rocksdb::Status commitTransaction();
-    rocksdb::Status rollBackTransaction();
-};
+SaveResults saveValue(Transaction& transaction, const value& val);
+SaveResults saveMachineState(Transaction& transaction,
+                             const MachineStateKeys& state_data,
+                             const std::vector<unsigned char>& checkpoint_name);
 
 #endif /* machinestatesaver_hpp */

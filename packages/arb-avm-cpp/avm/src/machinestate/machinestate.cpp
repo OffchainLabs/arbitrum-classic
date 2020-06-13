@@ -141,14 +141,14 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 }
 
 SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(storage.makeTransaction());
+    auto transaction = storage.makeTransaction();
 
-    auto datastack_results = stack.checkpointState(stateSaver, pool.get());
-    auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
+    auto datastack_results = stack.checkpointState(*transaction, pool.get());
+    auto auxstack_results = auxstack.checkpointState(*transaction, pool.get());
 
-    auto register_val_results = stateSaver.saveValue(registerVal);
-    auto err_code_point = stateSaver.saveValue(errpc);
-    auto pc_results = stateSaver.saveValue(code[pc]);
+    auto register_val_results = saveValue(*transaction, registerVal);
+    auto err_code_point = saveValue(*transaction, errpc);
+    auto pc_results = saveValue(*transaction, code[pc]);
 
     auto status_str = static_cast<unsigned char>(state);
 
@@ -164,8 +164,8 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
             err_code_point.storage_key,       status_str};
 
         auto results =
-            stateSaver.saveMachineState(machine_state_data, hash_key);
-        results.status = stateSaver.commitTransaction();
+            saveMachineState(*transaction, machine_state_data, hash_key);
+        results.status = transaction->commit();
         return results;
     } else {
         return SaveResults{0, rocksdb::Status().Aborted(), hash_key};

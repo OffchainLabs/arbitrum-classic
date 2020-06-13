@@ -123,19 +123,18 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
 
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto valueSaver = MachineStateSaver(storage->makeTransaction());
+    auto transaction = storage->makeTransaction();
 
     auto data_ptr = reinterpret_cast<const char*>(value_data);
 
     TuplePool pool;
     auto val = deserialize_value(data_ptr, pool);
-    auto results = valueSaver.saveValue(val);
+    auto results = saveValue(*transaction, val);
 
     if (!results.status.ok()) {
         return false;
     }
-
-    return valueSaver.commitTransaction().ok();
+    return transaction->commit().ok();
 }
 
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
