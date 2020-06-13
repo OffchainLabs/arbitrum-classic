@@ -194,11 +194,18 @@ bool MachineState::restoreCheckpoint(
             stateFetcher.getValue(state_data.register_val_key);
         registerVal = register_results.data;
 
-        auto pc_results = stateFetcher.getCodePoint(state_data.pc_key);
-        pc = pc_results.data.pc;
+        auto pc_results = stateFetcher.getValue(state_data.pc_key);
+        if (!nonstd::holds_alternative<CodePoint>(pc_results.data)) {
+            return false;
+        }
+        pc = nonstd::get<CodePoint>(pc_results.data).pc;
 
-        auto err_pc_results = stateFetcher.getCodePoint(state_data.err_pc_key);
-        errpc = err_pc_results.data;
+        auto err_pc_results = stateFetcher.getValue(state_data.err_pc_key);
+        if (!nonstd::holds_alternative<CodePoint>(err_pc_results.data)) {
+            return false;
+        }
+
+        errpc = nonstd::get<CodePoint>(err_pc_results.data);
 
         if (!stack.initializeDataStack(stateFetcher,
                                        state_data.datastack_key)) {

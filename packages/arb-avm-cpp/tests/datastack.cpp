@@ -87,11 +87,13 @@ void saveAndGetDataStack(MachineStateSaver& saver,
     data_stack.checkpointState(saver, &pool);
     saver.commitTransaction();
 
-    auto get_results = fetcher.getTuple(hash_key);
+    auto get_results = fetcher.getValue(hash_key);
 
+    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 1);
-    REQUIRE(get_results.data.calculateHash() == expected_hash);
+    REQUIRE(nonstd::get<Tuple>(get_results.data).calculateHash() ==
+            expected_hash);
 }
 
 void saveTwiceAndGetDataStack(MachineStateSaver& saver,
@@ -105,11 +107,13 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
     data_stack.checkpointState(saver, &pool);
     saver.commitTransaction();
 
-    auto get_results = fetcher.getTuple(hash_key);
+    auto get_results = fetcher.getValue(hash_key);
 
+    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 2);
-    REQUIRE(get_results.data.calculateHash() == expected_hash);
+    REQUIRE(nonstd::get<Tuple>(get_results.data).calculateHash() ==
+            expected_hash);
 }
 
 TEST_CASE("Initialize datastack") {

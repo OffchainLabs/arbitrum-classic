@@ -40,32 +40,6 @@ DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
                                       parsed_state};
 }
 
-DbResult<CodePoint> MachineStateFetcher::getCodePoint(
-    const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage.getValue(hash_key);
-
-    if (!results.status.ok()) {
-        return DbResult<CodePoint>{results.status, results.reference_count,
-                                   CodePoint()};
-    }
-
-    auto code_point = checkpoint::utils::deserializeCodepoint(
-        results.stored_value, checkpoint_storage.getInitialVmValues().code);
-    return DbResult<CodePoint>{results.status, results.reference_count,
-                               code_point};
-}
-
-DbResult<uint256_t> MachineStateFetcher::getUint256_t(
-    const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage.getValue(hash_key);
-
-    if (!results.status.ok()) {
-        return DbResult<uint256_t>{results.status, results.reference_count, 0};
-    }
-    auto num = checkpoint::utils::deserializeUint256_t(results.stored_value);
-    return DbResult<uint256_t>{results.status, results.reference_count, num};
-}
-
 DbResult<Tuple> MachineStateFetcher::getTuple(
     const std::vector<unsigned char>& hash_key) const {
     std::vector<value> values;

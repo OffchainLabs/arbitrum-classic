@@ -81,8 +81,11 @@ SaveResults Datastack::checkpointState(MachineStateSaver& saver,
 bool Datastack::initializeDataStack(
     const MachineStateFetcher& fetcher,
     const std::vector<unsigned char>& hash_key) {
-    auto results = fetcher.getTuple(hash_key);
-    initializeDataStack(results.data);
+    auto results = fetcher.getValue(hash_key);
+    if (!nonstd::holds_alternative<Tuple>(results.data)) {
+        return false;
+    }
+    initializeDataStack(nonstd::get<Tuple>(results.data));
     return results.status.ok();
 }
 

@@ -70,21 +70,28 @@ void getTuple(MachineStateFetcher& fetcher,
               uint256_t& expected_hash,
               int expected_tuple_size,
               bool expected_status) {
-    auto results = fetcher.getTuple(hash_key);
+    auto results = fetcher.getValue(hash_key);
+
+    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+
+    auto tuple = nonstd::get<Tuple>(results.data);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(results.data.calculateHash() == expected_hash);
-    REQUIRE(results.data.tuple_size() == expected_tuple_size);
+    REQUIRE(tuple.calculateHash() == expected_hash);
+    REQUIRE(tuple.tuple_size() == expected_tuple_size);
     REQUIRE(results.status.ok() == expected_status);
 }
 
 void getTupleValues(MachineStateFetcher& fetcher,
                     std::vector<unsigned char>& hash_key,
                     std::vector<uint256_t> value_hashes) {
-    auto results = fetcher.getTuple(hash_key);
-    REQUIRE(results.data.tuple_size() == value_hashes.size());
+    auto results = fetcher.getValue(hash_key);
+    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+
+    auto tuple = nonstd::get<Tuple>(results.data);
+    REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
-        REQUIRE(hash(results.data.get_element(i)) == value_hashes[i]);
+        REQUIRE(hash(tuple.get_element(i)) == value_hashes[i]);
     }
 }
 
