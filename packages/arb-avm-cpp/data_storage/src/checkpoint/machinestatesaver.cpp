@@ -16,13 +16,10 @@
 
 #include <data_storage/checkpoint/machinestatesaver.hpp>
 
-#include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
-
-#include <variant>
 
 namespace {
 rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {

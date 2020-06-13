@@ -16,9 +16,7 @@
 
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 
-#include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
@@ -28,39 +26,46 @@ rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
     return {reinterpret_cast<const char*>(vec.data()), vec.size()};
 }
 
-DbResult<Tuple> getTuple(const Transaction& transaction,
-                         const std::vector<unsigned char>& hash_key,
-                         TuplePool* pool) {
-    auto key = vecToSlice(hash_key);
-    std::vector<value> values;
+DbResult<value> getTuple(const Transaction& transaction,
+                         const GetResults& results,
+                         TuplePool* pool);
 
+DbResult<value> getTuple(const Transaction& transaction,
+                         const rocksdb::Slice& key,
+                         TuplePool* pool) {
     auto results = transaction.getData(key);
 
     if (!results.status.ok()) {
-        return DbResult<Tuple>{results.status, results.reference_count,
+        return DbResult<value>{results.status, results.reference_count,
                                Tuple()};
     }
+    return getTuple(transaction, results, pool);
+}
 
+DbResult<value> getTuple(const Transaction& transaction,
+                         const GetResults& results,
+                         TuplePool* pool) {
     auto value_vectors = checkpoint::utils::parseTuple(results.stored_value);
 
     if (value_vectors.empty()) {
-        return DbResult<Tuple>{results.status, results.reference_count,
+        return DbResult<value>{results.status, results.reference_count,
                                Tuple()};
     }
 
+    std::vector<value> values;
     for (auto& current_vector : value_vectors) {
-        auto value_type = static_cast<ValueTypes>(current_vector[0]);
+        auto buf = reinterpret_cast<const char*>(current_vector.data());
+        auto value_type = static_cast<ValueTypes>(*buf);
+        ++buf;
 
         switch (value_type) {
             case NUM: {
-                auto num =
-                    checkpoint::utils::deserializeUint256_t(current_vector);
-                values.push_back(num);
+                values.push_back(deserializeUint256t(buf));
                 break;
             }
             case CODEPT: {
                 auto code_point =
-                    checkpoint::utils::deserializeCodePointStub(current_vector);
+                    checkpoint::utils::deserializeCodePointStub(buf);
                 values.push_back(code_point);
                 break;
             }
@@ -74,15 +79,15 @@ DbResult<Tuple> getTuple(const Transaction& transaction,
                         "tried to get value inside tuple with invalid "
                         "typecode");
                 }
-                current_vector.erase(current_vector.begin());
-                auto tuple = getTuple(transaction, current_vector, pool).data;
+                rocksdb::Slice tupKey(buf, 32);
+                auto tuple = getTuple(transaction, tupKey, pool).data;
                 values.push_back(tuple);
                 break;
             }
         }
     }
     auto tuple = Tuple(values, pool);
-    return DbResult<Tuple>{results.status, results.reference_count, tuple};
+    return DbResult<value>{results.status, results.reference_count, tuple};
 }
 }  // namespace
 
@@ -93,24 +98,22 @@ DbResult<value> getValue(const Transaction& transaction,
     auto results = transaction.getData(key);
 
     if (!results.status.ok()) {
-        auto error_res = DbResult<value>();
-        error_res.status = results.status;
-        error_res.reference_count = results.reference_count;
-        return error_res;
+        return DbResult<value>{results.status, results.reference_count,
+                               Tuple()};
     }
 
-    auto value_type = static_cast<ValueTypes>(results.stored_value[0]);
+    auto buf = reinterpret_cast<const char*>(results.stored_value.data());
+    auto value_type = static_cast<ValueTypes>(*buf);
+    ++buf;
 
     switch (value_type) {
         case NUM: {
-            auto val =
-                checkpoint::utils::deserializeUint256_t(results.stored_value);
+            auto val = deserializeUint256t(buf);
             return DbResult<value>{results.status, results.reference_count,
                                    val};
         }
         case CODEPT: {
-            auto code_point = checkpoint::utils::deserializeCodePointStub(
-                results.stored_value);
+            auto code_point = checkpoint::utils::deserializeCodePointStub(buf);
             return DbResult<value>{results.status, results.reference_count,
                                    code_point};
         }
@@ -122,9 +125,7 @@ DbResult<value> getValue(const Transaction& transaction,
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            auto tuple_res = getTuple(transaction, hash_key, pool);
-            return DbResult<value>{tuple_res.status, tuple_res.reference_count,
-                                   tuple_res.data};
+            return getTuple(transaction, results, pool);
         }
     }
 }

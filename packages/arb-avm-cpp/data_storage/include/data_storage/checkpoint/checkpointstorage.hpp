@@ -17,12 +17,12 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
+#include <avm_values/vmValueParser.hpp>
+#include <data_storage/datastorage.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <avm_values/vmValueParser.hpp>
-#include <data_storage/datastorage.hpp>
 
 struct GetResults;
 

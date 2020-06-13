@@ -34,7 +34,7 @@ extern std::unordered_map<int, int> blockreason_type_length;
 namespace checkpoint {
 namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);
-CodePointStub deserializeCodePointStub(const std::vector<unsigned char>& val);
+CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
 std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data);

@@ -151,11 +151,9 @@ std::vector<std::vector<unsigned char>> parseTuple(
     return return_vector;
 }
 
-CodePointStub deserializeCodePointStub(const std::vector<unsigned char>& val) {
-    auto buff = reinterpret_cast<const char*>(&val[1]);
-
-    auto pc_val = deserialize_uint64(buff);
-    auto hash_val = deserializeUint256t(buff);
+CodePointStub deserializeCodePointStub(const char*& bufptr) {
+    auto pc_val = deserialize_uint64(bufptr);
+    auto hash_val = deserializeUint256t(bufptr);
     return {pc_val, hash_val};
 }
 
