@@ -27,7 +27,7 @@
 constexpr int UINT64_SIZE = 8;
 constexpr int HASH_KEY_LENGTH = 33;
 constexpr int TUP_TUPLE_LENGTH = 34;
-constexpr int TUP_NUM_LENGTH = 34;
+constexpr int TUP_NUM_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 9;
 
 std::unordered_map<int, int> blockreason_type_length = {{0, 1},
@@ -57,9 +57,7 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 struct ValueSerializer {
     std::vector<unsigned char> operator()(const Tuple& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(TUPLE);
-        value_vector.push_back(type_code);
-
+        value_vector.push_back(TUPLE);
         auto hash_key = hash(val);
         value_vector.push_back(NUM);
         marshal_uint256_t(hash_key, value_vector);
@@ -69,9 +67,6 @@ struct ValueSerializer {
 
     std::vector<unsigned char> operator()(const uint256_t& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(NUM);
-        value_vector.push_back(type_code);
-
         value_vector.push_back(NUM);
         marshal_uint256_t(val, value_vector);
 
@@ -166,7 +161,7 @@ CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
 }
 
 uint256_t deserializeUint256_t(const std::vector<unsigned char>& val) {
-    auto buff = reinterpret_cast<const char*>(&val[2]);
+    auto buff = reinterpret_cast<const char*>(&val[1]);
     return deserializeUint256t(buff);
 }
 
