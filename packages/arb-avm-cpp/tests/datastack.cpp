@@ -19,7 +19,6 @@
 
 #include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/transaction.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machinestate/datastack.hpp>

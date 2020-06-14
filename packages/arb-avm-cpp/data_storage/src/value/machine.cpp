@@ -16,9 +16,11 @@
 
 #include <data_storage/value/machine.hpp>
 
+#include "referencecount.hpp"
+#include "utils.hpp"
+
+#include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/checkpointutils.hpp>
-#include <data_storage/value/transaction.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
@@ -78,13 +80,13 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = transaction.getData(key);
+    auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
         return DeleteResults{0, results.status};
     }
 
-    auto delete_results = transaction.deleteData(key);
+    auto delete_results = deleteRefCountedData(*transaction.transaction, key);
 
     if (delete_results.reference_count < 1) {
         auto parsed_state = extractStateKeys(results.stored_value);
@@ -110,7 +112,7 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machineHash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = transaction.getData(key);
+    auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
         return DbResult<MachineStateKeys>{
@@ -127,10 +129,11 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
 
-    auto currentResult = transaction.getData(key);
+    auto currentResult = getRefCountedData(*transaction.transaction, key);
     if (currentResult.status.ok()) {
         // Already saved so just increment refence count
-        return transaction.saveData(key, currentResult.stored_value);
+        return saveRefCountedData(*transaction.transaction, key,
+                                  currentResult.stored_value);
     }
 
     auto& machinestate = machine.machine_state;
@@ -156,5 +159,5 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
                          err_pc_stub,
                          machinestate.state};
     auto serialized_state = serializeStateKeys(machine_state_data);
-    return transaction.saveData(key, serialized_state);
+    return saveRefCountedData(*transaction.transaction, key, serialized_state);
 }

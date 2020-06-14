@@ -19,7 +19,6 @@
 #include <data_storage/blockstore.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/checkpointutils.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -54,12 +53,18 @@ InitialVmValues CheckpointStorage::getInitialVmValues() const {
 }
 
 std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
-    return datastorage->makeTransaction();
+    rocksdb::WriteOptions writeOptions;
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        datastorage->txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<Transaction>(datastorage, std::move(transaction));
 }
 
 std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
     const {
-    return datastorage->makeTransaction();
+    rocksdb::WriteOptions writeOptions;
+    auto transaction = std::unique_ptr<rocksdb::Transaction>(
+        datastorage->txn_db->BeginTransaction(writeOptions));
+    return std::make_unique<Transaction>(datastorage, std::move(transaction));
 }
 
 std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {

@@ -130,7 +130,7 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     auto transaction = storage->makeTransaction();
     auto result = deleteValue(*transaction, hash);
     if (!result.status.ok()) {
-        transaction->rollBack();
+        transaction->rollback();
         return false;
     }
     return transaction->commit().ok();

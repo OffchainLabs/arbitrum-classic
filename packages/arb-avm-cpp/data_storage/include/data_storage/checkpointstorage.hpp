@@ -26,6 +26,8 @@
 
 struct GetResults;
 class Machine;
+class BlockStore;
+class ConfirmedNodeStore;
 
 namespace rocksdb {
 class TransactionDB;

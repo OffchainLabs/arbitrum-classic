@@ -16,7 +16,7 @@
 
 #include <iterator>
 
-#include <data_storage/value/checkpointutils.hpp>
+#include "utils.hpp"
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>

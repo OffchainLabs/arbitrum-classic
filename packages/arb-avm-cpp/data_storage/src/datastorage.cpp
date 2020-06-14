@@ -69,10 +69,3 @@ rocksdb::Status DataStorage::closeDb() {
     txn_db.reset();
     return s;
 }
-
-std::unique_ptr<Transaction> DataStorage::makeTransaction() {
-    rocksdb::WriteOptions writeOptions;
-    auto transaction = std::unique_ptr<rocksdb::Transaction>(
-        txn_db->BeginTransaction(writeOptions));
-    return std::make_unique<Transaction>(std::move(transaction));
-}

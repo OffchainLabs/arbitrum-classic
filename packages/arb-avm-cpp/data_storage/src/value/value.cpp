@@ -16,9 +16,11 @@
 
 #include <data_storage/value/value.hpp>
 
+#include "referencecount.hpp"
+#include "utils.hpp"
+
+#include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/checkpointutils.hpp>
-#include <data_storage/value/transaction.hpp>
 
 #include <avm_values/tuple.hpp>
 
@@ -133,7 +135,7 @@ DbResult<value> getTuple(const Transaction& transaction,
 DbResult<value> getTuple(const Transaction& transaction,
                          const rocksdb::Slice& key,
                          TuplePool* pool) {
-    auto results = transaction.getData(key);
+    auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
         return DbResult<value>{results.status, results.reference_count,
@@ -192,12 +194,12 @@ DbResult<value> getTuple(const Transaction& transaction,
 SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
     auto hash_key = getHashKey(val);
     auto key = vecToSlice(hash_key);
-    auto results = transaction.getData(key);
+    auto results = getRefCountedData(*transaction.transaction, key);
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
     if (incr_ref_count) {
-        return transaction.incrementReference(key);
+        return incrementReference(*transaction.transaction, key);
     } else {
         std::vector<unsigned char> value_vector;
         value_vector.push_back(TUPLE + val.tuple_size());
@@ -214,7 +216,7 @@ SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
                 auto tuple_save_results = saveTuple(transaction, tup_val);
             }
         }
-        return transaction.saveData(key, value_vector);
+        return saveRefCountedData(*transaction.transaction, key, value_vector);
     }
 }
 
@@ -240,18 +242,18 @@ DeleteResults deleteTuple(Transaction& transaction,
             }
         }
     }
-    return transaction.deleteData(hash_key);
+    return deleteRefCountedData(*transaction.transaction, hash_key);
 }
 
 DeleteResults deleteTuple(Transaction& transaction,
                           const rocksdb::Slice& hash_key) {
-    auto results = transaction.getData(hash_key);
+    auto results = getRefCountedData(*transaction.transaction, hash_key);
     return deleteTuple(transaction, hash_key, results);
 }
 
 DeleteResults deleteValue(Transaction& transaction,
                           const rocksdb::Slice& hash_key) {
-    auto results = transaction.getData(hash_key);
+    auto results = getRefCountedData(*transaction.transaction, hash_key);
 
     if (!results.status.ok()) {
         return DeleteResults{0, results.status};
@@ -262,7 +264,7 @@ DeleteResults deleteValue(Transaction& transaction,
     if (type == TUPLE) {
         return deleteTuple(transaction, hash_key, results);
     } else {
-        return transaction.deleteData(hash_key);
+        return deleteRefCountedData(*transaction.transaction, hash_key);
     }
 }
 }  // namespace
@@ -273,7 +275,7 @@ DbResult<value> getValue(const Transaction& transaction,
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
-    auto results = transaction.getData(key);
+    auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
         return DbResult<value>{results.status, results.reference_count,
@@ -316,7 +318,8 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
         auto serialized_value = nonstd::visit(ValueSerializer{}, val);
         auto hash_key = getHashKey(val);
         auto key = vecToSlice(hash_key);
-        return transaction.saveData(key, serialized_value);
+        return saveRefCountedData(*transaction.transaction, key,
+                                  serialized_value);
     }
 }
 

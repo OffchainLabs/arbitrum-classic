@@ -23,13 +23,11 @@
 
 #include <data_storage/keyvaluestore.hpp>
 #include <data_storage/storageresultfwd.hpp>
-#include <data_storage/value/transaction.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-class BlockStore;
-class ConfirmedNodeStore;
+class Transaction;
 
 class DataStorage {
    public:
@@ -41,7 +39,21 @@ class DataStorage {
 
     DataStorage(const std::string& db_path);
     rocksdb::Status closeDb();
-    std::unique_ptr<Transaction> makeTransaction();
+};
+
+class Transaction {
+   public:
+    std::shared_ptr<DataStorage> datastorage;
+    std::unique_ptr<rocksdb::Transaction> transaction;
+
+    Transaction(std::shared_ptr<DataStorage> datastorage_,
+                std::unique_ptr<rocksdb::Transaction> transaction_)
+        : datastorage(std::move(datastorage_)),
+          transaction(std::move(transaction_)) {}
+
+    rocksdb::Status commit() { return transaction->Commit(); }
+
+    rocksdb::Status rollback() { return transaction->Rollback(); }
 };
 
 #endif /* datastorage_hpp */

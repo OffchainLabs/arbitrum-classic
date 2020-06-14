@@ -19,7 +19,6 @@
 
 #include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/checkpointutils.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -30,8 +29,6 @@
 #include <catch2/catch.hpp>
 
 #include <boost/filesystem.hpp>
-
-using namespace checkpoint::utils;
 
 void saveValue(Transaction& transaction,
                const value& val,

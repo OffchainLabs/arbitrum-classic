@@ -21,16 +21,18 @@ project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/data_storage/blockstore.hpp
-  include/data_storage/valuestorage.hpp
   include/data_storage/confirmednodestore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
-  include/data_storage/value/checkpointutils.hpp
   include/data_storage/value/machine.hpp
-  include/data_storage/value/transaction.hpp
   include/data_storage/value/value.hpp
+)
+
+set(LIB_PRIVATE_HEADERS
+  src/value/referencecount.hpp
+  src/value/utils.hpp
 )
 
 set(LIB_SOURCES
@@ -39,13 +41,13 @@ set(LIB_SOURCES
   src/checkpointstorage.cpp
   src/confirmednodestore.cpp
   src/keyvaluestore.cpp
-  src/value/checkpointutils.cpp
+  src/value/utils.cpp
   src/value/machine.cpp
-  src/value/transaction.cpp
+  src/value/referencecount.cpp
   src/value/value.cpp
 )
 
-add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
 
 set_target_properties(
     data_storage
@@ -71,9 +73,9 @@ target_link_libraries(data_storage PUBLIC avm avm_values CONAN_PKG::variant-lite
 target_code_coverage(data_storage AUTO ALL)
 
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    source_group(data_storage FILES ${LIB_HEADERS} ${LIB_SOURCES})
+    source_group(data_storage FILES ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})
 else()
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/data_storage" FILES ${LIB_HEADERS})
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES} ${LIB_PRIVATE_HEADERS})
 endif()
 
