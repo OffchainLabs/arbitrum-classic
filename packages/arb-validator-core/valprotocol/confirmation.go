@@ -17,6 +17,7 @@
 package valprotocol
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -26,6 +27,15 @@ type ConfirmValidOpportunity struct {
 	Messages         []value.Value
 	LogsAcc          common.Hash
 	VMProtoStateHash common.Hash
+}
+
+func (opp ConfirmValidOpportunity) MarshalMsgsForConfirmation() []byte {
+	var messageData bytes.Buffer
+	for _, msg := range opp.Messages {
+		_ = value.MarshalValue(msg, &messageData)
+	}
+
+	return messageData.Bytes()
 }
 
 func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {

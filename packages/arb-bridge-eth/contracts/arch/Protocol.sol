@@ -22,24 +22,6 @@ import "./Value.sol";
 library Protocol {
     using Value for Value.Data;
 
-    function generateMessageStubHash(
-        Value.Data memory _dataHashValue,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _destination
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        Value.Data[] memory values = new Value.Data[](4);
-        values[0] = _dataHashValue;
-        values[1] = Value.newInt(uint256(_destination));
-        values[2] = Value.newInt(_value);
-        values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-        return Value.newTuple(values).hash();
-    }
-
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint128[4] memory _timeBounds,
@@ -87,7 +69,11 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32, uint) {
+    function generateLastMessageHash(
+        bytes memory messages, 
+        uint256 startOffset, 
+        uint256 length
+    ) internal pure returns (bytes32, uint) {
         bool valid;
         bytes32 hashVal = 0x00;
         bytes32 msgHash;

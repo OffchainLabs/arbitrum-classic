@@ -138,7 +138,7 @@ library Value {
         return hashes;
     }
 
-    function hashTuplePreImage(Data memory preImage) private pure returns (bytes32) {
+    function hashTuplePreImage(Data memory preImage) internal pure returns (bytes32) {
         require(preImage.typeCode == HASH_PRE_IMAGE_TYPECODE, "Must be PreImageHsh");
         return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
     }

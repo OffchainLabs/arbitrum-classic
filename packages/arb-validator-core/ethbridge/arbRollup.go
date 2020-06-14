@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
@@ -245,8 +243,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	vmProtoStateHashes := make([]common.Hash, 0)
 
 	messagesLengths := make([]*big.Int, 0)
-	var messageData bytes.Buffer
-	prevLen := 0
+	var messages []byte
 
 	for _, opp := range nodeOpps {
 		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
@@ -257,17 +254,14 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			logsAcc = append(logsAcc, opp.LogsAcc)
 			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
 
-			for _, msg := range opp.Messages {
-				_ = value.MarshalValue(msg, &messageData)
-			}
-			messagesLengths = append(messagesLengths, big.NewInt(int64(messageData.Len()-prevLen)))
-			prevLen = messageData.Len()
+			msgBytes := opp.MarshalMsgsForConfirmation()
+			messages = append(messages, msgBytes...)
+
+			messagesLengths = append(messagesLengths, big.NewInt(int64(len(msgBytes))))
 		case valprotocol.ConfirmInvalidOpportunity:
 			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
 		}
 	}
-
-	messages := messageData.Bytes()
 
 	combinedProofs := make([]common.Hash, 0)
 	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))

@@ -57,17 +57,17 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 
 func (m *Machine) Hash() common.Hash {
 	h1 := m.cppmachine.Hash()
-	//h2 := m.gomachine.Hash()
-	//if h1 != h2 {
-	//	log.Fatalln("Hash error at pc", m.gomachine.GetPC())
-	//}
+	h2 := m.gomachine.Hash()
+	if h1 != h2 {
+		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
+	}
 	return h1
 }
 
 func (m *Machine) PrintState() {
 	log.Println("Cpp state")
 	m.cppmachine.PrintState()
-	//log.Println("Go state")
+	log.Println("Go state")
 	//m.gomachine.PrintState()
 }
 
@@ -123,8 +123,8 @@ func (m *Machine) ExecuteAssertion(
 			steps = maxSteps - i
 		}
 
-		fmt.Println(m.gomachine.GetPC())
-		m.gomachine.PrintState()
+		//fmt.Println(m.gomachine.GetPC())
+		//m.gomachine.PrintState()
 		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
