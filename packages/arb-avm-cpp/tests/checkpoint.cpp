@@ -362,7 +362,10 @@ Machine getComplexMachine() {
     CodePointStub pc(0, 645357);
     CodePointStub err_pc(0, 968769876);
     Status state = Status::Extensive;
-    return Machine(MachineState(pool, code, static_val, register_val,
+
+    auto static_values = std::make_shared<StaticVmValues>(
+        std::move(code), std::move(static_val));
+    return Machine(MachineState(pool, std::move(static_values), register_val,
                                 data_stack, aux_stack, state, pc, err_pc));
 }
 
@@ -376,7 +379,9 @@ Machine getDefaultMachine() {
     CodePointStub pc(0, false);
     CodePointStub err_pc(0, true);
     Status state = Status::Extensive;
-    return Machine(MachineState(pool, code, static_val, register_val,
+    auto static_values = std::make_shared<StaticVmValues>(
+        std::move(code), std::move(static_val));
+    return Machine(MachineState(pool, std::move(static_values), register_val,
                                 data_stack, aux_stack, state, pc, err_pc));
 }
 

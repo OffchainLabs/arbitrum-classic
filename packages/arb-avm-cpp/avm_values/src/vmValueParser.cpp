@@ -30,19 +30,19 @@ std::vector<char> getContractData(const std::string& contract_filename) {
             std::istreambuf_iterator<char>()};
 }
 
-std::pair<InitialVmValues, bool> parseInitialVmValues(
+std::pair<StaticVmValues, bool> parseStaticVmValues(
     const std::string& contract_filename,
     TuplePool& pool) {
-    auto parseError = [&]() -> std::pair<InitialVmValues, bool> {
+    auto parseError = [&]() -> std::pair<StaticVmValues, bool> {
         std::cerr << "Failed to parse file " << contract_filename << std::endl;
-        return std::make_pair(InitialVmValues{}, false);
+        return std::make_pair(StaticVmValues{}, false);
     };
 
     auto contract_data = getContractData(contract_filename);
 
     if (contract_data.size() < 32) {
         std::cerr << "Failed to open path: " << contract_filename << std::endl;
-        return std::make_pair(InitialVmValues{}, false);
+        return std::make_pair(StaticVmValues{}, false);
     }
 
     size_t offset = 0;
@@ -60,7 +60,7 @@ std::pair<InitialVmValues, bool> parseInitialVmValues(
         std::cerr << "incorrect version of .ao file" << std::endl;
         std::cerr << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
-        return std::make_pair(InitialVmValues{}, false);
+        return std::make_pair(StaticVmValues{}, false);
     }
     uint32_t extentionId = 1;
     while (extentionId != 0) {
@@ -112,6 +112,6 @@ std::pair<InitialVmValues, bool> parseInitialVmValues(
     }
     auto staticVal = deserialize_value(bufptr, pool);
 
-    return std::make_pair(
-        InitialVmValues{Code{opsToCodePoints(ops)}, staticVal}, true);
+    return std::make_pair(StaticVmValues{Code{opsToCodePoints(ops)}, staticVal},
+                          true);
 }

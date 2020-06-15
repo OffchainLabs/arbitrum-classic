@@ -66,8 +66,7 @@ CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto state = storage->getInitialVmValues();
-    auto machine = new Machine(state.code, state.staticVal, storage->pool);
+    auto machine = new Machine(storage->getInitialMachine());
     return static_cast<void*>(machine);
 }
 
@@ -116,11 +115,8 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto transaction = storage->makeConstTransaction();
     auto hash = receiveUint256(hash_key);
-    auto code = storage->getInitialVmValues().code;
-    return returnValueResult(getValue(*transaction, hash, storage->pool.get()),
-                             code);
+    return returnValueResult(storage->getValue(hash), storage->getCode());
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {

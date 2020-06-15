@@ -21,6 +21,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm_values/value.hpp>
+#include <avm_values/vmValueParser.hpp>
 
 #include <memory>
 #include <vector>
@@ -58,8 +59,7 @@ struct AssertionContext {
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
-    Code code;
-    value staticVal;
+    std::shared_ptr<const StaticVmValues> static_values;
     value registerVal;
     Datastack stack;
     Datastack auxstack;
@@ -74,18 +74,15 @@ struct MachineState {
     MachineState()
         : pool(std::make_unique<TuplePool>()), pc(0, false), errpc(0, true) {}
 
-    MachineState(const Code& code_,
-                 const value& static_val_,
+    MachineState(std::shared_ptr<const StaticVmValues> static_values_,
                  std::shared_ptr<TuplePool> pool_)
         : pool(std::move(pool_)),
-          code(code_),
-          staticVal(static_val_),
+          static_values(std::move(static_values_)),
           pc(0, false),
           errpc(0, true) {}
 
     MachineState(std::shared_ptr<TuplePool> pool_,
-                 const Code& code_,
-                 value static_val_,
+                 std::shared_ptr<const StaticVmValues> static_values_,
                  value register_val_,
                  Datastack stack_,
                  Datastack auxstack_,
@@ -93,8 +90,7 @@ struct MachineState {
                  CodePointRef pc_,
                  CodePointRef errpc_)
         : pool(std::move(pool_)),
-          code(code_),
-          staticVal(std::move(static_val_)),
+          static_values(std::move(static_values_)),
           registerVal(std::move(register_val_)),
           stack(std::move(stack_)),
           auxstack(std::move(auxstack_)),

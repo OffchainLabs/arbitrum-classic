@@ -36,22 +36,23 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::shared_ptr<DataStorage> datastorage;
-    InitialVmValues initial_state;
+    std::shared_ptr<const StaticVmValues> initial_state;
 
    public:
-    const Code& getCode() const { return initial_state.code; }
     std::shared_ptr<TuplePool> pool;
     CheckpointStorage(const std::string& db_path,
                       const std::string& contract_path);
     bool closeCheckpointStorage();
-    InitialVmValues getInitialVmValues() const;
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
 
+    const Code& getCode() const { return initial_state->code; }
+    Machine getInitialMachine() const;
     std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
+    DbResult<value> getValue(uint256_t value_hash) const;
 };
 
 #endif /* checkpointstorage_hpp */

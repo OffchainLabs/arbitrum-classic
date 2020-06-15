@@ -144,8 +144,10 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     auto datastack_results = saveValue(transaction, datastack_tup);
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
     auto auxstack_results = saveValue(transaction, auxstack_tup);
-    auto err_pc_stub = CodePointStub{machinestate.code[machinestate.errpc]};
-    auto pc_stub = CodePointStub{machinestate.code[machinestate.pc]};
+    auto err_pc_stub =
+        CodePointStub{machinestate.static_values->code[machinestate.errpc]};
+    auto pc_stub =
+        CodePointStub{machinestate.static_values->code[machinestate.pc]};
 
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok()) {

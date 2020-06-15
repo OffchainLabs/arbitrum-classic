@@ -83,9 +83,7 @@ TEST_CASE("Checkpoint State") {
         auto ret = Machine::loadFromFile(test_contract_path);
         REQUIRE(ret.second);
         auto machine = std::move(ret.first);
-        auto initial_machine = storage.getInitialVmValues();
-        Machine machine2(initial_machine.code, initial_machine.staticVal,
-                         storage.pool);
+        Machine machine2 = storage.getInitialMachine();
         auto hash1 = machine.hash();
         auto hash2 = machine2.hash();
         auto transaction = storage.makeTransaction();
@@ -129,5 +127,36 @@ TEST_CASE("Restore checkpoint") {
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         restoreCheckpoint(storage, ret.first);
+    }
+}
+
+TEST_CASE("Proof") {
+    auto ret = Machine::loadFromFile(test_contract_path);
+    REQUIRE(ret.second);
+    while (true) {
+        auto assertion = ret.first.run(1, {}, {}, std::chrono::seconds{0});
+        ret.first.marshalForProof();
+        if (assertion.stepCount == 0) {
+            break;
+        }
+    }
+}
+
+TEST_CASE("Clone") {
+    auto ret = Machine::loadFromFile(test_contract_path);
+    REQUIRE(ret.second);
+    auto machine = std::move(ret.first);
+    for (int i = 0; i < 100; i++) {
+        machine.machine_state.stack.push(Tuple(uint256_t{3}, uint256_t{6},
+                                               uint256_t{7}, uint256_t{2},
+                                               &machine.getPool()));
+        machine.machine_state.auxstack.push(Tuple(uint256_t{3}, uint256_t{6},
+                                                  uint256_t{7}, uint256_t{2},
+                                                  &machine.getPool()));
+    }
+
+    for (int i = 0; i < 1000; i++) {
+        Machine m = machine;
+        REQUIRE(m.hash() != 3242);
     }
 }

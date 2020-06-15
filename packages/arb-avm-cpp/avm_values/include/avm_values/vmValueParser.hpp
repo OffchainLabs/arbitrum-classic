@@ -20,12 +20,16 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 
-struct InitialVmValues {
+struct StaticVmValues {
     Code code;
     value staticVal;
+
+    StaticVmValues() = default;
+    StaticVmValues(Code code_, value staticVal_)
+        : code(std::move(code_)), staticVal(std::move(staticVal_)) {}
 };
 
-std::pair<InitialVmValues, bool> parseInitialVmValues(
+std::pair<StaticVmValues, bool> parseStaticVmValues(
     const std::string& contract_filename,
     TuplePool& pool);
 

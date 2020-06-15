@@ -381,7 +381,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.staticVal;
+    value copiedStatic = m.static_values->staticVal;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -437,7 +437,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.code[m.pc]});
+    m.stack.push(CodePointStub{m.static_values->code[m.pc]});
     ++m.pc;
 }
 
@@ -465,7 +465,7 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.code[m.errpc]});
+    m.stack.push(CodePointStub{m.static_values->code[m.errpc]});
     ++m.pc;
 }
 

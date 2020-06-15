@@ -23,17 +23,6 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-std::ostream& operator<<(std::ostream& os, const MachineState& val) {
-    os << "status " << static_cast<int>(val.state) << "\n";
-    os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
-    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
-    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
-    os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash_value(val.staticVal)) << "\n";
-    os << "errHandlerHash " << to_hex_str(hash(val.code[val.errpc])) << "\n";
-    return os;
-}
-
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
     return os;
@@ -74,7 +63,7 @@ BlockReason Machine::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = machine_state.code[machine_state.pc];
+    auto& instruction = machine_state.static_values->code[machine_state.pc];
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint

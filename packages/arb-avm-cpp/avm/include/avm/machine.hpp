@@ -42,10 +42,9 @@ class Machine {
     Machine() = default;
     Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(const Code& code_,
-            const value& static_val_,
+    Machine(std::shared_ptr<const StaticVmValues> static_values,
             std::shared_ptr<TuplePool> pool_)
-        : machine_state(code_, static_val_, std::move(pool_)) {}
+        : machine_state(std::move(static_values), std::move(pool_)) {}
 
     static std::pair<Machine, bool> loadFromFile(
         const std::string& contract_filename) {
@@ -73,7 +72,7 @@ class Machine {
     TuplePool& getPool() { return *machine_state.pool; }
 
     void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-        return ::marshal_value(val, buf, machine_state.code);
+        return ::marshal_value(val, buf, machine_state.static_values->code);
     }
 };
 

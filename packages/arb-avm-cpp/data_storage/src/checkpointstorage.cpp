@@ -36,20 +36,16 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const std::string& contract_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
       pool(std::make_shared<TuplePool>()) {
-    auto ret = parseInitialVmValues(contract_path, *pool.get());
+    auto ret = parseStaticVmValues(contract_path, *pool.get());
     if (!ret.second) {
         throw std::runtime_error("invalid initial values");
     }
-    initial_state = ret.first;
+    initial_state = std::make_shared<StaticVmValues>(std::move(ret.first));
 }
 
 bool CheckpointStorage::closeCheckpointStorage() {
     auto status = datastorage->closeDb();
     return status.ok();
-}
-
-InitialVmValues CheckpointStorage::getInitialVmValues() const {
-    return initial_state;
 }
 
 std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
@@ -80,12 +76,14 @@ std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
     return std::make_unique<ConfirmedNodeStore>(datastorage);
 }
 
+Machine CheckpointStorage::getInitialMachine() const {
+    return {MachineState{initial_state, pool}};
+}
+
 std::pair<Machine, bool> CheckpointStorage::getMachine(
     uint256_t machineHash) const {
     auto transaction = makeConstTransaction();
     auto results = getMachineState(*transaction, machineHash);
-
-    auto initial_values = getInitialVmValues();
     if (!results.status.ok()) {
         return std::make_pair(Machine{}, false);
     }
@@ -114,8 +112,7 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
 
     MachineState machine_state{
         pool,
-        initial_values.code,
-        initial_values.staticVal,
+        initial_state,
         std::move(register_results.data),
         Datastack(nonstd::get<Tuple>(stack_results.data)),
         Datastack(nonstd::get<Tuple>(auxstack_results.data)),
@@ -123,4 +120,9 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         CodePointRef(state_data.pc),
         CodePointRef(state_data.err_pc)};
     return std::make_pair(std::move(machine_state), true);
+}
+
+DbResult<value> CheckpointStorage::getValue(uint256_t value_hash) const {
+    auto tx = makeConstTransaction();
+    return ::getValue(*tx, value_hash, pool.get());
 }

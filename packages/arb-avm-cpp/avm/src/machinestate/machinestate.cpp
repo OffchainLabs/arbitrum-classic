@@ -32,15 +32,16 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 std::pair<MachineState, bool> MachineState::loadFromFile(
     const std::string& contract_filename) {
     auto pool = std::make_shared<TuplePool>();
-    auto ret = parseInitialVmValues(contract_filename, *pool.get());
+    auto ret = parseStaticVmValues(contract_filename, *pool.get());
 
     if (!ret.second) {
         return std::make_pair(MachineState{}, false);
     }
 
-    return std::make_pair(
-        MachineState{ret.first.code, ret.first.staticVal, std::move(pool)},
-        true);
+    return std::make_pair(MachineState{std::make_shared<const StaticVmValues>(
+                                           std::move(ret.first)),
+                                       std::move(pool)},
+                          true);
 }
 
 uint256_t MachineState::hash() const {
@@ -52,7 +53,7 @@ uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
     {
-        auto val = ::hash(code[pc]);
+        auto val = ::hash(static_values->code[pc]);
         oit = to_big_endian(val, oit);
     }
     {
@@ -68,11 +69,11 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash_value(staticVal);
+        auto val = ::hash_value(static_values->staticVal);
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(code[errpc]);
+        auto val = ::hash(static_values->code[errpc]);
         oit = to_big_endian(val, oit);
     }
 
@@ -84,7 +85,7 @@ uint256_t MachineState::hash() const {
 uint256_t MachineState::getMachineSize() {
     uint256_t machine_size = 0;
 
-    machine_size += getSize(staticVal);
+    machine_size += getSize(static_values->staticVal);
     machine_size += getSize(registerVal);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
@@ -94,24 +95,28 @@ uint256_t MachineState::getMachineSize() {
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
-    auto opcode = code[pc].op.opcode;
+    auto opcode = static_values->code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
     bool includeImmediateVal = false;
-    if (code[pc].op.immediate && !stackPops.empty()) {
+    if (static_values->code[pc].op.immediate && !stackPops.empty()) {
         includeImmediateVal = stackPops[0] == true;
         stackPops.erase(stackPops.begin());
     }
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
-    auto stackProof = stack.marshalForProof(stackPops, code);
-    auto auxStackProof = auxstack.marshalForProof(auxStackPops, code);
+    auto stackProof = stack.marshalForProof(stackPops, static_values->code);
+    auto auxStackProof =
+        auxstack.marshalForProof(auxStackPops, static_values->code);
 
-    ::marshalStub(CodePointStub{code[pc + 1]}, buf, code);
+    ::marshalStub(CodePointStub{static_values->code[pc + 1]}, buf,
+                  static_values->code);
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
-    ::marshalStub(registerVal, buf, code);
-    ::marshalStub(staticVal, buf, code);
-    ::marshalStub(CodePointStub{code[errpc]}, buf, code);
-    code[pc].op.marshalForProof(buf, includeImmediateVal, code);
+    ::marshalStub(registerVal, buf, static_values->code);
+    ::marshalStub(static_values->staticVal, buf, static_values->code);
+    ::marshalStub(CodePointStub{static_values->code[errpc]}, buf,
+                  static_values->code);
+    static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
+                                               static_values->code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
@@ -126,7 +131,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = code[pc];
+    auto& instruction = static_values->code[pc];
     if (instruction.op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
@@ -357,4 +362,18 @@ BlockReason MachineState::runOp(OpCode opcode) {
     }
 
     return NotBlocked{};
+}
+
+std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "status " << static_cast<int>(val.state) << "\n";
+    os << "codePointHash " << to_hex_str(hash(val.static_values->code[val.pc]))
+       << "\n";
+    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
+    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
+    os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
+    os << "staticHash " << to_hex_str(hash_value(val.static_values->staticVal))
+       << "\n";
+    os << "errHandlerHash "
+       << to_hex_str(hash(val.static_values->code[val.errpc])) << "\n";
+    return os;
 }
