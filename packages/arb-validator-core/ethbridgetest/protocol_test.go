@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -75,9 +74,9 @@ import (
 //	return currentHash
 //}
 
-func hash2(h1, h2 common.Hash) common.Hash {
-	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
-}
+//func hash2(h1, h2 common.Hash) common.Hash {
+//	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
+//}
 
 func TestGeneratePreconditionHash(t *testing.T) {
 	intVal := value.NewInt64Value(1)

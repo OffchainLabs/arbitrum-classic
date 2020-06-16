@@ -136,6 +136,13 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return returnCharVector(mach->marshalForProof());
 }
 
+ByteSlice machineMarshallState(CMachine* m) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+    std::vector<unsigned char> buffer;
+    return returnCharVector(mach->marshalState());
+}
+
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* lowerBoundBlockData,

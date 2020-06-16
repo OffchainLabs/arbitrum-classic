@@ -176,6 +176,11 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 
+func (m *Machine) MarshalState() ([]byte, error) {
+	stateData := C.machineMarshallState(m.c)
+	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
+}
+
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	cCheckpointStorage := storage.(*CheckpointStorage)
 	success := C.checkpointMachine(m.c, cCheckpointStorage.c)

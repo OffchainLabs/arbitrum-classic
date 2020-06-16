@@ -55,6 +55,10 @@ class Machine {
         return machine_state.marshalForProof();
     }
 
+    std::vector<unsigned char> marshalState() const {
+        return machine_state.marshalState();
+    }
+
     TuplePool& getPool() { return *machine_state.pool; }
 
     SaveResults checkpoint(CheckpointStorage& storage);

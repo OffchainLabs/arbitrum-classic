@@ -37,8 +37,8 @@ type Machine struct {
 }
 
 func New(codeFile string, warnMode bool) (*Machine, error) {
-	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
 	cm, cmerr := cmachine.New(codeFile)
+	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
 	var err error
 	if gmerr != nil {
 		if cmerr != nil {
@@ -67,7 +67,7 @@ func (m *Machine) Hash() common.Hash {
 func (m *Machine) PrintState() {
 	log.Println("Cpp state")
 	m.cppmachine.PrintState()
-	log.Println("Go state")
+	//log.Println("Go state")
 	//m.gomachine.PrintState()
 }
 
@@ -125,8 +125,8 @@ func (m *Machine) ExecuteAssertion(
 
 		//fmt.Println(m.gomachine.GetPC())
 		//m.gomachine.PrintState()
-		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
 		//if ranSteps1 != ranSteps2 {
 		//	_ = m.gomachine.GetPC()
@@ -185,6 +185,16 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	//	m.gomachine.PrintState()
 	//	log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
 	//}
+
+	return h1, nil
+}
+
+func (m *Machine) MarshalState() ([]byte, error) {
+	h1, err1 := m.cppmachine.MarshalState()
+
+	if err1 != nil {
+		return nil, err1
+	}
 
 	return h1, nil
 }

@@ -18,6 +18,7 @@ package vm
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -404,6 +405,10 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 		}
 	}
 	return nil
+}
+
+func (m *Machine) MarshalState() ([]byte, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (m *Machine) Clone() machine.Machine { // clone machine state--new machine wll NOT be in proving mode

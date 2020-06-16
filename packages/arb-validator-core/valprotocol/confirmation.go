@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"math/big"
 )
 
 type ConfirmValidOpportunity struct {
@@ -29,13 +30,18 @@ type ConfirmValidOpportunity struct {
 	VMProtoStateHash common.Hash
 }
 
-func (opp ConfirmValidOpportunity) MarshalMsgsForConfirmation() []byte {
+func (opp ConfirmValidOpportunity) MarshalMsgsForConfirmation() ([]byte, *big.Int) {
 	var messageData bytes.Buffer
-	for _, msg := range opp.Messages {
-		_ = value.MarshalValue(msg, &messageData)
-	}
 
-	return messageData.Bytes()
+	if len(opp.Messages) > 0 {
+		for _, msg := range opp.Messages {
+			_ = value.MarshalValue(msg, &messageData)
+		}
+		length := big.NewInt(int64(messageData.Len()))
+		return messageData.Bytes(), length
+	} else {
+		return messageData.Bytes(), big.NewInt(0)
+	}
 }
 
 func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {

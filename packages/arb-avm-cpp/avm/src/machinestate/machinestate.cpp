@@ -112,8 +112,35 @@ uint256_t MachineState::getMachineSize() {
     return machine_size;
 }
 
+std::vector<unsigned char> marshalState(CodePoint next_codepoint,
+                                        HashPreImage stackPreImage,
+                                        HashPreImage auxStackPreImage,
+                                        value registerVal,
+                                        value staticVal,
+                                        CodePoint errpc) {
+    auto buf = std::vector<unsigned char>();
+    ::marshalStub(next_codepoint, buf);
+
+    stackPreImage.marshal(buf);
+    auxStackPreImage.marshal(buf);
+
+    ::marshalStub(registerVal, buf);
+    ::marshalStub(staticVal, buf);
+    ::marshalStub(errpc, buf);
+
+    return buf;
+}
+
+std::vector<unsigned char> MachineState::marshalState() const {
+    auto next_codepoint = code[pc];
+    auto stackPreImage = stack.getHashPreImage();
+    auto auxStackPreImage = auxstack.getHashPreImage();
+
+    return ::marshalState(next_codepoint, stackPreImage, auxStackPreImage,
+                          registerVal, staticVal, errpc);
+}
+
 std::vector<unsigned char> MachineState::marshalForProof() {
-    std::vector<unsigned char> buf;
     auto opcode = code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
     bool includeImmediateVal = false;
@@ -124,14 +151,12 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
-
     auto next_codepoint = code[pc + 1];
-    ::marshalStub(next_codepoint, buf);
-    stackProof.first.marshal(buf);
-    auxStackProof.first.marshal(buf);
-    ::marshalStub(registerVal, buf);
-    ::marshalStub(staticVal, buf);
-    ::marshalStub(errpc, buf);
+
+    auto buf =
+        ::marshalState(next_codepoint, stackProof.first, auxStackProof.first,
+                       registerVal, staticVal, errpc);
+
     code[pc].op.marshalForProof(buf, includeImmediateVal);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());

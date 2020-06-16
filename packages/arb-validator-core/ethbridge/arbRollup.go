@@ -254,10 +254,10 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			logsAcc = append(logsAcc, opp.LogsAcc)
 			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
 
-			msgBytes := opp.MarshalMsgsForConfirmation()
+			msgBytes, length := opp.MarshalMsgsForConfirmation()
 			messages = append(messages, msgBytes...)
 
-			messagesLengths = append(messagesLengths, big.NewInt(int64(len(msgBytes))))
+			messagesLengths = append(messagesLengths, length)
 		case valprotocol.ConfirmInvalidOpportunity:
 			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
 		}
