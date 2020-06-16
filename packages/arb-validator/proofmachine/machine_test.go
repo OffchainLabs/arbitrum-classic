@@ -67,7 +67,7 @@ func getTester(m *testing.T) *machinetester.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
+	machine, err := loader.LoadMachineFromFile("../contract.ao", true, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestAddValueToStack(t *testing.T) {
 	machineTester := getTester(t)
 
 	stack := stack2.NewEmptyFlat()
-	bridgeStack := value.NewEmptyTuple()
+	bridgeStack := stack.StateValue()
 	intval := value.NewInt64Value(1)
 
 	stack.Push(intval)

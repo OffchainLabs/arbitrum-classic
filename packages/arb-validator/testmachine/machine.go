@@ -126,6 +126,7 @@ func (m *Machine) ExecuteAssertion(
 		//fmt.Println(m.gomachine.GetPC())
 		//m.gomachine.PrintState()
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
+
 		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
 		//if ranSteps1 != ranSteps2 {

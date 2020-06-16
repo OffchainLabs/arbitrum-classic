@@ -207,7 +207,7 @@ func (cv CodePointValue) CloneShallow() Value {
 }
 
 func (cv CodePointValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	if val.TypeCode() == TypeCodeHashPreImage {
 		return cv.Hash() == val.Hash()
 	} else if val.TypeCode() != TypeCodeCodePoint {
 		return false

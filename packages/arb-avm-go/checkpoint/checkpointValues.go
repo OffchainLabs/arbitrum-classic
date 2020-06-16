@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"math/big"
 
 	"github.com/dgraph-io/badger"
 
@@ -73,7 +74,7 @@ func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value
 			}
 		}
 		return contents, nil
-	case value.TypeCodeHashOnly:
+	case value.TypeCodeHashPreImage:
 		h := val.Hash()
 		if _, err := wr.Write(h[:]); err != nil {
 			return nil, err
@@ -262,12 +263,21 @@ func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash common.H
 			}
 		}
 		return value.NewTupleFromSlice(contents)
-	case value.TypeCodeHashOnly:
+	case value.TypeCodeHashPreImage:
 		var h common.Hash
-		if _, err := io.ReadFull(rd, h[:]); err != nil {
+		_, err := io.ReadFull(rd, h[:])
+		if err != nil {
 			return nil, err
 		}
-		return value.NewHashOnlyValue(h, 32), nil
+
+		var data common.Hash
+		_, err = rd.Read(data[:])
+		if err != nil {
+			return nil, err
+		}
+		ret := new(big.Int).SetBytes(data[:])
+		size := ret.Int64()
+		return value.NewPreImage(h, size), nil
 	default:
 		return nil, Error{"Unexpected typecode in checkpoint"}
 	}

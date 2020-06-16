@@ -352,58 +352,58 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 }
 
 func (m *Machine) marshalForProof(wr io.Writer) error {
-	codePoint := m.pc.GetPC()
-
-	stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
-	includeImmediateVal := false
-	if _, ok := codePoint.Op.(value.ImmediateOperation); ok && len(stackPops) > 0 {
-		if stackPops[0] == 1 {
-			includeImmediateVal = true
-		}
-		stackPops = stackPops[1:]
-	}
-	auxStackPops := code.InstructionAuxStackPops[codePoint.Op.GetOp()]
-
-	baseStackVal, stackVals := m.stack.SolidityProofValue(stackPops)
-	baseAuxStackVal, auxStackVals := m.auxstack.SolidityProofValue(auxStackPops)
-	registerHashValue := m.register.ProofValue()
-	staticHashValue := m.static.ProofValue()
-	errHandlerHashValue := value.NewHashOnlyValueFromValue(m.errHandler)
-
-	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
-
-	nextHashVal := value.NewHashOnlyValue(codePoint.NextHash, 1)
-	if err := nextHashVal.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := baseStackVal.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := baseAuxStackVal.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := registerHashValue.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := staticHashValue.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := errHandlerHashValue.MarshalForProof(wr); err != nil {
-		return err
-	}
-	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
-		return err
-	}
-	for _, val := range stackVals {
-		if err := value.MarshalValueForProof(val, wr); err != nil {
-			return err
-		}
-	}
-	for _, val := range auxStackVals {
-		if err := value.MarshalValueForProof(val, wr); err != nil {
-			return err
-		}
-	}
+	//codePoint := m.pc.GetPC()
+	//
+	//stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
+	//includeImmediateVal := false
+	//if _, ok := codePoint.Op.(value.ImmediateOperation); ok && len(stackPops) > 0 {
+	//	if stackPops[0] == 1 {
+	//		includeImmediateVal = true
+	//	}
+	//	stackPops = stackPops[1:]
+	//}
+	//auxStackPops := code.InstructionAuxStackPops[codePoint.Op.GetOp()]
+	//
+	//baseStackVal, stackVals := m.stack.SolidityProofValue(stackPops)
+	//baseAuxStackVal, auxStackVals := m.auxstack.SolidityProofValue(auxStackPops)
+	//registerHashValue := m.register.ProofValue()
+	//staticHashValue := m.static.ProofValue()
+	//errHandlerHashValue := value.NewHashOnlyValueFromValue(m.errHandler)
+	//
+	//fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
+	//
+	////nextHashVal := value.NewHashOnlyValue(codePoint.NextHash, 1)
+	////if err := nextHashVal.MarshalForProof(wr); err != nil {
+	////	return err
+	////}
+	//if err := baseStackVal.MarshalForProof(wr); err != nil {
+	//	return err
+	//}
+	//if err := baseAuxStackVal.MarshalForProof(wr); err != nil {
+	//	return err
+	//}
+	//if err := registerHashValue.MarshalForProof(wr); err != nil {
+	//	return err
+	//}
+	//if err := staticHashValue.MarshalForProof(wr); err != nil {
+	//	return err
+	//}
+	//if err := errHandlerHashValue.MarshalForProof(wr); err != nil {
+	//	return err
+	//}
+	//if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
+	//	return err
+	//}
+	//for _, val := range stackVals {
+	//	if err := value.MarshalValueForProof(val, wr); err != nil {
+	//		return err
+	//	}
+	//}
+	//for _, val := range auxStackVals {
+	//	if err := value.MarshalValueForProof(val, wr); err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 

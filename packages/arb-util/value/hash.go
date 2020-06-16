@@ -28,10 +28,6 @@ type HashOnlyValue struct {
 	size int64
 }
 
-func NewHashOnlyValue(hash common.Hash, size int64) HashOnlyValue {
-	return HashOnlyValue{hash, size}
-}
-
 func NewHashOnlyValueFromValue(val Value) HashOnlyValue {
 	return HashOnlyValue{val.Hash(), val.Size()}
 }
@@ -68,11 +64,11 @@ func (tv HashOnlyValue) MarshalForProof(wr io.Writer) error {
 }
 
 func (nv HashOnlyValue) TypeCode() byte {
-	return TypeCodeHashOnly
+	return TypeCodeHashPreImage
 }
 
 func (nv HashOnlyValue) InternalTypeCode() byte {
-	return TypeCodeHashOnly
+	return TypeCodeHashPreImage
 }
 
 func (nv HashOnlyValue) Clone() Value {

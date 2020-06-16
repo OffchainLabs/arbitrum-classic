@@ -29,7 +29,7 @@ type Flat struct {
 	codePoints []value.CodePointValue
 	hashOnly   []value.HashOnlyValue
 	itemTypes  []byte
-	hashes     []value.HashOnlyValue
+	hashes     []value.HashPreImage
 	size       int64
 }
 
@@ -77,7 +77,7 @@ func (f *Flat) CloneImpl() *Flat {
 	copy(hashOnly, f.hashOnly)
 	itemTypes := make([]byte, len(f.itemTypes))
 	copy(itemTypes, f.itemTypes)
-	hashes := make([]value.HashOnlyValue, len(f.hashes))
+	hashes := make([]value.HashPreImage, len(f.hashes))
 	copy(hashes, f.hashes)
 	newS := &Flat{ints, tuples, codePoints, hashOnly, itemTypes, hashes, f.size}
 	newS.verifyHeight()
@@ -207,7 +207,7 @@ func (f *Flat) PopCodePoint() (val value.CodePointValue, err error) {
 
 func (f *Flat) PopHashOnly() (val value.HashOnlyValue, err error) {
 	f.verifyHeight()
-	if err := f.tryPop(value.TypeCodeHashOnly); err != nil {
+	if err := f.tryPop(value.TypeCodeHashPreImage); err != nil {
 		return value.HashOnlyValue{}, err
 	}
 	val = f.popHashOnlyUnchecked()
@@ -228,7 +228,7 @@ func (f *Flat) Pop() (value.Value, error) {
 		return f.popTupleUnchecked(), nil
 	case value.TypeCodeCodePoint:
 		return f.popCodePointUnchecked(), nil
-	case value.TypeCodeHashOnly:
+	case value.TypeCodeHashPreImage:
 		return f.popHashOnlyUnchecked(), nil
 	default:
 		panic("PopValue: Unhandled type")
@@ -250,7 +250,7 @@ func (f *Flat) Count() int64 {
 func (f *Flat) StateValue() value.Value {
 	f.updateHashes()
 	if len(f.itemTypes) == 0 {
-		return value.NewHashOnlyValue(value.NewEmptyTuple().Hash(), 1)
+		return value.NewEmptyTuple().GetPreImage()
 	}
 	return f.hashes[len(f.hashes)-1]
 }
@@ -302,16 +302,16 @@ func (f *Flat) FullyExpandedValueImpl() value.Value {
 	return value.NewTuple2(top, f.FullyExpandedValueImpl())
 }
 
-func (f *Flat) addedValueAddHash(itemHash1 value.HashOnlyValue) {
-	var prevItem value.HashOnlyValue
+func (f *Flat) addedValueAddHash(itemHash1 value.Value) {
+	var prevItem value.HashPreImage
 	if len(f.hashes) > 0 {
 		prevItem = f.hashes[len(f.hashes)-1]
 	} else {
-		prevItem = value.NewHashOnlyValueFromValue(value.NewEmptyTuple())
+		prevItem = value.NewEmptyTuple().GetPreImage()
 	}
 
 	tup := value.NewTuple2(itemHash1, prevItem)
-	f.hashes = append(f.hashes, value.NewHashOnlyValueFromValue(tup))
+	f.hashes = append(f.hashes, tup.GetPreImage())
 }
 
 func (f *Flat) countOfType(tipe byte) int {
@@ -322,23 +322,23 @@ func (f *Flat) countOfType(tipe byte) int {
 		return len(f.tuples)
 	case value.TypeCodeCodePoint:
 		return len(f.codePoints)
-	case value.TypeCodeHashOnly:
+	case value.TypeCodeHashPreImage:
 		return len(f.hashOnly)
 	default:
 		panic("PopValue: Unhandled type")
 	}
 }
 
-func (f *Flat) hashOfItem(tipe byte, offset int) value.HashOnlyValue {
+func (f *Flat) hashOfItem(tipe byte, offset int) value.Value {
 	switch tipe {
 	case value.TypeCodeInt:
-		return value.NewHashOnlyValueFromValue(f.ints[offset])
+		return f.ints[offset]
 	case value.TypeCodeTuple:
-		return value.NewHashOnlyValueFromValue(f.tuples[offset])
+		return f.tuples[offset]
 	case value.TypeCodeCodePoint:
-		return value.NewHashOnlyValueFromValue(f.codePoints[offset])
-	case value.TypeCodeHashOnly:
-		return value.NewHashOnlyValueFromValue(f.hashOnly[offset])
+		return f.codePoints[offset]
+	case value.TypeCodeHashPreImage:
+		return f.hashOnly[offset]
 	default:
 		panic("PopValue: Unhandled type")
 	}
@@ -393,7 +393,7 @@ func (f *Flat) tryPop(tipe byte) error {
 			v = f.popTupleUnchecked()
 		case value.TypeCodeCodePoint:
 			v = f.popCodePointUnchecked()
-		case value.TypeCodeHashOnly:
+		case value.TypeCodeHashPreImage:
 			v = f.popHashOnlyUnchecked()
 		default:
 			panic("PopValue: Unhandled type")
@@ -457,7 +457,7 @@ func (f *Flat) duplicate() {
 		f.PushTuple(f.tuples[len(f.tuples)-1])
 	case value.TypeCodeCodePoint:
 		f.PushCodePoint(f.codePoints[len(f.codePoints)-1])
-	case value.TypeCodeHashOnly:
+	case value.TypeCodeHashPreImage:
 		f.PushHashOnly(f.hashOnly[len(f.hashOnly)-1])
 	default:
 		panic("PopValue: Unhandled type")

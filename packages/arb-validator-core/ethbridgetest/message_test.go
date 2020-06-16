@@ -185,8 +185,8 @@ func TestTransactionBatchMessage(t *testing.T) {
 
 	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
 		nil,
-		preImage.HashImage,
-		big.NewInt(preImage.Size),
+		preImage.GetPreImageHash(),
+		big.NewInt(preImage.Size()),
 		msg.Chain.ToEthAddress(),
 		batchTxData,
 		deliveryInfo.BlockNum.AsInt(),
@@ -354,13 +354,13 @@ func TestDeliveredMessage(t *testing.T) {
 
 	messageBridgeHash, err := tester.AddMessageToVMInboxHash(
 		nil,
-		inboxPreImage.HashImage,
-		big.NewInt(inboxPreImage.Size),
+		inboxPreImage.GetPreImageHash(),
+		big.NewInt(inboxPreImage.Size()),
 		deliveryInfo.BlockNum.AsInt(),
 		deliveryInfo.Timestamp,
 		deliveryInfo.TxId,
-		valPreimage.HashImage,
-		big.NewInt(valPreimage.Size),
+		valPreimage.GetPreImageHash(),
+		big.NewInt(valPreimage.Size()),
 	)
 	if err != nil {
 		t.Fatal(err)
