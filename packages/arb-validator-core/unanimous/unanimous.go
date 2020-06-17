@@ -29,7 +29,7 @@ func UnanimousAssertPartialPartialHash(
 ) common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(newInboxHash),
-		hashing.Bytes32(assertion.AfterHash),
+		hashing.Bytes32(assertion.AfterHash.Unmarshal()),
 	)
 }
 
