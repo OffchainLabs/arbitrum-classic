@@ -106,15 +106,11 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
 		rawTimeoutBytes := toByteSlice(cBlockReason.val)
-		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
+		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
 		}
-		timeoutInt, ok := timeout.(value.IntValue)
-		if !ok {
-			panic("Inbox hash must be an int")
-		}
-		return machine.InboxBlocked{Timeout: timeoutInt}
+		return machine.InboxBlocked{Timeout: timeout}
 	default:
 	}
 	return nil
