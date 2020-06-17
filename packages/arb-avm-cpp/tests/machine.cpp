@@ -160,3 +160,32 @@ TEST_CASE("Clone") {
         REQUIRE(m.hash() != 3242);
     }
 }
+
+TEST_CASE("Machine hash") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    MachineState machine = MachineState::loadFromFile(test_contract_path).first;
+    auto pcHash = ::hash(machine.static_values->code[machine.pc]);
+    auto stackHash = machine.stack.hash();
+    auto auxstackHash = machine.auxstack.hash();
+    auto registerHash = ::hash_value(machine.registerVal);
+    auto staticHash = ::hash_value(machine.static_values->staticVal);
+    auto errHash = ::hash(machine.static_values->code[machine.errpc]);
+    auto machineHash = machine.hash();
+
+    REQUIRE(pcHash == uint256_t("7737343943613437755395141441291826898796163866"
+                                "8492301359045565991555588221763"));
+    REQUIRE(stackHash == uint256_t("4251290975118555612292311539115420848775231"
+                                   "0613213055089416300774052282720344"));
+    REQUIRE(auxstackHash == uint256_t("4251290975118555612292311539115420848775"
+                                      "2310613213055089416300774052282720344"));
+    REQUIRE(registerHash == uint256_t("4251290975118555612292311539115420848775"
+                                      "2310613213055089416300774052282720344"));
+    REQUIRE(staticHash == uint256_t("832315546794065743621037540472311669512067"
+                                    "66645942016669157541405145405171869"));
+    REQUIRE(errHash == uint256_t("817555893843236912662725763451298816577059146"
+                                 "21008081459572116739688988488432"));
+    REQUIRE(machineHash == uint256_t("38086450045779233370084791113969759535500"
+                                     "380524553750909191655579112918186895"));
+}
