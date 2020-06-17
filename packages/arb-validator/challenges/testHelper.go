@@ -96,7 +96,7 @@ func testChallenge(
 		context.Background(),
 		client1.Address(),
 		client2.Address(),
-		common.TicksFromBlockNum(common.NewTimeBlocksInt(5)),
+		common.TicksFromBlockNum(common.NewTimeBlocksInt(10)),
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)
