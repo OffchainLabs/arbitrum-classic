@@ -113,8 +113,14 @@ func (chain *ChainObserver) AddListener(ctx context.Context, listener ChainListe
 
 func (chain *ChainObserver) NowAtHead() {
 	chain.Lock()
+	defer chain.Unlock()
 	chain.atHead = true
-	chain.Unlock()
+}
+
+func (chain *ChainObserver) IsAtHead() bool {
+	chain.RLock()
+	defer chain.RUnlock()
+	return chain.atHead
 }
 
 func (chain *ChainObserver) GetChainParams() valprotocol.ChainParams {
@@ -226,9 +232,8 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 
 func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
-	blockId := chain.latestBlockId
-	chain.RUnlock()
-	return blockId
+	defer chain.RUnlock()
+	return chain.latestBlockId.Clone()
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {

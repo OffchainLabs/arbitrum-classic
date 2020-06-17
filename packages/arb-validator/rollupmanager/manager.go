@@ -18,6 +18,7 @@ package rollupmanager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
@@ -39,20 +40,23 @@ const (
 	ValidEthBridgeVersion = "4"
 )
 
-type Manager struct {
-	// listenersLock is should be held whenever listeners is accessed or set
-	// and whenever activeChain is going to be set (but not when it is accessed)
-	listenersLock sync.Mutex
+var errNoActiveChain = errors.New("validator has no active chain")
+var notAtHead = errors.New("validator is catching up to latest")
 
-	// validCallLock is held by the main loop whenever there is not a non-nil
-	// activeChain running which has caught up to the current L1 block. It is
-	// held by all other functions when they wish to access an update to date
-	// chain state. This means that these functions will block when there isn't
-	// an appropriate way to resolve them
-	validCallLock sync.Mutex
+type reorgCache struct {
+	latestValidMachine    machine.Machine
+	currentPendingMachine machine.Machine
+	currentBlockId        *common.BlockId
+}
+
+type Manager struct {
+	// The mutex should be held whenever listeres or reorgCache are accessed or
+	// set and whenever activeChain is going to be set (but not when it is accessed)
+	sync.Mutex
 
 	listeners   []rollup.ChainListener
 	activeChain *rollup.ChainObserver
+	reorgCache  *reorgCache
 
 	// These variables are only written by the constructor
 	RollupAddress common.Address
@@ -98,7 +102,6 @@ func CreateManagerAdvanced(
 		RollupAddress: rollupAddr,
 		checkpointer:  checkpointer,
 	}
-	man.validCallLock.Lock()
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
@@ -130,13 +133,13 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
-			man.listenersLock.Lock()
+			man.Lock()
 			man.activeChain = chain
 			// Add manager's listeners
 			for _, listener := range man.listeners {
 				man.activeChain.AddListener(runCtx, listener)
 			}
-			man.listenersLock.Unlock()
+			man.Unlock()
 
 			currentProcessedBlockId := man.activeChain.CurrentBlockId()
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
@@ -229,7 +232,9 @@ func CreateManagerAdvanced(
 						caughtUpToL1 = true
 						man.activeChain.NowAtHead()
 						log.Println("Now at head")
-						man.validCallLock.Unlock()
+						man.Lock()
+						man.reorgCache = nil
+						man.Unlock()
 					}
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
@@ -263,14 +268,14 @@ func CreateManagerAdvanced(
 				log.Println(err)
 			}
 
-			// If we're not caught up to the l1 then the call lock is already held
-			if caughtUpToL1 {
-				man.validCallLock.Lock()
+			man.Lock()
+			man.reorgCache = &reorgCache{
+				latestValidMachine:    man.activeChain.LatestKnownValidMachine(),
+				currentPendingMachine: man.activeChain.CurrentPendingMachine(),
+				currentBlockId:        man.activeChain.CurrentBlockId(),
 			}
-
-			man.listenersLock.Lock()
 			man.activeChain = nil
-			man.listenersLock.Unlock()
+			man.Unlock()
 
 			cancelFunc()
 
@@ -287,36 +292,57 @@ func CreateManagerAdvanced(
 }
 
 func (man *Manager) AddListener(listener rollup.ChainListener) {
-	man.listenersLock.Lock()
-	defer man.listenersLock.Unlock()
+	man.Lock()
+	defer man.Unlock()
 	man.listeners = append(man.listeners, listener)
 	if man.activeChain != nil {
 		man.activeChain.AddListener(context.Background(), listener)
 	}
 }
 
-func (man *Manager) GetLatestMachine() machine.Machine {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeChain.LatestKnownValidMachine()
+func (man *Manager) GetLatestMachine() (machine.Machine, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.latestValidMachine.Clone(), nil
+	}
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.LatestKnownValidMachine(), nil
+	}
+	return nil, notAtHead
 }
 
-func (man *Manager) GetLatestBlock() *common.BlockId {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeChain.CurrentBlockId()
+func (man *Manager) GetPendingMachine() (machine.Machine, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.currentPendingMachine.Clone(), nil
+	}
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.CurrentPendingMachine(), nil
+	}
+	return nil, notAtHead
 }
 
-func (man *Manager) GetPendingMachine() machine.Machine {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeChain.CurrentPendingMachine()
-}
-
-func (man *Manager) CurrentBlockId() *common.BlockId {
-	man.validCallLock.Lock()
-	defer man.validCallLock.Unlock()
-	return man.activeChain.CurrentBlockId()
+func (man *Manager) CurrentBlockId() (*common.BlockId, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.currentBlockId.Clone(), nil
+	}
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.CurrentBlockId(), nil
+	}
+	return nil, notAtHead
 }
 
 func (man *Manager) GetCheckpointer() checkpointing.RollupCheckpointer {
