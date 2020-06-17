@@ -18,7 +18,6 @@ package rollupmanager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
@@ -303,8 +302,9 @@ func verifyArbChain(
 		return err
 	}
 
-	if initialMachine.Hash() != initialVMHash {
-		return errors.New("ArbChain was initialized with different VM")
+	initialMachineHash := initialMachine.Hash()
+	if initialMachineHash != initialVMHash {
+		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, initialMachineHash)
 	}
 	return nil
 }
