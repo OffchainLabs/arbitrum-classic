@@ -168,7 +168,7 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 	chain := addr3
 	batchTx := message.NewRandomBatchTx(chain, privateKey)
 
-	batchTx.Sig[0]++
+	batchTx.Sig = [65]byte{1, 2, 3}
 
 	_, _, valid, err := tester.TransactionMessageBatchHashSingle(
 		nil,
