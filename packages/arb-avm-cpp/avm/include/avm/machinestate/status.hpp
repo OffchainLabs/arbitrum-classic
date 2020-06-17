@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef avmfwd_h
-#define avmfwd_h
+#ifndef avm_status_hpp
+#define avm_status_hpp
 
 enum class Status { Extensive, Halted, Error };
 
-#endif /* avmfwd_h */
+#endif /* avm_status_hpp */

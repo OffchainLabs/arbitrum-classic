@@ -17,7 +17,7 @@
 #ifndef checkpoint_machine_hpp
 #define checkpoint_machine_hpp
 
-#include <avm/avmfwd.hpp>
+#include <avm/machinestate/status.hpp>
 
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepoint.hpp>

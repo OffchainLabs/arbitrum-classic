@@ -17,9 +17,9 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
-#include <avm/avmfwd.hpp>
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/status.hpp>
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
 

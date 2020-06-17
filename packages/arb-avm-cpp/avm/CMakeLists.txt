@@ -20,8 +20,8 @@ set (CMAKE_CXX_STANDARD 14)
 project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
-
   include/avm/machine.hpp
+  include/avm/machinestate/status.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
