@@ -287,6 +287,7 @@ func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEv
 	for _, lis := range chain.listeners {
 		lis.PrunedLeaf(ctx, chain, ev)
 	}
+	chain.updateOldest()
 }
 
 func (chain *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
