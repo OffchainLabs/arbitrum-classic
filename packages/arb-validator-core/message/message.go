@@ -40,6 +40,8 @@ const (
 type SingleMessage interface {
 	Message
 	AsInboxValue() value.TupleValue
+	DestAddress() common.Address
+	SenderAddress() common.Address
 }
 
 type ReceiptMessage interface {

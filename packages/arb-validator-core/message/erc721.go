@@ -65,6 +65,14 @@ func (m ERC721) GetFuncName() string {
 	return "ERC721Transfer"
 }
 
+func (m ERC721) DestAddress() common.Address {
+	return m.To
+}
+
+func (m ERC721) SenderAddress() common.Address {
+	return m.From
+}
+
 func (m ERC721) CommitmentHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint8(uint8(m.Type())),

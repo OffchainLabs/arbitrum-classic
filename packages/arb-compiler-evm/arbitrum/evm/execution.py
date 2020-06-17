@@ -25,6 +25,7 @@ from .types import local_exec_state
 @modifies_stack(0, 0)
 def save_up_call_frame(vm):
     os.get_call_frame(vm)
+    call_frame.save_state(vm)
     vm.dup0()
     call_frame.call_frame.get("parent_frame")(vm)
     call_frame.merge(vm)
@@ -91,10 +92,16 @@ def _perform_real_call(vm, call_num):
     vm.ifelse(
         lambda vm: [_execute_call(vm, call_num)],
         lambda vm: [
+            vm.pop(),
+            vm.pop(),
+            vm.push(ast.AVMLabel("evm_call_{}".format(call_num))),
             os.get_call_frame(vm),
             call_frame.spawn_child(vm),
             os.set_call_frame(vm),
+            save_stacks(vm),
             vm.push(0),
+            vm.push(0),
+            call_finish.revert(vm),
         ],
     )
     _complete_call(vm, call_num)
@@ -105,15 +112,7 @@ def _enter_exec(vm, call_num):
     vm.dup0()
     vm.tnewn(0)
     vm.eq()
-    vm.ifelse(
-        lambda vm: [
-            vm.pop(),
-            vm.push(3),
-            vm.push(ast.AVMLabel("evm_call_{}".format(call_num))),
-            vm.jump(),
-        ],
-        lambda vm: [vm.jump()],
-    )
+    vm.ifelse(lambda vm: [vm.pop(), call_finish.stop(vm)], lambda vm: [vm.jump()])
 
 
 @noreturn
@@ -292,7 +291,6 @@ def call(vm, call_num):
     call_frame.call_frame.get("contractID")(vm)
     os.tx_call_to_local_exec_state(vm)
     # dest local_exec_state calltup
-
     _save_call_frame(vm)
     _perform_call(vm, call_num)
     # ret calltup

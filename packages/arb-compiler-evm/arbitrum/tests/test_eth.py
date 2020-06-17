@@ -64,6 +64,25 @@ def make_evm_clone_code(address):
     ]
 
 
+def make_evm_transfer_code(address, amount):
+    instruction_table = instruction_tables["byzantium"]
+    return [
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH32 " + eth_utils.to_hex(amount)),
+        assemble_one("PUSH20 " + address),
+        assemble_one("PUSH1 0x20"),
+        instruction_table["CALL"],
+        assemble_one("PUSH1 0x00"),
+        instruction_table["MSTORE"],
+        assemble_one("PUSH1 0x20"),
+        assemble_one("PUSH1 0x00"),
+        instruction_table["RETURN"],
+    ]
+
+
 def make_simple_code():
     instruction_table = instruction_tables["byzantium"]
     return [
@@ -826,3 +845,77 @@ class TestEVM(TestCase):
         self.assertEqual(
             parsed_outs[2].output_values[0], parsed_outs[5].output_values[0]
         )
+
+    def test_transfer_eth_from_contract(self):
+        contract_address_string = "0x0b55929f4095f677C9Ec1F4810C3E59CCD6D33C7"
+        contract_address = eth_utils.to_int(hexstr=contract_address_string)
+        evm_code = make_evm_transfer_code(dest_address_string, 2000)
+        contract_a = make_contract(evm_code, "address", contract_address_string)
+
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([contract_address, 2000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, contract_a.testMethod(0, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(contract_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 4)
+        parsed_outs = [output_handler(log) for log in vm.logs]
+        self.assertIsInstance(parsed_outs[0], EVMStop)
+        self.assertIsInstance(parsed_outs[1], EVMReturn)
+        self.assertIsInstance(parsed_outs[2], EVMReturn)
+        self.assertIsInstance(parsed_outs[3], EVMReturn)
+        self.assertEqual(eth_utils.to_int(hexstr=parsed_outs[1].output_values[0]), 1)
+        dest_balance = parsed_outs[2].output_values[0]
+        contract_balance = parsed_outs[3].output_values[0]
+        self.assertEqual(dest_balance, 2000)
+        self.assertEqual(contract_balance, 0)
