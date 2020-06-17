@@ -112,3 +112,7 @@ func (e EvilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, con
 func (e EvilRollupCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
 	return e.cp.CheckpointConfirmedNode(nodeHash, depth, nodeData, cpCtx)
 }
+
+func (e EvilRollupCheckpointer) MaxReorgHeight() *big.Int {
+	return e.cp.MaxReorgHeight()
+}

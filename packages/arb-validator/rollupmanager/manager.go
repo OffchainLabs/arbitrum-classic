@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -146,67 +147,120 @@ func CreateManagerAdvanced(
 
 			man.activeChain.Start(runCtx)
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, currentProcessedBlockId)
-			if err != nil {
-				log.Println("Error subscribing to block headers", err)
-				cancelFunc()
-				time.Sleep(2 * time.Second)
-				continue
-			}
-
 			caughtUpToL1 := false
-		headerLoop:
-			for maybeBlockId := range headersChan {
-				if maybeBlockId.Err != nil {
-					log.Println("Error getting new header", maybeBlockId.Err)
-					break
-				}
 
-				blockId := maybeBlockId.BlockId
-				timestamp := maybeBlockId.Timestamp
+			err = func() error {
+				// If the local chain is significantly behind the L1, catch up more efficiently
+				maxReorg := checkpointer.MaxReorgHeight()
+				for {
+					currentProcessedBlockId := man.activeChain.CurrentBlockId()
+					currentLocalHeight := currentProcessedBlockId.Height.AsInt()
 
-				currentOnChain, err := clnt.CurrentBlockId(runCtx)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
-					caughtUpToL1 = true
-					man.activeChain.NowAtHead()
-					log.Println("Now at head")
-					man.validCallLock.Unlock()
-				}
-
-				man.activeChain.NotifyNewBlock(blockId.Clone())
-				log.Print(man.activeChain.DebugString("== "))
-
-				inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
-				if err != nil {
-					log.Println("Manager hit error getting events", err)
-					break
-				}
-
-				events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
-				if err != nil {
-					log.Println("Manager hit error getting events", err)
-					break
-				}
-
-				for _, event := range inboxEvents {
-					err := man.activeChain.HandleNotification(runCtx, event)
+					currentOnChain, err := clnt.CurrentBlockId(runCtx)
 					if err != nil {
-						log.Println("Manager hit error processing event", err)
-						break headerLoop
+						return err
+					}
+					currentL1Height := currentOnChain.Height.AsInt()
+
+					distanceFromCurrent := new(big.Int).Sub(currentL1Height, currentLocalHeight)
+					if distanceFromCurrent.Cmp(maxReorg) <= 0 {
+						log.Println("Ending fast catchup")
+						break
+					}
+
+					fetchEnd := new(big.Int).Add(currentLocalHeight, maxReorg)
+					fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
+
+					log.Println("Getting events between", currentLocalHeight, "and", fetchEnd)
+					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, currentLocalHeight, fetchEnd)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+					}
+					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
+					for _, ev := range inboxDeliveredEvents {
+						inboxEvents = append(inboxEvents, ev)
+					}
+
+					events, err := rollupWatcher.GetAllEvents(runCtx, currentLocalHeight, fetchEnd)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+					}
+					allEvents := arbbridge.MergeEventsUnsafe(inboxEvents, events)
+					for _, ev := range allEvents {
+						blockId := ev.GetChainInfo().BlockId
+						if blockId.Height.AsInt().Cmp(currentLocalHeight) > 0 {
+							man.activeChain.NotifyNewBlock(blockId.Clone())
+							currentLocalHeight = blockId.Height.AsInt()
+						}
+						err := man.activeChain.HandleNotification(runCtx, ev)
+						if err != nil {
+							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
+						}
+					}
+					if fetchEnd.Cmp(currentLocalHeight) > 0 {
+						endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
+						if err != nil {
+							return err
+						}
+						man.activeChain.NotifyNewBlock(endBlockId)
 					}
 				}
 
-				for _, event := range events {
-					err := man.activeChain.HandleNotification(runCtx, event)
+				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, man.activeChain.CurrentBlockId())
+				if err != nil {
+					return errors2.Wrap(err, "Error subscribing to block headers")
+				}
+
+				lastDebugPrint := time.Now()
+				for maybeBlockId := range headersChan {
+					if maybeBlockId.Err != nil {
+						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+					}
+
+					blockId := maybeBlockId.BlockId
+					timestamp := maybeBlockId.Timestamp
+
+					currentOnChain, err := clnt.CurrentBlockId(runCtx)
 					if err != nil {
-						log.Println("Manager hit error processing event", err)
-						break headerLoop
+						return err
+					}
+
+					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
+						caughtUpToL1 = true
+						man.activeChain.NowAtHead()
+						log.Println("Now at head")
+						man.validCallLock.Unlock()
+					}
+
+					man.activeChain.NotifyNewBlock(blockId.Clone())
+
+					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 5 {
+						log.Print(man.activeChain.DebugString("== "))
+						lastDebugPrint = time.Now()
+					}
+
+					inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error getting events")
+					}
+
+					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error getting events")
+					}
+
+					for _, event := range arbbridge.MergeEventsUnsafe(inboxEvents, events) {
+						err := man.activeChain.HandleNotification(runCtx, event)
+						if err != nil {
+							return errors2.Wrap(err, "Manager hit error processing event")
+						}
 					}
 				}
+				return nil
+			}()
+
+			if err != nil {
+				log.Println(err)
 			}
 
 			// If we're not caught up to the l1 then the call lock is already held
@@ -337,9 +391,9 @@ func initializeChainObserver(
 	if err != nil {
 		log.Fatal(err)
 	}
-	txHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, txHash)
+	return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
 }

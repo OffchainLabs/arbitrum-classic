@@ -28,6 +28,35 @@ type Event interface {
 	GetChainInfo() ChainInfo
 }
 
+// MergeEventsUnsafe assumes that both sets of events come from the same
+// chain state rather than from two different states caused by a reorg
+func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
+	totalLen := len(events1) + len(events2)
+	events := make([]Event, 0, totalLen)
+	events1Index := 0
+	events2Index := 0
+	for i := 0; i < totalLen; i++ {
+		if events1Index == len(events1) {
+			events = append(events, events2[events2Index])
+			events2Index++
+		} else if events2Index == len(events2) {
+			events = append(events, events1[events1Index])
+			events1Index++
+		} else {
+			event1 := events1[events1Index]
+			event2 := events2[events2Index]
+			if event1.GetChainInfo().BlockId.Height.AsInt().Cmp(event2.GetChainInfo().BlockId.Height.AsInt()) < 0 {
+				events = append(events, events1[events1Index])
+				events1Index++
+			} else {
+				events = append(events, events2[events2Index])
+				events2Index++
+			}
+		}
+	}
+	return events
+}
+
 type ChainInfo struct {
 	BlockId  *common.BlockId
 	LogIndex uint

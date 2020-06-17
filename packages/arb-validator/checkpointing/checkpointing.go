@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"math/big"
 )
 
 type RollupCheckpointer interface {
@@ -33,6 +34,7 @@ type RollupCheckpointer interface {
 
 	GetCheckpointDB() machine.CheckpointStorage
 	GetConfirmedNodeStore() machine.ConfirmedNodeStore
+	MaxReorgHeight() *big.Int
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
