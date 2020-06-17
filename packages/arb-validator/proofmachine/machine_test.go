@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
-	stack2 "github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -94,15 +93,14 @@ func TestDeserializeMachine(t *testing.T) {
 func TestAddValueToStack(t *testing.T) {
 	machineTester := getTester(t)
 
-	stack := stack2.NewEmptyFlat()
-	bridgeStack := stack.StateValue()
+	stack := value.NewEmptyTuple()
 	intval := value.NewInt64Value(1)
 
-	stack.Push(intval)
-	expectedHash := stack.StateValue().Hash().ToEthHash()
+	stack2 := value.NewTuple2(intval, stack)
+	expectedHash := stack2.GetPreImage().Hash().ToEthHash()
 
 	buf1 := new(bytes.Buffer)
-	err := value.MarshalValue(bridgeStack, buf1)
+	err := value.MarshalValue(stack, buf1)
 	if err != nil {
 		t.Fatal(err)
 	}

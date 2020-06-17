@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
-	gomachine "github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -33,70 +31,41 @@ import (
 
 type Machine struct {
 	cppmachine *cmachine.Machine
-	gomachine  *gomachine.Machine
 }
 
 func New(codeFile string, warnMode bool) (*Machine, error) {
 	cm, cmerr := cmachine.New(codeFile)
-	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
-	var err error
-	if gmerr != nil {
-		if cmerr != nil {
-			err = fmt.Errorf("Go machine error: %v, cpp machine error: %v ", gmerr, cmerr)
-		} else {
-			err = fmt.Errorf("Go machine error: %v", gmerr)
-		}
-	} else if cmerr != nil {
-		err = fmt.Errorf("cpp machine error: %v ", cmerr)
+
+	if cmerr != nil {
+		err := fmt.Errorf("cpp machine error: %v ", cmerr)
+		return nil, err
+	} else {
+		return &Machine{
+			cm,
+		}, nil
 	}
-	return &Machine{
-		cm,
-		gm,
-	}, err
 }
 
 func (m *Machine) Hash() common.Hash {
 	h1 := m.cppmachine.Hash()
-	h2 := m.gomachine.Hash()
-	if h1 != h2 {
-		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
-	}
 	return h1
 }
 
 func (m *Machine) PrintState() {
 	log.Println("Cpp state")
 	m.cppmachine.PrintState()
-	//log.Println("Go state")
-	//m.gomachine.PrintState()
 }
 
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{m.cppmachine.Clone().(*cmachine.Machine), m.gomachine.Clone().(*gomachine.Machine)}
+	return &Machine{m.cppmachine.Clone().(*cmachine.Machine)}
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
-	b1 := m.cppmachine.CurrentStatus()
-	//b2 := m.gomachine.CurrentStatus()
-	//if b1 != b2 {
-	//	log.Fatalln("CurrentStatus error at pc", m.gomachine.GetPC())
-	//}
-	return b1
+	return m.cppmachine.CurrentStatus()
 }
 
 func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	b1 := m.cppmachine.IsBlocked(currentTime, newMessages)
-	//b2 := m.gomachine.IsBlocked(currentTime, newMessages)
-	//if b1 == nil || b2 == nil {
-	//	if b1 != nil || b2 != nil {
-	//		log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
-	//	}
-	//	return nil
-	//}
-	//if !b1.Equals(b2) {
-	//	log.Fatalln("IsBlocked error at pc", m.gomachine.GetPC())
-	//}
-	return b1
+	return m.cppmachine.IsBlocked(currentTime, newMessages)
 }
 
 func (m *Machine) ExecuteAssertion(
@@ -123,27 +92,8 @@ func (m *Machine) ExecuteAssertion(
 			steps = maxSteps - i
 		}
 
-		//fmt.Println(m.gomachine.GetPC())
-		//m.gomachine.PrintState()
 		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
 
-		_, _ = m.gomachine.ExecuteAssertion(steps, timeBounds, inbox, timeLeft)
-
-		//if ranSteps1 != ranSteps2 {
-		//	_ = m.gomachine.GetPC()
-		//	log.Println("cpp num steps", ranSteps1, a1.NumGas)
-		//	log.Println("go num steps", ranSteps2, a2.NumGas)
-		//	log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
-		//} else if !a1.Equals(a2) {
-		//	pcEnd := m.gomachine.GetPC()
-		//	m.cppmachine.PrintState()
-		//	m.gomachine.PrintState()
-		//	log.Println("cpp num steps, num gas", ranSteps1, a1.NumGas)
-		//	log.Println("go num steps, num gas", ranSteps2, a2.NumGas)
-		//	log.Println("pcstart", pcStart)
-		//	log.Println("pcend", pcEnd)
-		//	log.Fatalln("ExecuteAssertion error after running step", a1, a2)
-		//}
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps1
 		a.NumGas += a1.NumGas
@@ -170,22 +120,11 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
-	//h2, err2 := m.gomachine.MarshalForProof()
 	h1, err1 := m.cppmachine.MarshalForProof()
 
 	if err1 != nil {
 		return nil, err1
 	}
-
-	//if err2 != nil {
-	//	return nil, err2
-	//}
-
-	//if !bytes.Equal(h1, h2) {
-	//	m.cppmachine.PrintState()
-	//	m.gomachine.PrintState()
-	//	log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
-	//}
 
 	return h1, nil
 }
@@ -196,15 +135,9 @@ func (m *Machine) MarshalState() ([]byte, error) {
 	if err1 != nil {
 		return nil, err1
 	}
-
 	return h1, nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
-	h1 := m.cppmachine.Checkpoint(storage)
-	//h2 := m.gomachine.Checkpoint(storage)
-	//if h1 != h2 {
-	//	log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
-	//}
-	return h1
+	return m.cppmachine.Checkpoint(storage)
 }

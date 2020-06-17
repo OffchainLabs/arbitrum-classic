@@ -196,8 +196,10 @@ func (tv TupleValue) CloneShallow() Value {
 	for i, b := range tv.Contents() {
 		if b.TypeCode() == TypeCodeInt {
 			newContents[i] = b
+		} else if b.TypeCode() == TypeCodeTuple {
+			newContents[i] = b.(TupleValue).GetPreImage()
 		} else {
-			newContents[i] = NewHashOnlyValueFromValue(b)
+			newContents[i] = b.CloneShallow()
 		}
 	}
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}

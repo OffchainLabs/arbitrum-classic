@@ -32,6 +32,22 @@ func NewPreImage(hashImage common.Hash, size int64) HashPreImage {
 	return HashPreImage{hashImage, size}
 }
 
+func NewHashPreImageFromReader(rd io.Reader) (HashPreImage, error) {
+	var h common.Hash
+	_, err := io.ReadFull(rd, h[:])
+	if err != nil {
+		return HashPreImage{}, err
+	}
+
+	intVal, err := NewIntValueFromReader(rd)
+	if err != nil {
+		return HashPreImage{}, err
+	}
+
+	size := intVal.BigInt().Int64()
+	return NewPreImage(h, size), nil
+}
+
 func (hp HashPreImage) GetPreImageHash() common.Hash {
 	return hp.hashImage
 }

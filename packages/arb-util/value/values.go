@@ -98,7 +98,7 @@ func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 	case tipe == TypeCodeCodePoint:
 		return NewCodePointValueFromReader(r)
 	case tipe == TypeCodeHashPreImage:
-		return NewHashOnlyValueFromReader(r)
+		return NewHashPreImageFromReader(r)
 	case tipe <= TypeCodeTuple+MaxTupleSize:
 		return NewSizedTupleFromReader(r, tipe-TypeCodeTuple)
 	default:

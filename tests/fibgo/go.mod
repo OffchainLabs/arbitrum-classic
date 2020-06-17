@@ -17,8 +17,6 @@ replace github.com/offchainlabs/arbitrum/packages/arb-validator => ../../package
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../../packages/arb-validator-core
 
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../../packages/arb-avm-go
-
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../../packages/arb-avm-cpp
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../../packages/arb-util

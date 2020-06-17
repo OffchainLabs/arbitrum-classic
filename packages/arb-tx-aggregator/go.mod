@@ -10,7 +10,6 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.5.0
-	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.5.0
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.5.0
 	github.com/pkg/errors v0.9.1
@@ -18,8 +17,6 @@ require (
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.22.0
 )
-
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
 
