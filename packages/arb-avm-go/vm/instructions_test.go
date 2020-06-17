@@ -1504,7 +1504,7 @@ func TestLog(t *testing.T) {
 		t.Error(err)
 	}
 	// verify out message
-	logs := ad.Logs
+	logs := ad.ParseLogs()
 	if len(logs) != 1 {
 		t.Error("No log value generated")
 	}
@@ -1542,12 +1542,13 @@ func TestSend(t *testing.T) {
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
+	outMessages := ad.ParseOutMessages()
 	// verify out message
-	if len(ad.OutMsgs) != 1 {
+	if len(outMessages) != 1 {
 		t.Error("No out message generated")
 	}
-	if !value.Eq(ad.OutMsgs[0], val) {
-		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", ad.OutMsgs[0], val)
+	if !value.Eq(outMessages[0], val) {
+		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", outMessages[0], val)
 	}
 }
 
