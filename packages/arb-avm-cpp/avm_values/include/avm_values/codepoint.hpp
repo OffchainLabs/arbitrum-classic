@@ -73,7 +73,7 @@ bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t hash(const CodePoint& cp);
 
-CodePoint getErrCodePoint();
+const CodePoint& getErrCodePoint();
 
 struct CodePointStub {
     uint64_t pc;
@@ -135,10 +135,21 @@ class Code {
     Code(std::vector<CodePoint> code_) : code(std::move(code_)) {}
 
     const CodePoint& operator[](const CodePointStub& ref) const {
-        return code[ref.pc];
+        const auto& err_codepoint = getErrCodePoint();
+        if (ref.hash == hash(err_codepoint)) {
+            return err_codepoint;
+        } else {
+            return code[ref.pc];
+        }
     }
 
-    const CodePoint& operator[](CodePointRef ref) const { return code[ref.pc]; }
+    const CodePoint& operator[](CodePointRef ref) const {
+        if (ref.is_err) {
+            return getErrCodePoint();
+        } else {
+            return code[ref.pc];
+        }
+    }
 
     const CodePoint& operator[](uint64_t pos) const { return code[pos]; }
 };

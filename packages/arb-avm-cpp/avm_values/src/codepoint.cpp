@@ -136,8 +136,9 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
     return os;
 }
 
-CodePoint getErrCodePoint() {
-    return CodePoint(pc_default, Operation(static_cast<OpCode>(0)), 0);
+const CodePoint& getErrCodePoint() {
+    CodePoint static errcp(pc_default, Operation(static_cast<OpCode>(0)), 0);
+    return errcp;
 }
 
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
