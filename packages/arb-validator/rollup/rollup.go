@@ -381,7 +381,8 @@ func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.Confir
 }
 
 func (chain *ChainObserver) updateOldest() {
-	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
+	// Don't update the oldest more than 1 block behind the current latest confirmed node
+	for chain.nodeGraph.oldestNode.Depth()+1 < chain.nodeGraph.latestConfirmed.Depth() {
 		if chain.nodeGraph.oldestNode.NumStakers() > 0 {
 			return
 		}
