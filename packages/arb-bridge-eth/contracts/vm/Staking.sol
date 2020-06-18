@@ -291,7 +291,8 @@ contract Staking {
         view
         returns(uint)
     {
-        uint256 _stakerCount = _verifyStakerCount(stakerProofOffsets, stakerAddresses.length);
+        uint256 _stakerCount = stakerAddresses.length;
+        _verifyStakerCount(stakerProofOffsets, _stakerCount);
 
         bytes20 prevStaker = 0x00;
         uint activeCount = 0;
@@ -340,8 +341,8 @@ contract Staking {
                 RollupUtils.calculateLeafFromPath(
                     node,
                     stakerProofs,
-                    start,
-                    end
+                    proofStart,
+                    proofEnd
                 ) == staker.location,
                 CHCK_STAKER_PROOF
             );
@@ -357,11 +358,8 @@ contract Staking {
     ) 
         private 
         view 
-        returns(uint256) 
     {
         require(_stakerCount == stakerCount, CHCK_COUNT);
         require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
-
-        return _stakerCount;
     }
 }

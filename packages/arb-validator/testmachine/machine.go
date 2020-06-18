@@ -125,7 +125,6 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	if err1 != nil {
 		return nil, err1
 	}
-
 	return h1, nil
 }
 
