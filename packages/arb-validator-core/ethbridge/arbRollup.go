@@ -357,44 +357,6 @@ func (vm *arbRollup) IsStaked(address common.Address) (bool, error) {
 	return vm.ArbRollup.IsStaked(nil, address.ToEthAddress())
 }
 
-//func (vm *arbRollup) VerifyVM(
-//	auth *bind.CallOpts,
-//	config *valmessage.VMConfiguration,
-//	machine common.Hash,
-//) error {
-//	//code, err := vm.client.CodeAt(auth.Context, vm.address, nil)
-//	// Verify that VM has correct code
-//	vmInfo, err := vm.ArbRollup.Vm(auth)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if vmInfo.MachineHash != machine {
-//		return errors.New("VM has different machine hash")
-//	}
-//
-//	if config.GracePeriod != uint64(vmInfo.GracePeriod) {
-//		return errors.New("VM has different grace period")
-//	}
-//
-//	if value.NewBigIntFromBuf(config.EscrowRequired).Cmp(vmInfo.EscrowRequired) != 0 {
-//		return errors.New("VM has different escrow required")
-//	}
-//
-//	if config.MaxExecutionStepCount != vmInfo.MaxExecutionSteps {
-//		return errors.New("VM has different mxa steps")
-//	}
-//
-//	owner, err := vm.ArbRollup.Owner(auth)
-//	if err != nil {
-//		return err
-//	}
-//	if protocol.NewAddressFromBuf(config.Owner) != owner {
-//		return errors.New("VM has different owner")
-//	}
-//	return nil
-//}
-
 func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, vm.Client, vm.auth.auth.From, tx, methodName)
 }

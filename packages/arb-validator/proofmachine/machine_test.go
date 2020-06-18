@@ -97,7 +97,7 @@ func TestAddValueToStack(t *testing.T) {
 	intval := value.NewInt64Value(1)
 
 	stack2 := value.NewTuple2(intval, stack)
-	expectedHash := stack2.GetPreImage().Hash().ToEthHash()
+	expectedHash := stack2.Hash().ToEthHash()
 
 	buf1 := new(bytes.Buffer)
 	err := value.MarshalValue(stack, buf1)

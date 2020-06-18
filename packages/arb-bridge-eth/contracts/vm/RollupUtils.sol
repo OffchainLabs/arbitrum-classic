@@ -94,7 +94,7 @@ library RollupUtils {
         );
     }
 
-    function calculatePath(
+    function calculateLeafFromPath(
         bytes32 from,
         bytes32[] memory proof
     )
@@ -102,7 +102,7 @@ library RollupUtils {
         pure
         returns(bytes32)
     {
-        return calculatePathOffset(
+        return calculateLeafFromPath(
             from,
             proof,
             0,
@@ -110,7 +110,7 @@ library RollupUtils {
         );
     }
 
-    function calculatePathOffset(
+    function calculateLeafFromPath(
         bytes32 from,
         bytes32[] memory proof,
         uint256 start,

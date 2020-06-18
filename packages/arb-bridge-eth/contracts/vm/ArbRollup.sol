@@ -117,8 +117,8 @@ contract ArbRollup is NodeGraph, Staking {
         external
         payable
     {
-        bytes32 location = RollupUtils.calculatePath(latestConfirmed(), proof1);
-        bytes32 leaf = RollupUtils.calculatePath(location, proof2);
+        bytes32 location = RollupUtils.calculateLeafFromPath(latestConfirmed(), proof1);
+        bytes32 leaf = RollupUtils.calculateLeafFromPath(location, proof2);
         require(isValidLeaf(leaf), PLACE_LEAF);
         createStake(location);
     }
@@ -130,8 +130,8 @@ contract ArbRollup is NodeGraph, Staking {
         external
     {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        bytes32 newLocation = RollupUtils.calculatePath(stakerLocation, proof1);
-        bytes32 leaf = RollupUtils.calculatePath(newLocation, proof2);
+        bytes32 newLocation = RollupUtils.calculateLeafFromPath(stakerLocation, proof1);
+        bytes32 leaf = RollupUtils.calculateLeafFromPath(newLocation, proof2);
         require(isValidLeaf(leaf), MOVE_LEAF);
         updateStakerLocation(msg.sender, newLocation);
     }
@@ -156,8 +156,8 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(
             latestConfirmedProof[0] != stakerProof[0] &&
-            RollupUtils.calculatePath(node, latestConfirmedProof) == latestConfirmed() &&
-            RollupUtils.calculatePath(node, stakerProof) == stakerLocation,
+            RollupUtils.calculateLeafFromPath(node, latestConfirmedProof) == latestConfirmed() &&
+            RollupUtils.calculateLeafFromPath(node, stakerProof) == stakerLocation,
             RECOV_CONFLICT_PROOF
         );
         refundStaker(stakerAddress);
@@ -182,7 +182,7 @@ contract ArbRollup is NodeGraph, Staking {
             childType,
             vmProtoStateHash
         );
-        bytes32 leaf = RollupUtils.calculatePath(nextNode, proof);
+        bytes32 leaf = RollupUtils.calculateLeafFromPath(nextNode, proof);
         require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
         require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
 
@@ -214,7 +214,7 @@ contract ArbRollup is NodeGraph, Staking {
     )
         external
     {
-        MakeAssertionData memory assertData = MakeAssertionData(
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
@@ -242,7 +242,7 @@ contract ArbRollup is NodeGraph, Staking {
         (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(assertData);
 
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        require(RollupUtils.calculatePath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
+        require(RollupUtils.calculateLeafFromPath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
         updateStakerLocation(msg.sender, newValid);
     }
 
@@ -258,7 +258,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        require(RollupUtils.calculatePath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
+        require(RollupUtils.calculateLeafFromPath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
         refundStaker(stakerAddress);
     }
 
@@ -309,58 +309,25 @@ contract ArbRollup is NodeGraph, Staking {
     function _confirm(ConfirmData memory data) private {
         uint256 nodeCount = data.branches.length;
         _verifyDataLength(data);
-        uint256 validNum = 0;
-        uint256 invalidNum = 0;
-        uint256 messagesOffset = 0;
-        bytes32 confNode = latestConfirmed();
 
         bytes32[] memory nodeHashes = new bytes32[](nodeCount);
         uint[] memory messageCounts = new uint[](nodeCount);
 
-        bytes32 vmProtoStateHash = data.initalProtoStateHash;
+        NodeData memory nodeData = _getInitialNodeData(data);
 
-        for (uint256 i = 0; i < nodeCount; i++) {
-            uint256 branchType = data.branches[i];
-            bytes32 nodeDataHash;
-            if (branchType == VALID_CHILD_TYPE) {
-                bytes32 lastMsgHash;
-                uint256 messageLength = data.messagesLengths[validNum];
-                (lastMsgHash, messageCounts[i]) = Protocol.generateLastMessageHash(
-                    data.messages,
-                    messagesOffset,
-                    messageLength
-                );
-                nodeDataHash = RollupUtils.validDataHash(
-                    lastMsgHash,
-                    data.logsAcc[validNum]
-                );
-                messagesOffset += messageLength;
-                vmProtoStateHash = data.vmProtoStateHashes[validNum];
-                validNum++;
-            } else {
-                messageCounts[i] = 0;
-                nodeDataHash = data.challengeNodeData[invalidNum];
-                invalidNum++;
-            }
-
-            confNode = RollupUtils.childNodeHash(
-                confNode,
-                data.deadlineTicks[i],
-                nodeDataHash,
-                branchType,
-                vmProtoStateHash
-            );
-            nodeHashes[i] = confNode;
-
-            if (branchType == VALID_CHILD_TYPE) {
-                emit ConfirmedValidAssertion(confNode);
-            }
+        for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+                ( nodeData, 
+                  nodeHashes[nodeIndex], 
+                  messageCounts[nodeIndex] ) = _computeNodeData(nodeData, nodeIndex, data);
         }
-        require(messagesOffset == data.messages.length, "Didn't read all messages");
+
+        require(nodeData.messagesOffset == data.messages.length, "Didn't read all messages");
+
         // If last node is after deadline, then all nodes are
         require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[nodeCount - 1], CONF_TIME);
+
         uint activeCount = checkAlignedStakers(
-            confNode,
+            nodeHashes[nodeCount-1],
             data.deadlineTicks[nodeCount - 1],
             data.stakerAddresses,
             data.stakerProofs,
@@ -368,16 +335,84 @@ contract ArbRollup is NodeGraph, Staking {
         );
         require(activeCount > 0, CONF_HAS_STAKER);
 
-        confirmNode(confNode);
+        confirmNode(nodeData.nodeHash);
 
         // Send all messages is a single batch
         globalInbox.sendMessages(data.messages, messageCounts, nodeHashes);
 
-        if (validNum > 0) {
+        if (nodeData.validNum > 0) {
             emit ConfirmedAssertion(
                 data.logsAcc
             );
         }
+    }
+
+    struct NodeData {
+        uint256 validNum;
+        uint256 invalidNum;
+        uint256 messagesOffset;
+        bytes32 vmProtoStateHash;
+        bytes32 nodeHash;
+    }
+
+    function _getInitialNodeData(
+        ConfirmData memory data
+    ) 
+        private view returns (NodeData memory)
+    {
+        return NodeData(
+            0,
+            0,
+            0,
+            data.initalProtoStateHash,
+            latestConfirmed());
+    }
+
+    function _computeNodeData(
+        NodeData memory nodeData,
+        uint256 nodeIndex,
+        ConfirmData memory data
+    ) 
+        private returns (NodeData memory, bytes32, uint) 
+    {
+        uint256 branchType = data.branches[nodeIndex];
+        bytes32 nodeDataHash;
+        uint msgCount;
+
+        if (branchType == VALID_CHILD_TYPE) {
+            bytes32 lastMsgHash;
+            uint256 messageLength = data.messagesLengths[nodeData.validNum];
+            (lastMsgHash, msgCount) = Protocol.generateLastMessageHash(
+                data.messages,
+                nodeData.messagesOffset,
+                messageLength
+            );
+            nodeDataHash = RollupUtils.validDataHash(
+                lastMsgHash,
+                data.logsAcc[nodeData.validNum]
+            );
+            nodeData.messagesOffset += messageLength;
+            nodeData.vmProtoStateHash = data.vmProtoStateHashes[nodeData.validNum];
+            nodeData.validNum++;
+        } else {
+            msgCount = 0;
+            nodeDataHash = data.challengeNodeData[nodeData.invalidNum];
+            nodeData.invalidNum++;
+        }
+
+        nodeData.nodeHash = RollupUtils.childNodeHash(
+            nodeData.nodeHash,
+            data.deadlineTicks[nodeIndex],
+            nodeDataHash,
+            branchType,
+            nodeData.vmProtoStateHash
+        );
+
+        if (branchType == VALID_CHILD_TYPE) {
+            emit ConfirmedValidAssertion(nodeData.nodeHash);
+        }
+        
+        return (nodeData, nodeData.nodeHash, msgCount);
     }
 
     function _verifyDataLength(ConfirmData memory data) private pure{

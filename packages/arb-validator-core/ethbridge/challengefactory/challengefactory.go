@@ -28,10 +28,11 @@ var (
 )
 
 // ChallengeFactoryABI is the input ABI used to generate the binding from.
-const ChallengeFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_messagesChallengeTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_inboxTopChallengeTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_executionChallengeTemplate\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"createChallenge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"executionChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"generateCloneAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"inboxTopChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"messagesChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ChallengeFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_messagesChallengeTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_inboxTopChallengeTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_executionChallengeTemplate\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"INVALID_TYPE_STR\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"createChallenge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"executionChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"generateCloneAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"inboxTopChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"messagesChallengeTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ChallengeFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ChallengeFactoryFuncSigs = map[string]string{
+	"e6fcd194": "INVALID_TYPE_STR()",
 	"865da1c2": "createChallenge(address,address,uint256,bytes32,uint256)",
 	"9b5f4dfc": "executionChallengeTemplate()",
 	"729406c8": "generateCloneAddress(address,address,uint256)",
@@ -40,7 +41,7 @@ var ChallengeFactoryFuncSigs = map[string]string{
 }
 
 // ChallengeFactoryBin is the compiled bytecode used for deploying new contracts.
-var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516107423803806107428339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556106b38061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c8063729406c81461005c578063865da1c2146100ae5780639b5f4dfc146100f0578063e252f79a146100f8578063f089f1c214610100575b600080fd5b6100926004803603606081101561007257600080fd5b506001600160a01b03813581169160208101359091169060400135610108565b604080516001600160a01b039092168252519081900360200190f35b610092600480360360a08110156100c457600080fd5b506001600160a01b0381358116916020810135909116906040810135906060810135906080013561019f565b610092610246565b610092610255565b610092610264565b60006001600160f81b03193061011e8686610273565b61012f61012a866102c0565b6103bb565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b6000806101ab836102c0565b905060006101b8826104c5565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b15801561022257600080fd5b505af1158015610236573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b6000816102d957506001546001600160a01b03166103b6565b60018214156102f457506000546001600160a01b03166103b6565b600282141561030f57506002546001600160a01b03166103b6565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561037b578181015183820152602001610363565b50505050905090810190601f1680156103a85780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b60006060604051806020016103cf906105e2565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106104365780518252601f199092019160209182019101610417565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b6020831061047e5780518252601f19909201916020918201910161045f565b6001836020036101000a0380198251168184511680821785525050505050509050019250505060405160208183030381529060405290508080519060200120915050919050565b60006060604051806020016104d9906105e2565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106105405780518252601f199092019160209182019101610521565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106105885780518252601f199092019160209182019101610569565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836105da573d6000803e3d6000fd5b505050919050565b6090806105ef8339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a7231582014921322bbb834f542e3609cc961ef94ced9d0818145ca3f33ab17457b01ab5c64736f6c634300050f0032"
+var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516108173803806108178339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556107888061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c8063729406c814610067578063865da1c2146100b95780639b5f4dfc146100fb578063e252f79a14610103578063e6fcd1941461010b578063f089f1c214610188575b600080fd5b61009d6004803603606081101561007d57600080fd5b506001600160a01b03813581169160208101359091169060400135610190565b604080516001600160a01b039092168252519081900360200190f35b61009d600480360360a08110156100cf57600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060800135610227565b61009d6102ce565b61009d6102dd565b6101136102ec565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014d578181015183820152602001610135565b50505050905090810190601f16801561017a5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61009d610314565b60006001600160f81b0319306101a68686610323565b6101b76101b286610370565b610481565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b60008061023383610370565b905060006102408261058b565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6040518060400160405280600c81526020016b494e56414c49445f5459504560a01b81525081565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b600061037a6106a8565b82141561039357506001546001600160a01b031661047c565b61039b6106ad565b8214156103b457506000546001600160a01b031661047c565b6103bc6106b2565b8214156103d557506002546001600160a01b031661047c565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610441578181015183820152602001610429565b50505050905090810190601f16801561046e5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b6000606060405180602001610495906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106104fc5780518252601f1990920191602091820191016104dd565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106105445780518252601f199092019160209182019101610525565b6001836020036101000a0380198251168184511680821785525050505050509050019250505060405160208183030381529060405290508080519060200120915050919050565b600060606040518060200161059f906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106106065780518252601f1990920191602091820191016105e7565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b6020831061064e5780518252601f19909201916020918201910161062f565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836106a0573d6000803e3d6000fd5b505050919050565b600090565b600190565b600290565b6090806106c48339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a723158202632503bd6e8596c3f0453454ec4c0f738d703d6eed47185ecc638834bcb9bbc64736f6c634300050f0032"
 
 // DeployChallengeFactory deploys a new Ethereum contract, binding an instance of ChallengeFactory to it.
 func DeployChallengeFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _messagesChallengeTemplate common.Address, _inboxTopChallengeTemplate common.Address, _executionChallengeTemplate common.Address) (common.Address, *types.Transaction, *ChallengeFactory, error) {
@@ -198,6 +199,32 @@ func (_ChallengeFactory *ChallengeFactoryTransactorRaw) Transact(opts *bind.Tran
 	return _ChallengeFactory.Contract.contract.Transact(opts, method, params...)
 }
 
+// INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
+//
+// Solidity: function INVALID_TYPE_STR() constant returns(string)
+func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ChallengeFactory.contract.Call(opts, out, "INVALID_TYPE_STR")
+	return *ret0, err
+}
+
+// INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
+//
+// Solidity: function INVALID_TYPE_STR() constant returns(string)
+func (_ChallengeFactory *ChallengeFactorySession) INVALIDTYPESTR() (string, error) {
+	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
+}
+
+// INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
+//
+// Solidity: function INVALID_TYPE_STR() constant returns(string)
+func (_ChallengeFactory *ChallengeFactoryCallerSession) INVALIDTYPESTR() (string, error) {
+	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
+}
+
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
 // Solidity: function executionChallengeTemplate() constant returns(address)
@@ -323,124 +350,132 @@ func (_ChallengeFactory *ChallengeFactoryTransactorSession) CreateChallenge(_ass
 	return _ChallengeFactory.Contract.CreateChallenge(&_ChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriodTicks, _challengeHash, challengeType)
 }
 
-// ChallengeTypeABI is the input ABI used to generate the binding from.
-const ChallengeTypeABI = "[]"
+// ChallengeUtilsABI is the input ABI used to generate the binding from.
+const ChallengeUtilsABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"INVALID_EXECUTION_TYPE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"INVALID_INBOX_TOP_TYPE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"INVALID_MESSAGES_TYPE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"VALID_CHILD_TYPE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
-// ChallengeTypeBin is the compiled bytecode used for deploying new contracts.
-var ChallengeTypeBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582010a38d0d5c7745c71a22d558d797375568be2714cb4336f2004d6f10c253593864736f6c634300050f0032"
+// ChallengeUtilsFuncSigs maps the 4-byte function signature to its string representation.
+var ChallengeUtilsFuncSigs = map[string]string{
+	"95312727": "INVALID_EXECUTION_TYPE()",
+	"a697bcac": "INVALID_INBOX_TOP_TYPE()",
+	"d7519b46": "INVALID_MESSAGES_TYPE()",
+	"2e179be5": "VALID_CHILD_TYPE()",
+}
 
-// DeployChallengeType deploys a new Ethereum contract, binding an instance of ChallengeType to it.
-func DeployChallengeType(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeType, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
+// ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
+var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820700623dcb300d07a89dd66c2f312e517c83be08b285278c67140cfaaad930fb064736f6c634300050f0032"
+
+// DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
+func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeUtilsABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeTypeBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeUtilsBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
+	return address, tx, &ChallengeUtils{ChallengeUtilsCaller: ChallengeUtilsCaller{contract: contract}, ChallengeUtilsTransactor: ChallengeUtilsTransactor{contract: contract}, ChallengeUtilsFilterer: ChallengeUtilsFilterer{contract: contract}}, nil
 }
 
-// ChallengeType is an auto generated Go binding around an Ethereum contract.
-type ChallengeType struct {
-	ChallengeTypeCaller     // Read-only binding to the contract
-	ChallengeTypeTransactor // Write-only binding to the contract
-	ChallengeTypeFilterer   // Log filterer for contract events
+// ChallengeUtils is an auto generated Go binding around an Ethereum contract.
+type ChallengeUtils struct {
+	ChallengeUtilsCaller     // Read-only binding to the contract
+	ChallengeUtilsTransactor // Write-only binding to the contract
+	ChallengeUtilsFilterer   // Log filterer for contract events
 }
 
-// ChallengeTypeCaller is an auto generated read-only Go binding around an Ethereum contract.
-type ChallengeTypeCaller struct {
+// ChallengeUtilsCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ChallengeUtilsCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeTypeTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type ChallengeTypeTransactor struct {
+// ChallengeUtilsTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ChallengeUtilsTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeTypeFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type ChallengeTypeFilterer struct {
+// ChallengeUtilsFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ChallengeUtilsFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeTypeSession is an auto generated Go binding around an Ethereum contract,
+// ChallengeUtilsSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type ChallengeTypeSession struct {
-	Contract     *ChallengeType    // Generic contract binding to set the session for
+type ChallengeUtilsSession struct {
+	Contract     *ChallengeUtils   // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ChallengeTypeCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// ChallengeUtilsCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type ChallengeTypeCallerSession struct {
-	Contract *ChallengeTypeCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts        // Call options to use throughout this session
+type ChallengeUtilsCallerSession struct {
+	Contract *ChallengeUtilsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ChallengeTypeTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// ChallengeUtilsTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type ChallengeTypeTransactorSession struct {
-	Contract     *ChallengeTypeTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+type ChallengeUtilsTransactorSession struct {
+	Contract     *ChallengeUtilsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ChallengeTypeRaw is an auto generated low-level Go binding around an Ethereum contract.
-type ChallengeTypeRaw struct {
-	Contract *ChallengeType // Generic contract binding to access the raw methods on
+// ChallengeUtilsRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ChallengeUtilsRaw struct {
+	Contract *ChallengeUtils // Generic contract binding to access the raw methods on
 }
 
-// ChallengeTypeCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type ChallengeTypeCallerRaw struct {
-	Contract *ChallengeTypeCaller // Generic read-only contract binding to access the raw methods on
+// ChallengeUtilsCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ChallengeUtilsCallerRaw struct {
+	Contract *ChallengeUtilsCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ChallengeTypeTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type ChallengeTypeTransactorRaw struct {
-	Contract *ChallengeTypeTransactor // Generic write-only contract binding to access the raw methods on
+// ChallengeUtilsTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ChallengeUtilsTransactorRaw struct {
+	Contract *ChallengeUtilsTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewChallengeType creates a new instance of ChallengeType, bound to a specific deployed contract.
-func NewChallengeType(address common.Address, backend bind.ContractBackend) (*ChallengeType, error) {
-	contract, err := bindChallengeType(address, backend, backend, backend)
+// NewChallengeUtils creates a new instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtils(address common.Address, backend bind.ContractBackend) (*ChallengeUtils, error) {
+	contract, err := bindChallengeUtils(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
+	return &ChallengeUtils{ChallengeUtilsCaller: ChallengeUtilsCaller{contract: contract}, ChallengeUtilsTransactor: ChallengeUtilsTransactor{contract: contract}, ChallengeUtilsFilterer: ChallengeUtilsFilterer{contract: contract}}, nil
 }
 
-// NewChallengeTypeCaller creates a new read-only instance of ChallengeType, bound to a specific deployed contract.
-func NewChallengeTypeCaller(address common.Address, caller bind.ContractCaller) (*ChallengeTypeCaller, error) {
-	contract, err := bindChallengeType(address, caller, nil, nil)
+// NewChallengeUtilsCaller creates a new read-only instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsCaller(address common.Address, caller bind.ContractCaller) (*ChallengeUtilsCaller, error) {
+	contract, err := bindChallengeUtils(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ChallengeTypeCaller{contract: contract}, nil
+	return &ChallengeUtilsCaller{contract: contract}, nil
 }
 
-// NewChallengeTypeTransactor creates a new write-only instance of ChallengeType, bound to a specific deployed contract.
-func NewChallengeTypeTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeTypeTransactor, error) {
-	contract, err := bindChallengeType(address, nil, transactor, nil)
+// NewChallengeUtilsTransactor creates a new write-only instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeUtilsTransactor, error) {
+	contract, err := bindChallengeUtils(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ChallengeTypeTransactor{contract: contract}, nil
+	return &ChallengeUtilsTransactor{contract: contract}, nil
 }
 
-// NewChallengeTypeFilterer creates a new log filterer instance of ChallengeType, bound to a specific deployed contract.
-func NewChallengeTypeFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeTypeFilterer, error) {
-	contract, err := bindChallengeType(address, nil, nil, filterer)
+// NewChallengeUtilsFilterer creates a new log filterer instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeUtilsFilterer, error) {
+	contract, err := bindChallengeUtils(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &ChallengeTypeFilterer{contract: contract}, nil
+	return &ChallengeUtilsFilterer{contract: contract}, nil
 }
 
-// bindChallengeType binds a generic wrapper to an already deployed contract.
-func bindChallengeType(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
+// bindChallengeUtils binds a generic wrapper to an already deployed contract.
+func bindChallengeUtils(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeUtilsABI))
 	if err != nil {
 		return nil, err
 	}
@@ -451,38 +486,142 @@ func bindChallengeType(address common.Address, caller bind.ContractCaller, trans
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeType *ChallengeTypeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ChallengeType.Contract.ChallengeTypeCaller.contract.Call(opts, result, method, params...)
+func (_ChallengeUtils *ChallengeUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeUtils.Contract.ChallengeUtilsCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ChallengeType *ChallengeTypeRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transfer(opts)
+func (_ChallengeUtils *ChallengeUtilsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.ChallengeUtilsTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ChallengeType *ChallengeTypeRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transact(opts, method, params...)
+func (_ChallengeUtils *ChallengeUtilsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.ChallengeUtilsTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeType *ChallengeTypeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ChallengeType.Contract.contract.Call(opts, result, method, params...)
+func (_ChallengeUtils *ChallengeUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeUtils.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ChallengeType *ChallengeTypeTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ChallengeType.Contract.contract.Transfer(opts)
+func (_ChallengeUtils *ChallengeUtilsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ChallengeType *ChallengeTypeTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ChallengeType.Contract.contract.Transact(opts, method, params...)
+func (_ChallengeUtils *ChallengeUtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.contract.Transact(opts, method, params...)
+}
+
+// INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
+//
+// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDEXECUTIONTYPE(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ChallengeUtils.contract.Call(opts, out, "INVALID_EXECUTION_TYPE")
+	return *ret0, err
+}
+
+// INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
+//
+// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsSession) INVALIDEXECUTIONTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDEXECUTIONTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
+//
+// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDEXECUTIONTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDEXECUTIONTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
+//
+// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDINBOXTOPTYPE(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ChallengeUtils.contract.Call(opts, out, "INVALID_INBOX_TOP_TYPE")
+	return *ret0, err
+}
+
+// INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
+//
+// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsSession) INVALIDINBOXTOPTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDINBOXTOPTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
+//
+// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDINBOXTOPTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDINBOXTOPTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
+//
+// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDMESSAGESTYPE(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ChallengeUtils.contract.Call(opts, out, "INVALID_MESSAGES_TYPE")
+	return *ret0, err
+}
+
+// INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
+//
+// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsSession) INVALIDMESSAGESTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDMESSAGESTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
+//
+// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDMESSAGESTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.INVALIDMESSAGESTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
+//
+// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCaller) VALIDCHILDTYPE(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ChallengeUtils.contract.Call(opts, out, "VALID_CHILD_TYPE")
+	return *ret0, err
+}
+
+// VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
+//
+// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsSession) VALIDCHILDTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.VALIDCHILDTYPE(&_ChallengeUtils.CallOpts)
+}
+
+// VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
+//
+// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+func (_ChallengeUtils *ChallengeUtilsCallerSession) VALIDCHILDTYPE() (*big.Int, error) {
+	return _ChallengeUtils.Contract.VALIDCHILDTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // CloneFactoryABI is the input ABI used to generate the binding from.

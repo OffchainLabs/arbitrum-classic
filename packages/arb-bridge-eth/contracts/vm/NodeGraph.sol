@@ -17,11 +17,12 @@
 pragma solidity ^0.5.3;
 
 import "./RollupUtils.sol";
+import "./NodeGraphUtils.sol";
 import "./VM.sol";
 import "../IGlobalInbox.sol";
 
 import "../challenge/ChallengeUtils.sol";
-import "../challenge/ChallengeType.sol";
+// import "../challenge/ChallengeType.sol";
 
 import "../arch/Value.sol";
 import "../arch/Protocol.sol";
@@ -29,7 +30,7 @@ import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
 
 
-contract NodeGraph is ChallengeType {
+contract NodeGraph {
 
     using SafeMath for uint256;
 
@@ -84,81 +85,6 @@ contract NodeGraph is ChallengeType {
     mapping (bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
 
-    struct MakeAssertionData {
-        bytes32 beforeVMHash;
-        bytes32 beforeInboxTop;
-        uint256 beforeInboxCount;
-
-        bytes32 prevPrevLeafHash;
-        uint256 prevDeadlineTicks;
-        bytes32 prevDataHash;
-        uint32  prevChildType;
-
-        uint64 numSteps;
-        uint128[4] timeBounds;
-        uint256 importedMessageCount;
-
-        bytes32 afterInboxTop;
-
-        bytes32 importedMessagesSlice;
-
-        bytes32 afterVMHash;
-        bool didInboxInsn;
-        uint64 numArbGas;
-        bytes32 messagesAccHash;
-        bytes32 logsAccHash;
-    }
-
-    function pruneLeaves(
-        bytes32[] memory fromNodes,
-        bytes32[] memory leafProofs,
-        uint256[] memory leafProofLengths,
-        bytes32[] memory latestConfProofs,
-        uint256[] memory latestConfirmedProofLengths
-    )
-        public
-    {
-        uint pruneCount = fromNodes.length;
-
-        require(
-            leafProofLengths.length == pruneCount &&
-            latestConfirmedProofLengths.length == pruneCount,
-            "input length mistmatch"
-        );
-        uint256 prevLeafOffset = 0;
-        uint256 prevConfOffset = 0;
-        for (uint256 i = 0; i < pruneCount; i++) {
-            bytes32 from = fromNodes[i];
-            require(leafProofLengths[i] > 0 && latestConfirmedProofLengths[i] > 0, PRUNE_PROOFLEN);
-            uint256 nextLeafOffset = prevLeafOffset + leafProofLengths[i];
-            uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLengths[i];
-
-            // If the function call was produced valid at any point, either all these checks will pass or all will fail
-            require(
-                leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset] &&
-                RollupUtils.calculatePathOffset(from, latestConfProofs, prevConfOffset, nextConfOffset) == latestConfirmed(),
-                PRUNE_CONFLICT
-            );
-
-            bytes32 leaf = RollupUtils.calculatePathOffset(from, leafProofs, prevLeafOffset, nextLeafOffset);
-            if (isValidLeaf(leaf)) {
-                delete leaves[leaf];
-                emit RollupPruned(leaf);
-            }
-
-            prevLeafOffset = nextLeafOffset;
-            prevConfOffset = nextConfOffset;
-        }
-    }
-
-    function latestConfirmed() public view returns (bytes32) {
-        return latestConfirmedPriv;
-    }
-
-    function isValidLeaf(bytes32 leaf) public view returns(bool) {
-        return leaves[leaf];
-    }
-
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
@@ -197,76 +123,63 @@ contract NodeGraph is ChallengeType {
         emit RollupCreated(_vmState);
     }
 
-    function makeAssertion(MakeAssertionData memory data) internal returns(bytes32, bytes32) {
-        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
-            data.beforeVMHash,
-            data.beforeInboxTop,
-            data.beforeInboxCount
-        );
-        bytes32 prevLeaf = RollupUtils.childNodeHash(
-            data.prevPrevLeafHash,
-            data.prevDeadlineTicks,
-            data.prevDataHash,
-            data.prevChildType,
-            vmProtoHashBefore
-        );
-        require(isValidLeaf(prevLeaf), MAKE_LEAF);
-        require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
-        require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
-        require(data.timeBounds[1] <= data.timeBounds[0]+vmParams.maxBlockBoundsWidth);
-        require(data.timeBounds[2] <= data.timeBounds[3]+vmParams.maxTimestampBoundsWidth);
-        require(VM.withinTimeBounds(data.timeBounds), MAKE_TIME);
-        require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
+    function makeAssertion(NodeGraphUtils.AssertionData memory data) internal returns(bytes32, bytes32) {
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = _verifyPrevLeaf(data);
+        _verifyAssertionData(data);
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
         require(data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount), MAKE_MESSAGE_CNT);
 
-        uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
-        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
-        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
-        if (deadlineTicks < data.prevDeadlineTicks) {
-            deadlineTicks = data.prevDeadlineTicks;
-        }
-        deadlineTicks += checkTimeTicks;
+        bytes32 validLeafHash = _initializeAssertionLeaves(
+            data, 
+            prevLeaf, 
+            vmProtoHashBefore, 
+            inboxValue, 
+            inboxCount);
 
-        bytes32 invalidInbox = generateInvalidInboxTopLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks,
-            inboxValue,
-            inboxCount,
-            vmProtoHashBefore,
-            gracePeriodTicks
-        );
-        bytes32 invalidMessages = generateInvalidMessagesLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            gracePeriodTicks
-        );
-        bytes32 invalidExec = generateInvalidExecutionLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            gracePeriodTicks,
-            checkTimeTicks
-        );
-        bytes32 validHash = generateValidLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks
-        );
-
-        leaves[invalidInbox] = true;
-        leaves[invalidMessages] = true;
-        leaves[invalidExec] = true;
-        leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, validHash, inboxValue, inboxCount);
-        return (prevLeaf, validHash);
+        emitAssertedEvent(data, prevLeaf, validLeafHash, inboxValue, inboxCount);
+        return (prevLeaf, validLeafHash);
+    }
+
+    function pruneLeaves(
+        bytes32[] memory fromNodes,
+        bytes32[] memory leafProofs,
+        uint256[] memory leafProofLengths,
+        bytes32[] memory latestConfProofs,
+        uint256[] memory latestConfirmedProofLengths
+    )
+        public
+    {
+        uint pruneCount = fromNodes.length;
+
+        require(
+            leafProofLengths.length == pruneCount &&
+            latestConfirmedProofLengths.length == pruneCount,
+            "input length mistmatch"
+        );
+        uint256 prevLeafOffset = 0;
+        uint256 prevConfOffset = 0;
+
+        for (uint256 i = 0; i < pruneCount; i++) {
+            (prevLeafOffset, prevConfOffset) = _pruneLeaf(
+                fromNodes[i], 
+                latestConfirmedProofLengths[i], 
+                leafProofLengths[i],
+                leafProofs,
+                latestConfProofs,
+                prevLeafOffset,
+                prevConfOffset);
+        }
+    }
+
+    function latestConfirmed() public view returns (bytes32) {
+        return latestConfirmedPriv;
+    }
+
+    function isValidLeaf(bytes32 leaf) public view returns(bool) {
+        return leaves[leaf];
     }
 
     function confirmNode(bytes32 to) internal {
@@ -275,7 +188,7 @@ contract NodeGraph is ChallengeType {
     }
 
     function emitAssertedEvent(
-        MakeAssertionData memory data,
+        NodeGraphUtils.AssertionData memory data,
         bytes32 prevLeaf,
         bytes32 validLeaf,
         bytes32 inboxValue,
@@ -303,135 +216,119 @@ contract NodeGraph is ChallengeType {
         );
     }
 
-    function generateInvalidInboxTopLeaf(
-        MakeAssertionData memory data,
-        bytes32 prevLeaf,
-        uint256 deadlineTicks,
-        bytes32 inboxValue,
-        uint256 inboxCount,
-        bytes32 vmProtoHashBefore,
-        uint256 gracePeriodTicks
-    )
-        private
-        pure
-        returns(bytes32)
+    function _pruneLeaf(
+        bytes32 from,
+        uint256 latestConfirmedProofLength,
+        uint256 leafProofLength,
+        bytes32[] memory leafProofs,
+        bytes32[] memory latestConfProofs,
+        uint256 prevLeafOffset,
+        uint256 prevConfOffset
+
+    ) 
+        private returns (uint256, uint256)
     {
-        bytes32 challengeHash = ChallengeUtils.inboxTopHash(
-            data.afterInboxTop,
-            inboxValue,
-            inboxCount - (data.beforeInboxCount + data.importedMessageCount)
-        );
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            RollupUtils.challengeDataHash(
-                challengeHash,
-                gracePeriodTicks + RollupTime.blocksToTicks(1)
-            ),
-            INVALID_INBOX_TOP_TYPE,
-            vmProtoHashBefore
-        );
+        require(leafProofLength > 0 && latestConfirmedProofLength > 0, PRUNE_PROOFLEN);
+        uint256 nextLeafOffset = prevLeafOffset + leafProofLength;
+        uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLength;
+
+        // If the function call was produced valid at any point, either all these checks will pass or all will fail
+        bool isValidNode = RollupUtils.calculateLeafFromPath(
+            from, 
+            latestConfProofs, 
+            prevConfOffset, 
+            nextConfOffset) == latestConfirmed();
+
+        require(isValidNode && leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset], PRUNE_CONFLICT);
+
+        bytes32 leaf = RollupUtils.calculateLeafFromPath(from, leafProofs, prevLeafOffset, nextLeafOffset);
+        if (isValidLeaf(leaf)) {
+            delete leaves[leaf];
+            emit RollupPruned(leaf);
+        }
+
+        return (nextLeafOffset, nextConfOffset);
     }
 
-    function generateInvalidMessagesLeaf(
-        MakeAssertionData memory data,
-        bytes32 prevLeaf,
-        uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore,
-        uint256 gracePeriodTicks
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        bytes32 challengeHash = ChallengeUtils.messagesHash(
+    function _verifyPrevLeaf(NodeGraphUtils.AssertionData memory data) private view returns (bytes32, bytes32) {
+        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
+            data.beforeVMHash,
             data.beforeInboxTop,
-            data.afterInboxTop,
-            Value.hashEmptyTuple(),
-            data.importedMessagesSlice,
-            data.importedMessageCount
+            data.beforeInboxCount
         );
-        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
-            challengeHash,
-            gracePeriodTicks + RollupTime.blocksToTicks(1)
-        );
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            nodeDataHash,
-            INVALID_MESSAGES_TYPE,
+        bytes32 prevLeaf = RollupUtils.childNodeHash(
+            data.prevPrevLeafHash,
+            data.prevDeadlineTicks,
+            data.prevDataHash,
+            data.prevChildType,
             vmProtoHashBefore
         );
+        require(isValidLeaf(prevLeaf), MAKE_LEAF);
+
+        return (prevLeaf, vmProtoHashBefore);
     }
 
-    function generateInvalidExecutionLeaf(
-        MakeAssertionData memory data,
+    function _verifyAssertionData(NodeGraphUtils.AssertionData memory data) private view {
+        require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
+        require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
+        require(data.timeBounds[1] <= data.timeBounds[0]+vmParams.maxBlockBoundsWidth);
+        require(data.timeBounds[2] <= data.timeBounds[3]+vmParams.maxTimestampBoundsWidth);
+        require(VM.withinTimeBounds(data.timeBounds), MAKE_TIME);
+        require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
+    }
+
+    function _initializeAssertionLeaves(
+        NodeGraphUtils.AssertionData memory data, 
         bytes32 prevLeaf,
-        uint256 deadlineTicks,
         bytes32 vmProtoHashBefore,
-        uint256 gracePeriodTicks,
-        uint256 checkTimeTicks
-    )
-        private
-        pure
-        returns(bytes32)
+        bytes32 inboxValue,
+        uint256 inboxCount
+    ) 
+        private returns (bytes32) 
     {
-        bytes32 preconditionHash = Protocol.generatePreconditionHash(
-             data.beforeVMHash,
-             data.timeBounds,
-             data.importedMessagesSlice
-        );
+        uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
+        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
+        if (deadlineTicks < data.prevDeadlineTicks) {
+            deadlineTicks = data.prevDeadlineTicks;
+        }
+        deadlineTicks += checkTimeTicks;
 
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.didInboxInsn,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
-
-        bytes32 executionHash = ChallengeUtils.executionHash(
-            data.numSteps,
-            preconditionHash,
-            assertionHash
-        );
-
-        return RollupUtils.childNodeHash(
+        bytes32 invalidInbox = NodeGraphUtils.generateInvalidInboxTopLeaf(
+            data,
             prevLeaf,
             deadlineTicks,
-            RollupUtils.challengeDataHash(
-                executionHash,
-                gracePeriodTicks + checkTimeTicks
-            ),
-            INVALID_EXECUTION_TYPE,
-            vmProtoHashBefore
+            inboxValue,
+            inboxCount,
+            vmProtoHashBefore,
+            gracePeriodTicks
         );
-    }
-
-    function generateValidLeaf(
-        MakeAssertionData memory data,
-        bytes32 prevLeaf,
-        uint256 deadlineTicks
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        return RollupUtils.childNodeHash(
+        bytes32 invalidMessages = NodeGraphUtils.generateInvalidMessagesLeaf(
+            data,
             prevLeaf,
             deadlineTicks,
-            RollupUtils.validDataHash(
-                data.messagesAccHash,
-                data.logsAccHash
-            ),
-            VALID_CHILD_TYPE,
-            RollupUtils.protoStateHash(
-                data.afterVMHash,
-                data.afterInboxTop,
-                data.beforeInboxCount + data.importedMessageCount
-            )
+            vmProtoHashBefore,
+            gracePeriodTicks
         );
+        bytes32 invalidExec = NodeGraphUtils.generateInvalidExecutionLeaf(
+            data,
+            prevLeaf,
+            deadlineTicks,
+            vmProtoHashBefore,
+            gracePeriodTicks,
+            checkTimeTicks
+        );
+        bytes32 validHash = NodeGraphUtils.generateValidLeaf(
+            data,
+            prevLeaf,
+            deadlineTicks
+        );
+
+        leaves[invalidInbox] = true;
+        leaves[invalidMessages] = true;
+        leaves[invalidExec] = true;
+        leaves[validHash] = true;
+
+        return validHash;
     }
 }
