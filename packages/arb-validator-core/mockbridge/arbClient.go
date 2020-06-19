@@ -51,6 +51,10 @@ func (c *ArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollu
 	return NewRollupWatcher(address, c.client)
 }
 
+func (c *ArbClient) NewGlobalInboxWatcher(common.Address, common.Address) (arbbridge.ArbRollupWatcher, error) {
+	return NewGlobalInboxWatcher(c.client)
+}
+
 func (c *ArbClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
 	return NewExecutionChallenge(address, c.client)
 }
@@ -63,7 +67,7 @@ func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepPr
 	return NewOneStepProof(address, c.client)
 }
 
-func (c *ArbClient) NewGlobalInbox(address common.Address) (arbbridge.GlobalInbox, error) {
+func (c *ArbClient) NewGlobalInbox(address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
 	return NewGlobalInbox(address, c.client)
 }
 

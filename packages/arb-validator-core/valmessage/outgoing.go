@@ -32,9 +32,10 @@ type FinalizedAssertion struct {
 func (f FinalizedAssertion) NewLogs() []value.Value {
 	if f.ProposalResults != nil {
 		assertion := f.ProposalResults.Assertion
-		return assertion.Logs[len(assertion.Logs)-f.ProposalResults.NewLogCount:]
+		logs := assertion.ParseLogs()
+		return logs[len(logs)-f.ProposalResults.NewLogCount:]
 	} else {
-		return f.Assertion.Logs
+		return f.Assertion.ParseLogs()
 	}
 }
 

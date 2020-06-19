@@ -23,6 +23,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+func generateTestSingleDeliveredERC20() SingleDelivered {
+	return SingleDelivered{
+		Message: generateTestERC20(),
+		DeliveryInfo: DeliveryInfo{
+			ChainTime: ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(64654)),
+				Timestamp: big.NewInt(65435643),
+			},
+			TxId: big.NewInt(9675),
+		},
+	}
+}
+
 func generateTestDeliveredERC20() Delivered {
 	return Delivered{
 		Message: generateTestERC20(),
@@ -36,13 +49,10 @@ func generateTestDeliveredERC20() Delivered {
 	}
 }
 
-func TestMarshalDelivered(t *testing.T) {
-	msg := generateTestDeliveredERC20()
-	inboxVal, err := msg.AsInboxValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	msg2, err := UnmarshalDelivered(inboxVal, generateTestChain())
+func TestMarshalSingleDelivered(t *testing.T) {
+	msg := generateTestSingleDeliveredERC20()
+	inboxVal := msg.AsInboxValue()
+	msg2, err := UnmarshalSingleDelivered(inboxVal, generateTestChain())
 	if err != nil {
 		t.Fatal(err)
 	}

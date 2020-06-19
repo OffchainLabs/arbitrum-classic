@@ -18,12 +18,11 @@
 #include "utils.hpp"
 
 #include <data_storage/blockstore.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machinestatedeleter.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
-#include <data_storage/nodestore.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
+#include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 #include <avm_values/value.hpp>
@@ -38,12 +37,7 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     try {
         auto storage =
             new CheckpointStorage(string_filename, string_contract_path);
-
-        if (storage->getInitialVmValues().valid_state) {
-            return static_cast<void*>(storage);
-        } else {
-            return nullptr;
-        }
+        return static_cast<void*>(storage);
     } catch (const std::exception& exp) {
         return nullptr;
     }
@@ -65,23 +59,14 @@ CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr) {
     return storage->getBlockStore().release();
 }
 
-CNodeStore* createNodeStore(CCheckpointStorage* storage_ptr) {
+CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    return storage->getNodeStore().release();
+    return storage->getConfirmedNodeStore().release();
 }
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto state = storage->getInitialVmValues();
-
-    if (!state.valid_state) {
-        return nullptr;
-    }
-
-    MachineState machine_state(state.code, state.staticVal, storage->pool);
-    auto machine = new Machine();
-    machine->initializeMachine(machine_state);
-
+    auto machine = new Machine(storage->getInitialMachine());
     return static_cast<void*>(machine);
 }
 
@@ -90,21 +75,12 @@ CMachine* getMachine(const CCheckpointStorage* storage_ptr,
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
 
     auto hash = receiveUint256(machine_hash);
-    std::vector<unsigned char> machine_vector;
-    marshal_uint256_t(hash, machine_vector);
 
-    auto initial_state = storage->getInitialVmValues();
-
-    if (!initial_state.valid_state) {
+    auto ret = storage->getMachine(hash);
+    if (!ret.second) {
         return nullptr;
     }
-
-    MachineState machine_state(initial_state.code, initial_state.staticVal,
-                               storage->pool);
-    auto machine = new Machine();
-    machine->initializeMachine(machine_state);
-    machine->restoreCheckpoint(*storage, machine_vector);
-
+    auto machine = new Machine(std::move(ret.first));
     return machine;
 }
 
@@ -112,59 +88,48 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
-
-    std::vector<unsigned char> hash_vector;
-    marshal_uint256_t(hash, hash_vector);
-
-    auto result = deleteCheckpoint(*storage, hash_vector);
-
-    return result.status.ok();
+    auto transaction = storage->makeTransaction();
+    auto results = deleteMachine(*transaction, hash);
+    if (!results.status.ok()) {
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto valueSaver = MachineStateSaver(storage->makeTransaction());
+    auto transaction = storage->makeTransaction();
 
     auto data_ptr = reinterpret_cast<const char*>(value_data);
 
     TuplePool pool;
     auto val = deserialize_value(data_ptr, pool);
-    auto results = valueSaver.saveValue(val);
+    auto results = saveValue(*transaction, val);
 
     if (!results.status.ok()) {
         return false;
     }
-
-    return valueSaver.commitTransaction().ok();
+    return transaction->commit().ok();
 }
 
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto fetcher = MachineStateFetcher(*storage);
     auto hash = receiveUint256(hash_key);
-
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash, hash_key_vector);
-
-    return returnValueResult(fetcher.getValue(hash_key_vector));
+    return returnValueResult(storage->getValue(hash), storage->getCode());
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto deleter = MachineStateDeleter(storage->makeTransaction());
     auto hash = receiveUint256(hash_key);
 
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash, hash_key_vector);
-
-    auto results = deleter.deleteValue(hash_key_vector);
-
-    if (!results.status.ok()) {
+    auto transaction = storage->makeTransaction();
+    auto result = deleteValue(*transaction, hash);
+    if (!result.status.ok()) {
+        transaction->rollback();
         return false;
     }
-
-    return deleter.commitTransaction().ok();
+    return transaction->commit().ok();
 }
 
 int saveData(CCheckpointStorage* storage_ptr,

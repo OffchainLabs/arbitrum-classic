@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -37,6 +38,17 @@ type PreparedAssertion struct {
 	claim       *valprotocol.AssertionClaim
 	assertion   *protocol.ExecutionAssertion
 	machine     machine.Machine
+}
+
+func (pa *PreparedAssertion) String() string {
+	return fmt.Sprintf(
+		"PreparedAssertion(%v, %v, %v, %v, %v)",
+		pa.prev.Hash(),
+		pa.beforeState,
+		pa.params,
+		pa.claim,
+		pa.assertion,
+	)
 }
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {
@@ -120,8 +132,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					afterInboxTop = &afterInboxTopVal
 				}
 				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
+				messages, _ := chain.inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.Machine().Clone()
+				log.Println("Forming opinion on", successor.Hash().ShortString(), "which imported", messages, "messages")
 
 				chain.RUnlock()
 
@@ -196,8 +210,20 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						lowerBoundBlock := prepared.params.TimeBounds.LowerBoundBlock
 						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
+						lowerBoundTime := prepared.params.TimeBounds.LowerBoundTimestamp
+						upperBoundTime := prepared.params.TimeBounds.UpperBoundTimestamp
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
-						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 && endCushion.Cmp(upperBoundBlock) <= 0 {
+
+						// We're predicting what the timestamp will be when we
+						// submit which is likely to be close to the current
+						// time rather than the time of the previous block. This
+						// doesn't effect correctness since the failure modes
+						// are dropping a valid assertion or submitting an
+						// assertion that will be rejected.
+						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
+							endCushion.Cmp(upperBoundBlock) <= 0 &&
+							time.Now().Unix() >= lowerBoundTime.Int64() &&
+							time.Now().Unix() <= upperBoundTime.Int64() {
 							chain.RUnlock()
 							chain.Lock()
 							chain.pendingState = prepared.machine
@@ -266,6 +292,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 
 	var params *valprotocol.AssertionParams
 	var claim *valprotocol.AssertionClaim
+	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	if assertion.DidInboxInsn {
 		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
@@ -275,7 +302,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
 			ImportedMessagesSlice: inbox.Hash().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	} else {
 		params = &valprotocol.AssertionParams{
@@ -286,7 +313,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         beforeInboxTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	}
 	return &PreparedAssertion{
@@ -308,9 +335,11 @@ func getNodeOpinion(
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
 	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
+		log.Println("Saw node with invalid after inbox top claim", claim.AfterInboxTop)
 		return valprotocol.InvalidInboxTopChildType, nil
 	}
 	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
+		log.Println("Saw node with invalid imported messages claim", claim.ImportedMessagesSlice)
 		return valprotocol.InvalidMessagesChildType, nil
 	}
 
@@ -321,6 +350,7 @@ func getNodeOpinion(
 		0,
 	)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
+		log.Println("Saw node with invalid execution claim")
 		return valprotocol.InvalidExecutionChildType, nil
 	}
 

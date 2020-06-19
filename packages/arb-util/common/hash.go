@@ -66,3 +66,11 @@ func (hb *HashBuf) Unmarshal() Hash {
 	copy(ret[:], hb.Value)
 	return ret
 }
+
+func HashSliceToRaw(slice []Hash) [][32]byte {
+	ret := make([][32]byte, 0, len(slice))
+	for _, h := range slice {
+		ret = append(ret, h)
+	}
+	return ret
+}

@@ -195,20 +195,23 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		Data: dataBytes,
 	}
 
-	deliveredMsg := message.Delivered{
+	latestBlock, err := m.man.CurrentBlockId()
+	if err != nil {
+		return nil, err
+	}
+
+	deliveredMsg := message.SingleDelivered{
 		Message: callMsg,
 		DeliveryInfo: message.DeliveryInfo{
 			ChainTime: message.ChainTime{
-				BlockNum:  m.man.CurrentBlockId().Height,
+				BlockNum:  latestBlock.Height,
 				Timestamp: big.NewInt(time.Now().Unix()),
 			},
 			TxId: big.NewInt(0),
 		},
 	}
+	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
 
-	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
-
-	latestBlock := m.man.CurrentBlockId()
 	latestTime := big.NewInt(time.Now().Unix())
 	timeBounds := &protocol.TimeBounds{
 		LowerBoundBlock:     latestBlock.Height,
@@ -216,6 +219,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		LowerBoundTimestamp: latestTime,
 		UpperBoundTimestamp: latestTime,
 	}
+
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
@@ -224,9 +228,17 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		m.maxCallTime,
 	)
 
+	// If the machine wasn't able to run and it reports that it is currently
+	// blocked, return the block reason to give the client more information
+	// as opposed to just returning a general "call produced no output"
+	if br := mach.IsBlocked(latestBlock.Height, true); steps == 0 && br != nil {
+		log.Println("can't produce solution since machine is blocked", br)
+		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
+	}
+
 	log.Println("Executed call for", steps, "steps")
 
-	results := assertion.Logs
+	results := assertion.ParseLogs()
 	if len(results) == 0 {
 		return nil, errors.New("call produced no output")
 	}
@@ -254,10 +266,36 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	return m.executeCall(m.man.GetLatestMachine(), args)
+	mach, err := m.man.GetLatestMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
 }
 
 // PendingCall takes a request from a client to process in a temporary context and return the result
 func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	return m.executeCall(m.man.GetPendingMachine(), args)
+	mach, err := m.man.GetPendingMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
+}
+
+func (m *Server) GetLatestNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+}
+
+func (m *Server) GetLatestPendingNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestPendingNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
 }

@@ -154,7 +154,7 @@ func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 
 func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint64) {
 	ac.machine.SetContext(&NoContext{})
-	return protocol.NewExecutionAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
+	return protocol.NewExecutionAssertionFromValues(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
 }
 
 func (ac *MachineAssertionContext) EndContext() {

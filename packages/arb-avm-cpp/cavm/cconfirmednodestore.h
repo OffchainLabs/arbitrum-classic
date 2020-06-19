@@ -25,19 +25,19 @@
 extern "C" {
 #endif
 
-void deleteNodeStore(CNodeStore* m);
-int putNode(CNodeStore* node_store,
+void deleteConfirmedNodeStore(CConfirmedNodeStore* m);
+int putNode(CConfirmedNodeStore* node_store,
             uint64_t height,
             const void* hash,
             const void* data,
             int data_length);
-ByteSliceResult getNode(CNodeStore* node_store,
+ByteSliceResult getNode(CConfirmedNodeStore* node_store,
                         uint64_t height,
                         const void* hash);
-Uint64Result getNodeHeight(CNodeStore* node_store, const void* hash);
-HashResult getNodeHash(CNodeStore* node_store, uint64_t height);
-int isNodeStoreEmpty(CNodeStore* node_store);
-uint64_t maxNodeHeight(CNodeStore* node_store);
+Uint64Result getNodeHeight(CConfirmedNodeStore* node_store, const void* hash);
+HashResult getNodeHash(CConfirmedNodeStore* node_store, uint64_t height);
+int isNodeStoreEmpty(CConfirmedNodeStore* node_store);
+uint64_t maxNodeHeight(CConfirmedNodeStore* node_store);
 
 #ifdef __cplusplus
 }

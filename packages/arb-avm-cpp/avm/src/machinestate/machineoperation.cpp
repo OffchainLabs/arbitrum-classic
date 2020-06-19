@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -342,7 +342,7 @@ void signExtend(MachineState& m) {
 
 void hashOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = ::hash(m.stack[0]);
+    m.stack[0] = ::hash_value(m.stack[0]);
     ++m.pc;
 }
 
@@ -350,7 +350,7 @@ void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
     if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
         m.stack[0] = NUM;
-    else if (nonstd::holds_alternative<CodePoint>(m.stack[0]))
+    else if (nonstd::holds_alternative<CodePointStub>(m.stack[0]))
         m.stack[0] = CODEPT;
     else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
         m.stack[0] = TUPLE;
@@ -381,7 +381,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.staticVal;
+    value copiedStatic = m.static_values->staticVal;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -401,9 +401,9 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
     if (target) {
-        m.pc = target->pc;
+        m.pc = *target;
     } else {
         m.state = Status::Error;
     }
@@ -412,11 +412,11 @@ void jump(MachineState& m) {
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
     if (bNum != 0) {
         if (target) {
-            m.pc = target->pc;
+            m.pc = *target;
         } else {
             m.state = Status::Error;
         }
@@ -437,7 +437,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(m.code[m.pc]);
+    m.stack.push(CodePointStub{m.static_values->code[m.pc]});
     ++m.pc;
 }
 
@@ -465,13 +465,13 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(m.errpc);
+    m.stack.push(CodePointStub{m.static_values->code[m.errpc]});
     ++m.pc;
 }
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto codePointVal = nonstd::get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {

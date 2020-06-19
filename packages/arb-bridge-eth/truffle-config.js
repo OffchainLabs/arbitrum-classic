@@ -23,6 +23,7 @@ module.exports = {
         )
       },
       network_id: 4,
+      confirmations: 1,
     },
     ropsten: {
       provider: function () {
@@ -32,6 +33,7 @@ module.exports = {
         )
       },
       network_id: 3,
+      confirmations: 1,
     },
     kovan: {
       provider: function () {
@@ -41,6 +43,7 @@ module.exports = {
         )
       },
       network_id: 42,
+      confirmations: 4,
     },
   },
   mocha: {

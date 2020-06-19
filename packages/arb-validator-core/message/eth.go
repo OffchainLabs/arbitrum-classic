@@ -41,7 +41,7 @@ func NewRandomEth() Eth {
 }
 
 func (m Eth) String() string {
-	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, m.Value)
+	return fmt.Sprintf("Eth(to: %v, from: %v, value: %v)", m.To, m.From, toEth(m.Value))
 }
 
 func (m Eth) Equals(other Message) bool {
@@ -58,8 +58,20 @@ func (m Eth) Type() Type {
 	return EthType
 }
 
+func (m Eth) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
 func (m Eth) GetFuncName() string {
 	return "EthTransfer"
+}
+
+func (m Eth) DestAddress() common.Address {
+	return m.To
+}
+
+func (m Eth) SenderAddress() common.Address {
+	return m.From
 }
 
 func (m Eth) CommitmentHash() common.Hash {

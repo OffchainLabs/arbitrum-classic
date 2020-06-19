@@ -55,7 +55,7 @@ function _arbClient(managerAddress: string): any {
 export interface NodeInfo {
   nodeHash: string
   nodeHeight: number
-  l1TxHash: string
+  l1TxHash?: string
   l1Confirmations?: number
 }
 
@@ -68,7 +68,7 @@ export interface AVMProof {
 interface RawMessageResult {
   val: ArbValue.Value
   proof?: AVMProof
-  nodeInfo?: NodeInfo
+  nodeInfo: NodeInfo
 }
 
 interface OutputMessage {
@@ -124,8 +124,7 @@ function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
   if (
     nodeInfo === undefined ||
     nodeInfo.nodeHash === undefined ||
-    nodeInfo.nodeHeight === undefined ||
-    nodeInfo.l1TxHash === undefined
+    nodeInfo.nodeHeight === undefined
   ) {
     return undefined
   }
@@ -215,10 +214,15 @@ export class ArbClient {
       if (tx.rawVal === undefined) {
         return null
       }
+      const nodeInfo = extractNodeInfo(tx.location)
+      if (nodeInfo === undefined) {
+        return null
+      }
+
       const val = ArbValue.unmarshal(tx.rawVal)
       return {
         val,
-        nodeInfo: extractNodeInfo(tx.location),
+        nodeInfo: nodeInfo,
         proof: extractAVMProof(tx.proof),
       }
     } else {
@@ -359,5 +363,44 @@ export class ArbClient {
         }
       )
     })
+  }
+
+  private async getNodeLocation(
+    funcType: string
+  ): Promise<NodeInfo | undefined> {
+    const params: validatorserver.GetLatestNodeLocationArgs = {}
+    return new Promise((resolve, reject): void => {
+      this.client.request(
+        funcType,
+        [params],
+        (
+          err: Error,
+          error: Error,
+          result: validatorserver.GetLatestNodeLocationReply
+        ) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(extractNodeInfo(result.location))
+          }
+        }
+      )
+    })
+  }
+
+  public async getLatestNodeLocation(): Promise<NodeInfo | undefined> {
+    return await this.getNodeLocation('Validator.GetLatestNodeLocation')
+  }
+
+  public async getLatestPendingNodeLocation(): Promise<NodeInfo | undefined> {
+    const nodeInfo = await this.getNodeLocation(
+      'Validator.GetLatestPendingNodeLocation'
+    )
+    if (nodeInfo === undefined) {
+      return this.getLatestNodeLocation()
+    }
+    return nodeInfo
   }
 }

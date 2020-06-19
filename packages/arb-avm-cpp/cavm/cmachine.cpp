@@ -19,7 +19,8 @@
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/value/machine.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -30,14 +31,11 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto machine = new Machine();
-    auto sucess = machine->initializeMachine(filename);
-
-    if (sucess) {
-        return machine;
-    } else {
+    auto ret = Machine::loadFromFile(filename);
+    if (!ret.second) {
         return nullptr;
     }
+    return new Machine(std::move(ret.first));
 }
 
 // cmachine_t *machine_create(char *data)
@@ -52,12 +50,15 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
+int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
     auto machine = static_cast<Machine*>(m);
-    auto result =
-        machine->checkpoint(*(static_cast<CheckpointStorage*>(storage)));
-
-    return result.status.ok();
+    auto storage = static_cast<CheckpointStorage*>(s);
+    auto transaction = storage->makeTransaction();
+    auto result = saveMachine(*transaction, *machine);
+    if (!result.status.ok()) {
+        return false;
+    }
+    return transaction->commit().ok();
 }
 
 void machineHash(CMachine* m, void* ret) {
@@ -114,7 +115,7 @@ struct ReasonConverter {
 
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(val.timout, inboxDataVec);
+        marshal_uint256_t(val.timout, inboxDataVec);
         return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
     }
 };
@@ -162,11 +163,11 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        marshal_value(outMsg, outMsgData);
+        mach->marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
+        mach->marshal_value(log, logData);
     }
 
     return {returnCharVector(outMsgData),

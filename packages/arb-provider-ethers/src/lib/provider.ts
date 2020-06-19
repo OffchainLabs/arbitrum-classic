@@ -59,7 +59,7 @@ interface PossibleMessageResult {
 interface MessageResult {
   evmVal: EVMResult
   txHash: string
-  nodeInfo?: NodeInfo
+  nodeInfo: NodeInfo
 }
 
 interface VerifyMessageResult {
@@ -86,6 +86,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
   private vmIdCache?: string
+  private latestLocation?: NodeInfo
 
   constructor(
     validatorUrl: string,
@@ -291,10 +292,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       )
     }
 
-    if (nodeInfo == undefined || proof === undefined) {
+    if (proof === undefined || nodeInfo.l1TxHash === undefined) {
       return {
         evmVal,
         txHash: evmVal.message.txHash,
+        nodeInfo,
       }
     }
 
@@ -319,28 +321,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
   }
 
-  // public async getPossibleMessageResult(
-  //   txHash: string
-  // ): Promise<MessageResult | null> {
-  //   const result = await this.getRawMessageResult(txHash)
-  //   if (!result) {
-  //     return null
-  //   }
-  //   const { val, evmVal, proof } = result
-
-  //   return {
-  //     evmVal,
-  //     txHash: evmVal.message.txHash,
-  //     validNodeHash,
-  //     onChainTxHash: proof.onChainTxHash,
-  //   }
-  // }
-
   // This should return a Promise (and may throw errors)
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
   public async perform(method: string, params: any): Promise<any> {
-    // console.log('perform', method, params);
+    // console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -362,6 +347,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (!result) {
           return null
         }
+
         let status = 0
         let logs: ethers.providers.Log[] = []
         if (
@@ -375,16 +361,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         let confirmations = 0
         const l1Confs = result.nodeInfo?.l1Confirmations
         if (this.deterministicAssertions) {
-          confirmations =
-            this.ethProvider.blockNumber -
-            result.evmVal.message.blockNumber.toNumber()
+          const currentBlockNum = await this.ethProvider.getBlockNumber()
+          const messageBlockNum = result.evmVal.message.blockNumber.toNumber()
+          confirmations = currentBlockNum - messageBlockNum + 1
         } else if (l1Confs !== undefined) {
           confirmations = l1Confs
         }
 
         const txReceipt: ethers.providers.TransactionReceipt = {
-          blockHash: result.nodeInfo?.nodeHash,
-          blockNumber: result.nodeInfo?.nodeHeight,
+          blockHash: result.nodeInfo.nodeHash,
+          blockNumber: result.nodeInfo.nodeHeight,
           confirmations: confirmations,
           cumulativeGasUsed: ethers.utils.bigNumberify(1),
           from: result.evmVal.message.sender,
@@ -448,6 +434,25 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       case 'getBalance': {
         const arbInfo = ArbInfoFactory.connect(ARB_INFO_ADDRESS, this)
         return arbInfo.getBalance(params.address)
+      }
+      case 'getBlockNumber': {
+        let location: NodeInfo | undefined
+        if (this.deterministicAssertions) {
+          location = await this.client.getLatestPendingNodeLocation()
+        } else {
+          location = await this.client.getLatestNodeLocation()
+        }
+        if (location) {
+          if (
+            this.latestLocation &&
+            (this.latestLocation.nodeHeight !== location.nodeHeight ||
+              this.latestLocation.nodeHash !== location.nodeHash)
+          ) {
+            this.resetEventsBlock(location.nodeHeight)
+          }
+          this.latestLocation = location
+        }
+        return this.ethProvider.getBlockNumber()
       }
     }
     const forwardResponse = this.ethProvider.perform(method, params)
@@ -538,6 +543,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     nodeInfo: NodeInfo,
     proof: AVMProof
   ): Promise<ethers.providers.TransactionReceipt> {
+    if (nodeInfo.l1TxHash === undefined) {
+      throw Error("node doesn't exist on chain")
+    }
     const receipt = await this.ethProvider.waitForTransaction(nodeInfo.l1TxHash)
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')

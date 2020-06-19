@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"log"
 	"math/big"
@@ -112,8 +113,14 @@ func (chain *ChainObserver) AddListener(ctx context.Context, listener ChainListe
 
 func (chain *ChainObserver) NowAtHead() {
 	chain.Lock()
+	defer chain.Unlock()
 	chain.atHead = true
-	chain.Unlock()
+}
+
+func (chain *ChainObserver) IsAtHead() bool {
+	chain.RLock()
+	defer chain.RUnlock()
+	return chain.atHead
 }
 
 func (chain *ChainObserver) GetChainParams() valprotocol.ChainParams {
@@ -151,13 +158,23 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 	if err != nil {
 		return nil, err
 	}
+	knownValidNode := nodeGraph.nodeFromHash[x.KnownValidNode.Unmarshal()]
+	if knownValidNode == nil {
+		return nil, fmt.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
+	}
+
+	calculatedValidNode := nodeGraph.nodeFromHash[x.CalculatedValidNode.Unmarshal()]
+	if calculatedValidNode == nil {
+		return nil, fmt.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
+	}
+
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
 		rollupAddr:          x.ContractAddress.Unmarshal(),
 		inbox:               &structures.Inbox{MessageStack: inbox},
-		knownValidNode:      nodeGraph.nodeFromHash[x.KnownValidNode.Unmarshal()],
-		calculatedValidNode: nodeGraph.nodeFromHash[x.CalculatedValidNode.Unmarshal()],
+		knownValidNode:      knownValidNode,
+		calculatedValidNode: calculatedValidNode,
 		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
@@ -169,7 +186,10 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 func (chain *ChainObserver) DebugString(prefix string) string {
 	chain.Lock()
 	defer chain.Unlock()
-	return chain.nodeGraph.DebugString(prefix)
+	labels := make(map[*structures.Node][]string)
+	labels[chain.calculatedValidNode] = append(labels[chain.calculatedValidNode], "calculatedValidNode")
+	labels[chain.knownValidNode] = append(labels[chain.knownValidNode], "knownValidNode")
+	return chain.nodeGraph.DebugString(prefix, labels)
 }
 
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {
@@ -191,7 +211,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ctx, ev)
 	case arbbridge.AssertedEvent:
-		return chain.notifyAssert(ctx, ev)
+		chain.notifyAssert(ctx, ev)
 	case arbbridge.ConfirmedEvent:
 		return chain.confirmNode(ctx, ev)
 	}
@@ -212,9 +232,8 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 
 func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
-	blockId := chain.latestBlockId
-	chain.RUnlock()
-	return blockId
+	defer chain.RUnlock()
+	return chain.latestBlockId.Clone()
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {
@@ -273,6 +292,7 @@ func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEv
 	for _, lis := range chain.listeners {
 		lis.PrunedLeaf(ctx, chain, ev)
 	}
+	chain.updateOldest()
 }
 
 func (chain *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
@@ -361,7 +381,8 @@ func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.Confir
 }
 
 func (chain *ChainObserver) updateOldest() {
-	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
+	// Don't update the oldest more than 1 block behind the current latest confirmed node
+	for chain.nodeGraph.oldestNode.Depth()+1 < chain.nodeGraph.latestConfirmed.Depth() {
 		if chain.nodeGraph.oldestNode.NumStakers() > 0 {
 			return
 		}
@@ -382,23 +403,16 @@ func (chain *ChainObserver) updateOldest() {
 	}
 }
 
-func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) error {
-	disputableNode := valprotocol.NewDisputableNode(
-		ev.Params,
-		ev.Claim,
-		ev.MaxInboxTop,
-		ev.MaxInboxCount,
-	)
+func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) {
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
-		disputableNode,
+		ev.Disputable,
 		ev.BlockId.Height,
 		ev.TxHash,
 	)
 	for _, listener := range chain.listeners {
 		listener.SawAssertion(ctx, chain, ev)
 	}
-	return nil
 }
 
 func (chain *ChainObserver) equals(co2 *ChainObserver) bool {

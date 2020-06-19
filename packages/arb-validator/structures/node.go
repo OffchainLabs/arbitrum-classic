@@ -97,7 +97,7 @@ func NewValidNodeFromPrev(
 }
 
 func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
-	assertion := evm.NewRandomEVMAssertion(results)
+	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)
@@ -141,14 +141,12 @@ func NewNodeFromPrev(
 	vmProtoData *valprotocol.VMProtoData,
 	assertionTxHash common.Hash,
 ) *Node {
-	checkTime := disputable.CheckTime(params)
-	deadlineTicks := common.TicksFromBlockNum(currentTime).Add(params.GracePeriod)
-	if deadlineTicks.Cmp(prev.deadline) >= 0 {
-		deadlineTicks = deadlineTicks.Add(checkTime)
-	} else {
-		deadlineTicks = prev.deadline.Add(checkTime)
-	}
-
+	deadlineTicks := valprotocol.CalculateNodeDeadline(
+		disputable.AssertionClaim.AssertionStub,
+		params,
+		prev.deadline,
+		common.TicksFromBlockNum(currentTime),
+	)
 	ret := &Node{
 		prevHash:        prev.hash,
 		prev:            prev,
@@ -193,13 +191,14 @@ func (node *Node) Prev() *Node {
 
 func (node *Node) ClearPrev() {
 	node.prev = nil
+	node.prevHash = zeroBytes32
 }
 
 func (node *Node) UnlinkPrev() bool {
 	hasPrev := node.prev != nil
 	if hasPrev {
 		node.prev.successorHashes[node.LinkType()] = zeroBytes32
-		node.prev = nil
+		node.ClearPrev()
 	}
 	return hasPrev
 }
@@ -265,9 +264,9 @@ func (node *Node) RemoveStaker() {
 	node.numStakers--
 }
 
-func (node *Node) IsInitial() bool {
+func (node *Node) HasAncestor() bool {
 	emptyHash := common.Hash{}
-	return node.prevHash == emptyHash
+	return node.prevHash != emptyHash
 }
 
 func (node *Node) Equals(node2 *Node) bool {
@@ -334,7 +333,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			node.executionPreconditionHash(),
 			node.disputable.AssertionClaim.AssertionStub.Hash(),
 		)
-		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
+		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
@@ -382,10 +381,6 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 		disputableNodeBuf = node.disputable.MarshalToBuf()
 	}
 
-	var assertion *ExecutionAssertionBuf
-	if node.assertion != nil {
-		assertion = MarshalAssertionForCheckpoint(ctx, node.assertion)
-	}
 	return &NodeBuf{
 		PrevHash:        node.prevHash.MarshalToBuf(),
 		Deadline:        node.deadline.MarshalToBuf(),
@@ -393,7 +388,7 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 		LinkType:        uint32(node.linkType),
 		VmProtoData:     node.vmProtoData.MarshalToBuf(),
 		MachineHash:     machineHash,
-		Assertion:       assertion,
+		Assertion:       node.assertion,
 		Depth:           node.depth,
 		NodeDataHash:    node.nodeDataHash.MarshalToBuf(),
 		InnerHash:       node.innerHash.MarshalToBuf(),
@@ -416,7 +411,7 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 		linkType:        valprotocol.ChildType(x.LinkType),
 		vmProtoData:     x.VmProtoData.Unmarshal(),
 		machine:         nil,
-		assertion:       nil,
+		assertion:       x.Assertion,
 		depth:           x.Depth,
 		nodeDataHash:    x.NodeDataHash.Unmarshal(),
 		innerHash:       x.InnerHash.Unmarshal(),
@@ -430,7 +425,6 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 	}
 
 	if x.Assertion != nil {
-		node.assertion = x.Assertion.UnmarshalFromCheckpoint(ctx)
 		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
 		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
 			return nil, errors.New("assertion doesn't match stub")

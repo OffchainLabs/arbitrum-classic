@@ -53,7 +53,7 @@ contract ArbRollup is NodeGraph, Staking {
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    string public constant VERSION = "3";
+    string public constant VERSION = "4";
 
     address payable owner;
 
@@ -269,7 +269,7 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32[] memory challengeNodeData,
         bytes32[] memory logsAcc,
         bytes32[] memory vmProtoStateHashes,
-        uint256[] memory messagesLengths,
+        uint256[] memory messageCounts,
         bytes memory messages,
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
@@ -277,115 +277,60 @@ contract ArbRollup is NodeGraph, Staking {
     )
         public
     {
-        return _confirm(ConfirmData(
-            initalProtoStateHash,
-            branches,
-            deadlineTicks,
-            challengeNodeData,
-            logsAcc,
-            vmProtoStateHashes,
-            messagesLengths,
-            messages,
+        return _confirm(
+            RollupUtils.ConfirmData(
+                initalProtoStateHash,
+                branches,
+                deadlineTicks,
+                challengeNodeData,
+                logsAcc,
+                vmProtoStateHashes,
+                messageCounts,
+                messages
+            ),
             stakerAddresses,
             stakerProofs,
             stakerProofOffsets
-        ));
+        );
     }
 
-    struct ConfirmData {
-        bytes32 initalProtoStateHash;
-        uint256[] branches;
-        uint256[] deadlineTicks;
-        bytes32[] challengeNodeData;
-        bytes32[] logsAcc;
-        bytes32[] vmProtoStateHashes;
-        uint256[] messagesLengths;
-        bytes messages;
-        address[] stakerAddresses;
-        bytes32[] stakerProofs;
-        uint256[] stakerProofOffsets;
-    }
+    function _confirm(
+        RollupUtils.ConfirmData memory data,
+        address[] memory stakerAddresses,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    )
+        private
+    {
+        uint256 totalNodeCount = data.branches.length;
 
-    function _confirm(ConfirmData memory data) private {
-        uint256 nodeCount = data.branches.length;
-        _verifyDataLength(data);
-        uint256 validNum = 0;
-        uint256 invalidNum = 0;
-        uint256 messagesOffset = 0;
-        bytes32 confNode = latestConfirmed();
-
-        bytes32[] memory nodeHashes = new bytes32[](nodeCount);
-        uint[] memory messageCounts = new uint[](nodeCount);
-
-        bytes32 vmProtoStateHash = data.initalProtoStateHash;
-
-        for (uint256 i = 0; i < nodeCount; i++) {
-            uint256 branchType = data.branches[i];
-            bytes32 nodeDataHash;
-            if (branchType == VALID_CHILD_TYPE) {
-                bytes32 lastMsgHash;
-                uint256 messageLength = data.messagesLengths[validNum];
-                (lastMsgHash, messageCounts[i]) = Protocol.generateLastMessageHash(
-                    data.messages,
-                    messagesOffset,
-                    messageLength
-                );
-                nodeDataHash = RollupUtils.validDataHash(
-                    lastMsgHash,
-                    data.logsAcc[validNum]
-                );
-                messagesOffset += messageLength;
-                vmProtoStateHash = data.vmProtoStateHashes[validNum];
-                validNum++;
-            } else {
-                messageCounts[i] = 0;
-                nodeDataHash = data.challengeNodeData[invalidNum];
-                invalidNum++;
-            }
-
-            confNode = RollupUtils.childNodeHash(
-                confNode,
-                data.deadlineTicks[i],
-                nodeDataHash,
-                branchType,
-                vmProtoStateHash
-            );
-            nodeHashes[i] = confNode;
-
-            if (branchType == VALID_CHILD_TYPE) {
-                emit ConfirmedValidAssertion(confNode);
-            }
-        }
-        require(messagesOffset == data.messages.length, "Didn't read all messages");
         // If last node is after deadline, then all nodes are
-        require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[nodeCount - 1], CONF_TIME);
+        require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[totalNodeCount - 1], CONF_TIME);
+
+        (bytes32[] memory validNodeHashes, bytes32 confNode) = RollupUtils.confirm(data, latestConfirmed());
+
+        uint256 validNodeCount = validNodeHashes.length;
+        for (uint256 i = 0; i < validNodeCount; i++) {
+            emit ConfirmedValidAssertion(validNodeHashes[i]);
+        }
         uint activeCount = checkAlignedStakers(
             confNode,
-            data.deadlineTicks[nodeCount - 1],
-            data.stakerAddresses,
-            data.stakerProofs,
-            data.stakerProofOffsets
+            data.deadlineTicks[totalNodeCount - 1],
+            stakerAddresses,
+            stakerProofs,
+            stakerProofOffsets
         );
         require(activeCount > 0, CONF_HAS_STAKER);
 
         confirmNode(confNode);
 
         // Send all messages is a single batch
-        globalInbox.sendMessages(data.messages, messageCounts, nodeHashes);
+        globalInbox.sendMessages(data.messages, data.messageCounts, validNodeHashes);
 
-        if (validNum > 0) {
+        if (validNodeCount > 0) {
             emit ConfirmedAssertion(
                 data.logsAcc
             );
         }
-    }
-
-    function _verifyDataLength(ConfirmData memory data) private pure{
-        uint256 nodeCount = data.branches.length;
-        uint256 validNodeCount = data.messagesLengths.length;
-        require(data.vmProtoStateHashes.length == validNodeCount);
-        require(data.logsAcc.length == validNodeCount);
-        require(data.deadlineTicks.length == nodeCount);
-        require(data.challengeNodeData.length == nodeCount - validNodeCount);
     }
 }

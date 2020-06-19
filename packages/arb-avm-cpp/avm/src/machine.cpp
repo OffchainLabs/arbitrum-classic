@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,31 +22,10 @@
 #include <avm_values/opcodes.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machinestatedeleter.hpp>
-
-std::ostream& operator<<(std::ostream& os, const MachineState& val) {
-    os << "status " << static_cast<int>(val.state) << "\n";
-    os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
-    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
-    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
-    os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash(val.staticVal)) << "\n";
-    os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
-    return os;
-}
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
     return os;
-}
-
-bool Machine::initializeMachine(const std::string& filename) {
-    return machine_state.initialize_machinestate(filename);
-}
-
-void Machine::initializeMachine(const MachineState& initial_state) {
-    machine_state = initial_state;
 }
 
 Assertion Machine::run(uint64_t stepCount,
@@ -75,10 +54,6 @@ Assertion Machine::run(uint64_t stepCount,
             machine_state.context.didInboxInsn};
 }
 
-bool isErrorCodePoint(const CodePoint& cp) {
-    return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
-}
-
 BlockReason Machine::runOne() {
     if (machine_state.state == Status::Error) {
         return ErrorBlocked();
@@ -88,15 +63,15 @@ BlockReason Machine::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = machine_state.code[machine_state.pc];
+    auto& instruction = machine_state.static_values->code[machine_state.pc];
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint
     if (!isValidOpcode(instruction.op.opcode)) {
         machine_state.state = Status::Error;
         machine_state.context.numSteps++;
-        if (!isErrorCodePoint(machine_state.errpc)) {
-            machine_state.pc = machine_state.errpc.pc;
+        if (!machine_state.errpc.is_err) {
+            machine_state.pc = machine_state.errpc;
             machine_state.state = Status::Extensive;
         }
         return NotBlocked();
@@ -137,27 +112,10 @@ BlockReason Machine::runOne() {
             machine_state.stack.popClear();
         }
 
-        if (!isErrorCodePoint(machine_state.errpc)) {
-            machine_state.pc = machine_state.errpc.pc;
+        if (!machine_state.errpc.is_err) {
+            machine_state.pc = machine_state.errpc;
             machine_state.state = Status::Extensive;
         }
         return blockReason;
     }
-}
-
-SaveResults Machine::checkpoint(CheckpointStorage& storage) {
-    return machine_state.checkpointState(storage);
-}
-
-bool Machine::restoreCheckpoint(
-    const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    return machine_state.restoreCheckpoint(storage, checkpoint_key);
-}
-
-DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
-    std::vector<unsigned char> checkpoint_key;
-    marshal_uint256_t(hash(), checkpoint_key);
-
-    return ::deleteCheckpoint(storage, checkpoint_key);
 }

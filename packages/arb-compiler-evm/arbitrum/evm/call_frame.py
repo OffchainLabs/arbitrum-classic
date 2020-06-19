@@ -91,10 +91,6 @@ def setup_state(vm):
 @modifies_stack([call_frame.typ, call_frame.typ], [call_frame.typ])
 def merge(vm):
     # parent_frame current_frame
-    vm.swap1()
-    save_state(vm)
-    vm.swap1()
-    # parent_frame current_frame
     vm.dup1()
     call_frame.get("accounts")(vm)
     vm.swap1()
@@ -107,7 +103,18 @@ def merge(vm):
     # parent_frame current_frame
     vm.swap1()
     vm.pop()
+    setup_state(vm)
     # parent_frame
+
+
+@modifies_stack([call_frame.typ, value.CodePointType()], [call_frame.typ])
+def spawn_child(vm):
+    vm.dup0()
+    call_frame.set_val("parent_frame")(vm)
+    std.sized_byterange.new(vm)
+    vm.swap1()
+    call_frame.set_val("memory")(vm)
+    call_frame.set_val("return_location")(vm)
 
 
 # update:
@@ -125,29 +132,31 @@ def merge(vm):
 )
 def spawn(vm):
     # parent_frame local_exec_state contractID ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
     vm.swap1()
-    call_frame.set_val("memory")(vm)
+    std.stack_manip.swap_n(3)(vm)
+    vm.swap1()
+    spawn_child(vm)
+    # frame contractID local_exec_state
+    vm.swap1()
+    vm.swap2()
+    vm.swap1()
 
     # subtract sent funds from balance
-    # frame local_exec_state contractID ret_pc
+    # frame local_exec_state contractID
     vm.dup1()
     local_exec_state.get("value")(vm)
-    # value frame local_exec_state contractID ret_pc
+    # value frame local_exec_state contractID
     vm.dup1()
     call_frame.get("account_state")(vm)
     account_state.get("balance")(vm)
     vm.sub()
-    # new_balance frame local_exec_state contractID ret_pc
+    # new_balance frame local_exec_state contractID
     update_frame_balance(vm)
     save_state(vm)
 
-    # frame local_exec_state contractID ret_pc
+    # frame local_exec_state contractID
     call_frame.set_val("local_exec_state")(vm)
     call_frame.set_val("contractID")(vm)
-    call_frame.set_val("return_location")(vm)
     setup_state(vm)
     # frame
 
@@ -180,11 +189,14 @@ def spawn(vm):
 )
 def spawn_callcode(vm):
     # parent_frame local_exec_state contractID ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
     vm.swap1()
-    call_frame.set_val("memory")(vm)
+    std.stack_manip.swap_n(3)(vm)
+    vm.swap1()
+    spawn_child(vm)
+    # frame contractID local_exec_state
+    vm.swap1()
+    vm.swap2()
+    vm.swap1()
 
     # subtract sent funds from balance
     # frame local_exec_state contractID ret_pc
@@ -249,16 +261,12 @@ def spawn_callcode(vm):
 )
 def spawn_delegatecall(vm):
     # parent_frame local_exec_state ret_pc
-    vm.dup0()
-    call_frame.set_val("parent_frame")(vm)
-    std.sized_byterange.new(vm)
     vm.swap1()
-    call_frame.set_val("memory")(vm)
-    # frame local_exec_state ret_pc
-
-    # frame local_exec_state ret_pc
+    vm.swap2()
+    vm.swap1()
+    spawn_child(vm)
+    # frame local_exec_state
     call_frame.set_val("local_exec_state")(vm)
-    call_frame.set_val("return_location")(vm)
     # frame
 
 

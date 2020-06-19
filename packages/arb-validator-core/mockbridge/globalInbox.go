@@ -27,6 +27,7 @@ import (
 )
 
 type GlobalInbox struct {
+	GlobalInboxWatcher
 	//GlobalInbox *globalinbox.GlobalInbox
 	client arbbridge.ArbClient
 }
@@ -36,7 +37,7 @@ func NewGlobalInbox(address common.Address, client arbbridge.ArbClient) (*Global
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	//}
-	return &GlobalInbox{client}, nil
+	return &GlobalInbox{client: client}, nil
 }
 
 func (con *GlobalInbox) SendTransactionMessage(
@@ -93,17 +94,4 @@ func (con *GlobalInbox) DepositERC721Message(
 	value *big.Int,
 ) error {
 	return nil
-}
-
-func (con *GlobalInbox) GetTokenBalance(
-	ctx context.Context,
-	user common.Address,
-	tokenContract common.Address,
-) (*big.Int, error) {
-	//return con.GlobalInbox.GetTokenBalance(
-	//	auth,
-	//	tokenContract,
-	//	user,
-	//)
-	return big.NewInt(0), nil
 }

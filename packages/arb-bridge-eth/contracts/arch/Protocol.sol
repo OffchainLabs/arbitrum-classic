@@ -86,22 +86,4 @@ library Protocol {
             )
         );
     }
-
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32, uint) {
-        bool valid;
-        bytes32 hashVal = 0x00;
-        bytes32 msgHash;
-        uint256 endOffset = startOffset + length;
-        require(endOffset <= messages.length, "invalid length");
-        uint256 offset;
-        uint msgCount = 0;
-        for (offset = startOffset; offset < endOffset;) {
-            (valid, offset, msgHash) = Value.deserializeHashed(messages, offset);
-            require(valid, "Invalid output message");
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-            msgCount++;
-        }
-        require(offset == startOffset + length, "value extended past length");
-        return (hashVal, msgCount);
-    }
 }

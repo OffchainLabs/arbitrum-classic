@@ -19,7 +19,7 @@
 
 #include <ccheckpointstorage.h>
 
-#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <boost/filesystem.hpp>

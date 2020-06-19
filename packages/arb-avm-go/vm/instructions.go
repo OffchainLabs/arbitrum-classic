@@ -663,7 +663,6 @@ func insnEthhash2(state *Machine) (StackMods, error) {
 		hashing.Uint256(arg2.BigInt()),
 	)
 	hashAsBigInt := new(big.Int).SetBytes(hashAsBytes[:])
-	fmt.Println(hashAsBigInt.Text(10))
 	hashAsInt := value.NewIntValue(hashAsBigInt)
 	mods = PushStackInt(state, mods, hashAsInt)
 	state.IncrPC()

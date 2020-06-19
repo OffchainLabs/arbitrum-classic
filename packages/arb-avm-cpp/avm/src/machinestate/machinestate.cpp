@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
+#include <avm_values/vmValueParser.hpp>
 
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
@@ -31,35 +29,19 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()), context({0, 0}, Tuple()) {}
-
-MachineState::MachineState(const std::vector<CodePoint>& code_,
-                           const value& static_val_,
-                           std::shared_ptr<TuplePool> pool_)
-    : pool(std::move(pool_)), context({0, 0}, Tuple()) {
-    code = code_;
-    staticVal = static_val_;
-
-    errpc = getErrCodePoint();
-    pc = 0;
-}
-
-bool MachineState::initialize_machinestate(
+std::pair<MachineState, bool> MachineState::loadFromFile(
     const std::string& contract_filename) {
-    auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
+    auto pool = std::make_shared<TuplePool>();
+    auto ret = parseStaticVmValues(contract_filename, *pool.get());
 
-    if (initial_state.valid_state) {
-        code = initial_state.code;
-        staticVal = initial_state.staticVal;
-
-        errpc = getErrCodePoint();
-        pc = 0;
-
-        return true;
-    } else {
-        return false;
+    if (!ret.second) {
+        return std::make_pair(MachineState{}, false);
     }
+
+    return std::make_pair(MachineState{std::make_shared<const StaticVmValues>(
+                                           std::move(ret.first)),
+                                       std::move(pool)},
+                          true);
 }
 
 uint256_t MachineState::hash() const {
@@ -71,7 +53,7 @@ uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
     {
-        auto val = ::hash(code[pc]);
+        auto val = ::hash(static_values->code[pc]);
         oit = to_big_endian(val, oit);
     }
     {
@@ -83,15 +65,15 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(registerVal);
+        auto val = ::hash_value(registerVal);
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(staticVal);
+        auto val = ::hash_value(static_values->staticVal);
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash(errpc);
+        auto val = ::hash(static_values->code[errpc]);
         oit = to_big_endian(val, oit);
     }
 
@@ -103,9 +85,8 @@ uint256_t MachineState::hash() const {
 uint256_t MachineState::getMachineSize() {
     uint256_t machine_size = 0;
 
-    machine_size += getSize(staticVal);
+    machine_size += getSize(static_values->staticVal);
     machine_size += getSize(registerVal);
-    machine_size += getSize(errpc);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
 
@@ -114,105 +95,33 @@ uint256_t MachineState::getMachineSize() {
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
-    auto opcode = code[pc].op.opcode;
+    auto opcode = static_values->code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
     bool includeImmediateVal = false;
-    if (code[pc].op.immediate && !stackPops.empty()) {
+    if (static_values->code[pc].op.immediate && !stackPops.empty()) {
         includeImmediateVal = stackPops[0] == true;
         stackPops.erase(stackPops.begin());
     }
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
-    auto stackProof = stack.marshalForProof(stackPops);
-    auto auxStackProof = auxstack.marshalForProof(auxStackPops);
+    auto stackProof = stack.marshalForProof(stackPops, static_values->code);
+    auto auxStackProof =
+        auxstack.marshalForProof(auxStackPops, static_values->code);
 
-    auto next_codepoint = code[pc + 1];
-    ::marshalStub(next_codepoint, buf);
+    ::marshalStub(CodePointStub{static_values->code[pc + 1]}, buf,
+                  static_values->code);
     stackProof.first.marshal(buf);
     auxStackProof.first.marshal(buf);
-    ::marshalStub(registerVal, buf);
-    ::marshalStub(staticVal, buf);
-    ::marshalStub(errpc, buf);
-    code[pc].op.marshalForProof(buf, includeImmediateVal);
+    ::marshalStub(registerVal, buf, static_values->code);
+    ::marshalStub(static_values->staticVal, buf, static_values->code);
+    ::marshalStub(CodePointStub{static_values->code[errpc]}, buf,
+                  static_values->code);
+    static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
+                                               static_values->code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
     return buf;
-}
-
-SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(storage.makeTransaction());
-
-    auto datastack_results = stack.checkpointState(stateSaver, pool.get());
-    auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
-
-    auto register_val_results = stateSaver.saveValue(registerVal);
-    auto err_code_point = stateSaver.saveValue(errpc);
-    auto pc_results = stateSaver.saveValue(code[pc]);
-
-    auto status_str = static_cast<unsigned char>(state);
-
-    std::vector<unsigned char> hash_key;
-    marshal_uint256_t(hash(), hash_key);
-
-    if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        register_val_results.status.ok() && pc_results.status.ok() &&
-        err_code_point.status.ok()) {
-        auto machine_state_data = MachineStateKeys{
-            register_val_results.storage_key, datastack_results.storage_key,
-            auxstack_results.storage_key,     pc_results.storage_key,
-            err_code_point.storage_key,       status_str};
-
-        auto results =
-            stateSaver.saveMachineState(machine_state_data, hash_key);
-        results.status = stateSaver.commitTransaction();
-        return results;
-    } else {
-        return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
-    }
-}
-
-bool MachineState::restoreCheckpoint(
-    const CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(storage);
-    auto results = stateFetcher.getMachineState(checkpoint_key);
-
-    auto initial_values = storage.getInitialVmValues();
-    if (!initial_values.valid_state) {
-        return false;
-    }
-
-    code = initial_values.code;
-    staticVal = initial_values.staticVal;
-    pool = storage.pool;
-
-    if (results.status.ok()) {
-        auto state_data = results.data;
-
-        auto register_results =
-            stateFetcher.getValue(state_data.register_val_key);
-        registerVal = register_results.data;
-
-        auto pc_results = stateFetcher.getCodePoint(state_data.pc_key);
-        pc = pc_results.data.pc;
-
-        auto err_pc_results = stateFetcher.getCodePoint(state_data.err_pc_key);
-        errpc = err_pc_results.data;
-
-        if (!stack.initializeDataStack(stateFetcher,
-                                       state_data.datastack_key)) {
-            return false;
-        }
-
-        if (!auxstack.initializeDataStack(stateFetcher,
-                                          state_data.auxstack_key)) {
-            return false;
-        }
-
-        state = static_cast<Status>(state_data.status_char);
-    }
-    return results.status.ok();
 }
 
 BlockReason MachineState::isBlocked(uint256_t currentTime,
@@ -222,7 +131,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = code[pc];
+    auto& instruction = static_values->code[pc];
     if (instruction.op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
@@ -453,4 +362,18 @@ BlockReason MachineState::runOp(OpCode opcode) {
     }
 
     return NotBlocked{};
+}
+
+std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "status " << static_cast<int>(val.state) << "\n";
+    os << "codePointHash " << to_hex_str(hash(val.static_values->code[val.pc]))
+       << "\n";
+    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
+    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
+    os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
+    os << "staticHash " << to_hex_str(hash_value(val.static_values->staticVal))
+       << "\n";
+    os << "errHandlerHash "
+       << to_hex_str(hash(val.static_values->code[val.errpc])) << "\n";
+    return os;
 }

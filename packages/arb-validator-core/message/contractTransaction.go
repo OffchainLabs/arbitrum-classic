@@ -49,6 +49,14 @@ func (m ContractTransaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
+func (m ContractTransaction) DestAddress() common.Address {
+	return m.To
+}
+
+func (m ContractTransaction) SenderAddress() common.Address {
+	return m.From
+}
+
 func (m ContractTransaction) Equals(other Message) bool {
 	o, ok := other.(ContractTransaction)
 	if !ok {
@@ -62,6 +70,10 @@ func (m ContractTransaction) Equals(other Message) bool {
 
 func (m ContractTransaction) Type() Type {
 	return ContractTransactionType
+}
+
+func (m ContractTransaction) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
 }
 
 func (m ContractTransaction) CommitmentHash() common.Hash {

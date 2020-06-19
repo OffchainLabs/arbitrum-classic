@@ -183,6 +183,9 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
+github.com/offchainlabs/arbitrum v0.6.4 h1:WGlUI+83CIm9Ffsc15ZSNd1tkm7di3dg2fVsKrroU2w=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.4 h1:NFwIHD1rc6qQt8dpymd9pAXSoIo0KIDFe8iOejTyIZU=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.4/go.mod h1:x3VCB4tI/09En3SdI+2XZ1Gb3jDm1oKdQ8cFA8/m1J4=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.1 h1:b3iUnf1v+ppJiOfNX4yxxqfWKMQPZR5yoh8urCTFX88=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=

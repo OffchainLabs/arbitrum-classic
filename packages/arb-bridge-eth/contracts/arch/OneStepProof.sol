@@ -64,7 +64,7 @@ library OneStepProof {
                 beforeHash,
                 timeBounds,
                 Value.newTuplePreImage(
-                    beforeInbox, 
+                    beforeInbox,
                     beforeInboxValueSize),
                 afterHash,
                 didInboxInsn,
@@ -967,8 +967,11 @@ library OneStepProof {
         if (! val1.isInt()) {
             return false;
         }
-        require(lowerTimeBound<val1.intVal && Value.hash(beforeInbox) == Value.hashEmptyTuple(),
-            "Inbox instruction was blocked");
+        require(
+            val1.intVal >= lowerTimeBound ||
+            Value.hash(beforeInbox) != Value.hashEmptyTuple(),
+            "Inbox instruction was blocked"
+        );
         machine.addDataStackValue(beforeInbox);
         return true;
     }
@@ -1298,7 +1301,7 @@ library OneStepProof {
         (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
 
         require (valid, "loadMachine(): invalid machine");
-        
+
         Machine.Data memory endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
         uint8 opCode = uint8(_data.proof[offset + 1]);
@@ -1529,7 +1532,7 @@ library OneStepProof {
             } else {
                 messageHash = 0;
             }
-            
+
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](4);
             contents[0] = Value.newInt(_data.timeBounds[0]);
@@ -1539,8 +1542,8 @@ library OneStepProof {
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
             correct = executeInboxInsn(
-                endMachine, 
-                stackVals[0], 
+                endMachine,
+                stackVals[0],
                 _data.beforeInbox,
                 _data.timeBounds[0]);
         } else if (opCode == OP_ERROR) {

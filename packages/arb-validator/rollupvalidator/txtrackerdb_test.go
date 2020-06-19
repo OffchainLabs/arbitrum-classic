@@ -55,7 +55,7 @@ func setupNodes() ([]*structures.Node, error) {
 	return []*structures.Node{node, nextNode}, nil
 }
 
-func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.NodeStore, node *structures.Node) error {
+func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.ConfirmedNodeStore, node *structures.Node) error {
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	nodeData := node.MarshalForCheckpoint(checkpointContext, false)
 	rawNodeData, err := proto.Marshal(nodeData)
@@ -82,7 +82,7 @@ func TestTrackerDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := newTxDB(checkpointer, checkpointer.GetNodeStore())
+	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore())
 
 	heightTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestUnconfirmedDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := newTxDB(checkpointer, checkpointer.GetNodeStore())
+	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore())
 	if err != nil {
 		t.Fatal(err)
 	}

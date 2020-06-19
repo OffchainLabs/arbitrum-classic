@@ -21,6 +21,7 @@ abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challenge
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 abigen --sol=test_only/SigUtilsTester.sol --pkg=sigutilstester --out=sigutilstester.go
 abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
+abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 
 \mv arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
 \mv arbrollup.go ../../arb-validator-core/ethbridge/rollup/
@@ -33,6 +34,7 @@ abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
 \mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
 \mv sigutilstester.go ../../arb-validator-core/ethbridgetest/sigutilstester/
 \mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
+\mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
 rm -rf @openzeppelin bytes
 cd ../../..
 

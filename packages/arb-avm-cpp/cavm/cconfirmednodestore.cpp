@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "cnodestore.h"
+#include "cconfirmednodestore.h"
 #include "utils.hpp"
 
-#include <data_storage/nodestore.hpp>
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
-void deleteNodeStore(CNodeStore* m) {
-    delete static_cast<NodeStore*>(m);
+void deleteConfirmedNodeStore(CConfirmedNodeStore* m) {
+    delete static_cast<ConfirmedNodeStore*>(m);
 }
 
-int putNode(CNodeStore* ptr,
+int putNode(CConfirmedNodeStore* ptr,
             uint64_t height,
             const void* hash_ptr,
             const void* data,
@@ -32,32 +32,34 @@ int putNode(CNodeStore* ptr,
     auto hash = receiveUint256(hash_ptr);
     auto data_ptr = reinterpret_cast<const char*>(data);
     auto data_vector = std::vector<char>(data_ptr, data_ptr + data_length);
-    return static_cast<NodeStore*>(ptr)
+    return static_cast<ConfirmedNodeStore*>(ptr)
         ->putNode(height, hash, data_vector)
         .ok();
 }
 
-ByteSliceResult getNode(CNodeStore* ptr,
+ByteSliceResult getNode(CConfirmedNodeStore* ptr,
                         uint64_t height,
                         const void* hash_ptr) {
     auto hash = receiveUint256(hash_ptr);
     return returnDataResult(
-        static_cast<NodeStore*>(ptr)->getNode(height, hash));
+        static_cast<ConfirmedNodeStore*>(ptr)->getNode(height, hash));
 }
 
-Uint64Result getNodeHeight(CNodeStore* ptr, const void* hash_ptr) {
+Uint64Result getNodeHeight(CConfirmedNodeStore* ptr, const void* hash_ptr) {
     auto hash = receiveUint256(hash_ptr);
-    return returnUint64Result(static_cast<NodeStore*>(ptr)->getHeight(hash));
+    return returnUint64Result(
+        static_cast<ConfirmedNodeStore*>(ptr)->getHeight(hash));
 }
 
-HashResult getNodeHash(CNodeStore* ptr, uint64_t height) {
-    return returnUint256Result(static_cast<NodeStore*>(ptr)->getHash(height));
+HashResult getNodeHash(CConfirmedNodeStore* ptr, uint64_t height) {
+    return returnUint256Result(
+        static_cast<ConfirmedNodeStore*>(ptr)->getHash(height));
 }
 
-int isNodeStoreEmpty(CNodeStore* ptr) {
-    return static_cast<NodeStore*>(ptr)->isEmpty();
+int isNodeStoreEmpty(CConfirmedNodeStore* ptr) {
+    return static_cast<ConfirmedNodeStore*>(ptr)->isEmpty();
 }
 
-uint64_t maxNodeHeight(CNodeStore* ptr) {
-    return static_cast<NodeStore*>(ptr)->maxNodeHeight();
+uint64_t maxNodeHeight(CConfirmedNodeStore* ptr) {
+    return static_cast<ConfirmedNodeStore*>(ptr)->maxNodeHeight();
 }

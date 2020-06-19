@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,39 +28,41 @@ class Tuple;
 struct Operation;
 struct CodePoint;
 class HashPreImage;
+class Code;
+struct CodePointStub;
 
 // Note: uint256_t is actually 48 bytes long
-using value = nonstd::variant<Tuple, uint256_t, CodePoint, HashPreImage>;
+using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-uint256_t hash(const value& value);
-int get_tuple_size(char*& bufptr);
+uint256_t hash_value(const value& value);
 
 uint256_t deserializeUint256t(const char*& srccode);
 Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool);
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(const char*& srccode, TuplePool& pool);
-void marshal_value(const value& val, std::vector<unsigned char>& buf);
-void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
-void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
-void marshal_HashPreImage(const HashPreImage& val,
-                          std::vector<unsigned char>& buf);
 
-void marshalShallow(const value& val, std::vector<unsigned char>& buf);
-void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf);
-void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
-void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
-void marshalShallow(const HashPreImage& val, std::vector<unsigned char>& buf);
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
+
+void marshal_value(const value& val,
+                   std::vector<unsigned char>& buf,
+                   const Code& code);
+
+void marshalForProof(const CodePoint& cp,
+                     std::vector<unsigned char>& buf,
+                     const Code& code);
+
+void marshalForProof(const value& val,
+                     std::vector<unsigned char>& buf,
+                     const Code& code);
+void marshalStub(const value& val,
+                 std::vector<unsigned char>& buf,
+                 const Code& code);
 
 template <typename T>
 static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
 
-std::vector<unsigned char> GetHashKey(const value& val);
 uint256_t getSize(const value& val);
-void marshalStub(const value& val, std::vector<unsigned char>& buf);
 
 #endif /* value_hpp */

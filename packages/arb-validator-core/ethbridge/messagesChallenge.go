@@ -57,10 +57,10 @@ func (c *messagesChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashes := hashSliceToRaw(segmentHashes)
+	hashes := common.HashSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
-		hashSliceToRaw(chainHashes),
+		common.HashSliceToRaw(chainHashes),
 		hashes,
 		chainLength,
 	)
@@ -70,7 +70,7 @@ func (c *messagesChallenge) Bisect(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			hashSliceToRaw(chainHashes),
+			common.HashSliceToRaw(chainHashes),
 			hashes,
 			chainLength)
 	}
