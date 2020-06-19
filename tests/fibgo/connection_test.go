@@ -208,7 +208,7 @@ func setupValidators(
 			t.Fatal(err)
 		}
 
-		if err := utils.LaunchRPC(s, "1235"); err != nil {
+		if err := utils.LaunchRPC(s, "1235", utils.RPCFlags{}); err != nil {
 			t.Fatal(err)
 		}
 	}()

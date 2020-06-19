@@ -64,7 +64,7 @@ func main() {
 
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	walletVars := utils.AddFlags(createCmd)
+	walletVars := utils.AddWalletFlags(createCmd)
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
