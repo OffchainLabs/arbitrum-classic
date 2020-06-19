@@ -18,6 +18,7 @@ package utils
 
 import (
 	"flag"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/handlers"
@@ -53,6 +54,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(r)
 
 	if flags.certFile != "" && flags.keyFile != "" {
+		log.Println("Launching rpc server over http")
 		return http.ListenAndServeTLS(
 			":"+port,
 			flags.certFile,
@@ -60,6 +62,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 			h,
 		)
 	} else {
+		log.Println("Launching rpc server over https")
 		return http.ListenAndServe(
 			":"+port,
 			h,
