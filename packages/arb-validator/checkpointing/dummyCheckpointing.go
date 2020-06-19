@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"log"
+	"math/big"
 )
 
 type DummyCheckpointer struct {
@@ -64,4 +65,8 @@ func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _
 
 func (dcp *DummyCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
 	return nil
+}
+
+func (dcp DummyCheckpointer) MaxReorgHeight() *big.Int {
+	return big.NewInt(100)
 }

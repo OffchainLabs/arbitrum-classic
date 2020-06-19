@@ -89,34 +89,37 @@ func newRollupWatcher(
 	}, nil
 }
 
+func (vm *ethRollupWatcher) generateTopics() [][]ethcommon.Hash {
+	addressIndex := ethcommon.Hash{}
+	copy(
+		addressIndex[:],
+		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
+	)
+	return [][]ethcommon.Hash{
+		{
+			stakeCreatedID,
+			challengeStartedID,
+			challengeCompletedID,
+			rollupRefundedID,
+			rollupPrunedID,
+			rollupStakeMovedID,
+			rollupAssertedID,
+			rollupConfirmedID,
+			confirmedAssertionID,
+		},
+	}
+}
+
 func (vm *ethRollupWatcher) GetEvents(
 	ctx context.Context,
 	blockId *common.BlockId,
 	_ *big.Int,
 ) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
-	addressIndex := ethcommon.Hash{}
-	copy(
-		addressIndex[:],
-		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
-	)
-
 	rollupLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
 		BlockHash: &bh,
 		Addresses: []ethcommon.Address{vm.rollupAddress},
-		Topics: [][]ethcommon.Hash{
-			{
-				stakeCreatedID,
-				challengeStartedID,
-				challengeCompletedID,
-				rollupRefundedID,
-				rollupPrunedID,
-				rollupStakeMovedID,
-				rollupAssertedID,
-				rollupConfirmedID,
-				confirmedAssertionID,
-			},
-		},
+		Topics:    vm.generateTopics(),
 	})
 	if err != nil {
 		return nil, err
@@ -128,6 +131,32 @@ func (vm *ethRollupWatcher) GetEvents(
 			getLogChainInfo(evmLog),
 			evmLog,
 		)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, nil
+}
+
+func (vm *ethRollupWatcher) GetAllEvents(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]arbbridge.Event, error) {
+	inboxLogs, err := vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+		Addresses: []ethcommon.Address{vm.rollupAddress},
+		Topics:    vm.generateTopics(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	events := make([]arbbridge.Event, 0, len(inboxLogs))
+	for _, evmLog := range inboxLogs {
+		event, err := vm.processEvents(getLogChainInfo(evmLog), evmLog)
 		if err != nil {
 			return nil, err
 		}
@@ -261,6 +290,7 @@ func (vm *ethRollupWatcher) processEvents(
 			return nil, err
 		}
 		return arbbridge.ConfirmedAssertionEvent{
+			ChainInfo:   chainInfo,
 			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
 	default:

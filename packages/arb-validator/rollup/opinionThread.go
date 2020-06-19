@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -37,6 +38,17 @@ type PreparedAssertion struct {
 	claim       *valprotocol.AssertionClaim
 	assertion   *protocol.ExecutionAssertion
 	machine     machine.Machine
+}
+
+func (pa *PreparedAssertion) String() string {
+	return fmt.Sprintf(
+		"PreparedAssertion(%v, %v, %v, %v, %v)",
+		pa.prev.Hash(),
+		pa.beforeState,
+		pa.params,
+		pa.claim,
+		pa.assertion,
+	)
 }
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {

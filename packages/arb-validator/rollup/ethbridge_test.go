@@ -51,7 +51,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	auth, err = test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
+	auth, err = test.SetupAuth("8285795ed740b32384e72554128f80714ed6c93d50aeb18aa655547431a7a3cb")
 	if err != nil {
 		log.Fatal(err)
 	}

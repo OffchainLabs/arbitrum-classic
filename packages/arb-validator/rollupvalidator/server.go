@@ -195,11 +195,16 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		Data: dataBytes,
 	}
 
+	latestBlock, err := m.man.CurrentBlockId()
+	if err != nil {
+		return nil, err
+	}
+
 	deliveredMsg := message.SingleDelivered{
 		Message: callMsg,
 		DeliveryInfo: message.DeliveryInfo{
 			ChainTime: message.ChainTime{
-				BlockNum:  m.man.CurrentBlockId().Height,
+				BlockNum:  latestBlock.Height,
 				Timestamp: big.NewInt(time.Now().Unix()),
 			},
 			TxId: big.NewInt(0),
@@ -207,7 +212,6 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 	}
 	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
 
-	latestBlock := m.man.CurrentBlockId()
 	latestTime := big.NewInt(time.Now().Unix())
 	timeBounds := &protocol.TimeBounds{
 		LowerBoundBlock:     latestBlock.Height,
@@ -262,12 +266,20 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	return m.executeCall(m.man.GetLatestMachine(), args)
+	mach, err := m.man.GetLatestMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
 }
 
 // PendingCall takes a request from a client to process in a temporary context and return the result
 func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	return m.executeCall(m.man.GetPendingMachine(), args)
+	mach, err := m.man.GetPendingMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
 }
 
 func (m *Server) GetLatestNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,

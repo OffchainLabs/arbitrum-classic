@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -25,6 +26,8 @@ import (
 
 type ArbRollupWatcher interface {
 	ContractWatcher
+
+	GetAllEvents(ctx context.Context, fromBlock *big.Int, toBlock *big.Int) ([]Event, error)
 
 	GetParams(ctx context.Context) (valprotocol.ChainParams, error)
 	InboxAddress(ctx context.Context) (common.Address, error)

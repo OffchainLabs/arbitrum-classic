@@ -212,6 +212,14 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 //	return nil
 //}
 
+func (vm *EthRollupWatcher) GetAllEvents(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]arbbridge.Event, error) {
+	return nil, nil
+}
+
 func (vm *EthRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
 	return valprotocol.ChainParams{
 		StakeRequirement:        nil,
