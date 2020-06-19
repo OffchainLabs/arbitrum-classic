@@ -69,6 +69,8 @@ struct CodePoint {
     }
 };
 
+std::ostream& operator<<(std::ostream& os, const CodePoint& val);
+
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t hash(const CodePoint& cp);
@@ -132,7 +134,7 @@ class Code {
 
    public:
     Code() = default;
-    Code(std::vector<CodePoint> code_) : code(std::move(code_)) {}
+    Code(std::vector<CodePoint> code_);
 
     const CodePoint& operator[](const CodePointStub& ref) const {
         const auto& err_codepoint = getErrCodePoint();
@@ -152,6 +154,10 @@ class Code {
     }
 
     const CodePoint& operator[](uint64_t pos) const { return code[pos]; }
+
+    friend std::ostream& operator<<(std::ostream& os, const Code& code);
 };
+
+std::ostream& operator<<(std::ostream& os, const Code& code);
 
 #endif /* codepoint_hpp */

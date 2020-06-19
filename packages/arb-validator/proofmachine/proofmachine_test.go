@@ -113,6 +113,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodetestethhash2.ao",
 		"opcodeteststack.ao",
 		"opcodetestdup.ao",
+		"../contract.ao",
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {

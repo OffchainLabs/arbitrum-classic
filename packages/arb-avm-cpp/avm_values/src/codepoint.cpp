@@ -136,6 +136,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const CodePoint& val) {
+    os << "CodePoint(" << val.pc << ", " << val.op << ", "
+       << to_hex_str(val.nextHash) << ")";
+    return os;
+}
+
 const CodePoint& getErrCodePoint() {
     CodePoint static errcp(pc_default, Operation(static_cast<OpCode>(0)), 0);
     return errcp;
@@ -153,4 +159,13 @@ std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
         cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
     }
     return cps;
+}
+
+Code::Code(std::vector<CodePoint> code_) : code(std::move(code_)) {}
+
+std::ostream& operator<<(std::ostream& os, const Code& code) {
+    for (const auto& cp : code.code) {
+        os << cp << "\n";
+    }
+    return os;
 }
