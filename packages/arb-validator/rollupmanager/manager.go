@@ -260,12 +260,12 @@ func CreateManagerAdvanced(
 
 					inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting inbox events with block", blockId)
+						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
 
 					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting rollup events with block", blockId)
+						return errors2.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
 					}
 
 					for _, event := range arbbridge.MergeEventsUnsafe(inboxEvents, events) {
