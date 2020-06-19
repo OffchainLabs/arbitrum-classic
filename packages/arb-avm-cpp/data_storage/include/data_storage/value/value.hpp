@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef vmValueParser_hpp
-#define vmValueParser_hpp
+#ifndef checkpoint_value_hpp
+#define checkpoint_value_hpp
 
-#include <avm_values/codepoint.hpp>
-#include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
-struct StaticVmValues {
-    Code code;
-    value staticVal;
+struct DeleteResults;
+struct SaveResults;
+class Transaction;
 
-    StaticVmValues() = default;
-    StaticVmValues(Code code_, value staticVal_)
-        : code(std::move(code_)), staticVal(std::move(staticVal_)) {}
-};
+template <typename T>
+struct DbResult;
 
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool);
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         TuplePool* pool);
+SaveResults saveValue(Transaction& transaction, const value& val);
+DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 
-#endif /* vmValueParser_hpp */
+#endif /* value_hpp */

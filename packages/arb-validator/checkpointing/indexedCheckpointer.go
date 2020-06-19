@@ -42,8 +42,9 @@ type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    machine.CheckpointStorage
 	bs                    machine.BlockStore
-	confirmedNodeStore    machine.NodeStore
+	confirmedNodeStore    machine.ConfirmedNodeStore
 	nextCheckpointToWrite *writableCheckpoint
+	maxReorgHeight        *big.Int
 }
 
 func NewIndexedCheckpointer(
@@ -57,6 +58,7 @@ func NewIndexedCheckpointer(
 		rollupAddr,
 		arbitrumCodeFilePath,
 		databasePath,
+		new(big.Int).Set(maxReorgHeight),
 		forceFreshStart,
 	)
 
@@ -76,6 +78,7 @@ func newIndexedCheckpointer(
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	databasePath string,
+	maxReorgHeight *big.Int,
 	forceFreshStart bool,
 ) (*IndexedCheckpointer, error) {
 	if databasePath == "" {
@@ -96,25 +99,21 @@ func newIndexedCheckpointer(
 		new(sync.Mutex),
 		cCheckpointer,
 		cCheckpointer.GetBlockStore(),
-		cCheckpointer.GetNodeStore(),
+		cCheckpointer.GetConfirmedNodeStore(),
 		nil,
+		maxReorgHeight,
 	}, nil
 }
 
-// The checkpointer interface uses a factory pattern. The idea is that the rollup manager makes a factory, then
-// uses that factory to make a first checkpointer. On every reorg it kills the old checkpointer and calls the factory
-// to make a new checkpointer. But IndexedCheckpointer is reorg-aware, so it doesn't need to die and get
-// re-instantiated after each reorg.  To comply with the factory-based interface, it just makes a single object
-// which acts as both the factory and the checkpointer. So when the factory's New is called, it just returns itself.
-func (cp *IndexedCheckpointer) New(_ context.Context) RollupCheckpointer {
-	return cp
+func (cp *IndexedCheckpointer) MaxReorgHeight() *big.Int {
+	return new(big.Int).Set(cp.maxReorgHeight)
 }
 
 func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return cp.db
 }
 
-func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.NodeStore {
+func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
 	return cp.confirmedNodeStore
 }
 

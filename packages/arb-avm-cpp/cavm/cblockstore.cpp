@@ -19,7 +19,7 @@
 #include "utils.hpp"
 
 #include <data_storage/blockstore.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpointstorage.hpp>
 
 void deleteBlockStore(CBlockStore* m) {
     delete static_cast<BlockStore*>(m);

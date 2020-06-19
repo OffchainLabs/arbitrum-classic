@@ -58,7 +58,7 @@ type txTracker struct {
 
 func newTxTracker(
 	db machine.CheckpointStorage,
-	ns machine.NodeStore,
+	ns machine.ConfirmedNodeStore,
 ) (*txTracker, error) {
 	txdb, err := newTxDB(db, ns)
 	if err != nil {

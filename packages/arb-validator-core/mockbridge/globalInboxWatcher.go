@@ -24,6 +24,14 @@ func (vm *GlobalInboxWatcher) GetEvents(ctx context.Context, blockId *common.Blo
 	return nil, nil
 }
 
+func (vm *GlobalInboxWatcher) GetDeliveredEvents(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]arbbridge.MessageDeliveredEvent, error) {
+	return nil, nil
+}
+
 func (vm *GlobalInboxWatcher) GetAllReceived(
 	ctx context.Context,
 	fromBlock *big.Int,

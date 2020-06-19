@@ -214,13 +214,13 @@ func processNode(node *structures.Node) (*nodeInfo, error) {
 
 	assertion := node.Assertion()
 
-	nodeInfo.AVMMessages = assertion.OutMsgs
-	nodeInfo.AVMLogs = assertion.Logs
-	nodeInfo.AVMLogsValHashes = make([]string, 0, len(assertion.Logs))
-	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(assertion.Logs))
+	nodeInfo.AVMMessages = assertion.ParseOutMessages()
+	nodeInfo.AVMLogs = assertion.ParseLogs()
+	nodeInfo.AVMLogsValHashes = make([]string, 0, len(nodeInfo.AVMLogs))
+	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(nodeInfo.AVMLogs))
 
 	acc := common.Hash{}
-	for _, logsVal := range assertion.Logs {
+	for _, logsVal := range nodeInfo.AVMLogs {
 		logsValHash := logsVal.Hash()
 		nodeInfo.AVMLogsValHashes = append(nodeInfo.AVMLogsValHashes,
 			hexutil.Encode(logsValHash[:]))
@@ -232,9 +232,9 @@ func processNode(node *structures.Node) (*nodeInfo, error) {
 			hexutil.Encode(acc.Bytes()))
 	}
 
-	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(assertion.Logs))
+	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(nodeInfo.AVMLogs))
 
-	for _, logVal := range assertion.Logs {
+	for _, logVal := range nodeInfo.AVMLogs {
 		evmVal, err := evm.ProcessLog(logVal)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)

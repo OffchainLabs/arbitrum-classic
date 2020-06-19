@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,13 +33,27 @@ struct Assertion {
 };
 
 class Machine {
-    MachineState machine_state;
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     BlockReason runOne();
 
    public:
-    bool initializeMachine(const std::string& filename);
-    void initializeMachine(const MachineState& initial_state);
+    MachineState machine_state;
+
+    Machine() = default;
+    Machine(MachineState machine_state_)
+        : machine_state(std::move(machine_state_)) {}
+    Machine(std::shared_ptr<const StaticVmValues> static_values,
+            std::shared_ptr<TuplePool> pool_)
+        : machine_state(std::move(static_values), std::move(pool_)) {}
+
+    static std::pair<Machine, bool> loadFromFile(
+        const std::string& contract_filename) {
+        auto result = MachineState::loadFromFile(contract_filename);
+        if (!result.second) {
+            return std::make_pair(Machine{}, false);
+        }
+        return std::make_pair(Machine{std::move(result.first)}, true);
+    }
 
     Assertion run(uint64_t stepCount,
                   const TimeBounds& timeBounds,
@@ -57,10 +71,9 @@ class Machine {
 
     TuplePool& getPool() { return *machine_state.pool; }
 
-    SaveResults checkpoint(CheckpointStorage& storage);
-    bool restoreCheckpoint(const CheckpointStorage& storage,
-                           const std::vector<unsigned char>& checkpoint_key);
-    DeleteResults deleteCheckpoint(CheckpointStorage& storage);
+    void marshal_value(const value& val, std::vector<unsigned char>& buf) {
+        return ::marshal_value(val, buf, machine_state.static_values->code);
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

@@ -33,14 +33,14 @@ var nodeData = []byte{5, 6, 7}
 var nodeHeight2 = uint64(5)
 var nodeHash2 = common.Hash{56}
 
-func TestNodeStore(t *testing.T) {
+func TestConfirmedNodeStore(t *testing.T) {
 	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
 	if err != nil {
 		t.Error(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
-	ns := checkpointStorage.GetNodeStore()
+	ns := checkpointStorage.GetConfirmedNodeStore()
 
 	t.Run("EmptyTrue", func(t *testing.T) {
 		if !ns.Empty() {

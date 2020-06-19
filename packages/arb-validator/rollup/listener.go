@@ -254,7 +254,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 		go func() {
 			_, err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				log.Println("Error making assertion", err)
+				log.Println("Error making assertion", prepared, err)
 				lis.Lock()
 				delete(lis.broadcastAssertions, prepared.prev.Hash())
 				lis.Unlock()

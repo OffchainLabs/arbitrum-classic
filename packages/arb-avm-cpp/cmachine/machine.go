@@ -106,15 +106,11 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
 		rawTimeoutBytes := toByteSlice(cBlockReason.val)
-		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
+		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
 		}
-		timeoutInt, ok := timeout.(value.IntValue)
-		if !ok {
-			panic("Inbox hash must be an int")
-		}
-		return machine.InboxBlocked{Timeout: timeoutInt}
+		return machine.InboxBlocked{Timeout: timeout}
 	default:
 	}
 	return nil
@@ -159,15 +155,15 @@ func (m *Machine) ExecuteAssertion(
 
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
-	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
-	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
 	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
 		uint64(assertion.numGas),
-		outMessageVals,
-		logVals,
+		outMessagesRaw,
+		uint64(assertion.outMessageCount),
+		logsRaw,
+		uint64(assertion.logCount),
 	), uint64(assertion.numSteps)
 }
 

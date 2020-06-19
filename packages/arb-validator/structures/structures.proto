@@ -17,6 +17,7 @@
 syntax = "proto3";
 package structures;
 import "arb-util/common/common.proto";
+import "arb-util/protocol/protocol.proto";
 import "arb-validator-core/valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
@@ -42,7 +43,7 @@ message NodeBuf {
     valprotocol.VMProtoDataBuf vmProtoData = 5;
 
     common.HashBuf machineHash = 6;
-    ExecutionAssertionBuf assertion = 7;
+    protocol.ExecutionAssertion assertion = 7;
     uint64 depth = 8;
     common.HashBuf nodeDataHash = 9;
     common.HashBuf innerHash = 10;

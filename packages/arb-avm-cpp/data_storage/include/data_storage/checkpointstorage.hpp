@@ -17,14 +17,17 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
+#include <avm_values/vmValueParser.hpp>
+#include <data_storage/datastorage.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <avm_values/vmValueParser.hpp>
-#include <data_storage/datastorage.hpp>
-
 struct GetResults;
+class Machine;
+class BlockStore;
+class ConfirmedNodeStore;
 
 namespace rocksdb {
 class TransactionDB;
@@ -33,20 +36,23 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::shared_ptr<DataStorage> datastorage;
-    InitialVmValues initial_state;
+    std::shared_ptr<const StaticVmValues> initial_state;
 
    public:
     std::shared_ptr<TuplePool> pool;
     CheckpointStorage(const std::string& db_path,
                       const std::string& contract_path);
     bool closeCheckpointStorage();
-    InitialVmValues getInitialVmValues() const;
-    GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
-    std::unique_ptr<NodeStore> getNodeStore() const;
+    std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
+
+    const Code& getCode() const { return initial_state->code; }
+    Machine getInitialMachine() const;
+    std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
+    DbResult<value> getValue(uint256_t value_hash) const;
 };
 
 #endif /* checkpointstorage_hpp */

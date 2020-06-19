@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef vmValueParser_hpp
-#define vmValueParser_hpp
+#ifndef avm_status_hpp
+#define avm_status_hpp
 
-#include <avm_values/codepoint.hpp>
-#include <avm_values/tuple.hpp>
+enum class Status { Extensive, Halted, Error };
 
-struct StaticVmValues {
-    Code code;
-    value staticVal;
-
-    StaticVmValues() = default;
-    StaticVmValues(Code code_, value staticVal_)
-        : code(std::move(code_)), staticVal(std::move(staticVal_)) {}
-};
-
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool);
-
-#endif /* vmValueParser_hpp */
+#endif /* avm_status_hpp */

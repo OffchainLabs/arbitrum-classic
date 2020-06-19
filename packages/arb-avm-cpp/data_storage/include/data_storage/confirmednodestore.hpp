@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef nodestore_hpp
-#define nodestore_hpp
+#ifndef confirmednodestore_hpp
+#define confirmednodestore_hpp
 
 #include <avm_values/bigint.hpp>
 #include <data_storage/storageresultfwd.hpp>
@@ -32,13 +32,13 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
-class NodeStore {
+class ConfirmedNodeStore {
    private:
     std::shared_ptr<DataStorage> data_storage;
 
    public:
-    NodeStore() = default;
-    NodeStore(std::shared_ptr<DataStorage> data_storage_)
+    ConfirmedNodeStore() = default;
+    ConfirmedNodeStore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
     rocksdb::Status putNode(uint64_t height,
                             const uint256_t& hash,
@@ -52,4 +52,4 @@ class NodeStore {
     uint64_t maxNodeHeight() const;
 };
 
-#endif /* nodestore_hpp */
+#endif /* confirmednodestore_hpp */

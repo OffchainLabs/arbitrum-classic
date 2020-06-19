@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -37,6 +38,17 @@ type PreparedAssertion struct {
 	claim       *valprotocol.AssertionClaim
 	assertion   *protocol.ExecutionAssertion
 	machine     machine.Machine
+}
+
+func (pa *PreparedAssertion) String() string {
+	return fmt.Sprintf(
+		"PreparedAssertion(%v, %v, %v, %v, %v)",
+		pa.prev.Hash(),
+		pa.beforeState,
+		pa.params,
+		pa.claim,
+		pa.assertion,
+	)
 }
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {
@@ -280,6 +292,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 
 	var params *valprotocol.AssertionParams
 	var claim *valprotocol.AssertionClaim
+	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	if assertion.DidInboxInsn {
 		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
@@ -289,7 +302,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
 			ImportedMessagesSlice: inbox.Hash().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	} else {
 		params = &valprotocol.AssertionParams{
@@ -300,7 +313,7 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         beforeInboxTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			AssertionStub:         stub,
 		}
 	}
 	return &PreparedAssertion{

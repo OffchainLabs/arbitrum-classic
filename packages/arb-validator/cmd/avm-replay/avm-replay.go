@@ -68,7 +68,7 @@ func runMessage(mach machine.Machine, msg message.Delivered) (evm.Result, error)
 		1000,
 	)
 	//log.Println("ran assertion")
-	logs := assertion.Logs
+	logs := assertion.ParseLogs()
 	if len(logs) != 1 {
 		log.Fatal("returned incorrect log count")
 	}
