@@ -28,8 +28,8 @@ type Event interface {
 	GetChainInfo() ChainInfo
 }
 
-// MergeEventsUnsafe assumes that both sets of events come from the same
-// chain state rather than from two different states caused by a reorg
+// MergeEventsUnsafe assumes that both sets of events are disjoint and come from
+// the same chain state rather than from two different states caused by a reorg
 func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 	totalLen := len(events1) + len(events2)
 	events := make([]Event, 0, totalLen)

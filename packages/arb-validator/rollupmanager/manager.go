@@ -56,7 +56,14 @@ type Manager struct {
 
 	listeners   []rollup.ChainListener
 	activeChain *rollup.ChainObserver
-	reorgCache  *reorgCache
+	// reorgCache is nil when the validator is functioning normally. When the
+	// validator experiences a reorg it stores the current state in the reorg
+	// cache. It uses this cache to respond to non-mutating queries from users
+	// until it is caught back up with the latest state at which point it clears
+	// the cache and starts answering queries based on the current state.
+	// This approach let's us provide a best effort response to users quickly
+	// rather than blocking until the validator fully recovers from the reorg.
+	reorgCache *reorgCache
 
 	// These variables are only written by the constructor
 	RollupAddress common.Address
@@ -153,7 +160,11 @@ func CreateManagerAdvanced(
 			caughtUpToL1 := false
 
 			err = func() error {
-				// If the local chain is significantly behind the L1, catch up more efficiently
+				// If the local chain is significantly behind the L1, catch up
+				// more efficiently. We process `MaxReorgHeight` blocks at a
+				// time up to `MaxReorgHeight` blocks before the current head
+				// and and assume that no reorg will occur affecting the blocks
+				// we are processing
 				maxReorg := checkpointer.MaxReorgHeight()
 				for {
 					currentProcessedBlockId := man.activeChain.CurrentBlockId()
@@ -165,13 +176,16 @@ func CreateManagerAdvanced(
 					}
 					currentL1Height := currentOnChain.Height.AsInt()
 
-					distanceFromCurrent := new(big.Int).Sub(currentL1Height, currentLocalHeight)
-					if distanceFromCurrent.Cmp(maxReorg) <= 0 {
-						log.Println("Ending fast catchup")
+					fastCatchupEndHeight := new(big.Int).Sub(currentL1Height, maxReorg)
+					if currentLocalHeight.Cmp(fastCatchupEndHeight) >= 0 {
 						break
 					}
 
-					fetchEnd := new(big.Int).Add(currentLocalHeight, maxReorg)
+					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, currentLocalHeight)
+					if fetchSize.Cmp(maxReorg) >= 0 {
+						fetchSize = maxReorg
+					}
+					fetchEnd := new(big.Int).Add(currentLocalHeight, fetchSize)
 					fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
 
 					log.Println("Getting events between", currentLocalHeight, "and", fetchEnd)
