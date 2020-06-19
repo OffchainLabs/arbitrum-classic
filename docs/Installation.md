@@ -68,7 +68,7 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.6.4 https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.6.5 https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build
