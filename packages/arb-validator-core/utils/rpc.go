@@ -53,7 +53,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	)
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(r)
 
-	if *flags.certFile != "" && *flags.keyFile != "" {
+	if flags.certFile != nil && flags.keyFile != nil && *flags.certFile != "" && *flags.keyFile != "" {
 		log.Println("Launching rpc server over https with cert", *flags.certFile, "and key", *flags.keyFile)
 		return http.ListenAndServeTLS(
 			":"+port,
