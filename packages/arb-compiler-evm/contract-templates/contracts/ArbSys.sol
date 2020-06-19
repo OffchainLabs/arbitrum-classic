@@ -49,4 +49,7 @@ interface ArbSys {
     // This function returns the address of the new contract
     // This is currently the only way to create new contracts in a compiled rollup instance
     function cloneContract(address account) external returns(address);
+
+    // Send arbitrary data to L1 
+    function sendDataPacket(bytes encodedData, uint messageType) external;
 }

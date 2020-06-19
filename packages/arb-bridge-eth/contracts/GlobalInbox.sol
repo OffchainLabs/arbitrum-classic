@@ -22,6 +22,7 @@ import "./GlobalNFTWallet.sol";
 import "./IGlobalInbox.sol";
 import "./Messages.sol";
 import "./PaymentRecords.sol";
+import "./DataPackets.sol";
 
 import "./arch/Protocol.sol";
 import "./arch/Value.sol";
@@ -29,7 +30,7 @@ import "./arch/Value.sol";
 import "./libraries/SigUtils.sol";
 import "bytes/contracts/BytesLib.sol";
 
-contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords {
+contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords, DataPackets {
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
     uint8 internal constant ERC20_DEPOSIT = 2;
