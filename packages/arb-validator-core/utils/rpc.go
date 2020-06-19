@@ -26,8 +26,8 @@ import (
 )
 
 type RPCFlags struct {
-	certFile string
-	keyFile  string
+	certFile *string
+	keyFile  *string
 }
 
 func AddRPCFlags(fs *flag.FlagSet) RPCFlags {
@@ -35,8 +35,8 @@ func AddRPCFlags(fs *flag.FlagSet) RPCFlags {
 	privkeyFile := fs.String("privkey", "", "path to private key file (if using ssl)")
 
 	return RPCFlags{
-		certFile: *certFile,
-		keyFile:  *privkeyFile,
+		certFile: certFile,
+		keyFile:  privkeyFile,
 	}
 }
 
@@ -53,16 +53,16 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	)
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(r)
 
-	if flags.certFile != "" && flags.keyFile != "" {
-		log.Println("Launching rpc server over http with cert", flags.certFile, "and key", flags.keyFile)
+	if *flags.certFile != "" && *flags.keyFile != "" {
+		log.Println("Launching rpc server over https with cert", *flags.certFile, "and key", *flags.keyFile)
 		return http.ListenAndServeTLS(
 			":"+port,
-			flags.certFile,
-			flags.keyFile,
+			*flags.certFile,
+			*flags.keyFile,
 			h,
 		)
 	} else {
-		log.Println("Launching rpc server over https")
+		log.Println("Launching rpc server over http")
 		return http.ListenAndServe(
 			":"+port,
 			h,
