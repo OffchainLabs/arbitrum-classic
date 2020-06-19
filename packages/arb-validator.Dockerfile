@@ -10,24 +10,28 @@ RUN apk update && apk add --no-cache boost-dev cmake g++ \
     git make musl-dev python3-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
-    pip3 install conan && \
+    pip3 install virtualenv && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 WORKDIR "/home/user/"
 # Build dependencies
 COPY --chown=user arb-avm-cpp/conanfile.txt ./
-RUN mkdir -p build && cd build && \
+RUN python3 -m virtualenv vconan && \
+    . vconan/bin/activate && \
+    pip3 install --upgrade conan && \
+    mkdir -p build && cd build && \
     conan profile new default --detect && \
     conan profile update settings.compiler.libcxx=libstdc++11 default && \
     conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite && \
-    conan install ..
+    conan install .. && \
+    deactivate
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator --chown=user /cpp-build build/
 # Build arb-avm-cpp
-RUN cd build && conan install .. && \
+RUN cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
     cp lib/* ../cmachine
