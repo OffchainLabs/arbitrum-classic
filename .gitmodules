@@ -1,0 +1,6 @@
+[submodule "packages/arb-avm-cpp/external/secp256k1"]
+	path = packages/arb-avm-cpp/external/secp256k1
+	url = https://github.com/bitcoin-core/secp256k1.git
+[submodule "packages/arb-avm-cpp/external/libff"]
+	path = packages/arb-avm-cpp/external/libff
+	url = https://github.com/scipr-lab/libff
