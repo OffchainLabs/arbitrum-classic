@@ -550,31 +550,59 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
-void ec_recover(MachineState& m) {
-    m.stack.prepForMod(4);
+namespace {
+uint256_t parseSignature(MachineState& m) {
+    auto recovery_int = assumeInt(m.stack[2]);
+    if (recovery_int != 0 && recovery_int != 1) {
+        return 0;
+    }
+    std::array<unsigned char, 64> sig_raw;
+    to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
+    to_big_endian(assumeInt(m.stack[1]), sig_raw.begin() + 32);
+
+    std::array<unsigned char, 32> message;
+    to_big_endian(assumeInt(m.stack[3]), message.begin());
+
     secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+
+    secp256k1_ecdsa_recoverable_signature sig;
+    int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
+        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+    if (!parsed_sig) {
+        return 0;
+    }
+
     secp256k1_pubkey pubkey;
-    secp256k1_ecdsa_recoverable_signature signature;
-    unsigned char message[32];
-    signature.data[64] = static_cast<unsigned char>(assumeInt(m.stack[2]));
-    for (int i = 0; i < 2; i++) {
-        to_big_endian(assumeInt(m.stack[1 - i]), signature.data + (32 * i));
+    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.data())) {
+        return 0;
     }
-    to_big_endian(assumeInt(m.stack[3]), message);
-    m.stack.popClear();
-    m.stack.popClear();
-    m.stack.popClear();
-    if (secp256k1_ecdsa_recover(context, &pubkey, &signature, message)) {
-        std::array<unsigned char, 32> hashData;
-        evm::Keccak_256(pubkey.data, 64, hashData.data());
-        for (int i = 0; i < 12; i++) {
-            hashData[i] = 0;
-        }
-        m.stack[0] = from_big_endian(hashData.begin(), hashData.end());
-    } else {
-        m.stack[0] = 0;
+
+    std::array<unsigned char, 65> pubkey_raw;
+    size_t output_length = pubkey_raw.size();
+    int serialized_pubkey = secp256k1_ec_pubkey_serialize(
+        context, pubkey_raw.data(), &output_length, &pubkey,
+        SECP256K1_EC_UNCOMPRESSED);
+    if (!serialized_pubkey) {
+        return 0;
     }
+
+    std::array<unsigned char, 32> hash_data;
+    // Skip header byte
+    evm::Keccak_256(pubkey_raw.data() + 1, 64, hash_data.data());
+    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+    return from_big_endian(hash_data.begin(), hash_data.end());
+}
+}  // namespace
+
+void ec_recover(MachineState& m) {
+    m.stack.prepForMod(4);
+
+    m.stack[3] = parseSignature(m);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
 }
 
 BlockReason breakpoint(MachineState& m) {

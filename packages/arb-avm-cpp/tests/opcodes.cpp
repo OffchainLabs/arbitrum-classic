@@ -747,39 +747,45 @@ uint256_t& assumeInt(value& val) {
 TEST_CASE("ecrecover opcode is correct") {
     SECTION("ecrecover") {
         MachineState s;
-        s.initialize_machinestate(test_ecrecover_path);
+        std::array<unsigned char, 32> msg;
+        std::generate(msg.begin(), msg.end(), std::rand);
+        std::array<unsigned char, 32> seckey;
+        std::generate(seckey.begin(), seckey.end(), std::rand);
+
         auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
                                             SECP256K1_CONTEXT_VERIFY);
         secp256k1_ecdsa_recoverable_signature sig;
-        unsigned char msg[32];
-        unsigned char seckey[32];
         secp256k1_pubkey pubkey;
-        uint32_t* current_loc = reinterpret_cast<uint32_t*>(seckey);
-        for (int i = 0; i < 8; i++) {
-            *current_loc = rand();
-            ++current_loc;
-        }
-        current_loc = reinterpret_cast<uint32_t*>(msg);
-        for (int i = 0; i < 8; i++) {
-            *current_loc = rand();
-            ++current_loc;
-        }
-        REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey) == 1);
-        REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg, seckey,
-                                                 nullptr, nullptr) == 1);
-        s.stack.push(from_big_endian(msg, msg + 32));
-        s.stack.push(value(sig.data[64]));
-        s.stack.push(from_big_endian(sig.data, sig.data + 32));
-        s.stack.push(from_big_endian(sig.data + 32, sig.data + 64));
+        REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey.data()) == 1);
+        std::array<unsigned char, 65> pubkey_raw;
+        size_t output_length = 65;
+        REQUIRE(secp256k1_ec_pubkey_serialize(ctx, pubkey_raw.data(),
+                                              &output_length, &pubkey,
+                                              SECP256K1_EC_UNCOMPRESSED));
+        REQUIRE(output_length == 65);
+
+        REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg.data(),
+                                                 seckey.data(), nullptr,
+                                                 nullptr) == 1);
+
+        std::array<unsigned char, 64> sig_raw;
+        int recovery_id;
+        REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
+                    ctx, sig_raw.data(), &recovery_id, &sig) == 1);
+
+        s.stack.push(from_big_endian(msg.begin(), msg.end()));
+        s.stack.push(uint256_t{recovery_id});
+        s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+        s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
         s.runOp(OpCode::ECRECOVER);
         REQUIRE(s.stack[0] != value(0));
-        std::array<unsigned char, 32> hashData;
-        keccak(pubkey.data, 64, hashData.data());
-        for (int i = 0; i < 12; i++) {
-            hashData[i] = 0;
-        }
-        REQUIRE(from_big_endian(hashData.begin(), hashData.end()) ==
-                assumeInt(s.stack[0]));
+        std::array<unsigned char, 32> hash_data;
+        keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
+        std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+        auto correct_address =
+            from_big_endian(hash_data.begin(), hash_data.end());
+        auto calculated_address = assumeInt(s.stack[0]);
+        REQUIRE(correct_address == calculated_address);
     }
 }
 
