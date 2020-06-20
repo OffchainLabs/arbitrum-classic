@@ -1313,7 +1313,7 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return 10;
         } else if (opCode == OP_ECRECOVER) {
-            return 9999; // TODO: Fill in calibrated gas cost
+            return 20000;
         } else {
             require(false, "Invalid opcode: opGasCost()");
         }

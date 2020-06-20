@@ -369,6 +369,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::HALT, 10},
     {OpCode::DEBUG, 1},
 
-    {OpCode::ECRECOVER, 9999}};
+    {OpCode::ECRECOVER, 20000}};
 
 #endif /* opcodes_hpp */
