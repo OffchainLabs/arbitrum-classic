@@ -22,7 +22,6 @@
 #include <secp256k1_recovery.h>
 #include <avm_values/keccak.hpp>
 #include <cstdlib>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
 
 #import "config.hpp"
 
