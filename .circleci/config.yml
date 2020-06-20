@@ -157,7 +157,7 @@ jobs:
             - data
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.2.4
+      - image: offchainlabs/cpp-base:0.2.5
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
