@@ -171,6 +171,10 @@ jobs:
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recursive
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_conan_cache
       - run:
