@@ -762,7 +762,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(machine.errHandler);
+        machine.addDataStackValue(Value.newCodepointHash(machine.errHandlerHash));
         return true;
     }
 
@@ -777,7 +777,7 @@ library OneStepProof {
         if (!val.isCodePoint()) {
             return false;
         }
-        machine.errHandler = val;
+        machine.errHandlerHash = val.hash();
         return true;
     }
 
@@ -1563,10 +1563,10 @@ library OneStepProof {
         }
 
         if (!correct) {
-            if (Value.hash(endMachine.errHandler) == CODE_POINT_ERROR) {
+            if (endMachine.errHandlerHash == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
-                endMachine.instructionStackHash = endMachine.errHandler.hash();
+                endMachine.instructionStackHash = endMachine.errHandlerHash;
             }
         }
 

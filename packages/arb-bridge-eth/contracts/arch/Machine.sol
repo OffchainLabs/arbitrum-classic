@@ -49,7 +49,7 @@ library Machine {
         Value.Data auxStack;
         Value.Data registerVal;
         Value.Data staticVal;
-        Value.Data errHandler;
+        bytes32 errHandlerHash;
         uint256 status;
     }
 
@@ -67,7 +67,7 @@ library Machine {
                 ", \n",
                 DebugPrint.bytes32string(Value.hash(machine.staticVal)),
                 ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.errHandler)),
+                DebugPrint.bytes32string(machine.errHandlerHash),
                 ")\n"
             )
         );
@@ -106,7 +106,7 @@ library Machine {
         Value.Data memory auxStack,
         Value.Data memory registerVal,
         Value.Data memory staticVal,
-        Value.Data memory errHandler
+        bytes32 errHandlerHash
     )
         internal
         pure
@@ -119,7 +119,7 @@ library Machine {
                 auxStack,
                 registerVal,
                 staticVal,
-                errHandler,
+                errHandlerHash,
                 MACHINE_EXTENSIVE
             )
         );
@@ -138,7 +138,7 @@ library Machine {
                     Value.hash(machine.auxStack),
                     Value.hash(machine.registerVal),
                     Value.hash(machine.staticVal),
-                    Value.hash(machine.errHandler)
+                    machine.errHandlerHash
                 )
             );
         }
@@ -152,7 +152,7 @@ library Machine {
             machine.auxStack,
             machine.registerVal,
             machine.staticVal,
-            machine.errHandler,
+            machine.errHandlerHash,
             machine.status
         );
     }
@@ -195,7 +195,7 @@ library Machine {
             return (false, offset, m);
         }
 
-        (valid, offset, m.errHandler) = Value.deserialize(data, offset);
+        (valid, offset, m.errHandlerHash) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
