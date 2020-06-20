@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -345,7 +345,7 @@ void signExtend(MachineState& m) {
 
 void hashOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = ::hash(m.stack[0]);
+    m.stack[0] = ::hash_value(m.stack[0]);
     ++m.pc;
 }
 
@@ -353,7 +353,7 @@ void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
     if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
         m.stack[0] = NUM;
-    else if (nonstd::holds_alternative<CodePoint>(m.stack[0]))
+    else if (nonstd::holds_alternative<CodePointStub>(m.stack[0]))
         m.stack[0] = CODEPT;
     else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
         m.stack[0] = TUPLE;
@@ -366,16 +366,8 @@ void ethhash2Op(MachineState& m) {
     auto& bNum = assumeInt(m.stack[1]);
 
     std::array<unsigned char, 64> inData;
-    std::array<uint64_t, 4> anumInts;
-    to_big_endian(aNum, anumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(anumInts.data()),
-              reinterpret_cast<unsigned char*>(anumInts.data()) + 32,
-              inData.begin());
-    std::array<uint64_t, 4> bnumInts;
-    to_big_endian(bNum, bnumInts.begin());
-    std::copy(reinterpret_cast<unsigned char*>(bnumInts.data()),
-              reinterpret_cast<unsigned char*>(bnumInts.data()) + 32,
-              inData.begin() + 32);
+    auto it = to_big_endian(aNum, inData.begin());
+    to_big_endian(bNum, it);
 
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(inData.data(), 64, hashData.data());
@@ -392,7 +384,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.staticVal;
+    value copiedStatic = m.static_values->staticVal;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -412,9 +404,9 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
     if (target) {
-        m.pc = target->pc;
+        m.pc = *target;
     } else {
         m.state = Status::Error;
     }
@@ -423,11 +415,11 @@ void jump(MachineState& m) {
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
     if (bNum != 0) {
         if (target) {
-            m.pc = target->pc;
+            m.pc = *target;
         } else {
             m.state = Status::Error;
         }
@@ -448,7 +440,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(m.code[m.pc]);
+    m.stack.push(CodePointStub{m.static_values->code[m.pc]});
     ++m.pc;
 }
 
@@ -476,13 +468,13 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(m.errpc);
+    m.stack.push(CodePointStub{m.static_values->code[m.errpc]});
     ++m.pc;
 }
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = nonstd::get_if<CodePoint>(&m.stack[0]);
+    auto codePointVal = nonstd::get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -634,20 +626,30 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason send(MachineState& m) {
+bool send(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.outMessage.push_back(std::move(m.stack[0]));
-    m.stack.popClear();
-    ++m.pc;
-    return NotBlocked();
+
+    auto val_size = getSize(m.stack[0]);
+    bool success;
+
+    if (val_size > send_size_limit) {
+        success = false;
+    } else {
+        m.context.outMessage.push_back(std::move(m.stack[0]));
+        m.stack.popClear();
+        ++m.pc;
+
+        success = true;
+    }
+
+    return success;
 }
 
 void getTime(MachineState& m) {
-    Tuple tup(m.pool.get(), 4);
-    tup.set_element(0, m.context.timeBounds.lowerBoundBlock);
-    tup.set_element(1, m.context.timeBounds.upperBoundBlock);
-    tup.set_element(2, m.context.timeBounds.lowerBoundTimestamp);
-    tup.set_element(3, m.context.timeBounds.upperBoundTimestamp);
+    Tuple tup(m.context.timeBounds.lowerBoundBlock,
+              m.context.timeBounds.upperBoundBlock,
+              m.context.timeBounds.lowerBoundTimestamp,
+              m.context.timeBounds.upperBoundTimestamp, m.pool.get());
     m.stack.push(std::move(tup));
     ++m.pc;
 }

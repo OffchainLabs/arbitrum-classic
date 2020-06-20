@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,13 @@
 #ifndef ccheckpointstorage_h
 #define ccheckpointstorage_h
 
+#include "ctypes.h"
+
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct {
-    void* data;
-    int length;
-} ByteSlice;
-
-typedef void CMachine;
-typedef void CCheckpointStorage;
 
 CCheckpointStorage* createCheckpointStorage(const char* filename,
                                             const char* contract_path);
@@ -46,12 +40,15 @@ int saveData(CCheckpointStorage* storage_ptr,
              int key_length,
              const void* data,
              int data_length);
-ByteSlice getData(CCheckpointStorage* storage_ptr,
-                  const void* key,
-                  int key_length);
+ByteSliceResult getData(CCheckpointStorage* storage_ptr,
+                        const void* key,
+                        int key_length);
 int deleteData(CCheckpointStorage* storage_ptr,
                const void* key,
                int key_length);
+
+CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr);
+CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr);
 
 #ifdef __cplusplus
 }

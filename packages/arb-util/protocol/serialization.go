@@ -16,4 +16,4 @@
 
 package protocol
 
-//go:generate protoc -I.. -I. --go_out=paths=source_relative:. protocol.proto
+//go:generate protoc -I ../.. -I. --go_out=paths=source_relative:. protocol.proto

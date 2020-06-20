@@ -22,6 +22,7 @@ from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 from arbitrum import messagestack
 from arbitrum.evm.log import EVMStop, EVMRevert, EVMReturn, EVMInvalidSequence
 from arbitrum.evm import contract_templates
+from arbitrum.std import bytestack_frombytes
 
 CALL_TX_TYPE = 5
 
@@ -59,6 +60,25 @@ def make_evm_clone_code(address):
         instruction_table["CALL"],
         assemble_one("PUSH1 0x20"),
         assemble_one("PUSH1 0x40"),
+        instruction_table["RETURN"],
+    ]
+
+
+def make_evm_transfer_code(address, amount):
+    instruction_table = instruction_tables["byzantium"]
+    return [
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH1 0x00"),
+        assemble_one("PUSH32 " + eth_utils.to_hex(amount)),
+        assemble_one("PUSH20 " + address),
+        assemble_one("PUSH1 0x20"),
+        instruction_table["CALL"],
+        assemble_one("PUSH1 0x00"),
+        instruction_table["MSTORE"],
+        assemble_one("PUSH1 0x20"),
+        assemble_one("PUSH1 0x00"),
         instruction_table["RETURN"],
     ]
 
@@ -236,7 +256,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageBlock(1, 0)]), 37
+                    value.Tuple([0, address, arbsys_abi.blockLowerBound(1, 0)]), 37
                 )
             ),
         )
@@ -264,7 +284,7 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMReturn)
 
         self.assertEqual(parsed_out0.output_values[0], 100000000)
-        self.assertEqual(parsed_out1.output_values[0], 37)
+        self.assertEqual(parsed_out1.output_values[0], 453)
         self.assertEqual(parsed_out2.output_values[0], 100000000)
 
     def test_timestamp(self):
@@ -290,7 +310,7 @@ class TestEVM(TestCase):
             inbox,
             value.Tuple(
                 make_msg_val(
-                    value.Tuple([0, address, arbsys_abi.currentMessageTimestamp(1, 0)]),
+                    value.Tuple([0, address, arbsys_abi.timestampLowerBound(1, 0)]),
                     0,
                     543,
                 )
@@ -713,5 +733,189 @@ class TestEVM(TestCase):
         parsed_out0 = output_handler(vm.logs[0])
         self.assertIsInstance(parsed_out0, EVMReturn)
         self.assertEqual(
-            parsed_out0.output_values[0], "0x76b4d51dcf8e85892588d43581540feb1c2d77ba"
+            parsed_out0.output_values[0], "0xef8c0cf8cb9e67b7b5d0ff04d6e26c04e2a591fa"
         )
+
+    def test_insuffient_balance(self):
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([address, 5000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            0,
+                            address,
+                            value.Tuple(
+                                [dest_address, 0, 10000, bytestack_frombytes(b"")]
+                            ),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 6)
+        parsed_outs = [output_handler(log) for log in vm.logs]
+
+        self.assertIsInstance(parsed_outs[0], EVMStop)
+        self.assertIsInstance(parsed_outs[1], EVMReturn)
+        self.assertIsInstance(parsed_outs[2], EVMReturn)
+        self.assertIsInstance(parsed_outs[3], EVMRevert)
+        self.assertIsInstance(parsed_outs[4], EVMReturn)
+        self.assertIsInstance(parsed_outs[5], EVMReturn)
+        self.assertEqual(len(vm.sent_messages), 0)
+
+        self.assertEqual(
+            parsed_outs[1].output_values[0], parsed_outs[4].output_values[0]
+        )
+        self.assertEqual(
+            parsed_outs[2].output_values[0], parsed_outs[5].output_values[0]
+        )
+
+    def test_transfer_eth_from_contract(self):
+        contract_address_string = "0x0b55929f4095f677C9Ec1F4810C3E59CCD6D33C7"
+        contract_address = eth_utils.to_int(hexstr=contract_address_string)
+        evm_code = make_evm_transfer_code(dest_address_string, 2000)
+        contract_a = make_contract(evm_code, "address", contract_address_string)
+
+        arbinfo = contract_templates.get_info_contract()
+        arbinfo_abi = ContractABI(arbinfo)
+
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler([contract_a, arbinfo_abi])
+        inbox = value.Tuple([])
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [1, 2345, value.Tuple([contract_address, 2000])]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [0, address, contract_a.testMethod(0, 0)]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(dest_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        inbox = messagestack.addMessage(
+            inbox,
+            value.Tuple(
+                make_msg_val(
+                    value.Tuple(
+                        [
+                            CALL_TX_TYPE,
+                            address,
+                            arbinfo_abi.call_getBalance(contract_address_string),
+                        ]
+                    )  # type  # sender
+                )
+            ),
+        )
+        vm.env.messages = inbox
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 4)
+        parsed_outs = [output_handler(log) for log in vm.logs]
+        self.assertIsInstance(parsed_outs[0], EVMStop)
+        self.assertIsInstance(parsed_outs[1], EVMReturn)
+        self.assertIsInstance(parsed_outs[2], EVMReturn)
+        self.assertIsInstance(parsed_outs[3], EVMReturn)
+        self.assertEqual(eth_utils.to_int(hexstr=parsed_outs[1].output_values[0]), 1)
+        dest_balance = parsed_outs[2].output_values[0]
+        contract_balance = parsed_outs[3].output_values[0]
+        self.assertEqual(dest_balance, 2000)
+        self.assertEqual(contract_balance, 0)

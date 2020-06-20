@@ -23,7 +23,7 @@ library Protocol {
     using Value for Value.Data;
 
     function generateMessageStubHash(
-        bytes32 _data,
+        Value.Data memory _dataHashValue,
         bytes21 _tokenType,
         uint256 _value,
         address _destination
@@ -33,17 +33,17 @@ library Protocol {
         returns (bytes32)
     {
         Value.Data[] memory values = new Value.Data[](4);
-        values[0] = Value.newHashOnly(_data);
+        values[0] = _dataHashValue;
         values[1] = Value.newInt(uint256(_destination));
         values[2] = Value.newInt(_value);
         values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-        return Value.newTuple(values).hash().hash;
+        return Value.newTuple(values).hash();
     }
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint128[4] memory _timeBounds,
-        bytes32 _beforeInbox
+        bytes32 _beforeInboxHash
     )
         internal
         pure
@@ -56,7 +56,7 @@ library Protocol {
                 _timeBounds[1],
                 _timeBounds[2],
                 _timeBounds[3],
-                _beforeInbox
+                _beforeInboxHash
             )
         );
     }
@@ -83,38 +83,6 @@ library Protocol {
                 _lastMessageHash,
                 _firstLogHash,
                 _lastLogHash
-            )
-        );
-    }
-
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) internal pure returns (bytes32) {
-        bool valid;
-        bytes32 hashVal = 0x00;
-        bytes32 msgHash;
-        uint256 endOffset = startOffset + length;
-        require(endOffset <= messages.length, "invalid length");
-        uint256 offset;
-        for (offset = startOffset; offset < endOffset;) {
-            (valid, offset, msgHash) = Value.deserializeHashed(messages, offset);
-            require(valid, "Invalid output message");
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-        }
-        require(offset == startOffset + length, "value extended past length");
-        return hashVal;
-    }
-
-    function addMessageToVMInbox(bytes32 vmInbox, bytes32 message) internal pure returns (bytes32) {
-        return Value.hashTuple([
-            Value.newHashOnly(vmInbox),
-            Value.newHashOnly(message)
-        ]);
-    }
-
-    function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                inbox,
-                message
             )
         );
     }

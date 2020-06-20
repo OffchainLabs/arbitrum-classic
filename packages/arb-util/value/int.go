@@ -51,6 +51,12 @@ func NewInt64Value(x int64) IntValue {
 	return IntValue{big.NewInt(x)}
 }
 
+func NewValueFromAddress(addr common.Address) IntValue {
+	addressBytes := [32]byte{}
+	copy(addressBytes[12:], addr[:])
+	return NewIntValue(big.NewInt(0).SetBytes(addressBytes[:]))
+}
+
 func NewBooleanValue(val bool) IntValue {
 	if val {
 		return NewInt64Value(1)

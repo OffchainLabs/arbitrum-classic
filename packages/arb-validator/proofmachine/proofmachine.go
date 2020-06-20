@@ -105,9 +105,10 @@ func (m *Machine) ExecuteAssertion(
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
 		a.NumGas += a1.NumGas
-		a.Logs = append(a.Logs, a1.Logs...)
-		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
-
+		a.LogsData = append(a.LogsData, a1.LogsData...)
+		a.LogsCount += a1.LogsCount
+		a.OutMsgsData = append(a.OutMsgsData, a1.OutMsgsData...)
+		a.OutMsgsCount += a1.OutMsgsCount
 		if ranSteps == 0 {
 			fmt.Println(" machine halted ")
 			break

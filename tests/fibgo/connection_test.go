@@ -4,6 +4,8 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -13,11 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -28,7 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
@@ -96,9 +95,6 @@ func setupValidators(
 	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
 	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
-	ckpFac := checkpointing.NewDummyCheckpointerFactory(contract)
-
-	checkpointer1 := ckpFac.New(context.TODO())
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
@@ -113,14 +109,14 @@ func setupValidators(
 		return err
 	}
 
-	mach, err := checkpointer1.GetInitialMachine()
+	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
 
-	rollupAddress, err := factory.CreateRollup(
+	rollupAddress, _, err := factory.CreateRollup(
 		ctx,
 		mach.Hash(),
 		config,
@@ -144,12 +140,12 @@ func setupValidators(
 		log.Fatal(err)
 	}
 
-	manager1, err := rollupmanager.CreateManagerAdvanced(
+	manager1, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		true,
-		client1,
-		ckpFac,
+		rollupmanager.NewStressTestClient(client1, time.Second*10),
+		contract,
+		db1,
 	)
 	if err != nil {
 		return err
@@ -167,12 +163,12 @@ func setupValidators(
 	}
 	manager1.AddListener(validatorListener1)
 
-	manager2, err := rollupmanager.CreateManagerAdvanced(
+	manager2, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		true,
-		client2,
-		ckpFac,
+		rollupmanager.NewStressTestClient(client2, time.Second*10),
+		contract,
+		db2,
 	)
 	if err != nil {
 		return err
@@ -191,10 +187,13 @@ func setupValidators(
 	manager2.AddListener(validatorListener2)
 
 	go func() {
-		server := rollupvalidator.NewRPCServer(
+		server, err := rollupvalidator.NewRPCServer(
 			manager2,
 			time.Second*60,
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		s := rpc.NewServer()
 		s.RegisterCodec(
 			json.NewCodec(),
@@ -209,8 +208,7 @@ func setupValidators(
 			t.Fatal(err)
 		}
 
-		err := utils.LaunchRPC(s, "1235")
-		if err != nil {
+		if err := utils.LaunchRPC(s, "1235"); err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -290,7 +288,8 @@ func RunValidators(
 	fibonacciSession := &FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
-			From: auth.From,
+			From:    auth.From,
+			Pending: true,
 		},
 		TransactOpts: *auth,
 	}
@@ -370,14 +369,14 @@ func waitForReceipt(
 			context.Background(),
 			txhash.ToEthHash(),
 		)
-		if err == nil {
-			return receipt, nil
+		if err != nil {
+			if err.Error() == "not found" {
+				continue
+			}
+			log.Println("GetMessageResult error:", err)
+			return nil, err
 		}
-		if err.Error() == "not found" {
-			continue
-		}
-		log.Println("GetMessageResult error:", err)
-		return nil, err
+		return receipt, nil
 	}
 }
 
@@ -391,6 +390,7 @@ func TestFib(t *testing.T) {
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
+
 		tx, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)

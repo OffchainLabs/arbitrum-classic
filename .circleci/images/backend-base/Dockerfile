@@ -1,7 +1,7 @@
 FROM debian:buster-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
-    apt-get install -y curl git golang librocksdb-dev libgmp-dev sudo && \
+    apt-get install -y curl git golang librocksdb-dev libgmp-dev sudo netcat-openbsd && \
     rm -rf /var/lib/apt/lists/* && \
     curl https://get.parity.io -L | bash /dev/stdin -r stable && \
     useradd -ms /bin/bash user

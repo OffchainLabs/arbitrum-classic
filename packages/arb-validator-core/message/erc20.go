@@ -19,10 +19,10 @@ package message
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -53,15 +53,37 @@ func (m ERC20) Equals(other Message) bool {
 		m.Value.Cmp(o.Value) == 0
 }
 
-func (m ERC20) Type() MessageType {
+func (m ERC20) Type() Type {
 	return ERC20Type
+}
+
+func (m ERC20) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
 }
 
 func (m ERC20) GetFuncName() string {
 	return "ERC20Transfer"
 }
 
-func (m ERC20) asValue() value.Value {
+func (m ERC20) DestAddress() common.Address {
+	return m.To
+}
+
+func (m ERC20) SenderAddress() common.Address {
+	return m.From
+}
+
+func (m ERC20) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Address(m.TokenAddress),
+		hashing.Uint256(m.Value),
+	)
+}
+
+func (m ERC20) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.TokenAddress),
 		addressToIntValue(m.To),
@@ -89,67 +111,21 @@ func UnmarshalERC20(val value.Value) (ERC20, error) {
 	}, nil
 }
 
-type DeliveredERC20 struct {
-	ERC20
-	BlockNum   *common.TimeBlocks
-	Timestamp  *big.Int
-	MessageNum *big.Int
-}
-
-func (m DeliveredERC20) Equals(other Message) bool {
-	o, ok := other.(DeliveredERC20)
-	if !ok {
-		return false
-	}
-	return m.ERC20.Equals(o.ERC20) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0 &&
-		m.MessageNum.Cmp(o.MessageNum) == 0
-}
-
-func (m DeliveredERC20) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m DeliveredERC20) deliveredTimestamp() *big.Int {
-	return m.Timestamp
-}
-
-func (m DeliveredERC20) CommitmentHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(uint8(m.Type())),
-		hashing.Address(m.To),
-		hashing.Address(m.From),
-		hashing.Address(m.TokenAddress),
-		hashing.Uint256(m.Value),
-		hashing.Uint256(m.BlockNum.AsInt()),
-		hashing.Uint256(m.Timestamp),
-		hashing.Uint256(m.MessageNum),
-	)
-}
-
-func (m DeliveredERC20) ReceiptHash() common.Hash {
-	return value.NewIntValue(m.MessageNum).ToBytes()
-}
-
-func (m DeliveredERC20) CheckpointValue() value.Value {
+func (m ERC20) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		addressToIntValue(m.From),
 		addressToIntValue(m.TokenAddress),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
-		value.NewIntValue(new(big.Int).Set(m.MessageNum)),
 	})
 	return val
 }
 
-func UnmarshalERC20FromCheckpoint(v value.Value) (DeliveredERC20, error) {
+func UnmarshalERC20FromCheckpoint(v value.Value) (ERC20, error) {
 	tup, ok := v.(value.TupleValue)
-	failRet := DeliveredERC20{}
-	if !ok || tup.Len() != 7 {
-		return failRet, errors.New("tx val must be 7-tuple")
+	failRet := ERC20{}
+	if !ok || tup.Len() != 4 {
+		return failRet, errors.New("tx val must be 4-tuple")
 	}
 	to, _ := tup.GetByInt64(0)
 	toInt, ok := to.(value.IntValue)
@@ -171,31 +147,11 @@ func UnmarshalERC20FromCheckpoint(v value.Value) (DeliveredERC20, error) {
 	if !ok {
 		return failRet, errors.New("chain must be int")
 	}
-	blockNum, _ := tup.GetByInt64(4)
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNum must be int")
-	}
-	timestamp, _ := tup.GetByInt64(5)
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be int")
-	}
-	messageNum, _ := tup.GetByInt64(6)
-	messageNumInt, ok := messageNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("messageNum must be int")
-	}
 
-	return DeliveredERC20{
-		ERC20: ERC20{
-			To:           intValueToAddress(toInt),
-			From:         intValueToAddress(fromInt),
-			TokenAddress: intValueToAddress(tokenAddressInt),
-			Value:        valInt.BigInt(),
-		},
-		BlockNum:   common.NewTimeBlocks(blockNumInt.BigInt()),
-		Timestamp:  timestampInt.BigInt(),
-		MessageNum: messageNumInt.BigInt(),
+	return ERC20{
+		To:           intValueToAddress(toInt),
+		From:         intValueToAddress(fromInt),
+		TokenAddress: intValueToAddress(tokenAddressInt),
+		Value:        valInt.BigInt(),
 	}, nil
 }

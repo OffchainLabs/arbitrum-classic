@@ -20,23 +20,22 @@ abigen --sol=GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 abigen --sol=test_only/SigUtilsTester.sol --pkg=sigutilstester --out=sigutilstester.go
+abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
+abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 
-\cp arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
-\cp arbrollup.go ../../arb-validator-core/ethbridge/rollup/
-\cp challengefactory.go ../../arb-validator-core/ethbridge/challengefactory/
-\cp inboxtopchallenge.go ../../arb-validator-core/ethbridge/inboxtopchallenge/
-\cp messageschallenge.go ../../arb-validator-core/ethbridge/messageschallenge/
-\cp executionchallenge.go ../../arb-validator-core/ethbridge/executionchallenge/
-\cp globalinbox.go ../../arb-validator-core/ethbridge/globalinbox/
-\cp challengetester.go ../../arb-validator-core/ethbridge/challengetester/
-\cp messagetester.go ../../arb-validator-core/ethbridge/messagetester/
-\cp sigutilstester.go ../../arb-validator-core/ethbridge/sigutilstester/
+\mv arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
+\mv arbrollup.go ../../arb-validator-core/ethbridge/rollup/
+\mv challengefactory.go ../../arb-validator-core/ethbridge/challengefactory/
+\mv inboxtopchallenge.go ../../arb-validator-core/ethbridge/inboxtopchallenge/
+\mv messageschallenge.go ../../arb-validator-core/ethbridge/messageschallenge/
+\mv executionchallenge.go ../../arb-validator-core/ethbridge/executionchallenge/
+\mv globalinbox.go ../../arb-validator-core/ethbridge/globalinbox/
+\mv challengetester.go ../../arb-validator-core/ethbridgetest/challengetester/
+\mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
+\mv sigutilstester.go ../../arb-validator-core/ethbridgetest/sigutilstester/
+\mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
+\mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
 rm -rf @openzeppelin bytes
-rm -f arbfactory.go arbrollup.go
-rm -f challengefactory.go
-rm -f inboxtopchallenge.go messageschallenge.go executionchallenge.go
-rm -f globalinbox.go
-rm -f challengetester.go messagetester.go sigutilstester.go
 cd ../../..
 
 yarn workspace arb-provider-ethers update-abi

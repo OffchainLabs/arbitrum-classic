@@ -18,20 +18,10 @@ package ethbridge
 
 import (
 	"bytes"
-
 	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-func hashSliceToRaw(slice []common.Hash) [][32]byte {
-	ret := make([][32]byte, 0, len(slice))
-	for _, h := range slice {
-		ret = append(ret, h)
-	}
-	return ret
-}
 
 func addressSliceToRaw(slice []common.Address) []ethcommon.Address {
 	ret := make([]ethcommon.Address, 0, len(slice))

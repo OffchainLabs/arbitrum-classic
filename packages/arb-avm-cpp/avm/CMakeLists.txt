@@ -21,6 +21,7 @@ project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/avm/machine.hpp
+  include/avm/machinestate/status.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
@@ -58,7 +59,7 @@ target_include_directories(avm PRIVATE
 
 find_package(GMP REQUIRED)
 
-target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 ff PRIVATE avm_utils ${GMP_LIBRARY})
+target_link_libraries(avm PUBLIC avm_values Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 ff PRIVATE avm_utils ${GMP_LIBRARY})
 
 target_code_coverage(avm AUTO ALL)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,778 +15,463 @@
  */
 
 #include "config.hpp"
+#include "helper.hpp"
 
-#include <avm/machinestate/machinestate.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
+#include <data_storage/value/value.hpp>
+
+#include <avm/machine.hpp>
+
 #include <avm_values/vmValueParser.hpp>
-#include <data_storage/checkpoint/checkpointstorage.hpp>
-#include <data_storage/checkpoint/machinestatedeleter.hpp>
-#include <data_storage/checkpoint/machinestatefetcher.hpp>
-#include <data_storage/checkpoint/machinestatesaver.hpp>
 
 #include <catch2/catch.hpp>
 
 #include <boost/filesystem.hpp>
 
-std::string path =
-    boost::filesystem::current_path().generic_string() + "/machineDb";
-
-void saveValue(MachineStateSaver& saver,
+void saveValue(Transaction& transaction,
                const value& val,
                int expected_ref_count,
                bool expected_status) {
-    auto results = saver.saveValue(val);
-    saver.commitTransaction();
+    auto results = saveValue(transaction, val);
+    transaction.commit();
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
-void getValue(MachineStateFetcher& fetcher,
-              std::vector<unsigned char>& hash_key,
+void getValue(const Transaction& transaction,
+              const value& value,
               int expected_ref_count,
-              uint256_t& expected_hash,
-              ValueTypes expected_value_type,
               bool expected_status) {
-    auto results = fetcher.getValue(hash_key);
-    auto serialized_val = checkpoint::utils::serializeValue(results.data);
-    auto type = (ValueTypes)serialized_val[0];
+    TuplePool pool;
+    auto results = getValue(transaction, hash_value(value), &pool);
 
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(type == expected_value_type);
-    REQUIRE(hash(results.data) == expected_hash);
+    REQUIRE(hash_value(results.data) == hash_value(value));
 }
 
-void saveTuple(MachineStateSaver& saver,
-               const Tuple& tup,
-               int expected_ref_count,
-               bool expected_status) {
-    auto results = saver.saveTuple(tup);
-    saver.commitTransaction();
-    REQUIRE(results.status.ok() == expected_status);
-    REQUIRE(results.reference_count == expected_ref_count);
-}
-
-void getTuple(MachineStateFetcher& fetcher,
-              std::vector<unsigned char>& hash_key,
+void getTuple(const Transaction& transaction,
+              const Tuple& tuple,
               int expected_ref_count,
-              uint256_t& expected_hash,
-              int expected_tuple_size,
               bool expected_status) {
-    auto results = fetcher.getTuple(hash_key);
+    TuplePool pool;
+    auto results = getValue(transaction, hash(tuple), &pool);
+
+    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+
+    auto loadedTuple = nonstd::get<Tuple>(results.data);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(results.data.calculateHash() == expected_hash);
-    REQUIRE(results.data.tuple_size() == expected_tuple_size);
+    REQUIRE(loadedTuple.calculateHash() == tuple.calculateHash());
+    REQUIRE(loadedTuple.tuple_size() == tuple.tuple_size());
     REQUIRE(results.status.ok() == expected_status);
 }
 
-void getTupleValues(MachineStateFetcher& fetcher,
-                    std::vector<unsigned char>& hash_key,
+void getTupleValues(const Transaction& transaction,
+                    uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes) {
-    auto results = fetcher.getTuple(hash_key);
-    REQUIRE(results.data.tuple_size() == value_hashes.size());
+    TuplePool pool;
+    auto results = getValue(transaction, tuple_hash, &pool);
+    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+
+    auto tuple = nonstd::get<Tuple>(results.data);
+    REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
-        REQUIRE(hash(results.data.get_element(i)) == value_hashes[i]);
+        REQUIRE(hash_value(tuple.get_element(i)) == value_hashes[i]);
     }
 }
 
 TEST_CASE("Save value") {
-    CheckpointStorage storage(path, test_contract_path);
-    auto saver = MachineStateSaver(storage.makeTransaction());
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
         TuplePool pool;
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        saveValue(saver, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save num") {
         uint256_t num = 1;
-        saveValue(saver, num, 1, true);
+        saveValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        auto code_point = CodePoint(1, Operation(), 0);
-        saveValue(saver, code_point, 1, true);
+        auto code_point = CodePointStub(1, 654546);
+        saveValue(*transaction, code_point, 1, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save tuple") {
-    CheckpointStorage storage(path, test_contract_path);
-    auto saver = MachineStateSaver(storage.makeTransaction());
-
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
     TuplePool pool;
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        saveTuple(saver, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save 2, 1 num tuples") {
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        saveTuple(saver, tuple, 1, true);
-        saveTuple(saver, tuple, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 2, true);
     }
     SECTION("saved tuple in tuple") {
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        saveTuple(saver, tuple, 1, true);
-        saveTuple(saver, tuple, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction, tuple, 2, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get value") {
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+
     SECTION("save empty tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         auto tuple = Tuple();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        saveValue(saver, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
         TuplePool pool;
         auto tuple = Tuple(num, &pool);
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        saveValue(saver, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save num") {
-        CheckpointStorage storage(path, test_contract_path);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
-        auto hash_key = GetHashKey(num);
-        auto num_hash = hash(num);
-
-        saveValue(saver, num, 1, true);
-        getValue(fetcher, hash_key, 1, num_hash, NUM, true);
+        saveValue(*transaction, num, 1, true);
+        getValue(*transaction, num, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint") {
-        CheckpointStorage storage(path, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        auto hash_key = GetHashKey(code_point);
-        auto cp_hash = hash(code_point);
-        saveValue(saver, code_point, 1, true);
-        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
+        CodePointStub code_point_stub(1, 654546);
+        saveValue(*transaction, code_point_stub, 1, true);
+        getValue(*transaction, code_point_stub, 1, true);
     }
     SECTION("save err codepoint") {
-        CheckpointStorage storage(path, test_contract_path);
-        auto code_point = getErrCodePoint();
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        auto hash_key = GetHashKey(code_point);
-        auto cp_hash = hash(code_point);
-        saveValue(saver, code_point, 1, true);
-        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
+        CodePointStub code_point_stub(1, 654546);
+        saveValue(*transaction, code_point_stub, 1, true);
+        getValue(*transaction, code_point_stub, 1, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get tuple values") {
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+    TuplePool pool;
+
     SECTION("save num tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
-        TuplePool pool;
         auto tuple = Tuple(num, &pool);
-
-        saveTuple(saver, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(num)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[1];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        TuplePool pool;
-        auto tuple = Tuple(code_point, &pool);
-
-        saveTuple(saver, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(code_point)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+        CodePointStub code_point_stub(1, 654546);
+        auto tuple = Tuple(code_point_stub, &pool);
+        saveValue(*transaction, tuple, 1, true);
+        std::vector<uint256_t> hashes{hash(code_point_stub)};
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        TuplePool pool;
-        auto tuple = Tuple(code_point, &pool);
-
-        saveValue(saver, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(code_point)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+        CodePointStub code_point_stub(1, 654546);
+        auto tuple = Tuple(code_point_stub, &pool);
+        saveValue(*transaction, tuple, 1, true);
+        std::vector<uint256_t> hashes{hash(code_point_stub)};
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save nested tuple") {
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         auto inner_tuple = Tuple();
-        TuplePool pool;
         auto tuple = Tuple(inner_tuple, &pool);
-
-        saveTuple(saver, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
+        CodePointStub code_point_stub(1, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
-        auto tuple = Tuple(inner_tuple, num, code_point, &pool);
-
-        saveTuple(saver, tuple, 1, true);
+        auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
-                                      hash(code_point)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+                                      hash(code_point_stub)};
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple, saveValue()") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[2];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
+        CodePointStub code_point_stub(1, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
-        auto tuple = Tuple(inner_tuple, num, code_point, &pool);
-
-        saveValue(saver, tuple, 1, true);
+        auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
+        saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
-                                      hash(code_point)};
-        auto hash_key = GetHashKey(tuple);
-
-        getTupleValues(fetcher, hash_key, hashes);
+                                      hash(code_point_stub)};
+        getTupleValues(*transaction, hash(tuple), hashes);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save And Get Tuple") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+
     SECTION("save 1 num tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-
-        saveTuple(saver, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save codepoint in tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        auto tuple = Tuple(code_point, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-
-        saveTuple(saver, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
+        CodePointStub code_point_stub(1, 654546);
+        auto tuple = Tuple(code_point_stub, &pool);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 1 num tuple twice") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto saver2 = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
+        auto transaction2 = storage.makeTransaction();
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-
-        saveTuple(saver, tuple, 1, true);
-        saveTuple(saver2, tuple, 2, true);
-        getTuple(fetcher, hash_key, 2, tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        saveValue(*transaction2, tuple, 2, true);
+        getTuple(*transaction, tuple, 2, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 2 num tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
         uint256_t num2 = 2;
         auto tuple = Tuple(num, num2, &pool);
-        auto tup_hash = tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-
-        saveTuple(saver, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save tuple in tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        saveTuple(saver, tuple, 1, true);
-
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
+        getTuple(*transaction, inner_tuple, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save 2 tuples in tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         uint256_t num2 = 2;
         auto inner_tuple2 = Tuple(num2, &pool);
         auto tuple = Tuple(inner_tuple, inner_tuple2, &pool);
-        saveTuple(saver, tuple, 1, true);
-
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto inner_hash_key2 = GetHashKey(inner_tuple2);
-        auto inner_tup_hash2 = inner_tuple2.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key2, 1, inner_tup_hash2, 1, true);
+        saveValue(*transaction, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
+        getTuple(*transaction, inner_tuple, 1, true);
+        getTuple(*transaction, inner_tuple2, 1, true);
     }
-    boost::filesystem::remove_all(path);
     SECTION("save saved tuple in tuple") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto saver2 = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
+        auto transaction2 = storage.makeTransaction();
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
         auto tuple = Tuple(inner_tuple, &pool);
-        auto inner_hash_key = GetHashKey(inner_tuple);
-        auto inner_tup_hash = inner_tuple.calculateHash();
-        auto hash_key = GetHashKey(tuple);
-        auto tup_hash = tuple.calculateHash();
-
-        saveTuple(saver, inner_tuple, 1, true);
-        getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
-        saveTuple(saver2, tuple, 1, true);
-        getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
-        getTuple(fetcher, inner_hash_key, 2, inner_tup_hash, 1, true);
+        saveValue(*transaction, inner_tuple, 1, true);
+        getTuple(*transaction, inner_tuple, 1, true);
+        saveValue(*transaction2, tuple, 1, true);
+        getTuple(*transaction, tuple, 1, true);
+        getTuple(*transaction, inner_tuple, 2, true);
     }
-    boost::filesystem::remove_all(path);
 }
 
-void saveState(MachineStateSaver& saver,
-               MachineStateKeys storage_data,
-               std::vector<unsigned char> checkpoint_name) {
-    auto results = saver.saveMachineState(storage_data, checkpoint_name);
-    auto status = saver.commitTransaction();
-
+void saveState(Transaction& transaction, const Machine& machine) {
+    auto results = saveMachine(transaction, machine);
     REQUIRE(results.reference_count == 1);
     REQUIRE(results.status.ok());
+    REQUIRE(transaction.commit().ok());
 }
 
-void getSavedState(MachineStateFetcher& fetcher,
-                   std::vector<unsigned char> checkpoint_name,
-                   MachineStateKeys expected_data,
-                   int expected_ref_count,
-                   std::vector<std::vector<unsigned char>> keys) {
-    auto results = fetcher.getMachineState(checkpoint_name);
-
+void checkSavedState(const Transaction& transaction,
+                     const Machine& expected_machine,
+                     int expected_ref_count) {
+    TuplePool pool;
+    auto results = getMachineState(transaction, expected_machine.hash());
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
 
     auto data = results.data;
+    REQUIRE(data.status == expected_machine.machine_state.state);
+    REQUIRE(data.pc == expected_machine.machine_state.pc);
+    REQUIRE(data.datastack_hash ==
+            hash(expected_machine.machine_state.stack.getTupleRepresentation(
+                &pool)));
+    REQUIRE(data.auxstack_hash ==
+            hash(expected_machine.machine_state.auxstack.getTupleRepresentation(
+                &pool)));
+    REQUIRE(data.register_hash ==
+            hash_value(expected_machine.machine_state.registerVal));
 
-    REQUIRE(data.status_char == expected_data.status_char);
-    REQUIRE(data.pc_key == expected_data.pc_key);
-    REQUIRE(data.datastack_key == expected_data.datastack_key);
-    REQUIRE(data.auxstack_key == expected_data.auxstack_key);
-    REQUIRE(data.register_val_key == expected_data.register_val_key);
-
-    for (auto& key : keys) {
-        auto res = fetcher.getValue(key);
-        REQUIRE(res.status.ok());
-    }
+    REQUIRE(getValue(transaction, data.datastack_hash, &pool).status.ok());
+    REQUIRE(getValue(transaction, data.auxstack_hash, &pool).status.ok());
+    REQUIRE(getValue(transaction, data.register_hash, &pool).status.ok());
 }
 
-void deleteCheckpoint(CheckpointStorage& storage,
-                      MachineStateFetcher& fetcher,
-                      std::vector<unsigned char> checkpoint_name,
-                      std::vector<std::vector<unsigned char>> deleted_values) {
-    auto res = deleteCheckpoint(storage, checkpoint_name);
-    auto results = fetcher.getMachineState(checkpoint_name);
-    REQUIRE(results.status.ok() == false);
-
-    for (auto& hash_key : deleted_values) {
-        auto res = fetcher.getValue(hash_key);
-        REQUIRE(res.status.ok() == false);
-    }
-}
-
-void deleteCheckpointSavedTwice(
-    CheckpointStorage& storage,
-    MachineStateFetcher& fetcher,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
-    auto res = deleteCheckpoint(storage, checkpoint_name);
-    auto res2 = deleteCheckpoint(storage, checkpoint_name);
-    auto results = fetcher.getMachineState(checkpoint_name);
-
-    REQUIRE(results.status.ok() == false);
-
-    for (auto& hash_key : deleted_values) {
-        auto res = fetcher.getValue(hash_key);
-        REQUIRE(res.status.ok() == false);
-    }
-}
-
-void deleteCheckpointSavedTwiceReordered(
-    CheckpointStorage& storage,
-    MachineStateFetcher& fetcher,
-    std::vector<unsigned char> checkpoint_name,
-    std::vector<std::vector<unsigned char>> deleted_values) {
-    auto resultsx = fetcher.getMachineState(checkpoint_name);
-    for (auto& hash_key : deleted_values) {
-        auto res = fetcher.getValue(hash_key);
-        REQUIRE(res.status.ok());
-    }
-    auto res = deleteCheckpoint(storage, checkpoint_name);
-    auto results = fetcher.getMachineState(checkpoint_name);
-    REQUIRE(results.status.ok() == true);
-
-    for (auto& hash_key : deleted_values) {
-        auto res = fetcher.getValue(hash_key);
-        REQUIRE(res.status.ok());
-    }
-    auto res2 = deleteCheckpoint(storage, checkpoint_name);
-    auto results2 = fetcher.getMachineState(checkpoint_name);
-    REQUIRE(results2.status.ok() == false);
-
-    for (auto& hash_key : deleted_values) {
-        auto res = fetcher.getValue(hash_key);
-        REQUIRE(res.status.ok() == false);
-    }
-}
-
-MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
-                                 value registerVal,
-                                 Datastack stack,
-                                 Datastack auxstack,
-                                 Status state,
-                                 CodePoint pc,
-                                 CodePoint err_pc,
-                                 BlockReason blockReason) {
+void checkDeletedCheckpoint(Transaction& transaction,
+                            const Machine& deleted_machine) {
     TuplePool pool;
+    auto results = getMachineState(transaction, deleted_machine.hash());
+    REQUIRE(!results.status.ok());
 
-    auto datastack_results = stack.checkpointState(stateSaver, &pool);
-    auto auxstack_results = auxstack.checkpointState(stateSaver, &pool);
-
-    auto register_val_results = stateSaver.saveValue(registerVal);
-    auto pc_results = stateSaver.saveValue(pc);
-    auto err_pc_results = stateSaver.saveValue(err_pc);
-
-    auto status_str = (unsigned char)state;
-
-    return MachineStateKeys{
-        register_val_results.storage_key, datastack_results.storage_key,
-        auxstack_results.storage_key,     pc_results.storage_key,
-        err_pc_results.storage_key,       status_str};
+    auto datastack_tup =
+        deleted_machine.machine_state.stack.getTupleRepresentation(&pool);
+    auto auxstack_tup =
+        deleted_machine.machine_state.auxstack.getTupleRepresentation(&pool);
+    REQUIRE(!getValue(transaction, hash(datastack_tup), &pool).status.ok());
+    REQUIRE(!getValue(transaction, hash(auxstack_tup), &pool).status.ok());
+    REQUIRE(!getValue(transaction,
+                      hash_value(deleted_machine.machine_state.registerVal),
+                      &pool)
+                 .status.ok());
 }
 
-MachineStateKeys getStateValues(MachineStateSaver& saver) {
-    TuplePool pool;
+void deleteCheckpoint(Transaction& transaction,
+                      const Machine& deleted_machine) {
+    auto res = deleteMachine(transaction, deleted_machine.hash());
+    REQUIRE(res.status.ok());
+    checkDeletedCheckpoint(transaction, deleted_machine);
+}
+
+Machine getComplexMachine() {
+    auto pool = std::make_shared<TuplePool>();
+    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
     uint256_t register_val = 100;
-    auto static_val = Tuple(register_val, Tuple(), &pool);
+    auto static_val = Tuple(register_val, Tuple(), pool.get());
 
-    auto code_point = CodePoint(1, Operation(), 0);
-    auto tup1 = Tuple(register_val, &pool);
-    auto tup2 = Tuple(code_point, tup1, &pool);
+    CodePointStub code_point_stub(1, 654546);
+    auto tup1 = Tuple(register_val, pool.get());
+    auto tup2 = Tuple(code_point_stub, tup1, pool.get());
 
     Datastack data_stack;
     data_stack.push(register_val);
     Datastack aux_stack;
     aux_stack.push(register_val);
-    aux_stack.push(code_point);
+    aux_stack.push(code_point_stub);
 
-    CodePoint pc_codepoint(0, Operation(), 0);
-    CodePoint err_pc_codepoint(0, Operation(), 0);
+    CodePointStub pc(0, 645357);
+    CodePointStub err_pc(0, 968769876);
     Status state = Status::Extensive;
 
-    auto inbox_blocked = InboxBlocked(0);
-
-    auto saved_data =
-        makeStorageData(saver, register_val, data_stack, aux_stack, state,
-                        pc_codepoint, err_pc_codepoint, inbox_blocked);
-
-    return saved_data;
+    auto static_values = std::make_shared<StaticVmValues>(
+        std::move(code), std::move(static_val));
+    return Machine(MachineState(pool, std::move(static_values), register_val,
+                                data_stack, aux_stack, state, pc, err_pc));
 }
 
-MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
-    TuplePool pool;
+Machine getDefaultMachine() {
+    auto pool = std::make_shared<TuplePool>();
+    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
+    auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
-
+    CodePointStub pc(0, false);
+    CodePointStub err_pc(0, true);
     Status state = Status::Extensive;
-    CodePoint code_point(0, Operation(), 0);
-
-    auto data = makeStorageData(saver, Tuple(), Datastack(), Datastack(), state,
-                                code_point, code_point, NotBlocked());
-
-    return data;
+    auto static_values = std::make_shared<StaticVmValues>(
+        std::move(code), std::move(static_val));
+    return Machine(MachineState(pool, std::move(static_values), register_val,
+                                data_stack, aux_stack, state, pc, err_pc));
 }
 
-std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
-    std::vector<std::vector<unsigned char>> hash_keys;
+std::vector<uint256_t> getHashKeys(MachineStateKeys data) {
+    std::vector<uint256_t> hash_keys;
 
-    hash_keys.push_back(data.auxstack_key);
-    hash_keys.push_back(data.datastack_key);
-    hash_keys.push_back(data.pc_key);
-    hash_keys.push_back(data.err_pc_key);
-    hash_keys.push_back(data.register_val_key);
+    hash_keys.push_back(data.auxstack_hash);
+    hash_keys.push_back(data.datastack_hash);
+    hash_keys.push_back(data.register_hash);
 
     return hash_keys;
 }
 
 TEST_CASE("Save Machinestatedata") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+
     SECTION("default") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto data_values = getDefaultValues(saver);
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saveState(saver, data_values, checkpoint_key);
+        auto machine = getDefaultMachine();
+        saveState(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with values") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto state_data = getStateValues(saver);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saveState(saver, state_data, checkpoint_key);
+        auto machine = getComplexMachine();
+        saveState(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Get Machinestate data") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+
     SECTION("default") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        auto data_values = getDefaultValues(saver);
-        auto keys = getHashKeys(data_values);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.commitTransaction();
-        getSavedState(fetcher, checkpoint_key, data_values, 1, keys);
+        auto machine = getDefaultMachine();
+        saveMachine(*transaction, machine);
+        transaction->commit();
+        checkSavedState(*transaction, machine, 1);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with values") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-
-        auto state_data = getStateValues(saver);
-        auto keys = getHashKeys(state_data);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saveState(saver, state_data, checkpoint_key);
-        getSavedState(fetcher, checkpoint_key, state_data, 1, keys);
+        auto machine = getComplexMachine();
+        saveState(*transaction, machine);
+        checkSavedState(*transaction, machine, 1);
     }
-    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Delete checkpoint") {
+    DBDeleter deleter;
+    TuplePool pool;
+    CheckpointStorage storage(dbpath, test_contract_path);
+    auto transaction = storage.makeTransaction();
+
     SECTION("default") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-        auto data_values = getDefaultValues(saver);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.commitTransaction();
-        auto hash_keys = getHashKeys(data_values);
-
-        deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
+        auto machine = getDefaultMachine();
+        saveMachine(*transaction, machine);
+        transaction->commit();
+        deleteCheckpoint(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
     SECTION("with actual state values") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
-
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[2];
-
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage);
-        auto data_values = getStateValues(saver);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.commitTransaction();
-        auto hash_keys = getHashKeys(data_values);
-
-        deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
+        auto machine = getComplexMachine();
+        saveMachine(*transaction, machine);
+        transaction->commit();
+        deleteCheckpoint(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        auto machine = getComplexMachine();
+        saveMachine(*transaction, machine);
+        saveMachine(*transaction, machine);
+        transaction->commit();
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
-
-        auto fetcher = MachineStateFetcher(storage);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto data_values = getStateValues(saver);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.commitTransaction();
-        auto hash_keys = getHashKeys(data_values);
-
-        deleteCheckpointSavedTwice(storage, fetcher, checkpoint_key, hash_keys);
+        auto res = deleteMachine(*transaction, machine.hash());
+        REQUIRE(res.status.ok());
+        auto res2 = deleteMachine(*transaction, machine.hash());
+        REQUIRE(res2.status.ok());
+        checkDeletedCheckpoint(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice, reordered") {
-        TuplePool pool;
-        CheckpointStorage storage(path, test_contract_path);
+        auto transaction2 = storage.makeTransaction();
+        auto machine = getComplexMachine();
+        saveMachine(*transaction, machine);
+        transaction->commit();
+        saveMachine(*transaction2, machine);
+        transaction2->commit();
 
-        CodePoint code_point = storage.getInitialVmValues().code[0];
-        CodePoint code_point2 = storage.getInitialVmValues().code[1];
-
-        auto fetcher = MachineStateFetcher(storage);
-        auto saver = MachineStateSaver(storage.makeTransaction());
-        auto saver2 = MachineStateSaver(storage.makeTransaction());
-        auto data_values = getStateValues(saver);
-
-        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
-
-        saver.saveMachineState(data_values, checkpoint_key);
-        saver.commitTransaction();
-        saver2.saveMachineState(data_values, checkpoint_key);
-        saver2.commitTransaction();
-        auto hash_keys = getHashKeys(data_values);
-
-        deleteCheckpointSavedTwiceReordered(storage, fetcher, checkpoint_key,
-                                            hash_keys);
+        checkSavedState(*transaction, machine, 2);
+        auto res = deleteMachine(*transaction, machine.hash());
+        checkSavedState(*transaction, machine, 1);
+        auto res2 = deleteMachine(*transaction, machine.hash());
+        checkDeletedCheckpoint(*transaction, machine);
     }
-    boost::filesystem::remove_all(path);
 }

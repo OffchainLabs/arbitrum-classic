@@ -17,7 +17,12 @@
 package test
 
 import (
+	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"io/ioutil"
 	"net"
+	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -43,6 +48,25 @@ func GetEthUrl() string {
 	} else {
 		return "ws://127.0.0.1:7545"
 	}
+}
+
+func GetFactoryAddress() (common.Address, error) {
+	bridge_eth_addresses := "../bridge_eth_addresses.json"
+	jsonFile, err := os.Open(bridge_eth_addresses)
+	if err != nil {
+		return common.Address{}, err
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	if err := jsonFile.Close(); err != nil {
+		return common.Address{}, err
+	}
+
+	var connectionInfo ethbridge.ArbAddresses
+	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
+		return common.Address{}, err
+	}
+
+	return connectionInfo.ArbFactoryAddress(), nil
 }
 
 func SetupAuth(hexKey string) (*bind.TransactOpts, error) {

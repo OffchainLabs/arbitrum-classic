@@ -342,9 +342,9 @@ TEST_CASE("TYPE opcode is correct") {
         REQUIRE(res == value{uint256_t(0)});
         REQUIRE(m.stack.stacksize() == 0);
     }
-    SECTION("type codepoint") {
+    SECTION("type codepoint stub") {
         MachineState m;
-        m.stack.push(value{CodePoint()});
+        m.stack.push(value{CodePointStub()});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
         REQUIRE(m.stack.stacksize() == 1);
@@ -376,8 +376,10 @@ TEST_CASE("POP opcode is correct") {
 
 TEST_CASE("SPUSH opcode is correct") {
     SECTION("spush") {
-        MachineState m;
-        m.staticVal = uint256_t(5);
+        auto pool = std::make_shared<TuplePool>();
+        auto static_values =
+            std::make_shared<StaticVmValues>(Code{}, uint256_t(5));
+        MachineState m{static_values, pool};
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -411,7 +413,7 @@ TEST_CASE("RSET opcode is correct") {
 TEST_CASE("JUMP opcode is correct") {
     SECTION("jump") {
         MachineState m;
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePointStub(2, 73665)});
         m.runOp(OpCode::JUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -423,7 +425,7 @@ TEST_CASE("CJUMP opcode is correct") {
         MachineState m;
         m.pc = 3;
         m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePointStub(2, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 4);
@@ -432,7 +434,7 @@ TEST_CASE("CJUMP opcode is correct") {
         MachineState m;
         m.pc = 3;
         m.stack.push(uint256_t{1});
-        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.stack.push(value{CodePointStub(2, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -461,13 +463,16 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
-        MachineState m;
-        m.code.push_back(CodePoint(0, OpCode::ADD, 0));
+        auto pool = std::make_shared<TuplePool>();
+        CodePoint cp(0, OpCode::ADD, 0);
+        auto static_values = std::make_shared<StaticVmValues>(
+            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        MachineState m{static_values, pool};
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(res == value{CodePointStub(cp)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -528,13 +533,17 @@ TEST_CASE("NOP opcode is correct") {
 
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
-        MachineState m;
-        m.errpc = CodePoint(0, OpCode::ADD, 0);
+        auto pool = std::make_shared<TuplePool>();
+        CodePoint cp(0, OpCode::ADD, 0);
+        auto static_values = std::make_shared<StaticVmValues>(
+            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        MachineState m{static_values, pool};
+        m.errpc = CodePointRef(0, false);
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(res == value{CodePointStub(cp)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -542,11 +551,11 @@ TEST_CASE("ERRPUSH opcode is correct") {
 TEST_CASE("ERRSET opcode is correct") {
     SECTION("errset") {
         MachineState m;
-        m.stack.push(value{CodePoint(0, OpCode::ADD, 0)});
+        m.stack.push(value{CodePointStub(54, 968967)});
         m.runOp(OpCode::ERRSET);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 1);
-        REQUIRE(m.errpc == CodePoint(0, OpCode::ADD, 0));
+        REQUIRE(m.errpc == CodePointRef(54, false));
     }
 }
 

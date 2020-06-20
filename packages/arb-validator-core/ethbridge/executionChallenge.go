@@ -18,8 +18,8 @@ package ethbridge
 
 import (
 	"context"
-
 	errors2 "github.com/pkg/errors"
+	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -69,9 +69,10 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	beforeInboxHash := precondition.BeforeInbox.Hash()
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
-		precondition.BeforeInbox.Hash(),
+		beforeInboxHash,
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
 		didInboxInsns,
@@ -86,7 +87,7 @@ func (c *executionChallenge) BisectAssertion(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			precondition.BeforeInbox.Hash(),
+			beforeInboxHash,
 			precondition.TimeBounds.AsIntArray(),
 			machineHashes,
 			didInboxInsns,
@@ -107,10 +108,12 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	hashPreImage := precondition.BeforeInbox.GetPreImage()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
 		precondition.BeforeHash,
-		precondition.BeforeInbox.Hash(),
+		hashPreImage.HashImage,
+		big.NewInt(hashPreImage.Size),
 		precondition.TimeBounds.AsIntArray(),
 		assertion.AfterHash,
 		assertion.DidInboxInsn,
@@ -128,7 +131,8 @@ func (c *executionChallenge) OneStepProof(
 			c.auth.auth.From,
 			c.contractAddress,
 			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
+			hashPreImage.HashImage,
+			big.NewInt(hashPreImage.Size),
 			precondition.TimeBounds.AsIntArray(),
 			assertion.AfterHash,
 			assertion.DidInboxInsn,
@@ -158,6 +162,7 @@ func (c *executionChallenge) ChooseSegment(
 			valprotocol.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
+
 	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,

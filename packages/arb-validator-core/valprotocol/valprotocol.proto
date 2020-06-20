@@ -1,7 +1,7 @@
 syntax = "proto3";
 package valprotocol;
-import "common/common.proto";
-import "protocol/protocol.proto";
+import "arb-util/common/common.proto";
+import "arb-util/protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol";
 
 message PreconditionBuf {

@@ -116,9 +116,8 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value
 	if cData.data == nil {
 		return nil
 	}
-	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
-	C.free(unsafe.Pointer(cData.data))
+	dataBuff := toByteSlice(cData)
 
 	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
 	if err != nil {
@@ -161,19 +160,27 @@ func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
 func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
 	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
-	if cData.length == 0 {
+	if cData.found == 0 {
 		return nil
 	}
 
-	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
-
-	C.free(unsafe.Pointer(cData.data))
-
-	return dataBuff
+	return toByteSlice(cData.slice)
 }
 
 func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {
 	success := C.deleteData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	return success == 1
+}
+
+func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
+	bs := C.createBlockStore(checkpoint.c)
+
+	return NewBlockStore(bs)
+}
+
+func (checkpoint *CheckpointStorage) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
+	bs := C.createConfirmedNodeStore(checkpoint.c)
+
+	return NewConfirmedNodeStore(bs)
 }

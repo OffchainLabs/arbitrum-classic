@@ -33,79 +33,71 @@ library Messages {
     using Value for Value.Data;
     using BytesLib for bytes;
 
+    function addDeliveredMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                inbox,
+                message
+            )
+        );
+    }
+
+    function addMessageToInbox(
+        bytes32 inbox,
+        bytes32 messageHash,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 messageNum
+    ) internal pure returns (bytes32) {
+        return addDeliveredMessageToInbox(
+            inbox,
+            keccak256(
+                abi.encodePacked(
+                    messageHash,
+                    blockNumber,
+                    timestamp,
+                    messageNum
+                )
+            )
+        );
+    }
+
+    function addMessageToVMInboxHash(
+        Value.Data memory vmInboxHashValue,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 txId,
+        Value.Data memory message
+    )
+        internal
+        pure
+        returns (Value.Data memory)
+    {
+        Value.Data[] memory tup_data = new Value.Data[](4);
+        tup_data[0] = Value.newInt(blockNumber);
+        tup_data[1] = Value.newInt(timestamp);
+        tup_data[2] = Value.newInt(txId);
+        tup_data[3] = message;
+
+        Value.Data[] memory vals = new Value.Data[](2);
+        vals[0] = vmInboxHashValue;
+        vals[1] = Value.newTuple(tup_data);
+        return Value.newTuple(vals);
+    }
+
     function transactionHash(
         address chain,
         address to,
         address from,
         uint256 seqNumber,
         uint256 value,
-        bytes32 dataHash,
-        uint256 blockNumber,
-        uint256 timestamp
+        bytes32 dataHash
     )
         internal
         pure
         returns(bytes32)
     {
         return keccak256(
-            abi.encodePacked(
-                TRANSACTION_MSG,
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                dataHash,
-                blockNumber,
-                timestamp
-            )
-        );
-    }
-
-
-    function transactionMessageHash(
-        address chain,
-        address to,
-        address from,
-        uint256 seqNumber,
-        uint256 value,
-        bytes memory data,
-        uint256 blockNumber,
-        uint256 blockTimestamp
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return transactionMessageHash(
-            chain,
-            to,
-            from,
-            seqNumber,
-            value,
-            keccak256(data),
-            Value.bytesToBytestackHash(data, 0, data.length),
-            blockNumber,
-            blockTimestamp
-        );
-    }
-
-    function transactionMessageHash(
-        address chain,
-        address to,
-        address from,
-        uint256 seqNumber,
-        uint256 value,
-        bytes32 dataHash,
-        bytes32 dataTupleHash,
-        uint256 blockNumber,
-        uint256 timestamp
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        bytes32 txHash = keccak256(
             abi.encodePacked(
                 TRANSACTION_MSG,
                 chain,
@@ -116,29 +108,67 @@ library Messages {
                 dataHash
             )
         );
+    }
+
+    function transactionReceiptHash(
+        address chain,
+        address to,
+        address from,
+        uint256 seqNumber,
+        uint256 value,
+        bytes32 dataHash
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                TRANSACTION_MSG,
+                chain,
+                to,
+                from,
+                seqNumber,
+                value,
+                dataHash
+            )
+        );
+    }
+
+    function transactionMessageValue(
+        address chain,
+        address to,
+        address from,
+        uint256 seqNumber,
+        uint256 value,
+        bytes32 dataHash,
+        Value.Data memory dataTuple
+    )
+        internal
+        pure
+        returns(Value.Data memory, bytes32)
+    {
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataTupleHash);
+        msgValues[3] = dataTuple;
 
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(TRANSACTION_MSG);
-        msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
+        Value.Data memory message = messageOuterLayer(TRANSACTION_MSG, from, Value.newTuple(msgValues));
+        bytes32 txHash = transactionReceiptHash(
+            chain,
+            to,
+            from,
+            seqNumber,
+            value,
+            dataHash
+        );
 
-        return Value.hashTuple([
-            Value.newInt(blockNumber),
-            Value.newInt(timestamp),
-            Value.newInt(uint256(txHash)),
-            Value.newTuple(msgType)
-        ]);
+        return (message, txHash);
     }
 
     function transactionBatchHash(
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp
+        bytes memory transactions
     )
         internal
         pure
@@ -147,9 +177,7 @@ library Messages {
         return keccak256(
             abi.encodePacked(
                 TRANSACTION_BATCH_MSG,
-                transactions,
-                blockNum,
-                blockTimestamp
+                transactions
             )
         );
     }
@@ -161,7 +189,8 @@ library Messages {
     uint256 internal constant DATA_OFFSET = 151;
 
     function transactionMessageBatchHash(
-        bytes32 prev,
+        bytes32 prevHashImage,
+        uint256 prevHashSize,
         address chain,
         bytes memory transactions,
         uint256 blockNum,
@@ -171,6 +200,7 @@ library Messages {
         pure
         returns(bytes32)
     {
+        Value.Data memory prevVal = Value.newTuplePreImage(prevHashImage, prevHashSize);
         uint256 transactionsLength = transactions.length;
         uint256 start = 0x00;
         // Continue until we run out of enough data for a tx with no data
@@ -178,41 +208,43 @@ library Messages {
             uint16 dataLength = transactions.toUint16(start);
             // Terminate if the input data is shorter than the fixed length + claimed data length
             if (start + DATA_OFFSET + dataLength > transactionsLength) {
-                return prev;
+                return Value.hash(prevVal);
             }
 
-            bytes32 messageHash = transactionMessageBatchHashSingle(
+            (Value.Data memory message, bytes32 receiptHash, bool valid) = transactionMessageBatchHashSingle(
                 start,
                 chain,
-                transactions,
-                blockNum,
-                blockTimestamp
+                transactions
             );
 
-            prev = Protocol.addMessageToVMInbox(prev, messageHash);
+            if (valid) {
+                prevVal = addMessageToVMInboxHash(
+                    prevVal,
+                    blockNum,
+                    blockTimestamp,
+                    uint256(receiptHash),
+                    message
+                );
+            }
             start += DATA_OFFSET + dataLength;
         }
-        return prev;
-    }
-
-    function keccak256Subset(bytes memory data, uint256 start, uint256 length) internal pure returns(bytes32 dataHash) {
-        assembly {
-            dataHash := keccak256(add(add(data, 0x20), start), length)
-        }
+        return Value.hash(prevVal);
     }
 
     function transactionMessageBatchHashSingle(
         uint256 start,
         address chain,
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp
+        bytes memory transactions
     )
         internal
         pure
-        returns(bytes32)
+        returns(Value.Data memory message, bytes32 receiptHash, bool valid)
     {
-        bytes32 dataHash = keccak256Subset(transactions, start + DATA_OFFSET, transactions.toUint16(start));
+        bytes32 dataHash = keccak256Subset(
+            transactions,
+            start + DATA_OFFSET,
+            transactions.toUint16(start)
+        );
 
         address from = transactionMessageBatchSingleSender(
             start,
@@ -220,21 +252,29 @@ library Messages {
             dataHash,
             transactions
         );
-        require(from != address(0), "invalid sig");
+        valid = from != address(0);
+        if (!valid) {
+            // Signature was invalid so we'll ignore this message and keep processing
+            return (message, receiptHash, valid);
+        }
 
-        bytes32 dataTupHash = Value.bytesToBytestackHash(transactions, start + DATA_OFFSET, transactions.toUint16(start));
 
-        return transactionMessageHash(
+        Value.Data memory dataVal = Value.bytesToBytestackHash(
+            transactions,
+            start + DATA_OFFSET,
+            transactions.toUint16(start)
+        );
+
+        (message, receiptHash) = transactionMessageValue(
             chain,
             transactions.toAddress(start + TO_OFFSET),
             from,
             transactions.toUint(start + SEQ_OFFSET),
             transactions.toUint(start + VALUE_OFFSET),
             dataHash,
-            dataTupHash,
-            blockNum,
-            blockTimestamp
+            dataVal
         );
+        return (message, receiptHash, valid);
     }
 
     function transactionMessageBatchSingleSender(
@@ -265,10 +305,7 @@ library Messages {
     function ethHash(
         address to,
         address from,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         internal
         pure
@@ -279,52 +316,32 @@ library Messages {
                 ETH_DEPOSIT,
                 to,
                 from,
-                value,
-                blockNumber,
-                timestamp,
-                messageNum
+                value
             )
         );
     }
 
-    function ethMessageHash(
+    function ethMessageValue(
         address to,
         address from,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         internal
         pure
-        returns(bytes32)
+        returns(Value.Data memory)
     {
         Value.Data[] memory msgValues = new Value.Data[](2);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(value);
 
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(ETH_DEPOSIT);
-        msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
-
-        Value.Data[] memory ethMsg = new Value.Data[](4);
-        ethMsg[0] = Value.newInt(blockNumber);
-        ethMsg[1] = Value.newInt(timestamp);
-        ethMsg[2] = Value.newInt(messageNum);
-        ethMsg[3] = Value.newTuple(msgType);
-
-        return Value.newTuple(ethMsg).hash().hash;
+        return messageOuterLayer(ETH_DEPOSIT, from, Value.newTuple(msgValues));
     }
 
     function erc20Hash(
         address to,
         address from,
         address erc20,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         internal
         pure
@@ -335,35 +352,26 @@ library Messages {
             to,
             from,
             erc20,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
+            value
         );
     }
 
-    function erc20MessageHash(
+    function erc20MessageValue(
         address to,
         address from,
         address erc20,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         internal
         pure
-        returns(bytes32)
+        returns(Value.Data memory)
     {
-        return tokenMessageHash(
+        return tokenMessageValue(
             ERC20_DEPOSIT,
             to,
             from,
             erc20,
-            value,
-            blockNumber,
-            timestamp,
-            messageNum
+            value
         );
     }
 
@@ -371,10 +379,7 @@ library Messages {
         address to,
         address from,
         address erc721,
-        uint256 id,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 id
     )
         internal
         pure
@@ -385,35 +390,26 @@ library Messages {
             to,
             from,
             erc721,
-            id,
-            blockNumber,
-            timestamp,
-            messageNum
+            id
         );
     }
 
-    function erc721MessageHash(
+    function erc721MessageValue(
         address to,
         address from,
         address erc721,
-        uint256 id,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 id
     )
         internal
         pure
-        returns(bytes32)
+        returns(Value.Data memory)
     {
-        return tokenMessageHash(
+        return tokenMessageValue(
             ERC721_DEPOSIT,
             to,
             from,
             erc721,
-            id,
-            blockNumber,
-            timestamp,
-            messageNum
+            id
         );
     }
 
@@ -421,10 +417,7 @@ library Messages {
         address to,
         address from,
         uint256 value,
-        bytes memory data,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        bytes memory data
     )
         internal
         pure
@@ -436,44 +429,27 @@ library Messages {
                 to,
                 from,
                 value,
-                data,
-                blockNumber,
-                timestamp,
-                messageNum
+                data
             )
         );
     }
 
-    function contractTransactionMessageHash(
+    function contractTransactionMessageValue(
         address to,
         address from,
         uint256 value,
-        bytes memory data,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        bytes memory data
     )
         internal
         pure
-        returns(bytes32)
+        returns(Value.Data memory)
     {
-        bytes32 dataHash = Value.bytesToBytestackHash(data, 0, data.length);
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);
-        msgValues[3] = Value.newHashOnly(dataHash);
+        msgValues[3] = Value.bytesToBytestackHash(data);
 
-        Value.Data[] memory msgType = new Value.Data[](3);
-        msgType[0] = Value.newInt(CONTRACT_TRANSACTION_MSG);
-        msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
-
-        return Value.hashTuple([
-            Value.newInt(blockNumber),
-            Value.newInt(timestamp),
-            Value.newInt(messageNum),
-            Value.newTuple(msgType)
-        ]);
+        return messageOuterLayer(CONTRACT_TRANSACTION_MSG, from, Value.newTuple(msgValues));
     }
 
     function tokenHash(
@@ -481,10 +457,7 @@ library Messages {
         address to,
         address from,
         address tokenContract,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         private
         pure
@@ -496,44 +469,50 @@ library Messages {
                 to,
                 from,
                 tokenContract,
-                value,
-                blockNumber,
-                timestamp,
-                messageNum
+                value
             )
         );
     }
 
-    function tokenMessageHash(
+    function tokenMessageValue(
         uint8 messageType,
         address to,
         address from,
         address tokenContract,
-        uint256 value,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
+        uint256 value
     )
         private
         pure
-        returns(bytes32)
+        returns(Value.Data memory)
     {
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(tokenContract));
         msgValues[1] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);
 
+        return messageOuterLayer(messageType, from, Value.newTuple(msgValues));
+    }
+
+    function messageOuterLayer(
+        uint256 messageType,
+        address from,
+        Value.Data memory dataTuple
+    )
+        private
+        pure
+        returns(Value.Data memory)
+    {
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(messageType);
         msgType[1] = Value.newInt(uint256(from));
-        msgType[2] = Value.newTuple(msgValues);
+        msgType[2] = dataTuple;
 
-        Value.Data[] memory ercTokenMsg = new Value.Data[](4);
-        ercTokenMsg[0] = Value.newInt(blockNumber);
-        ercTokenMsg[1] = Value.newInt(timestamp);
-        ercTokenMsg[2] = Value.newInt(messageNum);
-        ercTokenMsg[3] = Value.newTuple(msgType);
+        return Value.newTuple(msgType);
+    }
 
-        return  Value.newTuple(ercTokenMsg).hash().hash;
+    function keccak256Subset(bytes memory data, uint256 start, uint256 length) private pure returns(bytes32 dataHash) {
+        assembly {
+            dataHash := keccak256(add(add(data, 0x20), start), length)
+        }
     }
 }

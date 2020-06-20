@@ -18,7 +18,24 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (cavm LANGUAGES CXX)
 
-add_library(cavm STATIC cmachine.h cmachine.cpp ccheckpointstorage.h ccheckpointstorage.cpp)
+
+set(LIB_HEADERS
+  cblockstore.h
+  cmachine.h
+  ccheckpointstorage.h
+  cconfirmednodestore.h
+  utils.hpp
+  ctypes.h
+)
+
+set(LIB_SOURCES
+  cblockstore.cpp
+  cmachine.cpp
+  ccheckpointstorage.cpp
+  cconfirmednodestore.cpp
+)
+
+add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
     cavm
@@ -35,4 +52,4 @@ target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 
 target_link_libraries(cavm PUBLIC data_storage avm PRIVATE avm_utils)
 
-source_group(cavm FILES cmachine.h cmachine.cpp ccheckpointstorage.h ccheckpointstorage.cpp)
+source_group(cavm FILES ${LIB_HEADERS} ${LIB_SOURCES})

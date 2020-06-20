@@ -17,23 +17,24 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type LeafSet struct {
-	idx map[common.Hash]*Node
+	idx map[common.Hash]*structures.Node
 }
 
 func NewLeafSet() *LeafSet {
 	return &LeafSet{
-		make(map[common.Hash]*Node),
+		make(map[common.Hash]*structures.Node),
 	}
 }
 
-func (ll *LeafSet) IsLeaf(node *Node) bool {
-	_, ok := ll.idx[node.hash]
+func (ll *LeafSet) IsLeaf(node *structures.Node) bool {
+	_, ok := ll.idx[node.Hash()]
 	return ok
 }
 
@@ -41,20 +42,20 @@ func (ll *LeafSet) NumLeaves() int {
 	return len(ll.idx)
 }
 
-func (ll *LeafSet) Add(node *Node) {
-	log.Println("Added leaf", node.linkType, node.hash)
+func (ll *LeafSet) Add(node *structures.Node) {
+	log.Println("Added leaf", node.LinkType(), node.Hash())
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
-	ll.idx[node.hash] = node
+	ll.idx[node.Hash()] = node
 }
 
-func (ll *LeafSet) Delete(node *Node) {
-	log.Println("Removed leaf", node.linkType, node.hash)
-	delete(ll.idx, node.hash)
+func (ll *LeafSet) Delete(node *structures.Node) {
+	log.Println("Removed leaf", node.LinkType(), node.Hash())
+	delete(ll.idx, node.Hash())
 }
 
-func (ll *LeafSet) forall(f func(*Node)) {
+func (ll *LeafSet) forall(f func(*structures.Node)) {
 	for _, v := range ll.idx {
 		f(v)
 	}

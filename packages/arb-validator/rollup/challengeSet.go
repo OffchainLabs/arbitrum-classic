@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -28,7 +29,7 @@ type Challenge struct {
 	asserter     common.Address
 	challenger   common.Address
 	contract     common.Address
-	conflictNode *Node
+	conflictNode *structures.Node
 }
 
 type ChallengeSet struct {
@@ -67,7 +68,7 @@ func (c *Challenge) MarshalToBuf() *ChallengeBuf {
 		Asserter:         c.asserter.MarshallToBuf(),
 		Challenger:       c.challenger.MarshallToBuf(),
 		Contract:         c.contract.MarshallToBuf(),
-		ConflictNodeHash: c.conflictNode.hash.MarshalToBuf(),
+		ConflictNodeHash: c.conflictNode.Hash().MarshalToBuf(),
 	}
 }
 

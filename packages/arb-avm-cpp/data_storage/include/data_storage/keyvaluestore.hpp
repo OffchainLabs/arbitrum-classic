@@ -17,26 +17,31 @@
 #ifndef keyvaluestore_hpp
 #define keyvaluestore_hpp
 
+#include <data_storage/storageresultfwd.hpp>
+
 #include <memory>
 #include <vector>
 
-struct DataResults;
+class DataStorage;
 
 namespace rocksdb {
 class Transaction;
 class Status;
+struct Slice;
+class ColumnFamilyHandle;
 }  // namespace rocksdb
 
 class KeyValueStore {
    private:
-    std::unique_ptr<rocksdb::Transaction> transaction;
+    std::shared_ptr<DataStorage> data_storage;
 
    public:
-    KeyValueStore(rocksdb::Transaction* transaction_);
-    rocksdb::Status saveData(const std::vector<unsigned char>& key,
+    KeyValueStore(std::shared_ptr<DataStorage> data_storage_)
+        : data_storage(std::move(data_storage_)) {}
+    rocksdb::Status saveData(const rocksdb::Slice& key,
                              const std::vector<unsigned char>& value);
-    rocksdb::Status deleteData(const std::vector<unsigned char>& key);
-    DataResults getData(const std::vector<unsigned char>& key) const;
+    rocksdb::Status deleteData(const rocksdb::Slice& key);
+    DataResults getData(const rocksdb::Slice& key) const;
 };
 
 #endif /* keyvaluestore_hpp */

@@ -17,6 +17,7 @@
 package hashing
 
 import (
+	"golang.org/x/crypto/sha3"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -28,7 +29,11 @@ import (
 
 func SoliditySHA3(data ...interface{}) common.Hash {
 	var ret common.Hash
-	copy(ret[:], solsha3.SoliditySHA3(data...))
+	hash := sha3.NewLegacyKeccak256()
+	for _, b := range data {
+		hash.Write(b.([]byte))
+	}
+	hash.Sum(ret[:0])
 	return ret
 }
 

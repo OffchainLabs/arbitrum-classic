@@ -61,6 +61,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
+	fmt.Println("proof test contact: ", contract)
 	basemach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 
 	if err != nil {
@@ -105,14 +106,15 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 
 func TestValidateProof(t *testing.T) {
 	testMachines := []string{
-		"opcodetestmath.ao",
+		"opcodetesttuple.ao",
 		"opcodetestlogic.ao",
+		"opcodetestmath.ao",
 		"opcodetesthash.ao",
 		"opcodetestethhash2.ao",
 		"opcodeteststack.ao",
 		"opcodetestdup.ao",
-		"opcodetesttuple.ao",
 		"opcodetestecrecover.ao",
+		"../contract.ao",
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {

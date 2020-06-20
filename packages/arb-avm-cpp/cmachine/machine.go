@@ -29,7 +29,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"runtime"
 	"time"
 	"unsafe"
@@ -88,16 +87,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 }
 
 func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	var currentTimeBuf bytes.Buffer
-	err := value.NewIntValue(currentTime.AsInt()).Marshal(&currentTimeBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	currentTimeDataC := intToData(currentTime.AsInt())
+
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
 	}
-	currentTimeDataC := C.CBytes(currentTimeBuf.Bytes())
 	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
 	C.free(currentTimeDataC)
 	switch cBlockReason.blockType {
@@ -110,17 +105,12 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val.data), cBlockReason.val.length)
-		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
+		rawTimeoutBytes := toByteSlice(cBlockReason.val)
+		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
 		}
-		timeoutInt, ok := timeout.(value.IntValue)
-		if !ok {
-			panic("Inbox hash must be an int")
-		}
-		C.free(cBlockReason.val.data)
-		return machine.InboxBlocked{Timeout: timeoutInt}
+		return machine.InboxBlocked{Timeout: timeout}
 	default:
 	}
 	return nil
@@ -136,51 +126,22 @@ func (m *Machine) ExecuteAssertion(
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	lowerBoundBlock := timeBounds.LowerBoundBlock.AsInt()
-	upperBoundBlock := timeBounds.UpperBoundBlock.AsInt()
-	lowerBoundTimestamp := timeBounds.LowerBoundTimestamp
-	upperBoundTimestamp := timeBounds.UpperBoundTimestamp
-
-	var lowerBoundBlockBuf bytes.Buffer
-	err := value.NewIntValue(lowerBoundBlock).Marshal(&lowerBoundBlockBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var upperBoundBlockBuf bytes.Buffer
-	err = value.NewIntValue(upperBoundBlock).Marshal(&upperBoundBlockBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var lowerBoundTimestampBuf bytes.Buffer
-	err = value.NewIntValue(lowerBoundTimestamp).Marshal(&lowerBoundTimestampBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var upperBoundTimestampBuf bytes.Buffer
-	err = value.NewIntValue(upperBoundTimestamp).Marshal(&upperBoundTimestampBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	lowerBoundBlockDataC := intToData(timeBounds.LowerBoundBlock.AsInt())
+	defer C.free(lowerBoundBlockDataC)
+	upperBoundBlockDataC := intToData(timeBounds.UpperBoundBlock.AsInt())
+	defer C.free(upperBoundBlockDataC)
+	lowerBoundTimestampDataC := intToData(timeBounds.LowerBoundTimestamp)
+	defer C.free(lowerBoundTimestampDataC)
+	upperBoundTimestampDataC := intToData(timeBounds.UpperBoundTimestamp)
+	defer C.free(upperBoundTimestampDataC)
 
 	var buf bytes.Buffer
-	err = value.MarshalValue(inbox, &buf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	_ = value.MarshalValue(inbox, &buf)
 
-	lowerBoundBlockData := lowerBoundBlockBuf.Bytes()
-	upperBoundBlockData := upperBoundBlockBuf.Bytes()
-	lowerBoundTimestampData := lowerBoundTimestampBuf.Bytes()
-	upperBoundTimestampData := upperBoundTimestampBuf.Bytes()
 	msgData := buf.Bytes()
-	lowerBoundBlockDataC := C.CBytes(lowerBoundBlockData)
-	upperBoundBlockDataC := C.CBytes(upperBoundBlockData)
-	lowerBoundTimestampDataC := C.CBytes(lowerBoundTimestampData)
-	upperBoundTimestampDataC := C.CBytes(upperBoundTimestampData)
 	msgDataC := C.CBytes(msgData)
+	defer C.free(msgDataC)
+
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
@@ -191,23 +152,18 @@ func (m *Machine) ExecuteAssertion(
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
-	C.free(lowerBoundBlockDataC)
-	C.free(upperBoundBlockDataC)
-	C.free(lowerBoundTimestampDataC)
-	C.free(upperBoundTimestampDataC)
-	C.free(msgDataC)
 
-	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
-	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
-	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
-	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
+	outMessagesRaw := toByteSlice(assertion.outMessages)
+	logsRaw := toByteSlice(assertion.logs)
 
 	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
 		uint64(assertion.numGas),
-		outMessageVals,
-		logVals,
+		outMessagesRaw,
+		uint64(assertion.outMessageCount),
+		logsRaw,
+		uint64(assertion.logCount),
 	), uint64(assertion.numSteps)
 }
 
@@ -221,17 +177,4 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
 
 	return success == 1
-}
-
-func bytesArrayToVals(data []byte, valCount int) []value.Value {
-	rd := bytes.NewReader(data)
-	vals := make([]value.Value, 0, valCount)
-	for i := 0; i < valCount; i++ {
-		val, err := value.UnmarshalValue(rd)
-		if err != nil {
-			panic(err)
-		}
-		vals = append(vals, val)
-	}
-	return vals
 }

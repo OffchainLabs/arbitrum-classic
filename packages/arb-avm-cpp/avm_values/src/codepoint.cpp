@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,49 +42,12 @@ Operation& Operation::operator=(const Operation& cp) {
 Operation& Operation::operator=(Operation&&) = default;
 Operation::~Operation() = default;
 
-bool operator==(const Operation& val1, const Operation& val2) {
-    if (val1.opcode != val2.opcode) {
-        return false;
-    }
-    if (!val1.immediate && !val2.immediate) {
-        return true;
-    }
-    if (val1.immediate && val2.immediate) {
-        return *val1.immediate == *val2.immediate;
-    }
-    return false;
-}
-
-bool operator!=(const Operation& val1, const Operation& val2) {
-    if (val1.opcode != val2.opcode) {
-        return true;
-    }
-    if ((val1.immediate && !val2.immediate) ||
-        (!val1.immediate && val2.immediate)) {
-        return true;
-    }
-    if (val1.immediate && val2.immediate) {
-        return *val1.immediate != *val2.immediate;
-    }
-    return false;
-}
-
-void Operation::marshal(std::vector<unsigned char>& buf) const {
+void Operation::marshal(std::vector<unsigned char>& buf,
+                        const Code& code) const {
     if (immediate) {
         buf.push_back(1);
         buf.push_back((uint8_t)opcode);
-        marshal_value(*immediate, buf);
-    } else {
-        buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
-    }
-}
-
-void Operation::marshalShallow(std::vector<unsigned char>& buf) const {
-    if (immediate) {
-        buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
-        ::marshalShallow(*immediate, buf);
+        marshal_value(*immediate, buf, code);
     } else {
         buf.push_back(0);
         buf.push_back((uint8_t)opcode);
@@ -92,17 +55,15 @@ void Operation::marshalShallow(std::vector<unsigned char>& buf) const {
 }
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
-                                bool includeVal) const {
+                                bool includeVal,
+                                const Code& code) const {
     if (immediate) {
         buf.push_back(1);
         buf.push_back((uint8_t)opcode);
         if (includeVal) {
-            ::marshalShallow(*immediate, buf);
+            ::marshalForProof(*immediate, buf, code);
         } else {
-            buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(*immediate), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+            marshalStub(*immediate, buf, code);
         }
     } else {
         buf.push_back(0);
@@ -119,14 +80,15 @@ bool operator==(const CodePoint& val1, const CodePoint& val2) {
         return true;
 }
 
-void CodePoint::marshal(std::vector<unsigned char>& buf) const {
+void CodePoint::marshal(std::vector<unsigned char>& buf,
+                        const Code& code) const {
     buf.push_back(CODEPT);
     uint64_t bepc = boost::endian::native_to_big(pc);
     std::copy(
         static_cast<const char*>(static_cast<const void*>(&bepc)),
         static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
         std::back_inserter(buf));
-    op.marshal(buf);
+    op.marshal(buf, code);
     std::array<unsigned char, 32> val;
     to_big_endian(nextHash, val.begin());
     buf.insert(buf.end(), val.begin(), val.end());
@@ -139,7 +101,7 @@ uint256_t hash(const CodePoint& cp) {
         std::array<unsigned char, 66> valData;
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
-        auto immHash = ::hash(*cp.op.immediate);
+        auto immHash = hash_value(*cp.op.immediate);
         std::array<uint64_t, 4> valHashInts;
         to_big_endian(immHash, valHashInts.begin());
         std::copy(reinterpret_cast<unsigned char*>(valHashInts.data()),
@@ -174,8 +136,15 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
     return os;
 }
 
-CodePoint getErrCodePoint() {
-    return CodePoint(pc_default, Operation(static_cast<OpCode>(0)), 0);
+std::ostream& operator<<(std::ostream& os, const CodePoint& val) {
+    os << "CodePoint(" << val.pc << ", " << val.op << ", "
+       << to_hex_str(val.nextHash) << ")";
+    return os;
+}
+
+const CodePoint& getErrCodePoint() {
+    CodePoint static errcp(pc_default, Operation(static_cast<OpCode>(0)), 0);
+    return errcp;
 }
 
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
@@ -190,4 +159,13 @@ std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
         cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
     }
     return cps;
+}
+
+Code::Code(std::vector<CodePoint> code_) : code(std::move(code_)) {}
+
+std::ostream& operator<<(std::ostream& os, const Code& code) {
+    for (const auto& cp : code.code) {
+        os << cp << "\n";
+    }
+    return os;
 }

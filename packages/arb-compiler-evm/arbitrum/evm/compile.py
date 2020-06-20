@@ -387,8 +387,29 @@ def get_opcode_name(instr):
     return instr.name
 
 
+def is_nonstandard_invalid_opcode(instr):
+    if get_opcode_name(instr) != "INVALID":
+        return False
+
+    if instr.opcode == 0xFE:
+        return False
+
+    return True
+
+
 def generate_contract_code(label, code, contract_id):
     code = replace_self_balance(code)
+
+    # Ignore all code starting with the first nonstandard invalid opcode,
+    # This is a hack around the fact that the solidity compiler stores
+    # constants  at the end of the code which can contain opcodes that
+    # the compiler doesn't support, but which are actually just data
+    valid_code_size = len(code)
+    for i, insn in enumerate(code):
+        if is_nonstandard_invalid_opcode(insn):
+            valid_code_size = i
+            break
+    code = code[:valid_code_size]
 
     jump_table = {}
     for insn in code:
@@ -459,10 +480,7 @@ def generate_contract_code(label, code, contract_id):
             return evm_instr_ops[instr_name]
 
         if instr_name == "INVALID":
-            if instr.opcode == 0xFE:
-                return call_finish.revert
-            else:
-                return None
+            return call_finish.revert
 
         raise Exception("Unhandled instruction {}".format(instr))
 

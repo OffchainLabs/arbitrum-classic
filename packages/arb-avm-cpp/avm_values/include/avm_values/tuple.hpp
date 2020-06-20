@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,16 +26,50 @@
 
 uint256_t zeroHash();
 
+class HashPreImage {
+   private:
+    std::array<unsigned char, 32> firstHash;
+    uint256_t valueSize;
+
+   public:
+    HashPreImage() = default;
+    HashPreImage(std::array<unsigned char, 32> _firstHash,
+                 uint256_t _valueSize) {
+        firstHash = _firstHash;
+        valueSize = _valueSize;
+    }
+    std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
+    uint256_t getSize() const { return valueSize; }
+    void marshal(std::vector<unsigned char>& buf) const;
+    uint256_t hash() const;
+};
+
+inline uint256_t hash(const HashPreImage& hv) {
+    return hv.hash();
+}
+
+inline bool operator==(const HashPreImage& val1, const HashPreImage& val2) {
+    return val1.hash() == val2.hash();
+}
+
+inline bool operator!=(const HashPreImage& val1, const HashPreImage& val2) {
+    return val1.hash() != val2.hash();
+}
+
+std::ostream& operator<<(std::ostream& os, const HashPreImage& val);
+
 class Tuple {
    private:
     TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
+    uint256_t value_size = 1;
 
     friend uint256_t hash(const Tuple&);
 
    public:
     Tuple() = default;
     uint256_t calculateHash() const;
+    uint256_t getSize() const;
 
     Tuple(TuplePool* pool, size_t size) {
         if (size > 0) {
@@ -92,11 +126,7 @@ class Tuple {
 
     Tuple(std::vector<value> values, TuplePool* pool);
 
-    //    ~Tuple() {
-    //        if (tpl.use_count() == 1) {
-    //            tuplePool->returnResource(std::move(tpl));
-    //        }
-    //    }
+    void computeValueSize();
 
     uint64_t tuple_size() const {
         if (tpl) {
@@ -110,16 +140,14 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-        // turned off because this optimization may not be thread safe
-        //        if (tpl.use_count() > 1) {
-        // make new copy tuple
         std::shared_ptr<RawTuple> tmp = tuplePool->getResource(tuple_size());
 
         std::copy(tpl->data.begin(), tpl->data.end(),
                   std::back_inserter(tmp->data));
         tpl = tmp;
-        //        }
+
         tpl->data[pos] = std::move(newval);
+        computeValueSize();
         tpl->deferredHashing = true;
     }
 
@@ -130,8 +158,10 @@ class Tuple {
         return tpl->data[pos];
     }
 
-    void marshal(std::vector<unsigned char>& buf) const;
+    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
     value clone_shallow();
+
+    HashPreImage getHashPreImage() const;
 };
 
 inline uint256_t hash(const Tuple& tup) {

@@ -19,7 +19,7 @@ pragma solidity ^0.5.3;
 import "../arch/Value.sol";
 
 contract ValueTester {
-    function deserializeHashed(
+    function deserializeHash(
         bytes memory data,
         uint256 startOffset
     )
@@ -31,7 +31,8 @@ contract ValueTester {
             bytes32 // valHash
         )
     {
-        return Value.deserializeHashed(data, startOffset);
+        (bool valid, uint256 offset, Value.Data memory value) = Value.deserialize(data, startOffset);
+        return (valid, offset, Value.hash(value));
     }
 
     function deserializeMessageData(
@@ -82,4 +83,17 @@ contract ValueTester {
     {
         return Value.getEthMsgData(data, startOffset);
     }
+
+    function bytesToBytestackHash(
+        bytes memory data,
+        uint256 startOffset,
+        uint256 dataLength
+    )
+        public
+        pure
+        returns(bytes32)
+    {
+        return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
+    }
+
 }

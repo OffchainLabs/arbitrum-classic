@@ -23,7 +23,7 @@ func (con *ArbFactory) CreateRollup(
 	vmState common.Hash,
 	params valprotocol.ChainParams,
 	owner common.Address,
-) (common.Address, error) {
+) (common.Address, *common.BlockId, error) {
 	//tx, err := con.contract.CreateRollup(
 	//	auth,
 	//	vmState,
@@ -47,5 +47,5 @@ func (con *ArbFactory) CreateRollup(
 	//if err != nil {
 	//	return common.Address{}, err
 	//}
-	return common.Address{}, nil
+	return common.Address{}, nil, nil
 }

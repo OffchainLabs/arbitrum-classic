@@ -20,7 +20,6 @@ import (
 	"errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -63,7 +62,7 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
 			pre.TimeBounds,
-			pre.BeforeInbox.(value.TupleValue),
+			pre.BeforeInbox,
 			0,
 		)
 		defenders = append(defenders, NewAssertionDefender(
@@ -95,7 +94,7 @@ func ChooseAssertionToChallenge(
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
 			pre.TimeBounds,
-			pre.BeforeInbox.(value.TupleValue),
+			pre.BeforeInbox,
 			0,
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,32 @@
 
 #define UINT256_SIZE 32
 
+namespace {
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
+    Tuple tup;
+    if (size > 0) {
+        tup = Tuple(&pool, size);
+        for (int i = 0; i < size; i++) {
+            tup.set_element(i, deserialize_value(bufptr, pool));
+        }
+    }
+
+    return tup;
+}
+
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
+    CodePoint ret;
+    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
+    bufptr += sizeof(ret.pc);
+    ret.pc = boost::endian::big_to_native(ret.pc);
+    ret.op = deserializeOperation(bufptr, pool);
+    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
+    bufptr += UINT256_SIZE;
+
+    return ret;
+}
+}  // namespace
+
 uint256_t deserializeUint256t(const char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
@@ -47,85 +73,6 @@ Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     }
 }
 
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
-    CodePoint ret;
-    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
-    bufptr += sizeof(ret.pc);
-    ret.pc = boost::endian::big_to_native(ret.pc);
-    ret.op = deserializeOperation(bufptr, pool);
-    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
-
-    return ret;
-}
-
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup(&pool, size);
-    for (int i = 0; i < size; i++) {
-        tup.set_element(i, deserialize_value(bufptr, pool));
-    }
-    return tup;
-}
-
-void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
-    val.marshal(buf);
-}
-
-void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf) {
-    val.marshal(buf);
-}
-
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        marshal_Tuple(nonstd::get<Tuple>(val), buf);
-    } else if (nonstd::holds_alternative<uint256_t>(val)) {
-        buf.push_back(NUM);
-        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-    } else if (nonstd::holds_alternative<CodePoint>(val)) {
-        marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
-    }
-}
-
-void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
-    return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
-                         val);
-}
-
-// see similar functionality in tuple.cloneShallow and tuple.marshal
-void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
-    buf.push_back(TUPLE + val.tuple_size());
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto itemval = val.get_element(i);
-        if (nonstd::holds_alternative<uint256_t>(itemval)) {
-            marshalShallow(itemval, buf);
-        } else {
-            buf.push_back(HASH_ONLY);
-            std::array<unsigned char, 32> tmpbuf;
-            to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
-            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-        }
-    }
-}
-
-void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
-    buf.push_back(CODEPT);
-    val.op.marshalForProof(buf, false);
-    std::array<unsigned char, 32> hashVal;
-    to_big_endian(val.nextHash, hashVal.begin());
-    buf.insert(buf.end(), hashVal.begin(), hashVal.end());
-}
-
-void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
-    buf.push_back(NUM);
-    marshal_uint256_t(val, buf);
-}
-
 value deserialize_value(const char*& bufptr, TuplePool& pool) {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
@@ -133,8 +80,9 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
     switch (valType) {
         case NUM:
             return deserializeUint256t(bufptr);
-        case CODEPT:
-            return deserializeCodePoint(bufptr, pool);
+        case CODEPT: {
+            return CodePointStub{deserializeCodePoint(bufptr, pool)};
+        }
         default:
             if (valType >= TUPLE && valType <= TUPLE + 8) {
                 return deserializeTuple(bufptr, valType - TUPLE, pool);
@@ -146,15 +94,107 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
     }
 }
 
-int get_tuple_size(char*& bufptr) {
-    uint8_t valType;
-    memcpy(&valType, bufptr, sizeof(valType));
-
-    return valType - TUPLE;
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
+    std::array<unsigned char, 32> tmpbuf;
+    to_big_endian(val, tmpbuf.begin());
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-uint256_t hash(const value& value) {
+void marshal_value(const value& val,
+                   std::vector<unsigned char>& buf,
+                   const Code& code) {
+    if (nonstd::holds_alternative<Tuple>(val)) {
+        nonstd::get<Tuple>(val).marshal(buf, code);
+    } else if (nonstd::holds_alternative<uint256_t>(val)) {
+        buf.push_back(NUM);
+        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
+    } else if (nonstd::holds_alternative<CodePointStub>(val)) {
+        auto cpr = nonstd::get<CodePointStub>(val);
+        code[cpr].marshal(buf, code);
+    } else if (nonstd::holds_alternative<HashPreImage>(val)) {
+        nonstd::get<HashPreImage>(val).marshal(buf);
+    }
+}
+
+void marshalStub(const value& val,
+                 std::vector<unsigned char>& buf,
+                 const Code& code) {
+    if (nonstd::holds_alternative<Tuple>(val)) {
+        auto tup = nonstd::get<Tuple>(val);
+        marshalForProof(tup.getHashPreImage(), buf, code);
+    } else {
+        marshalForProof(val, buf, code);
+    }
+}
+
+void marshalForProof(const CodePoint& cp,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    buf.push_back(CODEPT);
+    cp.op.marshalForProof(buf, false, code);
+    std::array<unsigned char, 32> hashVal;
+    to_big_endian(cp.nextHash, hashVal.begin());
+    buf.insert(buf.end(), hashVal.begin(), hashVal.end());
+}
+
+namespace {
+// see similar functionality in tuple.cloneShallow and tuple.marshal
+void marshalForProof(const Tuple& val,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    buf.push_back(TUPLE + val.tuple_size());
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        auto itemval = val.get_element(i);
+        marshalStub(itemval, buf, code);
+    }
+}
+
+void marshalForProof(const CodePointStub& val,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    marshalForProof(code[val], buf, code);
+}
+
+void marshalForProof(const uint256_t& val,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(NUM);
+    marshal_uint256_t(val, buf);
+}
+
+void marshalForProof(const HashPreImage& val,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(HASH_PRE_IMAGE);
+    val.marshal(buf);
+}
+}  // namespace
+
+void marshalForProof(const value& val,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    return nonstd::visit(
+        [&](const auto& v) { return marshalForProof(v, buf, code); }, val);
+}
+
+uint256_t hash_value(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
+}
+
+struct GetSize {
+    uint256_t operator()(const HashPreImage& val) const {
+        return val.getSize();
+    }
+
+    uint256_t operator()(const Tuple& val) const { return val.getSize(); }
+
+    uint256_t operator()(const uint256_t&) const { return 1; }
+
+    uint256_t operator()(const CodePointStub&) const { return 1; }
+};
+
+uint256_t getSize(const value& val) {
+    return nonstd::visit(GetSize{}, val);
 }
 
 struct ValuePrinter {
@@ -170,22 +210,18 @@ struct ValuePrinter {
         return &os;
     }
 
-    std::ostream* operator()(const CodePoint& val) const {
+    std::ostream* operator()(const HashPreImage& val) const {
+        os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const CodePointStub& val) const {
         //        std::printf("in CodePoint ostream operator\n");
-        os << "CodePoint(" << val.pc << ", " << val.op << ", "
-           << to_hex_str(val.nextHash) << ")";
+        os << "CodePointStub(" << val.pc << ")";
         return &os;
     }
 };
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
-}
-
-std::vector<unsigned char> GetHashKey(const value& val) {
-    auto hash_key = hash(val);
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash_key, hash_key_vector);
-
-    return hash_key_vector;
 }

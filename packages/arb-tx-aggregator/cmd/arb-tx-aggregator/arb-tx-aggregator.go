@@ -80,7 +80,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	globalInbox, err := client.NewGlobalInbox(inboxAddress)
+	globalInbox, err := client.NewGlobalInbox(inboxAddress, rollupArgs.Address)
 	if err != nil {
 		log.Fatal(err)
 	}

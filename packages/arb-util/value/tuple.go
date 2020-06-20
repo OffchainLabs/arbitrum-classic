@@ -29,29 +29,50 @@ import (
 
 const MaxTupleSize = 8
 
-var hashOfNone common.Hash
+var zeroHash HashPreImage
 
 func init() {
-	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple))
+	zeroHash = getZeroHash()
+}
+
+func getZeroHash() HashPreImage {
+	noneFirst := hashing.SoliditySHA3(
+		hashing.Uint8(0))
+	preImage := HashPreImage{noneFirst, 1}
+	return preImage
 }
 
 type TupleValue struct {
 	contentsArr     [MaxTupleSize]Value
 	itemCount       int8
 	cachedHash      common.Hash
+	cachedPreImage  HashPreImage
 	size            int64
 	deferredHashing bool
 }
 
+type HashPreImage struct {
+	HashImage common.Hash
+	Size      int64
+}
+
+func (val HashPreImage) Hash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(TypeCodeTuple),
+		hashing.Bytes32(val.HashImage),
+		hashing.Uint256(big.NewInt(val.Size)),
+	)
+}
+
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false}
+	return TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, common.Hash{}, 0, true}
+	ret := TupleValue{contents, size, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
@@ -61,7 +82,7 @@ func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
 
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, HashPreImage{}, 0, true}
 	for i := int64(0); i < size; i++ {
 		ret.contentsArr[i] = value
 	}
@@ -81,7 +102,7 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, 0, true}
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
 }
@@ -180,7 +201,7 @@ func (tv TupleValue) Clone() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) CloneShallow() Value {
@@ -192,7 +213,7 @@ func (tv TupleValue) CloneShallow() Value {
 			newContents[i] = NewHashOnlyValueFromValue(b)
 		}
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
@@ -230,21 +251,36 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func (tv TupleValue) internalHash() common.Hash {
+func (tv TupleValue) getPreImage() common.Hash {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
 	}
 
-	return hashing.SoliditySHA3(
-		hashing.Uint8(tv.InternalTypeCode()),
+	firstHash := hashing.SoliditySHA3(
+		hashing.Uint8(byte(tv.itemCount)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
+	return firstHash
+}
+
+func (tv TupleValue) hash() (HashPreImage, common.Hash) {
+	preImageHash := tv.getPreImage()
+	preImage := HashPreImage{preImageHash, tv.Size()}
+	return preImage, preImage.Hash()
+}
+
+func (tv TupleValue) GetPreImage() HashPreImage {
+	if tv.deferredHashing {
+		tv.cachedPreImage, tv.cachedHash = tv.hash()
+		tv.deferredHashing = false
+	}
+	return tv.cachedPreImage
 }
 
 func (tv TupleValue) Hash() common.Hash {
 	if tv.deferredHashing {
-		tv.cachedHash = tv.internalHash()
+		tv.cachedPreImage, tv.cachedHash = tv.hash()
 		tv.deferredHashing = false
 	}
 	return tv.cachedHash

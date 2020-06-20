@@ -18,17 +18,23 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type AnnouncerListener struct {
 	Prefix string
+}
+
+func (al *AnnouncerListener) AddedToChain(context.Context, *ChainObserver) {
+	log.Println("AddedToChain")
+}
+
+func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *ChainObserver, *structures.Node) {
+	log.Println("RestartingFromLatestValid")
 }
 
 func (al *AnnouncerListener) StakeCreated(ctx context.Context, observer *ChainObserver, ev arbbridge.StakeCreatedEvent) {
@@ -57,8 +63,8 @@ func (al *AnnouncerListener) CompletedChallenge(ctx context.Context, observer *C
 
 func (al *AnnouncerListener) SawAssertion(ctx context.Context, observer *ChainObserver, ev arbbridge.AssertedEvent) {
 	log.Println(al.Prefix, "SawAssertion on leaf", ev.PrevLeafHash)
-	log.Println(al.Prefix, "Params:", ev.Params)
-	log.Println(al.Prefix, "Claim:", ev.Claim)
+	log.Println(al.Prefix, "Params:", ev.Disputable.AssertionParams)
+	log.Println(al.Prefix, "Claim:", ev.Disputable.AssertionClaim)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ctx context.Context, observer *ChainObserver, ev arbbridge.ConfirmedEvent) {
@@ -73,7 +79,7 @@ func (al *AnnouncerListener) MessageDelivered(context.Context, *ChainObserver, a
 	log.Println(al.Prefix, "MessageDelivered")
 }
 
-func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, *preparedAssertion) {
+func (al *AnnouncerListener) AssertionPrepared(context.Context, *ChainObserver, *PreparedAssertion) {
 	log.Println(al.Prefix, "AssertionPrepared")
 }
 func (al *AnnouncerListener) ConfirmableNodes(context.Context, *ChainObserver, *valprotocol.ConfirmOpportunity) {
@@ -82,17 +88,13 @@ func (al *AnnouncerListener) ConfirmableNodes(context.Context, *ChainObserver, *
 func (al *AnnouncerListener) PrunableLeafs(context.Context, *ChainObserver, []valprotocol.PruneParams) {
 	log.Println(al.Prefix, "PrunableLeafs")
 }
-func (al *AnnouncerListener) MootableStakes(context.Context, *ChainObserver, []recoverStakeMootedParams) {
+func (al *AnnouncerListener) MootableStakes(context.Context, *ChainObserver, []RecoverStakeMootedParams) {
 	log.Println(al.Prefix, "MootableStakes")
 }
-func (al *AnnouncerListener) OldStakes(context.Context, *ChainObserver, []recoverStakeOldParams) {
+func (al *AnnouncerListener) OldStakes(context.Context, *ChainObserver, []RecoverStakeOldParams) {
 	log.Println(al.Prefix, "OldStakes")
 }
 
-func (al *AnnouncerListener) AdvancedCalculatedValidNode(ctx context.Context, observer *ChainObserver, nodeHash common.Hash) {
-	log.Println(al.Prefix, "AdvancedCalculatedValidNode", nodeHash)
-}
-
-func (al *AnnouncerListener) AdvancedKnownAssertion(context.Context, *ChainObserver, *protocol.ExecutionAssertion, common.Hash) {
-	log.Println(al.Prefix, "AdvancedKnownAssertion")
+func (al *AnnouncerListener) AdvancedKnownNode(context.Context, *ChainObserver, *structures.Node) {
+	log.Println(al.Prefix, "AdvancedKnownNode")
 }

@@ -32,19 +32,24 @@ type MaybeBlockId struct {
 	Err       error
 }
 
+type ChainTimeGetter interface {
+	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
+	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
+}
+
 type ArbClient interface {
+	ChainTimeGetter
 	SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewGlobalInboxWatcher(address common.Address, rollupAddress common.Address) (GlobalInboxWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 
 	GetBalance(ctx context.Context, account common.Address) (*big.Int, error)
-	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 }
 
 type ArbAuthClient interface {
@@ -52,7 +57,7 @@ type ArbAuthClient interface {
 	Address() common.Address
 	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
-	NewGlobalInbox(address common.Address) (GlobalInbox, error)
+	NewGlobalInbox(address common.Address, rollupAddress common.Address) (GlobalInbox, error)
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)

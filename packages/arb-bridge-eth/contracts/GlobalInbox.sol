@@ -21,14 +21,15 @@ import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
 import "./IGlobalInbox.sol";
 import "./Messages.sol";
+import "./PaymentRecords.sol";
 
 import "./arch/Protocol.sol";
 import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
+import "bytes/contracts/BytesLib.sol";
 
-contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox {
-
+contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords {
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
     uint8 internal constant ERC20_DEPOSIT = 2;
@@ -52,31 +53,34 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         return (inbox.value, inbox.count);
     }
 
-    function sendMessages(bytes calldata _messages) external {
+    function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external {
         bool valid;
         uint256 offset = 0;
         uint256 messageType;
         address sender;
-        uint256 totalLength = _messages.length;
 
-        while (offset < totalLength) {
-            (
-                valid,
-                offset,
-                messageType,
-                sender
-            ) = Value.deserializeMessageData(_messages, offset);
-            if (!valid) {
-                break;
-            }
-            (valid, offset) = sendDeserializedMsg(_messages, offset, messageType);
-            if (!valid) {
-                break;
+        uint256 nodeCount = nodeHashes.length;
+        for (uint256 i = 0; i < nodeCount; i++) {
+            for (uint256 j = 0; j < messageCounts[i]; j++) {
+                (   valid,
+                    offset,
+                    messageType,
+                    sender
+                ) = Value.deserializeMessageData(_messages, offset);
+                if (!valid) {
+                    return;
+                }
+                (valid, offset) = sendDeserializedMsg(nodeHashes[i], j, _messages, offset, messageType);
+                if (!valid) {
+                    return;
+                }
             }
         }
     }
 
     function sendDeserializedMsg(
+        bytes32 nodeHash,
+        uint256 messageIndex,
         bytes memory _messages,
         uint256 startOffset,
         uint256 messageType
@@ -98,7 +102,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferEth(msg.sender, to, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferEth(msg.sender, paymentOwner, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
             (
@@ -111,7 +119,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferERC20(msg.sender, to, erc20, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferERC20(msg.sender, paymentOwner, erc20, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
             (
@@ -124,7 +136,11 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             if (!valid) {
                 return (false, startOffset);
             }
-            transferNFT(msg.sender, to, erc721, value);
+
+            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
+            transferNFT(msg.sender, paymentOwner, erc721, value);
+            delete paymentMap[nodeHash][messageIndex][to];
+
             return (true, offset);
         } else {
             return (false, startOffset);
@@ -246,9 +262,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         bytes32 messageHash = keccak256(
             abi.encodePacked(
                 TRANSACTION_BATCH_MSG,
-                transactions,
-                block.number,
-                block.timestamp
+                transactions
             )
         );
 
@@ -273,9 +287,7 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
             _from,
             _seqNumber,
             _value,
-            keccak256(_data),
-            block.number,
-            block.timestamp
+            keccak256(_data)
         );
 
         _deliverMessage(_chain, messageHash);
@@ -298,17 +310,13 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.ethHash(
             _to,
             _from,
-            _value,
-            block.number,
-            block.timestamp,
-            messageNum
+            _value
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.EthDepositMessageDelivered(
             _chain,
@@ -328,18 +336,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc20Hash(
             _to,
             _from,
             _erc20,
-            _value,
-            block.number,
-            block.timestamp,
-            messageNum
+            _value
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ERC20DepositMessageDelivered(
             _chain,
@@ -360,18 +364,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.erc721Hash(
             _to,
             _from,
             _erc721,
-            _id,
-            block.number,
-            block.timestamp,
-            messageNum
+            _id
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ERC721DepositMessageDelivered(
             _chain,
@@ -392,18 +392,14 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
     )
         private
     {
-        uint256 messageNum = inboxes[_chain].count + 1;
         bytes32 messageHash = Messages.contractTransactionHash(
             _to,
             _from,
             _value,
-            _data,
-            block.number,
-            block.timestamp,
-            messageNum
+            _data
         );
 
-        _deliverMessage(_chain, messageHash);
+        uint256 messageNum = _deliverMessage(_chain, messageHash);
 
         emit IGlobalInbox.ContractTransactionMessageDelivered(
             _chain,
@@ -415,9 +411,17 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         );
     }
 
-    function _deliverMessage(address _chain, bytes32 _messageHash) private {
+    function _deliverMessage(address _chain, bytes32 _messageHash) private returns(uint256) {
         Inbox storage inbox = inboxes[_chain];
-        inbox.value = Protocol.addMessageToInbox(inbox.value, _messageHash);
-        inbox.count++;
+        uint256 updatedCount = inbox.count + 1;
+        inbox.value = Messages.addMessageToInbox(
+            inbox.value,
+            _messageHash,
+            block.number,
+            block.timestamp,
+            updatedCount
+        );
+        inbox.count = updatedCount;
+        return updatedCount;
     }
 }

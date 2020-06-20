@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@
 
 #include <vector>
 
-class MachineStateSaver;
-class MachineStateFetcher;
+class Transaction;
 struct SaveResults;
 
 class Datastack {
@@ -31,17 +30,19 @@ class Datastack {
 
     void addHash() const;
     void calculateAllHashes() const;
-    void initializeDataStack(const Tuple& tuple);
-    Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
     std::vector<value> values;
-    mutable std::vector<uint256_t> hashes;
+    mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
         values.reserve(1000);
         hashes.reserve(1000);
     }
+
+    Datastack(Tuple tuple_rep);
+
+    Tuple getTupleRepresentation(TuplePool* pool) const;
 
     void push(value&& newdata) {
         values.push_back(std::move(newdata));
@@ -82,8 +83,9 @@ class Datastack {
         }
     }
 
-    std::pair<uint256_t, std::vector<unsigned char>> marshalForProof(
-        const std::vector<bool>& stackInfo);
+    std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
+        const std::vector<bool>& stackInfo,
+        const Code& code);
 
     value& peek() {
         if (values.size() == 0) {
@@ -97,10 +99,9 @@ class Datastack {
 
     uint256_t hash() const;
 
-    SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
+    HashPreImage getHashPreImage() const;
 
-    bool initializeDataStack(const MachineStateFetcher& fetcher,
-                             const std::vector<unsigned char>& hash_key);
+    uint256_t getTotalValueSize() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

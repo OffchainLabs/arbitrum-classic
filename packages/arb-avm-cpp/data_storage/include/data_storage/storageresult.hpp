@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #define storageresult_hpp
 
 #include <rocksdb/status.h>
+#include <data_storage/storageresultfwd.hpp>
 
 #include <vector>
 
@@ -30,7 +31,6 @@ struct GetResults {
 struct SaveResults {
     uint32_t reference_count;
     rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
 };
 
 struct DeleteResults {
@@ -45,9 +45,10 @@ struct DbResult {
     T data;
 };
 
-struct DataResults {
+template <typename T>
+struct ValueResult {
     rocksdb::Status status;
-    std::vector<unsigned char> data;
+    T data;
 };
 
 #endif /* checkpointresult_hpp */

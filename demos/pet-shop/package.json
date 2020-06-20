@@ -22,8 +22,8 @@
     "webpack-dev-server": "~3.10.2"
   },
   "dependencies": {
-    "arb-provider-truffle": "^0.3.0",
-    "arb-provider-web3": "^0.5.0",
+    "arb-provider-truffle": "^0.6.0",
+    "arb-provider-web3": "^0.6.0",
     "bootstrap": "^4.4.1",
     "jquery": "^3.5.0",
     "web3": "~1.2.6"

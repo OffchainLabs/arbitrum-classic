@@ -18,6 +18,7 @@ package valprotocol
 
 import (
 	"math/big"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -29,6 +30,17 @@ type ChainParams struct {
 	MaxBlockBoundsWidth     uint64 // in blocks
 	MaxTimestampBoundsWidth uint64 // in seconds
 	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
+}
+
+func NewRandomChainParams() ChainParams {
+	return ChainParams{
+		StakeRequirement:        common.RandBigInt(),
+		GracePeriod:             common.TimeTicks{Val: common.RandBigInt()},
+		MaxExecutionSteps:       rand.Uint64(),
+		MaxBlockBoundsWidth:     rand.Uint64(),
+		MaxTimestampBoundsWidth: rand.Uint64(),
+		ArbGasSpeedLimitPerTick: rand.Uint64(),
+	}
 }
 
 func (cp ChainParams) WithStakeRequirement(amountInWei *big.Int) ChainParams {

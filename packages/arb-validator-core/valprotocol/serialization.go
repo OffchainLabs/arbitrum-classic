@@ -16,4 +16,4 @@
 
 package valprotocol
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
+//go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. valprotocol.proto

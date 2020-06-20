@@ -44,13 +44,21 @@ func (m Transaction) String() string {
 		m.To,
 		m.From,
 		m.SequenceNum,
-		m.Value,
-		m.Data,
+		toEth(m.Value),
+		hexutil.Encode(m.Data),
 	)
 }
 
 func (m Transaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
+}
+
+func (m Transaction) DestAddress() common.Address {
+	return m.To
+}
+
+func (m Transaction) SenderAddress() common.Address {
+	return m.From
 }
 
 func (m Transaction) Equals(other Message) bool {
@@ -66,11 +74,27 @@ func (m Transaction) Equals(other Message) bool {
 		bytes.Equal(m.Data, o.Data)
 }
 
-func (m Transaction) Type() MessageType {
+func (m Transaction) Type() Type {
 	return TransactionType
 }
 
-func (m Transaction) asValue() value.Value {
+func (m Transaction) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
+}
+
+func (m Transaction) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.Chain),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Uint256(m.SequenceNum),
+		hashing.Uint256(m.Value),
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
+	)
+}
+
+func (m Transaction) AsInboxValue() value.TupleValue {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
 		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
@@ -129,57 +153,7 @@ func UnmarshalTransaction(val value.Value, chain common.Address) (Transaction, e
 	}, nil
 }
 
-func (m Transaction) ReceiptHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(uint8(m.Type())),
-		hashing.Address(m.Chain),
-		hashing.Address(m.To),
-		hashing.Address(m.From),
-		hashing.Uint256(m.SequenceNum),
-		hashing.Uint256(m.Value),
-		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
-	)
-}
-
-type DeliveredTransaction struct {
-	Transaction
-	BlockNum  *common.TimeBlocks
-	Timestamp *big.Int
-}
-
-func (m DeliveredTransaction) Equals(other Message) bool {
-	o, ok := other.(DeliveredTransaction)
-	if !ok {
-		return false
-	}
-	return m.Transaction.Equals(o.Transaction) &&
-		m.BlockNum.Cmp(o.BlockNum) == 0 &&
-		m.Timestamp.Cmp(o.Timestamp) == 0
-}
-
-func (m DeliveredTransaction) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m DeliveredTransaction) deliveredTimestamp() *big.Int {
-	return m.Timestamp
-}
-
-func (m DeliveredTransaction) CommitmentHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(uint8(m.Type())),
-		hashing.Address(m.Chain),
-		hashing.Address(m.To),
-		hashing.Address(m.From),
-		hashing.Uint256(m.SequenceNum),
-		hashing.Uint256(m.Value),
-		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
-		hashing.Uint256(m.BlockNum.AsInt()),
-		hashing.Uint256(m.Timestamp),
-	)
-}
-
-func (m DeliveredTransaction) CheckpointValue() value.Value {
+func (m Transaction) CheckpointValue() value.Value {
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.Chain),
 		addressToIntValue(m.To),
@@ -187,17 +161,15 @@ func (m DeliveredTransaction) CheckpointValue() value.Value {
 		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
 		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
-		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
-		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
 	})
 	return val
 }
 
-func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, error) {
+func UnmarshalTransactionFromCheckpoint(v value.Value) (Transaction, error) {
 	tup, ok := v.(value.TupleValue)
-	failRet := DeliveredTransaction{}
-	if !ok || tup.Len() != 8 {
-		return failRet, errors.New("tx val must be 8-tuple")
+	failRet := Transaction{}
+	if !ok || tup.Len() != 6 {
+		return failRet, errors.New("tx val must be 6-tuple")
 	}
 	chain, _ := tup.GetByInt64(0)
 	chainInt, ok := chain.(value.IntValue)
@@ -229,27 +201,25 @@ func UnmarshalTransactionFromCheckpoint(v value.Value) (DeliveredTransaction, er
 	if err != nil {
 		return failRet, err
 	}
-	blockNum, _ := tup.GetByInt64(6)
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNum must be int")
-	}
-	timestamp, _ := tup.GetByInt64(7)
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be int")
-	}
 
-	return DeliveredTransaction{
-		Transaction: Transaction{
-			Chain:       intValueToAddress(chainInt),
-			To:          intValueToAddress(toInt),
-			From:        intValueToAddress(fromInt),
-			SequenceNum: seqInt.BigInt(),
-			Value:       valInt.BigInt(),
-			Data:        dataBytes,
-		},
-		BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
-		Timestamp: timestampInt.BigInt(),
+	return Transaction{
+		Chain:       intValueToAddress(chainInt),
+		To:          intValueToAddress(toInt),
+		From:        intValueToAddress(fromInt),
+		SequenceNum: seqInt.BigInt(),
+		Value:       valInt.BigInt(),
+		Data:        dataBytes,
 	}, nil
+}
+
+func (m Transaction) ReceiptHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(m.Type())),
+		hashing.Address(m.Chain),
+		hashing.Address(m.To),
+		hashing.Address(m.From),
+		hashing.Uint256(m.SequenceNum),
+		hashing.Uint256(m.Value),
+		hashing.Bytes32(hashing.SoliditySHA3(m.Data)),
+	)
 }

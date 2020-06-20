@@ -18,6 +18,7 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -117,8 +118,9 @@ func (c *MessagesChallenge) Bisect(
 func (c *MessagesChallenge) OneStepProofTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredTransaction,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Transaction,
 ) error {
 	return nil
 }
@@ -126,8 +128,9 @@ func (c *MessagesChallenge) OneStepProofTransactionMessage(
 func (c *MessagesChallenge) OneStepProofTransactionBatchMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredTransactionBatch,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.TransactionBatch,
 ) error {
 	return nil
 }
@@ -135,8 +138,9 @@ func (c *MessagesChallenge) OneStepProofTransactionBatchMessage(
 func (c *MessagesChallenge) OneStepProofEthMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredEth,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.Eth,
 ) error {
 	return nil
 }
@@ -144,8 +148,9 @@ func (c *MessagesChallenge) OneStepProofEthMessage(
 func (c *MessagesChallenge) OneStepProofERC20Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredERC20,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC20,
 ) error {
 	return nil
 }
@@ -153,8 +158,9 @@ func (c *MessagesChallenge) OneStepProofERC20Message(
 func (c *MessagesChallenge) OneStepProofERC721Message(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredERC721,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ERC721,
 ) error {
 	return nil
 }
@@ -162,8 +168,9 @@ func (c *MessagesChallenge) OneStepProofERC721Message(
 func (c *MessagesChallenge) OneStepProofContractTransactionMessage(
 	ctx context.Context,
 	lowerHashA common.Hash,
-	lowerHashB common.Hash,
-	msg message.DeliveredContractTransaction,
+	lowerHashB value.HashPreImage,
+	deliveryInfo message.DeliveryInfo,
+	msg message.ContractTransaction,
 ) error {
 	return nil
 }

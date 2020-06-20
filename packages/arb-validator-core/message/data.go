@@ -19,10 +19,17 @@ package message
 import (
 	"bytes"
 	"errors"
+	"math"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+func toEth(val *big.Int) *big.Float {
+	fbalance := new(big.Float)
+	fbalance.SetString(val.String())
+	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+}
 
 func bytesToValues(val []byte) []value.Value {
 	var ints []value.Value
@@ -45,25 +52,29 @@ func bytesToValues(val []byte) []value.Value {
 	return ints
 }
 
+var errInt = errors.New("expected int value")
+var errTupleSize2 = errors.New("expected 2-tuple value")
+
 func StackValueToList(val value.Value) ([]value.Value, error) {
 	values := make([]value.Value, 0)
 	for !val.Equal(value.NewEmptyTuple()) {
 		tupVal, ok := val.(value.TupleValue)
 		if !ok {
-			return nil, errors.New("value was not in stack format")
+			return nil, errTupleSize2
 		}
 		if tupVal.Len() != 2 {
-			return nil, errors.New("stack expected to be 2-tuple")
+			return nil, errTupleSize2
 		}
-		member, err := tupVal.GetByInt64(1)
-		if err != nil {
-			return nil, err
-		}
+		// Can't fail since size has been checked
+		val, _ = tupVal.GetByInt64(0)
+		member, _ := tupVal.GetByInt64(1)
+
 		values = append(values, member)
-		val, err = tupVal.GetByInt64(0)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	for i := len(values)/2 - 1; i >= 0; i-- {
+		opp := len(values) - 1 - i
+		values[i], values[opp] = values[opp], values[i]
 	}
 	return values, nil
 }
@@ -79,26 +90,22 @@ func ListToStackValue(vals []value.Value) value.TupleValue {
 func ByteStackToHex(val value.Value) ([]byte, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
-		return nil, errors.New("bytestack expected tuple value")
+		return nil, errTupleSize2
 	}
 	if tup.Len() != 2 {
-		return nil, errors.New("bytestack expected to be 2-tuple")
+		return nil, errTupleSize2
 	}
 	lengthVal, _ := tup.GetByInt64(0)
 	lengthIntVal, ok := lengthVal.(value.IntValue)
 	if !ok {
-		return nil, errors.New("bytestack expected length to be int value")
+		return nil, errInt
 	}
 	intLength := lengthIntVal.BigInt().Uint64()
 
 	stackVal, _ := tup.GetByInt64(1)
-	tupVal, ok := stackVal.(value.TupleValue)
-	if !ok {
-		return nil, errors.New("bytestack expected 2 tuple value")
-	}
 
 	byteChunks := make([][32]byte, 0)
-	vals, err := StackValueToList(tupVal)
+	vals, err := StackValueToList(stackVal)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +113,14 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	for _, val := range vals {
 		intVal, ok := val.(value.IntValue)
 		if !ok {
-			return nil, errors.New("bytestack expected chunk to be int")
+			return nil, errInt
 		}
 		byteChunks = append(byteChunks, intVal.ToBytes())
 	}
 
 	var buf bytes.Buffer
-	for i := range byteChunks {
-		buf.Write(byteChunks[len(byteChunks)-1-i][:])
+	for _, chunk := range byteChunks {
+		buf.Write(chunk[:])
 	}
 	return buf.Bytes()[:intLength], nil
 }

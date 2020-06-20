@@ -381,6 +381,7 @@ contract NodeGraph is ChallengeType {
              data.timeBounds,
              data.importedMessagesSlice
         );
+
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -390,11 +391,13 @@ contract NodeGraph is ChallengeType {
             0x00,
             data.logsAccHash
         );
+
         bytes32 executionHash = ChallengeUtils.executionHash(
             data.numSteps,
             preconditionHash,
             assertionHash
         );
+
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package protocol;
-import "common/common.proto";
+import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
 message TimeBoundsBlocksBuf {
@@ -8,4 +8,14 @@ message TimeBoundsBlocksBuf {
     common.TimeBlocksBuf upperBoundBlock = 2;
     common.BigIntegerBuf lowerBoundTimestamp = 3;
     common.BigIntegerBuf upperBoundTimestamp = 4;
+}
+
+message ExecutionAssertion {
+    common.HashBuf AfterHash = 1;
+    bool didInboxInsn = 2;
+    uint64 NumGas = 3;
+    bytes outMsgsData = 4;
+    uint64 outMsgsCount = 5;
+    bytes logsData = 6;
+    uint64 logsCount = 7;
 }

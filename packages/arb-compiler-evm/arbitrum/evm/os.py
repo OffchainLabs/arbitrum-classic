@@ -184,14 +184,16 @@ def set_call_frame(vm):
 def get_block_number(vm):
     get_chain_state(vm)
     chain_state.get("global_exec_state")(vm)
-    global_exec_state.get("block_number")(vm)
+    global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("block_number")(vm)
 
 
 @modifies_stack([], [value.IntType()])
 def get_block_timestamp(vm):
     get_chain_state(vm)
     chain_state.get("global_exec_state")(vm)
-    global_exec_state.get("block_timestamp")(vm)
+    global_exec_state.get("current_msg")(vm)
+    ethbridge_message.get("block_timestamp")(vm)
 
 
 def create_initial_evm_state(contracts):

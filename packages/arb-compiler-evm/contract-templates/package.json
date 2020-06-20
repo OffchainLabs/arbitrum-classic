@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^2.5.0",
-    "arb-provider-truffle": "^0.3.3"
+    "arb-provider-truffle": "^0.6.0"
   },
   "devDependencies": {
     "truffle": "^5.1.11"

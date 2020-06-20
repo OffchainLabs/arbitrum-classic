@@ -18,6 +18,11 @@ package rollupmanager
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -26,42 +31,60 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 const (
-	ValidEthBridgeVersion = "2"
+	ValidEthBridgeVersion = "4"
 )
 
-type Manager struct {
-	sync.Mutex
-	RollupAddress common.Address
-	client        arbbridge.ArbClient
-	listeners     []rollup.ChainListener
+var errNoActiveChain = errors.New("validator has no active chain")
+var notAtHead = errors.New("validator is catching up to latest")
 
-	listenerAddChan chan rollup.ChainListener
-	actionChan      chan func(*rollup.ChainObserver)
-	ckpFac          checkpointing.RollupCheckpointerFactory
+type reorgCache struct {
+	latestValidMachine    machine.Machine
+	currentPendingMachine machine.Machine
+	currentBlockId        *common.BlockId
+}
+
+type Manager struct {
+	// The mutex should be held whenever listeres or reorgCache are accessed or
+	// set and whenever activeChain is going to be set (but not when it is accessed)
+	sync.Mutex
+
+	listeners   []rollup.ChainListener
+	activeChain *rollup.ChainObserver
+	// reorgCache is nil when the validator is functioning normally. When the
+	// validator experiences a reorg it stores the current state in the reorg
+	// cache. It uses this cache to respond to non-mutating queries from users
+	// until it is caught back up with the latest state at which point it clears
+	// the cache and starts answering queries based on the current state.
+	// This approach let's us provide a best effort response to users quickly
+	// rather than blocking until the validator fully recovers from the reorg.
+	reorgCache *reorgCache
+
+	// These variables are only written by the constructor
+	RollupAddress common.Address
+	checkpointer  checkpointing.RollupCheckpointer
 }
 
 const defaultMaxReorgDepth = 100
 
 func CreateManager(
+	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
 	aoFilePath string,
 	dbPath string,
 ) (*Manager, error) {
 	return CreateManagerAdvanced(
-		context.Background(),
+		ctx,
 		rollupAddr,
 		true,
 		clnt,
-		checkpointing.NewIndexedCheckpointerFactory(
+		checkpointing.NewIndexedCheckpointer(
 			rollupAddr,
 			aoFilePath,
 			dbPath,
@@ -76,149 +99,197 @@ func CreateManagerAdvanced(
 	rollupAddr common.Address,
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
-	ckpFac checkpointing.RollupCheckpointerFactory,
+	checkpointer checkpointing.RollupCheckpointer,
 ) (*Manager, error) {
+	if err := verifyArbChain(ctx, rollupAddr, clnt, checkpointer); err != nil {
+		return nil, err
+	}
+
 	man := &Manager{
-		RollupAddress:   rollupAddr,
-		client:          clnt,
-		listenerAddChan: make(chan rollup.ChainListener, 10),
-		actionChan:      make(chan func(*rollup.ChainObserver), 10),
-		ckpFac:          ckpFac,
+		RollupAddress: rollupAddr,
+		checkpointer:  checkpointer,
 	}
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			checkpointer := man.ckpFac.New(runCtx)
-
-			var chain *rollup.ChainObserver
-
-			watcher, err := clnt.NewRollupWatcher(rollupAddr)
+			rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			ethbridgeVersion, err := watcher.GetVersion(runCtx)
+			inboxAddr, err := rollupWatcher.InboxAddress(runCtx)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			if ethbridgeVersion != ValidEthBridgeVersion {
-				log.Fatalf("VM has EthBridge version %v, but validator implements version %v."+
-					" To find a validator version which supports your EthBridge, visit "+
-					"https://offchainlabs.com/ethbridge-version-support",
-					ethbridgeVersion, ValidEthBridgeVersion)
-			}
-
-			blockId, initialVMHash, err := watcher.GetCreationInfo(runCtx)
+			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			initialMachine, err := checkpointer.GetInitialMachine()
+			chain, err := initializeChainObserver(
+				runCtx,
+				rollupAddr,
+				updateOpinion,
+				clnt,
+				rollupWatcher,
+				checkpointer,
+			)
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			if initialMachine.Hash() != initialVMHash {
-				log.Fatal("ArbChain was initialized with different VM")
-			}
-
-			if checkpointer.HasCheckpointedState() {
-				err := checkpointer.RestoreLatestState(runCtx, clnt, func(chainObserverBytes []byte, restoreCtx checkpointing.RestoreContext) error {
-					chainObserverBuf := &rollup.ChainObserverBuf{}
-					if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
-						log.Fatal(err)
-					}
-					var err error
-					chain, err = chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, checkpointer)
-					return err
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				params, err := watcher.GetParams(ctx)
-				if err != nil {
-					log.Fatal(err)
-				}
-				chain, err = rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			log.Println("Starting validator from", chain.CurrentBlockId())
 
 			man.Lock()
-			// Clear pending listeners
-			for len(man.listenerAddChan) > 0 {
-				<-man.listenerAddChan
-			}
+			man.activeChain = chain
 			// Add manager's listeners
 			for _, listener := range man.listeners {
-				chain.AddListener(listener)
+				man.activeChain.AddListener(runCtx, listener)
 			}
 			man.Unlock()
 
-			chain.Start(runCtx)
+			currentProcessedBlockId := man.activeChain.CurrentBlockId()
+			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
-			current, err := clnt.CurrentBlockId(runCtx)
-			if err != nil {
-				log.Fatal(err)
-			}
+			log.Println("Starting validator from", currentProcessedBlockId)
 
-			headersChan, err := clnt.SubscribeBlockHeaders(runCtx, chain.CurrentBlockId())
-			if err != nil {
-				blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(big.NewInt(0)))
-				if err != nil {
-					panic(err)
-				}
-				log.Println("Error subscribing to block headers", chain.CurrentBlockId().HeaderHash, chain.CurrentBlockId().Height.AsInt(), blockId.HeaderHash, blockId.Height.AsInt(), err)
+			man.activeChain.RestartFromLatestValid(runCtx)
 
-				cancelFunc()
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			reachedHead := false
-		runLoop:
-			for {
-				select {
-				case maybeBlockId, ok := <-headersChan:
-					if !ok {
-						log.Println("Manager stopped receiving headers")
-						break runLoop
+			man.activeChain.Start(runCtx)
+
+			caughtUpToL1 := false
+
+			err = func() error {
+				// If the local chain is significantly behind the L1, catch up
+				// more efficiently. We process `MaxReorgHeight` blocks at a
+				// time up to `MaxReorgHeight` blocks before the current head
+				// and and assume that no reorg will occur affecting the blocks
+				// we are processing
+				maxReorg := checkpointer.MaxReorgHeight()
+				for {
+					currentProcessedBlockId := man.activeChain.CurrentBlockId()
+					currentLocalHeight := currentProcessedBlockId.Height.AsInt()
+
+					currentOnChain, err := clnt.CurrentBlockId(runCtx)
+					if err != nil {
+						return err
 					}
+					currentL1Height := currentOnChain.Height.AsInt()
+
+					fastCatchupEndHeight := new(big.Int).Sub(currentL1Height, maxReorg)
+					if currentLocalHeight.Cmp(fastCatchupEndHeight) >= 0 {
+						break
+					}
+
+					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, currentLocalHeight)
+					if fetchSize.Cmp(maxReorg) >= 0 {
+						fetchSize = maxReorg
+					}
+					fetchEnd := new(big.Int).Add(currentLocalHeight, fetchSize)
+					fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
+
+					log.Println("Getting events between", currentLocalHeight, "and", fetchEnd)
+					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, currentLocalHeight, fetchEnd)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+					}
+					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
+					for _, ev := range inboxDeliveredEvents {
+						inboxEvents = append(inboxEvents, ev)
+					}
+
+					events, err := rollupWatcher.GetAllEvents(runCtx, currentLocalHeight, fetchEnd)
+					if err != nil {
+						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+					}
+					allEvents := arbbridge.MergeEventsUnsafe(inboxEvents, events)
+					for _, ev := range allEvents {
+						blockId := ev.GetChainInfo().BlockId
+						if blockId.Height.AsInt().Cmp(currentLocalHeight) > 0 {
+							man.activeChain.NotifyNewBlock(blockId.Clone())
+							currentLocalHeight = blockId.Height.AsInt()
+						}
+						err := man.activeChain.HandleNotification(runCtx, ev)
+						if err != nil {
+							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
+						}
+					}
+					if fetchEnd.Cmp(currentLocalHeight) > 0 {
+						endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
+						if err != nil {
+							return err
+						}
+						man.activeChain.NotifyNewBlock(endBlockId)
+					}
+				}
+
+				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, man.activeChain.CurrentBlockId())
+				if err != nil {
+					return errors2.Wrap(err, "Error subscribing to block headers")
+				}
+
+				lastDebugPrint := time.Now()
+				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						log.Println("Error getting new header", maybeBlockId.Err)
-						break runLoop
+						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
 					}
 
 					blockId := maybeBlockId.BlockId
 					timestamp := maybeBlockId.Timestamp
 
-					if !reachedHead && blockId.Height.Cmp(current.Height) >= 0 {
-						log.Println("Reached head")
-						reachedHead = true
-						chain.NowAtHead()
-						log.Println("Now at head")
-					}
-
-					chain.NotifyNewBlock(blockId.Clone())
-					log.Print(chain.DebugString("== "))
-
-					events, err := watcher.GetEvents(runCtx, blockId, timestamp)
+					currentOnChain, err := clnt.CurrentBlockId(runCtx)
 					if err != nil {
-						log.Println("Manager hit error getting events", err)
-						break runLoop
+						return err
 					}
-					for _, event := range events {
-						chain.HandleNotification(runCtx, event)
+
+					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
+						caughtUpToL1 = true
+						man.activeChain.NowAtHead()
+						log.Println("Now at head")
+						man.Lock()
+						man.reorgCache = nil
+						man.Unlock()
 					}
-				case action := <-man.actionChan:
-					action(chain)
+
+					man.activeChain.NotifyNewBlock(blockId.Clone())
+
+					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 5 {
+						log.Print(man.activeChain.DebugString("== "))
+						lastDebugPrint = time.Now()
+					}
+
+					inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
+					if err != nil {
+						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
+					}
+
+					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
+					if err != nil {
+						return errors2.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
+					}
+
+					for _, event := range arbbridge.MergeEventsUnsafe(inboxEvents, events) {
+						err := man.activeChain.HandleNotification(runCtx, event)
+						if err != nil {
+							return errors2.Wrap(err, "Manager hit error processing event")
+						}
+					}
 				}
+				return nil
+			}()
+
+			if err != nil {
+				log.Println(err)
 			}
+
+			man.Lock()
+			man.reorgCache = &reorgCache{
+				latestValidMachine:    man.activeChain.LatestKnownValidMachine(),
+				currentPendingMachine: man.activeChain.CurrentPendingMachine(),
+				currentBlockId:        man.activeChain.CurrentBlockId(),
+			}
+			man.activeChain = nil
+			man.Unlock()
 
 			cancelFunc()
 
@@ -226,7 +297,7 @@ func CreateManagerAdvanced(
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(10 * time.Second) // give time for things to settle, post-reorg, before restarting stuff
+
 			}
 		}
 	}()
@@ -236,43 +307,133 @@ func CreateManagerAdvanced(
 
 func (man *Manager) AddListener(listener rollup.ChainListener) {
 	man.Lock()
+	defer man.Unlock()
 	man.listeners = append(man.listeners, listener)
-	man.listenerAddChan <- listener
-	man.Unlock()
+	if man.activeChain != nil {
+		man.activeChain.AddListener(context.Background(), listener)
+	}
 }
 
-func (man *Manager) ExecuteCall(messages value.TupleValue, maxTime time.Duration) (*protocol.ExecutionAssertion, uint64) {
-	retChan := make(chan struct {
-		*protocol.ExecutionAssertion
-		uint64
-	}, 1)
-	man.actionChan <- func(chain *rollup.ChainObserver) {
-		mach := chain.LatestKnownValidMachine()
-		latestBlock := chain.CurrentBlockId().Height
-		latestTime := big.NewInt(time.Now().Unix())
-		timeBounds := &protocol.TimeBounds{latestBlock, latestBlock, latestTime, latestTime}
-		go func() {
-			assertion, numSteps := mach.ExecuteAssertion(
-				// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
-				10000000000000000,
-				timeBounds,
-				messages,
-				maxTime,
-			)
-			retChan <- struct {
-				*protocol.ExecutionAssertion
-				uint64
-			}{assertion, numSteps}
-		}()
+func (man *Manager) GetLatestMachine() (machine.Machine, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.latestValidMachine.Clone(), nil
 	}
-	ret := <-retChan
-	return ret.ExecutionAssertion, ret.uint64
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.LatestKnownValidMachine(), nil
+	}
+	return nil, notAtHead
 }
 
-func (man *Manager) CurrentBlockId() *common.BlockId {
-	retChan := make(chan *common.BlockId, 1)
-	man.actionChan <- func(chain *rollup.ChainObserver) {
-		retChan <- chain.CurrentBlockId()
+func (man *Manager) GetPendingMachine() (machine.Machine, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.currentPendingMachine.Clone(), nil
 	}
-	return <-retChan
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.CurrentPendingMachine(), nil
+	}
+	return nil, notAtHead
+}
+
+func (man *Manager) CurrentBlockId() (*common.BlockId, error) {
+	man.Lock()
+	defer man.Unlock()
+	if man.reorgCache != nil {
+		return man.reorgCache.currentBlockId.Clone(), nil
+	}
+	if man.activeChain == nil {
+		return nil, errNoActiveChain
+	}
+	if man.activeChain.IsAtHead() {
+		return man.activeChain.CurrentBlockId(), nil
+	}
+	return nil, notAtHead
+}
+
+func (man *Manager) GetCheckpointer() checkpointing.RollupCheckpointer {
+	return man.checkpointer
+}
+
+func verifyArbChain(
+	ctx context.Context,
+	rollupAddr common.Address,
+	clnt arbbridge.ArbClient,
+	checkpointer checkpointing.RollupCheckpointer,
+) error {
+	watcher, err := clnt.NewRollupWatcher(rollupAddr)
+	if err != nil {
+		return err
+	}
+
+	ethbridgeVersion, err := watcher.GetVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	if ethbridgeVersion != ValidEthBridgeVersion {
+		return fmt.Errorf("VM has EthBridge version %v, but validator implements version %v."+
+			" To find a validator version which supports your EthBridge, visit "+
+			"https://offchainlabs.com/ethbridge-version-support",
+			ethbridgeVersion, ValidEthBridgeVersion)
+	}
+
+	_, _, initialVMHash, err := watcher.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	initialMachine, err := checkpointer.GetInitialMachine()
+	if err != nil {
+		return err
+	}
+
+	initialMachineHash := initialMachine.Hash()
+	if initialMachineHash != initialVMHash {
+		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, initialMachineHash)
+	}
+	return nil
+}
+
+func initializeChainObserver(
+	ctx context.Context,
+	rollupAddr common.Address,
+	updateOpinion bool,
+	clnt arbbridge.ChainTimeGetter,
+	watcher arbbridge.ArbRollupWatcher,
+	checkpointer checkpointing.RollupCheckpointer,
+) (*rollup.ChainObserver, error) {
+	if checkpointer.HasCheckpointedState() {
+		var chain *rollup.ChainObserver
+		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+			chainObserverBuf := &rollup.ChainObserverBuf{}
+			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+				return err
+			}
+			var err error
+			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
+			return err
+		}); err == nil && chain != nil {
+			return chain, nil
+		}
+	}
+
+	log.Println("No valid checkpoints so starting from fresh state")
+	params, err := watcher.GetParams(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
 }

@@ -19,6 +19,7 @@ package valprotocol
 import (
 	"fmt"
 	"math/big"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -109,6 +110,14 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
+func NewRandomAssertionParams() *AssertionParams {
+	return &AssertionParams{
+		NumSteps:             rand.Uint64(),
+		TimeBounds:           protocol.NewRandomTimeBounds(),
+		ImportedMessageCount: common.RandBigInt(),
+	}
+}
+
 func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
 		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
@@ -153,6 +162,14 @@ type AssertionClaim struct {
 	AfterInboxTop         common.Hash
 	ImportedMessagesSlice common.Hash
 	AssertionStub         *ExecutionAssertionStub
+}
+
+func NewRandomAssertionClaim(assertion *ExecutionAssertionStub) *AssertionClaim {
+	return &AssertionClaim{
+		AfterInboxTop:         common.RandHash(),
+		ImportedMessagesSlice: common.RandHash(),
+		AssertionStub:         assertion,
+	}
 }
 
 func (dn *AssertionClaim) String() string {
@@ -215,6 +232,15 @@ func NewDisputableNode(
 	}
 }
 
+func NewRandomDisputableNode(assertion *ExecutionAssertionStub) *DisputableNode {
+	return &DisputableNode{
+		AssertionParams: NewRandomAssertionParams(),
+		AssertionClaim:  NewRandomAssertionClaim(assertion),
+		MaxInboxTop:     common.RandHash(),
+		MaxInboxCount:   common.RandBigInt(),
+	}
+}
+
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.AssertionParams.MarshalToBuf(),
@@ -231,11 +257,6 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 		buf.MaxInboxTop.Unmarshal(),
 		buf.MaxInboxCount.Unmarshal(),
 	)
-}
-
-func (dn *DisputableNode) CheckTime(params ChainParams) common.TimeTicks {
-	checkTimeRaw := dn.AssertionClaim.AssertionStub.NumGas / params.ArbGasSpeedLimitPerTick
-	return common.TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
 }
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
