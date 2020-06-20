@@ -9,7 +9,6 @@ arb-validator.Dockerfile
 **/arb-avm-cpp/rocksdb
 **/arb-avm-cpp/rocksdb-prefix
 
-**/vconan
 **/Dockerfile
 **/.dockerignore
 

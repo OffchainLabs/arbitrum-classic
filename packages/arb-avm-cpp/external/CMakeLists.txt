@@ -40,3 +40,10 @@ SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT_DIR})
 SET(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT_DIR}/include)
 SET(WITH_PROCPS OFF CACHE BOOL "" FORCE)
 add_subdirectory(libff)
+
+add_subdirectory(Catch2)
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(json)
+
+add_subdirectory(variant-lite)

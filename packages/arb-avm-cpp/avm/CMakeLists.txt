@@ -59,7 +59,7 @@ target_include_directories(avm PRIVATE
 
 find_package(GMP REQUIRED)
 
-target_link_libraries(avm PUBLIC avm_values Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads secp256k1 ff PRIVATE avm_utils ${GMP_LIBRARY})
+target_link_libraries(avm PUBLIC avm_values Boost::boost Boost::filesystem RocksDB::RocksDB Threads::Threads secp256k1 ff PRIVATE avm_utils ${GMP_LIBRARY})
 
 target_code_coverage(avm AUTO ALL)
 

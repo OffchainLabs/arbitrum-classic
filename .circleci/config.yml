@@ -36,15 +36,6 @@ aliases:
     key: go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
-  - &restore_conan_cache
-    keys:
-      - conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - conan-packages-v2-{{ .Branch }}-
-      - conan-packages-v2-
-  - &save_conan_cache
-    paths:
-      - ~/.conan/data
-    key: conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
   - &test-path /tmp/test-results
 version: 2
 workflows:
@@ -176,22 +167,19 @@ jobs:
           command: |
             git submodule update --init --recursive
       - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_conan_cache
       - run:
           command: |
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
-            conan install ..
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* ../cmachine/
-      - save_cache: *save_conan_cache
       - run:
           name: test arb-avm-cpp
           command: |
             ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+            lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
           working_directory: /home/user/project/packages/arb-avm-cpp/build
       - persist_to_workspace: # store the built files into the workspace for other jobs.

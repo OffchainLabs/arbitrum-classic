@@ -19,7 +19,6 @@ project (avm_tests)
 
 set(TEST_CASES_PATH ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json)
 set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_BINARY_DIR}/contract.ao)
-set(TEST_ECRECOVER_PATH ${CMAKE_CURRENT_BINARY_DIR}/precompiles.ao)
 
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in"
@@ -37,12 +36,12 @@ PRIVATE
     cavm
 	avm
     avm_utils
-	CONAN_PKG::Catch2
-	CONAN_PKG::jsonformoderncpp
+	Catch2::Catch2
+	nlohmann_json::nlohmann_json
 )
 
 include(CTest)
-include(lib/cmake/Catch2/Catch)
+include(Catch)
 catch_discover_tests(avm_tests)
 
 target_code_coverage(avm_tests AUTO ALL EXCLUDE external/* tests/*)

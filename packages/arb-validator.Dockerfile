@@ -15,23 +15,12 @@ RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ 
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 WORKDIR "/home/user/"
-# Build dependencies
-COPY --chown=user arb-avm-cpp/conanfile.txt ./
-RUN python3 -m virtualenv vconan && \
-    . vconan/bin/activate && \
-    pip3 install --upgrade conan && \
-    mkdir -p build && cd build && \
-    conan profile new default --detect && \
-    conan profile update settings.compiler.libcxx=libstdc++11 default && \
-    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite && \
-    conan install .. && \
-    deactivate
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator --chown=user /cpp-build build/
 # Build arb-avm-cpp
-RUN cd build && \
+RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
     cp lib/*.a ../cmachine
