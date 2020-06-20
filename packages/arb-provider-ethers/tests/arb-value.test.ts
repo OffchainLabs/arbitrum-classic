@@ -36,8 +36,8 @@ describe('Constructors', function () {
   const nullHash = '0x' + ZEROS_32B
 
   test('BasicOp', function () {
-    const bop = new arb.BasicOp(arb.OpCode.Halt)
-    expect(bop.opcode).toBe(arb.OpCode.Halt)
+    const bop = new arb.BasicOp(10)
+    expect(bop.opcode).toBe(10)
   })
 
   test('ImmOp', function () {
@@ -199,7 +199,7 @@ describe('Marshaling', function () {
 
   test('marshal and unmarshal CodePointValue', function () {
     const pc = ethers.utils.bigNumberify(0)
-    const op = new arb.BasicOp(arb.OpCode.Halt)
+    const op = new arb.BasicOp(10)
     const nextHash = '0x' + ZEROS_32B
     const basicTCV = new arb.CodePointValue(pc, op, nextHash)
     const marshaledBytes = arb.marshal(basicTCV)
@@ -267,17 +267,6 @@ describe('Marshaling', function () {
     expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).toThrow(
       'Error unmarshalOp no such immCount: 255'
     )
-
-    // Illegal OpCode
-    const ILLEGAL_OP_CODE = 'FF'
-    const [tyCodePoint2, pc2, immop2] = [
-      '0x01',
-      Array(8).fill('00').join(''),
-      '00',
-    ]
-    expect(() =>
-      arb.unmarshal(tyCodePoint2 + pc2 + immop2 + ILLEGAL_OP_CODE)
-    ).toThrow('Error unmarshalOpCode no such opcode: 0xff')
 
     expect(() => arb.unmarshal('0x01')).toThrow(
       'Error extracting bytes: Uint8Array is too short'
