@@ -1,15 +1,15 @@
 [submodule "packages/arb-avm-cpp/external/secp256k1"]
-	path = packages/arb-avm-cpp/external/secp256k1
-	url = https://github.com/bitcoin-core/secp256k1.git
+    path = packages/arb-avm-cpp/external/secp256k1
+    url = https://github.com/bitcoin-core/secp256k1.git
 [submodule "packages/arb-avm-cpp/external/libff"]
-	path = packages/arb-avm-cpp/external/libff
-	url = https://github.com/scipr-lab/libff
+    path = packages/arb-avm-cpp/external/libff
+    url = https://github.com/scipr-lab/libff
 [submodule "packages/arb-avm-cpp/external/Catch2"]
-	path = packages/arb-avm-cpp/external/Catch2
-	url = https://github.com/catchorg/Catch2
+    path = packages/arb-avm-cpp/external/Catch2
+    url = https://github.com/catchorg/Catch2
 [submodule "packages/arb-avm-cpp/external/json"]
-	path = packages/arb-avm-cpp/external/json
-	url = https://github.com/nlohmann/json
+    path = packages/arb-avm-cpp/external/json
+    url = https://github.com/nlohmann/json
 [submodule "packages/arb-avm-cpp/external/variant-lite"]
-	path = packages/arb-avm-cpp/external/variant-lite
-	url = https://github.com/martinmoene/variant-lite/
+    path = packages/arb-avm-cpp/external/variant-lite
+    url = https://github.com/martinmoene/variant-lite
