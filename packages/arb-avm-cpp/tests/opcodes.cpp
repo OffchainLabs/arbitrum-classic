@@ -20,6 +20,7 @@
 
 #include <secp256k1_recovery.h>
 
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
@@ -214,10 +215,26 @@ TEST_CASE("LT opcode is correct") {
 }
 
 TEST_CASE("GT opcode is correct") {
-    SECTION("less") { testBinaryOp(3, 9, 0, OpCode::GT); }
-    SECTION("greater") { testBinaryOp(9, 3, 1, OpCode::GT); }
-    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::GT); }
-    SECTION("First neg, second pos") { testBinaryOp(-3, 9, 1, OpCode::GT); }
+    testBinaryOp(3, 9, 0, OpCode::GT);
+    testBinaryOp(9, 3, 1, OpCode::GT);
+    testBinaryOp(3, 3, 0, OpCode::GT);
+    testBinaryOp(-3, 9, 1, OpCode::GT);
+
+    BENCHMARK_ADVANCED("gt 100x")(Catch::Benchmark::Chronometer meter) {
+        MachineState sample_machine;
+        for (int i = 0; i < 101; i++) {
+            sample_machine.stack.push(uint256_t{100});
+        }
+        std::vector<MachineState> machines(meter.runs());
+        std::fill(machines.begin(), machines.end(), sample_machine);
+        meter.measure([&machines](int i) {
+            auto& mach = machines[i];
+            for (int i = 0; i < 100; i++) {
+                mach.runOp(OpCode::GT);
+            }
+            return mach;
+        });
+    };
 }
 
 TEST_CASE("SLT opcode is correct") {
@@ -750,48 +767,60 @@ uint256_t& assumeInt(value& val) {
 }
 
 TEST_CASE("ecrecover opcode is correct") {
-    SECTION("ecrecover") {
-        MachineState s;
-        std::array<unsigned char, 32> msg;
-        std::generate(msg.begin(), msg.end(), std::rand);
-        std::array<unsigned char, 32> seckey;
-        std::generate(seckey.begin(), seckey.end(), std::rand);
+    std::array<unsigned char, 32> msg;
+    std::generate(msg.begin(), msg.end(), std::rand);
+    std::array<unsigned char, 32> seckey;
+    std::generate(seckey.begin(), seckey.end(), std::rand);
 
-        auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
-                                            SECP256K1_CONTEXT_VERIFY);
-        secp256k1_ecdsa_recoverable_signature sig;
-        secp256k1_pubkey pubkey;
-        REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey.data()) == 1);
-        std::array<unsigned char, 65> pubkey_raw;
-        size_t output_length = 65;
-        REQUIRE(secp256k1_ec_pubkey_serialize(ctx, pubkey_raw.data(),
-                                              &output_length, &pubkey,
-                                              SECP256K1_EC_UNCOMPRESSED));
-        REQUIRE(output_length == 65);
+    auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                        SECP256K1_CONTEXT_VERIFY);
+    secp256k1_ecdsa_recoverable_signature sig;
+    secp256k1_pubkey pubkey;
+    REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey.data()) == 1);
+    std::array<unsigned char, 65> pubkey_raw;
+    size_t output_length = 65;
+    REQUIRE(secp256k1_ec_pubkey_serialize(ctx, pubkey_raw.data(),
+                                          &output_length, &pubkey,
+                                          SECP256K1_EC_UNCOMPRESSED));
+    REQUIRE(output_length == 65);
 
-        REQUIRE(secp256k1_ecdsa_sign_recoverable(ctx, &sig, msg.data(),
-                                                 seckey.data(), nullptr,
-                                                 nullptr) == 1);
+    REQUIRE(secp256k1_ecdsa_sign_recoverable(
+                ctx, &sig, msg.data(), seckey.data(), nullptr, nullptr) == 1);
 
-        std::array<unsigned char, 64> sig_raw;
-        int recovery_id;
-        REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
-                    ctx, sig_raw.data(), &recovery_id, &sig) == 1);
+    std::array<unsigned char, 64> sig_raw;
+    int recovery_id;
+    REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
+                ctx, sig_raw.data(), &recovery_id, &sig) == 1);
 
-        s.stack.push(from_big_endian(msg.begin(), msg.end()));
-        s.stack.push(uint256_t{recovery_id});
-        s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
-        s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
-        s.runOp(OpCode::ECRECOVER);
-        REQUIRE(s.stack[0] != value(0));
-        std::array<unsigned char, 32> hash_data;
-        keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
-        std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
-        auto correct_address =
-            from_big_endian(hash_data.begin(), hash_data.end());
-        auto calculated_address = assumeInt(s.stack[0]);
-        REQUIRE(correct_address == calculated_address);
-    }
+    MachineState s;
+    s.stack.push(from_big_endian(msg.begin(), msg.end()));
+    s.stack.push(uint256_t{recovery_id});
+    s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+    s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+    s.runOp(OpCode::ECRECOVER);
+    REQUIRE(s.stack[0] != value(0));
+    std::array<unsigned char, 32> hash_data;
+    keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
+    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+    auto correct_address = from_big_endian(hash_data.begin(), hash_data.end());
+    auto calculated_address = assumeInt(s.stack[0]);
+    REQUIRE(correct_address == calculated_address);
+
+    BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
+        MachineState sample_machine;
+        sample_machine.stack.push(from_big_endian(msg.begin(), msg.end()));
+        sample_machine.stack.push(uint256_t{recovery_id});
+        sample_machine.stack.push(
+            from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+        sample_machine.stack.push(
+            from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+
+        std::vector<MachineState> machines(meter.runs());
+        std::fill(machines.begin(), machines.end(), sample_machine);
+        meter.measure([&machines](int i) {
+            return machines[i].runOp(OpCode::ECRECOVER);
+        });
+    };
 }
 
 TEST_CASE("GETTIME opcode is correct") {
