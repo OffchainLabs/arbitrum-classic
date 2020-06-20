@@ -563,7 +563,7 @@ uint256_t parseSignature(MachineState& m) {
     std::array<unsigned char, 32> message;
     to_big_endian(assumeInt(m.stack[3]), message.begin());
 
-    secp256k1_context* context = secp256k1_context_create(
+    static secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 
     secp256k1_ecdsa_recoverable_signature sig;
