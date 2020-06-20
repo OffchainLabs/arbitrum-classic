@@ -513,6 +513,8 @@ def test_ecrecover(vm):
     )
     vm.ecrecover()
     vm.halt()
+    # The next line is required to fix https://github.com/OffchainLabs/arbitrum/pull/378
+    vm.error()
 
 
 code = arb.compile_block(test_arithmetic)
