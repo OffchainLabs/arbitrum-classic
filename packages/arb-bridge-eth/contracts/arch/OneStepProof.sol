@@ -677,7 +677,10 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.instructionStack = val1;
+        if (!val1.isCodePoint()) {
+            return false;
+        }
+        machine.instructionStackHash = val1.hash();
         return true;
     }
 
@@ -697,7 +700,7 @@ library OneStepProof {
             return false;
         }
         if (val2.intVal != 0) {
-            machine.instructionStack = val1;
+            machine.instructionStackHash = val1.hash();
         }
         return true;
     }
@@ -717,13 +720,13 @@ library OneStepProof {
 
     function executePcpushInsn(
         Machine.Data memory machine,
-        Value.Data memory pc
+        bytes32 codepointHash
     )
         internal
         pure
         returns (bool)
     {
-        machine.addDataStackValue(pc);
+        machine.addDataStackValue(Value.newCodepointHash(codepointHash));
         return true;
     }
 
@@ -1311,10 +1314,10 @@ library OneStepProof {
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStack = Value.newCodePoint(
+            startMachine.instructionStackHash = Value.newCodePoint(
                 uint8(opCode),
-                Value.hash(startMachine.instructionStack)
-            );
+                startMachine.instructionStackHash
+            ).hash();
         } else {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
@@ -1326,11 +1329,11 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStack = Value.newCodePoint(
+            startMachine.instructionStackHash = Value.newCodePoint(
                 uint8(opCode),
-                Value.hash(startMachine.instructionStack),
+                startMachine.instructionStackHash,
                 Value.hash(immediateVal)
-            );
+            ).hash();
         }
 
         uint i = 0;
@@ -1445,7 +1448,7 @@ library OneStepProof {
         } else if (opCode == OP_STACKEMPTY) {
             correct = executeStackemptyInsn(endMachine);
         } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStack);
+            correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
         } else if (opCode == OP_AUXPUSH) {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
@@ -1563,7 +1566,7 @@ library OneStepProof {
             if (Value.hash(endMachine.errHandler) == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
-                endMachine.instructionStack = endMachine.errHandler;
+                endMachine.instructionStackHash = endMachine.errHandler.hash();
             }
         }
 

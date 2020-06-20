@@ -28,6 +28,7 @@ library Value {
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
+    uint8 internal constant CODEPOINT_HASH = 100;
 
     struct CodePoint {
         uint8 opcode;
@@ -208,6 +209,8 @@ library Value {
             return hashTuplePreImage(val);
         } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
             return hashTuple(val);
+        } else if (val.typeCode == CODEPOINT_HASH) {
+            return bytes32(val.intVal);
         } else {
             assert(false);
         }
@@ -239,6 +242,10 @@ library Value {
 
     function newCodePoint(uint8 opCode, bytes32 nextHash, bytes32 immediateVal) internal pure returns(Data memory){
         return newCodePoint(CodePoint(opCode, nextHash, true, immediateVal));
+    }
+
+    function newCodepointHash(bytes32 codepointHash) internal pure returns (Data memory) {
+        return Data(uint256(codepointHash), CodePoint(0, 0, false, 0), new Data[](0), CODEPOINT_HASH, uint256(1));
     }
 
     function isValidTupleSize(uint256 size) internal pure returns (bool) {

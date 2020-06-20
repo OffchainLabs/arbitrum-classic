@@ -44,7 +44,7 @@ library Machine {
     }
 
     struct Data {
-        Value.Data instructionStack;
+        bytes32 instructionStackHash;
         Value.Data dataStack;
         Value.Data auxStack;
         Value.Data registerVal;
@@ -57,7 +57,7 @@ library Machine {
         return string(
             abi.encodePacked(
                 "Machine(",
-                DebugPrint.bytes32string(Value.hash(machine.instructionStack)),
+                DebugPrint.bytes32string(machine.instructionStackHash),
                 ", \n",
                 DebugPrint.bytes32string(Value.hash(machine.dataStack)),
                 ", \n",
@@ -101,7 +101,7 @@ library Machine {
     }
 
     function machineHash(
-        Value.Data memory instructionStack,
+        bytes32 instructionStackHash,
         Value.Data memory dataStack,
         Value.Data memory auxStack,
         Value.Data memory registerVal,
@@ -114,7 +114,7 @@ library Machine {
     {
         return hash(
             Data(
-                instructionStack,
+                instructionStackHash,
                 dataStack,
                 auxStack,
                 registerVal,
@@ -133,7 +133,7 @@ library Machine {
         } else {
             return keccak256(
                 abi.encodePacked(
-                    Value.hash(machine.instructionStack),
+                    machine.instructionStackHash,
                     Value.hash(machine.dataStack),
                     Value.hash(machine.auxStack),
                     Value.hash(machine.registerVal),
@@ -147,7 +147,7 @@ library Machine {
 
     function clone(Data memory machine) internal pure returns (Data memory) {
         return Data(
-            machine.instructionStack,
+            machine.instructionStackHash,
             machine.dataStack,
             machine.auxStack,
             machine.registerVal,
@@ -172,7 +172,7 @@ library Machine {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
         bool valid;
-        (valid, offset, m.instructionStack) = Value.deserialize(data, offset);
+        (valid, offset, m.instructionStackHash) = Value.deserializeHashed(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
