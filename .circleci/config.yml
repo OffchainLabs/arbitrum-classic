@@ -177,7 +177,7 @@ jobs:
       - run:
           name: test arb-avm-cpp
           command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            ./tests/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
