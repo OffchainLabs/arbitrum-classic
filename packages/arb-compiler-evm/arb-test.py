@@ -512,6 +512,7 @@ def test_ecrecover(vm):
         89187457569088100819123068890294098045489627058153492329444369343498977790775
     )
     vm.ecrecover()
+    vm.halt()
 
 
 code = arb.compile_block(test_arithmetic)
@@ -562,7 +563,7 @@ print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_tuple)
+code = arb.compile_block(test_ecrecover)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("ecrecover ", len(vm.code), " codepoints")

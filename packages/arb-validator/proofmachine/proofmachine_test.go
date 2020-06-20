@@ -61,7 +61,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
-	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	basemach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 
 	if err != nil {
 		t.Fatal(err)
@@ -112,6 +112,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodeteststack.ao",
 		"opcodetestdup.ao",
 		"opcodetesttuple.ao",
+		"opcodetestecrecover.ao",
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {
