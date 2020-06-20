@@ -200,7 +200,6 @@ library Value {
     }
 
     function hash(Data memory val) internal pure returns (bytes32) {
-        require(val.typeCode < VALUE_TYPE_COUNT, "Invalid type code");
         if (val.typeCode == INT_TYPECODE) {
             return hashInt(val.intVal);
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
@@ -212,7 +211,7 @@ library Value {
         } else if (val.typeCode == CODEPOINT_HASH) {
             return bytes32(val.intVal);
         } else {
-            assert(false);
+            require(false, "Invalid type code");
         }
     }
 
