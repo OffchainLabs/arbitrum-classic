@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -199,7 +198,7 @@ func (_ArbFactory *ArbFactoryTransactorRaw) Transact(opts *bind.TransactOpts, me
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -211,21 +210,21 @@ func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactorySession) ChallengeFactoryAddress() (common.Address, error) {
 	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
 }
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) ChallengeFactoryAddress() (common.Address, error) {
 	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
 }
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -237,21 +236,21 @@ func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (co
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactorySession) GlobalInboxAddress() (common.Address, error) {
 	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
 }
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) GlobalInboxAddress() (common.Address, error) {
 	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
 }
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -263,14 +262,14 @@ func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactorySession) RollupTemplate() (common.Address, error) {
 	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) RollupTemplate() (common.Address, error) {
 	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
@@ -744,21 +743,21 @@ func (_IArbRollup *IArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, me
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupTransactor) ForwardContractMessage(opts *bind.TransactOpts, _sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.contract.Transact(opts, "forwardContractMessage", _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
 }
 
 // ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) returns()
+// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
 func (_IArbRollup *IArbRollupTransactorSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
 	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
 }

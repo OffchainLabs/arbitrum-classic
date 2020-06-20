@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -200,7 +199,7 @@ func (_ChallengeFactory *ChallengeFactoryTransactorRaw) Transact(opts *bind.Tran
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -212,21 +211,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -238,21 +237,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -264,21 +263,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts 
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) MessagesChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -290,14 +289,14 @@ func (_ChallengeFactory *ChallengeFactoryCaller) MessagesChallengeTemplate(opts 
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) MessagesChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.MessagesChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) MessagesChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.MessagesChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
@@ -971,7 +970,7 @@ func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.Tr
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -983,14 +982,14 @@ func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bi
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }

@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -369,7 +368,7 @@ func (_MessageTester *MessageTesterTransactorRaw) Transact(opts *bind.TransactOp
 
 // Erc20Hash is a free data retrieval call binding the contract method 0xf3e5743e.
 //
-// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) Erc20Hash(opts *bind.CallOpts, to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -381,21 +380,21 @@ func (_MessageTester *MessageTesterCaller) Erc20Hash(opts *bind.CallOpts, to com
 
 // Erc20Hash is a free data retrieval call binding the contract method 0xf3e5743e.
 //
-// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) Erc20Hash(to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc20Hash(&_MessageTester.CallOpts, to, from, erc20, value, blockNumber, timestamp, messageNum)
 }
 
 // Erc20Hash is a free data retrieval call binding the contract method 0xf3e5743e.
 //
-// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20Hash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) Erc20Hash(to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc20Hash(&_MessageTester.CallOpts, to, from, erc20, value, blockNumber, timestamp, messageNum)
 }
 
 // Erc20MessageHash is a free data retrieval call binding the contract method 0xfadffc5f.
 //
-// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) Erc20MessageHash(opts *bind.CallOpts, to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -407,21 +406,21 @@ func (_MessageTester *MessageTesterCaller) Erc20MessageHash(opts *bind.CallOpts,
 
 // Erc20MessageHash is a free data retrieval call binding the contract method 0xfadffc5f.
 //
-// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) Erc20MessageHash(to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc20MessageHash(&_MessageTester.CallOpts, to, from, erc20, value, blockNumber, timestamp, messageNum)
 }
 
 // Erc20MessageHash is a free data retrieval call binding the contract method 0xfadffc5f.
 //
-// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc20MessageHash(address to, address from, address erc20, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) Erc20MessageHash(to common.Address, from common.Address, erc20 common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc20MessageHash(&_MessageTester.CallOpts, to, from, erc20, value, blockNumber, timestamp, messageNum)
 }
 
 // Erc721Hash is a free data retrieval call binding the contract method 0x87c406bf.
 //
-// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) Erc721Hash(opts *bind.CallOpts, to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -433,21 +432,21 @@ func (_MessageTester *MessageTesterCaller) Erc721Hash(opts *bind.CallOpts, to co
 
 // Erc721Hash is a free data retrieval call binding the contract method 0x87c406bf.
 //
-// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) Erc721Hash(to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc721Hash(&_MessageTester.CallOpts, to, from, erc721, id, blockNumber, timestamp, messageNum)
 }
 
 // Erc721Hash is a free data retrieval call binding the contract method 0x87c406bf.
 //
-// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721Hash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) Erc721Hash(to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc721Hash(&_MessageTester.CallOpts, to, from, erc721, id, blockNumber, timestamp, messageNum)
 }
 
 // Erc721MessageHash is a free data retrieval call binding the contract method 0xdd182d69.
 //
-// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) Erc721MessageHash(opts *bind.CallOpts, to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -459,21 +458,21 @@ func (_MessageTester *MessageTesterCaller) Erc721MessageHash(opts *bind.CallOpts
 
 // Erc721MessageHash is a free data retrieval call binding the contract method 0xdd182d69.
 //
-// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) Erc721MessageHash(to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc721MessageHash(&_MessageTester.CallOpts, to, from, erc721, id, blockNumber, timestamp, messageNum)
 }
 
 // Erc721MessageHash is a free data retrieval call binding the contract method 0xdd182d69.
 //
-// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function erc721MessageHash(address to, address from, address erc721, uint256 id, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) Erc721MessageHash(to common.Address, from common.Address, erc721 common.Address, id *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.Erc721MessageHash(&_MessageTester.CallOpts, to, from, erc721, id, blockNumber, timestamp, messageNum)
 }
 
 // EthHash is a free data retrieval call binding the contract method 0xbbfd47ce.
 //
-// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) EthHash(opts *bind.CallOpts, to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -485,21 +484,21 @@ func (_MessageTester *MessageTesterCaller) EthHash(opts *bind.CallOpts, to commo
 
 // EthHash is a free data retrieval call binding the contract method 0xbbfd47ce.
 //
-// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) EthHash(to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.EthHash(&_MessageTester.CallOpts, to, from, value, blockNumber, timestamp, messageNum)
 }
 
 // EthHash is a free data retrieval call binding the contract method 0xbbfd47ce.
 //
-// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) EthHash(to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.EthHash(&_MessageTester.CallOpts, to, from, value, blockNumber, timestamp, messageNum)
 }
 
 // EthMessageHash is a free data retrieval call binding the contract method 0x3bcceb7d.
 //
-// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) EthMessageHash(opts *bind.CallOpts, to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -511,21 +510,21 @@ func (_MessageTester *MessageTesterCaller) EthMessageHash(opts *bind.CallOpts, t
 
 // EthMessageHash is a free data retrieval call binding the contract method 0x3bcceb7d.
 //
-// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) EthMessageHash(to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.EthMessageHash(&_MessageTester.CallOpts, to, from, value, blockNumber, timestamp, messageNum)
 }
 
 // EthMessageHash is a free data retrieval call binding the contract method 0x3bcceb7d.
 //
-// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) constant returns(bytes32)
+// Solidity: function ethMessageHash(address to, address from, uint256 value, uint256 blockNumber, uint256 timestamp, uint256 messageNum) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) EthMessageHash(to common.Address, from common.Address, value *big.Int, blockNumber *big.Int, timestamp *big.Int, messageNum *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.EthMessageHash(&_MessageTester.CallOpts, to, from, value, blockNumber, timestamp, messageNum)
 }
 
 // TransactionBatchHash is a free data retrieval call binding the contract method 0x2a65bbfb.
 //
-// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) TransactionBatchHash(opts *bind.CallOpts, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -537,21 +536,21 @@ func (_MessageTester *MessageTesterCaller) TransactionBatchHash(opts *bind.CallO
 
 // TransactionBatchHash is a free data retrieval call binding the contract method 0x2a65bbfb.
 //
-// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) TransactionBatchHash(transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionBatchHash(&_MessageTester.CallOpts, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionBatchHash is a free data retrieval call binding the contract method 0x2a65bbfb.
 //
-// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionBatchHash(bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) TransactionBatchHash(transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionBatchHash(&_MessageTester.CallOpts, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionHash is a free data retrieval call binding the contract method 0xf41ccefb.
 //
-// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) TransactionHash(opts *bind.CallOpts, chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -563,21 +562,21 @@ func (_MessageTester *MessageTesterCaller) TransactionHash(opts *bind.CallOpts, 
 
 // TransactionHash is a free data retrieval call binding the contract method 0xf41ccefb.
 //
-// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) TransactionHash(chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionHash(&_MessageTester.CallOpts, chain, to, from, seqNumber, value, data, blockNumber, timestamp)
 }
 
 // TransactionHash is a free data retrieval call binding the contract method 0xf41ccefb.
 //
-// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) TransactionHash(chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionHash(&_MessageTester.CallOpts, chain, to, from, seqNumber, value, data, blockNumber, timestamp)
 }
 
 // TransactionMessageBatchHash is a free data retrieval call binding the contract method 0x928bf175.
 //
-// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) TransactionMessageBatchHash(opts *bind.CallOpts, prev [32]byte, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -589,21 +588,21 @@ func (_MessageTester *MessageTesterCaller) TransactionMessageBatchHash(opts *bin
 
 // TransactionMessageBatchHash is a free data retrieval call binding the contract method 0x928bf175.
 //
-// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) TransactionMessageBatchHash(prev [32]byte, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageBatchHash(&_MessageTester.CallOpts, prev, chain, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionMessageBatchHash is a free data retrieval call binding the contract method 0x928bf175.
 //
-// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHash(bytes32 prev, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) TransactionMessageBatchHash(prev [32]byte, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageBatchHash(&_MessageTester.CallOpts, prev, chain, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionMessageBatchHashSingle is a free data retrieval call binding the contract method 0x94caf578.
 //
-// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) TransactionMessageBatchHashSingle(opts *bind.CallOpts, start *big.Int, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -615,21 +614,21 @@ func (_MessageTester *MessageTesterCaller) TransactionMessageBatchHashSingle(opt
 
 // TransactionMessageBatchHashSingle is a free data retrieval call binding the contract method 0x94caf578.
 //
-// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) TransactionMessageBatchHashSingle(start *big.Int, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageBatchHashSingle(&_MessageTester.CallOpts, start, chain, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionMessageBatchHashSingle is a free data retrieval call binding the contract method 0x94caf578.
 //
-// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) constant returns(bytes32)
+// Solidity: function transactionMessageBatchHashSingle(uint256 start, address chain, bytes transactions, uint256 blockNum, uint256 blockTimestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) TransactionMessageBatchHashSingle(start *big.Int, chain common.Address, transactions []byte, blockNum *big.Int, blockTimestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageBatchHashSingle(&_MessageTester.CallOpts, start, chain, transactions, blockNum, blockTimestamp)
 }
 
 // TransactionMessageBatchSingleSender is a free data retrieval call binding the contract method 0xfedc217e.
 //
-// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) constant returns(address)
+// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) pure returns(address)
 func (_MessageTester *MessageTesterCaller) TransactionMessageBatchSingleSender(opts *bind.CallOpts, start *big.Int, chain common.Address, dataHash [32]byte, transactions []byte) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -641,21 +640,21 @@ func (_MessageTester *MessageTesterCaller) TransactionMessageBatchSingleSender(o
 
 // TransactionMessageBatchSingleSender is a free data retrieval call binding the contract method 0xfedc217e.
 //
-// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) constant returns(address)
+// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) pure returns(address)
 func (_MessageTester *MessageTesterSession) TransactionMessageBatchSingleSender(start *big.Int, chain common.Address, dataHash [32]byte, transactions []byte) (common.Address, error) {
 	return _MessageTester.Contract.TransactionMessageBatchSingleSender(&_MessageTester.CallOpts, start, chain, dataHash, transactions)
 }
 
 // TransactionMessageBatchSingleSender is a free data retrieval call binding the contract method 0xfedc217e.
 //
-// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) constant returns(address)
+// Solidity: function transactionMessageBatchSingleSender(uint256 start, address chain, bytes32 dataHash, bytes transactions) pure returns(address)
 func (_MessageTester *MessageTesterCallerSession) TransactionMessageBatchSingleSender(start *big.Int, chain common.Address, dataHash [32]byte, transactions []byte) (common.Address, error) {
 	return _MessageTester.Contract.TransactionMessageBatchSingleSender(&_MessageTester.CallOpts, start, chain, dataHash, transactions)
 }
 
 // TransactionMessageHash is a free data retrieval call binding the contract method 0x63bc3d74.
 //
-// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) TransactionMessageHash(opts *bind.CallOpts, chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -667,14 +666,14 @@ func (_MessageTester *MessageTesterCaller) TransactionMessageHash(opts *bind.Cal
 
 // TransactionMessageHash is a free data retrieval call binding the contract method 0x63bc3d74.
 //
-// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) TransactionMessageHash(chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageHash(&_MessageTester.CallOpts, chain, to, from, seqNumber, value, data, blockNumber, timestamp)
 }
 
 // TransactionMessageHash is a free data retrieval call binding the contract method 0x63bc3d74.
 //
-// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) constant returns(bytes32)
+// Solidity: function transactionMessageHash(address chain, address to, address from, uint256 seqNumber, uint256 value, bytes data, uint256 blockNumber, uint256 timestamp) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) TransactionMessageHash(chain common.Address, to common.Address, from common.Address, seqNumber *big.Int, value *big.Int, data []byte, blockNumber *big.Int, timestamp *big.Int) ([32]byte, error) {
 	return _MessageTester.Contract.TransactionMessageHash(&_MessageTester.CallOpts, chain, to, from, seqNumber, value, data, blockNumber, timestamp)
 }

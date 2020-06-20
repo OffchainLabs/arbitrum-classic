@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -359,7 +358,7 @@ func (_GlobalEthWallet *GlobalEthWalletTransactorRaw) Transact(opts *bind.Transa
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalEthWallet *GlobalEthWalletCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -371,14 +370,14 @@ func (_GlobalEthWallet *GlobalEthWalletCaller) GetEthBalance(opts *bind.CallOpts
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalEthWallet *GlobalEthWalletSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
 	return _GlobalEthWallet.Contract.GetEthBalance(&_GlobalEthWallet.CallOpts, _owner)
 }
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalEthWallet *GlobalEthWalletCallerSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
 	return _GlobalEthWallet.Contract.GetEthBalance(&_GlobalEthWallet.CallOpts, _owner)
 }
@@ -575,7 +574,7 @@ func (_GlobalFTWallet *GlobalFTWalletTransactorRaw) Transact(opts *bind.Transact
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalFTWallet *GlobalFTWalletCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -587,21 +586,21 @@ func (_GlobalFTWallet *GlobalFTWalletCaller) GetERC20Balance(opts *bind.CallOpts
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalFTWallet *GlobalFTWalletSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	return _GlobalFTWallet.Contract.GetERC20Balance(&_GlobalFTWallet.CallOpts, _tokenContract, _owner)
 }
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalFTWallet *GlobalFTWalletCallerSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	return _GlobalFTWallet.Contract.GetERC20Balance(&_GlobalFTWallet.CallOpts, _tokenContract, _owner)
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalFTWallet *GlobalFTWalletCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
 	var (
 		ret0 = new([]common.Address)
@@ -613,14 +612,14 @@ func (_GlobalFTWallet *GlobalFTWalletCaller) OwnedERC20s(opts *bind.CallOpts, _o
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalFTWallet *GlobalFTWalletSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalFTWallet.Contract.OwnedERC20s(&_GlobalFTWallet.CallOpts, _owner)
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalFTWallet *GlobalFTWalletCallerSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalFTWallet.Contract.OwnedERC20s(&_GlobalFTWallet.CallOpts, _owner)
 }
@@ -832,7 +831,7 @@ func (_GlobalInbox *GlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts, 
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -844,21 +843,21 @@ func (_GlobalInbox *GlobalInboxCaller) GetERC20Balance(opts *bind.CallOpts, _tok
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	return _GlobalInbox.Contract.GetERC20Balance(&_GlobalInbox.CallOpts, _tokenContract, _owner)
 }
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
 //
-// Solidity: function getERC20Balance(address _tokenContract, address _owner) constant returns(uint256)
+// Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCallerSession) GetERC20Balance(_tokenContract common.Address, _owner common.Address) (*big.Int, error) {
 	return _GlobalInbox.Contract.GetERC20Balance(&_GlobalInbox.CallOpts, _tokenContract, _owner)
 }
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalInbox *GlobalInboxCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	var (
 		ret0 = new([]*big.Int)
@@ -870,21 +869,21 @@ func (_GlobalInbox *GlobalInboxCaller) GetERC721Tokens(opts *bind.CallOpts, _erc
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalInbox *GlobalInboxSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	return _GlobalInbox.Contract.GetERC721Tokens(&_GlobalInbox.CallOpts, _erc721, _owner)
 }
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalInbox *GlobalInboxCallerSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	return _GlobalInbox.Contract.GetERC721Tokens(&_GlobalInbox.CallOpts, _erc721, _owner)
 }
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -896,21 +895,21 @@ func (_GlobalInbox *GlobalInboxCaller) GetEthBalance(opts *bind.CallOpts, _owner
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
 	return _GlobalInbox.Contract.GetEthBalance(&_GlobalInbox.CallOpts, _owner)
 }
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
 //
-// Solidity: function getEthBalance(address _owner) constant returns(uint256)
+// Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCallerSession) GetEthBalance(_owner common.Address) (*big.Int, error) {
 	return _GlobalInbox.Contract.GetEthBalance(&_GlobalInbox.CallOpts, _owner)
 }
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
 	var (
 		ret0 = new([32]byte)
@@ -926,21 +925,21 @@ func (_GlobalInbox *GlobalInboxCaller) GetInbox(opts *bind.CallOpts, account com
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_GlobalInbox *GlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _GlobalInbox.Contract.GetInbox(&_GlobalInbox.CallOpts, account)
 }
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_GlobalInbox *GlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _GlobalInbox.Contract.GetInbox(&_GlobalInbox.CallOpts, account)
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalInbox *GlobalInboxCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -952,21 +951,21 @@ func (_GlobalInbox *GlobalInboxCaller) HasERC721(opts *bind.CallOpts, _erc721 co
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalInbox *GlobalInboxSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	return _GlobalInbox.Contract.HasERC721(&_GlobalInbox.CallOpts, _erc721, _owner, _tokenId)
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalInbox *GlobalInboxCallerSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	return _GlobalInbox.Contract.HasERC721(&_GlobalInbox.CallOpts, _erc721, _owner, _tokenId)
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
 	var (
 		ret0 = new([]common.Address)
@@ -978,21 +977,21 @@ func (_GlobalInbox *GlobalInboxCaller) OwnedERC20s(opts *bind.CallOpts, _owner c
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalInbox.Contract.OwnedERC20s(&_GlobalInbox.CallOpts, _owner)
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
 //
-// Solidity: function ownedERC20s(address _owner) constant returns(address[])
+// Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCallerSession) OwnedERC20s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalInbox.Contract.OwnedERC20s(&_GlobalInbox.CallOpts, _owner)
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
 	var (
 		ret0 = new([]common.Address)
@@ -1004,14 +1003,14 @@ func (_GlobalInbox *GlobalInboxCaller) OwnedERC721s(opts *bind.CallOpts, _owner 
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalInbox.Contract.OwnedERC721s(&_GlobalInbox.CallOpts, _owner)
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCallerSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalInbox.Contract.OwnedERC721s(&_GlobalInbox.CallOpts, _owner)
 }
@@ -1081,21 +1080,21 @@ func (_GlobalInbox *GlobalInboxTransactorSession) DepositERC721Message(_chain co
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_GlobalInbox *GlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_GlobalInbox *GlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.Contract.DepositEthMessage(&_GlobalInbox.TransactOpts, _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_GlobalInbox *GlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.Contract.DepositEthMessage(&_GlobalInbox.TransactOpts, _chain, _to)
 }
@@ -1123,21 +1122,21 @@ func (_GlobalInbox *GlobalInboxTransactorSession) ForwardContractTransactionMess
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_GlobalInbox *GlobalInboxTransactor) ForwardEthMessage(opts *bind.TransactOpts, _to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.contract.Transact(opts, "forwardEthMessage", _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_GlobalInbox *GlobalInboxSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.Contract.ForwardEthMessage(&_GlobalInbox.TransactOpts, _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_GlobalInbox *GlobalInboxTransactorSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _GlobalInbox.Contract.ForwardEthMessage(&_GlobalInbox.TransactOpts, _to, _from)
 }
@@ -2381,7 +2380,7 @@ func (_GlobalNFTWallet *GlobalNFTWalletTransactorRaw) Transact(opts *bind.Transa
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	var (
 		ret0 = new([]*big.Int)
@@ -2393,21 +2392,21 @@ func (_GlobalNFTWallet *GlobalNFTWalletCaller) GetERC721Tokens(opts *bind.CallOp
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalNFTWallet *GlobalNFTWalletSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	return _GlobalNFTWallet.Contract.GetERC721Tokens(&_GlobalNFTWallet.CallOpts, _erc721, _owner)
 }
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
 //
-// Solidity: function getERC721Tokens(address _erc721, address _owner) constant returns(uint256[])
+// Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalNFTWallet *GlobalNFTWalletCallerSession) GetERC721Tokens(_erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
 	return _GlobalNFTWallet.Contract.GetERC721Tokens(&_GlobalNFTWallet.CallOpts, _erc721, _owner)
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -2419,21 +2418,21 @@ func (_GlobalNFTWallet *GlobalNFTWalletCaller) HasERC721(opts *bind.CallOpts, _e
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalNFTWallet *GlobalNFTWalletSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	return _GlobalNFTWallet.Contract.HasERC721(&_GlobalNFTWallet.CallOpts, _erc721, _owner, _tokenId)
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
 //
-// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) constant returns(bool)
+// Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalNFTWallet *GlobalNFTWalletCallerSession) HasERC721(_erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
 	return _GlobalNFTWallet.Contract.HasERC721(&_GlobalNFTWallet.CallOpts, _erc721, _owner, _tokenId)
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
 	var (
 		ret0 = new([]common.Address)
@@ -2445,14 +2444,14 @@ func (_GlobalNFTWallet *GlobalNFTWalletCaller) OwnedERC721s(opts *bind.CallOpts,
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalNFTWallet *GlobalNFTWalletSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalNFTWallet.Contract.OwnedERC721s(&_GlobalNFTWallet.CallOpts, _owner)
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
 //
-// Solidity: function ownedERC721s(address _owner) constant returns(address[])
+// Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalNFTWallet *GlobalNFTWalletCallerSession) OwnedERC721s(_owner common.Address) ([]common.Address, error) {
 	return _GlobalNFTWallet.Contract.OwnedERC721s(&_GlobalNFTWallet.CallOpts, _owner)
 }
@@ -2630,7 +2629,7 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -2642,14 +2641,14 @@ func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC165 *IERC165Session) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _IERC165.Contract.SupportsInterface(&_IERC165.CallOpts, interfaceId)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC165 *IERC165CallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _IERC165.Contract.SupportsInterface(&_IERC165.CallOpts, interfaceId)
 }
@@ -2811,7 +2810,7 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2823,21 +2822,21 @@ func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Session) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _IERC20.Contract.Allowance(&_IERC20.CallOpts, owner, spender)
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _IERC20.Contract.Allowance(&_IERC20.CallOpts, owner, spender)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2849,21 +2848,21 @@ func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Addre
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Session) BalanceOf(account common.Address) (*big.Int, error) {
 	return _IERC20.Contract.BalanceOf(&_IERC20.CallOpts, account)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int, error) {
 	return _IERC20.Contract.BalanceOf(&_IERC20.CallOpts, account)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2875,14 +2874,14 @@ func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) 
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Session) TotalSupply() (*big.Int, error) {
 	return _IERC20.Contract.TotalSupply(&_IERC20.CallOpts)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20CallerSession) TotalSupply() (*big.Int, error) {
 	return _IERC20.Contract.TotalSupply(&_IERC20.CallOpts)
 }
@@ -3417,7 +3416,7 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address owner) constant returns(uint256 balance)
+// Solidity: function balanceOf(address owner) view returns(uint256 balance)
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -3429,21 +3428,21 @@ func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Addre
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address owner) constant returns(uint256 balance)
+// Solidity: function balanceOf(address owner) view returns(uint256 balance)
 func (_IERC721 *IERC721Session) BalanceOf(owner common.Address) (*big.Int, error) {
 	return _IERC721.Contract.BalanceOf(&_IERC721.CallOpts, owner)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address owner) constant returns(uint256 balance)
+// Solidity: function balanceOf(address owner) view returns(uint256 balance)
 func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
 	return _IERC721.Contract.BalanceOf(&_IERC721.CallOpts, owner)
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
 //
-// Solidity: function getApproved(uint256 tokenId) constant returns(address operator)
+// Solidity: function getApproved(uint256 tokenId) view returns(address operator)
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -3455,21 +3454,21 @@ func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
 //
-// Solidity: function getApproved(uint256 tokenId) constant returns(address operator)
+// Solidity: function getApproved(uint256 tokenId) view returns(address operator)
 func (_IERC721 *IERC721Session) GetApproved(tokenId *big.Int) (common.Address, error) {
 	return _IERC721.Contract.GetApproved(&_IERC721.CallOpts, tokenId)
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
 //
-// Solidity: function getApproved(uint256 tokenId) constant returns(address operator)
+// Solidity: function getApproved(uint256 tokenId) view returns(address operator)
 func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
 	return _IERC721.Contract.GetApproved(&_IERC721.CallOpts, tokenId)
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
 //
-// Solidity: function isApprovedForAll(address owner, address operator) constant returns(bool)
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -3481,21 +3480,21 @@ func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner commo
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
 //
-// Solidity: function isApprovedForAll(address owner, address operator) constant returns(bool)
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_IERC721 *IERC721Session) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
 	return _IERC721.Contract.IsApprovedForAll(&_IERC721.CallOpts, owner, operator)
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
 //
-// Solidity: function isApprovedForAll(address owner, address operator) constant returns(bool)
+// Solidity: function isApprovedForAll(address owner, address operator) view returns(bool)
 func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
 	return _IERC721.Contract.IsApprovedForAll(&_IERC721.CallOpts, owner, operator)
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
-// Solidity: function ownerOf(uint256 tokenId) constant returns(address owner)
+// Solidity: function ownerOf(uint256 tokenId) view returns(address owner)
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -3507,21 +3506,21 @@ func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (c
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
-// Solidity: function ownerOf(uint256 tokenId) constant returns(address owner)
+// Solidity: function ownerOf(uint256 tokenId) view returns(address owner)
 func (_IERC721 *IERC721Session) OwnerOf(tokenId *big.Int) (common.Address, error) {
 	return _IERC721.Contract.OwnerOf(&_IERC721.CallOpts, tokenId)
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
 //
-// Solidity: function ownerOf(uint256 tokenId) constant returns(address owner)
+// Solidity: function ownerOf(uint256 tokenId) view returns(address owner)
 func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
 	return _IERC721.Contract.OwnerOf(&_IERC721.CallOpts, tokenId)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -3533,14 +3532,14 @@ func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC721 *IERC721Session) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _IERC721.Contract.SupportsInterface(&_IERC721.CallOpts, interfaceId)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
 func (_IERC721 *IERC721CallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _IERC721.Contract.SupportsInterface(&_IERC721.CallOpts, interfaceId)
 }
@@ -4284,7 +4283,7 @@ func (_IGlobalInbox *IGlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
 	var (
 		ret0 = new([32]byte)
@@ -4300,14 +4299,14 @@ func (_IGlobalInbox *IGlobalInboxCaller) GetInbox(opts *bind.CallOpts, account c
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
 //
-// Solidity: function getInbox(address account) constant returns(bytes32, uint256)
+// Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_IGlobalInbox *IGlobalInboxCallerSession) GetInbox(account common.Address) ([32]byte, *big.Int, error) {
 	return _IGlobalInbox.Contract.GetInbox(&_IGlobalInbox.CallOpts, account)
 }
@@ -4356,21 +4355,21 @@ func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositERC721Message(_chain 
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactor) DepositEthMessage(opts *bind.TransactOpts, _chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.contract.Transact(opts, "depositEthMessage", _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
 
 // DepositEthMessage is a paid mutator transaction binding the contract method 0x5bd21290.
 //
-// Solidity: function depositEthMessage(address _chain, address _to) returns()
+// Solidity: function depositEthMessage(address _chain, address _to) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactorSession) DepositEthMessage(_chain common.Address, _to common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.DepositEthMessage(&_IGlobalInbox.TransactOpts, _chain, _to)
 }
@@ -4398,21 +4397,21 @@ func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardContractTransactionMe
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactor) ForwardEthMessage(opts *bind.TransactOpts, _to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.contract.Transact(opts, "forwardEthMessage", _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.ForwardEthMessage(&_IGlobalInbox.TransactOpts, _to, _from)
 }
 
 // ForwardEthMessage is a paid mutator transaction binding the contract method 0x96588a27.
 //
-// Solidity: function forwardEthMessage(address _to, address _from) returns()
+// Solidity: function forwardEthMessage(address _to, address _from) payable returns()
 func (_IGlobalInbox *IGlobalInboxTransactorSession) ForwardEthMessage(_to common.Address, _from common.Address) (*types.Transaction, error) {
 	return _IGlobalInbox.Contract.ForwardEthMessage(&_IGlobalInbox.TransactOpts, _to, _from)
 }
