@@ -15,15 +15,12 @@
  */
 
 #include <avm/machine.hpp>
+#include <avm_values/keccak.hpp>
 #include <bigint_utils.hpp>
 
-#include <catch2/catch.hpp>
-
 #include <secp256k1_recovery.h>
-#include <avm_values/keccak.hpp>
-#include <cstdlib>
 
-#import "config.hpp"
+#include <catch2/catch.hpp>
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
     MachineState m;
