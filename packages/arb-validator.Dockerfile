@@ -6,8 +6,8 @@
 
 FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
-RUN apk update && apk add --no-cache boost-dev cmake g++ \
-    git make musl-dev python3-dev && \
+RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ \
+    git gmp-dev inotify-tools libtool make musl-dev openssl-dev python3-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     pip3 install virtualenv && \
@@ -34,14 +34,14 @@ COPY --from=arb-validator --chown=user /cpp-build build/
 RUN cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
-    cp lib/* ../cmachine
+    cp lib/*.a ../cmachine
 
 
 FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
 RUN apk add --no-cache build-base git go \
     libc-dev linux-headers && \
-    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
     mkdir /home/user/arb-validator && \
