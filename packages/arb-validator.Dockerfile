@@ -7,10 +7,9 @@
 FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
 RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ \
-    git gmp-dev inotify-tools libtool make musl-dev openssl-dev python3-dev && \
+    git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
-    pip3 install virtualenv && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
