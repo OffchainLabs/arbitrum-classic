@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/dgraph-io/badger v1.6.1
-	github.com/ethereum/go-ethereum v1.9.13
+	github.com/ethereum/go-ethereum v1.9.15
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 )
 
