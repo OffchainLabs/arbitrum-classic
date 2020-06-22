@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	ValidEthBridgeVersion = "4"
+	ValidEthBridgeVersion = "develop"
 )
 
 var errNoActiveChain = errors.New("validator has no active chain")
