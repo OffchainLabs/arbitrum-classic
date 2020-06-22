@@ -17,23 +17,21 @@
 pragma solidity ^0.5.3;
 
 contract DataPackets {
-    Packet[] public packets;
+    mapping(uint => Packet) public packets;
 
     struct Packet {
         bytes data;
-        uint messageType;
         address sender;
         uint blockHeight;
     }
 
     function sendDataPacket(bytes calldata encodedData, uint messageType) external {
-        packets.push(Packet(
+        packets[messageType] = Packet(
             {
                 data: encodedData,
-                messageType: messageType,
                 sender: msg.sender,
                 blockHeight: block.number
             }
-        ));
+        );
     }
 }
