@@ -1,0 +1,50 @@
+version: 2
+updates:
+- package-ecosystem: npm
+  directory: "/packages/arb-provider-ethers"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-validator"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-validator-core"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-avm-cpp"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: npm
+  directory: "/packages/arb-provider-web3"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-avm-go"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-util"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+- package-ecosystem: gomod
+  directory: "/packages/arb-provider-go"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
