@@ -75,7 +75,6 @@ func TestDoAssertion(t *testing.T) {
 }
 
 func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
-
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)

@@ -21,9 +21,6 @@ import "./NodeGraphUtils.sol";
 import "./VM.sol";
 import "../IGlobalInbox.sol";
 
-import "../challenge/ChallengeUtils.sol";
-// import "../challenge/ChallengeType.sol";
-
 import "../arch/Value.sol";
 import "../arch/Protocol.sol";
 
@@ -124,13 +121,14 @@ contract NodeGraph {
     }
 
     function makeAssertion(NodeGraphUtils.AssertionData memory data) internal returns(bytes32, bytes32) {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = _verifyPrevLeaf(data);
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(data);
+        require(isValidLeaf(prevLeaf), MAKE_LEAF);
         _verifyAssertionData(data);
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
         require(data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount), MAKE_MESSAGE_CNT);
 
-        bytes32 validLeafHash = _initializeAssertionLeaves(
+        bytes32 validLeaf = _initializeAssertionLeaves(
             data, 
             prevLeaf, 
             vmProtoHashBefore, 
@@ -139,8 +137,8 @@ contract NodeGraph {
 
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, validLeafHash, inboxValue, inboxCount);
-        return (prevLeaf, validLeafHash);
+        emitAssertedEvent(data, prevLeaf, validLeaf, inboxValue, inboxCount);
+        return (prevLeaf, validLeaf);
     }
 
     function pruneLeaves(
@@ -250,24 +248,6 @@ contract NodeGraph {
         return (nextLeafOffset, nextConfOffset);
     }
 
-    function _verifyPrevLeaf(NodeGraphUtils.AssertionData memory data) private view returns (bytes32, bytes32) {
-        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
-            data.beforeVMHash,
-            data.beforeInboxTop,
-            data.beforeInboxCount
-        );
-        bytes32 prevLeaf = RollupUtils.childNodeHash(
-            data.prevPrevLeafHash,
-            data.prevDeadlineTicks,
-            data.prevDataHash,
-            data.prevChildType,
-            vmProtoHashBefore
-        );
-        require(isValidLeaf(prevLeaf), MAKE_LEAF);
-
-        return (prevLeaf, vmProtoHashBefore);
-    }
-
     function _verifyAssertionData(NodeGraphUtils.AssertionData memory data) private view {
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
@@ -286,49 +266,44 @@ contract NodeGraph {
     ) 
         private returns (bytes32) 
     {
-        uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
-        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
-        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
-        if (deadlineTicks < data.prevDeadlineTicks) {
-            deadlineTicks = data.prevDeadlineTicks;
-        }
-        deadlineTicks += checkTimeTicks;
+        ( uint256 checkTimeTicks, 
+          uint256 deadlineTicks ) = NodeGraphUtils.getTimeData(vmParams, data, block.number);
 
-        bytes32 invalidInbox = NodeGraphUtils.generateInvalidInboxTopLeaf(
+        bytes32 invalidInboxLeaf = NodeGraphUtils.generateInvalidInboxTopLeaf(
             data,
             prevLeaf,
             deadlineTicks,
             inboxValue,
             inboxCount,
             vmProtoHashBefore,
-            gracePeriodTicks
+            vmParams.gracePeriodTicks
         );
-        bytes32 invalidMessages = NodeGraphUtils.generateInvalidMessagesLeaf(
+        bytes32 invalidMsgsLeaf = NodeGraphUtils.generateInvalidMessagesLeaf(
             data,
             prevLeaf,
             deadlineTicks,
             vmProtoHashBefore,
-            gracePeriodTicks
+            vmParams.gracePeriodTicks
         );
-        bytes32 invalidExec = NodeGraphUtils.generateInvalidExecutionLeaf(
+        bytes32 invalidExecLeaf = NodeGraphUtils.generateInvalidExecutionLeaf(
             data,
             prevLeaf,
             deadlineTicks,
             vmProtoHashBefore,
-            gracePeriodTicks,
+            vmParams.gracePeriodTicks,
             checkTimeTicks
         );
-        bytes32 validHash = NodeGraphUtils.generateValidLeaf(
+        bytes32 validLeaf = NodeGraphUtils.generateValidLeaf(
             data,
             prevLeaf,
             deadlineTicks
         );
 
-        leaves[invalidInbox] = true;
-        leaves[invalidMessages] = true;
-        leaves[invalidExec] = true;
-        leaves[validHash] = true;
+        leaves[invalidInboxLeaf] = true;
+        leaves[invalidMsgsLeaf] = true;
+        leaves[invalidExecLeaf] = true;
+        leaves[validLeaf] = true;
 
-        return validHash;
+        return validLeaf;
     }
 }

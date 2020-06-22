@@ -307,34 +307,30 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     function _confirm(ConfirmData memory data) private {
-        uint256 nodeCount = data.branches.length;
         _verifyDataLength(data);
 
+        uint256 nodeCount = data.branches.length;
         bytes32[] memory nodeHashes = new bytes32[](nodeCount);
         uint[] memory messageCounts = new uint[](nodeCount);
 
         NodeData memory nodeData = _getInitialNodeData(data);
-
         for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
-                ( nodeData, 
-                  nodeHashes[nodeIndex], 
-                  messageCounts[nodeIndex] ) = _computeNodeData(nodeData, nodeIndex, data);
+                ( nodeData, messageCounts[nodeIndex] ) = _computeNodeData(nodeData, nodeIndex, data);
+                nodeHashes[nodeIndex] = nodeData.nodeHash;
         }
 
         require(nodeData.messagesOffset == data.messages.length, "Didn't read all messages");
-
         // If last node is after deadline, then all nodes are
         require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[nodeCount - 1], CONF_TIME);
 
         uint activeCount = checkAlignedStakers(
-            nodeHashes[nodeCount-1],
+            nodeData.nodeHash,
             data.deadlineTicks[nodeCount - 1],
             data.stakerAddresses,
             data.stakerProofs,
             data.stakerProofOffsets
         );
         require(activeCount > 0, CONF_HAS_STAKER);
-
         confirmNode(nodeData.nodeHash);
 
         // Send all messages is a single batch
@@ -373,7 +369,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 nodeIndex,
         ConfirmData memory data
     ) 
-        private returns (NodeData memory, bytes32, uint) 
+        private returns (NodeData memory, uint) 
     {
         uint256 branchType = data.branches[nodeIndex];
         bytes32 nodeDataHash;
@@ -412,7 +408,7 @@ contract ArbRollup is NodeGraph, Staking {
             emit ConfirmedValidAssertion(nodeData.nodeHash);
         }
         
-        return (nodeData, nodeData.nodeHash, msgCount);
+        return (nodeData, msgCount);
     }
 
     function _verifyDataLength(ConfirmData memory data) private pure{

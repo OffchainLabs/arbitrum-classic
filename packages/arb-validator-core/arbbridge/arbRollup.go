@@ -32,7 +32,17 @@ type ArbRollup interface {
 	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error
 	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
 	PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) error
-	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType valprotocol.ChildType, beforeState *valprotocol.VMProtoData, assertionParams *valprotocol.AssertionParams, assertionClaim *valprotocol.AssertionClaim, stakerProof []common.Hash) error
+	MakeAssertion(
+		ctx context.Context,
+		prevPrevLeafHash common.Hash,
+		prevDataHash common.Hash,
+		prevDeadline common.TimeTicks,
+		prevChildType valprotocol.ChildType,
+		beforeState *valprotocol.VMProtoData,
+		assertionParams *valprotocol.AssertionParams,
+		assertionClaim *valprotocol.AssertionClaim,
+		extraParams [9][32]byte,
+		stakerProof []common.Hash) error
 	Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error
 	StartChallenge(
 		ctx context.Context,

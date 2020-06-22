@@ -20,8 +20,10 @@ import "./RollupUtils.sol";
 import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
 import "../challenge/ChallengeUtils.sol";
+import "./VM.sol";
 
-library NodeGraphUtils {
+library NodeGraphUtils 
+{
 	struct AssertionData {
         bytes32 beforeVMHash;
         bytes32 beforeInboxTop;
@@ -47,6 +49,42 @@ library NodeGraphUtils {
         bytes32 logsAccHash;
     }
 
+    function computePrevLeaf(AssertionData memory data) 
+        internal 
+        pure 
+        returns (bytes32, bytes32) 
+    {
+        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
+            data.beforeVMHash,
+            data.beforeInboxTop,
+            data.beforeInboxCount
+        );
+        bytes32 prevLeaf = RollupUtils.childNodeHash(
+            data.prevPrevLeafHash,
+            data.prevDeadlineTicks,
+            data.prevDataHash,
+            data.prevChildType,
+            vmProtoHashBefore
+        );
+
+        return (prevLeaf, vmProtoHashBefore);
+    }
+
+    function getTimeData(VM.Params memory vmParams, AssertionData memory data, uint256 blockNum)
+        internal
+        pure
+        returns (uint256, uint256)
+    {
+        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) + vmParams.gracePeriodTicks;
+        if (deadlineTicks < data.prevDeadlineTicks) {
+            deadlineTicks = data.prevDeadlineTicks;
+        }
+        deadlineTicks += checkTimeTicks;
+
+        return (checkTimeTicks, deadlineTicks);
+    }
+
 	function generateInvalidInboxTopLeaf(
         AssertionData memory data,
         bytes32 prevLeaf,
@@ -65,13 +103,16 @@ library NodeGraphUtils {
             inboxValue,
             inboxCount - (data.beforeInboxCount + data.importedMessageCount)
         );
+
+        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
+            challengeHash,
+            gracePeriodTicks + RollupTime.blocksToTicks(1)
+        );
+
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            RollupUtils.challengeDataHash(
-                challengeHash,
-                gracePeriodTicks + RollupTime.blocksToTicks(1)
-            ),
+            nodeDataHash,
             ChallengeUtils.getInvalidInboxType(),
             vmProtoHashBefore
         );
@@ -142,13 +183,15 @@ library NodeGraphUtils {
             assertionHash
         );
 
+        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
+            executionHash,
+            gracePeriodTicks + checkTimeTicks
+        );
+
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            RollupUtils.challengeDataHash(
-                executionHash,
-                gracePeriodTicks + checkTimeTicks
-            ),
+            nodeDataHash,
             ChallengeUtils.getInvalidExType(),
             vmProtoHashBefore
         );

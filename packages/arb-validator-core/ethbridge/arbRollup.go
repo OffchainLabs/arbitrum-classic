@@ -59,8 +59,8 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	}
 	tx, err := vm.ArbRollup.PlaceStake(
 		call,
-		hashSliceToRaw(proof1),
-		hashSliceToRaw(proof2),
+		HashSliceToRaw(proof1),
+		HashSliceToRaw(proof2),
 	)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 	defer vm.auth.Unlock()
 	tx, err := vm.ArbRollup.RecoverStakeConfirmed(
 		vm.auth.getAuth(ctx),
-		hashSliceToRaw(proof),
+		HashSliceToRaw(proof),
 	)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 	tx, err := vm.ArbRollup.RecoverStakeOld(
 		vm.auth.getAuth(ctx),
 		staker.ToEthAddress(),
-		hashSliceToRaw(proof),
+		HashSliceToRaw(proof),
 	)
 	if err != nil {
 		return err
@@ -102,8 +102,8 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 		vm.auth.getAuth(ctx),
 		staker.ToEthAddress(),
 		nodeHash,
-		hashSliceToRaw(latestConfirmedProof),
-		hashSliceToRaw(stakerProof),
+		HashSliceToRaw(latestConfirmedProof),
+		HashSliceToRaw(stakerProof),
 	)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (vm *arbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddre
 		disputableNodeHashVal,
 		new(big.Int).SetUint64(childType),
 		vmProtoStateHash,
-		hashSliceToRaw(proof),
+		HashSliceToRaw(proof),
 	)
 	if err != nil {
 		return err
@@ -134,8 +134,8 @@ func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2
 	defer vm.auth.Unlock()
 	tx, err := vm.ArbRollup.MoveStake(
 		vm.auth.getAuth(ctx),
-		hashSliceToRaw(proof1),
-		hashSliceToRaw(proof2),
+		HashSliceToRaw(proof1),
+		HashSliceToRaw(proof2),
 	)
 	if err != nil {
 		return err
@@ -162,10 +162,10 @@ func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PrunePa
 
 	tx, err := vm.ArbRollup.PruneLeaves(
 		vm.auth.getAuth(ctx),
-		hashSliceToRaw(fromNodes),
-		hashSliceToRaw(leafProofs),
+		HashSliceToRaw(fromNodes),
+		HashSliceToRaw(leafProofs),
 		leafProofLengths,
-		hashSliceToRaw(confProofs),
+		HashSliceToRaw(confProofs),
 		confProofLengths,
 	)
 	if err != nil {
@@ -183,21 +183,11 @@ func (vm *arbRollup) MakeAssertion(
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
 	assertionClaim *valprotocol.AssertionClaim,
+	extraParams [9][32]byte,
 	stakerProof []common.Hash,
 ) error {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	extraParams := [9][32]byte{
-		beforeState.MachineHash,
-		beforeState.InboxTop,
-		prevPrevLeafHash,
-		prevDataHash,
-		assertionClaim.AfterInboxTop,
-		assertionClaim.ImportedMessagesSlice,
-		assertionClaim.AssertionStub.AfterHash,
-		assertionClaim.AssertionStub.LastMessageHash,
-		assertionClaim.AssertionStub.LastLogHash,
-	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		extraParams,
@@ -209,7 +199,7 @@ func (vm *arbRollup) MakeAssertion(
 		assertionParams.ImportedMessageCount,
 		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,
-		hashSliceToRaw(stakerProof),
+		HashSliceToRaw(stakerProof),
 	)
 	if err != nil {
 		return vm.ArbRollup.MakeAssertionCall(
@@ -226,7 +216,7 @@ func (vm *arbRollup) MakeAssertion(
 			assertionParams.ImportedMessageCount,
 			assertionClaim.AssertionStub.DidInboxInsn,
 			assertionClaim.AssertionStub.NumGas,
-			hashSliceToRaw(stakerProof),
+			HashSliceToRaw(stakerProof),
 		)
 	}
 
@@ -278,13 +268,13 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 		initalProtoStateHash,
 		branchesNums,
 		deadlineTicks,
-		hashSliceToRaw(challengeNodeData),
-		hashSliceToRaw(logsAcc),
-		hashSliceToRaw(vmProtoStateHashes),
+		HashSliceToRaw(challengeNodeData),
+		HashSliceToRaw(logsAcc),
+		HashSliceToRaw(vmProtoStateHashes),
 		messagesLengths,
 		messages,
 		addressSliceToRaw(opp.StakerAddresses),
-		hashSliceToRaw(combinedProofs),
+		HashSliceToRaw(combinedProofs),
 		stakerProofOffsets,
 	)
 	if err != nil {
@@ -296,13 +286,13 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			initalProtoStateHash,
 			branchesNums,
 			deadlineTicks,
-			hashSliceToRaw(challengeNodeData),
-			hashSliceToRaw(logsAcc),
-			hashSliceToRaw(vmProtoStateHashes),
+			HashSliceToRaw(challengeNodeData),
+			HashSliceToRaw(logsAcc),
+			HashSliceToRaw(vmProtoStateHashes),
 			messagesLengths,
 			messages,
 			addressSliceToRaw(opp.StakerAddresses),
-			hashSliceToRaw(combinedProofs),
+			HashSliceToRaw(combinedProofs),
 			stakerProofOffsets,
 		)
 	}
@@ -341,8 +331,8 @@ func (vm *arbRollup) StartChallenge(
 			asserterVMProtoHash,
 			challengerVMProtoHash,
 		},
-		hashSliceToRaw(asserterProof),
-		hashSliceToRaw(challengerProof),
+		HashSliceToRaw(asserterProof),
+		HashSliceToRaw(challengerProof),
 		asserterNodeHash,
 		challengerDataHash,
 		challengerPeriodTicks.Val,

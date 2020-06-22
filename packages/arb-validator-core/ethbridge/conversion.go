@@ -23,7 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func hashSliceToRaw(slice []common.Hash) [][32]byte {
+func HashSliceToRaw(slice []common.Hash) [][32]byte {
 	ret := make([][32]byte, 0, len(slice))
 	for _, h := range slice {
 		ret = append(ret, h)

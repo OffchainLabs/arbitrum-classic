@@ -208,6 +208,20 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
+func (prep *PreparedAssertion) getAssertionParams() [9][32]byte {
+	return [9][32]byte{
+		prep.beforeState.MachineHash,
+		prep.beforeState.InboxTop,
+		prep.prevPrevLeafHash,
+		prep.prevDataHash,
+		prep.claim.AfterInboxTop,
+		prep.claim.ImportedMessagesSlice,
+		prep.claim.AssertionStub.AfterHash,
+		prep.claim.AssertionStub.LastMessageHash,
+		prep.claim.AssertionStub.LastLogHash,
+	}
+}
+
 func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
