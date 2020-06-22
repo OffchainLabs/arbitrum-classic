@@ -229,6 +229,8 @@ waitloop:
 			if err := conn.Close(); err != nil {
 				t.Fatal(err)
 			}
+			// Wait for the validator to catch up to head
+			time.Sleep(time.Second * 2)
 			break waitloop
 		case <-time.After(time.Second * 5):
 			t.Fatal("Couldn't connect to rpc")
