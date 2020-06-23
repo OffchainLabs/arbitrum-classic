@@ -4,6 +4,7 @@ usePlugin('@nomiclabs/buidler-waffle')
 usePlugin('buidler-typechain')
 usePlugin('solidity-coverage')
 usePlugin('buidler-spdx-license-identifier')
+usePlugin('buidler-gas-reporter')
 
 // This is a sample Buidler task. To learn how to create your own go to
 // https://buidler.dev/guides/create-task.html
@@ -35,5 +36,9 @@ module.exports = {
   spdxLicenseIdentifier: {
     overwrite: false,
     runOnCompile: true,
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 20,
   },
 }

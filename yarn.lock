@@ -3347,6 +3347,13 @@ buffer@^5.0.5, buffer@^5.2.1:
     base64-js "^1.0.2"
     ieee754 "^1.1.4"
 
+buidler-gas-reporter@^0.1.3:
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/buidler-gas-reporter/-/buidler-gas-reporter-0.1.3.tgz#1c18d37e44391cd9a2907fe1820941fcaab18d76"
+  integrity sha512-3Q27K52iGEghJ4icDdkV/67iJiRCaiZ39E2LLCBNZgx5NvltI5Q7oR3RVyCGO/m3SZBcj418zC8p7yeyj/jFdw==
+  dependencies:
+    eth-gas-reporter "^0.2.13"
+
 buidler-spdx-license-identifier@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/buidler-spdx-license-identifier/-/buidler-spdx-license-identifier-1.0.2.tgz#cdb557c3b909926853820dce14e2565ad466d958"
@@ -5183,7 +5190,7 @@ eth-ens-namehash@2.0.8, eth-ens-namehash@^2.0.0:
     idna-uts46-hx "^2.3.1"
     js-sha3 "^0.5.7"
 
-eth-gas-reporter@^0.2.17:
+eth-gas-reporter@^0.2.13, eth-gas-reporter@^0.2.17:
   version "0.2.17"
   resolved "https://registry.yarnpkg.com/eth-gas-reporter/-/eth-gas-reporter-0.2.17.tgz#3ff12ae0235d97b429bcad3a1b05ce4d1a91d9be"
   integrity sha512-MsrUqeXTAFU9QEdAIdaVu+QeU1XwFsKvPDEC68iheppVR5xUP11h4SyPhSRZiGfOzXr1CfTtPM/B6wPGtt7/LA==
