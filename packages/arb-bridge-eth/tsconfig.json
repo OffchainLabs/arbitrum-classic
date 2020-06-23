@@ -10,6 +10,7 @@
   "files": [
     "./buidler.config.ts",
     "../../node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
-    "../../node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts"
+    "../../node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
+    "../../node_modules/buidler-typechain/src/type-extensions.d.ts"
   ]
 }
