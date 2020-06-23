@@ -14,8 +14,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
 
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
-
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util

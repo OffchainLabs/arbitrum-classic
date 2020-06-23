@@ -1,8 +1,25 @@
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ethbridgetest
 
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/protocoltester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/valuetester"
 	"log"
 	"os"
@@ -22,8 +39,11 @@ var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
 var auth *bind.TransactOpts
 var tester *messagetester.MessageTester
-var valueTester *valuetester.ValueTester
 var sigTester *sigutilstester.SigUtilsTester
+var valueTester *valuetester.ValueTester
+var protocolTester *protocoltester.ProtocolTester
+
+//var arbRollupTester *rollup.ArbRollup
 var client *ethclient.Client
 
 var addr1 common.Address
@@ -104,9 +124,48 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	_, valTx, deployedValueTester, err := valuetester.DeployValueTester(
+		auth,
+		client,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		client,
+		auth.From,
+		valTx,
+		"DeployValueTester",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, protocolTx, deployedProtocolTester, err := protocoltester.DeployProtocolTester(
+		auth,
+		client,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		client,
+		auth.From,
+		protocolTx,
+		"DeployValueTester",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	sigTester = deployedSigTester
 	tester = deployedMessageTester
 	valueTester = deployedValueTester
+	protocolTester = deployedProtocolTester
+
 	code := m.Run()
 	os.Exit(code)
 }

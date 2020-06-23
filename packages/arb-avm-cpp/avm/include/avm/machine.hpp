@@ -69,6 +69,10 @@ class Machine {
         return machine_state.marshalForProof();
     }
 
+    std::vector<unsigned char> marshalState() const {
+        return machine_state.marshalState();
+    }
+
     TuplePool& getPool() { return *machine_state.pool; }
 
     void marshal_value(const value& val, std::vector<unsigned char>& buf) {

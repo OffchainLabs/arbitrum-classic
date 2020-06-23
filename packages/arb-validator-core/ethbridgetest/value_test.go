@@ -19,6 +19,8 @@ package ethbridgetest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -29,6 +31,81 @@ import (
 	"testing"
 )
 
+func TestEmptyTupleHashing(t *testing.T) {
+
+	tup := value.NewEmptyTuple()
+	preImage := tup.GetPreImage()
+
+	emptyBridgeHash, err := valueTester.HashEmptyTuple(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if preImage.Hash().ToEthHash() != preImageBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+
+	if tup.Hash().ToEthHash() != emptyBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+
+	if preImage.Hash().ToEthHash() != emptyBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+}
+
+func TestTupleHashing(t *testing.T) {
+
+	intVal := value.NewInt64Value(111)
+	emptyTup := value.NewEmptyTuple()
+
+	tup := value.NewTuple2(intVal, emptyTup)
+	preImage := tup.GetPreImage()
+
+	testTupleBridgeHash, err := valueTester.HashTestTuple(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if preImage.Hash().ToEthHash() != preImageBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+
+	if tup.Hash().ToEthHash() != testTupleBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+
+	if preImage.Hash().ToEthHash() != testTupleBridgeHash {
+		t.Error(errors.New("calculated wrong empty tuple hash"))
+	}
+}
+
+func TestBytesStackHash(t *testing.T) {
+	data := []byte{65, 23, 68, 87, 12}
+	stackHash := message.BytesToByteStack(data).Hash().ToEthHash()
+
+	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if stackHash != bridgeStackHash {
+		t.Error(errors.New("calculated wrong byte stack hash: "))
+		fmt.Println(stackHash)
+		fmt.Println(bridgeStackHash)
+	}
+}
+
 func TestBytesToBytestackHash(t *testing.T) {
 	datas := [][]byte{
 		common.RandBytes(5),
@@ -38,7 +115,7 @@ func TestBytesToBytestackHash(t *testing.T) {
 		common.RandBytes(200),
 	}
 	for _, data := range datas {
-		valueHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
+		valueHash, err := valueTester.BytesToBytestackHash(nil, data)
 		if err != nil {
 			t.Fatal(err)
 		}

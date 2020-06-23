@@ -33,7 +33,7 @@ type DummyCheckpointer struct {
 }
 
 func NewDummyCheckpointer(arbitrumCodefilePath string) *DummyCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "test")
+	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "cpp")
 	if err != nil {
 		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
 	}

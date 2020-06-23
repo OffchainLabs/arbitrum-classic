@@ -24,10 +24,6 @@ library RollupUtils {
 
     uint256 constant VALID_CHILD_TYPE = 3;
 
-    event ConfirmedValidAssertion(
-        bytes32 indexed nodeHash
-    );
-
     struct ConfirmData {
         bytes32 initalProtoStateHash;
         uint256[] branches;
@@ -39,65 +35,90 @@ library RollupUtils {
         bytes messages;
     }
 
+    struct NodeData {
+        uint256 validNum;
+        uint256 invalidNum;
+        uint256 messagesOffset;
+        bytes32 vmProtoStateHash;
+        bytes32 nodeHash;
+    }
+
+    function getInitialNodeData(
+        bytes32 vmProtoStateHash,
+        bytes32 confNode
+    ) 
+        private pure returns (NodeData memory)
+    {
+        return NodeData(
+            0,
+            0,
+            0,
+            vmProtoStateHash,
+            confNode);
+    }
+
     function confirm(
-        RollupUtils.ConfirmData memory data,
+        ConfirmData memory data,
         bytes32 confNode
     )
         internal
         pure
-        returns(bytes32[] memory validNodeHashes, bytes32 lastNode)
+        returns(bytes32[] memory validNodeHashes, bytes32)
     {
+        verifyDataLength(data);
+
         uint256 nodeCount = data.branches.length;
-        _verifyDataLength(data);
-        uint256 validNum = 0;
-        uint256 invalidNum = 0;
-        uint256 messagesOffset = 0;
+        uint256 validNodeCount = data.messageCounts.length;
+        validNodeHashes = new bytes32[](validNodeCount);
+        NodeData memory currentNodeData = getInitialNodeData(data.initalProtoStateHash, confNode);
+        bool isValidChildType;
 
-        validNodeHashes = new bytes32[](nodeCount);
+        for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+            (currentNodeData, isValidChildType) = processNode(data, currentNodeData, nodeIndex);
 
-        bytes32 vmProtoStateHash = data.initalProtoStateHash;
-
-        for (uint256 i = 0; i < nodeCount; i++) {
-            uint256 branchType = data.branches[i];
-            bytes32 nodeDataHash;
-            if (branchType == VALID_CHILD_TYPE) {
-                (messagesOffset, nodeDataHash, vmProtoStateHash) = processValidNode(data, validNum, messagesOffset);
-                validNum++;
-            } else {
-                nodeDataHash = data.challengeNodeData[invalidNum];
-                invalidNum++;
-            }
-
-            confNode = childNodeHash(
-                confNode,
-                data.deadlineTicks[i],
-                nodeDataHash,
-                branchType,
-                vmProtoStateHash
-            );
-
-            if (branchType == VALID_CHILD_TYPE) {
-                validNodeHashes[validNum - 1] = confNode;
+            if (isValidChildType) {
+                validNodeHashes[currentNodeData.validNum - 1] = currentNodeData.nodeHash;
             }
         }
-        return (validNodeHashes, confNode);
+        return (validNodeHashes, currentNodeData.nodeHash);
     }
 
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 count) internal pure returns (bytes32, uint256) {
-        bool valid;
-        bytes32 hashVal = 0x00;
-        Value.Data memory messageVal;
-        uint256 offset = startOffset;
-        for (uint256 i = 0; i < count; i++) {
-            (valid, offset, messageVal) = Value.deserialize(messages, offset);
-            require(valid, "Invalid output message");
-            hashVal = keccak256(abi.encodePacked(hashVal, Value.hash(messageVal)));
+    function processNode(
+        ConfirmData memory data, 
+        NodeData memory nodeData, 
+        uint256 nodeIndex
+    )   
+        private
+        pure
+        returns (NodeData memory, bool)
+    {
+        uint256 branchType = data.branches[nodeIndex];
+        bool isValidChildType = (branchType == VALID_CHILD_TYPE);
+        bytes32 nodeDataHash;
+
+        if (isValidChildType) {
+            (nodeData.messagesOffset, 
+            nodeDataHash, 
+            nodeData.vmProtoStateHash) = processValidNode(data, nodeData.validNum, nodeData.messagesOffset);
+            nodeData.validNum++;
+        } else {
+            nodeDataHash = data.challengeNodeData[nodeData.invalidNum];
+            nodeData.invalidNum++;
         }
-        return (hashVal, offset);
+
+        nodeData.nodeHash = childNodeHash(
+            nodeData.nodeHash,
+            data.deadlineTicks[nodeIndex],
+            nodeDataHash,
+            branchType,
+            nodeData.vmProtoStateHash
+        );
+
+        return (nodeData, isValidChildType);
     }
 
     function processValidNode(
-        RollupUtils.ConfirmData memory data,
+        ConfirmData memory data,
         uint256 validNum,
         uint256 startOffset
     )
@@ -118,7 +139,20 @@ library RollupUtils {
         return (messagesOffset, nodeDataHash, vmProtoStateHash);
     }
 
-    function _verifyDataLength(RollupUtils.ConfirmData memory data) private pure{
+    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 count) internal pure returns (bytes32, uint256) {
+        bool valid;
+        bytes32 hashVal = 0x00;
+        Value.Data memory messageVal;
+        uint256 offset = startOffset;
+        for (uint256 i = 0; i < count; i++) {
+            (valid, offset, messageVal) = Value.deserialize(messages, offset);
+            require(valid, "Invalid output message");
+            hashVal = keccak256(abi.encodePacked(hashVal, Value.hash(messageVal)));
+        }
+        return (hashVal, offset);
+    }
+
+    function verifyDataLength(RollupUtils.ConfirmData memory data) private pure{
         uint256 nodeCount = data.branches.length;
         uint256 validNodeCount = data.messageCounts.length;
         require(data.vmProtoStateHashes.length == validNodeCount);
@@ -203,7 +237,7 @@ library RollupUtils {
         );
     }
 
-    function calculatePath(
+    function calculateLeafFromPath(
         bytes32 from,
         bytes32[] memory proof
     )
@@ -211,7 +245,7 @@ library RollupUtils {
         pure
         returns(bytes32)
     {
-        return calculatePathOffset(
+        return calculateLeafFromPath(
             from,
             proof,
             0,
@@ -219,7 +253,7 @@ library RollupUtils {
         );
     }
 
-    function calculatePathOffset(
+    function calculateLeafFromPath(
         bytes32 from,
         bytes32[] memory proof,
         uint256 start,

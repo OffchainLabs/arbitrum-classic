@@ -91,7 +91,7 @@ func (iv IntValue) CloneShallow() Value {
 }
 
 func (iv IntValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	if val.TypeCode() == TypeCodeHashPreImage {
 		return iv.Hash() == val.Hash()
 	} else if val.TypeCode() != TypeCodeInt {
 		return false

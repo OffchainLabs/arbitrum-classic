@@ -9,13 +9,12 @@ require (
 	github.com/hashicorp/golang-lru v0.0.0-20160813221303-0a025b7e63ad
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.5
+	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.5.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
 	github.com/pkg/errors v0.9.1
 	google.golang.org/protobuf v1.24.0
 )
-
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
 

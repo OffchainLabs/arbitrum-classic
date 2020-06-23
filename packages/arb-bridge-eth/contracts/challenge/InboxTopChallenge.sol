@@ -90,10 +90,10 @@ contract InboxTopChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_INBOX_TOP_TYPE);
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidInboxType());
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_INBOX_TOP_TYPE);
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidInboxType());
     }
 }

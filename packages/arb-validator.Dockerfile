@@ -50,7 +50,6 @@ USER user
 WORKDIR "/home/user/arb-validator"
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
-COPY --chown=user arb-avm-go/go.* /home/user/arb-avm-go/
 COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-validator/go.* /home/user/arb-validator/
 COPY --chown=user arb-validator-core/go.* /home/user/arb-validator-core/
@@ -59,7 +58,6 @@ RUN go mod download
 COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
 COPY --from=arb-avm-cpp /home/user/cavm/*.h /home/user/arb-avm-cpp/cavm/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
-COPY --chown=user arb-avm-go/ /home/user/arb-avm-go/
 COPY --chown=user arb-util/ /home/user/arb-util/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
 COPY --chown=user arb-validator-core/ /home/user/arb-validator-core/

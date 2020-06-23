@@ -51,19 +51,6 @@ type TupleValue struct {
 	deferredHashing bool
 }
 
-type HashPreImage struct {
-	HashImage common.Hash
-	Size      int64
-}
-
-func (val HashPreImage) Hash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(TypeCodeTuple),
-		hashing.Bytes32(val.HashImage),
-		hashing.Uint256(big.NewInt(val.Size)),
-	)
-}
-
 func NewEmptyTuple() TupleValue {
 	return TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
 }
@@ -209,15 +196,17 @@ func (tv TupleValue) CloneShallow() Value {
 	for i, b := range tv.Contents() {
 		if b.TypeCode() == TypeCodeInt {
 			newContents[i] = b
+		} else if b.TypeCode() == TypeCodeTuple {
+			newContents[i] = b.(TupleValue).GetPreImage()
 		} else {
-			newContents[i] = NewHashOnlyValueFromValue(b)
+			newContents[i] = b.CloneShallow()
 		}
 	}
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	if val.TypeCode() == TypeCodeHashPreImage {
 		return tv.Hash() == val.Hash()
 	} else if val.TypeCode() != TypeCodeTuple {
 		return false

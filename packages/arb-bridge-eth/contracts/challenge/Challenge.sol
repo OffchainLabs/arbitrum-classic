@@ -18,10 +18,8 @@ pragma solidity ^0.5.3;
 
 import "../vm/IStaking.sol";
 import "../libraries/RollupTime.sol";
-import "./ChallengeType.sol";
 
-
-contract Challenge is ChallengeType {
+contract Challenge {
 
     enum State {
         NoChallenge,

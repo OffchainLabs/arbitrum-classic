@@ -93,8 +93,39 @@ uint256_t MachineState::getMachineSize() {
     return machine_size;
 }
 
+namespace {
+std::vector<unsigned char> marshalState(const Code& code,
+                                        CodePointStub next_codepoint,
+                                        HashPreImage stackPreImage,
+                                        HashPreImage auxStackPreImage,
+                                        value registerVal,
+                                        value staticVal,
+                                        CodePointStub errpc) {
+    auto buf = std::vector<unsigned char>();
+    ::marshalStub(next_codepoint, buf, code);
+
+    stackPreImage.marshal(buf);
+    auxStackPreImage.marshal(buf);
+
+    ::marshalStub(registerVal, buf, code);
+    ::marshalStub(staticVal, buf, code);
+    ::marshalStub(errpc, buf, code);
+
+    return buf;
+}
+}  // namespace
+
+std::vector<unsigned char> MachineState::marshalState() const {
+    auto stackPreImage = stack.getHashPreImage();
+    auto auxStackPreImage = auxstack.getHashPreImage();
+
+    return ::marshalState(
+        static_values->code, CodePointStub{static_values->code[pc]},
+        stackPreImage, auxStackPreImage, registerVal, static_values->staticVal,
+        CodePointStub{static_values->code[errpc]});
+}
+
 std::vector<unsigned char> MachineState::marshalForProof() {
-    std::vector<unsigned char> buf;
     auto opcode = static_values->code[pc].op.opcode;
     std::vector<bool> stackPops = InstructionStackPops.at(opcode);
     bool includeImmediateVal = false;
@@ -103,18 +134,16 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         stackPops.erase(stackPops.begin());
     }
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
+
     auto stackProof = stack.marshalForProof(stackPops, static_values->code);
     auto auxStackProof =
         auxstack.marshalForProof(auxStackPops, static_values->code);
 
-    ::marshalStub(CodePointStub{static_values->code[pc + 1]}, buf,
-                  static_values->code);
-    stackProof.first.marshal(buf);
-    auxStackProof.first.marshal(buf);
-    ::marshalStub(registerVal, buf, static_values->code);
-    ::marshalStub(static_values->staticVal, buf, static_values->code);
-    ::marshalStub(CodePointStub{static_values->code[errpc]}, buf,
-                  static_values->code);
+    auto buf = ::marshalState(
+        static_values->code, CodePointStub{static_values->code[pc + 1]},
+        stackProof.first, auxStackProof.first, registerVal,
+        static_values->staticVal, CodePointStub{static_values->code[errpc]});
+
     static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
                                                static_values->code);
 

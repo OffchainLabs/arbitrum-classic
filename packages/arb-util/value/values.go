@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	TypeCodeInt       uint8 = 0
-	TypeCodeCodePoint uint8 = 1
-	TypeCodeHashOnly  uint8 = 2
-	TypeCodeTuple     uint8 = 3
+	TypeCodeInt          uint8 = 0
+	TypeCodeCodePoint    uint8 = 1
+	TypeCodeHashPreImage uint8 = 2
+	TypeCodeTuple        uint8 = 3
 )
 
 func TypeCodeName(code uint8) string {
@@ -36,7 +36,7 @@ func TypeCodeName(code uint8) string {
 		return "Int"
 	case TypeCodeTuple:
 		return "Tuple"
-	case TypeCodeHashOnly:
+	case TypeCodeHashPreImage:
 		return "HashOnly"
 	case TypeCodeCodePoint:
 		return "CodePoint"
@@ -97,8 +97,8 @@ func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 		return NewIntValueFromReader(r)
 	case tipe == TypeCodeCodePoint:
 		return NewCodePointValueFromReader(r)
-	case tipe == TypeCodeHashOnly:
-		return NewHashOnlyValueFromReader(r)
+	case tipe == TypeCodeHashPreImage:
+		return NewHashPreImageFromReader(r)
 	case tipe <= TypeCodeTuple+MaxTupleSize:
 		return NewSizedTupleFromReader(r, tipe-TypeCodeTuple)
 	default:

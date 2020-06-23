@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -36,7 +37,7 @@ var ChallengeTesterFuncSigs = map[string]string{
 }
 
 // ChallengeTesterBin is the compiled bytecode used for deploying new contracts.
-var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516102073803806102078339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b03199092169190911790556101a2806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80636bc3cd221461003b5780638f43ee3214610073575b600080fd5b6100716004803603606081101561005157600080fd5b506001600160a01b038135811691602081013590911690604001356100be565b005b610071600480360360a081101561008957600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100c3565b505050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013a57600080fd5b505af115801561014e573d6000803e3d6000fd5b505050506040513d602081101561016457600080fd5b5050505050505056fea265627a7a72315820bd8fc0c9d6bf3bde3d10ff96eff9b4aefcc24d6b3f20c9ed251e0306f690e14b64736f6c634300050d0032"
+var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516102073803806102078339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b03199092169190911790556101a2806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80636bc3cd221461003b5780638f43ee3214610073575b600080fd5b6100716004803603606081101561005157600080fd5b506001600160a01b038135811691602081013590911690604001356100be565b005b610071600480360360a081101561008957600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100c3565b505050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013a57600080fd5b505af115801561014e573d6000803e3d6000fd5b505050506040513d602081101561016457600080fd5b5050505050505056fea265627a7a72315820abd51c2b65e985e44043dab2106d8aab7d020adc47b9816107da161b7c338c8664736f6c634300050f0032"
 
 // DeployChallengeTester deploys a new Ethereum contract, binding an instance of ChallengeTester to it.
 func DeployChallengeTester(auth *bind.TransactOpts, backend bind.ContractBackend, challengeFactory_ common.Address) (common.Address, *types.Transaction, *ChallengeTester, error) {
@@ -196,7 +197,7 @@ func (_ChallengeTester *ChallengeTesterTransactorRaw) Transact(opts *bind.Transa
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
 func (_ChallengeTester *ChallengeTesterCaller) ResolveChallenge(opts *bind.CallOpts, winner common.Address, loser common.Address, challengeType *big.Int) error {
 	var ()
 	out := &[]interface{}{}
@@ -206,14 +207,14 @@ func (_ChallengeTester *ChallengeTesterCaller) ResolveChallenge(opts *bind.CallO
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
 func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
 	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
 }
 
 // ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) constant returns()
 func (_ChallengeTester *ChallengeTesterCallerSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
 	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
 }
@@ -528,7 +529,7 @@ func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.Tr
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
 func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -540,14 +541,14 @@ func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bi
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
 func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
 func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }

@@ -18,6 +18,7 @@ package challenges
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"testing"
 
@@ -26,33 +27,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
 func testExecutionChallenge(t *testing.T) {
 	t.Parallel()
-	contract := "../contract.ao"
 
-	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
-
-	timeBounds := &protocol.TimeBounds{
-		common.NewTimeBlocks(big.NewInt(100)),
-		common.NewTimeBlocks(big.NewInt(120)),
-		big.NewInt(100),
-		big.NewInt(120),
-	}
-	afterMachine := mach.Clone()
-	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
-
-	challengeHash := valprotocol.ExecutionDataHash(
-		numSteps,
-		precondition.Hash(),
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
-	)
+	mach := getTestMachine(t)
+	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
 
 	if err := testChallenge(
 		valprotocol.InvalidExecutionChildType,
@@ -87,4 +68,24 @@ func testExecutionChallenge(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
+	timeBounds := &protocol.TimeBounds{
+		common.NewTimeBlocks(big.NewInt(100)),
+		common.NewTimeBlocks(big.NewInt(120)),
+		big.NewInt(100),
+		big.NewInt(120),
+	}
+	afterMachine := mach.Clone()
+	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
+
+	challengeHash := valprotocol.ExecutionDataHash(
+		numSteps,
+		precondition.Hash(),
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
+	)
+
+	return challengeHash, precondition, numSteps
 }

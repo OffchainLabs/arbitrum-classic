@@ -84,6 +84,14 @@ contract ValueTester {
         return Value.getEthMsgData(data, startOffset);
     }
 
+    function bytesToBytestackHash(bytes memory data)
+        public
+        pure
+        returns(bytes32){
+        return Value.hash(Value.bytesToBytestackHash(data, 0, data.length));
+    }
+
+
     function bytesToBytestackHash(
         bytes memory data,
         uint256 startOffset,
@@ -94,6 +102,30 @@ contract ValueTester {
         returns(bytes32)
     {
         return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
+    }
+
+    function hashTuplePreImage(
+        bytes32 innerHash, 
+        uint256 valueSize
+    ) 
+        public pure returns (bytes32) 
+    {
+        return Value.hashTuplePreImage(innerHash, valueSize);
+    }
+
+    function hashEmptyTuple() public pure returns (bytes32)
+    {
+        return Value.hashEmptyTuple();
+    }
+
+    function hashTestTuple() public pure returns (bytes32) 
+    {
+        Value.Data[] memory tupVals = new Value.Data[](2);
+        tupVals[0] = Value.newInt(uint256(111));
+        tupVals[1] = Value.newTuple(new Value.Data[](0));
+        Value.Data memory tuple = Value.newTuple(tupVals);
+
+        return Value.hash(tuple);
     }
 
 }

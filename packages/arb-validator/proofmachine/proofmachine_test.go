@@ -62,7 +62,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	fmt.Println("proof test contact: ", contract)
-	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	basemach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 
 	if err != nil {
 		t.Fatal(err)
