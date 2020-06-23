@@ -17,7 +17,7 @@
 pragma solidity ^0.5.3;
 
 contract DataPackets {
-    mapping(uint => Packet) public packets;
+    mapping(bytes32 => Packet) public packets;
 
     struct Packet {
         bytes data;
@@ -26,12 +26,15 @@ contract DataPackets {
     }
 
     function sendDataPacket(bytes calldata encodedData, uint messageType) external {
-        packets[messageType] = Packet(
+        packets[ getDataPacketId(msg.sender, messageType) ] = Packet(
             {
                 data: encodedData,
                 sender: msg.sender,
                 blockHeight: block.number
             }
         );
+    }
+    function getDataPacketId(address sender, uint messageType) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(sender, messageType));
     }
 }
