@@ -2,6 +2,8 @@ import { task, usePlugin } from '@nomiclabs/buidler/config'
 
 usePlugin('@nomiclabs/buidler-waffle')
 usePlugin('buidler-typechain')
+usePlugin('solidity-coverage')
+usePlugin('buidler-spdx-license-identifier')
 
 // This is a sample Buidler task. To learn how to create your own go to
 // https://buidler.dev/guides/create-task.html
@@ -29,5 +31,9 @@ module.exports = {
   typechain: {
     outDir: 'build/types',
     target: 'ethers-v4',
+  },
+  spdxLicenseIdentifier: {
+    overwrite: false,
+    runOnCompile: true,
   },
 }

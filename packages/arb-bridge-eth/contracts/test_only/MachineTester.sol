@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2012, Offchain Labs, Inc.
  *
