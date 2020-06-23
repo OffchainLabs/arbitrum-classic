@@ -18,61 +18,29 @@ package challenges
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func testMessagesChallenge(t *testing.T) {
 	t.Parallel()
-	messageStack := structures.NewMessageStack()
-	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.Eth{
-				To:    common.Address{},
-				From:  common.Address{},
-				Value: big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
-	}
-
-	beforeInbox, err := messageStack.GetHashAtIndex(big.NewInt(2))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	messageStack := getMsgStack()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
-	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(messageCount))
-	afterInbox, err := messageStack.GetHashAtIndex(startIndex)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	inbox, err := messageStack.GenerateVMInbox(beforeInbox, messageCount)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	importedMessages := inbox.Hash().Hash()
-	challengeHash := valprotocol.MessageChallengeDataHash(
-		beforeInbox,
-		afterInbox,
-		value.NewEmptyTuple().Hash(),
-		importedMessages,
-		big.NewInt(4),
-	)
+	beforeInbox, challengeHash := getMsgChallengeData(
+		t,
+		messageStack,
+		startIndex,
+		messageCount)
 
 	if err := testChallenge(
 		valprotocol.InvalidMessagesChildType,
@@ -108,4 +76,56 @@ func testMessagesChallenge(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func getMsgChallengeData(
+	t *testing.T,
+	messageStack *structures.MessageStack,
+	startIndex *big.Int,
+	msgCount uint64,
+) (common.Hash, common.Hash) {
+
+	beforeInbox, err := messageStack.GetHashAtIndex(startIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(msgCount))
+	afterInbox, err := messageStack.GetHashAtIndex(startIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inbox, err := messageStack.GenerateVMInbox(beforeInbox, msgCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	importedMessages := inbox.Hash().Hash()
+	challengeHash := valprotocol.MessageChallengeDataHash(
+		beforeInbox,
+		afterInbox,
+		value.NewEmptyTuple().Hash(),
+		importedMessages,
+		big.NewInt(4),
+	)
+	return beforeInbox, challengeHash
+}
+
+func getMsgStack() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: message.Eth{
+				To:    common.Address{},
+				From:  common.Address{},
+				Value: big.NewInt(6745),
+			},
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
 }

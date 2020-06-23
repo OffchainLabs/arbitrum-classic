@@ -60,6 +60,7 @@ func TestMain(m *testing.M) {
 		auth,
 		ethclnt,
 	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -190,7 +191,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
-	dest := common.Address{4, 65, 23, 45, 65}
+	dest := common.RandAddress()
 	results := make([]evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
 	messages = append(messages, message.Eth{
@@ -203,6 +204,7 @@ func TestConfirmAssertion(t *testing.T) {
 		results = append(results, stop)
 		messages = append(messages, message.NewRandomEth().AsInboxValue())
 	}
+
 	assertion := evm.NewRandomEVMAssertion(results, messages)
 	assertion.NumGas = 100
 	prepared := chain.prepareAssertion()

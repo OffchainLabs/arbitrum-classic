@@ -138,7 +138,7 @@ library Value {
         return hashes;
     }
 
-    function hashTuplePreImage(Data memory preImage) private pure returns (bytes32) {
+    function hashTuplePreImage(Data memory preImage) internal pure returns (bytes32) {
         require(preImage.typeCode == HASH_PRE_IMAGE_TYPECODE, "Must be PreImageHsh");
         return hashTuplePreImage(bytes32(preImage.intVal), preImage.size);
     }
@@ -205,11 +205,7 @@ library Value {
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
             return hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint);
         } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
-            if(val.cpVal.nextCodePoint == bytes32(uint(1))){
-                return bytes32(val.intVal);
-            }else{
-                return hashTuplePreImage(val);
-            }
+            return hashTuplePreImage(val);
         } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
             return hashTuple(val);
         } else {

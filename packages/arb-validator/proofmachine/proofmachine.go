@@ -158,6 +158,10 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	return m.machine.MarshalForProof()
 }
 
+func (m *Machine) MarshalState() ([]byte, error) {
+	return m.machine.MarshalState()
+}
+
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return m.machine.Checkpoint(storage)
 }

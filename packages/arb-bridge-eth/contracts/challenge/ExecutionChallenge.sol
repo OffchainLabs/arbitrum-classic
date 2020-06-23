@@ -259,10 +259,10 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_EXECUTION_TYPE);
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidExType());
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_EXECUTION_TYPE);
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidExType());
     }
 }

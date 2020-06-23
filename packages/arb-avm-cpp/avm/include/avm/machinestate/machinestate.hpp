@@ -100,6 +100,7 @@ struct MachineState {
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();
+    std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
     BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;

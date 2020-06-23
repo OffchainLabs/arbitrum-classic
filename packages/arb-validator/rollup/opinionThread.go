@@ -18,7 +18,6 @@ package rollup
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -30,54 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
-
-type PreparedAssertion struct {
-	prev        *structures.Node
-	beforeState *valprotocol.VMProtoData
-	params      *valprotocol.AssertionParams
-	claim       *valprotocol.AssertionClaim
-	assertion   *protocol.ExecutionAssertion
-	machine     machine.Machine
-}
-
-func (pa *PreparedAssertion) String() string {
-	return fmt.Sprintf(
-		"PreparedAssertion(%v, %v, %v, %v, %v)",
-		pa.prev.Hash(),
-		pa.beforeState,
-		pa.params,
-		pa.claim,
-		pa.assertion,
-	)
-}
-
-func (pa *PreparedAssertion) Clone() *PreparedAssertion {
-	return &PreparedAssertion{
-		prev:        pa.prev,
-		beforeState: pa.beforeState.Clone(),
-		params:      pa.params.Clone(),
-		claim:       pa.claim.Clone(),
-		assertion:   pa.assertion,
-		machine:     pa.machine,
-	}
-}
-
-func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
-	node := structures.NewValidNodeFromPrev(
-		pa.prev,
-		valprotocol.NewDisputableNode(
-			pa.params,
-			pa.claim,
-			common.Hash{},
-			big.NewInt(0),
-		),
-		chainParams,
-		common.BlocksFromSeconds(time.Now().Unix()),
-		common.Hash{},
-	)
-	_ = node.UpdateValidOpinion(pa.machine, pa.assertion)
-	return node
-}
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {

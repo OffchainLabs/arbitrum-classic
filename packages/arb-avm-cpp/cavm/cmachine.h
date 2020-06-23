@@ -76,6 +76,8 @@ RawAssertion machineExecuteAssertion(CMachine* m,
 
 ByteSlice machineMarshallForProof(CMachine* m);
 
+ByteSlice machineMarshallState(CMachine* m);
+
 void machinePrint(CMachine* m);
 
 int checkpointMachine(CMachine* m, CCheckpointStorage* storage);

@@ -389,10 +389,10 @@ contract MessagesChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_MESSAGES_TYPE);
+        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidMsgsType());
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_MESSAGES_TYPE);
+        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidMsgsType());
     }
 }

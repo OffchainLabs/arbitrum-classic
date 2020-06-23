@@ -92,7 +92,7 @@ func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
 	if includeVal {
 		return MarshalValueForProof(op.Val.CloneShallow(), wr)
 	}
-	return MarshalValueForProof(NewHashOnlyValueFromValue(op.Val), wr)
+	return MarshalValueForProof(op.Val, wr)
 }
 
 func (op BasicOperation) TypeCode() uint8 {
@@ -207,7 +207,7 @@ func (cv CodePointValue) CloneShallow() Value {
 }
 
 func (cv CodePointValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashOnly {
+	if val.TypeCode() == TypeCodeHashPreImage {
 		return cv.Hash() == val.Hash()
 	} else if val.TypeCode() != TypeCodeCodePoint {
 		return false

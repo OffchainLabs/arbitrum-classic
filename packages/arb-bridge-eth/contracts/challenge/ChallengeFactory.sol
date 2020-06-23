@@ -20,13 +20,12 @@ import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
 import "./IBisectionChallenge.sol";
-import "./ChallengeType.sol";
+import "./ChallengeUtils.sol";
 
-
-contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
+contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     // Invalid challenge type
-    string constant INVALID_TYPE = "INVALID_TYPE";
+    string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
     address public messagesChallengeTemplate;
     address public inboxTopChallengeTemplate;
@@ -102,14 +101,14 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
     }
 
     function getChallengeTemplate(uint256 challengeType) private view returns(address) {
-        if (challengeType == INVALID_INBOX_TOP_TYPE) {
+        if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
-        } else if (challengeType == INVALID_MESSAGES_TYPE) {
+        } else if (challengeType == ChallengeUtils.getInvalidMsgsType()) {
             return messagesChallengeTemplate;
-        } else if (challengeType == INVALID_EXECUTION_TYPE) {
+        } else if (challengeType == ChallengeUtils.getInvalidExType()) {
             return executionChallengeTemplate;
         } else {
-            require(false, INVALID_TYPE);
+            require(false, INVALID_TYPE_STR);
         }
     }
 }
