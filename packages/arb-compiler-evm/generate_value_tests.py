@@ -26,9 +26,12 @@ if __name__ == "__main__":
     def add_case(val, name):
         data = io.BytesIO()
         marshall.marshall_value(val, data)
+        proof_data = io.BytesIO()
+        marshall.marshall_value(val, proof_data, True)
         cases.append(
             {
                 "value": data.getvalue().hex(),
+                "proof_value": proof_data.getvalue().hex(),
                 "hash": value.value_hash(val).hex(),
                 "name": name,
             }
@@ -55,4 +58,6 @@ if __name__ == "__main__":
         value.Tuple([nest1_tup, simple_tup, nest1_tup, simple_tup]), "double_nested_tup"
     )
     with open("test_cases.json", "w") as f:
+        json.dump(cases, f, indent=4)
+    with open("../arb-bridge-eth/test/test_cases.json", "w") as f:
         json.dump(cases, f, indent=4)
