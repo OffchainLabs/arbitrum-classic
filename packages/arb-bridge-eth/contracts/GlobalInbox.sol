@@ -27,7 +27,7 @@ import "./arch/Protocol.sol";
 import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
-import "bytes/contracts/BytesLib.sol";
+import "./libraries/BytesLib.sol";
 
 contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGlobalInbox, PaymentRecords {
     uint8 internal constant TRANSACTION_MSG = 0;

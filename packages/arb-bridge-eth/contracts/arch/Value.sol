@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "bytes/contracts/BytesLib.sol";
+import "../libraries/BytesLib.sol";
 
 
 library Value {
