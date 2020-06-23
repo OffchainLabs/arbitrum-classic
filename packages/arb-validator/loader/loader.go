@@ -22,14 +22,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
 )
 
 func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine.Machine, error) {
 	if strings.EqualFold(vmtype, "cpp") {
 		return cmachine.New(fileName)
-	} else if strings.EqualFold(vmtype, "test") {
-		return testmachine.New(fileName, warnMode)
 	} else {
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}

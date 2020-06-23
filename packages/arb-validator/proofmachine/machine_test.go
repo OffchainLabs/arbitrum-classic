@@ -66,7 +66,7 @@ func getTester(m *testing.T) *machinetester.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := loader.LoadMachineFromFile("../contract.ao", true, "test")
+	machine, err := loader.LoadMachineFromFile("../contract.ao", true, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}

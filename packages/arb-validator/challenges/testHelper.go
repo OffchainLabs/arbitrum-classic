@@ -186,7 +186,7 @@ func getAuth() (*ethclient.Client, *ethclient.Client, error) {
 func getTestMachine(t *testing.T) machine.Machine {
 	contract := "../contract.ao"
 
-	mach, err := loader.LoadMachineFromFile(contract, true, "test")
+	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
