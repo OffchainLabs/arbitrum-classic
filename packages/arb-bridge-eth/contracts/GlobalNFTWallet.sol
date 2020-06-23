@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.3;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "./interfaces/IERC721.sol";
 
 
 contract GlobalNFTWallet {

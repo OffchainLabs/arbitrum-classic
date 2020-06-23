@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.3;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IERC20.sol";
 
 
 contract GlobalFTWallet {
