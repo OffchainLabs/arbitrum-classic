@@ -212,6 +212,14 @@ func (vm *EthRollupWatcher) GetEvents(ctx context.Context, blockId *common.Block
 //	return nil
 //}
 
+func (vm *EthRollupWatcher) GetAllEvents(
+	ctx context.Context,
+	fromBlock *big.Int,
+	toBlock *big.Int,
+) ([]arbbridge.Event, error) {
+	return nil, nil
+}
+
 func (vm *EthRollupWatcher) GetParams(ctx context.Context) (valprotocol.ChainParams, error) {
 	return valprotocol.ChainParams{
 		StakeRequirement:        nil,
@@ -227,10 +235,14 @@ func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, e
 	return common.Address{}, nil
 }
 
-func (vm *EthRollupWatcher) GetCreationInfo(ctx context.Context) (*common.BlockId, common.Hash, error) {
-	return nil, common.Hash{}, nil
+func (vm *EthRollupWatcher) GetCreationInfo(ctx context.Context) (common.Hash, *common.BlockId, common.Hash, error) {
+	return common.Hash{}, nil, common.Hash{}, nil
 }
 
 func (vm *EthRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 	return "1", nil
+}
+
+func (vm *EthRollupWatcher) IsStaked(address common.Address) (bool, error) {
+	return false, nil
 }

@@ -47,7 +47,7 @@ type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.Blo
 
 func testChallenge(
 	challengeType valprotocol.ChildType,
-	//challengeHash [32]byte,
+	challengeHash [32]byte,
 	asserterKey string,
 	challengerKey string,
 	asserterFunc ChallengeFunc,
@@ -198,7 +198,7 @@ func getChallengeInfo(
 	asserterKey string,
 	challengerKey string,
 	challengeType valprotocol.ChildType,
-	//challengeHash [32]byte,
+	challengeHash [32]byte,
 ) (*ethbridge.EthArbAuthClient, *ethbridge.EthArbAuthClient, common.Address, *common.BlockId, error) {
 	auth1, err := test.SetupAuth(asserterKey)
 	if err != nil {

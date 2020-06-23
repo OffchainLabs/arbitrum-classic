@@ -169,7 +169,8 @@ func stakeLatestValid(ctx context.Context, chain *ChainObserver, stakingKey *Sta
 	stakeAmount := chain.nodeGraph.params.StakeRequirement
 
 	log.Println("Placing stake for", stakingKey.client.Address())
-	return stakingKey.contract.PlaceStake(ctx, stakeAmount, proof1, proof2)
+	_, err := stakingKey.contract.PlaceStake(ctx, stakeAmount, proof1, proof2)
+	return err
 }
 
 func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) error {
@@ -186,18 +187,37 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	return nil
 }
 
-func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *PreparedAssertion, proof []common.Hash) error {
+func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *PreparedAssertion, proof []common.Hash) ([]arbbridge.Event, error) {
 	return rollup.MakeAssertion(
 		ctx,
-		prepared.prevPrevLeafHash,
-		prepared.prevDataHash,
-		prepared.prevDeadline,
-		prepared.prevChildType,
+		prepared.prev.PrevHash(),
+		prepared.prev.NodeDataHash(),
+		prepared.prev.Deadline(),
+		prepared.prev.LinkType(),
 		prepared.beforeState,
 		prepared.params,
 		prepared.claim,
 		prepared.getAssertionParams(),
 		proof,
+	)
+}
+
+func initiateChallenge(ctx context.Context, rollup arbbridge.ArbRollup, opp *challengeOpportunity) ([]arbbridge.Event, error) {
+	return rollup.StartChallenge(
+		ctx,
+		opp.asserter,
+		opp.challenger,
+		opp.prevNodeHash,
+		opp.deadlineTicks.Val,
+		opp.asserterNodeType,
+		opp.challengerNodeType,
+		opp.asserterVMProtoHash,
+		opp.challengerVMProtoHash,
+		opp.asserterProof,
+		opp.challengerProof,
+		opp.asserterNodeHash,
+		opp.challengerDataHash,
+		opp.challengerPeriodTicks,
 	)
 }
 
@@ -211,15 +231,9 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
-	prevParams, alreadySent := lis.broadcastAssertions[prepared.leafHash]
+	prevParams, alreadySent := lis.broadcastAssertions[prepared.prev.Hash()]
 	lis.Unlock()
 	if alreadySent && prevParams.Equals(prepared.params) {
-		return
-	}
-
-	leaf, ok := chain.nodeGraph.nodeFromHash[prepared.leafHash]
-	if !ok {
-		log.Println("Prepared assertion on top of invalid node")
 		return
 	}
 
@@ -229,21 +243,21 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 			// stakingKey is not staked
 			continue
 		}
-		proof := structures.GeneratePathProof(stakerPos.location, leaf)
+		proof := structures.GeneratePathProof(stakerPos.location, prepared.prev)
 		if proof == nil {
 			// staker can't move to new asertion
 			continue
 		}
 		lis.Lock()
-		lis.broadcastAssertions[prepared.leafHash] = prepared.params
+		lis.broadcastAssertions[prepared.prev.Hash()] = prepared.params
 		lis.Unlock()
 		log.Printf("%v is making an assertion\n", stakingAddress)
 		go func() {
-			err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
+			_, err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				log.Println("Error making assertion", err)
+				log.Println("Error making assertion", prepared, err)
 				lis.Lock()
-				delete(lis.broadcastAssertions, prepared.leafHash)
+				delete(lis.broadcastAssertions, prepared.prev.Hash())
 				lis.Unlock()
 			} else {
 				log.Println("Successfully made assertion")
@@ -285,25 +299,6 @@ func (lis *ValidatorChainListener) AssertionPrepared(ctx context.Context, chain 
 	}
 }
 
-func (lis *ValidatorChainListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) error {
-	return lis.actor.StartChallenge(
-		ctx,
-		opp.asserter,
-		opp.challenger,
-		opp.prevNodeHash,
-		opp.deadlineTicks.Val,
-		opp.asserterNodeType,
-		opp.challengerNodeType,
-		opp.asserterVMProtoHash,
-		opp.challengerVMProtoHash,
-		opp.asserterProof,
-		opp.challengerProof,
-		opp.asserterNodeHash,
-		opp.challengerDataHash,
-		opp.challengerPeriodTicks,
-	)
-}
-
 func (lis *ValidatorChainListener) StakeCreated(ctx context.Context, chain *ChainObserver, ev arbbridge.StakeCreatedEvent) {
 	_, ok := lis.stakingKeys[ev.Staker]
 	if ok {
@@ -314,7 +309,7 @@ func (lis *ValidatorChainListener) StakeCreated(ctx context.Context, chain *Chai
 		opp := chain.nodeGraph.checkChallengeOpportunityAny(staker)
 		if opp != nil {
 			go func() {
-				err := lis.initiateChallenge(ctx, opp)
+				_, err := initiateChallenge(ctx, lis.actor, opp)
 				if err != nil {
 					log.Println("Failed to initiate challenge", err)
 				} else {
@@ -352,7 +347,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 		opp := chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
 		if opp != nil {
 			go func() {
-				err := lis.initiateChallenge(ctx, opp)
+				_, err := initiateChallenge(ctx, lis.actor, opp)
 				if err != nil {
 					log.Println("Failed to initiate challenge", err)
 				} else {
@@ -365,7 +360,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	opp := chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 	if opp != nil {
 		go func() {
-			err := lis.initiateChallenge(ctx, opp)
+			_, err := initiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
 				log.Println("Failed to initiate challenge", err)
 			} else {
@@ -549,7 +544,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, _ *Chai
 	confClone := conf.Clone()
 
 	go func() {
-		err := lis.actor.Confirm(ctx, confClone)
+		_, err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
 			log.Println("Failed to confirm valid node", err)
 			lis.Lock()
@@ -578,7 +573,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, _ *ChainOb
 	}
 	lis.Unlock()
 	go func() {
-		err := lis.actor.PruneLeaves(ctx, leavesToPrune)
+		_, err := lis.actor.PruneLeaves(ctx, leavesToPrune)
 		if err != nil {
 			log.Println("Failed pruning leaves", err)
 			lis.Lock()
@@ -665,7 +660,7 @@ func (lis *ValidatorChainListener) AdvancedKnownNode(ctx context.Context, chain 
 		proof2 := structures.GeneratePathProof(node, chain.nodeGraph.getLeaf(node))
 		stakingAddr := stakingAddress
 		go func() {
-			err := lis.actor.MoveStake(ctx, proof1, proof2)
+			_, err := lis.actor.MoveStake(ctx, proof1, proof2)
 			lis.Lock()
 			if err != nil {
 				log.Println("Failed moving stake", err)

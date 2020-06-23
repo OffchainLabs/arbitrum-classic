@@ -23,13 +23,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 )
 
 type nodeInfo struct {
-	EVMLogs              []logsInfo
+	EVMLogs              [][]evm.Log
 	EVMTransactionHashes []common.Hash
 
 	// These members contain the logs and messages from the assertion in this
@@ -42,29 +43,37 @@ type nodeInfo struct {
 	AVMLogsAccHashes []string
 	AVMLogsValHashes []string
 
-	NodeHash   common.Hash
-	NodeHeight uint64
-
-	// This is the transaction hash of the l1 transaction that was responsible
-	// for creating this node
-	L1TxHash common.Hash
+	Location *evm.NodeLocation
 }
 
 func newNodeInfo() *nodeInfo {
 	return &nodeInfo{}
 }
 
-func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash) []logResponse {
-	logs := make([]logResponse, 0)
-	for _, txLogs := range ni.EVMLogs {
-		for _, evmLog := range txLogs.Logs {
-			if evmLog.MatchesQuery(addresses, topics) {
-				logs = append(logs, logResponse{
-					Log:     evmLog,
-					TxIndex: txLogs.TxIndex,
-					TxHash:  txLogs.TxHash,
-				})
+func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash) []evm.FullLog {
+	logs := make([]evm.FullLog, 0)
+	for _, evmLog := range ni.fullLogs() {
+		if evmLog.MatchesQuery(addresses, topics) {
+			logs = append(logs, evmLog)
+		}
+	}
+	return logs
+}
+
+func (ni *nodeInfo) fullLogs() []evm.FullLog {
+	logs := make([]evm.FullLog, 0)
+	logIndex := uint64(0)
+	for i, txLogs := range ni.EVMLogs {
+		for _, evmLog := range txLogs {
+			l := evm.FullLog{
+				Log:      evmLog,
+				TxIndex:  uint64(i),
+				TxHash:   ni.EVMTransactionHashes[i],
+				Location: ni.Location,
+				Index:    logIndex,
 			}
+			logs = append(logs, l)
+			logIndex++
 		}
 	}
 	return logs
@@ -72,21 +81,8 @@ func (ni *nodeInfo) FindLogs(addresses []common.Address, topics [][]common.Hash)
 
 func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
 	ethLogs := make([]*types.Log, 0)
-	logIndex := uint(0)
-	for i, logsInfo := range ni.EVMLogs {
-		for _, ethLog := range logsInfo.Logs {
-			l := evm.FullLog{
-				Log:        ethLog,
-				TxIndex:    uint64(i),
-				TxHash:     logsInfo.TxHash,
-				NodeHeight: ni.NodeHeight,
-				NodeHash:   ni.NodeHash,
-			}.ToEVMLog()
-			l.Index = logIndex
-
-			ethLogs = append(ethLogs, l)
-			logIndex++
-		}
+	for _, evmLog := range ni.fullLogs() {
+		ethLogs = append(ethLogs, evmLog.ToEVMLog())
 	}
 	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 }
@@ -115,12 +111,24 @@ func stringSlicesEqual(a []string, b []string) bool {
 	return true
 }
 
-func logSlicesEqual(a []logsInfo, b []logsInfo) bool {
+func logSlicesEqual(a []evm.Log, b []evm.Log) bool {
 	if len(a) != len(b) {
 		return false
 	}
 	for i, t := range a {
 		if !t.Equals(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func nestedLogSlicesEqual(a [][]evm.Log, b [][]evm.Log) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, t := range a {
+		if !logSlicesEqual(t, b[i]) {
 			return false
 		}
 	}
@@ -140,36 +148,79 @@ func hashSlicesEqual(a []common.Hash, b []common.Hash) bool {
 }
 
 func (ni *nodeInfo) Equals(o *nodeInfo) bool {
-	return logSlicesEqual(ni.EVMLogs, o.EVMLogs) &&
+	return nestedLogSlicesEqual(ni.EVMLogs, o.EVMLogs) &&
 		hashSlicesEqual(ni.EVMTransactionHashes, o.EVMTransactionHashes) &&
 		valueSlicesEqual(ni.AVMLogs, o.AVMLogs) &&
 		valueSlicesEqual(ni.AVMMessages, o.AVMMessages) &&
 		stringSlicesEqual(ni.AVMLogsAccHashes, o.AVMLogsAccHashes) &&
 		stringSlicesEqual(ni.AVMLogsValHashes, o.AVMLogsValHashes) &&
-		ni.NodeHash == o.NodeHash &&
-		ni.NodeHeight == o.NodeHeight
+		ni.Location.Equals(o.Location)
 }
 
-func processNode(node *structures.Node, chain common.Address) *nodeInfo {
-	nodeInfo := newNodeInfo()
-	nodeInfo.NodeHash = node.Hash()
-	nodeInfo.NodeHeight = node.Depth()
-	txHash := node.AssertionTxHash()
-	nodeInfo.L1TxHash = txHash
+func (ni *nodeInfo) getTxInfo(txIndex uint64) *evm.TxInfo {
+	zero := common.Hash{}
 
-	if node.LinkType() != valprotocol.ValidChildType {
-		return nodeInfo
+	var logsPostHash string
+	if len(ni.AVMLogsAccHashes) > 0 {
+		logsPostHash = ni.AVMLogsAccHashes[len(ni.AVMLogsAccHashes)-1]
+	} else {
+		logsPostHash = hexutil.Encode(zero[:])
 	}
 
-	logs := node.Assertion().Logs
+	logsPreHash := hexutil.Encode(zero[:])
+	if txIndex > 0 {
+		logsPreHash = ni.AVMLogsAccHashes[txIndex-1] // Previous acc hash
+	}
+	logsValHashes := ni.AVMLogsValHashes[txIndex+1:] // log acc hashes after logVal
 
-	nodeInfo.AVMMessages = node.Assertion().OutMsgs
-	nodeInfo.AVMLogs = node.Assertion().Logs
-	nodeInfo.AVMLogsValHashes = make([]string, 0, len(logs))
-	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(logs))
+	startLogIndex := uint64(0)
+	for _, logs := range ni.EVMLogs[:txIndex] {
+		startLogIndex += uint64(len(logs))
+	}
+
+	return &evm.TxInfo{
+		TransactionHash:  ni.EVMTransactionHashes[txIndex],
+		TransactionIndex: txIndex,
+		RawVal:           ni.AVMLogs[txIndex],
+		Location:         ni.Location,
+		StartLogIndex:    startLogIndex,
+		Proof: &evm.AVMLogProof{
+			LogPreHash:   logsPreHash,
+			LogPostHash:  logsPostHash,
+			LogValHashes: logsValHashes,
+		},
+	}
+}
+
+func processNode(node *structures.Node) (*nodeInfo, error) {
+	nodeInfo := newNodeInfo()
+
+	l1TxHashString := ""
+	l1TxHash := node.AssertionTxHash()
+	emtpyHash := common.Hash{}
+	if l1TxHash != emtpyHash {
+		l1TxHashString = l1TxHash.String()
+	}
+
+	nodeInfo.Location = &evm.NodeLocation{
+		NodeHeight: node.Depth(),
+		NodeHash:   node.Hash().String(),
+		L1TxHash:   l1TxHashString,
+	}
+
+	if node.LinkType() != valprotocol.ValidChildType {
+		return nodeInfo, nil
+	}
+
+	assertion := node.Assertion()
+
+	nodeInfo.AVMMessages = assertion.ParseOutMessages()
+	nodeInfo.AVMLogs = assertion.ParseLogs()
+	nodeInfo.AVMLogsValHashes = make([]string, 0, len(nodeInfo.AVMLogs))
+	nodeInfo.AVMLogsAccHashes = make([]string, 0, len(nodeInfo.AVMLogs))
 
 	acc := common.Hash{}
-	for _, logsVal := range logs {
+	for _, logsVal := range nodeInfo.AVMLogs {
 		logsValHash := logsVal.Hash()
 		nodeInfo.AVMLogsValHashes = append(nodeInfo.AVMLogsValHashes,
 			hexutil.Encode(logsValHash[:]))
@@ -181,55 +232,25 @@ func processNode(node *structures.Node, chain common.Address) *nodeInfo {
 			hexutil.Encode(acc.Bytes()))
 	}
 
-	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(logs))
+	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(nodeInfo.AVMLogs))
 
-	for i, logVal := range logs {
-		evmVal, err := evm.ProcessLog(logVal, chain)
+	for _, logVal := range nodeInfo.AVMLogs {
+		evmVal, err := evm.ProcessLog(logVal)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue
 		}
-		msg := evmVal.GetEthMsg()
-		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, logsInfo{
-			Logs:    evmVal.GetLogs(),
-			TxIndex: uint64(i),
-			TxHash:  msg.TxHash(),
-		})
+		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, evmVal.GetLogs())
 
 		if evmVal, ok := evmVal.(evm.Revert); ok {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
 		}
-		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, msg.TxHash())
-	}
-	return nodeInfo
-}
 
-func getTxInfo(txHash common.Hash, nodeInfo *nodeInfo, txIndex uint64) evm.TxInfo {
-	zero := common.Hash{}
-
-	var logsPostHash string
-	if len(nodeInfo.AVMLogsAccHashes) > 0 {
-		logsPostHash = nodeInfo.AVMLogsAccHashes[len(nodeInfo.AVMLogsAccHashes)-1]
-	} else {
-		logsPostHash = hexutil.Encode(zero[:])
+		delivered, err := message.UnmarshalRawDelivered(evmVal.GetDeliveredMessage())
+		if err != nil {
+			return nil, err
+		}
+		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, delivered.TxHash())
 	}
-
-	logsPreHash := hexutil.Encode(zero[:])
-	if txIndex > 0 {
-		logsPreHash = nodeInfo.AVMLogsAccHashes[txIndex-1] // Previous acc hash
-	}
-	logsValHashes := nodeInfo.AVMLogsValHashes[txIndex+1:] // log acc hashes after logVal
-
-	return evm.TxInfo{
-		Found:            true,
-		NodeHeight:       nodeInfo.NodeHeight,
-		NodeHash:         nodeInfo.NodeHash,
-		TransactionHash:  txHash,
-		TransactionIndex: txIndex,
-		RawVal:           nodeInfo.AVMLogs[txIndex],
-		LogsPreHash:      logsPreHash,
-		LogsPostHash:     logsPostHash,
-		LogsValHashes:    logsValHashes,
-		OnChainTxHash:    nodeInfo.L1TxHash,
-	}
+	return nodeInfo, nil
 }

@@ -58,7 +58,7 @@ func (c *inboxTopChallenge) Bisect(
 	defer c.auth.Unlock()
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
-		HashSliceToRaw(chainHashes),
+		common.HashSliceToRaw(chainHashes),
 		chainLength,
 	)
 	if err != nil {
@@ -67,7 +67,7 @@ func (c *inboxTopChallenge) Bisect(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			HashSliceToRaw(chainHashes),
+			common.HashSliceToRaw(chainHashes),
 			chainLength,
 		)
 	}

@@ -68,6 +68,6 @@ func (e EvilMachine) ExecuteAssertion(
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, timeBounds, inbox, maxWallTime)
-	assn.AfterHash = _tweakHash(assn.AfterHash)
+	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }

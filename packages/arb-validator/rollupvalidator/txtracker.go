@@ -43,25 +43,6 @@ func (l logResponse) Equals(o logResponse) bool {
 		l.TxHash == o.TxHash
 }
 
-type logsInfo struct {
-	Logs    []evm.Log
-	TxIndex uint64
-	TxHash  common.Hash
-}
-
-func (l logsInfo) Equals(o logsInfo) bool {
-	if len(l.Logs) != len(o.Logs) {
-		return false
-	}
-	for i, l := range l.Logs {
-		if !l.Equals(o.Logs[i]) {
-			return false
-		}
-	}
-	return l.TxHash == o.TxHash &&
-		l.TxIndex == o.TxIndex
-}
-
 // txTracker is thread safe
 type txTracker struct {
 	rollup.NoopListener
@@ -69,41 +50,50 @@ type txTracker struct {
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex
-	txDB          *txDB
-	maxNodeHeight uint64
-	initialized   bool
+	txDB            *txDB
+	latestLocation  *evm.NodeLocation
+	pendingLocation *evm.NodeLocation
+	initialized     bool
 }
 
 func newTxTracker(
 	db machine.CheckpointStorage,
-	ns machine.NodeStore,
-	chainAddress common.Address,
+	ns machine.ConfirmedNodeStore,
 ) (*txTracker, error) {
-	txdb, err := newTxDB(db, ns, chainAddress)
+	txdb, err := newTxDB(db, ns)
 	if err != nil {
 		return nil, err
 	}
 	return &txTracker{
-		txDB:          txdb,
-		chainAddress:  chainAddress,
-		maxNodeHeight: 0,
-		initialized:   false,
+		txDB:           txdb,
+		latestLocation: &evm.NodeLocation{NodeHeight: 0},
+		initialized:    false,
 	}, nil
+}
+
+func getNodeLocation(node *structures.Node) *evm.NodeLocation {
+	return &evm.NodeLocation{
+		NodeHash:   node.Hash().String(),
+		NodeHeight: node.Depth(),
+		L1TxHash:   node.AssertionTxHash().String(),
+	}
 }
 
 // Delete assertion and transaction data from the reorged blocks if there are any
 func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
 	startDepth := node.Depth()
+	location := getNodeLocation(node)
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
+		tr.txDB.pendingTransactions = make(map[common.Hash]*evm.TxInfo)
 		// First remove any data from reorged nodes
-		for i := tr.maxNodeHeight; i > startDepth; i-- {
+		for i := tr.latestLocation.NodeHeight; i > startDepth; i-- {
 			if err := tr.txDB.removeUnconfirmedNode(i); err != nil {
 				continue
 			}
 		}
-		tr.maxNodeHeight = startDepth
+		tr.latestLocation = location
 	}()
 }
 
@@ -123,7 +113,7 @@ func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver
 	go func() {
 		defer tr.Unlock()
 		for _, node := range nodesToProcess {
-			tr.processNextNode(node)
+			_ = tr.processNextNode(node)
 		}
 	}()
 }
@@ -132,7 +122,25 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
-		tr.processNextNode(node)
+		_ = tr.processNextNode(node)
+	}()
+}
+
+func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObserver, prepared *rollup.PreparedAssertion) {
+	tr.Lock()
+	go func() {
+		defer tr.Unlock()
+		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
+		if tr.pendingLocation != nil && tr.pendingLocation.NodeHash == possibleNode.Hash().String() {
+			return
+		}
+		nodeInfo, err := processNode(possibleNode)
+		if err != nil {
+			log.Println("Prepared assertion with invalid data", err)
+			return
+		}
+		tr.txDB.addPendingNode(nodeInfo)
+		tr.pendingLocation = getNodeLocation(possibleNode)
 	}()
 }
 
@@ -149,16 +157,22 @@ func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, e
 }
 
 // processNextNode must be called with a write lock
-func (tr *txTracker) processNextNode(node *structures.Node) {
+func (tr *txTracker) processNextNode(node *structures.Node) error {
 	// We must have already processed this node if it is olded than the latest
 	// node that we've seen
-	sawOldNode := node.Depth() < tr.maxNodeHeight
+	sawOldNode := node.Depth() < tr.latestLocation.NodeHeight
 	if sawOldNode {
-		return
+		return nil
 	}
-	nodeInfo := processNode(node, tr.chainAddress)
-	tr.txDB.addUnconfirmedNode(nodeInfo)
-	tr.maxNodeHeight = node.Depth()
+	nodeInfo, err := processNode(node)
+	if err != nil {
+		return err
+	}
+	if err := tr.txDB.addUnconfirmedNode(nodeInfo); err != nil {
+		return err
+	}
+	tr.latestLocation = getNodeLocation(node)
+	return nil
 }
 
 func (tr *txTracker) OutputMsgVal(ctx context.Context, nodeHash common.Hash, msgIndex int64) (value.Value, error) {
@@ -186,23 +200,15 @@ func (tr *txTracker) OutputMsgVal(ctx context.Context, nodeHash common.Hash, msg
 	return nodeData.AVMMessages[msgIndex], nil
 }
 
-func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (evm.TxInfo, error) {
+func (tr *txTracker) TxInfo(ctx context.Context, txHash common.Hash) (*evm.TxInfo, error) {
 	tr.RLock()
 	defer tr.RUnlock()
 	select {
 	case <-ctx.Done():
-		return evm.TxInfo{Found: false}, errors.New("call timed out")
+		return nil, errors.New("call timed out")
 	default:
 	}
-	tx, err := tr.txDB.lookupTxRecord(txHash)
-	if err != nil || tx == nil {
-		return evm.TxInfo{Found: false}, err
-	}
-	nodeInfo, err := tr.txDB.lookupNodeRecord(tx.NodeHeight, tx.NodeHash.Unmarshal())
-	if err != nil {
-		return evm.TxInfo{Found: false}, nil
-	}
-	return getTxInfo(txHash, nodeInfo, tx.TransactionIndex), nil
+	return tr.txDB.lookupTxInfo(txHash)
 }
 
 func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {
@@ -213,7 +219,29 @@ func (tr *txTracker) AssertionCount(ctx context.Context) (uint64, error) {
 		return 0, errors.New("call timed out")
 	default:
 	}
-	return tr.maxNodeHeight, nil
+	return tr.latestLocation.NodeHeight, nil
+}
+
+func (tr *txTracker) GetLatestNodeLocation(ctx context.Context) (*evm.NodeLocation, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	return tr.latestLocation, nil
+}
+
+func (tr *txTracker) GetLatestPendingNodeLocation(ctx context.Context) (*evm.NodeLocation, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("call timed out")
+	default:
+	}
+	return tr.pendingLocation, nil
 }
 
 func (tr *txTracker) FindLogs(
@@ -231,7 +259,7 @@ func (tr *txTracker) FindLogs(
 	default:
 	}
 	startHeight := uint64(0)
-	endHeight := tr.maxNodeHeight
+	endHeight := tr.latestLocation.NodeHeight
 	if fromHeight != nil && *fromHeight > 0 {
 		startHeight = *fromHeight
 	}
@@ -242,7 +270,7 @@ func (tr *txTracker) FindLogs(
 		}
 	}
 	logs := make([]evm.FullLog, 0)
-	if startHeight >= tr.maxNodeHeight {
+	if startHeight >= tr.latestLocation.NodeHeight {
 		return logs, nil
 	}
 
@@ -269,15 +297,7 @@ func (tr *txTracker) FindLogs(
 		if err != nil {
 			continue
 		}
-		for _, evmLog := range info.FindLogs(address, topics) {
-			logs = append(logs, evm.FullLog{
-				Log:        evmLog.Log,
-				TxIndex:    evmLog.TxIndex,
-				TxHash:     evmLog.TxHash,
-				NodeHeight: info.NodeHeight,
-				NodeHash:   info.NodeHash,
-			})
-		}
+		logs = append(logs, info.FindLogs(address, topics)...)
 	}
 	return logs, nil
 }

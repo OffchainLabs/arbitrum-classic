@@ -666,7 +666,6 @@ library Value {
 
     function bytesToBytestackHash(bytes memory data, uint256 startOffset, uint256 dataLength) internal pure returns (Data memory) {
         uint wholeChunkCount = dataLength / 32;
-        uint chunkCount = (dataLength + 31) / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
         bytes32 stackHash = hashEmptyTuple();
@@ -681,9 +680,9 @@ library Value {
             stackHash = hashTuple(vals, size);
         }
 
-        if (wholeChunkCount < chunkCount) {
+        if (dataLength % 32 != 0) {
             uint lastVal = data.toUint(startOffset + dataLength - 32);
-            lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
+            lastVal <<= (32 - dataLength % 32) * 8;
 
             vals[0] = stackHash;
             vals[1] = newInt(lastVal).hash();

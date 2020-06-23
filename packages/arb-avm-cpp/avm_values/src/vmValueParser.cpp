@@ -30,22 +30,19 @@ std::vector<char> getContractData(const std::string& contract_filename) {
             std::istreambuf_iterator<char>()};
 }
 
-InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     TuplePool& pool) {
-    InitialVmValues initial_state;
-
-    auto parseError = [&]() -> InitialVmValues {
+std::pair<StaticVmValues, bool> parseStaticVmValues(
+    const std::string& contract_filename,
+    TuplePool& pool) {
+    auto parseError = [&]() -> std::pair<StaticVmValues, bool> {
         std::cerr << "Failed to parse file " << contract_filename << std::endl;
-        initial_state.valid_state = false;
-        return initial_state;
+        return std::make_pair(StaticVmValues{}, false);
     };
 
     auto contract_data = getContractData(contract_filename);
 
     if (contract_data.size() < 32) {
         std::cerr << "Failed to open path: " << contract_filename << std::endl;
-        initial_state.valid_state = false;
-        return initial_state;
+        return std::make_pair(StaticVmValues{}, false);
     }
 
     size_t offset = 0;
@@ -63,9 +60,7 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
         std::cerr << "incorrect version of .ao file" << std::endl;
         std::cerr << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
-
-        initial_state.valid_state = false;
-        return initial_state;
+        return std::make_pair(StaticVmValues{}, false);
     }
     uint32_t extentionId = 1;
     while (extentionId != 0) {
@@ -104,8 +99,6 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
     offset += sizeof(codeCount);
     codeCount = boost::endian::big_to_native(codeCount);
 
-    initial_state.code.reserve(codeCount);
-
     // TODO: The following code may read beyond the code buffer leading to a
     // crash To fix this we would need to make all of the deserialization
     // functions do bounds checking This may not be too big of a security risk
@@ -117,9 +110,8 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
     for (uint64_t i = 0; i < codeCount; i++) {
         ops.emplace_back(deserializeOperation(bufptr, pool));
     }
-    initial_state.code = opsToCodePoints(ops);
-    initial_state.staticVal = deserialize_value(bufptr, pool);
-    initial_state.valid_state = true;
+    auto staticVal = deserialize_value(bufptr, pool);
 
-    return initial_state;
+    return std::make_pair(StaticVmValues{Code{opsToCodePoints(ops)}, staticVal},
+                          true);
 }

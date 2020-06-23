@@ -25,7 +25,36 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type GlobalInboxWatcher interface {
+	ContractWatcher
+
+	GetAllReceived(
+		ctx context.Context,
+		fromBlock *big.Int,
+		toBlock *big.Int,
+	) ([]message.Received, error)
+
+	GetDeliveredEvents(
+		ctx context.Context,
+		fromBlock *big.Int,
+		toBlock *big.Int,
+	) ([]MessageDeliveredEvent, error)
+
+	GetERC20Balance(
+		ctx context.Context,
+		user common.Address,
+		tokenContract common.Address,
+	) (*big.Int, error)
+
+	GetEthBalance(
+		ctx context.Context,
+		user common.Address,
+	) (*big.Int, error)
+}
+
 type GlobalInbox interface {
+	GlobalInboxWatcher
+
 	SendTransactionMessage(
 		ctx context.Context,
 		data []byte,
@@ -72,9 +101,4 @@ type GlobalInbox interface {
 		destination common.Address,
 		value *big.Int,
 	) error
-	GetTokenBalance(
-		ctx context.Context,
-		user common.Address,
-		tokenContract common.Address,
-	) (*big.Int, error)
 }

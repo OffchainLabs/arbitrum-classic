@@ -71,7 +71,25 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, tx, deployedTester, err := messagetester.DeployMessageTester(
+	_, tx, deployedMessageTester, err := messagetester.DeployMessageTester(
+		auth,
+		client,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		client,
+		auth.From,
+		tx,
+		"DeployMessageTester",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, tx, deployedValueTester, err := valuetester.DeployValueTester(
 		auth,
 		client,
 	)
@@ -144,9 +162,10 @@ func TestMain(m *testing.M) {
 	}
 
 	sigTester = deployedSigTester
-	tester = deployedTester
+	tester = deployedMessageTester
 	valueTester = deployedValueTester
 	protocolTester = deployedProtocolTester
+
 	code := m.Run()
 	os.Exit(code)
 }

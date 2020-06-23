@@ -25,11 +25,11 @@ import (
 )
 
 type NodeView struct {
-	ns machine.NodeStore
+	ns machine.ConfirmedNodeStore
 	sr *ckptcontext.SimpleRestore
 }
 
-func New(ns machine.NodeStore, db machine.CheckpointStorage) *NodeView {
+func New(ns machine.ConfirmedNodeStore, db machine.CheckpointStorage) *NodeView {
 	return &NodeView{
 		ns: ns,
 		sr: ckptcontext.NewSimpleRestore(db),

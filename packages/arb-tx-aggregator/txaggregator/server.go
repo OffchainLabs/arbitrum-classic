@@ -18,9 +18,12 @@ package txaggregator
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"errors"
 	"log"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -40,13 +43,25 @@ const maxTransactions = 200
 const signatureLength = 65
 const recoverBitPos = signatureLength - 1
 
+type DecodedBatchTx struct {
+	tx     message.BatchTx
+	pubkey []byte
+}
+
+func NewDecodedBatchTx(tx message.BatchTx, key ecdsa.PublicKey) DecodedBatchTx {
+	return DecodedBatchTx{
+		tx:     tx,
+		pubkey: elliptic.Marshal(crypto.S256(), key.X, key.Y),
+	}
+}
+
 type Server struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
 
 	sync.Mutex
 	valid        bool
-	transactions []message.BatchTx
+	transactions []DecodedBatchTx
 }
 
 // NewServer returns a new instance of the Server class
@@ -88,8 +103,34 @@ func NewServer(
 	return server
 }
 
+// prepareTransactions reorders the transactions such that the position of each
+// user is maintained, but the transactions of that user are swapped to be in
+// sequence number order
+func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
+	transactionsBySender := make(map[string][]DecodedBatchTx)
+	for _, tx := range txes {
+		senderPubkey := hexutil.Encode(tx.pubkey)
+		transactionsBySender[senderPubkey] = append(transactionsBySender[senderPubkey], tx)
+	}
+
+	for _, txes := range transactionsBySender {
+		sort.SliceStable(txes, func(i, j int) bool {
+			return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
+		})
+	}
+
+	batchTxes := make([]message.BatchTx, 0, len(txes))
+	for _, tx := range txes {
+		senderPubkey := hexutil.Encode(tx.pubkey)
+		nextTx := transactionsBySender[senderPubkey][0]
+		transactionsBySender[senderPubkey] = transactionsBySender[senderPubkey][1:]
+		batchTxes = append(batchTxes, nextTx.tx)
+	}
+	return batchTxes
+}
+
 func (m *Server) sendBatch(ctx context.Context) {
-	var txes []message.BatchTx
+	var txes []DecodedBatchTx
 
 	if len(m.transactions) > maxTransactions {
 		txes = m.transactions[:maxTransactions]
@@ -102,14 +143,10 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	for _, tx := range txes {
-		log.Println("tx: ", tx)
-	}
-
 	err := m.globalInbox.DeliverTransactionBatchNoWait(
 		ctx,
 		m.rollupAddress,
-		txes,
+		prepareTransactions(txes),
 	)
 
 	m.Lock()
@@ -147,7 +184,7 @@ func (m *Server) SendTransaction(
 		return nil, errors2.Wrap(err, "error decoding data")
 	}
 
-	pubkey, err := hexutil.Decode(args.Pubkey)
+	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
 	if err != nil {
 		return nil, errors2.Wrap(err, "error decoding pubkey")
 	}
@@ -179,11 +216,46 @@ func (m *Server) SendTransaction(
 	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
 
 	if !crypto.VerifySignature(
-		pubkey,
+		pubkeyBytes,
 		messageHash[:],
 		signature[:len(signature)-1],
 	) {
 		return nil, errors.New("Invalid signature")
+	}
+
+	var sigData [signatureLength]byte
+	copy(sigData[:], signature)
+
+	tx := message.BatchTx{
+		To:     to,
+		SeqNum: sequenceNum,
+		Value:  valueInt,
+		Data:   data,
+		Sig:    sigData,
+	}
+
+	txHash := message.BatchTxHash(
+		m.rollupAddress,
+		tx.To,
+		tx.SeqNum,
+		tx.Value,
+		tx.Data,
+	)
+
+	var pubkey *ecdsa.PublicKey
+	var pubkeyErr error
+	if len(pubkeyBytes) == 33 {
+		pubkey, pubkeyErr = crypto.DecompressPubkey(pubkeyBytes)
+	} else {
+		x, y := elliptic.Unmarshal(crypto.S256(), pubkeyBytes)
+		pubkey = &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}
+	}
+
+	if pubkeyErr != nil || pubkey.X == nil || pubkey.Y == nil {
+		log.Println("Got tx: ", tx, "with hash", txHash, "from pubkey", hexutil.Encode(pubkeyBytes))
+	} else {
+		sender := crypto.PubkeyToAddress(*pubkey)
+		log.Println("Got tx: ", tx, "with hash", txHash, "from", hexutil.Encode(sender[:]))
 	}
 
 	m.Lock()
@@ -193,15 +265,9 @@ func (m *Server) SendTransaction(
 		return nil, errors.New("Tx aggregator is not running")
 	}
 
-	var sigData [signatureLength]byte
-	copy(sigData[:], signature)
-
-	m.transactions = append(m.transactions, message.BatchTx{
-		To:     to,
-		SeqNum: sequenceNum,
-		Value:  valueInt,
-		Data:   data,
-		Sig:    sigData,
+	m.transactions = append(m.transactions, DecodedBatchTx{
+		tx:     tx,
+		pubkey: pubkeyBytes,
 	})
 
 	return &SendTransactionReply{}, nil

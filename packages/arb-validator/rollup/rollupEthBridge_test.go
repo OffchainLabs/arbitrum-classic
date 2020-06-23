@@ -41,7 +41,7 @@ func TestCalculateLeafFromPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := structures.NewInitialNode(mach.Clone())
+	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
 	results := make([]evm.Result, 0, 10)
 	for i := int32(0); i < 5; i++ {
@@ -52,7 +52,7 @@ func TestCalculateLeafFromPath(t *testing.T) {
 	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
 	path := structures.GeneratePathProof(node, nextNode)
 
-	bridgeHash, err := rolluptester.CalculateLeafFromPath(nil, node.Hash(), ethbridge.HashSliceToRaw(path))
+	bridgeHash, err := rolluptester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
 	if nextNode.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
 		fmt.Println(nextNode.Hash().ToEthHash())
@@ -68,7 +68,7 @@ func TestChildNodeHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := structures.NewInitialNode(mach.Clone())
+	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
 	results := make([]evm.Result, 0, 10)
 	for i := int32(0); i < 7; i++ {
@@ -101,7 +101,7 @@ func TestProtoStateHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := structures.NewInitialNode(mach.Clone())
+	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
 	results := make([]evm.Result, 0, 10)
 	for i := int32(0); i < 8; i++ {
@@ -140,8 +140,8 @@ func TestComputePrevLeaf(t *testing.T) {
 		nil,
 		assertion.getAssertionParams(),
 		assertion.beforeState.InboxCount,
-		assertion.prevDeadline.Val,
-		uint32(assertion.prevChildType),
+		assertion.prev.Deadline().Val,
+		uint32(assertion.prev.LinkType()),
 		assertion.params.NumSteps,
 		assertion.params.TimeBounds.AsIntArray(),
 		assertion.params.ImportedMessageCount,
@@ -151,8 +151,7 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if assertion.leafHash.ToEthHash() != bridgeHash {
-		//chain.nodeGraph.
+	if assertion.prev.Hash().ToEthHash() != bridgeHash {
 		t.Error(bridgeHash)
 	}
 }

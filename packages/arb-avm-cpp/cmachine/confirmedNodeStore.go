@@ -19,7 +19,7 @@ package cmachine
 /*
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
-#include "../cavm/cnodestore.h"
+#include "../cavm/cconfirmednodestore.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -31,21 +31,21 @@ import (
 	"unsafe"
 )
 
-type NodeStore struct {
+type ConfirmedNodeStore struct {
 	c unsafe.Pointer
 }
 
-func deleteNodeStore(ns *NodeStore) {
-	C.deleteNodeStore(ns.c)
+func deleteConfirmedNodeStore(ns *ConfirmedNodeStore) {
+	C.deleteConfirmedNodeStore(ns.c)
 }
 
-func NewNodeStore(c unsafe.Pointer) *NodeStore {
-	bs := &NodeStore{c: c}
-	runtime.SetFinalizer(bs, deleteNodeStore)
+func NewConfirmedNodeStore(c unsafe.Pointer) *ConfirmedNodeStore {
+	bs := &ConfirmedNodeStore{c: c}
+	runtime.SetFinalizer(bs, deleteConfirmedNodeStore)
 	return bs
 }
 
-func (ns *NodeStore) PutNode(height uint64, hash common.Hash, data []byte) error {
+func (ns *ConfirmedNodeStore) PutNode(height uint64, hash common.Hash, data []byte) error {
 	cHash := hashToData(hash)
 	defer C.free(cHash)
 	cData := C.CBytes(data)
@@ -65,7 +65,7 @@ func (ns *NodeStore) PutNode(height uint64, hash common.Hash, data []byte) error
 	return nil
 }
 
-func (ns *NodeStore) GetNode(height uint64, hash common.Hash) ([]byte, error) {
+func (ns *ConfirmedNodeStore) GetNode(height uint64, hash common.Hash) ([]byte, error) {
 	cHash := hashToData(hash)
 	defer C.free(cHash)
 
@@ -82,7 +82,7 @@ func (ns *NodeStore) GetNode(height uint64, hash common.Hash) ([]byte, error) {
 	return toByteSlice(result.slice), nil
 }
 
-func (ns *NodeStore) GetNodeHeight(hash common.Hash) (uint64, error) {
+func (ns *ConfirmedNodeStore) GetNodeHeight(hash common.Hash) (uint64, error) {
 	cHash := hashToData(hash)
 	defer C.free(cHash)
 
@@ -98,7 +98,7 @@ func (ns *NodeStore) GetNodeHeight(hash common.Hash) (uint64, error) {
 	return uint64(result.value), nil
 }
 
-func (ns *NodeStore) GetNodeHash(height uint64) (common.Hash, error) {
+func (ns *ConfirmedNodeStore) GetNodeHash(height uint64) (common.Hash, error) {
 	result := C.getNodeHash(
 		ns.c,
 		C.uint64_t(height),
@@ -111,10 +111,10 @@ func (ns *NodeStore) GetNodeHash(height uint64) (common.Hash, error) {
 	return dataToHash(result.value), nil
 }
 
-func (ns *NodeStore) Empty() bool {
+func (ns *ConfirmedNodeStore) Empty() bool {
 	return C.isNodeStoreEmpty(ns.c) == 1
 }
 
-func (ns *NodeStore) MaxHeight() uint64 {
+func (ns *ConfirmedNodeStore) MaxHeight() uint64 {
 	return uint64(C.maxNodeHeight(ns.c))
 }

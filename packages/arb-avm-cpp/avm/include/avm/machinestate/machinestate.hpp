@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,12 @@
 
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/status.hpp>
 #include <avm_values/value.hpp>
-#include <data_storage/storageresult.hpp>
+#include <avm_values/vmValueParser.hpp>
 
 #include <memory>
 #include <vector>
-
-enum class Status { Extensive, Halted, Error };
 
 struct TimeBounds {
     uint256_t lowerBoundBlock;
@@ -33,8 +32,6 @@ struct TimeBounds {
     uint256_t lowerBoundTimestamp;
     uint256_t upperBoundTimestamp;
 };
-
-class CheckpointStorage;
 
 struct AssertionContext {
     TimeBounds timeBounds;
@@ -44,6 +41,8 @@ struct AssertionContext {
     uint64_t numGas;
     std::vector<value> outMessage;
     std::vector<value> logs;
+
+    AssertionContext() = default;
 
     explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
         : timeBounds(tb),
@@ -60,30 +59,51 @@ struct AssertionContext {
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
-    std::vector<CodePoint> code;
-    value staticVal;
+    std::shared_ptr<const StaticVmValues> static_values;
     value registerVal;
     Datastack stack;
     Datastack auxstack;
     Status state = Status::Extensive;
-    uint64_t pc = 0;
-    CodePoint errpc;
+    CodePointRef pc;
+    CodePointRef errpc;
     AssertionContext context;
 
-    MachineState();
-    MachineState(const std::vector<CodePoint>& code_,
-                 const value& static_val_,
-                 std::shared_ptr<TuplePool> pool_);
-    bool initialize_machinestate(const std::string& contract_filename);
+    static std::pair<MachineState, bool> loadFromFile(
+        const std::string& contract_filename);
+
+    MachineState()
+        : pool(std::make_unique<TuplePool>()), pc(0, false), errpc(0, true) {}
+
+    MachineState(std::shared_ptr<const StaticVmValues> static_values_,
+                 std::shared_ptr<TuplePool> pool_)
+        : pool(std::move(pool_)),
+          static_values(std::move(static_values_)),
+          pc(0, false),
+          errpc(0, true) {}
+
+    MachineState(std::shared_ptr<TuplePool> pool_,
+                 std::shared_ptr<const StaticVmValues> static_values_,
+                 value register_val_,
+                 Datastack stack_,
+                 Datastack auxstack_,
+                 Status state_,
+                 CodePointRef pc_,
+                 CodePointRef errpc_)
+        : pool(std::move(pool_)),
+          static_values(std::move(static_values_)),
+          registerVal(std::move(register_val_)),
+          stack(std::move(stack_)),
+          auxstack(std::move(auxstack_)),
+          state(state_),
+          pc(pc_),
+          errpc(errpc_) {}
+
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
     BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
-    SaveResults checkpointState(CheckpointStorage& storage);
-    bool restoreCheckpoint(const CheckpointStorage& storage,
-                           const std::vector<unsigned char>& checkpoint_key);
 };
 
 #endif /* machinestate_hpp */

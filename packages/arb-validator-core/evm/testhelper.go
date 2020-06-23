@@ -24,19 +24,18 @@ import (
 	"testing"
 )
 
-func NewRandomEVMAssertion(results []Result) *protocol.ExecutionAssertion {
+func NewRandomEVMAssertion(results []Result, messages []value.Value) *protocol.ExecutionAssertion {
 	logs := make([]value.Value, 0, len(results))
 	for _, result := range results {
 		logs = append(logs, ResultAsValue(result))
 	}
-
-	return &protocol.ExecutionAssertion{
-		AfterHash:    common.RandHash(),
-		DidInboxInsn: false,
-		NumGas:       rand.Uint64(),
-		OutMsgs:      []value.Value{},
-		Logs:         logs,
-	}
+	return protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		false,
+		rand.Uint64(),
+		messages,
+		logs,
+	)
 }
 
 func LogMatchTest(

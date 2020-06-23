@@ -60,7 +60,7 @@ typedef struct HashResultStruct HashResult;
 
 typedef void CMachine;
 typedef void CCheckpointStorage;
-typedef void CNodeStore;
+typedef void CConfirmedNodeStore;
 typedef void CBlockStore;
 
 #ifdef __cplusplus

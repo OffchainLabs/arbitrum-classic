@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package ethbridgetest
 import (
 	"bytes"
 	"math/big"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -32,7 +34,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
+func setupRand(t *testing.T) {
+	currentTime := time.Now().Unix()
+	t.Log("seed:", currentTime)
+	rand.Seed(currentTime)
+}
+
 func TestTransactionMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.Transaction{
 		Chain:       addr3,
 		To:          addr1,
@@ -79,61 +88,117 @@ func TestTransactionMessage(t *testing.T) {
 	}
 }
 
-func TestTransactionBatchMessage(t *testing.T) {
-	tx := message.Transaction{
-		Chain:       addr3,
-		To:          addr1,
-		From:        common.NewAddressFromEth(auth.From),
-		SequenceNum: big.NewInt(74563),
-		Value:       big.NewInt(89735406),
-		Data:        []byte{65, 23, 68, 87, 12},
-	}
-
-	offchainHash := message.BatchTxHash(
-		tx.Chain,
-		tx.To,
-		tx.SequenceNum,
-		tx.Value,
-		tx.Data,
-	)
-	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
-
-	privateKey, err := crypto.HexToECDSA(privHex)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sigBytes, err := crypto.Sign(messageHash.Bytes(), privateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var sig [65]byte
-	copy(sig[:], sigBytes)
-
-	batchTx := message.BatchTx{
-		To:     tx.To,
-		SeqNum: tx.SequenceNum,
-		Value:  tx.Value,
-		Data:   tx.Data,
-		Sig:    sig,
-	}
-
-	batchTxData := batchTx.ToBytes()
-
-	sender, err := tester.TransactionMessageBatchSingleSender(
+func TestTransactionBatchSingleSender(t *testing.T) {
+	setupRand(t)
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
+	chain := addr3
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
+	calculatedSender, err := tester.TransactionMessageBatchSingleSender(
 		nil,
 		big.NewInt(0),
-		tx.Chain.ToEthAddress(),
-		hashing.SoliditySHA3(tx.Data),
-		batchTxData,
+		chain.ToEthAddress(),
+		hashing.SoliditySHA3(batchTx.Data),
+		batchTx.ToBytes(),
 	)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if sender != auth.From {
-		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(sender[:]), "instead of", hexutil.Encode(auth.From[:]))
+	if err != nil {
+		t.Error(err)
 	}
+
+	if calculatedSender != sender.ToEthAddress() {
+		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(calculatedSender[:]), "instead of", hexutil.Encode(sender[:]))
+	}
+}
+
+func TestTransactionBatchSingleValid(t *testing.T) {
+	setupRand(t)
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
+	chain := addr3
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
+
+	txMessageHash, txReceiptHash, valid, err := tester.TransactionMessageBatchHashSingle(
+		nil,
+		big.NewInt(0),
+		chain.ToEthAddress(),
+		batchTx.ToBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Fatal("message should have been valid")
+	}
+
+	tx := message.Transaction{
+		Chain:       chain,
+		To:          batchTx.To,
+		From:        sender,
+		SequenceNum: batchTx.SeqNum,
+		Value:       batchTx.Value,
+		Data:        batchTx.Data,
+	}
+
+	txValueHash := tx.AsInboxValue().Hash()
+
+	t.Log("tx was", tx)
+
+	t.Log("txMessageHash", hexutil.Encode(txMessageHash[:]))
+	t.Log("txValueHash", hexutil.Encode(txValueHash[:]))
+
+	if txMessageHash != tx.AsInboxValue().Hash() {
+		t.Error("TransactionMessageBatchHashSingle result didn't match")
+	}
+	if txReceiptHash != tx.ReceiptHash() {
+		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
+	}
+}
+
+func TestTransactionBatchSingleInvalid(t *testing.T) {
+	setupRand(t)
+	currentTime := time.Now().Unix()
+	t.Log("seed:", currentTime)
+	rand.Seed(currentTime)
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	chain := addr3
+	batchTx := message.NewRandomBatchTx(chain, privateKey)
+
+	batchTx.Sig = [65]byte{1, 2, 3}
+
+	_, _, valid, err := tester.TransactionMessageBatchHashSingle(
+		nil,
+		big.NewInt(0),
+		chain.ToEthAddress(),
+		batchTx.ToBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if valid {
+		t.Fatal("message should have been valid")
+	}
+}
+
+func TestTransactionBatchMessage(t *testing.T) {
+	setupRand(t)
+	privateKey, _ := crypto.HexToECDSA(privHex)
+	chain := addr3
+	batchTxData := make([]byte, 0)
+	for i := 0; i < 10; i++ {
+		batchTx := message.NewRandomBatchTx(chain, privateKey)
+		if i%3 == 0 {
+			batchTx.Sig[0]++
+		}
+		batchTxData = append(batchTxData, batchTx.ToBytes()...)
+	}
+
+	// Append some random junk
+	batchTxData = append(batchTxData, []byte{54, 76, 23, 87, 34, 32, 87, 32}...)
 
 	deliveryInfo := message.DeliveryInfo{
 		ChainTime: message.ChainTime{
@@ -164,22 +229,6 @@ func TestTransactionBatchMessage(t *testing.T) {
 		t.Error(errHash)
 	}
 
-	txMessageHash, txReceiptHash, err := tester.TransactionMessageBatchHashSingle(
-		nil,
-		big.NewInt(0),
-		msg.Chain.ToEthAddress(),
-		batchTxData,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if txMessageHash != tx.AsInboxValue().Hash() {
-		t.Error("TransactionMessageBatchHashSingle result didn't match")
-	}
-	if txReceiptHash != tx.ReceiptHash() {
-		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
-	}
-
 	tup := value.NewEmptyTuple()
 	preImage := tup.GetPreImage()
 
@@ -202,6 +251,7 @@ func TestTransactionBatchMessage(t *testing.T) {
 }
 
 func TestEthMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.Eth{
 		To:    addr1,
 		From:  addr2,
@@ -236,6 +286,7 @@ func TestEthMessage(t *testing.T) {
 }
 
 func TestERC20Message(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC20{
 		To:           addr1,
 		From:         addr2,
@@ -273,6 +324,7 @@ func TestERC20Message(t *testing.T) {
 }
 
 func TestERC721Message(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC721{
 		To:           addr1,
 		From:         addr2,
@@ -310,6 +362,7 @@ func TestERC721Message(t *testing.T) {
 }
 
 func TestDeliveredMessage(t *testing.T) {
+	setupRand(t)
 	msg := message.ERC721{
 		To:           addr1,
 		From:         addr2,

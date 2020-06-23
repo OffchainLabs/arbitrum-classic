@@ -58,38 +58,23 @@ contract GlobalInbox is GlobalEthWallet, GlobalFTWallet, GlobalNFTWallet, IGloba
         uint256 offset = 0;
         uint256 messageType;
         address sender;
-        uint256 totalLength = _messages.length;
 
-
-        uint256 currentNode = 0;
-        uint256 currentIndex = 0;
-
-        while (offset < totalLength && currentNode < nodeHashes.length) {
-            if(messageCounts[currentNode] == 0){
-
-                currentNode += 1;
-                currentIndex = 0;
-            } else {
+        uint256 nodeCount = nodeHashes.length;
+        for (uint256 i = 0; i < nodeCount; i++) {
+            for (uint256 j = 0; j < messageCounts[i]; j++) {
                 (   valid,
                     offset,
                     messageType,
                     sender
                 ) = Value.deserializeMessageData(_messages, offset);
                 if (!valid) {
-                    break;
+                    return;
                 }
-                (valid, offset) = sendDeserializedMsg(nodeHashes[currentNode], currentIndex, _messages, offset, messageType);
+                (valid, offset) = sendDeserializedMsg(nodeHashes[i], j, _messages, offset, messageType);
                 if (!valid) {
-                    break;
-                }
-
-                currentIndex += 1;
-                if(currentIndex >= messageCounts[currentNode]){
-                    currentNode += 1;
-                    currentIndex = 0;
+                    return;
                 }
             }
-
         }
     }
 

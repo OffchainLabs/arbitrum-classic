@@ -38,8 +38,8 @@ type NodeGraph struct {
 	params          valprotocol.ChainParams
 }
 
-func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
-	newNode := structures.NewInitialNode(machine)
+func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *NodeGraph {
+	newNode := structures.NewInitialNode(machine, creationTxHash)
 	nodeFromHash := make(map[common.Hash]*structures.Node)
 	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()
@@ -90,7 +90,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 	}
 	// now set up prevs and successors for all nodes
 	for _, nd := range chain.nodeFromHash {
-		if !nd.IsInitial() {
+		if nd.HasAncestor() {
 			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
 				return nil, fmt.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
@@ -118,18 +118,21 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 	return chain, nil
 }
 
-func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string) string {
-	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix)
+func (ng *NodeGraph) DebugString(stakers *StakerSet, prefix string, labels map[*structures.Node][]string) string {
+	labels[ng.latestConfirmed] = append(labels[ng.latestConfirmed], "latestConfirmed")
+	return ng.DebugStringForNodeRecursive(ng.oldestNode, stakers, prefix, labels)
 }
 
-func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string) string {
+func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers *StakerSet, prefix string, labels map[*structures.Node][]string) string {
 	ret := prefix + strconv.Itoa(int(node.LinkType())) + ":" + node.Hash().ShortString()
 	if ng.leaves.IsLeaf(node) {
 		ret = ret + " leaf"
 	}
-	if node == ng.latestConfirmed {
-		ret = ret + " latestConfirmed"
+
+	for _, label := range labels[node] {
+		ret = ret + " " + label
 	}
+
 	stakers.forall(func(s *Staker) {
 		if s.location.Equals(node) {
 			ret = ret + " stake:" + s.address.ShortString()
@@ -140,7 +143,7 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers 
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succi := node.SuccessorHashes()[i]
 		if !succi.Equals(common.Hash{}) {
-			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix)
+			ret = ret + ng.DebugStringForNodeRecursive(ng.nodeFromHash[succi], stakers, subPrefix, labels)
 		}
 	}
 	return ret
@@ -212,7 +215,8 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
-) {
+) []*structures.Node {
+	newNodes := make([]*structures.Node, 0, 4)
 	if !ng.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}
@@ -224,12 +228,15 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 		_ = prevNode.LinkSuccessor(newNode)
 		ng.nodeFromHash[newNode.Hash()] = newNode
 		ng.leaves.Add(newNode)
+		newNodes = append(newNodes, newNode)
 	}
 
 	newNode := structures.NewValidNodeFromPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
 	_ = prevNode.LinkSuccessor(newNode)
 	ng.nodeFromHash[newNode.Hash()] = newNode
 	ng.leaves.Add(newNode)
+	newNodes = append(newNodes, newNode)
+	return newNodes
 }
 
 func (ng *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {

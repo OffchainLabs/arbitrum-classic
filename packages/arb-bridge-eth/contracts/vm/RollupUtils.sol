@@ -16,8 +16,151 @@
 
 pragma solidity ^0.5.3;
 
+import "../arch/Protocol.sol";
+import "../libraries/RollupTime.sol";
+
 
 library RollupUtils {
+
+    uint256 constant VALID_CHILD_TYPE = 3;
+
+    struct ConfirmData {
+        bytes32 initalProtoStateHash;
+        uint256[] branches;
+        uint256[] deadlineTicks;
+        bytes32[] challengeNodeData;
+        bytes32[] logsAcc;
+        bytes32[] vmProtoStateHashes;
+        uint256[] messageCounts;
+        bytes messages;
+    }
+
+    struct NodeData {
+        uint256 validNum;
+        uint256 invalidNum;
+        uint256 messagesOffset;
+        bytes32 vmProtoStateHash;
+        bytes32 nodeHash;
+    }
+
+    function getInitialNodeData(
+        bytes32 vmProtoStateHash,
+        bytes32 confNode
+    ) 
+        private pure returns (NodeData memory)
+    {
+        return NodeData(
+            0,
+            0,
+            0,
+            vmProtoStateHash,
+            confNode);
+    }
+
+    function confirm(
+        ConfirmData memory data,
+        bytes32 confNode
+    )
+        internal
+        pure
+        returns(bytes32[] memory validNodeHashes, bytes32)
+    {
+        verifyDataLength(data);
+
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messageCounts.length;
+        validNodeHashes = new bytes32[](validNodeCount);
+        NodeData memory currentNodeData = getInitialNodeData(data.initalProtoStateHash, confNode);
+        bool isValidChildType;
+
+        for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+            (currentNodeData, isValidChildType) = processNode(data, currentNodeData, nodeIndex);
+
+            if (isValidChildType) {
+                validNodeHashes[currentNodeData.validNum - 1] = currentNodeData.nodeHash;
+            }
+        }
+        return (validNodeHashes, currentNodeData.nodeHash);
+    }
+
+    function processNode(
+        ConfirmData memory data, 
+        NodeData memory nodeData, 
+        uint256 nodeIndex
+    )   
+        private
+        pure
+        returns (NodeData memory, bool)
+    {
+        uint256 branchType = data.branches[nodeIndex];
+        bool isValidChildType = (branchType == VALID_CHILD_TYPE);
+        bytes32 nodeDataHash;
+
+        if (isValidChildType) {
+            (nodeData.messagesOffset, 
+            nodeDataHash, 
+            nodeData.vmProtoStateHash) = processValidNode(data, nodeData.validNum, nodeData.messagesOffset);
+            nodeData.validNum++;
+        } else {
+            nodeDataHash = data.challengeNodeData[nodeData.invalidNum];
+            nodeData.invalidNum++;
+        }
+
+        nodeData.nodeHash = childNodeHash(
+            nodeData.nodeHash,
+            data.deadlineTicks[nodeIndex],
+            nodeDataHash,
+            branchType,
+            nodeData.vmProtoStateHash
+        );
+
+        return (nodeData, isValidChildType);
+    }
+
+    function processValidNode(
+        ConfirmData memory data,
+        uint256 validNum,
+        uint256 startOffset
+    )
+        internal
+        pure
+        returns(uint256, bytes32, bytes32)
+    {
+        (bytes32 lastMsgHash, uint256 messagesOffset) = generateLastMessageHash(
+            data.messages,
+            startOffset,
+            data.messageCounts[validNum]
+        );
+        bytes32 nodeDataHash = validDataHash(
+            lastMsgHash,
+            data.logsAcc[validNum]
+        );
+        bytes32 vmProtoStateHash = data.vmProtoStateHashes[validNum];
+        return (messagesOffset, nodeDataHash, vmProtoStateHash);
+    }
+
+    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 count) internal pure returns (bytes32, uint256) {
+        bool valid;
+        bytes32 hashVal = 0x00;
+        Value.Data memory messageVal;
+        uint256 offset = startOffset;
+        for (uint256 i = 0; i < count; i++) {
+            (valid, offset, messageVal) = Value.deserialize(messages, offset);
+            require(valid, "Invalid output message");
+            hashVal = keccak256(abi.encodePacked(hashVal, Value.hash(messageVal)));
+        }
+        return (hashVal, offset);
+    }
+
+    function verifyDataLength(RollupUtils.ConfirmData memory data) private pure{
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messageCounts.length;
+        require(data.vmProtoStateHashes.length == validNodeCount);
+        require(data.logsAcc.length == validNodeCount);
+        require(data.deadlineTicks.length == nodeCount);
+        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+    }
+
     function protoStateHash(
         bytes32 machineHash,
         bytes32 inboxTop,

@@ -28,7 +28,7 @@ configure_file (
 configure_file(test_cases.json ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json COPYONLY)
 configure_file(contract.ao ${CMAKE_CURRENT_BINARY_DIR}/contract.ao COPYONLY)
 
-add_executable(avm_tests main.cpp opcodes.cpp value.cpp checkpointstorage.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp nodestore.cpp)
+add_executable(avm_tests main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp confirmednodestore.cpp)
 
 target_link_libraries(
 	avm_tests

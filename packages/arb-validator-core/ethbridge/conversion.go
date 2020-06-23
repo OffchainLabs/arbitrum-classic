@@ -23,14 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func HashSliceToRaw(slice []common.Hash) [][32]byte {
-	ret := make([][32]byte, 0, len(slice))
-	for _, h := range slice {
-		ret = append(ret, h)
-	}
-	return ret
-}
-
 func addressSliceToRaw(slice []common.Address) []ethcommon.Address {
 	ret := make([]ethcommon.Address, 0, len(slice))
 	for _, a := range slice {

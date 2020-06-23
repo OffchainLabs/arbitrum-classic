@@ -32,8 +32,31 @@ import (
 func testExecutionChallenge(t *testing.T) {
 	t.Parallel()
 
+	//<<<<<<< HEAD
 	mach := getTestMachine(t)
 	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
+	//=======
+	//	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
+	//	if err != nil {
+	//		t.Fatal("Loader Error: ", err)
+	//	}
+	//
+	//	timeBounds := &protocol.TimeBounds{
+	//		common.NewTimeBlocks(big.NewInt(100)),
+	//		common.NewTimeBlocks(big.NewInt(120)),
+	//		big.NewInt(100),
+	//		big.NewInt(120),
+	//	}
+	//	afterMachine := mach.Clone()
+	//	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
+	//	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
+	//
+	//	challengeHash := valprotocol.ExecutionDataHash(
+	//		numSteps,
+	//		precondition.Hash(),
+	//		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
+	//	)
+	//>>>>>>> c7432e0f992c5ee237ebf447ccbc870885eb9a1a
 
 	if err := testChallenge(
 		valprotocol.InvalidExecutionChildType,

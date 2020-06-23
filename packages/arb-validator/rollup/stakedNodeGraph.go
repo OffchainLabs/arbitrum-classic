@@ -42,9 +42,9 @@ type StakedNodeGraph struct {
 	challenges *ChallengeSet
 }
 
-func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
+func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *StakedNodeGraph {
 	return &StakedNodeGraph{
-		NodeGraph:  NewNodeGraph(machine, params),
+		NodeGraph:  NewNodeGraph(machine, params, creationTxHash),
 		stakers:    NewStakerSet(),
 		challenges: NewChallengeSet(),
 	}
@@ -85,9 +85,9 @@ func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreCont
 	return chain, nil
 }
 
-func (sng *StakedNodeGraph) DebugString(prefix string) string {
+func (sng *StakedNodeGraph) DebugString(prefix string, labels map[*structures.Node][]string) string {
 	subPrefix := prefix + "  "
-	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix) + sng.stakers.DebugString(prefix)
+	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix, labels) + sng.stakers.DebugString(prefix)
 }
 
 func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
@@ -186,7 +186,7 @@ func (sng *StakedNodeGraph) generateNodePruneInfo(stakers *StakerSet) []valproto
 
 func (sng *StakedNodeGraph) generateNextConfProof(
 	currentTime common.TimeTicks,
-) *valprotocol.ConfirmOpportunity {
+) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
@@ -220,7 +220,8 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 					}
 					confOpp = valprotocol.ConfirmValidOpportunity{
 						DeadlineTicks:    nd.Deadline(),
-						Messages:         assertion.OutMsgs,
+						MessagesData:     assertion.OutMsgsData,
+						MessageCount:     assertion.OutMsgsCount,
 						LogsAcc:          nd.Disputable().AssertionClaim.AssertionStub.LastLogHash,
 						VMProtoStateHash: nd.VMProtoData().Hash(),
 					}
@@ -243,7 +244,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	}
 
 	if len(nodeOps) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	nodeLimit := len(nodeOps)
@@ -266,7 +267,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
 				StakerAddresses:        stakerAddrs,
 				StakerProofs:           proofs,
-			}
+			}, confNodes
 		}
 	}
 	panic("Unreachable code")
@@ -285,6 +286,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProofs(
 	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
 		if staker.creationTime.Cmp(deadline) >= 0 {
+			proofs = append(proofs, []common.Hash{})
 			continue
 		}
 		subProof := structures.GeneratePathProof(confirmingNode, staker.location)

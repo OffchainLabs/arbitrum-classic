@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"os"
 	"testing"
@@ -29,37 +28,25 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func extractFullLogs(node *structures.Node, results []evm.Result) []evm.FullLog {
-	logs := extractLogResponses(results)
-	ret := make([]evm.FullLog, 0, len(logs))
-	for _, l := range logs {
-		fl := evm.FullLog{
-			Log:        l.Log,
-			TxIndex:    l.TxIndex,
-			TxHash:     l.TxHash,
-			NodeHeight: node.Depth(),
-			NodeHash:   node.Hash(),
-		}
-		ret = append(ret, fl)
-	}
-	return ret
-}
-
 func TestTxTracker(t *testing.T) {
 	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	nodes, results, err := setupNodes()
+	nodes, err := setupNodes()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	logs := extractFullLogs(nodes[1], results)
+	info, err := processNode(nodes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	ns := checkpointer.GetNodeStore()
-	txTracker, err := newTxTracker(checkpointer, ns, chainAddress)
+	logs := info.fullLogs()
+	ns := checkpointer.GetConfirmedNodeStore()
+	txTracker, err := newTxTracker(checkpointer, ns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,17 +64,20 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfo := func(node *structures.Node) func(*testing.T) {
-		nodeInfo := processNode(node, chainAddress)
+		nodeInfo, err := processNode(node)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return func(t *testing.T) {
 			for i, txHash := range nodeInfo.EVMTransactionHashes {
 				info, err := txTracker.TxInfo(context.Background(), txHash)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if !info.Found {
+				if info == nil {
 					t.Fatal("tx not found")
 				}
-				if !info.Equals(getTxInfo(txHash, nodeInfo, uint64(i))) {
+				if !info.Equals(nodeInfo.getTxInfo(uint64(i))) {
 					t.Error("Got wrong tx info")
 				}
 			}
@@ -95,14 +85,17 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfoMissing := func(node *structures.Node) func(*testing.T) {
-		nodeInfo := processNode(node, chainAddress)
+		nodeInfo, err := processNode(node)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return func(t *testing.T) {
 			for _, txHash := range nodeInfo.EVMTransactionHashes {
 				info, err := txTracker.TxInfo(context.Background(), txHash)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if info.Found {
+				if info != nil {
 					t.Fatal("tx was found, but shouldn't have been")
 				}
 			}
@@ -141,7 +134,7 @@ func TestTxTracker(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Found != false {
+		if info != nil {
 			t.Error("found non-existant tx")
 		}
 	})

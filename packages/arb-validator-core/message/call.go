@@ -47,6 +47,14 @@ func (m Call) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
 }
 
+func (m Call) DestAddress() common.Address {
+	return m.To
+}
+
+func (m Call) SenderAddress() common.Address {
+	return m.From
+}
+
 func (m Call) Equals(other Message) bool {
 	o, ok := other.(Call)
 	if !ok {
@@ -59,6 +67,10 @@ func (m Call) Equals(other Message) bool {
 
 func (m Call) Type() Type {
 	return CallType
+}
+
+func (m Call) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
 }
 
 func (m Call) CommitmentHash() common.Hash {

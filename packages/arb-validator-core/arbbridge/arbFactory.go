@@ -29,7 +29,7 @@ type ArbFactory interface {
 		vmState common.Hash,
 		params valprotocol.ChainParams,
 		owner common.Address,
-	) (common.Address, error)
+	) (common.Address, *common.BlockId, error)
 }
 
 type ArbFactoryWatcher interface {

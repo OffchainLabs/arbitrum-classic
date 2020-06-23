@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-env node */
-'use strict'
 
-export interface Contract {
-  code: any
-  address: string
-}
+#ifndef avm_status_hpp
+#define avm_status_hpp
+
+enum class Status { Extensive, Halted, Error };
+
+#endif /* avm_status_hpp */

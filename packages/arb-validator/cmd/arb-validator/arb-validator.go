@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -37,9 +38,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+
+	_ "net/http/pprof"
 )
 
 func main() {
+
+	go func() {
+		http.ListenAndServe("localhost:8080", nil)
+	}()
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
@@ -101,7 +108,7 @@ func createRollupChain() error {
 		return err
 	}
 
-	address, err := factory.CreateRollup(
+	address, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
 		rollup.DefaultChainParams(),

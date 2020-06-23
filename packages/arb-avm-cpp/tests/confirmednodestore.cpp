@@ -17,16 +17,16 @@
 #include "config.hpp"
 #include "helper.hpp"
 
+#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/datastorage.hpp>
-#include <data_storage/nodestore.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <catch2/catch.hpp>
 
-TEST_CASE("NodeStore tests") {
+TEST_CASE("ConfirmedNodeStore tests") {
     DBDeleter deleter;
     auto storage = std::make_shared<DataStorage>(dbpath);
-    auto store = std::make_unique<NodeStore>(storage);
+    auto store = std::make_unique<ConfirmedNodeStore>(storage);
 
     SECTION("isEmpty") {
         REQUIRE(store->isEmpty());

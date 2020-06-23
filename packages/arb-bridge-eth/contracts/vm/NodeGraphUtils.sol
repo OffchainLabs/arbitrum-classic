@@ -103,16 +103,13 @@ library NodeGraphUtils
             inboxValue,
             inboxCount - (data.beforeInboxCount + data.importedMessageCount)
         );
-
-        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
-            challengeHash,
-            gracePeriodTicks + RollupTime.blocksToTicks(1)
-        );
-
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            nodeDataHash,
+            RollupUtils.challengeDataHash(
+                challengeHash,
+                gracePeriodTicks + RollupTime.blocksToTicks(1)
+            ),
             ChallengeUtils.getInvalidInboxType(),
             vmProtoHashBefore
         );
@@ -183,15 +180,13 @@ library NodeGraphUtils
             assertionHash
         );
 
-        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
-            executionHash,
-            gracePeriodTicks + checkTimeTicks
-        );
-
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            nodeDataHash,
+            RollupUtils.challengeDataHash(
+                executionHash,
+                gracePeriodTicks + checkTimeTicks
+            ),
             ChallengeUtils.getInvalidExType(),
             vmProtoHashBefore
         );

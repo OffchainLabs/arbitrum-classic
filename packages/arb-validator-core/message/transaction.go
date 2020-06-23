@@ -44,13 +44,21 @@ func (m Transaction) String() string {
 		m.To,
 		m.From,
 		m.SequenceNum,
-		m.Value,
-		m.Data,
+		toEth(m.Value),
+		hexutil.Encode(m.Data),
 	)
 }
 
 func (m Transaction) GetFuncName() string {
 	return hexutil.Encode(m.Data[:4])
+}
+
+func (m Transaction) DestAddress() common.Address {
+	return m.To
+}
+
+func (m Transaction) SenderAddress() common.Address {
+	return m.From
 }
 
 func (m Transaction) Equals(other Message) bool {
@@ -68,6 +76,10 @@ func (m Transaction) Equals(other Message) bool {
 
 func (m Transaction) Type() Type {
 	return TransactionType
+}
+
+func (m Transaction) VMInboxMessages() []SingleMessage {
+	return []SingleMessage{m}
 }
 
 func (m Transaction) CommitmentHash() common.Hash {

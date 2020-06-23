@@ -19,10 +19,17 @@ package message
 import (
 	"bytes"
 	"errors"
+	"math"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+func toEth(val *big.Int) *big.Float {
+	fbalance := new(big.Float)
+	fbalance.SetString(val.String())
+	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+}
 
 func bytesToValues(val []byte) []value.Value {
 	var ints []value.Value

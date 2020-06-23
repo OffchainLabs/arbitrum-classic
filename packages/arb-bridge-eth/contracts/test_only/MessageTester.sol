@@ -85,14 +85,14 @@ contract MessageTester {
     )
         public
         pure
-        returns(bytes32, bytes32)
+        returns(bytes32, bytes32, bool)
     {
-        (Value.Data memory message, bytes32 receiptHash) = Messages.transactionMessageBatchHashSingle(
+        (Value.Data memory message, bytes32 receiptHash, bool valid) = Messages.transactionMessageBatchHashSingle(
             start,
             chain,
             transactions
         );
-        return (Value.hash(message), receiptHash);
+        return (Value.hash(message), receiptHash, valid);
     }
 
     function transactionMessageBatchSingleSender(

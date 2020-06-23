@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 	"strconv"
@@ -51,7 +53,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	checkpointer := man.GetCheckpointer()
-	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), man.RollupAddress)
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +167,7 @@ func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) 
 	}, nil
 }
 
-// CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
-	log.Println("CallMessage", args.Data)
+func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
@@ -180,12 +180,14 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	var contractAddress common.Address
 	copy(contractAddress[:], contractAddressBytes)
 
-	senderBytes, err := hexutil.Decode(args.Sender)
-	if err != nil {
-		return nil, err
-	}
 	var sender common.Address
-	copy(sender[:], senderBytes)
+	if len(args.Sender) > 0 {
+		senderBytes, err := hexutil.Decode(args.Sender)
+		if err != nil {
+			return nil, err
+		}
+		copy(sender[:], senderBytes)
+	}
 
 	callMsg := message.Call{
 		To:   contractAddress,
@@ -193,33 +195,63 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 		Data: dataBytes,
 	}
 
-	deliveredMsg := message.Delivered{
+	latestBlock, err := m.man.CurrentBlockId()
+	if err != nil {
+		return nil, err
+	}
+
+	deliveredMsg := message.SingleDelivered{
 		Message: callMsg,
 		DeliveryInfo: message.DeliveryInfo{
 			ChainTime: message.ChainTime{
-				BlockNum:  m.man.CurrentBlockId().Height,
+				BlockNum:  latestBlock.Height,
 				Timestamp: big.NewInt(time.Now().Unix()),
 			},
 			TxId: big.NewInt(0),
 		},
 	}
+	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
 
-	inbox := message.AddToPrev(value.NewEmptyTuple(), deliveredMsg)
-	assertion, steps := m.man.ExecuteCall(inbox, m.maxCallTime)
+	latestTime := big.NewInt(time.Now().Unix())
+	timeBounds := &protocol.TimeBounds{
+		LowerBoundBlock:     latestBlock.Height,
+		UpperBoundBlock:     latestBlock.Height,
+		LowerBoundTimestamp: latestTime,
+		UpperBoundTimestamp: latestTime,
+	}
+
+	assertion, steps := mach.ExecuteAssertion(
+		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
+		10000000000000000,
+		timeBounds,
+		inbox,
+		m.maxCallTime,
+	)
+
+	// If the machine wasn't able to run and it reports that it is currently
+	// blocked, return the block reason to give the client more information
+	// as opposed to just returning a general "call produced no output"
+	if br := mach.IsBlocked(latestBlock.Height, true); steps == 0 && br != nil {
+		log.Println("can't produce solution since machine is blocked", br)
+		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
+	}
 
 	log.Println("Executed call for", steps, "steps")
 
-	results := assertion.Logs
+	results := assertion.ParseLogs()
 	if len(results) == 0 {
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal, m.rollupAddress)
+	lastLog, err := evm.ProcessLog(lastLogVal)
 	if err != nil {
 		return nil, err
 	}
-	logHash := lastLog.GetEthMsg().TxHash()
-	if logHash != deliveredMsg.ReceiptHash() {
+	delivered, err := message.UnmarshalRawDelivered(lastLog.GetDeliveredMessage())
+	if err != nil {
+		return nil, err
+	}
+	if delivered.TxHash() != deliveredMsg.ReceiptHash() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
@@ -230,4 +262,40 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 	return &validatorserver.CallMessageReply{
 		RawVal: hexutil.Encode(buf.Bytes()),
 	}, nil
+}
+
+// CallMessage takes a request from a client to process in a temporary context and return the result
+func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	mach, err := m.man.GetLatestMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
+}
+
+// PendingCall takes a request from a client to process in a temporary context and return the result
+func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+	mach, err := m.man.GetPendingMachine()
+	if err != nil {
+		return nil, err
+	}
+	return m.executeCall(mach, args)
+}
+
+func (m *Server) GetLatestNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+}
+
+func (m *Server) GetLatestPendingNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
+) (*validatorserver.GetLatestNodeLocationReply, error) {
+	loc, err := m.tracker.GetLatestPendingNodeLocation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
 }

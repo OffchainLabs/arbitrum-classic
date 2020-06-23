@@ -71,13 +71,14 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
     return {val.data, true};
 }
 
-inline ByteSlice returnValueResult(const DbResult<value>& res) {
+inline ByteSlice returnValueResult(const DbResult<value>& res,
+                                   const Code& code) {
     if (!res.status.ok()) {
         return {nullptr, 0};
     }
 
     std::vector<unsigned char> value;
-    marshal_value(res.data, value);
+    marshal_value(res.data, value, code);
 
     auto value_data = (unsigned char*)malloc(value.size());
     std::copy(value.begin(), value.end(), value_data);

@@ -25,13 +25,14 @@ import (
 )
 
 type ArbRollup interface {
-	PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) error
-	RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) error
-	RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) error
-	RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) error
-	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error
-	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
-	PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) error
+	ArbRollupWatcher
+	PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) ([]Event, error)
+	RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) ([]Event, error)
+	RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) ([]Event, error)
+	RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) ([]Event, error)
+	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) ([]Event, error)
+	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) ([]Event, error)
+	PruneLeaves(ctx context.Context, params []valprotocol.PruneParams) ([]Event, error)
 	MakeAssertion(
 		ctx context.Context,
 		prevPrevLeafHash common.Hash,
@@ -42,8 +43,8 @@ type ArbRollup interface {
 		assertionParams *valprotocol.AssertionParams,
 		assertionClaim *valprotocol.AssertionClaim,
 		extraParams [9][32]byte,
-		stakerProof []common.Hash) error
-	Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error
+		stakerProof []common.Hash) ([]Event, error)
+	Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) ([]Event, error)
 	StartChallenge(
 		ctx context.Context,
 		asserterAddress common.Address,
@@ -59,6 +60,5 @@ type ArbRollup interface {
 		asserterNodeHash common.Hash,
 		challengerDataHash common.Hash,
 		challengerPeriodTicks common.TimeTicks,
-	) error
-	IsStaked(address common.Address) (bool, error)
+	) ([]Event, error)
 }

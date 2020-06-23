@@ -116,7 +116,7 @@ func setupValidators(
 
 	ctx := context.Background()
 
-	rollupAddress, err := factory.CreateRollup(
+	rollupAddress, _, err := factory.CreateRollup(
 		ctx,
 		mach.Hash(),
 		config,
@@ -143,7 +143,7 @@ func setupValidators(
 	manager1, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		client1,
+		rollupmanager.NewStressTestClient(client1, time.Second*10),
 		contract,
 		db1,
 	)
@@ -166,7 +166,7 @@ func setupValidators(
 	manager2, err := rollupmanager.CreateManager(
 		ctx,
 		rollupAddress,
-		client2,
+		rollupmanager.NewStressTestClient(client2, time.Second*10),
 		contract,
 		db2,
 	)
@@ -288,7 +288,8 @@ func RunValidators(
 	fibonacciSession := &FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
-			From: auth.From,
+			From:    auth.From,
+			Pending: true,
 		},
 		TransactOpts: *auth,
 	}
@@ -368,14 +369,14 @@ func waitForReceipt(
 			context.Background(),
 			txhash.ToEthHash(),
 		)
-		if err == nil {
-			return receipt, nil
+		if err != nil {
+			if err.Error() == "not found" {
+				continue
+			}
+			log.Println("GetMessageResult error:", err)
+			return nil, err
 		}
-		if err.Error() == "not found" {
-			continue
-		}
-		log.Println("GetMessageResult error:", err)
-		return nil, err
+		return receipt, nil
 	}
 }
 

@@ -18,16 +18,19 @@ package message
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -36,6 +39,52 @@ import (
 type TransactionBatch struct {
 	Chain  common.Address
 	TxData []byte
+}
+
+func (m TransactionBatch) String() string {
+	var sb strings.Builder
+	sb.WriteString("TransactionBatch(txes: [")
+	txes := m.getBatchTransactions()
+	for i, batchTx := range m.getBatchTransactions() {
+		sb.WriteString(batchTx.String())
+		if i != len(txes)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString("])")
+	return sb.String()
+}
+
+func (m TransactionBatch) VMInboxMessages() []SingleMessage {
+	txes := make([]SingleMessage, 0)
+	for _, tx := range m.getBatchTransactions() {
+		batchTxHash := BatchTxHash(
+			m.Chain,
+			tx.To,
+			tx.SeqNum,
+			tx.Value,
+			tx.Data,
+		)
+		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
+		pubkey, err := crypto.SigToPub(messageHash.Bytes(), tx.Sig[:])
+		if err != nil {
+			log.Println("skipping tx with invalid sig:", err)
+			// Signature was invalid so we'll skip
+			continue
+		}
+
+		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
+		fullTx := Transaction{
+			Chain:       m.Chain,
+			To:          tx.To,
+			From:        from,
+			SequenceNum: tx.SeqNum,
+			Value:       tx.Value,
+			Data:        tx.Data,
+		}
+		txes = append(txes, fullTx)
+	}
+	return txes
 }
 
 // BatchTxHash hashes the transaction data. This hash is signed by users
@@ -64,10 +113,18 @@ type BatchTx struct {
 	Sig    [65]byte
 }
 
+func (b BatchTx) Equals(o BatchTx) bool {
+	return b.To == o.To &&
+		b.SeqNum.Cmp(o.SeqNum) == 0 &&
+		b.Value.Cmp(o.Value) == 0 &&
+		bytes.Equal(b.Data, o.Data) &&
+		b.Sig == o.Sig
+}
+
 func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 	dataLength := int(binary.BigEndian.Uint16(data[offset : offset+2]))
-	if offset+DataOffset+dataLength < len(data) {
-		return BatchTx{}, errors.New("not enough data remaining")
+	if offset+DataOffset+dataLength > len(data) {
+		return BatchTx{}, fmt.Errorf("not enough data remaining (offset: %v, DataOffset: %v, dataLength: %v, totalLength: %v)", offset, DataOffset, dataLength, len(data))
 	}
 	offset += 2
 	toRaw := data[offset : offset+20]
@@ -95,6 +152,43 @@ func NewBatchTxFromData(data []byte, offset int) (BatchTx, error) {
 	}, nil
 }
 
+func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
+	to := common.RandAddress()
+	seq := common.RandBigInt()
+	val := common.RandBigInt()
+	data := common.RandBytes(200)
+
+	offchainHash := BatchTxHash(
+		chain,
+		to,
+		seq,
+		val,
+		data,
+	)
+	messageHash := hashing.SoliditySHA3WithPrefix(offchainHash[:])
+	sigBytes, _ := crypto.Sign(messageHash.Bytes(), privKey)
+
+	var sig [65]byte
+	copy(sig[:], sigBytes)
+
+	return BatchTx{
+		To:     to,
+		SeqNum: seq,
+		Value:  val,
+		Data:   data,
+		Sig:    sig,
+	}
+}
+
+func (b BatchTx) String() string {
+	return fmt.Sprintf("BatchTx(to: %v, seq: %v, value: %v, data: %v)",
+		b.To,
+		b.SeqNum,
+		b.Value,
+		hexutils.BytesToHex(b.Data),
+	)
+}
+
 func (b BatchTx) encodedLength() int {
 	return DataOffset + len(b.Data)
 }
@@ -112,51 +206,20 @@ func (b BatchTx) ToBytes() []byte {
 
 var DataOffset = 151
 
-func (m TransactionBatch) getTransactions() []Transaction {
-	txes := make([]Transaction, 0)
+func (m TransactionBatch) getBatchTransactions() []BatchTx {
+	txes := make([]BatchTx, 0)
 	offset := 0
-
 	data := m.TxData
-	for offset+DataOffset < len(data) {
+	for offset+DataOffset <= len(data) {
 		batch, err := NewBatchTxFromData(data, offset)
 		if err != nil {
+			log.Println("Transaction batch", hexutil.Encode(data), "at offset", offset, "included invalid tx", err)
 			break
 		}
-
-		batchTxHash := BatchTxHash(
-			m.Chain,
-			batch.To,
-			batch.SeqNum,
-			batch.Value,
-			batch.Data,
-		)
-		messageHash := hashing.SoliditySHA3WithPrefix(batchTxHash[:])
-		pubkey, err := crypto.SigToPub(messageHash.Bytes(), batch.Sig[:])
-		if err != nil {
-			// TODO: Is this possible? If so we need to handle it
-			// What are the possible failure conditions and how do they relate
-			// to ecrecover's behavior
-			log.Fatalln("Invalid sig", err)
-		}
-
-		from := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-		tx := Transaction{
-			Chain:       m.Chain,
-			To:          batch.To,
-			From:        from,
-			SequenceNum: batch.SeqNum,
-			Value:       batch.Value,
-			Data:        batch.Data,
-		}
-
-		txes = append(txes, tx)
+		txes = append(txes, batch)
 		offset += batch.encodedLength()
 	}
 	return txes
-}
-
-func (m TransactionBatch) String() string {
-	return fmt.Sprintf("TransactionBatch()")
 }
 
 // Equals check for equality between this object and any other message by

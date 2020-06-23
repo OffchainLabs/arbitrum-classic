@@ -19,6 +19,7 @@ package message
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -43,6 +44,26 @@ type DeliveryInfo struct {
 	TxId *big.Int
 }
 
+func (d DeliveryInfo) Equals(o DeliveryInfo) bool {
+	return d.BlockNum.Cmp(o.BlockNum) == 0 &&
+		d.Timestamp.Cmp(o.Timestamp) == 0 &&
+		d.TxId.Cmp(o.TxId) == 0
+}
+
+func (d DeliveryInfo) deliveredHeight() *common.TimeBlocks {
+	return d.BlockNum
+}
+
+func (d DeliveryInfo) deliveredTimestamp() *big.Int {
+	return d.Timestamp
+}
+
+func (d DeliveryInfo) TxHash() common.Hash {
+	var hash common.Hash
+	copy(hash[:], abi.U256(d.TxId))
+	return hash
+}
+
 func NewRandomDeliveryInfo() DeliveryInfo {
 	return DeliveryInfo{
 		ChainTime: NewRandomChainTime(),
@@ -61,10 +82,49 @@ func (m Received) Equals(o Received) bool {
 		m.Timestamp.Cmp(o.Timestamp) == 0
 }
 
-func (d DeliveryInfo) TxHash() common.Hash {
-	var hash common.Hash
-	copy(hash[:], d.TxId.Bytes())
-	return hash
+func (m Received) CheckpointValue() value.Value {
+	val, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(int64(m.Message.Type())),
+		m.Message.CheckpointValue(),
+		value.NewIntValue(new(big.Int).Set(m.BlockNum.AsInt())),
+		value.NewIntValue(new(big.Int).Set(m.Timestamp)),
+	})
+	return val
+}
+
+func UnmarshalReceivedFromCheckpoint(v value.Value) (Received, error) {
+	tup, ok := v.(value.TupleValue)
+	failRet := Received{}
+	if !ok || tup.Len() != 4 {
+		return failRet, errors.New("delivered val must be 5-tuple")
+	}
+	typecode, _ := tup.GetByInt64(0)
+	typecodeInt, ok := typecode.(value.IntValue)
+	msgType := Type(typecodeInt.BigInt().Uint64())
+
+	msg, _ := tup.GetByInt64(1)
+	message, err := UnmarshalFromCheckpoint(msgType, msg)
+	if err != nil {
+		return failRet, err
+	}
+	blockNum, _ := tup.GetByInt64(2)
+	blockNumInt, ok := blockNum.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("blockNum must be int")
+	}
+	timestamp, _ := tup.GetByInt64(3)
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be int")
+	}
+
+	return Received{
+		Message: message,
+		ChainTime: ChainTime{
+			BlockNum:  common.NewTimeBlocks(blockNumInt.BigInt()),
+			Timestamp: timestampInt.BigInt(),
+		},
+	}, nil
 }
 
 type Delivered struct {
@@ -79,19 +139,23 @@ func (m Delivered) GetReceived() Received {
 	}
 }
 
+func (m Delivered) VMInboxMessages() []SingleDelivered {
+	messages := m.Message.VMInboxMessages()
+	ret := make([]SingleDelivered, 0, len(messages))
+	for _, msg := range messages {
+		ret = append(ret, SingleDelivered{
+			Message:      msg,
+			DeliveryInfo: m.DeliveryInfo,
+		})
+	}
+	return ret
+}
+
 func (m Delivered) Equals(o Delivered) bool {
 	return m.Message.Equals(o.Message) &&
 		m.BlockNum.Cmp(o.BlockNum) == 0 &&
 		m.Timestamp.Cmp(o.Timestamp) == 0 &&
 		m.TxId.Cmp(o.TxId) == 0
-}
-
-func (m Delivered) deliveredHeight() *common.TimeBlocks {
-	return m.BlockNum
-}
-
-func (m Delivered) deliveredTimestamp() *big.Int {
-	return m.Timestamp
 }
 
 func (m Delivered) CommitmentHash() common.Hash {
@@ -103,32 +167,15 @@ func (m Delivered) CommitmentHash() common.Hash {
 	)
 }
 
-func (m Delivered) ReceiptHash() common.Hash {
-	if msg, ok := m.Message.(ReceiptMessage); ok {
-		return msg.ReceiptHash()
-	}
-	return value.NewIntValue(m.TxId).ToBytes()
+type RawDelivered struct {
+	Type    Type
+	Message value.Value
+	DeliveryInfo
 }
 
-func (m Delivered) AsInboxValue() (value.Value, error) {
-	singleMessage, ok := m.Message.(SingleMessage)
-	if !ok {
-		return nil, errors.New("Only SingleMessages can be delivered")
-	}
-	receiptHash := m.ReceiptHash()
-	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
-	msg, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(m.deliveredHeight().AsInt()),
-		value.NewIntValue(m.deliveredTimestamp()),
-		value.NewIntValue(receiptVal),
-		singleMessage.AsInboxValue(),
-	})
-	return msg, nil
-}
-
-func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error) {
+func UnmarshalRawDelivered(val value.Value) (RawDelivered, error) {
 	tup, ok := val.(value.TupleValue)
-	invalid := Delivered{}
+	invalid := RawDelivered{}
 	if !ok {
 		return invalid, errors.New("msg must be tuple value")
 	}
@@ -167,13 +214,9 @@ func UnmarshalDelivered(val value.Value, chain common.Address) (Delivered, error
 	}
 	typecode := uint8(typeInt.BigInt().Uint64())
 
-	arbMessage, err := UnmarshalExecuted(Type(typecode), restValTup, chain)
-	if err != nil {
-		return invalid, err
-	}
-
-	return Delivered{
-		Message: arbMessage,
+	return RawDelivered{
+		Type:    Type(typecode),
+		Message: restValTup,
 		DeliveryInfo: DeliveryInfo{
 			ChainTime: ChainTime{
 				BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
@@ -239,23 +282,44 @@ func UnmarshalDeliveredFromCheckpoint(v value.Value) (Delivered, error) {
 }
 
 type SingleDelivered struct {
-	Delivered
+	Message SingleMessage
+	DeliveryInfo
 }
 
 func NewSingleDelivered(d Delivered) (SingleDelivered, error) {
-	_, ok := d.Message.(ExecutionMessage)
+	msg, ok := d.Message.(ExecutionMessage)
 	if !ok {
 		return SingleDelivered{}, errors.New("must construct from execution message")
 	}
-	return SingleDelivered{Delivered: d}, nil
+	return SingleDelivered{Message: msg}, nil
+}
+
+func (m SingleDelivered) Equals(o SingleDelivered) bool {
+	return m.Message.Equals(o.Message) &&
+		m.DeliveryInfo.Equals(o.DeliveryInfo)
+}
+
+func UnmarshalSingleDelivered(val value.Value, chain common.Address) (SingleDelivered, error) {
+	invalid := SingleDelivered{}
+	rawDelivered, err := UnmarshalRawDelivered(val)
+	if err != nil {
+		return invalid, err
+	}
+	arbMessage, err := UnmarshalExecuted(rawDelivered.Type, rawDelivered.Message, chain)
+	if err != nil {
+		return invalid, err
+	}
+
+	return SingleDelivered{
+		Message:      arbMessage,
+		DeliveryInfo: rawDelivered.DeliveryInfo,
+	}, nil
 }
 
 func NewRandomSingleDelivered(msg ExecutionMessage) SingleDelivered {
 	return SingleDelivered{
-		Delivered: Delivered{
-			Message:      msg,
-			DeliveryInfo: NewRandomDeliveryInfo(),
-		},
+		Message:      msg,
+		DeliveryInfo: NewRandomDeliveryInfo(),
 	}
 }
 
@@ -263,7 +327,21 @@ func (s SingleDelivered) ExectutedMessage() ExecutionMessage {
 	return s.Message.(ExecutionMessage)
 }
 
-func (m SingleDelivered) AsInboxValue() value.Value {
-	val, _ := m.Delivered.AsInboxValue()
-	return val
+func (s SingleDelivered) ReceiptHash() common.Hash {
+	if msg, ok := s.Message.(ReceiptMessage); ok {
+		return msg.ReceiptHash()
+	}
+	return value.NewIntValue(s.TxId).ToBytes()
+}
+
+func (s SingleDelivered) AsInboxValue() value.Value {
+	receiptHash := s.ReceiptHash()
+	receiptVal := big.NewInt(0).SetBytes(receiptHash[:])
+	msg, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(s.deliveredHeight().AsInt()),
+		value.NewIntValue(s.deliveredTimestamp()),
+		value.NewIntValue(receiptVal),
+		s.Message.AsInboxValue(),
+	})
+	return msg
 }

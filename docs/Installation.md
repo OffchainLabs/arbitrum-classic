@@ -52,12 +52,12 @@ yarn global add truffle
 
 Here are the important dependencies in case you are not running on a supported OS:
 
--   [docker](https://github.com/docker/docker-ce/releases) and
-    [docker-compose](https://github.com/docker/compose/releases)
--   [node](https://nodejs.org/en/)
--   [python3 and pip3](https://www.python.org/downloads/)
--   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [yarn](https://yarnpkg.com/en/)
+- [docker](https://github.com/docker/docker-ce/releases) and
+  [docker-compose](https://github.com/docker/compose/releases)
+- [node](https://nodejs.org/en/)
+- [python3 and pip3](https://www.python.org/downloads/)
+- [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
+- [yarn](https://yarnpkg.com/en/)
 
 > Requires `node -v` version 8, 10 or 12
 
@@ -68,7 +68,7 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.5.0 https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.6.5 https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build

@@ -43,6 +43,7 @@ type ArbClient interface {
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewGlobalInboxWatcher(address common.Address, rollupAddress common.Address) (GlobalInboxWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
@@ -56,7 +57,7 @@ type ArbAuthClient interface {
 	Address() common.Address
 	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
-	NewGlobalInbox(address common.Address) (GlobalInbox, error)
+	NewGlobalInbox(address common.Address, rollupAddress common.Address) (GlobalInbox, error)
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)

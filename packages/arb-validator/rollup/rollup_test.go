@@ -228,6 +228,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			Height:     common.NewTimeBlocks(big.NewInt(10)),
 			HeaderHash: common.Hash{},
 		},
+		common.Hash{},
 	)
 	if err != nil {
 		return nil, err

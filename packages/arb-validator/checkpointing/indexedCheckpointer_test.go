@@ -65,6 +65,7 @@ var checkpointData2 = []byte{5, 3, 4}
 var checkpointData3 = []byte{5, 3, 5}
 
 var dbPath = "./testdb"
+var maxReorgHeight = big.NewInt(100)
 
 type TimeGetterMock struct {
 	blockIdFunc func(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
@@ -88,7 +89,7 @@ func TestMain(m *testing.M) {
 
 func TestEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func TestEmpty(t *testing.T) {
 
 func TestWriteCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +161,7 @@ func TestWriteCheckpoint(t *testing.T) {
 
 func TestRestoreEmpty(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +176,7 @@ func TestRestoreEmpty(t *testing.T) {
 
 func TestRestoreSingleCheckpoint(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +228,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 
 func TestRestoreReorg(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +309,7 @@ func TestRestoreReorg(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -360,7 +361,7 @@ func TestCleanup(t *testing.T) {
 
 func TestConfirm(t *testing.T) {
 	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, true)
+	cp, err := newIndexedCheckpointer(rollupAddr, contractPath, dbPath, maxReorgHeight, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +381,7 @@ func TestConfirm(t *testing.T) {
 		t.Error()
 	}
 
-	nd := structures.NewInitialNode(mach)
+	nd := structures.NewInitialNode(mach, common.Hash{})
 
 	buf := nd.MarshalForCheckpoint(checkpointContext, false)
 	data, err := proto.Marshal(buf)

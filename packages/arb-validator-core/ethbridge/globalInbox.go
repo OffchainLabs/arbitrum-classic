@@ -23,8 +23,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -36,17 +34,16 @@ import (
 )
 
 type globalInbox struct {
-	GlobalInbox *globalinbox.GlobalInbox
-	client      *ethclient.Client
-	auth        *TransactAuth
+	*globalInboxWatcher
+	auth *TransactAuth
 }
 
-func newGlobalInbox(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*globalInbox, error) {
-	globalInboxContract, err := globalinbox.NewGlobalInbox(address, client)
+func newGlobalInbox(address ethcommon.Address, rollupAddress ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*globalInbox, error) {
+	watcher, err := newGlobalInboxWatcher(address, rollupAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	}
-	return &globalInbox{globalInboxContract, client, auth}, nil
+	return &globalInbox{watcher, auth}, nil
 }
 
 func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
@@ -185,18 +182,6 @@ func (con *globalInbox) DepositERC721Message(
 	}
 
 	return con.waitForReceipt(ctx, tx, "DepositERC721Message")
-}
-
-func (con *globalInbox) GetTokenBalance(
-	ctx context.Context,
-	user common.Address,
-	tokenContract common.Address,
-) (*big.Int, error) {
-	return con.GlobalInbox.GetERC20Balance(
-		&bind.CallOpts{Context: ctx},
-		tokenContract.ToEthAddress(),
-		user.ToEthAddress(),
-	)
 }
 
 func (con *globalInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
