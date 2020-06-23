@@ -104,11 +104,15 @@ contract ValueTester {
         return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
     }
 
+    function bytestackToBytes(bytes memory data) public pure returns (bytes memory) {
+        return Value.bytestackToBytes(data);
+    }
+
     function hashTuplePreImage(
-        bytes32 innerHash, 
+        bytes32 innerHash,
         uint256 valueSize
-    ) 
-        public pure returns (bytes32) 
+    )
+        public pure returns (bytes32)
     {
         return Value.hashTuplePreImage(innerHash, valueSize);
     }
@@ -118,7 +122,7 @@ contract ValueTester {
         return Value.hashEmptyTuple();
     }
 
-    function hashTestTuple() public pure returns (bytes32) 
+    function hashTestTuple() public pure returns (bytes32)
     {
         Value.Data[] memory tupVals = new Value.Data[](2);
         tupVals[0] = Value.newInt(uint256(111));
