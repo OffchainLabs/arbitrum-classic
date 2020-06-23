@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -41,7 +40,7 @@ var ChallengeFactoryFuncSigs = map[string]string{
 }
 
 // ChallengeFactoryBin is the compiled bytecode used for deploying new contracts.
-var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516108173803806108178339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556107888061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c8063729406c814610067578063865da1c2146100b95780639b5f4dfc146100fb578063e252f79a14610103578063e6fcd1941461010b578063f089f1c214610188575b600080fd5b61009d6004803603606081101561007d57600080fd5b506001600160a01b03813581169160208101359091169060400135610190565b604080516001600160a01b039092168252519081900360200190f35b61009d600480360360a08110156100cf57600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060800135610227565b61009d6102ce565b61009d6102dd565b6101136102ec565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014d578181015183820152602001610135565b50505050905090810190601f16801561017a5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61009d610314565b60006001600160f81b0319306101a68686610323565b6101b76101b286610370565b610481565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b60008061023383610370565b905060006102408261058b565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6040518060400160405280600c81526020016b494e56414c49445f5459504560a01b81525081565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b600061037a6106a8565b82141561039357506001546001600160a01b031661047c565b61039b6106ad565b8214156103b457506000546001600160a01b031661047c565b6103bc6106b2565b8214156103d557506002546001600160a01b031661047c565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610441578181015183820152602001610429565b50505050905090810190601f16801561046e5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b6000606060405180602001610495906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106104fc5780518252601f1990920191602091820191016104dd565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106105445780518252601f199092019160209182019101610525565b6001836020036101000a0380198251168184511680821785525050505050509050019250505060405160208183030381529060405290508080519060200120915050919050565b600060606040518060200161059f906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106106065780518252601f1990920191602091820191016105e7565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b6020831061064e5780518252601f19909201916020918201910161062f565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836106a0573d6000803e3d6000fd5b505050919050565b600090565b600190565b600290565b6090806106c48339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a723158202632503bd6e8596c3f0453454ec4c0f738d703d6eed47185ecc638834bcb9bbc64736f6c634300050f0032"
+var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516108173803806108178339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556107888061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c8063729406c814610067578063865da1c2146100b95780639b5f4dfc146100fb578063e252f79a14610103578063e6fcd1941461010b578063f089f1c214610188575b600080fd5b61009d6004803603606081101561007d57600080fd5b506001600160a01b03813581169160208101359091169060400135610190565b604080516001600160a01b039092168252519081900360200190f35b61009d600480360360a08110156100cf57600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060800135610227565b61009d6102ce565b61009d6102dd565b6101136102ec565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014d578181015183820152602001610135565b50505050905090810190601f16801561017a5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61009d610314565b60006001600160f81b0319306101a68686610323565b6101b76101b286610370565b610481565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b60008061023383610370565b905060006102408261058b565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6040518060400160405280600c81526020016b494e56414c49445f5459504560a01b81525081565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b600061037a6106a8565b82141561039357506001546001600160a01b031661047c565b61039b6106ad565b8214156103b457506000546001600160a01b031661047c565b6103bc6106b2565b8214156103d557506002546001600160a01b031661047c565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610441578181015183820152602001610429565b50505050905090810190601f16801561046e5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b6000606060405180602001610495906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106104fc5780518252601f1990920191602091820191016104dd565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106105445780518252601f199092019160209182019101610525565b6001836020036101000a0380198251168184511680821785525050505050509050019250505060405160208183030381529060405290508080519060200120915050919050565b600060606040518060200161059f906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106106065780518252601f1990920191602091820191016105e7565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b6020831061064e5780518252601f19909201916020918201910161062f565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836106a0573d6000803e3d6000fd5b505050919050565b600090565b600190565b600290565b6090806106c48339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a7231582025f356c5250d1d39d88f1701aa91754c7b64a8258a45a8208e638b046e8518ed64736f6c63430005110032"
 
 // DeployChallengeFactory deploys a new Ethereum contract, binding an instance of ChallengeFactory to it.
 func DeployChallengeFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _messagesChallengeTemplate common.Address, _inboxTopChallengeTemplate common.Address, _executionChallengeTemplate common.Address) (common.Address, *types.Transaction, *ChallengeFactory, error) {
@@ -201,7 +200,7 @@ func (_ChallengeFactory *ChallengeFactoryTransactorRaw) Transact(opts *bind.Tran
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallOpts) (string, error) {
 	var (
 		ret0 = new(string)
@@ -213,21 +212,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallO
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactorySession) INVALIDTYPESTR() (string, error) {
 	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
 }
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) INVALIDTYPESTR() (string, error) {
 	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -239,21 +238,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -265,21 +264,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -291,21 +290,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts 
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) MessagesChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -317,14 +316,14 @@ func (_ChallengeFactory *ChallengeFactoryCaller) MessagesChallengeTemplate(opts 
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) MessagesChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.MessagesChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // MessagesChallengeTemplate is a free data retrieval call binding the contract method 0xe252f79a.
 //
-// Solidity: function messagesChallengeTemplate() constant returns(address)
+// Solidity: function messagesChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) MessagesChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.MessagesChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
@@ -362,7 +361,7 @@ var ChallengeUtilsFuncSigs = map[string]string{
 }
 
 // ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
-var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820700623dcb300d07a89dd66c2f312e517c83be08b285278c67140cfaaad930fb064736f6c634300050f0032"
+var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820ba9f38222d69e81a75675f06da9325b78df15816f56ed13980746298a2cb39cf64736f6c63430005110032"
 
 // DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
 func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
@@ -522,7 +521,7 @@ func (_ChallengeUtils *ChallengeUtilsTransactorRaw) Transact(opts *bind.Transact
 
 // INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
 //
-// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+// Solidity: function INVALID_EXECUTION_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDEXECUTIONTYPE(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -534,21 +533,21 @@ func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDEXECUTIONTYPE(opts *bind.Cal
 
 // INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
 //
-// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+// Solidity: function INVALID_EXECUTION_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsSession) INVALIDEXECUTIONTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDEXECUTIONTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // INVALIDEXECUTIONTYPE is a free data retrieval call binding the contract method 0x95312727.
 //
-// Solidity: function INVALID_EXECUTION_TYPE() constant returns(uint256)
+// Solidity: function INVALID_EXECUTION_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDEXECUTIONTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDEXECUTIONTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
 //
-// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+// Solidity: function INVALID_INBOX_TOP_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDINBOXTOPTYPE(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -560,21 +559,21 @@ func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDINBOXTOPTYPE(opts *bind.Call
 
 // INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
 //
-// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+// Solidity: function INVALID_INBOX_TOP_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsSession) INVALIDINBOXTOPTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDINBOXTOPTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // INVALIDINBOXTOPTYPE is a free data retrieval call binding the contract method 0xa697bcac.
 //
-// Solidity: function INVALID_INBOX_TOP_TYPE() constant returns(uint256)
+// Solidity: function INVALID_INBOX_TOP_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDINBOXTOPTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDINBOXTOPTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
 //
-// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+// Solidity: function INVALID_MESSAGES_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDMESSAGESTYPE(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -586,21 +585,21 @@ func (_ChallengeUtils *ChallengeUtilsCaller) INVALIDMESSAGESTYPE(opts *bind.Call
 
 // INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
 //
-// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+// Solidity: function INVALID_MESSAGES_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsSession) INVALIDMESSAGESTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDMESSAGESTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // INVALIDMESSAGESTYPE is a free data retrieval call binding the contract method 0xd7519b46.
 //
-// Solidity: function INVALID_MESSAGES_TYPE() constant returns(uint256)
+// Solidity: function INVALID_MESSAGES_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCallerSession) INVALIDMESSAGESTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.INVALIDMESSAGESTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
 //
-// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+// Solidity: function VALID_CHILD_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCaller) VALIDCHILDTYPE(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -612,14 +611,14 @@ func (_ChallengeUtils *ChallengeUtilsCaller) VALIDCHILDTYPE(opts *bind.CallOpts)
 
 // VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
 //
-// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+// Solidity: function VALID_CHILD_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsSession) VALIDCHILDTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.VALIDCHILDTYPE(&_ChallengeUtils.CallOpts)
 }
 
 // VALIDCHILDTYPE is a free data retrieval call binding the contract method 0x2e179be5.
 //
-// Solidity: function VALID_CHILD_TYPE() constant returns(uint256)
+// Solidity: function VALID_CHILD_TYPE() view returns(uint256)
 func (_ChallengeUtils *ChallengeUtilsCallerSession) VALIDCHILDTYPE() (*big.Int, error) {
 	return _ChallengeUtils.Contract.VALIDCHILDTYPE(&_ChallengeUtils.CallOpts)
 }
@@ -628,7 +627,7 @@ func (_ChallengeUtils *ChallengeUtilsCallerSession) VALIDCHILDTYPE() (*big.Int, 
 const CloneFactoryABI = "[]"
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a723158207d097d5e2f137b07789dd089d368b908eebbecda041c56e17c963c8aff089cd764736f6c634300050f0032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582014499adf675d1d9478ed19c566b4f750dc94b33ec36c0cd9ed6abd9987faa64f64736f6c63430005110032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -1110,7 +1109,7 @@ func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.Tr
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -1122,14 +1121,14 @@ func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bi
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
