@@ -1,3 +1,4 @@
+import bre from '@nomiclabs/buidler'
 import deploy_contracts from './deploylib'
 
 async function main() {
@@ -5,7 +6,7 @@ async function main() {
   // If this runs in a standalone fashion you may want to call compile manually
   // to make sure everything is compiled
   // await bre.run('compile');
-  const { arb_factory } = await deploy_contracts()
+  const { arb_factory } = await deploy_contracts(bre)
   const fs = require('fs')
   let addresses = {
     ArbFactory: arb_factory.address,

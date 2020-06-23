@@ -1,8 +1,11 @@
-import { ethers, config } from '@nomiclabs/buidler'
-import { Artifact } from '@nomiclabs/buidler/types'
+import { Artifact, BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types'
+import { Contract } from 'ethers'
 const { readArtifact } = require('@nomiclabs/buidler/plugins')
 
-export default async function deploy_contracts() {
+export default async function deploy_contracts(bre: BuidlerRuntimeEnvironment) {
+  const ethers = bre.ethers
+  const config = bre.config
+
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const MessagesChallenge = await ethers.getContractFactory('MessagesChallenge')
   const InboxTopChallenge = await ethers.getContractFactory('InboxTopChallenge')
@@ -14,7 +17,7 @@ export default async function deploy_contracts() {
   const one_step_proof = await OneStepProof.deploy()
   const execution_challenge_promise = one_step_proof
     .deployed()
-    .then(async one_step_proof => {
+    .then(async (one_step_proof: Contract) => {
       const cArtifact = await readArtifact(
         config.paths.artifacts,
         'ExecutionChallenge'
@@ -55,6 +58,15 @@ export default async function deploy_contracts() {
     global_inbox.address,
     challenge_factory.address
   )
+
+  await one_step_proof.deployed()
+  await message_challenge.deployed()
+  await inbox_top_challenge.deployed()
+  await execution_challenge.deployed()
+  await arb_rollup.deployed()
+  await global_inbox.deployed()
+  await challenge_factory.deployed()
+  await arb_factory.deployed()
 
   console.log('ArbFactory deployed at', arb_factory.address)
 

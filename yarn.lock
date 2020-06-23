@@ -874,6 +874,15 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-ethers/-/buidler-ethers-1.3.4.tgz#3f200e1ef5843f844a356fe00d1d11685218817c"
   integrity sha512-kz2YtkQl/eUuNkYpZqj1xtkDpzy+2AdUNc9xfmvU/zEf0HL0eOsj+a9Ltvl2xhL86eTaYbfrIzJvWGmpIJndNA==
 
+"@nomiclabs/buidler-etherscan@^1.3.3":
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-etherscan/-/buidler-etherscan-1.3.3.tgz#a7cbba220c7ad88ae04f26440e1f7236569db145"
+  integrity sha512-Pmo890t8ZvO9/9Q+9uxQl7SLai6Sqp8m5CdUc4MWO/YIIsv6dt1+68VaUDOhkF5+xwUDgp89Cdu0fJp4PODsxw==
+  dependencies:
+    ethereumjs-abi "^0.6.8"
+    request "^2.88.0"
+    request-promise "^4.2.4"
+
 "@nomiclabs/buidler-waffle@^1.3.5":
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-waffle/-/buidler-waffle-1.3.5.tgz#327f8ce9daa2778af204f3c8ef986414c7d86afa"
@@ -11403,6 +11412,16 @@ request-promise-native@^1.0.5, request-promise-native@^1.0.7, request-promise-na
   resolved "https://registry.yarnpkg.com/request-promise-native/-/request-promise-native-1.0.8.tgz#a455b960b826e44e2bf8999af64dff2bfe58cb36"
   integrity sha512-dapwLGqkHtwL5AEbfenuzjTYg35Jd6KPytsC2/TLkVMz8rm+tNt72MGUWT1RP/aYawMpN6HqbNGBQaRcBtjQMQ==
   dependencies:
+    request-promise-core "1.1.3"
+    stealthy-require "^1.1.1"
+    tough-cookie "^2.3.3"
+
+request-promise@^4.2.4:
+  version "4.2.5"
+  resolved "https://registry.yarnpkg.com/request-promise/-/request-promise-4.2.5.tgz#186222c59ae512f3497dfe4d75a9c8461bd0053c"
+  integrity sha512-ZgnepCykFdmpq86fKGwqntyTiUrHycALuGggpyCZwMvGaZWgxW6yagT0FHkgo5LzYvOaCNvxYwWYIjevSH1EDg==
+  dependencies:
+    bluebird "^3.5.0"
     request-promise-core "1.1.3"
     stealthy-require "^1.1.1"
     tough-cookie "^2.3.3"
