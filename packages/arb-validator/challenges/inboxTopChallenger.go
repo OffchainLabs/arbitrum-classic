@@ -129,35 +129,35 @@ func inboxChallengerUpdate(
 ) (arbbridge.Event, ChallengeState, error) {
 	// Wait to check if we've already chosen a segment
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
-	if timedOut {
-		bisectionLength := bisectionEvent.TotalLength.Uint64()
-		segments, err := getSegments(
-			inbox,
-			bisectionEvent)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		segmentToChallenge, found := findSegmentToChallenge(segments, bisectionEvent.ChainHashes)
-
-		if !found {
-			if challengeEverything {
-				segmentToChallenge = uint64(rand.Int31n(int32(len(bisectionEvent.ChainHashes) - 1)))
-			} else {
-				return nil, 0, errors.New("can't find inbox segment to challenge")
-			}
-		}
-		err = contract.ChooseSegment(
-			ctx,
-			uint16(segmentToChallenge),
-			bisectionEvent.ChainHashes,
-			bisectionLength)
-
-		if err != nil {
-			return nil, 0, err
-		}
-		event, state, err = getNextEvent(eventChan)
+	if !timedOut {
+		return event, state, err
 	}
 
-	return event, state, err
+	bisectionLength := bisectionEvent.TotalLength.Uint64()
+	segments, err := getSegments(
+		inbox,
+		bisectionEvent)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	segmentToChallenge, found := findSegmentToChallenge(segments, bisectionEvent.ChainHashes)
+
+	if !found {
+		if challengeEverything {
+			segmentToChallenge = uint64(rand.Int31n(int32(len(bisectionEvent.ChainHashes) - 1)))
+		} else {
+			return nil, 0, errors.New("can't find inbox segment to challenge")
+		}
+	}
+	err = contract.ChooseSegment(
+		ctx,
+		uint16(segmentToChallenge),
+		bisectionEvent.ChainHashes,
+		bisectionLength)
+
+	if err != nil {
+		return nil, 0, err
+	}
+	return getNextEvent(eventChan)
 }

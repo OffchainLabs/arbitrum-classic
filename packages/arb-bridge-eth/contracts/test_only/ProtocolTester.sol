@@ -20,21 +20,6 @@ import "../arch/Protocol.sol";
 
 contract ProtocolTester{
 
-    function generateLastMessageHash(
-        bytes memory messages, 
-        uint256 startOffset, 
-        uint256 length
-    ) 
-    	public 
-    	pure 
-    	returns (bytes32, uint) 
-    {
-    	return Protocol.generateLastMessageHash(
-    		messages,
-    		startOffset,
-    		length);
-    }
-
     function generateAssertionHash(
     	bytes32 _afterHash,
         bool    _didInboxInsn,

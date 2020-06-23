@@ -161,9 +161,7 @@ func setPreCondition(
 		0,
 	)
 	assertStub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-	precondition = precondition.GeneratePostcondition(assertStub)
-
-	return precondition
+	return precondition.GeneratePostcondition(assertStub)
 }
 
 func executionChallengerUpdate(

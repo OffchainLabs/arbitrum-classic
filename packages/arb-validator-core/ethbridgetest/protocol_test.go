@@ -18,7 +18,6 @@ package ethbridgetest
 
 import (
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -101,8 +100,6 @@ func TestGeneratePreconditionHash(t *testing.T) {
 
 	if expectedHash != ethbridgeHash {
 		t.Error(errors.New("calculated wrong precondition hash"))
-		fmt.Println(expectedHash)
-		fmt.Println(ethbridgeHash)
 	}
 }
 
@@ -143,7 +140,5 @@ func TestGenerateAssertionHash(t *testing.T) {
 
 	if expectedHash != ethbridgeHash {
 		t.Error(errors.New("calculated wrong assertion hash"))
-		fmt.Println(expectedHash)
-		fmt.Println(ethbridgeHash)
 	}
 }

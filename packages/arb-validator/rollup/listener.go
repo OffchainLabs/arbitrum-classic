@@ -197,7 +197,6 @@ func makeAssertion(ctx context.Context, rollup arbbridge.ArbRollup, prepared *Pr
 		prepared.beforeState,
 		prepared.params,
 		prepared.claim,
-		prepared.getAssertionParams(),
 		proof,
 	)
 }

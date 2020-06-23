@@ -90,7 +90,7 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		[3]ethcommon.Address{
 			msg.Chain.ToEthAddress(),
@@ -121,7 +121,7 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	tx, err := c.contract.OneStepProofTransactionBatchMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		msg.Chain.ToEthAddress(),
 		msg.TxData,
@@ -147,7 +147,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -164,7 +164,7 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB.GetPreImageHash(),
+			lowerHashB.GetInnerHash(),
 			big.NewInt(lowerHashB.Size()),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
@@ -189,7 +189,7 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -217,7 +217,7 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
@@ -245,7 +245,7 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.GetPreImageHash(),
+		lowerHashB.GetInnerHash(),
 		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),

@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
@@ -31,7 +32,7 @@ import (
 
 func testMessagesChallenge(t *testing.T) {
 	t.Parallel()
-	messageStack := getMsgStack2()
+	messageStack := getMsgStack()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 
@@ -109,4 +110,22 @@ func getMsgChallengeData(
 		big.NewInt(4),
 	)
 	return beforeInbox, challengeHash
+}
+
+func getMsgStack() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: message.Eth{
+				To:    common.Address{},
+				From:  common.Address{},
+				Value: big.NewInt(6745),
+			},
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
 }

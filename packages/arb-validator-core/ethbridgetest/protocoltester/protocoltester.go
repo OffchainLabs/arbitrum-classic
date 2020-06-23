@@ -193,7 +193,7 @@ func (_BytesLib *BytesLibTransactorRaw) Transact(opts *bind.TransactOpts, method
 const ProtocolABI = "[]"
 
 // ProtocolBin is the compiled bytecode used for deploying new contracts.
-var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158208216d4682014e8cd8a0899329bca2ffb7fd563e94ecf7caa96ce6756cf76d5d864736f6c634300050f0032"
+var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820394193043a4aa777efd1395238c96d8bb055e65d8f449835e4663e5d6194359964736f6c634300050f0032"
 
 // DeployProtocol deploys a new Ethereum contract, binding an instance of Protocol to it.
 func DeployProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Protocol, error) {
@@ -352,17 +352,16 @@ func (_Protocol *ProtocolTransactorRaw) Transact(opts *bind.TransactOpts, method
 }
 
 // ProtocolTesterABI is the input ABI used to generate the binding from.
-const ProtocolTesterABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint64\",\"name\":\"_numGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLogHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLogHash\",\"type\":\"bytes32\"}],\"name\":\"generateAssertionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"messages\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"startOffset\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"generateLastMessageHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[4]\",\"name\":\"_timeBounds\",\"type\":\"uint128[4]\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInboxHash\",\"type\":\"bytes32\"}],\"name\":\"generatePreconditionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const ProtocolTesterABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint64\",\"name\":\"_numGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLogHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLogHash\",\"type\":\"bytes32\"}],\"name\":\"generateAssertionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[4]\",\"name\":\"_timeBounds\",\"type\":\"uint128[4]\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInboxHash\",\"type\":\"bytes32\"}],\"name\":\"generatePreconditionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // ProtocolTesterFuncSigs maps the 4-byte function signature to its string representation.
 var ProtocolTesterFuncSigs = map[string]string{
 	"c21ef0fa": "generateAssertionHash(bytes32,bool,uint64,bytes32,bytes32,bytes32,bytes32)",
-	"02be0bd0": "generateLastMessageHash(bytes,uint256,uint256)",
 	"fcc6af6e": "generatePreconditionHash(bytes32,uint128[4],bytes32)",
 }
 
 // ProtocolTesterBin is the compiled bytecode used for deploying new contracts.
-var ProtocolTesterBin = "0x608060405234801561001057600080fd5b506104f1806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c806302be0bd014610046578063c21ef0fa1461010a578063fcc6af6e14610169575b600080fd5b6100f16004803603606081101561005c57600080fd5b81019060208101813564010000000081111561007757600080fd5b82018360208201111561008957600080fd5b803590602001918460018302840111640100000000831117156100ab57600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050823593505050602001356101c1565b6040805192835260208301919091528051918290030190f35b610157600480360360e081101561012057600080fd5b50803590602081013515159067ffffffffffffffff6040820135169060608101359060808101359060a08101359060c001356101db565b60408051918252519081900360200190f35b610157600480360360c081101561017f57600080fd5b604080516080818101909252833593928301929160a0830191906020840190600490839083908082843760009201919091525091945050903591506101f89050565b6000806101cf85858561020d565b91509150935093915050565b60006101ec88888888888888610368565b98975050505050505050565b60006102058484846103cb565b949350505050565b8251600090819081908190819087870190811115610263576040805162461bcd60e51b815260206004820152600e60248201526d0d2dcecc2d8d2c840d8cadccee8d60931b604482015290519081900360640190fd5b8760005b82821015610301576102798b83610445565b9197509094509150856102cc576040805162461bcd60e51b8152602060048201526016602482015275496e76616c6964206f7574707574206d65737361676560501b604482015290519081900360640190fd5b604080516020808201979097528082018690528151808203830181526060909101909152805195019490942093600101610267565b888a018214610357576040805162461bcd60e51b815260206004820152601a60248201527f76616c756520657874656e6465642070617374206c656e677468000000000000604482015290519081900360640190fd5b939a93995092975050505050505050565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b81516020808401516040808601516060968701518251808601999099526fffffffffffffffffffffffffffffffff19608096871b81168a85015293861b841660508a015290851b83169688019690965294831b166070860152818501929092528251808503909101815260a0909301909152815191012090565b6000806000806000865190508581108061046157506020868203105b156104755750600093508492509050610499565b610485878763ffffffff6104a016565b600195506020870194509250610499915050565b9250925092565b600081602001835110156104b357600080fd5b5001602001519056fea265627a7a723158200f25665ee2462dbef4f344eff71ba91d467b0a1750a49e5c801eb5c4abb6205b64736f6c634300050f0032"
+var ProtocolTesterBin = "0x608060405234801561001057600080fd5b50610236806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063c21ef0fa1461003b578063fcc6af6e1461009a575b600080fd5b610088600480360360e081101561005157600080fd5b50803590602081013515159067ffffffffffffffff6040820135169060608101359060808101359060a08101359060c001356100f2565b60408051918252519081900360200190f35b610088600480360360c08110156100b057600080fd5b604080516080818101909252833593928301929160a08301919060208401906004908390839080828437600092019190915250919450509035915061010f9050565b600061010388888888888888610124565b98975050505050505050565b600061011c848484610187565b949350505050565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b81516020808401516040808601516060968701518251808601999099526fffffffffffffffffffffffffffffffff19608096871b81168a85015293861b841660508a015290851b83169688019690965294831b166070860152818501929092528251808503909101815260a090930190915281519101209056fea265627a7a72315820fd3db565859ec1197e2082aaba0376fc64ffb0f2f07ecfb101b9f1a7a624876a64736f6c634300050f0032"
 
 // DeployProtocolTester deploys a new Ethereum contract, binding an instance of ProtocolTester to it.
 func DeployProtocolTester(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ProtocolTester, error) {
@@ -544,36 +543,6 @@ func (_ProtocolTester *ProtocolTesterSession) GenerateAssertionHash(_afterHash [
 // Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterCallerSession) GenerateAssertionHash(_afterHash [32]byte, _didInboxInsn bool, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
 	return _ProtocolTester.Contract.GenerateAssertionHash(&_ProtocolTester.CallOpts, _afterHash, _didInboxInsn, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
-}
-
-// GenerateLastMessageHash is a free data retrieval call binding the contract method 0x02be0bd0.
-//
-// Solidity: function generateLastMessageHash(bytes messages, uint256 startOffset, uint256 length) constant returns(bytes32, uint256)
-func (_ProtocolTester *ProtocolTesterCaller) GenerateLastMessageHash(opts *bind.CallOpts, messages []byte, startOffset *big.Int, length *big.Int) ([32]byte, *big.Int, error) {
-	var (
-		ret0 = new([32]byte)
-		ret1 = new(*big.Int)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
-	}
-	err := _ProtocolTester.contract.Call(opts, out, "generateLastMessageHash", messages, startOffset, length)
-	return *ret0, *ret1, err
-}
-
-// GenerateLastMessageHash is a free data retrieval call binding the contract method 0x02be0bd0.
-//
-// Solidity: function generateLastMessageHash(bytes messages, uint256 startOffset, uint256 length) constant returns(bytes32, uint256)
-func (_ProtocolTester *ProtocolTesterSession) GenerateLastMessageHash(messages []byte, startOffset *big.Int, length *big.Int) ([32]byte, *big.Int, error) {
-	return _ProtocolTester.Contract.GenerateLastMessageHash(&_ProtocolTester.CallOpts, messages, startOffset, length)
-}
-
-// GenerateLastMessageHash is a free data retrieval call binding the contract method 0x02be0bd0.
-//
-// Solidity: function generateLastMessageHash(bytes messages, uint256 startOffset, uint256 length) constant returns(bytes32, uint256)
-func (_ProtocolTester *ProtocolTesterCallerSession) GenerateLastMessageHash(messages []byte, startOffset *big.Int, length *big.Int) ([32]byte, *big.Int, error) {
-	return _ProtocolTester.Contract.GenerateLastMessageHash(&_ProtocolTester.CallOpts, messages, startOffset, length)
 }
 
 // GeneratePreconditionHash is a free data retrieval call binding the contract method 0xfcc6af6e.

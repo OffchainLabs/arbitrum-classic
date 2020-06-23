@@ -20,9 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
 )
 
 func challengeEnded(state ChallengeState, err error) bool {
@@ -39,16 +37,10 @@ func getVmInboxSegments(
 	startInbox uint64,
 ) ([]value.HashPreImage, error) {
 	bisectionLength := bisectionEvent.TotalLength.Uint64()
-
-	vmInboxSegments, err := vmInbox.GenerateBisection(
+	return vmInbox.GenerateBisection(
 		startInbox,
 		uint64(len(bisectionEvent.SegmentHashes))-1,
 		bisectionLength)
-	if err != nil {
-		return nil, err
-	}
-
-	return vmInboxSegments, nil
 }
 
 func getInboxSegments(
@@ -56,16 +48,10 @@ func getInboxSegments(
 	bisectionEvent arbbridge.MessagesBisectionEvent,
 ) ([]common.Hash, error) {
 	bisectionLength := bisectionEvent.TotalLength.Uint64()
-
-	inboxSegments, err := inbox.GenerateBisection(
+	return inbox.GenerateBisection(
 		bisectionEvent.ChainHashes[0],
 		uint64(len(bisectionEvent.ChainHashes))-1,
 		bisectionLength)
-	if err != nil {
-		return nil, err
-	} else {
-		return inboxSegments, nil
-	}
 }
 
 func getSegments(
@@ -73,16 +59,10 @@ func getSegments(
 	bisectionEvent arbbridge.InboxTopBisectionEvent,
 ) ([]common.Hash, error) {
 	bisectionLength := bisectionEvent.TotalLength.Uint64()
-
-	inboxSegments, err := inbox.GenerateBisection(
+	return inbox.GenerateBisection(
 		bisectionEvent.ChainHashes[0],
 		uint64(len(bisectionEvent.ChainHashes))-1,
 		bisectionLength)
-	if err != nil {
-		return nil, err
-	} else {
-		return inboxSegments, nil
-	}
 }
 
 func findSegmentToChallenge(
@@ -96,76 +76,4 @@ func findSegmentToChallenge(
 	}
 
 	return 0, false
-}
-
-func getMsgStack1() *structures.MessageStack {
-	msg1 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg2 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg3 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg4 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	messageStack := structures.NewMessageStack()
-	messageStack.DeliverMessage(msg1)
-	messageStack.DeliverMessage(msg2)
-	messageStack.DeliverMessage(msg3)
-	messageStack.DeliverMessage(msg4)
-
-	return messageStack
-}
-
-func getMsgStack2() *structures.MessageStack {
-	messageStack := structures.NewMessageStack()
-	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.Eth{
-				To:    common.Address{},
-				From:  common.Address{},
-				Value: big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
-	}
-	return messageStack
 }

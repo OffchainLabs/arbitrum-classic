@@ -93,6 +93,7 @@ uint256_t MachineState::getMachineSize() {
     return machine_size;
 }
 
+namespace {
 std::vector<unsigned char> marshalState(const Code& code,
                                         CodePointStub next_codepoint,
                                         HashPreImage stackPreImage,
@@ -112,6 +113,7 @@ std::vector<unsigned char> marshalState(const Code& code,
 
     return buf;
 }
+}  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();

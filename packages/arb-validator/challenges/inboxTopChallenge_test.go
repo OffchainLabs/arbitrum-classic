@@ -18,6 +18,7 @@ package challenges
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 	"testing"
 
@@ -31,7 +32,7 @@ import (
 func testInboxTopChallenge(tester *testing.T) {
 	tester.Parallel()
 
-	messageStack := getMsgStack1()
+	messageStack := getInboxMsgStack()
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
 	bottomHash, challengeHash := getChallengeData(tester, messageStack, count)
 
@@ -81,4 +82,58 @@ func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messa
 	challengeHash := valprotocol.InboxTopChallengeDataHash(bottomHash, topHash, messageCount)
 
 	return bottomHash, challengeHash
+}
+
+func getInboxMsgStack() *structures.MessageStack {
+	msg1 := message.Received{
+		Message: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
+	}
+	msg2 := message.Received{
+		Message: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
+	}
+	msg3 := message.Received{
+		Message: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
+	}
+	msg4 := message.Received{
+		Message: message.Eth{
+			To:    common.Address{},
+			From:  common.Address{},
+			Value: big.NewInt(6745),
+		},
+		ChainTime: message.ChainTime{
+			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+			Timestamp: big.NewInt(5435254),
+		},
+	}
+	messageStack := structures.NewMessageStack()
+	messageStack.DeliverMessage(msg1)
+	messageStack.DeliverMessage(msg2)
+	messageStack.DeliverMessage(msg3)
+	messageStack.DeliverMessage(msg4)
+
+	return messageStack
 }

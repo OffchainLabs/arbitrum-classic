@@ -48,7 +48,7 @@ func NewHashPreImageFromReader(rd io.Reader) (HashPreImage, error) {
 	return NewPreImage(h, size), nil
 }
 
-func (hp HashPreImage) GetPreImageHash() common.Hash {
+func (hp HashPreImage) GetInnerHash() common.Hash {
 	return hp.hashImage
 }
 

@@ -292,20 +292,21 @@ contract Staking {
         returns(uint)
     {
         uint256 _stakerCount = stakerAddresses.length;
-        _verifyStakerCount(stakerProofOffsets, _stakerCount);
+        require(_stakerCount == stakerCount, CHCK_COUNT);
+        require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
 
         bytes20 prevStaker = 0x00;
         uint activeCount = 0;
         bool isActive = false;
 
         for (uint256 index = 0; index < _stakerCount; index++) {
-            address stakerAddress = stakerAddresses[index];
+            address currentStaker = stakerAddresses[index];
 
-            isActive = _verifyAlignedStakers(
+            isActive = _verifyAlignedStaker(
                 node, 
                 stakerProofs, 
                 deadlineTicks, 
-                stakerAddress, 
+                currentStaker, 
                 prevStaker, 
                 stakerProofOffsets[index],
                 stakerProofOffsets[index+1]);
@@ -314,12 +315,12 @@ contract Staking {
                 activeCount++;
             }
             
-            prevStaker = bytes20(stakerAddress);
+            prevStaker = bytes20(currentStaker);
         }
         return activeCount;
     }
 
-    function _verifyAlignedStakers(
+    function _verifyAlignedStaker(
         bytes32 node,
         bytes32[] memory stakerProofs,
         uint256 deadlineTicks,
@@ -333,10 +334,10 @@ contract Staking {
         returns (bool)
     {
         require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
-        bool isActive = false;
-
         Staker storage staker = getValidStaker(stakerAddress);
-        if (RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks) {
+        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks;
+
+        if (isActive) {
             require(
                 RollupUtils.calculateLeafFromPath(
                     node,
@@ -346,20 +347,8 @@ contract Staking {
                 ) == staker.location,
                 CHCK_STAKER_PROOF
             );
-            isActive = true;
         }
 
         return isActive;
-    }
-
-    function _verifyStakerCount(
-        uint256[] memory stakerProofOffsets, 
-        uint256 _stakerCount
-    ) 
-        private 
-        view 
-    {
-        require(_stakerCount == stakerCount, CHCK_COUNT);
-        require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
     }
 }

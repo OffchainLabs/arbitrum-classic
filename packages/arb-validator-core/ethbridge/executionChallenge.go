@@ -112,7 +112,7 @@ func (c *executionChallenge) OneStepProof(
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
 		precondition.BeforeHash,
-		hashPreImage.GetPreImageHash(),
+		hashPreImage.GetInnerHash(),
 		big.NewInt(hashPreImage.Size()),
 		precondition.TimeBounds.AsIntArray(),
 		assertion.AfterHash,
@@ -131,7 +131,7 @@ func (c *executionChallenge) OneStepProof(
 			c.auth.auth.From,
 			c.contractAddress,
 			precondition.BeforeHash,
-			hashPreImage.GetPreImageHash(),
+			hashPreImage.GetInnerHash(),
 			big.NewInt(hashPreImage.Size()),
 			precondition.TimeBounds.AsIntArray(),
 			assertion.AfterHash,

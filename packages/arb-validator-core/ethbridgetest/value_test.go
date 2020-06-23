@@ -41,7 +41,7 @@ func TestEmptyTupleHashing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetPreImageHash(), big.NewInt(preImage.Size()))
+	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestTupleHashing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetPreImageHash(), big.NewInt(preImage.Size()))
+	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
 	if err != nil {
 		t.Fatal(err)
 	}

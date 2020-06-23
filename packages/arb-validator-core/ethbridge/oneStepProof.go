@@ -55,7 +55,7 @@ func (con *oneStepProof) ValidateProof(
 		&bind.CallOpts{Context: ctx},
 		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
-		hashPreImage.GetPreImageHash(),
+		hashPreImage.GetInnerHash(),
 		big.NewInt(hashPreImage.Size()),
 		assertion.AfterHash,
 		assertion.DidInboxInsn,

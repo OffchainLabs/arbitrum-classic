@@ -164,7 +164,6 @@ func (vm *ArbRollup) MakeAssertion(
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
 	assertionClaim *valprotocol.AssertionClaim,
-	params [9][32]byte,
 	stakerProof []common.Hash,
 ) ([]arbbridge.Event, error) {
 	//vm.auth.Context = ctx

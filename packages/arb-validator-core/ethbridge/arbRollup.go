@@ -179,11 +179,21 @@ func (vm *arbRollup) MakeAssertion(
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
 	assertionClaim *valprotocol.AssertionClaim,
-	extraParams [9][32]byte,
 	stakerProof []common.Hash,
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
+	extraParams := [9][32]byte{
+		beforeState.MachineHash,
+		beforeState.InboxTop,
+		prevPrevLeafHash,
+		prevDataHash,
+		assertionClaim.AfterInboxTop,
+		assertionClaim.ImportedMessagesSlice,
+		assertionClaim.AssertionStub.AfterHash,
+		assertionClaim.AssertionStub.LastMessageHash,
+		assertionClaim.AssertionStub.LastLogHash,
+	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		extraParams,
@@ -219,44 +229,6 @@ func (vm *arbRollup) MakeAssertion(
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
-//<<<<<<< HEAD
-//func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) error {
-//	nodeOpps := opp.Nodes
-//	initalProtoStateHash := nodeOpps[0].StateHash()
-//	branchesNums := make([]*big.Int, 0, len(nodeOpps))
-//	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
-//	challengeNodeData := make([]common.Hash, 0)
-//	logsAcc := make([]common.Hash, 0)
-//	vmProtoStateHashes := make([]common.Hash, 0)
-//
-//	messagesLengths := make([]*big.Int, 0)
-//	var messages []byte
-//
-//	for _, opp := range nodeOpps {
-//		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
-//		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
-//
-//		switch opp := opp.(type) {
-//		case valprotocol.ConfirmValidOpportunity:
-//			logsAcc = append(logsAcc, opp.LogsAcc)
-//			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
-//
-//			msgBytes, length := opp.MarshalMsgsForConfirmation()
-//			messages = append(messages, msgBytes...)
-//
-//			messagesLengths = append(messagesLengths, length)
-//		case valprotocol.ConfirmInvalidOpportunity:
-//			challengeNodeData = append(challengeNodeData, opp.ChallengeNodeData)
-//		}
-//	}
-//
-//	combinedProofs := make([]common.Hash, 0)
-//	stakerProofOffsets := make([]*big.Int, 0, len(opp.StakerAddresses))
-//	stakerProofOffsets = append(stakerProofOffsets, big.NewInt(0))
-//	for _, proof := range opp.StakerProofs {
-//		combinedProofs = append(combinedProofs, proof...)
-//		stakerProofOffsets = append(stakerProofOffsets, big.NewInt(int64(len(combinedProofs))))
-//	}
 func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) ([]arbbridge.Event, error) {
 	proof := opp.PrepareProof()
 	vm.auth.Lock()
@@ -341,52 +313,6 @@ func (vm *arbRollup) StartChallenge(
 	}
 	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
 }
-
-//<<<<<<< HEAD
-//func (vm *arbRollup) IsStaked(address common.Address) (bool, error) {
-//	return vm.ArbRollup.IsStaked(nil, address.ToEthAddress())
-//}
-//
-//func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-//	return waitForReceipt(ctx, vm.Client, vm.auth.auth.From, tx, methodName)
-//=======
-//func (vm *arbRollup) VerifyVM(
-//	auth *bind.CallOpts,
-//	config *valmessage.VMConfiguration,
-//	machine common.Hash,
-//) error {
-//	//code, err := vm.client.CodeAt(auth.Context, vm.address, nil)
-//	// Verify that VM has correct code
-//	vmInfo, err := vm.ArbRollup.Vm(auth)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if vmInfo.MachineHash != machine {
-//		return errors.New("VM has different machine hash")
-//	}
-//
-//	if config.GracePeriod != uint64(vmInfo.GracePeriod) {
-//		return errors.New("VM has different grace period")
-//	}
-//
-//	if value.NewBigIntFromBuf(config.EscrowRequired).Cmp(vmInfo.EscrowRequired) != 0 {
-//		return errors.New("VM has different escrow required")
-//	}
-//
-//	if config.MaxExecutionStepCount != vmInfo.MaxExecutionSteps {
-//		return errors.New("VM has different mxa steps")
-//	}
-//
-//	owner, err := vm.ArbRollup.Owner(auth)
-//	if err != nil {
-//		return err
-//	}
-//	if protocol.NewAddressFromBuf(config.Owner) != owner {
-//		return errors.New("VM has different owner")
-//	}
-//	return nil
-//}
 
 func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) ([]arbbridge.Event, error) {
 	receipt, err := WaitForReceiptWithResults(ctx, vm.client, vm.auth.auth.From, tx, methodName)
