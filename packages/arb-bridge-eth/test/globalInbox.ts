@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
+/* eslint-env node, mocha */
+
 import { ethers, waffle } from '@nomiclabs/buidler'
 import * as bre from '@nomiclabs/buidler'
 import { utils, Signer } from 'ethers'
 import * as chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { deployMockContract } from '@ethereum-waffle/mock-contract'
 import { GlobalInbox } from '../build/types/GlobalInbox'
 import { ValueTester } from '../build/types/ValueTester'
 import { ArbValue } from 'arb-provider-ethers'
 
-chai.use(require('chai-as-promised'))
+chai.use(chaiAsPromised)
 
 const { assert, expect } = chai
 
@@ -32,12 +34,11 @@ async function getMessageData(
   sender: utils.BigNumberish,
   receiver: utils.BigNumberish,
   value: utils.BigNumberish,
-  value_tester: ValueTester
+  valueTester: ValueTester
 ): Promise<Uint8Array> {
-  let msgType = 1
-
+  const msgType = 1
   const msg = new ArbValue.TupleValue([
-    new ArbValue.IntValue(1),
+    new ArbValue.IntValue(msgType),
     new ArbValue.IntValue(ethers.utils.bigNumberify(sender).toString()),
     new ArbValue.TupleValue([
       new ArbValue.IntValue(ethers.utils.bigNumberify(receiver).toString()),
@@ -45,22 +46,22 @@ async function getMessageData(
     ]),
   ])
 
-  const msg_data = ArbValue.marshal(msg)
-  let res = await value_tester.deserializeMessageData(msg_data, 0)
+  const msgData = ArbValue.marshal(msg)
+  const res = await valueTester.deserializeMessageData(msgData, 0)
 
   assert.isTrue(res['0'], 'did not deserialize first part corrctly')
 
-  let offset = res['1'].toNumber()
+  const offset = res['1'].toNumber()
   assert.equal(res['2'].toNumber(), 1, 'Incorrect message type, must be ethMsg')
   assert.equal(res['3'], sender, 'Incorrect sender')
 
-  let res2 = await value_tester.getEthMsgData(msg_data, offset)
+  const res2 = await valueTester.getEthMsgData(msgData, offset)
   assert.isTrue(res2['0'], "value didn't deserialize correctly")
   assert.equal(res2['2'], receiver, 'Incorrect receiver')
 
   assert.equal(res2['3'].toNumber(), value, 'Incorrect value sent')
 
-  return msg_data
+  return msgData
 }
 
 function calcTxHash(
@@ -69,7 +70,7 @@ function calcTxHash(
   sequenceNum: utils.BigNumberish,
   value: utils.BigNumberish,
   messageData: string
-) {
+): string {
   return ethers.utils.solidityKeccak256(
     ['address', 'address', 'uint256', 'uint256', 'bytes32'],
     [
@@ -86,33 +87,33 @@ async function generateTxData(
   accounts: Signer[],
   chain: string,
   messageCount: utils.BigNumberish
-) {
-  let txDataTemplate = {
+): Promise<string> {
+  const txDataTemplate = {
     to: '0xffffffffffffffffffffffffffffffffffffffff',
     sequenceNum: 2000,
     value: 54254535454544,
     messageData: '0x00',
   }
 
-  let transactionsData = []
+  const transactionsData = []
   for (let i = 0; i < messageCount; i++) {
     transactionsData.push(txDataTemplate)
   }
 
   let data = '0x'
 
-  for (var i = 0; i < transactionsData.length; i++) {
-    let txData = transactionsData[i]
+  for (let i = 0; i < transactionsData.length; i++) {
+    const txData = transactionsData[i]
 
-    let txHash = calcTxHash(
+    const txHash = calcTxHash(
       chain,
       txData['to'],
       txData['sequenceNum'],
       txData['value'],
       txData['messageData']
     )
-    let signedTxHash = await accounts[0].signMessage(txHash)
-    let packedTxData = ethers.utils.solidityPack(
+    const signedTxHash = await accounts[0].signMessage(txHash)
+    const packedTxData = ethers.utils.solidityPack(
       ['uint16', 'address', 'uint256', 'uint256', 'bytes', 'bytes'],
       [
         (txData['messageData'].length - 2) / 2,
@@ -128,19 +129,19 @@ async function generateTxData(
   return data
 }
 
-let chain_address = ethers.utils.getAddress(
+const chainAddress = ethers.utils.getAddress(
   '0xffffffffffffffffffffffffffffffffffffffff'
 )
 
 let accounts: Signer[]
-let global_inbox: GlobalInbox
-let value_tester: ValueTester
+let globalInbox: GlobalInbox
+let valueTester: ValueTester
 
-let nodeHash =
+const nodeHash =
   '0x10c9d77c3846591fdfc3f966935819eb7dd71ebb7e71d5d081b880868ca33e4d'
-let nodeHash2 =
+const nodeHash2 =
   '0x20c9d77c3846591fdfc3f966935819eb7dd71ebb7e71d5d081b880868ca33e4d'
-let messageIndex = 0
+const messageIndex = 0
 let originalOwner: string
 let address2: string
 let address3: string
@@ -151,12 +152,12 @@ describe('GlobalInbox', async () => {
     accounts = await ethers.getSigners()
 
     const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
-    global_inbox = (await GlobalInbox.deploy()) as GlobalInbox
-    await global_inbox.deployed()
+    globalInbox = (await GlobalInbox.deploy()) as GlobalInbox
+    await globalInbox.deployed()
 
     const ValueTester = await ethers.getContractFactory('ValueTester')
-    value_tester = (await ValueTester.deploy()) as ValueTester
-    await value_tester.deployed()
+    valueTester = (await ValueTester.deploy()) as ValueTester
+    await valueTester.deployed()
 
     originalOwner = await accounts[0].getAddress()
     address2 = await accounts[1].getAddress()
@@ -166,12 +167,12 @@ describe('GlobalInbox', async () => {
 
   it('should deposit eth', async () => {
     await expect(
-      global_inbox.getEthBalance(chain_address),
+      globalInbox.getEthBalance(chainAddress),
       'Eth balance should start at 0'
     ).to.eventually.equal(0)
 
-    await global_inbox.depositEthMessage(
-      chain_address,
+    await globalInbox.depositEthMessage(
+      chainAddress,
       await accounts[0].getAddress(),
       {
         value: 1000,
@@ -179,7 +180,7 @@ describe('GlobalInbox', async () => {
     )
 
     await expect(
-      global_inbox.getEthBalance(chain_address),
+      globalInbox.getEthBalance(chainAddress),
       "Eth balance wasn't deposited successfully"
     ).to.eventually.equal(1000)
   })
@@ -187,64 +188,64 @@ describe('GlobalInbox', async () => {
   // These tests use a waffle mock which depends on buidlerevm
   if (bre.network.name == 'buidlerevm') {
     it('should deposit an ERC20', async () => {
-      const [mock_creator] = await waffle.provider.getWallets()
+      const [mockCreator] = await waffle.provider.getWallets()
       const IERC20 = await ethers.getContractFactory('IERC20')
       const mockERC20 = await deployMockContract(
-        mock_creator,
+        mockCreator,
         IERC20.interface.abi
       )
 
       await mockERC20.mock.transferFrom.returns(1)
 
       await expect(
-        global_inbox.getERC20Balance(mockERC20.address, chain_address),
+        globalInbox.getERC20Balance(mockERC20.address, chainAddress),
         'ERC20 balance should start at 0'
       ).to.eventually.equal(0)
 
-      await global_inbox.depositERC20Message(
-        chain_address,
-        chain_address,
+      await globalInbox.depositERC20Message(
+        chainAddress,
+        chainAddress,
         mockERC20.address,
         50
       )
 
       await expect(
-        global_inbox.getERC20Balance(mockERC20.address, chain_address),
+        globalInbox.getERC20Balance(mockERC20.address, chainAddress),
         "ERC20 Balance wasn't deposited successfully"
       ).to.eventually.equal(50)
     })
 
     it('should deposit an ERC721', async () => {
-      const [mock_creator] = await waffle.provider.getWallets()
+      const [mockCreator] = await waffle.provider.getWallets()
       const IERC721 = await ethers.getContractFactory('IERC721')
       const mockERC721 = await deployMockContract(
-        mock_creator,
+        mockCreator,
         IERC721.interface.abi
       )
       await expect(
-        global_inbox.hasERC721(mockERC721.address, chain_address, 1234),
+        globalInbox.hasERC721(mockERC721.address, chainAddress, 1234),
         'ERC721 Balance should start 0'
       ).to.eventually.be.false
 
       await mockERC721.mock.transferFrom.returns()
-      await global_inbox.depositERC721Message(
-        chain_address,
-        chain_address,
+      await globalInbox.depositERC721Message(
+        chainAddress,
+        chainAddress,
         mockERC721.address,
         1234
       )
 
       await expect(
-        global_inbox.hasERC721(mockERC721.address, chain_address, 1234),
+        globalInbox.hasERC721(mockERC721.address, chainAddress, 1234),
         "ERC721 Balance wasn't deposited successfully"
       ).to.eventually.be.true
     })
   }
 
   it('should make initial call', async () => {
-    await global_inbox.sendTransactionMessage(
-      chain_address,
-      chain_address,
+    await globalInbox.sendTransactionMessage(
+      chainAddress,
+      chainAddress,
       2000,
       54254535454544,
       '0x'
@@ -252,9 +253,9 @@ describe('GlobalInbox', async () => {
   })
 
   it('should make second call', async () => {
-    await global_inbox.sendTransactionMessage(
-      chain_address,
-      chain_address,
+    await globalInbox.sendTransactionMessage(
+      chainAddress,
+      chainAddress,
       2000,
       54254535454544,
       '0x'
@@ -262,9 +263,9 @@ describe('GlobalInbox', async () => {
   })
 
   it('should make bigger call', async () => {
-    await global_inbox.sendTransactionMessage(
-      chain_address,
-      chain_address,
+    await globalInbox.sendTransactionMessage(
+      chainAddress,
+      chainAddress,
       2000,
       54254535454544,
       // 64 bytes of data
@@ -273,27 +274,27 @@ describe('GlobalInbox', async () => {
   })
 
   it('should make a batch call', async () => {
-    let messageCount = 500
+    const messageCount = 500
 
     // console.log(data);
 
-    let data = await generateTxData(accounts, chain_address, messageCount)
+    const data = await generateTxData(accounts, chainAddress, messageCount)
 
-    let tx_promise = global_inbox.deliverTransactionBatch(chain_address, data)
+    const txPromise = globalInbox.deliverTransactionBatch(chainAddress, data)
 
-    await expect(tx_promise)
-      .to.emit(global_inbox, 'TransactionMessageBatchDelivered')
-      .withArgs(chain_address)
+    await expect(txPromise)
+      .to.emit(globalInbox, 'TransactionMessageBatchDelivered')
+      .withArgs(chainAddress)
 
-    let tx = await tx_promise
-    let [chainInput, txDataInput] = ethers.utils.defaultAbiCoder.decode(
+    const tx = await txPromise
+    const [chainInput, txDataInput] = ethers.utils.defaultAbiCoder.decode(
       ['address', 'bytes'],
       ethers.utils.hexDataSlice(tx.data, 4)
     )
 
     assert.equal(
       chainInput.toLowerCase(),
-      chain_address.toLowerCase(),
+      chainAddress.toLowerCase(),
       'incorrect chain from input'
     )
 
@@ -306,145 +307,141 @@ describe('GlobalInbox', async () => {
 
   it('tradeable-exits: initial', async () => {
     await expect(
-      global_inbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
       'current owner must be original owner'
     ).to.eventually.equal(originalOwner)
 
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[0])
         .transferPayment(originalOwner, address2, nodeHash, messageIndex)
-    ).to.emit(global_inbox, 'PaymentTransfer')
+    ).to.emit(globalInbox, 'PaymentTransfer')
 
     await expect(
-      global_inbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
       'current owner must be new owner (address2)'
     ).to.eventually.equal(address2)
   })
 
   it('tradeable-exits: subsequent transfers', async () => {
     await expect(
-      global_inbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
       'current owner must be address2'
     ).to.eventually.equal(address2)
 
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[0])
         .transferPayment(originalOwner, address2, nodeHash, messageIndex)
     ).to.be.revertedWith('Must be payment owner')
 
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[1])
         .transferPayment(originalOwner, address3, nodeHash, messageIndex)
-    ).to.emit(global_inbox, 'PaymentTransfer')
+    ).to.emit(globalInbox, 'PaymentTransfer')
 
     await expect(
-      global_inbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
       'current owner must be new owner (address3)'
     ).to.eventually.equal(address3)
 
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[1])
         .transferPayment(originalOwner, address2, nodeHash, messageIndex)
     ).to.be.revertedWith('Must be payment owner.')
   })
 
   it('tradeable-exits: commiting transfers', async () => {
-    let curr_owner = await global_inbox.getPaymentOwner(
+    const currOwner = await globalInbox.getPaymentOwner(
       originalOwner,
       nodeHash,
       messageIndex
     )
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[0])
         .depositEthMessage(address4, originalOwner, {
           value: 100,
         })
-    ).to.emit(global_inbox, 'EthDepositMessageDelivered')
+    ).to.emit(globalInbox, 'EthDepositMessageDelivered')
 
-    await expect(global_inbox.getEthBalance(address4)).to.eventually.equal(100)
-    await expect(global_inbox.getEthBalance(curr_owner)).to.eventually.equal(0)
-    await expect(global_inbox.getEthBalance(originalOwner)).to.eventually.equal(
+    await expect(globalInbox.getEthBalance(address4)).to.eventually.equal(100)
+    await expect(globalInbox.getEthBalance(currOwner)).to.eventually.equal(0)
+    await expect(globalInbox.getEthBalance(originalOwner)).to.eventually.equal(
       0
     )
 
-    let msg_data = await getMessageData(
+    const msgData = await getMessageData(
       originalOwner,
-      curr_owner,
+      currOwner,
       50,
-      value_tester
+      valueTester
     )
 
-    await global_inbox
+    await globalInbox
       .connect(accounts[3])
-      .sendMessages(msg_data, [1], [nodeHash])
+      .sendMessages(msgData, [1], [nodeHash])
 
-    await expect(global_inbox.getEthBalance(address4)).to.eventually.equal(50)
-    await expect(global_inbox.getEthBalance(curr_owner)).to.eventually.equal(50)
-    await expect(global_inbox.getEthBalance(originalOwner)).to.eventually.equal(
+    await expect(globalInbox.getEthBalance(address4)).to.eventually.equal(50)
+    await expect(globalInbox.getEthBalance(currOwner)).to.eventually.equal(50)
+    await expect(globalInbox.getEthBalance(originalOwner)).to.eventually.equal(
       0
     )
 
-    let msg_data2 = await getMessageData(
+    const msgData2 = await getMessageData(
       address4,
       originalOwner,
       50,
-      value_tester
+      valueTester
     )
 
-    await global_inbox
+    await globalInbox
       .connect(accounts[3])
-      .sendMessages(msg_data2, [1], [nodeHash2])
+      .sendMessages(msgData2, [1], [nodeHash2])
 
-    await expect(global_inbox.getEthBalance(address4)).to.eventually.equal(0)
-    await expect(global_inbox.getEthBalance(curr_owner)).to.eventually.equal(50)
-    await expect(global_inbox.getEthBalance(originalOwner)).to.eventually.equal(
+    await expect(globalInbox.getEthBalance(address4)).to.eventually.equal(0)
+    await expect(globalInbox.getEthBalance(currOwner)).to.eventually.equal(50)
+    await expect(globalInbox.getEthBalance(originalOwner)).to.eventually.equal(
       50
     )
   })
 
   it('tradeable-exits: commiting transfers, different mnsg indexes', async () => {
-    let chain_address = await accounts[4].getAddress()
-    let dest_address = await accounts[5].getAddress()
+    const chainAddress = await accounts[4].getAddress()
+    const destAddress = await accounts[5].getAddress()
     await expect(
-      global_inbox
+      globalInbox
         .connect(accounts[1])
-        .depositEthMessage(chain_address, dest_address, {
+        .depositEthMessage(chainAddress, destAddress, {
           value: 100,
         })
-    ).to.emit(global_inbox, 'EthDepositMessageDelivered')
+    ).to.emit(globalInbox, 'EthDepositMessageDelivered')
 
-    let msg_data = await getMessageData(
-      chain_address,
-      dest_address,
+    const msgData = await getMessageData(
+      chainAddress,
+      destAddress,
       10,
-      value_tester
+      valueTester
     )
 
-    await global_inbox
+    await globalInbox
       .connect(accounts[4])
-      .sendMessages(msg_data, [0], [nodeHash2])
+      .sendMessages(msgData, [0], [nodeHash2])
 
-    await expect(global_inbox.getEthBalance(chain_address)).to.eventually.equal(
+    await expect(globalInbox.getEthBalance(chainAddress)).to.eventually.equal(
       100
     )
-    await expect(global_inbox.getEthBalance(dest_address)).to.eventually.equal(
-      0
-    )
+    await expect(globalInbox.getEthBalance(destAddress)).to.eventually.equal(0)
 
-    await global_inbox
+    await globalInbox
       .connect(accounts[4])
-      .sendMessages(msg_data, [1], [nodeHash2])
+      .sendMessages(msgData, [1], [nodeHash2])
 
-    await expect(global_inbox.getEthBalance(chain_address)).to.eventually.equal(
+    await expect(globalInbox.getEthBalance(chainAddress)).to.eventually.equal(
       90
     )
-    await expect(global_inbox.getEthBalance(dest_address)).to.eventually.equal(
-      10
-    )
+    await expect(globalInbox.getEthBalance(destAddress)).to.eventually.equal(10)
   })
 })

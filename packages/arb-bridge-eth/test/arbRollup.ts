@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
+/* eslint-env node, mocha */
+
 import { ethers, deployments } from '@nomiclabs/buidler'
-import { Signer, providers, utils } from 'ethers'
+import { Signer, ContractTransaction, providers, utils } from 'ethers'
 import * as chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised'
 import { ArbRollup } from '../build/types/ArbRollup'
 import { ArbFactory } from '../build/types/ArbFactory'
 import { InboxTopChallenge } from '../build/types/InboxTopChallenge'
 import { ArbValue } from 'arb-provider-ethers'
 
-chai.use(require('chai-as-promised'))
+chai.use(chaiAsPromised)
 
 const { assert, expect } = chai
+
+const initialVmState =
+  '0x9900000000000000000000000000000000000000000000000000000000000000'
+const stakeRequirement = 10
+const maxExecutionSteps = 50000
+const gracePeriodTicks = ethers.utils.bigNumberify(1000)
 
 function inboxTopHash(
   lowerHash: string,
@@ -35,18 +43,6 @@ function inboxTopHash(
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'bytes32', 'uint256'],
     [lowerHash, topHash, chainLength]
-  )
-}
-
-function invalidInboxTopHash(
-  lowerHash: string,
-  topHash: string,
-  chainLength: utils.BigNumberish,
-  challengePeriod: utils.BigNumberish
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'uint256'],
-    [inboxTopHash(lowerHash, topHash, chainLength), challengePeriod]
   )
 }
 
@@ -113,40 +109,43 @@ function childNodeHash(
   )
 }
 
-function childNodeShortHash(prevNodeHash: string, nodeInnerHash: string) {
+function childNodeShortHash(
+  prevNodeHash: string,
+  nodeInnerHash: string
+): string {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'bytes32'],
     [prevNodeHash, nodeInnerHash]
   )
 }
 
-let empty_tuple_hash = ethers.utils.solidityKeccak256(
+const emptyTupleHash = ethers.utils.solidityKeccak256(
   ['uint8', 'bytes32', 'uint256'],
   [3, ethers.utils.solidityKeccak256(['uint8'], [0]), 1]
 )
 
-let zerobytes32 =
+const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 async function makeEmptyAssertion(
-  arb_rollup: ArbRollup,
-  vm_state: string,
-  num_steps: number,
-  start_block: utils.BigNumberish,
-  start_time: utils.BigNumberish,
-  imported_message_count: utils.BigNumberish,
-  read_inbox: boolean
-) {
-  const start_block_int = ethers.utils.bigNumberify(start_block)
-  const start_time_int = ethers.utils.bigNumberify(start_time)
-  return arb_rollup.makeAssertion(
+  arbRollup: ArbRollup,
+  vmState: string,
+  numSteps: number,
+  startBlock: utils.BigNumberish,
+  startTime: utils.BigNumberish,
+  importedMessageCount: utils.BigNumberish,
+  readInbox: boolean
+): Promise<ContractTransaction> {
+  const startBlockInt = ethers.utils.bigNumberify(startBlock)
+  const startTimeInt = ethers.utils.bigNumberify(startTime)
+  return arbRollup.makeAssertion(
     [
-      vm_state,
-      empty_tuple_hash,
+      vmState,
+      emptyTupleHash,
       zerobytes32,
       zerobytes32,
-      empty_tuple_hash,
-      empty_tuple_hash,
+      emptyTupleHash,
+      emptyTupleHash,
       zerobytes32,
       zerobytes32,
       zerobytes32,
@@ -154,15 +153,10 @@ async function makeEmptyAssertion(
     0,
     0,
     0,
-    num_steps,
-    [
-      start_block_int,
-      start_block_int.add(10),
-      start_time_int,
-      start_time_int.add(100),
-    ],
-    imported_message_count,
-    read_inbox,
+    numSteps,
+    [startBlockInt, startBlockInt.add(10), startTimeInt, startTimeInt.add(100)],
+    importedMessageCount,
+    readInbox,
     0,
     []
   )
@@ -178,7 +172,7 @@ class VMProtoData {
     this.inboxCount = ethers.utils.bigNumberify(inboxCount)
   }
 
-  hash() {
+  hash(): string {
     return ethers.utils.solidityKeccak256(
       ['bytes32', 'bytes32', 'uint256'],
       [this.machineHash, this.inboxTop, this.inboxCount]
@@ -203,7 +197,7 @@ class ExecutionAssertion {
     public outLogs: ArbValue.Value[]
   ) {}
 
-  outMessagesAcc() {
+  outMessagesAcc(): string {
     return this.outMessages.reduce(
       (acc, val) =>
         ethers.utils.solidityKeccak256(
@@ -214,7 +208,7 @@ class ExecutionAssertion {
     )
   }
 
-  outLogsAcc() {
+  outLogsAcc(): string {
     return this.outLogs.reduce(
       (acc, hash) =>
         ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, hash]),
@@ -222,7 +216,7 @@ class ExecutionAssertion {
     )
   }
 
-  outMessagesData() {
+  outMessagesData(): Uint8Array {
     return this.outMessages.reduce(
       (acc, val) => ethers.utils.concat([acc, ArbValue.marshal(val)]),
       new Uint8Array()
@@ -260,7 +254,7 @@ class Assertion {
     this.prevDeadline = ethers.utils.bigNumberify(prevDeadline)
   }
 
-  prevNodeHash() {
+  prevNodeHash(): string {
     return childNodeHash(
       this.prevPrevNode,
       this.prevDeadline,
@@ -270,10 +264,10 @@ class Assertion {
     )
   }
 
-  deadline() {
+  deadline(): utils.BigNumber {
     let deadlineTicks = this.blockNumber
       .mul(ethers.utils.bigNumberify(1000))
-      .add(grace_period_ticks)
+      .add(gracePeriodTicks)
     if (deadlineTicks.lt(this.prevDeadline)) {
       deadlineTicks = this.prevDeadline
     }
@@ -281,12 +275,12 @@ class Assertion {
     return deadlineTicks.add(ethers.utils.bigNumberify(0))
   }
 
-  challengePeriod() {
+  challengePeriod(): utils.BigNumber {
     // should be plus numArbGas
-    return grace_period_ticks.add(ethers.utils.bigNumberify(1000))
+    return gracePeriodTicks.add(ethers.utils.bigNumberify(1000))
   }
 
-  invalidInboxTopDataHash() {
+  invalidInboxTopDataHash(): string {
     return inboxTopHash(
       this.claims.afterInboxTop,
       this.inboxValue,
@@ -296,14 +290,14 @@ class Assertion {
     )
   }
 
-  invalidInboxTopChallengeHash() {
+  invalidInboxTopChallengeHash(): string {
     return ethers.utils.solidityKeccak256(
       ['bytes32', 'uint256'],
       [this.invalidInboxTopDataHash(), this.challengePeriod()]
     )
   }
 
-  invalidInboxTopHashInner() {
+  invalidInboxTopHashInner(): string {
     return childNodeInnerHash(
       this.deadline(),
       this.invalidInboxTopChallengeHash(),
@@ -312,37 +306,37 @@ class Assertion {
     )
   }
 
-  invalidInboxTopHash() {
+  invalidInboxTopHash(): string {
     return childNodeShortHash(
       this.prevNodeHash(),
       this.invalidInboxTopHashInner()
     )
   }
 
-  invalidMessagesHashInner() {
+  invalidMessagesHashInner(): string {
     return childNodeInnerHash(
       this.deadline(),
       invalidMessagesHash(
         this.prevProtoData.inboxTop,
         this.claims.afterInboxTop,
-        empty_tuple_hash,
+        emptyTupleHash,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
-        grace_period_ticks.add(ethers.utils.bigNumberify(1000))
+        gracePeriodTicks.add(ethers.utils.bigNumberify(1000))
       ),
       1,
       this.prevProtoData.hash()
     )
   }
 
-  invalidMessagesHash() {
+  invalidMessagesHash(): string {
     return childNodeShortHash(
       this.prevNodeHash(),
       this.invalidMessagesHashInner()
     )
   }
 
-  updatedProtoData() {
+  updatedProtoData(): VMProtoData {
     return new VMProtoData(
       this.claims.executionAssertion.afterState,
       this.claims.afterInboxTop,
@@ -350,7 +344,7 @@ class Assertion {
     )
   }
 
-  validDataHash() {
+  validDataHash(): string {
     return ethers.utils.solidityKeccak256(
       ['bytes32', 'bytes32'],
       [
@@ -360,7 +354,7 @@ class Assertion {
     )
   }
 
-  validHashInner() {
+  validHashInner(): string {
     return childNodeInnerHash(
       this.deadline(),
       this.validDataHash(),
@@ -369,13 +363,13 @@ class Assertion {
     )
   }
 
-  validHash() {
+  validHash(): string {
     return childNodeShortHash(this.prevNodeHash(), this.validHashInner())
   }
 }
 
 async function makeAssertion(
-  arb_rollup: ArbRollup,
+  arbRollup: ArbRollup,
   prevPrevNode: string,
   prevProtoData: VMProtoData,
   prevDeadline: utils.BigNumberish,
@@ -384,8 +378,8 @@ async function makeAssertion(
   params: AssertionParams,
   claims: AssertionClaim,
   stakerProof: Array<string>
-) {
-  let tx = await arb_rollup.makeAssertion(
+): Promise<{ receipt: providers.TransactionReceipt; assertion: Assertion }> {
+  const tx = await arbRollup.makeAssertion(
     [
       prevProtoData.machineHash,
       prevProtoData.inboxTop,
@@ -414,7 +408,7 @@ async function makeAssertion(
   }
 
   const logs = receipt.logs.map((log: providers.Log) =>
-    arb_rollup.interface.parseLog(log)
+    arbRollup.interface.parseLog(log)
   )
   return {
     receipt: receipt,
@@ -433,16 +427,10 @@ async function makeAssertion(
   }
 }
 
-let initial_vm_state =
-  '0x9900000000000000000000000000000000000000000000000000000000000000'
-let stakeRequirement = 10
-let max_execution_steps = 50000
-let grace_period_ticks = ethers.utils.bigNumberify(1000)
-
-let arb_rollup: ArbRollup
+let arbRollup: ArbRollup
 let challenge: InboxTopChallenge
 let assertionInfo: Assertion
-let original_node: string
+let originalNode: string
 let accounts: Signer[]
 
 describe('ArbRollup', function () {
@@ -452,52 +440,52 @@ describe('ArbRollup', function () {
   })
 
   it('should initialize', async function () {
-    const ArbFactory = await deployments.get('ArbFactory')
+    const arbFactoryDeployment = await deployments.get('ArbFactory')
     const ArbRollupFactory = await ethers.getContractFactory('ArbFactory')
-    const arb_factory = ArbRollupFactory.attach(
-      ArbFactory.address
+    const arbFactory = ArbRollupFactory.attach(
+      arbFactoryDeployment.address
     ) as ArbFactory
-    let tx = arb_factory.createRollup(
-      initial_vm_state, // vmState
-      grace_period_ticks, // gracePeriodTicks
+    const tx = arbFactory.createRollup(
+      initialVmState, // vmState
+      gracePeriodTicks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
-      max_execution_steps, // maxExecutionSteps
+      maxExecutionSteps, // maxExecutionSteps
       [20, 1000], // maxTimeBoundsWidth
       stakeRequirement, // stakeRequirement
       await accounts[0].getAddress() // owner
     )
-    await expect(tx).to.emit(arb_factory, 'RollupCreated')
+    await expect(tx).to.emit(arbFactory, 'RollupCreated')
 
-    let receipt = await (await tx).wait()
+    const receipt = await (await tx).wait()
     if (receipt.logs == undefined) {
       throw Error('expected receipt to have logs')
     }
 
     const logs = receipt.logs.map((log: providers.Log) =>
-      arb_factory.interface.parseLog(log)
+      arbFactory.interface.parseLog(log)
     )
     const ev = logs[1]
     expect(ev.name).to.equal('RollupCreated')
-    let chain_address = ev.values.vmAddress
+    const chainAddress = ev.values.vmAddress
     const ArbRollup = await ethers.getContractFactory('ArbRollup')
-    arb_rollup = ArbRollup.attach(chain_address) as ArbRollup
+    arbRollup = ArbRollup.attach(chainAddress) as ArbRollup
 
-    original_node = await arb_rollup.latestConfirmed()
+    originalNode = await arbRollup.latestConfirmed()
     assert.isTrue(
-      await arb_rollup.isValidLeaf(original_node),
+      await arbRollup.isValidLeaf(originalNode),
       'original node should be a leaf'
     )
   })
 
   it('should fail to assert on invalid leaf', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
+    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
-        arb_rollup,
+        arbRollup,
         '0x3400000000000000000000000000000000000000000000000000000000000000',
         0,
-        current_block.number,
-        current_block.timestamp,
+        currentBlock.number,
+        currentBlock.timestamp,
         0,
         false
       )
@@ -509,14 +497,14 @@ describe('ArbRollup', function () {
   // })
 
   it('should fail to assert over step limit', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
+    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
-        arb_rollup,
-        initial_vm_state,
-        max_execution_steps + 1,
-        current_block.number,
-        current_block.timestamp,
+        arbRollup,
+        initialVmState,
+        maxExecutionSteps + 1,
+        currentBlock.number,
+        currentBlock.timestamp,
         0,
         false
       )
@@ -524,14 +512,14 @@ describe('ArbRollup', function () {
   })
 
   it('should fail to assert without stake', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
+    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
-        arb_rollup,
-        initial_vm_state,
+        arbRollup,
+        initialVmState,
         0,
-        current_block.number,
-        current_block.timestamp,
+        currentBlock.number,
+        currentBlock.timestamp,
         0,
         false
       )
@@ -540,27 +528,19 @@ describe('ArbRollup', function () {
 
   it('should fail to assert outside time bounds', async () => {
     await expect(
-      makeEmptyAssertion(
-        arb_rollup,
-        initial_vm_state,
-        0,
-        10000,
-        10000,
-        0,
-        false
-      )
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 10000, 10000, 0, false)
     ).to.be.revertedWith('MAKE_TIME')
   })
 
   it('should fail if consuming messages but not reading inbox', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
+    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
-        arb_rollup,
-        initial_vm_state,
+        arbRollup,
+        initialVmState,
         0,
-        current_block.number,
-        current_block.timestamp,
+        currentBlock.number,
+        currentBlock.timestamp,
         10,
         false
       )
@@ -568,14 +548,14 @@ describe('ArbRollup', function () {
   })
 
   it('should fail if reading past lastest inbox message', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
+    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
-        arb_rollup,
-        initial_vm_state,
+        arbRollup,
+        initialVmState,
         0,
-        current_block.number,
-        current_block.timestamp,
+        currentBlock.number,
+        currentBlock.timestamp,
         10,
         true
       )
@@ -583,49 +563,49 @@ describe('ArbRollup', function () {
   })
 
   it('should create a stake', async () => {
-    await expect(arb_rollup.isStaked(await accounts[0].getAddress())).to
+    await expect(arbRollup.isStaked(await accounts[0].getAddress())).to
       .eventually.be.false
     await expect(
-      arb_rollup.connect(accounts[0]).placeStake([], [], {
+      arbRollup.connect(accounts[0]).placeStake([], [], {
         value: stakeRequirement,
       })
-    ).to.emit(arb_rollup, 'RollupStakeCreated')
-    await expect(arb_rollup.isStaked(await accounts[0].getAddress())).to
+    ).to.emit(arbRollup, 'RollupStakeCreated')
+    await expect(arbRollup.isStaked(await accounts[0].getAddress())).to
       .eventually.be.true
   })
 
   it('should create a second stake', async () => {
     await expect(
-      arb_rollup.connect(accounts[1]).placeStake([], [], {
+      arbRollup.connect(accounts[1]).placeStake([], [], {
         value: stakeRequirement,
       })
-    ).to.emit(arb_rollup, 'RollupStakeCreated')
+    ).to.emit(arbRollup, 'RollupStakeCreated')
   })
 
   it('should make an assertion', async () => {
     assert.isTrue(
-      await arb_rollup.isValidLeaf(original_node),
+      await arbRollup.isValidLeaf(originalNode),
       'latest confirmed should be leaf before asserting'
     )
-    let current_block = await ethers.provider.getBlock('latest')
-    let prevProtoData = new VMProtoData(
-      initial_vm_state,
-      empty_tuple_hash,
+    const currentBlock = await ethers.provider.getBlock('latest')
+    const prevProtoData = new VMProtoData(
+      initialVmState,
+      emptyTupleHash,
       ethers.utils.bigNumberify(0)
     )
-    let params = new AssertionParams(
+    const params = new AssertionParams(
       0,
       [
-        current_block.number,
-        current_block.number + 10,
-        current_block.timestamp,
-        current_block.timestamp + 100,
+        currentBlock.number,
+        currentBlock.number + 10,
+        currentBlock.timestamp,
+        currentBlock.timestamp + 100,
       ],
       ethers.utils.bigNumberify(0)
     )
-    let claims = new AssertionClaim(
+    const claims = new AssertionClaim(
       zerobytes32,
-      empty_tuple_hash,
+      emptyTupleHash,
       new ExecutionAssertion(
         '0x8500000000000000000000000000000000000000000000000000000000000000',
         false,
@@ -634,8 +614,8 @@ describe('ArbRollup', function () {
         []
       )
     )
-    let info = await makeAssertion(
-      arb_rollup,
+    const info = await makeAssertion(
+      arbRollup,
       zerobytes32,
       prevProtoData,
       0,
@@ -649,31 +629,31 @@ describe('ArbRollup', function () {
     assertionInfo = info.assertion
 
     assert.isFalse(
-      await arb_rollup.isValidLeaf(assertionInfo.prevNodeHash()),
-      'original_node confirmed should be removed as leaf'
+      await arbRollup.isValidLeaf(assertionInfo.prevNodeHash()),
+      'originalNode confirmed should be removed as leaf'
     )
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
+      await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       'invalid inbox top should be leaf'
     )
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidMessagesHash()),
+      await arbRollup.isValidLeaf(assertionInfo.invalidMessagesHash()),
       'invalid messages should be leaf'
     )
     // TODO: Check whether invalid execution is leaf
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.validHash()),
+      await arbRollup.isValidLeaf(assertionInfo.validHash()),
       'valid child should be leaf'
     )
   })
 
   it('should allow the second staker to move to conflicting node', async () => {
     await expect(
-      arb_rollup
+      arbRollup
         .connect(accounts[1])
         .moveStake([assertionInfo.invalidInboxTopHashInner()], [])
     )
-      .to.emit(arb_rollup, 'RollupStakeMoved')
+      .to.emit(arbRollup, 'RollupStakeMoved')
       .withArgs(
         await accounts[1].getAddress(),
         assertionInfo.invalidInboxTopHash()
@@ -681,7 +661,7 @@ describe('ArbRollup', function () {
   })
 
   it('should allow the creation of a challenge', async () => {
-    let tx_promise = arb_rollup.startChallenge(
+    const txPromise = arbRollup.startChallenge(
       await accounts[0].getAddress(),
       await accounts[1].getAddress(),
       assertionInfo.prevNodeHash(),
@@ -697,24 +677,22 @@ describe('ArbRollup', function () {
       assertionInfo.invalidInboxTopDataHash(),
       assertionInfo.challengePeriod()
     )
-    let receipt = await (await tx_promise).wait()
+    const receipt = await (await txPromise).wait()
     if (receipt.logs === undefined) {
       throw Error('logs must be defined')
     }
     expect(receipt.logs).to.have.lengthOf(2)
     const logs = receipt.logs.map((log: providers.Log) =>
-      arb_rollup.interface.parseLog(log)
+      arbRollup.interface.parseLog(log)
     )
-    let ev = logs[1]
+    const ev = logs[1]
     expect(ev.name).equals('RollupChallengeStarted')
-    const challenge_contract = ev.values.challengeContract
+    const challengeContract = ev.values.challengeContract
 
     const InboxTopChallenge = await ethers.getContractFactory(
       'InboxTopChallenge'
     )
-    challenge = InboxTopChallenge.attach(
-      challenge_contract
-    ) as InboxTopChallenge
+    challenge = InboxTopChallenge.attach(challengeContract) as InboxTopChallenge
   })
 
   it('should timeout the challenge', async () => {
@@ -731,7 +709,7 @@ describe('ArbRollup', function () {
     await ethers.provider.send('evm_mine', [])
 
     await expect(
-      arb_rollup.confirm(
+      arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
         [0],
         [assertionInfo.deadline()],
@@ -744,56 +722,56 @@ describe('ArbRollup', function () {
         [],
         [0, 0]
       )
-    ).to.emit(arb_rollup, 'RollupConfirmed')
+    ).to.emit(arbRollup, 'RollupConfirmed')
 
     assert.equal(
-      await arb_rollup.latestConfirmed(),
+      await arbRollup.latestConfirmed(),
       assertionInfo.invalidInboxTopHash(),
       'latest confirmed should now be invalid inbox child'
     )
 
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
+      await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       'invalid inbox top should be leaf'
     )
   })
 
   it('should prune a leaf', async () => {
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
+      await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       'invalid messages should be leaf'
     )
     await expect(
-      arb_rollup.pruneLeaves(
-        [original_node],
+      arbRollup.pruneLeaves(
+        [originalNode],
         [assertionInfo.validHashInner()],
         [1],
         [assertionInfo.invalidInboxTopHashInner()],
         [1]
       )
-    ).to.emit(arb_rollup, 'RollupPruned')
+    ).to.emit(arbRollup, 'RollupPruned')
 
     assert.isFalse(
-      await arb_rollup.isValidLeaf(assertionInfo.validHashInner()),
+      await arbRollup.isValidLeaf(assertionInfo.validHashInner()),
       'valid node should no longer be leaf'
     )
   })
 
   it('should assert again', async () => {
-    let current_block = await ethers.provider.getBlock('latest')
-    let params = new AssertionParams(
+    const currentBlock = await ethers.provider.getBlock('latest')
+    const params = new AssertionParams(
       0,
       [
-        current_block.number,
-        current_block.number + 10,
-        current_block.timestamp,
-        current_block.timestamp + 100,
+        currentBlock.number,
+        currentBlock.number + 10,
+        currentBlock.timestamp,
+        currentBlock.timestamp + 100,
       ],
       ethers.utils.bigNumberify(0)
     )
-    let claims = new AssertionClaim(
+    const claims = new AssertionClaim(
       zerobytes32,
-      empty_tuple_hash,
+      emptyTupleHash,
       new ExecutionAssertion(
         zerobytes32,
         false,
@@ -805,7 +783,7 @@ describe('ArbRollup', function () {
 
     assertionInfo = (
       await makeAssertion(
-        arb_rollup.connect(accounts[1]),
+        arbRollup.connect(accounts[1]),
         assertionInfo.prevNodeHash(),
         assertionInfo.prevProtoData,
         assertionInfo.deadline(),
@@ -824,7 +802,7 @@ describe('ArbRollup', function () {
     await ethers.provider.send('evm_mine', [])
 
     await expect(
-      arb_rollup.confirm(
+      arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
         [3],
         [assertionInfo.deadline()],
@@ -837,23 +815,23 @@ describe('ArbRollup', function () {
         [],
         [0, 0]
       )
-    ).to.emit(arb_rollup, 'RollupConfirmed')
+    ).to.emit(arbRollup, 'RollupConfirmed')
 
     assert.equal(
-      await arb_rollup.latestConfirmed(),
+      await arbRollup.latestConfirmed(),
       assertionInfo.validHash(),
       'latest confirmed should now be valid child'
     )
 
     assert.isTrue(
-      await arb_rollup.isValidLeaf(assertionInfo.validHash()),
+      await arbRollup.isValidLeaf(assertionInfo.validHash()),
       'valid child should be leaf'
     )
   })
 
   it('should allow second staker to withdraw', async () => {
-    await expect(arb_rollup.connect(accounts[1]).recoverStakeConfirmed([]))
-      .to.emit(arb_rollup, 'RollupStakeRefunded')
+    await expect(arbRollup.connect(accounts[1]).recoverStakeConfirmed([]))
+      .to.emit(arbRollup, 'RollupStakeRefunded')
       .withArgs(await accounts[1].getAddress())
   })
 })

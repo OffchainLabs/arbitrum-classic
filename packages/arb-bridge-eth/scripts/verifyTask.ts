@@ -17,7 +17,7 @@ const ContractLocations = {
   MessagesChallenge: 'contracts/challenge/MessagesChallenge.sol',
 }
 
-export default function setupVerifyTask() {
+export default function setupVerifyTask(): void {
   task(
     'verify',
     'Verifies arbitrum deployment on etherscan',

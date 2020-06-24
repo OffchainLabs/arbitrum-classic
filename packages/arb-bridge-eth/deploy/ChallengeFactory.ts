@@ -8,18 +8,18 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
   const { deploy, log } = deployments
   const { deployer } = await getNamedAccounts()
 
-  let messages_challenge = await deployments.get('MessagesChallenge')
-  let inbox_top_challenge = await deployments.get('InboxTopChallenge')
-  let execution_challenge = await deployments.get('ExecutionChallenge')
+  const messagesChallenge = await deployments.get('MessagesChallenge')
+  const inboxTopChallenge = await deployments.get('InboxTopChallenge')
+  const executionChallenge = await deployments.get('ExecutionChallenge')
 
   let contract = await deployments.getOrNull('ChallengeFactory')
   if (!contract) {
     const deployResult = await deploy('ChallengeFactory', {
       from: deployer,
       args: [
-        messages_challenge.address,
-        inbox_top_challenge.address,
-        execution_challenge.address,
+        messagesChallenge.address,
+        inboxTopChallenge.address,
+        executionChallenge.address,
       ],
     })
     contract = await deployments.get('ChallengeFactory')

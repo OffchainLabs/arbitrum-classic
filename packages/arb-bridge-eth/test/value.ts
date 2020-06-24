@@ -14,37 +14,39 @@
  * limitations under the License.
  */
 
+/* eslint-env node, mocha */
+
 import { ethers } from '@nomiclabs/buidler'
-import { assert, expect } from 'chai'
+import { assert } from 'chai'
 import { ValueTester } from '../build/types/ValueTester'
 import { ArbValue } from 'arb-provider-ethers'
 
-import test_cases from './test_cases.json'
+import testCases from './test_cases.json'
 
-let testVal =
+const testVal =
   '0x5345325345325345325345325345325345325345325345325345325345325435'
 
 describe('Value', () => {
-  let value_tester: ValueTester
+  let valueTester: ValueTester
 
   before(async () => {
     const ValueTester = await ethers.getContractFactory('ValueTester')
-    value_tester = (await ValueTester.deploy()) as ValueTester
-    await value_tester.deployed()
+    valueTester = (await ValueTester.deploy()) as ValueTester
+    await valueTester.deployed()
   })
 
   it('should initialize', async () => {
-    let val = new ArbValue.IntValue(100)
-    let res = await value_tester.deserializeHash(ArbValue.marshal(val), 0)
+    const val = new ArbValue.IntValue(100)
+    const res = await valueTester.deserializeHash(ArbValue.marshal(val), 0)
     assert.isTrue(res['0'], "value didn't deserialize correctly")
     assert.equal(val.hash(), res['2'], 'value hashes incorrectly')
   })
 
-  for (let i = 0; i < test_cases.length; i++) {
-    it(test_cases[i].name, async () => {
-      const expectedHash = test_cases[i].hash
-      let res = await value_tester.deserializeHash(
-        '0x' + test_cases[i].proof_value,
+  for (let i = 0; i < testCases.length; i++) {
+    it(testCases[i].name, async () => {
+      const expectedHash = testCases[i].hash
+      const res = await valueTester.deserializeHash(
+        '0x' + testCases[i].proof_value,
         0
       )
       assert.isTrue(res['0'], "value didn't deserialize correctly")
@@ -69,9 +71,9 @@ describe('Value', () => {
       ]),
     ])
 
-    const val_data = ArbValue.marshal(val)
-    let res = await value_tester.deserializeMessageData(val_data, 0)
-    let offset = res['1'].toNumber()
+    const valData = ArbValue.marshal(val)
+    const res = await valueTester.deserializeMessageData(valData, 0)
+    const offset = res['1'].toNumber()
     assert.isTrue(res['0'], "value didn't deserialize correctly")
     assert.equal(res['2'].toNumber(), 2, 'Incorrect message type')
     assert.equal(
@@ -80,7 +82,7 @@ describe('Value', () => {
       'Incorrect sender'
     )
 
-    let res2 = await value_tester.getERCTokenMsgData(val_data, offset)
+    const res2 = await valueTester.getERCTokenMsgData(valData, offset)
     assert.isTrue(res2['0'], "value didn't deserialize correctly")
     assert.equal(
       res2['2'],
@@ -108,9 +110,9 @@ describe('Value', () => {
       ]),
     ])
 
-    const val_data = ArbValue.marshal(val)
-    let res = await value_tester.deserializeMessageData(val_data, 0)
-    let offset = res['1'].toNumber()
+    const valData = ArbValue.marshal(val)
+    const res = await valueTester.deserializeMessageData(valData, 0)
+    const offset = res['1'].toNumber()
     assert.isTrue(res['0'], "value didn't deserialize correctly")
     assert.equal(res['2'].toNumber(), 2, 'Incorrect message type')
     assert.equal(
@@ -119,7 +121,7 @@ describe('Value', () => {
       'Incorrect sender'
     )
 
-    let res2 = await value_tester.getEthMsgData(val_data, offset)
+    const res2 = await valueTester.getEthMsgData(valData, offset)
     assert.isTrue(res2['0'], "value didn't deserialize correctly")
     assert.equal(
       res2['2'],
@@ -130,35 +132,35 @@ describe('Value', () => {
   })
 
   it('should properly calculate bytestack hash 32 bytes', async () => {
-    let ethVal = await value_tester.bytesToBytestackHash(testVal)
-    let jsVal = ArbValue.hexToBytestack(testVal).hash()
+    const ethVal = await valueTester.bytesToBytestackHash(testVal)
+    const jsVal = ArbValue.hexToBytestack(testVal).hash()
     assert.equal(ethVal, jsVal)
   })
 
   it('should properly calculate bytestack hash 64 bytes', async () => {
-    let ethVal = await value_tester.bytesToBytestackHash(
+    const ethVal = await valueTester.bytesToBytestackHash(
       testVal + testVal.slice(2)
     )
-    let jsVal = ArbValue.hexToBytestack(testVal + testVal.slice(2)).hash()
+    const jsVal = ArbValue.hexToBytestack(testVal + testVal.slice(2)).hash()
     assert.equal(ethVal, jsVal)
   })
 
   it('should properly calculate bytestack hash 16 bytes', async () => {
-    let ethVal = await value_tester.bytesToBytestackHash(testVal.slice(0, 34))
-    let jsVal = ArbValue.hexToBytestack(testVal.slice(0, 34)).hash()
+    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 34))
+    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 34)).hash()
     assert.equal(ethVal, jsVal)
   })
 
   it('should properly calculate bytestack hash 19 bytes', async () => {
-    let ethVal = await value_tester.bytesToBytestackHash(testVal.slice(0, 40))
-    let jsVal = ArbValue.hexToBytestack(testVal.slice(0, 40)).hash()
+    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 40))
+    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 40)).hash()
     assert.equal(ethVal, jsVal)
   })
 
   it('should properly convert bytestack to bytes', async () => {
-    let bytestack = ArbValue.hexToBytestack(testVal.slice(0, 40))
-    let bytestackData = ethers.utils.hexlify(ArbValue.marshal(bytestack))
-    let ethVal = await value_tester.bytestackToBytes(bytestackData)
+    const bytestack = ArbValue.hexToBytestack(testVal.slice(0, 40))
+    const bytestackData = ethers.utils.hexlify(ArbValue.marshal(bytestack))
+    const ethVal = await valueTester.bytestackToBytes(bytestackData)
     assert.equal(ethVal, testVal.slice(0, 40))
   })
 })
