@@ -21,6 +21,10 @@ repos:
     rev: master
     hooks:
       - id: go-fmt
+  - repo: https://github.com/prettier/prettier
+    rev: '2.0.5' # Use the sha or tag you want to point at
+    hooks:
+      - id: prettier
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: 'v6.8.0' # Use the sha / tag you want to point at
     hooks:
