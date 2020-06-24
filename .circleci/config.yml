@@ -129,6 +129,8 @@ jobs:
   ethbridge:
     docker:
       - image: offchainlabs/ethbridge-base:0.2.0
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
