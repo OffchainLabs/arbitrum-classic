@@ -18,9 +18,9 @@
   },
   "scripts": {
     "build": "truffle compile",
-    "test": "buidler typechain && buidler test",
-    "test:gas": "buidler typechain && REPORT_GAS=true buidler test --network localhost",
-    "coverage": "buidler coverage",
+    "test": "rm -rf deployments/buidlerevm_31337 && buidler typechain && buidler test",
+    "test:gas": "rm -rf deployments/buidlerevm_31337 && buidler typechain && REPORT_GAS=true buidler test --network localhost",
+    "coverage": "rm -rf deployments/buidlerevm_31337 && buidler coverage",
     "migrate:ropsten": "buidler deploy --network ropsten",
     "migrate:rinkeby": "buidler deploy --network rinkeby",
     "migrate:kovan": "buidler deploy --network kovan",
@@ -55,6 +55,7 @@
     "dotenv": "^8.2.0",
     "ethereum-waffle": "^2.3.0",
     "ethers": "^4.0.27",
+    "mocha-junit-reporter": "^2.0.0",
     "solidity-coverage": "^0.7.7",
     "ts-generator": "^0.0.8",
     "typechain": "^2.0.0"
