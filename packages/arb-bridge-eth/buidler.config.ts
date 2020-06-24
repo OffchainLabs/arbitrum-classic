@@ -2,6 +2,8 @@ import { task, usePlugin } from '@nomiclabs/buidler/config'
 import setupVerifyTask from './scripts/verifyTask'
 import fs from 'fs'
 
+/* eslint-disable @typescript-eslint/camelcase */
+
 require('dotenv').config()
 
 usePlugin('buidler-deploy')
@@ -25,7 +27,7 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
 
 task('deploy').setAction(async (args: any, { deployments }, runSuper) => {
   await runSuper()
-  let addresses = {
+  const addresses = {
     ArbFactory: (await deployments.get('ArbFactory')).address,
   }
   fs.writeFileSync('bridge_eth_addresses.json', JSON.stringify(addresses))
@@ -33,6 +35,9 @@ task('deploy').setAction(async (args: any, { deployments }, runSuper) => {
 
 module.exports = {
   defaultNetwork: 'buidlerevm',
+  paths: {
+    artifacts: 'build/contracts',
+  },
   solc: {
     version: '0.5.17',
     optimizer: {
