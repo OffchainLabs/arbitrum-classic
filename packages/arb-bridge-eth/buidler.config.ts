@@ -1,8 +1,10 @@
 import { task, usePlugin } from '@nomiclabs/buidler/config'
-import setupDeployTask from './scripts/deployTask'
+import setupVerifyTask from './scripts/verifyTask'
+import fs from 'fs'
 
 require('dotenv').config()
 
+usePlugin('buidler-deploy')
 usePlugin('@nomiclabs/buidler-waffle')
 usePlugin('buidler-typechain')
 usePlugin('solidity-coverage')
@@ -10,7 +12,7 @@ usePlugin('@nomiclabs/buidler-etherscan')
 usePlugin('buidler-spdx-license-identifier')
 usePlugin('buidler-gas-reporter')
 
-setupDeployTask()
+setupVerifyTask()
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
@@ -18,6 +20,14 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   for (const account of accounts) {
     console.log(await account.getAddress())
   }
+})
+
+task('deploy').setAction(async (args: any, { deployments }, runSuper) => {
+  await runSuper()
+  let addresses = {
+    ArbFactory: (await deployments.get('ArbFactory')).address,
+  }
+  fs.writeFileSync('bridge_eth_addresses.json', JSON.stringify(addresses))
 })
 
 module.exports = {
@@ -42,26 +52,31 @@ module.exports = {
     gasPrice: 20,
     enabled: process.env.REPORT_GAS ? true : false,
   },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+  },
   networks: {
     buidlerevm: {},
     parity: {
       url: 'http://127.0.0.1:7545',
     },
     rinkeby: {
-      url: process.env['RINKEBY_URL'],
-      accounts: [process.env['RINKEBY_MNEMONIC']],
+      url: process.env['RINKEBY_URL'] || '',
+      accounts: [process.env['RINKEBY_MNEMONIC'] || ''],
       network_id: 4,
       confirmations: 1,
     },
     ropsten: {
-      url: process.env['ROPSTEN_URL'],
-      accounts: [process.env['ROPSTEN_MNEMONIC']],
+      url: process.env['ROPSTEN_URL'] || '',
+      accounts: [process.env['ROPSTEN_MNEMONIC'] || ''],
       network_id: 3,
       confirmations: 1,
     },
     kovan: {
-      url: process.env['KOVAN_URL'],
-      accounts: [process.env['KOVAN_MNEMONIC']],
+      url: process.env['KOVAN_URL'] || '',
+      accounts: [process.env['KOVAN_MNEMONIC'] || ''],
       network_id: 42,
       confirmations: 4,
     },

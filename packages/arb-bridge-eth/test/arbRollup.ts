@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import bre from '@nomiclabs/buidler'
+import { ethers, deployments } from '@nomiclabs/buidler'
 import { Signer, providers, utils } from 'ethers'
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
@@ -23,12 +23,9 @@ import { ArbFactory } from '../build/types/ArbFactory'
 import { InboxTopChallenge } from '../build/types/InboxTopChallenge'
 import { ArbValue } from 'arb-provider-ethers'
 
-import deploy_contracts from '../scripts/deploylib'
-
 chai.use(require('chai-as-promised'))
 
 const { assert, expect } = chai
-const ethers = bre.ethers
 
 function inboxTopHash(
   lowerHash: string,
@@ -451,10 +448,11 @@ let accounts: Signer[]
 describe('ArbRollup', function () {
   before(async function () {
     accounts = await ethers.getSigners()
+    await deployments.fixture()
   })
 
   it('should initialize', async function () {
-    const { ArbFactory } = await deploy_contracts(bre)
+    const ArbFactory = await deployments.get('ArbFactory')
     const ArbRollupFactory = await ethers.getContractFactory('ArbFactory')
     const arb_factory = ArbRollupFactory.attach(
       ArbFactory.address
