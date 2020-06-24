@@ -20,7 +20,7 @@
     "build": "buidler compile",
     "test": "rm -rf deployments/buidlerevm_31337 && buidler typechain && buidler test",
     "test:gas": "rm -rf deployments/buidlerevm_31337 && buidler typechain && REPORT_GAS=true buidler test --network localhost",
-    "test:coverage": "rm -rf deployments/buidlerevm_31337 && buidler coverage",
+    "test:coverage": "rm -rf deployments/buidlerevm_31337 && buidler typechain && buidler coverage",
     "lint": "eslint ./**/*.ts",
     "format": "prettier './**/*.{js,json,md,ts,yml,sol}' --write && yarn lint --fix",
     "migrate:ropsten": "buidler deploy --network ropsten",
