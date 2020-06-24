@@ -2,7 +2,7 @@
 
 // Taken from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 /*
 The MIT License (MIT)

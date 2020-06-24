@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 contract PaymentRecords {
 	mapping(bytes32 => mapping(uint256 => mapping(address => address))) paymentMap;
 
     event PaymentTransfer(
-        bytes32 nodeHash, 
+        bytes32 nodeHash,
         uint256 messageIndex,
         address originalOwner,
         address prevOwner,
@@ -31,8 +31,8 @@ contract PaymentRecords {
 
     function transferPayment(
         address originalOwner,
-        address newOwner, 
-        bytes32 nodeHash, 
+        address newOwner,
+        bytes32 nodeHash,
         uint256 messageIndex) external
     {
         address currentOwner = getPaymentOwner(originalOwner, nodeHash, messageIndex);
@@ -45,7 +45,7 @@ contract PaymentRecords {
 
     function getPaymentOwner(
         address originalOwner,
-        bytes32 nodeHash, 
+        bytes32 nodeHash,
         uint256 messageIndex) public view returns(address)
     {
     	address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];

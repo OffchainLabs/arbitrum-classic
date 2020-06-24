@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
 import "../libraries/RollupTime.sol";
@@ -200,9 +200,9 @@ contract Staking {
         uint128 challengerPeriodTicks,
         bytes32 challengerDataHash,
         uint256 stakerNodeType
-    ) 
+    )
         internal
-    { 
+    {
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
@@ -305,18 +305,18 @@ contract Staking {
             address currentStaker = stakerAddresses[index];
 
             isActive = _verifyAlignedStaker(
-                node, 
-                stakerProofs, 
-                deadlineTicks, 
-                currentStaker, 
-                prevStaker, 
+                node,
+                stakerProofs,
+                deadlineTicks,
+                currentStaker,
+                prevStaker,
                 stakerProofOffsets[index],
                 stakerProofOffsets[index+1]);
 
             if(isActive){
                 activeCount++;
             }
-            
+
             prevStaker = bytes20(currentStaker);
         }
         return activeCount;
@@ -326,13 +326,13 @@ contract Staking {
         bytes32 node,
         bytes32[] memory stakerProofs,
         uint256 deadlineTicks,
-        address stakerAddress, 
+        address stakerAddress,
         bytes20 prevStaker,
         uint256 proofStart,
         uint256 proofEnd
-    ) 
-        private 
-        view 
+    )
+        private
+        view
         returns (bool)
     {
         require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);

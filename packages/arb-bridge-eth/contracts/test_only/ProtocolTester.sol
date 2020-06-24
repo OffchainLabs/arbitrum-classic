@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Protocol.sol";
 
@@ -56,8 +56,8 @@ contract ProtocolTester{
         returns(bytes32)
     {
         return Protocol.generatePreconditionHash(
-        	_beforeHash, 
-        	_timeBounds, 
+        	_beforeHash,
+        	_timeBounds,
         	_beforeInboxHash);
     }
 }

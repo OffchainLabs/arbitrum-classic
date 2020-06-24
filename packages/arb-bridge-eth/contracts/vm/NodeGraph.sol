@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
 import "./NodeGraphUtils.sol";
@@ -131,10 +131,10 @@ contract NodeGraph {
         require(data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount), MAKE_MESSAGE_CNT);
 
         bytes32 validLeaf = _initializeAssertionLeaves(
-            data, 
-            prevLeaf, 
-            vmProtoHashBefore, 
-            inboxValue, 
+            data,
+            prevLeaf,
+            vmProtoHashBefore,
+            inboxValue,
             inboxCount);
 
         delete leaves[prevLeaf];
@@ -164,8 +164,8 @@ contract NodeGraph {
 
         for (uint256 i = 0; i < pruneCount; i++) {
             (prevLeafOffset, prevConfOffset) = _pruneLeaf(
-                fromNodes[i], 
-                latestConfirmedProofLengths[i], 
+                fromNodes[i],
+                latestConfirmedProofLengths[i],
                 leafProofLengths[i],
                 leafProofs,
                 latestConfProofs,
@@ -225,7 +225,7 @@ contract NodeGraph {
         uint256 prevLeafOffset,
         uint256 prevConfOffset
 
-    ) 
+    )
         private returns (uint256, uint256)
     {
         require(leafProofLength > 0 && latestConfirmedProofLength > 0, PRUNE_PROOFLEN);
@@ -234,9 +234,9 @@ contract NodeGraph {
 
         // If the function call was produced valid at any point, either all these checks will pass or all will fail
         bool isValidNode = RollupUtils.calculateLeafFromPath(
-            from, 
-            latestConfProofs, 
-            prevConfOffset, 
+            from,
+            latestConfProofs,
+            prevConfOffset,
             nextConfOffset) == latestConfirmed();
 
         require(isValidNode && leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset], PRUNE_CONFLICT);
@@ -260,15 +260,15 @@ contract NodeGraph {
     }
 
     function _initializeAssertionLeaves(
-        NodeGraphUtils.AssertionData memory data, 
+        NodeGraphUtils.AssertionData memory data,
         bytes32 prevLeaf,
         bytes32 vmProtoHashBefore,
         bytes32 inboxValue,
         uint256 inboxCount
-    ) 
-        private returns (bytes32) 
+    )
+        private returns (bytes32)
     {
-        ( uint256 checkTimeTicks, 
+        ( uint256 checkTimeTicks,
           uint256 deadlineTicks ) = NodeGraphUtils.getTimeData(vmParams, data, block.number);
 
         bytes32 invalidInboxLeaf = NodeGraphUtils.generateInvalidInboxTopLeaf(

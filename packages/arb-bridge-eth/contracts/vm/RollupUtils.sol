@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
@@ -48,7 +48,7 @@ library RollupUtils {
     function getInitialNodeData(
         bytes32 vmProtoStateHash,
         bytes32 confNode
-    ) 
+    )
         private pure returns (NodeData memory)
     {
         return NodeData(
@@ -86,10 +86,10 @@ library RollupUtils {
     }
 
     function processNode(
-        ConfirmData memory data, 
-        NodeData memory nodeData, 
+        ConfirmData memory data,
+        NodeData memory nodeData,
         uint256 nodeIndex
-    )   
+    )
         private
         pure
         returns (NodeData memory, bool)
@@ -99,8 +99,8 @@ library RollupUtils {
         bytes32 nodeDataHash;
 
         if (isValidChildType) {
-            (nodeData.messagesOffset, 
-            nodeDataHash, 
+            (nodeData.messagesOffset,
+            nodeDataHash,
             nodeData.vmProtoStateHash) = processValidNode(data, nodeData.validNum, nodeData.messagesOffset);
             nodeData.validNum++;
         } else {

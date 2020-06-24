@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-  pragma solidity ^0.5.3;
+  pragma solidity ^0.5.11;
 
   import "../vm/RollupUtils.sol";
   import "../vm/NodeGraphUtils.sol";
@@ -90,7 +90,7 @@
 
   	function calculateLeafFromPath(
   		bytes32 from,
-        bytes32[] memory proof) public pure returns(bytes32) 
+        bytes32[] memory proof) public pure returns(bytes32)
   	{
   		return RollupUtils.calculateLeafFromPath(from, proof);
   	}
@@ -103,10 +103,10 @@
         bytes32 vmProtoStateHash) public pure returns(bytes32)
   	{
   		return RollupUtils.childNodeHash(
-  			prevNodeHash, 
-  			deadlineTicks, 
-  			nodeDataHash, 
-  			childType, 
+  			prevNodeHash,
+  			deadlineTicks,
+  			nodeDataHash,
+  			childType,
   			vmProtoStateHash);
   	}
 
@@ -203,7 +203,7 @@
 	function _generateInvalidInboxTopLeaf(
 		NodeGraphUtils.AssertionData memory assertData,
 		uint256[4] memory invalidInboxData
-  	) 
+  	)
 		private pure returns(bytes32)
 	{
 		(bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
@@ -268,7 +268,7 @@
 		NodeGraphUtils.AssertionData memory assertData,
 		uint256 gracePeriodTicks,
 		uint256 deadlineTicks
-	) 
+	)
 		private pure returns(bytes32)
 	{
 		(bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);

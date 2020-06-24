@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
- pragma solidity ^0.5.3;
+ pragma solidity ^0.5.11;
 
  import "../arch/Machine.sol";
  import "../arch/Value.sol";
@@ -25,10 +25,10 @@
 
  	using Machine for Machine.Data;
 
- 	function deserializeMachine(bytes memory data) 
- 		public 
- 		pure 
- 		returns (bytes32) 
+ 	function deserializeMachine(bytes memory data)
+ 		public
+ 		pure
+ 		returns (bytes32)
  	{
  		bool valid;
  		uint offset;
@@ -42,8 +42,8 @@
  		bytes memory data1,
  		bytes memory data2
  	)
- 		public 
- 		pure 
+ 		public
+ 		pure
  		returns (bytes32)
  	{
  		bool valid;
@@ -57,7 +57,7 @@
  		(valid, offset, val2) = Value.deserialize(data2, 0);
  		require(valid, "value2 incorrect");
 
-		return Value.hash(Machine.addStackVal(val1, val2)); 		
+		return Value.hash(Machine.addStackVal(val1, val2));
  	}
 
  }

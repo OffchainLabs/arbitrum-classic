@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
 import "../arch/Protocol.sol";
@@ -24,7 +24,7 @@ import "../libraries/RollupTime.sol";
 import "../challenge/ChallengeUtils.sol";
 import "./VM.sol";
 
-library NodeGraphUtils 
+library NodeGraphUtils
 {
 	struct AssertionData {
         bytes32 beforeVMHash;
@@ -51,10 +51,10 @@ library NodeGraphUtils
         bytes32 logsAccHash;
     }
 
-    function computePrevLeaf(AssertionData memory data) 
-        internal 
-        pure 
-        returns (bytes32, bytes32) 
+    function computePrevLeaf(AssertionData memory data)
+        internal
+        pure
+        returns (bytes32, bytes32)
     {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
