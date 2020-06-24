@@ -1,5 +1,3 @@
-**/migrations/*.js
-packages/arb-bridge-eth/test/**/*.js
 packages/arb-provider-ethers/src/lib/abi/*
 **/dist/main.js
 **/node_modules/**
