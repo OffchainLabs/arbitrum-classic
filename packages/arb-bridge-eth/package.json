@@ -59,7 +59,6 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^8.2.0",
-    "eth-gas-reporter": "^0.2.17",
     "ethereum-waffle": "^2.3.0",
     "ethers": "^4.0.27",
     "solidity-coverage": "^0.7.7",

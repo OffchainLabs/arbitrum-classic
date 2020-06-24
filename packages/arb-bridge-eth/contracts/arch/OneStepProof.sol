@@ -57,7 +57,7 @@ library OneStepProof {
         uint64  gas,
         bytes memory proof
     )
-        public
+        internal
         pure
         returns(uint)
     {

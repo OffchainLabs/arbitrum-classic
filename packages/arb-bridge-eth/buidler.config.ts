@@ -6,6 +6,7 @@ require('dotenv').config()
 usePlugin('@nomiclabs/buidler-waffle')
 usePlugin('buidler-typechain')
 usePlugin('solidity-coverage')
+usePlugin('@nomiclabs/buidler-etherscan')
 usePlugin('buidler-spdx-license-identifier')
 usePlugin('buidler-gas-reporter')
 
@@ -39,6 +40,7 @@ module.exports = {
   gasReporter: {
     currency: 'USD',
     gasPrice: 20,
+    enabled: process.env.REPORT_GAS ? true : false,
   },
   networks: {
     buidlerevm: {},
@@ -63,5 +65,11 @@ module.exports = {
       network_id: 42,
       confirmations: 4,
     },
+  },
+  etherscan: {
+    // The url for the Etherscan API you want to use.
+    // For example, here we're using the one for the Ropsten test network
+    url: 'https://api-kovan.etherscan.io/api',
+    apiKey: process.env['ETHERSCAN_API_KEY'],
   },
 }

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { ethers } from '@nomiclabs/buidler'
+import bre from '@nomiclabs/buidler'
 import { Signer, providers, utils } from 'ethers'
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import { ArbRollup } from '../build/types/ArbRollup'
+import { ArbFactory } from '../build/types/ArbFactory'
 import { InboxTopChallenge } from '../build/types/InboxTopChallenge'
 import { ArbValue } from 'arb-provider-ethers'
 
@@ -27,6 +28,7 @@ import deploy_contracts from '../scripts/deploylib'
 chai.use(require('chai-as-promised'))
 
 const { assert, expect } = chai
+const ethers = bre.ethers
 
 function inboxTopHash(
   lowerHash: string,
@@ -452,8 +454,11 @@ describe('ArbRollup', function () {
   })
 
   it('should initialize', async function () {
-    const { arb_factory } = await deploy_contracts()
-
+    const { ArbFactory } = await deploy_contracts(bre)
+    const ArbRollupFactory = await ethers.getContractFactory('ArbFactory')
+    const arb_factory = ArbRollupFactory.attach(
+      ArbFactory.address
+    ) as ArbFactory
     let tx = arb_factory.createRollup(
       initial_vm_state, // vmState
       grace_period_ticks, // gracePeriodTicks
