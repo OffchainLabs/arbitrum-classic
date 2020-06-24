@@ -30,47 +30,47 @@ import "../arch/Protocol.sol";
 contract Staking {
 
     // VM already initialized"
-    string constant INIT_TWICE = "INIT_TWICE";
+    string private constant INIT_TWICE = "INIT_TWICE";
     // Challenge factory must be nonzero
-    string constant INIT_NONZERO = "INIT_NONZERO";
+    string private constant INIT_NONZERO = "INIT_NONZERO";
 
     // Invalid staker
-    string constant INV_STAKER = "INV_STAKER";
+    string private constant INV_STAKER = "INV_STAKER";
 
     // must supply stake value
-    string constant STK_AMT = "STK_AMT";
+    string private constant STK_AMT = "STK_AMT";
     // Staker already exists
-    string constant ALRDY_STAKED = "ALRDY_STAKED";
+    string private constant ALRDY_STAKED = "ALRDY_STAKED";
 
     // Challenge can only be resolved by spawned contract
-    string constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
+    string private constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
 
     // staker1 staked after deadline
-    string constant STK1_DEADLINE = "STK1_DEADLINE";
+    string private constant STK1_DEADLINE = "STK1_DEADLINE";
     // staker2 staked after deadline
-    string constant STK2_DEADLINE = "STK2_DEADLINE";
+    string private constant STK2_DEADLINE = "STK2_DEADLINE";
     // staker1 already in a challenge
-    string constant STK1_IN_CHAL = "STK1_IN_CHAL";
+    string private constant STK1_IN_CHAL = "STK1_IN_CHAL";
     // staker2 already in a challenge
-    string constant STK2_IN_CHAL = "STK1_IN_CHAL";
+    string private constant STK2_IN_CHAL = "STK1_IN_CHAL";
     // Child types must be ordered
-    string constant TYPE_ORDER = "TYPE_ORDER";
+    string private constant TYPE_ORDER = "TYPE_ORDER";
     // Invalid child type
-    string constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
+    string private constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
     // Challenge asserter proof
-    string constant ASSERT_PROOF = "ASSERT_PROOF";
+    string private constant ASSERT_PROOF = "ASSERT_PROOF";
     // Challenge challenger proof
-    string constant CHAL_PROOF = "CHAL_PROOF";
+    string private constant CHAL_PROOF = "CHAL_PROOF";
 
     // must include proof for all stakers
-    string constant CHCK_COUNT = "CHCK_COUNT";
+    string private constant CHCK_COUNT = "CHCK_COUNT";
     // Stakers must be ordered
-    string constant CHCK_ORDER = "CHCK_ORDER";
+    string private constant CHCK_ORDER = "CHCK_ORDER";
     // at least one active staker disagrees
-    string constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
-    string constant CHCK_OFFSETS = "CHCK_OFFSETS";
+    string private constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
+    string private constant CHCK_OFFSETS = "CHCK_OFFSETS";
 
-    uint256 internal constant MAX_CHILD_TYPE = 3;
+    uint256 private constant MAX_CHILD_TYPE = 3;
 
     IChallengeFactory public challengeFactory;
 
@@ -83,7 +83,7 @@ contract Staking {
     uint128 private stakeRequirement;
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
-    mapping (address => bool) challenges;
+    mapping (address => bool) private challenges;
 
     event RollupStakeCreated(
         address staker,

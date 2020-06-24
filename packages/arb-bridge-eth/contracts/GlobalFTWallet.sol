@@ -33,7 +33,7 @@ contract GlobalFTWallet {
         FTWallet[] ftList;
     }
 
-    mapping(address => UserFTWallet) ftWallets;
+    mapping(address => UserFTWallet) private ftWallets;
 
     function ownedERC20s(address _owner) external view returns (address[] memory) {
         UserFTWallet storage wallet = ftWallets[_owner];

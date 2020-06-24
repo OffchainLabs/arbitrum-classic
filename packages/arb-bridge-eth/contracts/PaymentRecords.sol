@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 
 contract PaymentRecords {
-	mapping(bytes32 => mapping(uint256 => mapping(address => address))) paymentMap;
+	mapping(bytes32 => mapping(uint256 => mapping(address => address))) internal paymentMap;
 
     event PaymentTransfer(
         bytes32 nodeHash,

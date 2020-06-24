@@ -75,15 +75,15 @@ library Messages {
         pure
         returns (Value.Data memory)
     {
-        Value.Data[] memory tup_data = new Value.Data[](4);
-        tup_data[0] = Value.newInt(blockNumber);
-        tup_data[1] = Value.newInt(timestamp);
-        tup_data[2] = Value.newInt(txId);
-        tup_data[3] = message;
+        Value.Data[] memory tupData = new Value.Data[](4);
+        tupData[0] = Value.newInt(blockNumber);
+        tupData[1] = Value.newInt(timestamp);
+        tupData[2] = Value.newInt(txId);
+        tupData[3] = message;
 
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = vmInboxHashValue;
-        vals[1] = Value.newTuple(tup_data);
+        vals[1] = Value.newTuple(tupData);
         return Value.newTuple(vals);
     }
 

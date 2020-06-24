@@ -42,9 +42,9 @@ contract ExecutionChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Incorrect previous state
-    string constant BIS_INPLEN = "BIS_INPLEN";
+    string private constant BIS_INPLEN = "BIS_INPLEN";
     // Proof was incorrect
-    string constant OSP_PROOF = "OSP_PROOF";
+    string private constant OSP_PROOF = "OSP_PROOF";
 
     struct BisectAssertionData {
         bytes32 beforeInbox;

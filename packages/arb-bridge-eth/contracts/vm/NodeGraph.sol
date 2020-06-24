@@ -34,24 +34,24 @@ contract NodeGraph {
     using SafeMath for uint256;
 
     // invalid leaf
-    string constant MAKE_LEAF = "MAKE_LEAF";
+    string private constant MAKE_LEAF = "MAKE_LEAF";
     // Can only disputable assert if machine is not errored or halted
-    string constant MAKE_RUN = "MAKE_RUN";
+    string private constant MAKE_RUN = "MAKE_RUN";
     // Tried to execute too many steps
-    string constant MAKE_STEP = "MAKE_STEP";
+    string private constant MAKE_STEP = "MAKE_STEP";
     // Precondition: not within time bounds
-    string constant MAKE_TIME = "MAKE_TIME";
+    string private constant MAKE_TIME = "MAKE_TIME";
     // Imported messages without reading them
-    string constant MAKE_MESSAGES = "MAKE_MESSAGES";
+    string private constant MAKE_MESSAGES = "MAKE_MESSAGES";
     // Tried to import more messages than exist in ethe inbox
-    string constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
+    string private constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
-    string constant PRUNE_LEAF = "PRUNE_LEAF";
-    string constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
-    string constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
+    string private constant PRUNE_LEAF = "PRUNE_LEAF";
+    string private constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
+    string private constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
 
-    uint256 constant VALID_CHILD_TYPE = 3;
-    uint256 constant MAX_CHILD_TYPE = 3;
+    uint256 private constant VALID_CHILD_TYPE = 3;
+    uint256 private constant MAX_CHILD_TYPE = 3;
 
     // Fields
     //  prevLeaf

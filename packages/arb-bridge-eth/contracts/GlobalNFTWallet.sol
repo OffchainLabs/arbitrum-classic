@@ -34,7 +34,7 @@ contract GlobalNFTWallet {
         NFTWallet[] nftWalletList;
     }
 
-    mapping(address => UserNFTWallet) nftWallets;
+    mapping(address => UserNFTWallet) private nftWallets;
 
     function ownedERC721s(address _owner) external view returns (address[] memory) {
         UserNFTWallet storage wallet = nftWallets[_owner];

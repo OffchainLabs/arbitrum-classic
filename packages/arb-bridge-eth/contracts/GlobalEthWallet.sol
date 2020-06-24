@@ -20,7 +20,7 @@ pragma solidity ^0.5.11;
 
 contract GlobalEthWallet {
 
-    mapping(address => uint256) ethWallets;
+    mapping(address => uint256) private ethWallets;
 
     function withdrawEth() external {
         uint256 value = getEthBalance(msg.sender);

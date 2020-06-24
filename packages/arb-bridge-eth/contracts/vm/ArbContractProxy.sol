@@ -23,7 +23,7 @@ import "./IArbRollup.sol";
 
 contract ArbVMContractProxy {
 
-    IArbRollup arbChain;
+    IArbRollup private arbChain;
 
     constructor(address _arbChain) public {
         arbChain = IArbRollup(_arbChain);

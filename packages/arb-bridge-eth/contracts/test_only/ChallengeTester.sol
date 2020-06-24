@@ -22,14 +22,7 @@ import "../challenge/IChallengeFactory.sol";
 
 contract ChallengeTester {
 
-    event ChallengeInfo(
-        address challengeTemplate,
-        uint256 nonce,
-        bytes32 codeHash,
-        address cloneAddress
-    );
-
-    IChallengeFactory challengeFactory;
+    IChallengeFactory private challengeFactory;
 
     constructor(address challengeFactory_) public {
         challengeFactory = IChallengeFactory(challengeFactory_);

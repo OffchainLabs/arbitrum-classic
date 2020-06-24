@@ -38,7 +38,7 @@ contract MessagesChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Incorrect previous state
-    string constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
+    string private constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
 
     function bisect(
         bytes32[] memory _chainHashes,

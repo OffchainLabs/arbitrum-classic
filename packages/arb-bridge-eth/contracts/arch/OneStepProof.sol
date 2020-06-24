@@ -27,7 +27,7 @@ library OneStepProof {
     using Machine for Machine.Data;
     using Value for Value.Data;
 
-    uint256 constant send_size_limit = 10000;
+    uint256 private constant SEND_SIZE_LIMIT = 10000;
 
     struct ValidateProofData {
         bytes32 beforeHash;
@@ -902,10 +902,10 @@ library OneStepProof {
         if (val1.intVal >= val2.valLength()) {
             return false;
         }
-        Value.Data[] memory tuple_vals = val2.tupleVal;
-        tuple_vals[val1.intVal] = val3;
+        Value.Data[] memory tupleVals = val2.tupleVal;
+        tupleVals[val1.intVal] = val3;
 
-        machine.addDataStackValue(Value.newTuple(tuple_vals));
+        machine.addDataStackValue(Value.newTuple(tupleVals));
         return true;
     }
 
@@ -952,7 +952,7 @@ library OneStepProof {
         returns (bool, bytes32)
     {
 
-        if(val1.size <= send_size_limit){
+        if(val1.size <= SEND_SIZE_LIMIT){
             return (true, val1.hash());
         }else{
             return (true, 0);
@@ -1389,8 +1389,8 @@ library OneStepProof {
         return (opCode, stackVals, startMachine, endMachine, offset);
     }
 
-    uint8 constant CODE_POINT_TYPECODE = 1;
-    bytes32 constant CODE_POINT_ERROR = keccak256(
+    uint8 private constant CODE_POINT_TYPECODE = 1;
+    bytes32 private constant CODE_POINT_ERROR = keccak256(
         abi.encodePacked(
             CODE_POINT_TYPECODE,
             uint8(0),

@@ -26,40 +26,40 @@ import "./ArbContractProxy.sol";
 contract ArbRollup is NodeGraph, Staking {
 
     // invalid path proof
-    string constant PLACE_LEAF = "PLACE_LEAF";
+    string private constant PLACE_LEAF = "PLACE_LEAF";
 
     // invalid leaf
-    string constant MOVE_LEAF = "MOVE_LEAF";
+    string private constant MOVE_LEAF = "MOVE_LEAF";
 
     // invalid path proof
-    string constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
+    string private constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
     // Invalid conflict proof
-    string constant RECOV_CONFLICT_PROOF = "RECOV_CONFLICT_PROOF";
+    string private constant RECOV_CONFLICT_PROOF = "RECOV_CONFLICT_PROOF";
     // Proof must be of nonzero length
-    string constant RECVOLD_LENGTH = "RECVOLD_LENGTH";
+    string private constant RECVOLD_LENGTH = "RECVOLD_LENGTH";
     // invalid leaf
-    string constant RECOV_DEADLINE_LEAF = "RECOV_DEADLINE_LEAF";
+    string private constant RECOV_DEADLINE_LEAF = "RECOV_DEADLINE_LEAF";
     // Node is not passed deadline
-    string constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
+    string private constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
 
     // invalid staker location proof
-    string constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
+    string private constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
 
     // Type is not invalid
-    string constant CONF_INV_TYPE = "CONF_INV_TYPE";
+    string private constant CONF_INV_TYPE = "CONF_INV_TYPE";
     // Node is not passed deadline
-    string constant CONF_TIME = "CONF_TIME";
+    string private constant CONF_TIME = "CONF_TIME";
     // There must be at least one staker
-    string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
+    string private constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
 
     // Only callable by owner
-    string constant ONLY_OWNER = "ONLY_OWNER";
+    string private constant ONLY_OWNER = "ONLY_OWNER";
 
     string public constant VERSION = "develop";
 
-    address payable owner;
+    address payable public owner;
 
-    mapping(address => address) incomingCallProxies;
+    mapping(address => address) private incomingCallProxies;
     mapping(address => address) public supportedContracts;
 
     event ConfirmedAssertion(

@@ -24,7 +24,7 @@ import "../libraries/RollupTime.sol";
 
 library RollupUtils {
 
-    uint256 constant VALID_CHILD_TYPE = 3;
+    uint256 private constant VALID_CHILD_TYPE = 3;
 
     struct ConfirmData {
         bytes32 initalProtoStateHash;

@@ -35,7 +35,7 @@ contract InboxTopChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Proof was incorrect
-    string constant HC_OSP_PROOF = "HC_OSP_PROOF";
+    string private constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
     function bisect(
         bytes32[] memory _chainHashes,

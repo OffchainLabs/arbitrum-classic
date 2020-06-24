@@ -31,12 +31,12 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
     );
 
     // Incorrect previous state
-    string constant BIS_PREV = "BIS_PREV";
+    string private constant BIS_PREV = "BIS_PREV";
 
     // Incorrect previous state
-    string constant CON_PREV = "CON_PREV";
+    string private constant CON_PREV = "CON_PREV";
     // Invalid assertion selected
-    string constant CON_PROOF = "CON_PROOF";
+    string private constant CON_PROOF = "CON_PROOF";
     // Incorrect previous state
 
     // After bisection this is an array of all sub-assertions
