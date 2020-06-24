@@ -26,9 +26,7 @@ import "../challenge/IChallengeFactory.sol";
 
 import "../arch/Protocol.sol";
 
-
 contract Staking {
-
     // VM already initialized"
     string private constant INIT_TWICE = "INIT_TWICE";
     // Challenge factory must be nonzero
@@ -83,19 +81,13 @@ contract Staking {
     uint128 private stakeRequirement;
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
-    mapping (address => bool) private challenges;
+    mapping(address => bool) private challenges;
 
-    event RollupStakeCreated(
-        address staker,
-        bytes32 nodeHash
-    );
+    event RollupStakeCreated(address staker, bytes32 nodeHash);
 
     event RollupStakeRefunded(address staker);
 
-    event RollupStakeMoved(
-        address staker,
-        bytes32 toNodeHash
-    );
+    event RollupStakeMoved(address staker, bytes32 toNodeHash);
 
     event RollupChallengeStarted(
         address asserter,
@@ -110,7 +102,7 @@ contract Staking {
         address loser
     );
 
-    function getStakeRequired() external view returns(uint128) {
+    function getStakeRequired() external view returns (uint128) {
         return stakeRequirement;
     }
 
@@ -118,7 +110,11 @@ contract Staking {
         return stakers[_stakerAddress].location != 0x00;
     }
 
-    function resolveChallenge(address payable winner, address loser, uint256) external {
+    function resolveChallenge(
+        address payable winner,
+        address loser,
+        uint256
+    ) external {
         require(challenges[msg.sender], RES_CHAL_SENDER);
         delete challenges[msg.sender];
 
@@ -142,14 +138,20 @@ contract Staking {
         bytes32 asserterNodeHash,
         bytes32 challengerDataHash,
         uint128 challengerPeriodTicks
-    )
-        public
-    {
+    ) public {
         Staker storage asserter = getValidStaker(asserterAddress);
         Staker storage challenger = getValidStaker(challengerAddress);
 
-        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < deadlineTicks, STK1_DEADLINE);
-        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < deadlineTicks, STK2_DEADLINE);
+        require(
+            RollupTime.blocksToTicks(asserter.creationTimeBlocks) <
+                deadlineTicks,
+            STK1_DEADLINE
+        );
+        require(
+            RollupTime.blocksToTicks(challenger.creationTimeBlocks) <
+                deadlineTicks,
+            STK2_DEADLINE
+        );
         require(!asserter.inChallenge, STK1_IN_CHAL);
         require(!challenger.inChallenge, STK2_IN_CHAL);
         require(stakerNodeTypes[0] > stakerNodeTypes[1], TYPE_ORDER);
@@ -191,7 +193,8 @@ contract Staking {
             challengerAddress,
             challengerPeriodTicks,
             challengerDataHash,
-            stakerNodeTypes[1]);
+            stakerNodeTypes[1]
+        );
     }
 
     function createChallenge(
@@ -200,9 +203,7 @@ contract Staking {
         uint128 challengerPeriodTicks,
         bytes32 challengerDataHash,
         uint256 stakerNodeType
-    )
-        internal
-    {
+    ) internal {
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
@@ -221,10 +222,7 @@ contract Staking {
         );
     }
 
-    function init(
-        uint128 _stakeRequirement,
-        address _challengeFactoryAddress
-    )
+    function init(uint128 _stakeRequirement, address _challengeFactoryAddress)
         internal
     {
         require(address(challengeFactory) == address(0), INIT_TWICE);
@@ -236,30 +234,28 @@ contract Staking {
         stakeRequirement = _stakeRequirement;
     }
 
-    function getStakerLocation(address _stakerAddress) internal view returns (bytes32) {
+    function getStakerLocation(address _stakerAddress)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 location = stakers[_stakerAddress].location;
         require(location != 0x00, INV_STAKER);
         return location;
     }
 
-    function createStake(
-        bytes32 location
-    )
-        internal
-    {
+    function createStake(bytes32 location) internal {
         require(msg.value == stakeRequirement, STK_AMT);
         require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
-        stakers[msg.sender] = Staker(
-            location,
-            uint128(block.number),
-            false
-        );
+        stakers[msg.sender] = Staker(location, uint128(block.number), false);
         stakerCount++;
 
         emit RollupStakeCreated(msg.sender, location);
     }
 
-    function updateStakerLocation(address _stakerAddress, bytes32 _location) internal {
+    function updateStakerLocation(address _stakerAddress, bytes32 _location)
+        internal
+    {
         stakers[_stakerAddress].location = _location;
         emit RollupStakeMoved(_stakerAddress, _location);
     }
@@ -271,7 +267,11 @@ contract Staking {
         emit RollupStakeRefunded(address(_stakerAddress));
     }
 
-    function getValidStaker(address _stakerAddress) private view returns (Staker storage) {
+    function getValidStaker(address _stakerAddress)
+        private
+        view
+        returns (Staker storage)
+    {
         Staker storage staker = stakers[_stakerAddress];
         require(staker.location != 0x00, INV_STAKER);
         return staker;
@@ -288,17 +288,13 @@ contract Staking {
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
         uint256[] memory stakerProofOffsets
-    )
-        internal
-        view
-        returns(uint)
-    {
+    ) internal view returns (uint256) {
         uint256 _stakerCount = stakerAddresses.length;
         require(_stakerCount == stakerCount, CHCK_COUNT);
         require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
 
         bytes20 prevStaker = 0x00;
-        uint activeCount = 0;
+        uint256 activeCount = 0;
         bool isActive = false;
 
         for (uint256 index = 0; index < _stakerCount; index++) {
@@ -311,9 +307,10 @@ contract Staking {
                 currentStaker,
                 prevStaker,
                 stakerProofOffsets[index],
-                stakerProofOffsets[index+1]);
+                stakerProofOffsets[index + 1]
+            );
 
-            if(isActive){
+            if (isActive) {
                 activeCount++;
             }
 
@@ -330,14 +327,11 @@ contract Staking {
         bytes20 prevStaker,
         uint256 proofStart,
         uint256 proofEnd
-    )
-        private
-        view
-        returns (bool)
-    {
+    ) private view returns (bool) {
         require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
         Staker storage staker = getValidStaker(stakerAddress);
-        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks;
+        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) <
+            deadlineTicks;
 
         if (isActive) {
             require(

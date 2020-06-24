@@ -22,11 +22,8 @@ import "../libraries/CloneFactory.sol";
 
 import "./IArbRollup.sol";
 
-
 contract ArbFactory is CloneFactory {
-    event RollupCreated(
-        address vmAddress
-    );
+    event RollupCreated(address vmAddress);
 
     address public rollupTemplate;
     address public globalInboxAddress;
@@ -36,9 +33,7 @@ contract ArbFactory is CloneFactory {
         address _rollupTemplate,
         address _globalInboxAddress,
         address _challengeFactoryAddress
-    )
-        public
-    {
+    ) public {
         rollupTemplate = _rollupTemplate;
         globalInboxAddress = _globalInboxAddress;
         challengeFactoryAddress = _challengeFactoryAddress;
@@ -52,9 +47,7 @@ contract ArbFactory is CloneFactory {
         uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner
-    )
-        external
-    {
+    ) external {
         address clone = createClone(rollupTemplate);
         IArbRollup(clone).init(
             _vmState,
@@ -67,8 +60,6 @@ contract ArbFactory is CloneFactory {
             challengeFactoryAddress,
             globalInboxAddress
         );
-        emit RollupCreated(
-            clone
-        );
+        emit RollupCreated(clone);
     }
 }

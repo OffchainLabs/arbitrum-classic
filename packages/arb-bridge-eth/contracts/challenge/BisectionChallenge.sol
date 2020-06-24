@@ -24,11 +24,7 @@ import "./IBisectionChallenge.sol";
 import "../libraries/MerkleLib.sol";
 
 contract BisectionChallenge is Challenge, IBisectionChallenge {
-
-    event Continued (
-        uint256 segmentIndex,
-        uint256 deadlineTicks
-    );
+    event Continued(uint256 segmentIndex, uint256 deadlineTicks);
 
     // Incorrect previous state
     string private constant BIS_PREV = "BIS_PREV";
@@ -49,9 +45,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         address payable _challenger,
         uint256 _challengePeriodTicks,
         bytes32 _challengeState
-    )
-        external
-    {
+    ) external {
         Challenge.initializeChallenge(
             _vmAddress,
             _asserter,
@@ -66,10 +60,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         bytes memory _proof,
         bytes32 _bisectionRoot,
         bytes32 _bisectionHash
-    )
-        public
-        challengerAction
-    {
+    ) public challengerAction {
         require(_bisectionRoot == challengeState, CON_PREV);
         require(
             MerkleLib.verifyProof(
@@ -95,11 +86,19 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         require(_challengeState == challengeState, BIS_PREV);
     }
 
-    function firstSegmentSize(uint256 totalCount, uint256 bisectionCount) internal pure returns(uint) {
-        return totalCount / bisectionCount + totalCount%bisectionCount;
+    function firstSegmentSize(uint256 totalCount, uint256 bisectionCount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return totalCount / bisectionCount + (totalCount % bisectionCount);
     }
 
-    function otherSegmentSize(uint256 totalCount, uint256 bisectionCount) internal pure returns(uint) {
+    function otherSegmentSize(uint256 totalCount, uint256 bisectionCount)
+        internal
+        pure
+        returns (uint256)
+    {
         return totalCount / bisectionCount;
     }
 }

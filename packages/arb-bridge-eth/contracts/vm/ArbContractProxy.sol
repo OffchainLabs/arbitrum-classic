@@ -20,9 +20,7 @@ pragma solidity ^0.5.11;
 
 import "./IArbRollup.sol";
 
-
 contract ArbVMContractProxy {
-
     IArbRollup private arbChain;
 
     constructor(address _arbChain) public {

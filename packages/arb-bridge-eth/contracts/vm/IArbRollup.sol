@@ -18,7 +18,6 @@
 
 pragma solidity ^0.5.11;
 
-
 interface IArbRollup {
     function init(
         bytes32 _vmState,
@@ -30,8 +29,9 @@ interface IArbRollup {
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress
-    )
-        external;
+    ) external;
 
-    function forwardContractMessage(address _sender, bytes calldata _data) external payable;
+    function forwardContractMessage(address _sender, bytes calldata _data)
+        external
+        payable;
 }

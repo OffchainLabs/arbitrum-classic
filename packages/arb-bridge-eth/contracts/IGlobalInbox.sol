@@ -19,7 +19,6 @@
 pragma solidity ^0.5.11;
 
 interface IGlobalInbox {
-
     event TransactionMessageDelivered(
         address indexed chain,
         address indexed to,
@@ -29,9 +28,7 @@ interface IGlobalInbox {
         bytes data
     );
 
-    event TransactionMessageBatchDelivered(
-        address indexed chain
-    );
+    event TransactionMessageBatchDelivered(address indexed chain);
 
     event EthDepositMessageDelivered(
         address indexed chain,
@@ -68,9 +65,13 @@ interface IGlobalInbox {
         uint256 messageNum
     );
 
-    function getInbox(address account) external view returns(bytes32, uint);
+    function getInbox(address account) external view returns (bytes32, uint256);
 
-    function sendMessages(bytes calldata _messages, uint[] calldata messageCounts, bytes32[] calldata nodeHashes) external;
+    function sendMessages(
+        bytes calldata _messages,
+        uint256[] calldata messageCounts,
+        bytes32[] calldata nodeHashes
+    ) external;
 
     function depositEthMessage(address _chain, address _to) external payable;
 
@@ -80,24 +81,21 @@ interface IGlobalInbox {
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data
-    )
-        external;
+    ) external;
 
     function depositERC20Message(
         address _chain,
         address _to,
         address _erc20,
         uint256 _value
-    )
-        external;
+    ) external;
 
     function depositERC721Message(
         address _chain,
         address _to,
         address _erc721,
         uint256 _value
-    )
-        external;
+    ) external;
 
     // msg.sender is the chain receiving the message
     function forwardContractTransactionMessage(
@@ -105,8 +103,7 @@ interface IGlobalInbox {
         address _from,
         uint256 _value,
         bytes calldata _data
-    )
-        external;
+    ) external;
 
     // msg.sender is the chain receiving the message
     function forwardEthMessage(address _to, address _from) external payable;

@@ -19,7 +19,6 @@
 pragma solidity ^0.5.11;
 
 contract GlobalEthWallet {
-
     mapping(address => uint256) private ethWallets;
 
     function withdrawEth() external {
@@ -40,10 +39,7 @@ contract GlobalEthWallet {
         address _from,
         address _to,
         uint256 _value
-    )
-        internal
-        returns (bool)
-    {
+    ) internal returns (bool) {
         if (_value > ethWallets[_from]) {
             return false;
         }

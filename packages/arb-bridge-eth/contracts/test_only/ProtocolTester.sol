@@ -20,44 +20,38 @@ pragma solidity ^0.5.11;
 
 import "../arch/Protocol.sol";
 
-contract ProtocolTester{
-
+contract ProtocolTester {
     function generateAssertionHash(
-    	bytes32 _afterHash,
-        bool    _didInboxInsn,
-        uint64  _numGas,
+        bytes32 _afterHash,
+        bool _didInboxInsn,
+        uint64 _numGas,
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
         bytes32 _lastLogHash
-    )
-    	public
-        pure
-        returns (bytes32)
-    {
-       return Protocol.generateAssertionHash(
-       	_afterHash,
-        _didInboxInsn,
-        _numGas,
-        _firstMessageHash,
-        _lastMessageHash,
-        _firstLogHash,
-        _lastLogHash);
-
+    ) public pure returns (bytes32) {
+        return
+            Protocol.generateAssertionHash(
+                _afterHash,
+                _didInboxInsn,
+                _numGas,
+                _firstMessageHash,
+                _lastMessageHash,
+                _firstLogHash,
+                _lastLogHash
+            );
     }
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
-    )
-        public
-        pure
-        returns(bytes32)
-    {
-        return Protocol.generatePreconditionHash(
-        	_beforeHash,
-        	_timeBounds,
-        	_beforeInboxHash);
+    ) public pure returns (bytes32) {
+        return
+            Protocol.generatePreconditionHash(
+                _beforeHash,
+                _timeBounds,
+                _beforeInboxHash
+            );
     }
 }

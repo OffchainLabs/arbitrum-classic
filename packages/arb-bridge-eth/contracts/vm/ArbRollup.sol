@@ -22,9 +22,7 @@ import "./NodeGraph.sol";
 import "./Staking.sol";
 import "./ArbContractProxy.sol";
 
-
 contract ArbRollup is NodeGraph, Staking {
-
     // invalid path proof
     string private constant PLACE_LEAF = "PLACE_LEAF";
 
@@ -62,13 +60,9 @@ contract ArbRollup is NodeGraph, Staking {
     mapping(address => address) private incomingCallProxies;
     mapping(address => address) public supportedContracts;
 
-    event ConfirmedAssertion(
-        bytes32[] logsAccHash
-    );
+    event ConfirmedAssertion(bytes32[] logsAccHash);
 
-    event ConfirmedValidAssertion(
-        bytes32 indexed nodeHash
-    );
+    event ConfirmedValidAssertion(bytes32 indexed nodeHash);
 
     function init(
         bytes32 _vmState,
@@ -80,9 +74,7 @@ contract ArbRollup is NodeGraph, Staking {
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress
-    )
-        external
-    {
+    ) external {
         NodeGraph.init(
             _vmState,
             _gracePeriodTicks,
@@ -91,19 +83,30 @@ contract ArbRollup is NodeGraph, Staking {
             _maxTimeBoundsWidth,
             _globalInboxAddress
         );
-        Staking.init(
-            _stakeRequirement,
-            _challengeFactoryAddress
-        );
+        Staking.init(_stakeRequirement, _challengeFactoryAddress);
         owner = _owner;
     }
 
-    function forwardContractMessage(address _sender, bytes calldata _data) external payable {
+    function forwardContractMessage(address _sender, bytes calldata _data)
+        external
+        payable
+    {
         address arbContractAddress = incomingCallProxies[msg.sender];
-        require(arbContractAddress != address(0), "Non interface contract can't send message");
+        require(
+            arbContractAddress != address(0),
+            "Non interface contract can't send message"
+        );
 
-        globalInbox.forwardEthMessage.value(msg.value)(arbContractAddress, _sender);
-        globalInbox.forwardContractTransactionMessage(arbContractAddress, _sender, msg.value, _data);
+        globalInbox.forwardEthMessage.value(msg.value)(
+            arbContractAddress,
+            _sender
+        );
+        globalInbox.forwardContractTransactionMessage(
+            arbContractAddress,
+            _sender,
+            msg.value,
+            _data
+        );
     }
 
     function spawnCallProxy(address _arbContract) external {
@@ -112,27 +115,27 @@ contract ArbRollup is NodeGraph, Staking {
         supportedContracts[_arbContract] = address(proxy);
     }
 
-    function placeStake(
-        bytes32[] calldata proof1,
-        bytes32[] calldata proof2
-    )
+    function placeStake(bytes32[] calldata proof1, bytes32[] calldata proof2)
         external
         payable
     {
-        bytes32 location = RollupUtils.calculateLeafFromPath(latestConfirmed(), proof1);
+        bytes32 location = RollupUtils.calculateLeafFromPath(
+            latestConfirmed(),
+            proof1
+        );
         bytes32 leaf = RollupUtils.calculateLeafFromPath(location, proof2);
         require(isValidLeaf(leaf), PLACE_LEAF);
         createStake(location);
     }
 
-    function moveStake(
-        bytes32[] calldata proof1,
-        bytes32[] calldata proof2
-    )
+    function moveStake(bytes32[] calldata proof1, bytes32[] calldata proof2)
         external
     {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        bytes32 newLocation = RollupUtils.calculateLeafFromPath(stakerLocation, proof1);
+        bytes32 newLocation = RollupUtils.calculateLeafFromPath(
+            stakerLocation,
+            proof1
+        );
         bytes32 leaf = RollupUtils.calculateLeafFromPath(newLocation, proof2);
         require(isValidLeaf(leaf), MOVE_LEAF);
         updateStakerLocation(msg.sender, newLocation);
@@ -142,7 +145,10 @@ contract ArbRollup is NodeGraph, Staking {
         _recoverStakeConfirmed(msg.sender, proof);
     }
 
-    function recoverStakeOld(address payable stakerAddress, bytes32[] calldata proof) external {
+    function recoverStakeOld(
+        address payable stakerAddress,
+        bytes32[] calldata proof
+    ) external {
         require(proof.length > 0, RECVOLD_LENGTH);
         _recoverStakeConfirmed(stakerAddress, proof);
     }
@@ -152,14 +158,14 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32 node,
         bytes32[] calldata latestConfirmedProof,
         bytes32[] calldata stakerProof
-    )
-        external
-    {
+    ) external {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(
             latestConfirmedProof[0] != stakerProof[0] &&
-            RollupUtils.calculateLeafFromPath(node, latestConfirmedProof) == latestConfirmed() &&
-            RollupUtils.calculateLeafFromPath(node, stakerProof) == stakerLocation,
+                RollupUtils.calculateLeafFromPath(node, latestConfirmedProof) ==
+                latestConfirmed() &&
+                RollupUtils.calculateLeafFromPath(node, stakerProof) ==
+                stakerLocation,
             RECOV_CONFLICT_PROOF
         );
         refundStaker(stakerAddress);
@@ -173,9 +179,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 childType,
         bytes32 vmProtoStateHash,
         bytes32[] calldata proof
-    )
-        external
-    {
+    ) external {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         bytes32 nextNode = RollupUtils.childNodeHash(
             stakerLocation,
@@ -186,21 +190,24 @@ contract ArbRollup is NodeGraph, Staking {
         );
         bytes32 leaf = RollupUtils.calculateLeafFromPath(nextNode, proof);
         require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
-        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
+        require(
+            block.number >= RollupTime.blocksToTicks(deadlineTicks),
+            RECOV_DEADLINE_TIME
+        );
 
         refundStaker(stakerAddress);
     }
 
     // fields
-     // beforeVMHash
-     // beforeInboxTop
-     // prevPrevLeafHash
-     // prevDataHash
-     // afterInboxTop
-     // importedMessagesSlice
-     // afterVMHash
-     // messagesAccHash
-     // logsAccHash
+    // beforeVMHash
+    // beforeInboxTop
+    // prevPrevLeafHash
+    // prevDataHash
+    // afterInboxTop
+    // importedMessagesSlice
+    // afterVMHash
+    // messagesAccHash
+    // logsAccHash
 
     function makeAssertion(
         bytes32[9] calldata _fields,
@@ -213,27 +220,21 @@ contract ArbRollup is NodeGraph, Staking {
         bool _didInboxInsn,
         uint64 _numArbGas,
         bytes32[] calldata _stakerProof
-    )
-        external
-    {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+    ) external {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -244,7 +245,11 @@ contract ArbRollup is NodeGraph, Staking {
         (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(assertData);
 
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        require(RollupUtils.calculateLeafFromPath(stakerLocation, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
+        require(
+            RollupUtils.calculateLeafFromPath(stakerLocation, _stakerProof) ==
+                prevLeaf,
+            MAKE_STAKER_PROOF
+        );
         updateStakerLocation(msg.sender, newValid);
     }
 
@@ -257,10 +262,16 @@ contract ArbRollup is NodeGraph, Staking {
         selfdestruct(msg.sender);
     }
 
-
-    function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
+    function _recoverStakeConfirmed(
+        address payable stakerAddress,
+        bytes32[] memory proof
+    ) private {
         bytes32 stakerLocation = getStakerLocation(msg.sender);
-        require(RollupUtils.calculateLeafFromPath(stakerLocation, proof) == latestConfirmed(), RECOV_PATH_PROOF);
+        require(
+            RollupUtils.calculateLeafFromPath(stakerLocation, proof) ==
+                latestConfirmed(),
+            RECOV_PATH_PROOF
+        );
         refundStaker(stakerAddress);
     }
 
@@ -276,24 +287,23 @@ contract ArbRollup is NodeGraph, Staking {
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
         uint256[] memory stakerProofOffsets
-    )
-        public
-    {
-        return _confirm(
-            RollupUtils.ConfirmData(
-                initalProtoStateHash,
-                branches,
-                deadlineTicks,
-                challengeNodeData,
-                logsAcc,
-                vmProtoStateHashes,
-                messageCounts,
-                messages
-            ),
-            stakerAddresses,
-            stakerProofs,
-            stakerProofOffsets
-        );
+    ) public {
+        return
+            _confirm(
+                RollupUtils.ConfirmData(
+                    initalProtoStateHash,
+                    branches,
+                    deadlineTicks,
+                    challengeNodeData,
+                    logsAcc,
+                    vmProtoStateHashes,
+                    messageCounts,
+                    messages
+                ),
+                stakerAddresses,
+                stakerProofs,
+                stakerProofOffsets
+            );
     }
 
     function _confirm(
@@ -301,20 +311,23 @@ contract ArbRollup is NodeGraph, Staking {
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
         uint256[] memory stakerProofOffsets
-    )
-        private
-    {
+    ) private {
         uint256 totalNodeCount = data.branches.length;
         // If last node is after deadline, then all nodes are
-        require(RollupTime.blocksToTicks(block.number) >= data.deadlineTicks[totalNodeCount - 1], CONF_TIME);
+        require(
+            RollupTime.blocksToTicks(block.number) >=
+                data.deadlineTicks[totalNodeCount - 1],
+            CONF_TIME
+        );
 
-        (bytes32[] memory validNodeHashes, bytes32 confNode) = RollupUtils.confirm(data, latestConfirmed());
+        (bytes32[] memory validNodeHashes, bytes32 confNode) = RollupUtils
+            .confirm(data, latestConfirmed());
 
         uint256 validNodeCount = validNodeHashes.length;
         for (uint256 i = 0; i < validNodeCount; i++) {
             emit ConfirmedValidAssertion(validNodeHashes[i]);
         }
-        uint activeCount = checkAlignedStakers(
+        uint256 activeCount = checkAlignedStakers(
             confNode,
             data.deadlineTicks[totalNodeCount - 1],
             stakerAddresses,
@@ -326,12 +339,14 @@ contract ArbRollup is NodeGraph, Staking {
         confirmNode(confNode);
 
         // Send all messages is a single batch
-        globalInbox.sendMessages(data.messages, data.messageCounts, validNodeHashes);
+        globalInbox.sendMessages(
+            data.messages,
+            data.messageCounts,
+            validNodeHashes
+        );
 
         if (validNodeCount > 0) {
-            emit ConfirmedAssertion(
-                data.logsAcc
-            );
+            emit ConfirmedAssertion(data.logsAcc);
         }
     }
 }

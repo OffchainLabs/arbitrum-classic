@@ -18,23 +18,34 @@
 
 pragma solidity ^0.5.11;
 
-
 library MerkleLib {
-    function generateAddressRoot(address[] memory _addresses) internal pure returns (bytes32) {
+    function generateAddressRoot(address[] memory _addresses)
+        internal
+        pure
+        returns (bytes32)
+    {
         bytes32[] memory _hashes = new bytes32[](_addresses.length);
-        for (uint i = 0; i < _addresses.length; i++) {
+        for (uint256 i = 0; i < _addresses.length; i++) {
             _hashes[i] = bytes32(bytes20(_addresses[i]));
         }
         return generateRoot(_hashes);
     }
 
-    function generateRoot(bytes32[] memory _hashes) internal pure returns (bytes32) {
+    function generateRoot(bytes32[] memory _hashes)
+        internal
+        pure
+        returns (bytes32)
+    {
         bytes32[] memory prevLayer = _hashes;
         while (prevLayer.length > 1) {
-            bytes32[] memory nextLayer = new bytes32[]((prevLayer.length + 1) / 2);
-            for (uint i = 0; i < nextLayer.length; i++) {
+            bytes32[] memory nextLayer = new bytes32[](
+                (prevLayer.length + 1) / 2
+            );
+            for (uint256 i = 0; i < nextLayer.length; i++) {
                 if (2 * i + 1 < prevLayer.length) {
-                    nextLayer[i] = keccak256(abi.encodePacked(prevLayer[2 * i], prevLayer[2 * i + 1]));
+                    nextLayer[i] = keccak256(
+                        abi.encodePacked(prevLayer[2 * i], prevLayer[2 * i + 1])
+                    );
                 } else {
                     nextLayer[i] = prevLayer[2 * i];
                 }
@@ -49,11 +60,7 @@ library MerkleLib {
         bytes32 root,
         bytes32 hash,
         uint256 index
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         // use the index to determine the node ordering
         // index ranges 1 to n
 
@@ -72,8 +79,8 @@ library MerkleLib {
             // we don't assume that the tree is padded to a power of 2
             // if the index is odd then the proof will start with a hash at a higher
             // layer, so we have to adjust the index to be the index at that layer
-            while (remaining > 0 && index % 2 == 1 && index > 2 ** remaining) {
-                index = uint(index) / 2 + 1;
+            while (remaining > 0 && index % 2 == 1 && index > 2**remaining) {
+                index = uint256(index) / 2 + 1;
             }
 
             if (index % 2 == 0) {
@@ -81,7 +88,7 @@ library MerkleLib {
                 index = index / 2;
             } else {
                 h = keccak256(abi.encodePacked(h, el));
-                index = uint(index) / 2 + 1;
+                index = uint256(index) / 2 + 1;
             }
         }
 
