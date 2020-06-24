@@ -17,6 +17,7 @@ module.exports = {
     'prettier/prettier': 'error',
     'no-unused-vars': 'warn',
     'prefer-const': [2, { destructuring: 'all' }],
+    'object-curly-spacing': ['error', 'always']
   },
   overrides: [
     {

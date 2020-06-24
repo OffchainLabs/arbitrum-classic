@@ -1347,7 +1347,7 @@
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.5.2.tgz#4d74670ead39e4f4fdab605a393ba8ea2390a2c4"
   integrity sha512-uRyvnvVYmgNmTBpWDbBsH/0kPESQhQpEc4KsvMRLVzFJ1o1s0uIv0Y6Y9IB5vI1Dwz2CbS4X/y4Wyw/75cTFnQ==
 
-"@solidity-parser/parser@^0.6.0":
+"@solidity-parser/parser@^0.6.0", "@solidity-parser/parser@^0.6.2":
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.6.2.tgz#49707fc4e06649d39d6b25bdab2e9093d372ce50"
   integrity sha512-kUVUvrqttndeprLoXjI5arWHeiP3uh4XODAKbG+ZaWHCVQeelxCbnXBeWxZ2BPHdXgH0xR9dU1b916JhDhbgAA==
@@ -4828,6 +4828,11 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
+dir-to-object@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/dir-to-object/-/dir-to-object-2.0.0.tgz#29723e9bd1c3e58e4f307bd04ff634c0370c8f8a"
+  integrity sha512-sXs0JKIhymON7T1UZuO2Ud6VTNAx/VTBXIl4+3mjb2RgfOpt+hectX0x04YqPOPdkeOAKoJuKqwqnXXURNPNEA==
+
 dns-equal@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/dns-equal/-/dns-equal-1.0.0.tgz#b39e7f1da6eb0a75ba9c17324b34753c47e0654d"
@@ -5011,6 +5016,11 @@ emoji-regex@^8.0.0:
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-8.0.0.tgz#e818fd69ce5ccfcb404594f842963bf53164cc37"
   integrity sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==
 
+emoji-regex@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-9.0.0.tgz#48a2309cc8a1d2e9d23bc6a67c39b63032e76ea4"
+  integrity sha512-6p1NII1Vm62wni/VR/cUMauVQoxmLVb9csqQlvLz+hO2gk8U2UYDfXHQSUYIBKmZwAKz867IDqG7B+u0mj+M6w==
+
 emojis-list@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/emojis-list/-/emojis-list-2.1.0.tgz#4daa4d9db00f9819880c79fa457ae5b09a1fd389"
@@ -5160,6 +5170,11 @@ escape-string-regexp@^2.0.0:
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-2.0.0.tgz#a30304e99daa32e23b2fd20f51babd07cffca344"
   integrity sha512-UpzcLCXolUWcNu5HtVMHYdXJjArjsF9C0aNnquZYY4uW/Vu0miy5YoWvbV345HauVvcAUnpRuhMMcqTcGOY2+w==
 
+escape-string-regexp@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz#14ba83a5d373e3d311e5afca29cf5bfad965bf34"
+  integrity sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==
+
 escodegen@1.8.x:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/escodegen/-/escodegen-1.8.1.tgz#5a5b53af4693110bebb0867aa3430dd3b70a1018"
@@ -5196,7 +5211,7 @@ escodegen@^1.14.1:
   optionalDependencies:
     source-map "~0.6.1"
 
-eslint-config-prettier@^6.10.1:
+eslint-config-prettier@^6.10.1, eslint-config-prettier@^6.11.0:
   version "6.11.0"
   resolved "https://registry.yarnpkg.com/eslint-config-prettier/-/eslint-config-prettier-6.11.0.tgz#f6d2238c1290d01c859a8b5c1f7d352a0b0da8b1"
   integrity sha512-oB8cpLWSAjOVFEJhhyMZh6NOEOtBVziaqdDQ86+qhDHFbZXoRTM7pNSvFRfW/W/L/LrQ38C99J5CGuRBBzBsdA==
@@ -5215,6 +5230,13 @@ eslint-plugin-prettier@^3.1.3:
   version "3.1.3"
   resolved "https://registry.yarnpkg.com/eslint-plugin-prettier/-/eslint-plugin-prettier-3.1.3.tgz#ae116a0fc0e598fdae48743a4430903de5b4e6ca"
   integrity sha512-+HG5jmu/dN3ZV3T6eCD7a4BlAySdN7mLIbJYo0z1cFQuI+r2DiTJEFeF68ots93PsnrMxbzIZ2S/ieX+mkrBeQ==
+  dependencies:
+    prettier-linter-helpers "^1.0.0"
+
+eslint-plugin-prettier@^3.1.4:
+  version "3.1.4"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-prettier/-/eslint-plugin-prettier-3.1.4.tgz#168ab43154e2ea57db992a2cd097c828171f75c2"
+  integrity sha512-jZDa8z76klRqo+TdGDTFJSavwbnWK2ZpqGKNZ+VvweMW516pDUMmQ2koXvxEE4JhzNvTv+radye/bWGBmA6jmg==
   dependencies:
     prettier-linter-helpers "^1.0.0"
 
@@ -5360,6 +5382,13 @@ espree@^6.1.2:
     acorn "^7.1.1"
     acorn-jsx "^5.2.0"
     eslint-visitor-keys "^1.1.0"
+
+esprima-extract-comments@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/esprima-extract-comments/-/esprima-extract-comments-1.1.0.tgz#0dacab567a5900240de6d344cf18c33617becbc9"
+  integrity sha512-sBQUnvJwpeE9QnPrxh7dpI/dp67erYG4WXEAreAMoelPRpMR7NWb4YtwRPn9b+H1uLQKl/qS8WYmyaljTpjIsw==
+  dependencies:
+    esprima "^4.0.0"
 
 esprima@2.7.x, esprima@^2.7.1:
   version "2.7.3"
@@ -6171,6 +6200,14 @@ extglob@^2.0.4:
     regex-not "^1.0.0"
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
+
+extract-comments@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/extract-comments/-/extract-comments-1.1.0.tgz#b90bca033a056bd69b8ba1c6b6b120fc2ee95c18"
+  integrity sha512-dzbZV2AdSSVW/4E7Ti5hZdHWbA+Z80RJsJhr5uiL10oyjl/gy7/o+HI1HwK4/WSZhlq4SNKU3oUzXlM13Qx02Q==
+  dependencies:
+    esprima-extract-comments "^1.1.0"
+    parse-code-context "^1.0.0"
 
 extsprintf@1.3.0:
   version "1.3.0"
@@ -10982,6 +11019,11 @@ parse-cache-control@^1.0.1:
   resolved "https://registry.yarnpkg.com/parse-cache-control/-/parse-cache-control-1.0.1.tgz#8eeab3e54fa56920fe16ba38f77fa21aacc2d74e"
   integrity sha1-juqz5U+laSD+Fro493+iGqzC104=
 
+parse-code-context@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/parse-code-context/-/parse-code-context-1.0.0.tgz#718c295c593d0d19a37f898473268cc75e98de1e"
+  integrity sha512-OZQaqKaQnR21iqhlnPfVisFjBWjhnMl5J9MgbP8xC+EwoVqbXrq78lp+9Zb3ahmLzrIX5Us/qbvBnaS3hkH6OA==
+
 parse-filepath@^1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/parse-filepath/-/parse-filepath-1.0.2.tgz#a632127f53aaf3d15876f5872f3ffac763d6c891"
@@ -11347,6 +11389,20 @@ prettier-linter-helpers@^1.0.0:
   integrity sha512-GbK2cP9nraSSUF9N2XwUwqfzlAFlMNYYl+ShE/V+H8a9uNl/oUqB1w2EL54Jh0OlyRSd8RfWYJ3coVS4TROP2w==
   dependencies:
     fast-diff "^1.1.2"
+
+prettier-plugin-solidity@^1.0.0-alpha.54:
+  version "1.0.0-alpha.54"
+  resolved "https://registry.yarnpkg.com/prettier-plugin-solidity/-/prettier-plugin-solidity-1.0.0-alpha.54.tgz#c3cf56c7964b31a26c159d6226654816e4320902"
+  integrity sha512-wPTbvPtyGopKjLxMsXqlmWS/cHnT1CNeJqm1ix7q+HkJlQkXNkXDdMZk758l8SpaFm64+eWYlhj2CzUJdULj+g==
+  dependencies:
+    "@solidity-parser/parser" "^0.6.2"
+    dir-to-object "^2.0.0"
+    emoji-regex "^9.0.0"
+    escape-string-regexp "^4.0.0"
+    extract-comments "^1.1.0"
+    prettier "^2.0.5"
+    semver "^7.3.2"
+    string-width "^4.2.0"
 
 prettier@^1.14.2:
   version "1.18.2"

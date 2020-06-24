@@ -22,6 +22,7 @@
     "test:gas": "rm -rf deployments/buidlerevm_31337 && buidler typechain && REPORT_GAS=true buidler test --network localhost",
     "test:coverage": "rm -rf deployments/buidlerevm_31337 && buidler coverage",
     "lint": "eslint deploy/**/*.ts test/**/*.ts scripts/**/*.ts",
+    "format": "prettier './{contracts,scripts,test}/**/*.{js,json,md,ts,yml,sol}' --write && yarn lint --fix",
     "migrate:ropsten": "buidler deploy --network ropsten",
     "migrate:rinkeby": "buidler deploy --network rinkeby",
     "migrate:kovan": "buidler deploy --network kovan",
@@ -58,8 +59,13 @@
     "ethereum-waffle": "^2.3.0",
     "ethers": "^4.0.27",
     "mocha-junit-reporter": "^2.0.0",
+    "prettier-plugin-solidity": "^1.0.0-alpha.54",
     "solidity-coverage": "^0.7.7",
     "ts-generator": "^0.0.8",
     "typechain": "^2.0.0"
+  },
+  "dependencies": {
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.4"
   }
 }
