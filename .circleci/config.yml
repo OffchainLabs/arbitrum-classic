@@ -142,6 +142,20 @@ jobs:
             MOCHA_FILE: *ethbridge-test-path
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
+          command: yarn buidler node
+          background: true
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: while ! nc -z localhost 8545/; do sleep 2; done
+      - run:
+          name: test arb-bridge-eth gas usage
+          command: |
+            yarn test:gas:ci
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
+          name: codechecks
+          command: npx codechecks
+          working_directory: /home/user/project
+      - run:
           command: |
             echo arbitrum > ~/password.txt
             mkdir data

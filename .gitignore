@@ -19,6 +19,7 @@ keys.json
 /workspace
 arbitrum_flat.sol
 vconan
+gasReporterOutput.json
 
 # Logs
 logs
