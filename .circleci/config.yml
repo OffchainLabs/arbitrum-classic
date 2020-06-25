@@ -161,7 +161,7 @@ jobs:
       - run: killall geth
       - run:
           name: Upload Coverage to Codecov
-          command: codecovbash
+          command: codecovbash -R /home/user/project -c -F unit
           working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
@@ -200,7 +200,7 @@ jobs:
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:
             - ./*.a
-      - run: codecovbash -R /home/user/project
+      - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
           path: *test-path
   backend:
