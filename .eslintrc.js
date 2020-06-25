@@ -17,7 +17,7 @@ module.exports = {
     'prettier/prettier': 'error',
     'no-unused-vars': 'warn',
     'prefer-const': [2, { destructuring: 'all' }],
-    'object-curly-spacing': ['error', 'always']
+    'object-curly-spacing': ['error', 'always'],
   },
   overrides: [
     {
@@ -26,6 +26,7 @@ module.exports = {
       extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
+        'prettier/@typescript-eslint',
         'plugin:prettier/recommended',
       ],
       plugins: ['@typescript-eslint', 'prettier'],

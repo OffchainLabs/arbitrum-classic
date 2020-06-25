@@ -24,11 +24,12 @@
     "test": "mocha",
     "test:coverage": "nyc mocha",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
-    "lint": "eslint src/**/*.ts test/**/*.ts",
+    "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update-abi": "./scripts/update-abi && yarn format"
   },
   "dependencies": {
+    "@types/promise-poller": "^1.7.0",
     "jayson": "^3.2.0",
     "promise-poller": "^1.9.1"
   },
