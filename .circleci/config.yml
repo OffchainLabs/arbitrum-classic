@@ -135,7 +135,13 @@ jobs:
       - checkout
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
+      - run:
+          name: install
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+            yarn build
+          working_directory: /home/user/project
+      - run:
       - run:
           name: test arb-bridge-eth
           command: |
