@@ -17,6 +17,7 @@
 'use strict'
 
 // import * as fs from 'fs'
+import { assert, expect } from 'chai'
 import * as ethers from 'ethers'
 
 const utils = ethers.utils
@@ -37,26 +38,26 @@ describe('Constructors', function () {
 
   test('BasicOp', function () {
     const bop = new arb.BasicOp(10)
-    expect(bop.opcode).toBe(10)
+    expect(bop.opcode).to.equal(10)
   })
 
-  test('ImmOp', function () {
+  it('ImmOp', function () {
     const iop = new arb.ImmOp(0x19, new arb.IntValue(utils.bigNumberify(9)))
-    expect(iop.opcode).toBe(0x19)
-    expect((iop.value as arb.IntValue).bignum.toNumber()).toBe(9)
+    expect(iop.opcode).to.equal(0x19)
+    expect((iop.value as arb.IntValue).bignum.toNumber()).to.equal(9)
   })
 
-  test('IntValue', function () {
+  it('IntValue', function () {
     const iv = new arb.IntValue(utils.bigNumberify(0))
-    expect(iv.bignum.toNumber()).toBe(0)
-    expect(iv.typeCode()).toBe(0)
+    expect(iv.bignum.toNumber()).to.equal(0)
+    expect(iv.typeCode()).to.equal(0)
   })
 
-  test('CodePointValue', function () {
+  it('CodePointValue', function () {
     const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash)
-    expect(cpv.insnNum.toNumber()).toBe(0)
-    expect(cpv.op.opcode).toBe(0x60)
-    expect(cpv.nextHash).toBe(nullHash)
+    expect(cpv.insnNum.toNumber()).to.equal(0)
+    expect(cpv.op.opcode).to.equal(0x60)
+    expect(cpv.nextHash).to.equal(nullHash)
 
     // Test BasicOp hash value
     const bopv = new arb.CodePointValue(
@@ -66,59 +67,59 @@ describe('Constructors', function () {
     )
     const preCalc =
       '0xe20558cb3c2dbc788aee4091e5596aa3a86530d82bce979e21365703da522301'
-    expect(bopv.hash()).toBe(preCalc)
+    expect(bopv.hash()).to.equal(preCalc)
 
     // Test ImmOp hash value
     const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)))
     const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH)
     const preCalc2 =
       '0x17ae7e9c5b69861db0759631c54ee3a23ecd04bd57d3d3e2b5579c05c5bd0e8b'
-    expect(immv.hash()).toBe(preCalc2)
+    expect(immv.hash()).to.equal(preCalc2)
   })
 })
 
 describe('TupleValue', function () {
-  test('Empty', function () {
+  it('Empty', function () {
     const emptyTuple = new arb.TupleValue([])
-    expect(emptyTuple.contents).toEqual([])
-    expect(emptyTuple.typeCode()).toBe(3)
-    expect(emptyTuple.hash()).toBe(EMPTY_TUPLE_HASH)
+    expect(emptyTuple.contents).to.deep.equal([])
+    expect(emptyTuple.typeCode()).to.equal(3)
+    expect(emptyTuple.hash()).to.equal(EMPTY_TUPLE_HASH)
   })
 
-  test('Two Tuple', function () {
+  it('Two Tuple', function () {
     const twoTuple = new arb.TupleValue([
       new arb.IntValue(utils.bigNumberify(0)),
       new arb.IntValue(utils.bigNumberify(100)),
     ])
-    expect((twoTuple.get(0) as arb.IntValue).bignum.isZero()).toBe(true)
+    expect((twoTuple.get(0) as arb.IntValue).bignum.isZero()).to.equal(true)
     expect(
       (twoTuple.get(1) as arb.IntValue).bignum.eq(utils.bigNumberify(100))
-    ).toBe(true)
-    expect(twoTuple.typeCode()).toBe(3 + 2)
+    ).to.equal(true)
+    expect(twoTuple.typeCode()).to.equal(3 + 2)
   })
 
-  test('Largest Tuple', function () {
+  it('Largest Tuple', function () {
     const mtsv = new arb.TupleValue(
       Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([]))
     )
-    expect(mtsv.contents.length).toBe(arb.MAX_TUPLE_SIZE)
+    expect(mtsv.contents.length).to.equal(arb.MAX_TUPLE_SIZE)
     for (let i = 0; i < arb.MAX_TUPLE_SIZE; i++) {
-      expect((mtsv.get(i) as arb.TupleValue).contents.length).toBe(0)
+      expect((mtsv.get(i) as arb.TupleValue).contents.length).to.equal(0)
     }
-    expect(mtsv.typeCode()).toBe(3 + arb.MAX_TUPLE_SIZE)
+    expect(mtsv.typeCode()).to.equal(3 + arb.MAX_TUPLE_SIZE)
     // Pre calculated hash
     const p =
       '0x50d4ffda29a6d6324f06a725d7df50f897b34d245b2cff697281c437e454c777'
-    expect(mtsv.hash()).toBe(p)
+    expect(mtsv.hash()).to.equal(p)
   })
 
-  test('Greater than MAX_TUPLE_SIZE', function () {
-    expect(() => new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE + 1))).toThrow(
+  it('Greater than MAX_TUPLE_SIZE', function () {
+    expect(() => new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE + 1))).to.throw(
       'Error TupleValue: illegal size ' + (arb.MAX_TUPLE_SIZE + 1)
     )
   })
 
-  test('get and set', function () {
+  it('get and set', function () {
     const emptyTuple = new arb.TupleValue(
       Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([]))
     )
@@ -126,44 +127,46 @@ describe('TupleValue', function () {
     // set
     for (let i = 0; i < arb.MAX_TUPLE_SIZE; i++) {
       t = t.set(i, new arb.IntValue(utils.bigNumberify(i)))
-      expect((t.contents[i] as arb.IntValue).bignum.toNumber()).toBe(i)
+      expect((t.contents[i] as arb.IntValue).bignum.toNumber()).to.equal(i)
     }
 
-    expect(() => t.set(arb.MAX_TUPLE_SIZE, new arb.TupleValue([]))).toThrow(
+    expect(() => t.set(arb.MAX_TUPLE_SIZE, new arb.TupleValue([]))).to.throw(
       'Error TupleValue set: index out of bounds ' + arb.MAX_TUPLE_SIZE
     )
-    expect(() => t.set(-1, new arb.TupleValue([]))).toThrow(
+    expect(() => t.set(-1, new arb.TupleValue([]))).to.throw(
       'Error TupleValue set: index out of bounds ' + -1
     )
 
     // get
     for (let i = 0; i < arb.MAX_TUPLE_SIZE; i++) {
-      expect((t.get(i) as arb.IntValue).bignum.toNumber()).toBe(i)
+      expect((t.get(i) as arb.IntValue).bignum.toNumber()).to.equal(i)
     }
 
-    expect(() => t.get(arb.MAX_TUPLE_SIZE)).toThrow(
+    expect(() => t.get(arb.MAX_TUPLE_SIZE)).to.throw(
       'Error TupleValue get: index out of bounds ' + arb.MAX_TUPLE_SIZE
     )
-    expect(() => t.get(-1)).toThrow(
+    expect(() => t.get(-1)).to.throw(
       'Error TupleValue get: index out of bounds ' + -1
     )
   })
 })
 
 describe('BigTuple', function () {
-  test('getBigTuple and setBigTuple', function () {
+  it('getBigTuple and setBigTuple', function () {
     const emptyBigTup = new arb.TupleValue([])
     expect(
       (arb.getBigTuple(emptyBigTup, 93) as arb.IntValue).bignum.toNumber()
-    ).toBe(0)
+    ).to.equal(0)
     expect(
       (arb.getBigTuple(emptyBigTup, 1234567890) as arb.IntValue).bignum.eq(0)
-    ).toBe(true)
+    ).to.equal(true)
 
     let t = emptyBigTup
     for (let i = 0; i < 100; i++) {
       t = arb.setBigTuple(t, i, new arb.IntValue(i))
-      expect((arb.getBigTuple(t, i) as arb.IntValue).bignum.toNumber()).toBe(i)
+      expect(
+        (arb.getBigTuple(t, i) as arb.IntValue).bignum.toNumber()
+      ).to.equal(i)
     }
   })
 })
@@ -175,87 +178,87 @@ const M_HASH_ONLY_SIZE = 1 + 8 + 32
 const M_TUPLE_SIZE = 1 + 0 // Without other vals
 
 describe('Marshaling', function () {
-  test('marshal and unmarshal IntValue', function () {
+  it('marshal and unmarshal IntValue', function () {
     for (const i of [0, 1, 100, '0x9271342394932492394']) {
       const iv = new arb.IntValue(bn(i))
       const marshaledBytes = arb.marshal(iv)
-      expect(marshaledBytes.length).toBe(M_INT_VALUE_SIZE)
+      expect(marshaledBytes.length).to.equal(M_INT_VALUE_SIZE)
       const unmarshaledValue = arb.unmarshal(marshaledBytes)
-      expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(i))).toBe(true)
+      expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(i))).to.equal(true)
     }
 
     // Test that negative IntValues throw on marshal
-    expect(() => arb.marshal(new arb.IntValue(bn(-1)))).toThrow(
+    expect(() => arb.marshal(new arb.IntValue(bn(-1)))).to.throw(
       'Error marshaling IntValue: negative values not supported'
     )
 
     // Test without "0x"
     const iv = new arb.IntValue(bn(99))
     const marshaledBytes = arb.marshal(iv)
-    expect(marshaledBytes.length).toBe(M_INT_VALUE_SIZE)
+    expect(marshaledBytes.length).to.equal(M_INT_VALUE_SIZE)
     const unmarshaledValue = arb.unmarshal(marshaledBytes)
-    expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(99))).toBe(true)
+    expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(99))).to.equal(true)
   })
 
-  test('marshal and unmarshal CodePointValue', function () {
+  it('marshal and unmarshal CodePointValue', function () {
     const pc = ethers.utils.bigNumberify(0)
     const op = new arb.BasicOp(10)
     const nextHash = '0x' + ZEROS_32B
     const basicTCV = new arb.CodePointValue(pc, op, nextHash)
     const marshaledBytes = arb.marshal(basicTCV)
-    expect(marshaledBytes.length).toBe(M_CODE_POINT_SIZE)
+    expect(marshaledBytes.length).to.equal(M_CODE_POINT_SIZE)
     const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue
-    expect(revValue.insnNum.toString()).toEqual(pc.toString())
-    expect(revValue.op.opcode).toBe(op.opcode)
-    expect(revValue.nextHash).toEqual(nextHash)
-    expect(revValue.toString()).toEqual(basicTCV.toString())
+    expect(revValue.insnNum.toString()).to.equal(pc.toString())
+    expect(revValue.op.opcode).to.equal(op.opcode)
+    expect(revValue.nextHash).to.equal(nextHash)
+    expect(revValue.toString()).to.equal(basicTCV.toString())
 
     const iv = new arb.IntValue(bn(60))
-    expect(arb.marshal(iv).length).toBe(M_INT_VALUE_SIZE)
+    expect(arb.marshal(iv).length).to.equal(M_INT_VALUE_SIZE)
     const immTCV = new arb.CodePointValue(pc, new arb.ImmOp(0x19, iv), nextHash)
     const mb = arb.marshal(immTCV)
-    expect(mb.length).toBe(M_CODE_POINT_SIZE + M_INT_VALUE_SIZE)
+    expect(mb.length).to.equal(M_CODE_POINT_SIZE + M_INT_VALUE_SIZE)
     const revImmValue = arb.unmarshal(mb) as arb.CodePointValue
-    expect(revImmValue.insnNum).toEqual(pc)
-    expect(revImmValue.op.opcode).toBe(0x19)
+    assert(revImmValue.insnNum.eq(pc))
+    expect(revImmValue.op.opcode).to.equal(0x19)
     expect(
       ((revImmValue.op as arb.ImmOp).value as arb.IntValue).bignum.toNumber()
-    ).toBe(60)
-    expect(revImmValue.nextHash).toEqual(nextHash)
-    expect(revImmValue.toString()).toEqual(immTCV.toString())
+    ).to.equal(60)
+    expect(revImmValue.nextHash).to.equal(nextHash)
+    expect(revImmValue.toString()).to.equal(immTCV.toString())
   })
 
-  test('marshal and unmarshal TupleValue', function () {
+  it('marshal and unmarshal TupleValue', function () {
     // Empty Tuple
     const etv = new arb.TupleValue([])
     const etvm = arb.marshal(etv)
-    expect(etvm.length).toBe(M_TUPLE_SIZE)
+    expect(etvm.length).to.equal(M_TUPLE_SIZE)
     const etvRev = arb.unmarshal(etvm)
-    expect(etvRev.toString()).toEqual(etv.toString())
+    expect(etvRev.toString()).to.equal(etv.toString())
 
     // Full Tuple of Empty Tuple"s
     const ftv = new arb.TupleValue(Array(8).fill(new arb.TupleValue([])))
     const ftvm = arb.marshal(ftv)
-    expect(ftvm.length).toBe(M_TUPLE_SIZE + M_TUPLE_SIZE * 8)
+    expect(ftvm.length).to.equal(M_TUPLE_SIZE + M_TUPLE_SIZE * 8)
     const ftvRev = arb.unmarshal(ftvm)
-    expect(ftvRev.toString()).toEqual(ftv.toString())
+    expect(ftvRev.toString()).to.equal(ftv.toString())
 
     // Full Tuple of IntValue"s
     const fitv = new arb.TupleValue(Array(8).fill(new arb.IntValue(bn(0))))
     const fitvm = arb.marshal(fitv)
-    expect(fitvm.length).toBe(M_TUPLE_SIZE + M_INT_VALUE_SIZE * 8)
+    expect(fitvm.length).to.equal(M_TUPLE_SIZE + M_INT_VALUE_SIZE * 8)
     const fitvRev = arb.unmarshal(fitvm) as arb.TupleValue
-    expect(fitvRev.toString()).toEqual(fitv.toString())
-    expect((fitvRev.get(0) as arb.IntValue).bignum.toNumber()).toBe(0)
-    expect((fitvRev.get(7) as arb.IntValue).bignum.toNumber()).toBe(0)
-    expect(() => fitvRev.get(8)).toThrow(
+    expect(fitvRev.toString()).to.equal(fitv.toString())
+    expect((fitvRev.get(0) as arb.IntValue).bignum.toNumber()).to.equal(0)
+    expect((fitvRev.get(7) as arb.IntValue).bignum.toNumber()).to.equal(0)
+    expect(() => fitvRev.get(8)).to.throw(
       'Error TupleValue get: index out of bounds 8'
     )
   })
 
-  test('illegal inputs', function () {
+  it('illegal inputs', function () {
     // Illegal Value
-    expect(() => arb.unmarshal('0x99')).toThrow(
+    expect(() => arb.unmarshal('0x99')).to.throw(
       'Error unmarshaling value no such TYPE: 99'
     )
 
@@ -264,18 +267,18 @@ describe('Marshaling', function () {
       Array(8).fill('00').join(''),
       'FF',
     ]
-    expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).toThrow(
+    expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).to.throw(
       'Error unmarshalOp no such immCount: 255'
     )
 
-    expect(() => arb.unmarshal('0x01')).toThrow(
+    expect(() => arb.unmarshal('0x01')).to.throw(
       'Error extracting bytes: Uint8Array is too short'
     )
   })
 })
 
 describe('Integration', function () {
-  test('sizedByteRangeToBytes and hexToSizedByteRange', function () {
+  it('sizedByteRangeToBytes and hexToSizedByteRange', function () {
     // Create test value
     const myValue = new arb.TupleValue([
       new arb.TupleValue([]),
@@ -331,31 +334,31 @@ describe('Integration', function () {
     const marshaledBytes = arb.marshal(myValue)
     const expectedMessageBytes =
       '0x0b030b03030303030303005ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b0b0303030303030300781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c10b030303030303030032edc9a1000000000000000000000000000000000000000000000000000000000303030090e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180'
-    expect(ethers.utils.hexlify(marshaledBytes)).toBe(expectedMessageBytes)
+    expect(ethers.utils.hexlify(marshaledBytes)).to.equal(expectedMessageBytes)
     const val = arb.unmarshal(expectedMessageBytes)
-    expect(val.toString()).toEqual(
+    expect(val.toString()).to.equal(
       'Tuple([Tuple([]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 42009942682379378059947058450083587892049528549641310042571988458584210932843]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 54311897307976383387700091809425625413681576808311458615378223571158439396033]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 23035776775082914819351730844503175383119388692051102633761137171302117801984]), Tuple([]), Tuple([]), Tuple([]), 65530928266225785593959077233184075030766656784123302077071474652886342173056])'
     )
     const sizedByteRange = new arb.TupleValue([val, new arb.IntValue(bn(100))])
     const hex = arb.sizedByteRangeToBytes(sizedByteRange)
-    expect(ethers.utils.hexlify(hex)).toBe(
+    expect(ethers.utils.hexlify(hex)).to.equal(
       '0x90e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e601805ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c132edc9a1'
     )
     const sizedByteRangeReverse = arb.hexToSizedByteRange(hex)
     const sizeReverse = sizedByteRangeReverse.get(1)
-    expect((sizeReverse as arb.IntValue).bignum.toNumber()).toBe(100)
+    expect((sizeReverse as arb.IntValue).bignum.toNumber()).to.equal(100)
     const valReverse = sizedByteRangeReverse.get(0)
     const messageReverse = arb.marshal(valReverse)
-    expect(ethers.utils.hexlify(messageReverse)).toBe(expectedMessageBytes)
+    expect(ethers.utils.hexlify(messageReverse)).to.equal(expectedMessageBytes)
   })
 
-  test('hexToBytestack and bytestackToBytes', function () {
+  it('hexToBytestack and bytestackToBytes', function () {
     // Create test value
     const messageBytes =
       '0x0b030b03030303030303005ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b0b0303030303030300781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c10b030303030303030032edc9a1000000000000000000000000000000000000000000000000000000000303030090e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180'
     const bytestack = arb.hexToBytestack(messageBytes)
     const messageBytes2 = arb.bytestackToBytes(bytestack)
-    expect(ethers.utils.hexlify(messageBytes2)).toBe(messageBytes)
+    expect(ethers.utils.hexlify(messageBytes2)).to.equal(messageBytes)
   })
 })
 
@@ -368,7 +371,7 @@ describe('test_cases.json', function () {
       if (hash !== expectedHash) {
         console.log(value.toString())
       }
-      expect(hash).toEqual(expectedHash)
+      expect(hash).to.equal(expectedHash)
     })
   }
 })

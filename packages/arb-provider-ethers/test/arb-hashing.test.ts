@@ -1,5 +1,6 @@
 /* eslint-env node, jest */
 
+import { expect } from 'chai'
 import * as Hashing from '../src/lib/hashing'
 import * as ethers from 'ethers'
 
@@ -8,7 +9,7 @@ const randHexString = (): string =>
   '0x' + Math.random().toString().substring(2, 15)
 
 describe('calculateTransactionHash tests', function () {
-  test('works with precalucated hash', function () {
+  it('works with precalculated hash', function () {
     expect(
       Hashing.calculateTransactionHash(
         '0x1',
@@ -18,10 +19,12 @@ describe('calculateTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         '0xabc'
       )
-    ).toBe('0xffbd8a9fedd19f018642a8bb711a91a1b49b1774bf8af75132fba1af7d94b7c4')
+    ).to.equal(
+      '0xffbd8a9fedd19f018642a8bb711a91a1b49b1774bf8af75132fba1af7d94b7c4'
+    )
   })
 
-  test('throws with non-hex string data', function () {
+  it('throws with non-hex string data', function () {
     expect(() => {
       Hashing.calculateTransactionHash(
         '1',
@@ -31,7 +34,7 @@ describe('calculateTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         '0xabc'
       )
-    }).toThrow()
+    }).to.throw()
 
     expect(() => {
       Hashing.calculateTransactionHash(
@@ -42,10 +45,10 @@ describe('calculateTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         'abc'
       )
-    }).toThrow()
+    }).to.throw()
   })
 
-  test('random inputs output 32 bytes of data', function () {
+  it('random inputs output 32 bytes of data', function () {
     expect(
       ethers.utils.arrayify(
         Hashing.calculateTransactionHash(
@@ -57,12 +60,12 @@ describe('calculateTransactionHash tests', function () {
           randHexString()
         )
       ).length
-    ).toBe(32)
+    ).to.equal(32)
   })
 })
 
 describe('calculateBatchTransactionHash tests', function () {
-  test('works with precalucated hash', function () {
+  it('works with precalucated hash', function () {
     expect(
       Hashing.calculateBatchTransactionHash(
         '0x1',
@@ -71,9 +74,11 @@ describe('calculateBatchTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         '0xabc'
       )
-    ).toBe('0x935e9ab43661b8911d589b4f7bec0f7638d15c798ff6b6346bab20b7549eb9b8')
+    ).to.equal(
+      '0x935e9ab43661b8911d589b4f7bec0f7638d15c798ff6b6346bab20b7549eb9b8'
+    )
   })
-  test('throws with non-hex string data', function () {
+  it('throws with non-hex string data', function () {
     expect(() => {
       Hashing.calculateBatchTransactionHash(
         '1',
@@ -82,7 +87,7 @@ describe('calculateBatchTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         '0xabc'
       )
-    }).toThrow()
+    }).to.throw()
 
     expect(() => {
       Hashing.calculateBatchTransactionHash(
@@ -92,10 +97,10 @@ describe('calculateBatchTransactionHash tests', function () {
         ethers.utils.bigNumberify(10),
         'abc'
       )
-    }).toThrow()
+    }).to.throw()
   })
 
-  test('random inputs output 32 bytes of data', function () {
+  it('random inputs output 32 bytes of data', function () {
     expect(
       ethers.utils.arrayify(
         Hashing.calculateBatchTransactionHash(
@@ -106,6 +111,6 @@ describe('calculateBatchTransactionHash tests', function () {
           randHexString()
         )
       ).length
-    ).toBe(32)
+    ).to.equal(32)
   })
 })

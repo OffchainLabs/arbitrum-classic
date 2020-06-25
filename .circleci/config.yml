@@ -96,29 +96,20 @@ jobs:
           name: test arb-provider-ethers
           command: |
             yarn
-            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-ethers.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-ethers.xml
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
           name: test arb-provider-web3
           command: |
-            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-web3.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-web3.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
           name: test arb-provider-truffle
           command: |
-            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-truffle.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-truffle.xml
           working_directory: /home/user/project/packages/arb-provider-truffle
       - run:
           name: Upload Coverage to Codecov
@@ -155,7 +146,7 @@ jobs:
             mkdir data
             geth --datadir data init geth/ethbridge.json
             cp geth/keystore/* data/keystore
-          working_directory: /home/user/arb-bridge-eth
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
           command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true

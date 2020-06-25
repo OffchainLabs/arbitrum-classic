@@ -11,7 +11,9 @@
     "directory": "packages/arb-provider-web3"
   },
   "scripts": {
-    "test": "jest --config jest.config.js",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "format": "prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "lint": "eslint ."
   },
@@ -26,7 +28,6 @@
     "ethers-utils": "^2.1.11"
   },
   "devDependencies": {
-    "jest": "^26.0.0",
-    "jest-junit": "^10.0.0"
+    "mocha": "^7.2.0"
   }
 }

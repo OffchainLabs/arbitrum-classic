@@ -46,14 +46,13 @@
     ]
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.29.0",
-    "@typescript-eslint/parser": "^2.29.0",
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
     "eslint-plugin-mocha": "^7.0.1",
     "ts-node": "^8.10.2",
     "prettier-plugin-solidity": "^1.0.0-alpha.54",
-    "eslint": "^6.8.0",
+    "eslint": "^7.3.1",
     "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
     "typescript": "^3.8.3"
   }
