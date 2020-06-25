@@ -24,7 +24,7 @@
     "test": "mocha",
     "test:coverage": "nyc mocha",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
-    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint": "eslint src/**/*.ts test/**/*.ts",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update-abi": "./scripts/update-abi && yarn format"
   },

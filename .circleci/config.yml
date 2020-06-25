@@ -156,7 +156,7 @@ jobs:
           name: deploy arb-bridge-eth
           command: |
             yarn buidler deploy --network parity
-          working_directory: /home/user/arb-bridge-eth
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run: cat /home/user/project/packages/arb-bridge-eth/bridge_eth_addresses.json
       - run: killall geth
       - run:
