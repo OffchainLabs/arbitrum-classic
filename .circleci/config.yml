@@ -136,7 +136,8 @@ jobs:
           name: test arb-bridge-eth
           command: |
             yarn test:coverage
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
+            yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
+            yarn lint:solidity
           environment:
             MOCHA_FILE: *ethbridge-test-path
           working_directory: /home/user/project/packages/arb-bridge-eth
