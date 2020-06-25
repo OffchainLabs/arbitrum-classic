@@ -75,6 +75,8 @@ library OneStepProof {
             );
     }
 
+    /* solhint-disable no-inline-assembly */
+
     // Arithmetic
 
     function executeAddInsn(
@@ -485,6 +487,8 @@ library OneStepProof {
         machine.addDataStackInt(c);
         return true;
     }
+
+    /* solhint-enable no-inline-assembly */
 
     // Hash
 
@@ -1354,7 +1358,9 @@ library OneStepProof {
             endMachine.addDataStackValue(auxVal);
         } else if (opCode == OP_AUXSTACKEMPTY) {
             correct = executeAuxstackemptyInsn(endMachine);
-        } else if (opCode == OP_NOP) {} else if (opCode == OP_ERRPUSH) {
+        } else if (opCode == OP_NOP) {
+            correct = true;
+        } else if (opCode == OP_ERRPUSH) {
             correct = executeErrpushInsn(endMachine);
         } else if (opCode == OP_ERRSET) {
             correct = executeErrsetInsn(endMachine, stackVals[0]);

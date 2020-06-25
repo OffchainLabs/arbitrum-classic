@@ -69,6 +69,7 @@ library MerkleLib {
         uint256 remaining;
 
         for (uint256 j = 32; j <= proof.length; j += 32) {
+            // solhint-disable-next-line no-inline-assembly
             assembly {
                 el := mload(add(proof, j))
             }

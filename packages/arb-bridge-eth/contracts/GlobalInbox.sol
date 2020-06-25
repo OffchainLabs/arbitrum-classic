@@ -36,7 +36,7 @@ contract GlobalInbox is
     GlobalFTWallet,
     GlobalNFTWallet,
     IGlobalInbox,
-    PaymentRecords
+    PaymentRecords // solhint-disable-next-line bracket-align
 {
     uint8 internal constant TRANSACTION_MSG = 0;
     uint8 internal constant ETH_DEPOSIT = 1;
@@ -120,7 +120,7 @@ contract GlobalInbox is
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferEth(msg.sender, paymentOwner, value);
-            delete paymentMap[nodeHash][messageIndex][to];
+            deletePayment(to, nodeHash, messageIndex);
 
             return (true, offset);
         } else if (messageType == ERC20_DEPOSIT) {
@@ -137,7 +137,7 @@ contract GlobalInbox is
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferERC20(msg.sender, paymentOwner, erc20, value);
-            delete paymentMap[nodeHash][messageIndex][to];
+            deletePayment(to, nodeHash, messageIndex);
 
             return (true, offset);
         } else if (messageType == ERC721_DEPOSIT) {
@@ -154,7 +154,7 @@ contract GlobalInbox is
 
             address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721, value);
-            delete paymentMap[nodeHash][messageIndex][to];
+            deletePayment(to, nodeHash, messageIndex);
 
             return (true, offset);
         } else {
@@ -239,6 +239,7 @@ contract GlobalInbox is
     function deliverTransactionBatch(address chain, bytes calldata transactions)
         external
     {
+        // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         bytes32 messageHash = keccak256(
             abi.encodePacked(TRANSACTION_BATCH_MSG, transactions)
@@ -375,7 +376,7 @@ contract GlobalInbox is
             inbox.value,
             _messageHash,
             block.number,
-            block.timestamp,
+            block.timestamp, // solhint-disable-line not-rely-on-time
             updatedCount
         );
         inbox.count = updatedCount;

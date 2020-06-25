@@ -19,8 +19,7 @@
 pragma solidity ^0.5.11;
 
 contract PaymentRecords {
-    mapping(bytes32 => mapping(uint256 => mapping(address => address)))
-        internal paymentMap;
+    mapping(bytes32 => address) private payments;
 
     event PaymentTransfer(
         bytes32 nodeHash,
@@ -43,7 +42,9 @@ contract PaymentRecords {
         );
         require(msg.sender == currentOwner, "Must be payment owner.");
 
-        paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
+        payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )] = newOwner;
 
         emit PaymentTransfer(
             nodeHash,
@@ -59,14 +60,24 @@ contract PaymentRecords {
         bytes32 nodeHash,
         uint256 messageIndex
     ) public view returns (address) {
-
-            address currentOwner
-         = paymentMap[nodeHash][messageIndex][originalOwner];
+        address currentOwner = payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )];
 
         if (currentOwner == address(0)) {
             return originalOwner;
         } else {
             return currentOwner;
         }
+    }
+
+    function deletePayment(
+        address originalOwner,
+        bytes32 nodeHash,
+        uint256 messageIndex
+    ) internal {
+        delete payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )];
     }
 }

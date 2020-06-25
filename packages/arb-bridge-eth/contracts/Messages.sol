@@ -424,6 +424,7 @@ library Messages {
         uint256 start,
         uint256 length
     ) private pure returns (bytes32 dataHash) {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             dataHash := keccak256(add(add(data, 0x20), start), length)
         }

@@ -10774,6 +10774,13 @@ solc@^0.6.3:
     semver "^5.5.0"
     tmp "0.0.33"
 
+solhint-plugin-prettier@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/solhint-plugin-prettier/-/solhint-plugin-prettier-0.0.4.tgz#ab55ff776d64ff665c52bed41a3b4795c391c9d8"
+  integrity sha512-JVxh8ZkD4ydb0EndbNcstpFU+vWzUvX3jr9z6u72+Srg/zjD8JQ1tIMjMn0H1PnsNLItZqPZ6RYIPJB6HOsVMg==
+  dependencies:
+    prettier-linter-helpers "^1.0.0"
+
 solhint@^2.0.0:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/solhint/-/solhint-2.3.1.tgz#6fee8fc2635112bf5812f7cba8359c14e9d9a491"

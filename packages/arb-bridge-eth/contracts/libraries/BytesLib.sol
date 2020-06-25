@@ -10,6 +10,7 @@
 
 pragma solidity ^0.5.11;
 
+/* solhint-disable no-inline-assembly */
 library BytesLib {
     function slice(
         bytes memory _bytes,
@@ -219,3 +220,4 @@ library BytesLib {
         return tempBytes32;
     }
 }
+/* solhint-enable no-inline-assembly */

@@ -49,10 +49,12 @@ library VM {
         view
         returns (bool)
     {
+        // solhint-disable-next-line not-rely-on-time
+        uint256 currentTime = block.timestamp;
         return
             block.number >= _timeBoundsBlocks[0] &&
             block.number <= _timeBoundsBlocks[1] &&
-            block.timestamp >= _timeBoundsBlocks[2] &&
-            block.timestamp <= _timeBoundsBlocks[3];
+            currentTime >= _timeBoundsBlocks[2] &&
+            currentTime <= _timeBoundsBlocks[3];
     }
 }

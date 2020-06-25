@@ -19,8 +19,9 @@
 pragma solidity ^0.5.11;
 
 import "../challenge/IChallengeFactory.sol";
+import "../vm/IStaking.sol";
 
-contract ChallengeTester {
+contract ChallengeTester is IStaking {
     IChallengeFactory private challengeFactory;
 
     constructor(address challengeFactory_) public {
@@ -28,13 +29,11 @@ contract ChallengeTester {
     }
 
     function resolveChallenge(
-        address payable winner,
-        address loser,
-        uint256 challengeType
-    ) external view {
-        // address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, challengeType);
-        // address challengeContract2 = challengeFactory.generateCloneAddress(address(loser), winner, challengeType);
-        // require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, "Challenge not completed by proper sender");
+        address payable,
+        address,
+        uint256
+    ) external {
+        return;
     }
 
     function startChallenge(
