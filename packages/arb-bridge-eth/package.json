@@ -61,10 +61,7 @@
     "mocha-junit-reporter": "^2.0.0",
     "solidity-coverage": "^0.7.7",
     "ts-generator": "^0.0.8",
-    "typechain": "^2.0.0"
-  },
-  "dependencies": {
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-prettier": "^3.1.4"
+    "typechain": "^2.0.0",
+    "arb-provider-ethers": "^0.6.5"
   }
 }
