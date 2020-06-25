@@ -45,3 +45,13 @@ repos:
     rev: v0.0.16
     hooks:
       - id: circleci-config-validate
+  - repo: local
+    hooks:
+      - id: prettier-soldity
+        name: prettier-soldity
+        language: node
+        entry: ./node_modules/.bin/prettier --write --list-different
+        files: \.sol$
+        additional_dependencies:
+          - 'prettier@2.0.5'
+          - 'prettier-plugin-solidity@^1.0.0-alpha.54'
