@@ -145,7 +145,7 @@ jobs:
           command: yarn buidler node
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: while ! nc -z localhost 8545/; do sleep 2; done
+      - run: while ! nc -z localhost 8545; do sleep 2; done
       - run:
           name: test arb-bridge-eth gas usage
           command: |
