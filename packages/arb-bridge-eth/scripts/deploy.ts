@@ -20,7 +20,6 @@ export default async function deploy_contracts(
   bre: BuidlerRuntimeEnvironment
 ): Promise<Record<ContractName, Contract>> {
   const ethers = bre.ethers
-  const config = bre.config
 
   const ExecutionChallenge = await ethers.getContractFactory(
     'ExecutionChallenge'

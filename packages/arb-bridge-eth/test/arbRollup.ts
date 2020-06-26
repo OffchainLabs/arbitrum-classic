@@ -27,7 +27,7 @@ import deploy_contracts from '../scripts/deploy'
 
 chai.use(chaiAsPromised)
 
-const { ethers, deployments } = bre
+const { ethers } = bre
 const { assert, expect } = chai
 
 const initialVmState =

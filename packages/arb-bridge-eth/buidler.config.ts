@@ -1,21 +1,21 @@
 import { task, usePlugin } from '@nomiclabs/buidler/config'
-import setupVerifyTask from './scripts/verifyTask'
+import {} from 'dotenv/config'
 import fs from 'fs'
 
-/* eslint-disable @typescript-eslint/camelcase */
-
-require('dotenv').config()
-
 usePlugin('buidler-deploy')
-usePlugin('@nomiclabs/buidler-waffle')
-usePlugin('buidler-typechain')
-usePlugin('solidity-coverage')
-usePlugin('@nomiclabs/buidler-solhint')
-usePlugin('@nomiclabs/buidler-etherscan')
-usePlugin('buidler-spdx-license-identifier')
-usePlugin('buidler-gas-reporter')
+if (!process.env.CI) {
+  usePlugin('@nomiclabs/buidler-waffle')
+  usePlugin('buidler-typechain')
+  usePlugin('solidity-coverage')
+  usePlugin('@nomiclabs/buidler-solhint')
+  usePlugin('@nomiclabs/buidler-etherscan')
+  usePlugin('buidler-spdx-license-identifier')
+  usePlugin('buidler-gas-reporter')
 
-setupVerifyTask()
+  const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
+  const setupVerifyTask = verifyTask.default
+  setupVerifyTask()
+}
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
@@ -25,7 +25,7 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
-task('deploy').setAction(async (args: any, { deployments }, runSuper) => {
+task('deploy').setAction(async (args, { deployments }, runSuper) => {
   await runSuper()
   const addresses = {
     ArbFactory: (await deployments.get('ArbFactory')).address,

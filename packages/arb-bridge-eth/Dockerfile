@@ -1,69 +1,52 @@
 ### --------------------------------------------------------------------
 ### Dockerfile
 ### arb-bridge-eth
-### Runs Ganache with the EthBridge deployed
-### Exports bridge_eth_addresses.json and keys.json
+### Runs Geth with the EthBridge deployed
+### Exports bridge_eth_addresses.json
 ### --------------------------------------------------------------------
-
-# Global build args (for multistage build)
 ARG NETWORK=poa.json
 
-FROM debian:buster-slim
-
+FROM parity/parity:latest
+USER root
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
-    curl \
-    sudo && \
+    ca-certificates && \
     curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
     apt-get install -y \
     git \
     netcat \
-    nodejs \
-    psmisc &&\
-    rm -rf /var/lib/apt/lists/* && \
-    curl https://get.parity.io -L | bash /dev/stdin -r stable && \
-    useradd -ms /bin/bash user
-USER user
-WORKDIR /home/user/
-ENV PATH="/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
-RUN mkdir -p /home/user/.npm-global && \
-    npm config set prefix "/home/user/.npm-global" && \
-    npm install -g truffle@5.0.30 yarn@1.17.3
-COPY package.json ./
-RUN yarn --production --frozen-lockfile --non-interactive
+    nodejs
+USER parity
+WORKDIR /home/parity/
+COPY package.json .
+ENV PATH="/home/parity/.local/bin:/home/parity/.npm-global/bin:${PATH}"
+ENTRYPOINT []
+RUN mkdir -p /home/parity/.npm-global && \
+    npm config set prefix "/home/parity/.npm-global" && \
+    npm install --only=prod --ignore-scripts --no-package-lock
+COPY deploy ./deploy
 COPY contracts ./contracts
-COPY migrations ./migrations
-COPY test ./test
-COPY installed_contracts ./installed_contracts
-COPY truffle-config.js ./
-
-RUN truffle compile
-
-# # Global arguments
+COPY buidler.config.ts .
+COPY tsconfig.docker.json tsconfig.json
+COPY parity ./parity
+COPY --chown=parity parity/config.toml /home/parity/.local/share/io.parity.ethereum/config.toml
 ARG NETWORK
 ENV NETWORK=$NETWORK
-# Generate bridge_eth_addresses.json for export
-COPY parity ./parity
-COPY --chown=user parity/config.toml /home/user/.local/share/io.parity.ethereum/config.toml
 RUN echo arbitrum > password.txt && \
     parity --chain=parity/$NETWORK account import parity/keystore/ && \
     parity --chain parity/$NETWORK --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt & \
     while ! nc -z localhost 7545; do sleep 2; done; \
-    echo "Finished waiting for parity on localhost:8545..." && \
-    truffle migrate --network parity -q && [ -f bridge_eth_addresses.json ]
+    echo "Finished waiting for parity on localhost:7545..." && \
+    CI=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
 
-FROM debian:buster-slim
+FROM parity/parity:latest
 
 ARG NETWORK
 ENV NETWORK=$NETWORK
 
-RUN useradd -ms /bin/bash user
-USER user
-WORKDIR /home/user/
-COPY --from=0 --chown=user /home/user/parity/ /home/user/parity/
-COPY --from=0 --chown=user /usr/bin/parity /usr/bin/parity
-COPY --from=0 --chown=user /home/user/.local/share/io.parity.ethereum/ /home/user/.local/share/io.parity.ethereum/
-COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json ./
+COPY --from=0 --chown=parity /home/parity/parity/ /home/parity/parity/
+COPY --from=0 --chown=parity /home/parity/.local/share/io.parity.ethereum/ /home/parity/.local/share/io.parity.ethereum/
+COPY --from=0 --chown=parity /home/parity/bridge_eth_addresses.json ./
 RUN echo arbitrum > password.txt
-ENTRYPOINT ["/usr/bin/parity", "--unlock", "0x81183c9c61bdf79db7330bbcda47be30c0a85064", "--password", "/home/user/password.txt"]
+ENTRYPOINT ["/usr/bin/parity", "--unlock", "0x81183c9c61bdf79db7330bbcda47be30c0a85064", "--password", "/home/parity/password.txt"]

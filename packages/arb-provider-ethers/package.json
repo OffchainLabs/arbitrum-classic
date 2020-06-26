@@ -44,7 +44,8 @@
     "mocha": "^7.2.0",
     "nyc": "^15.1.0",
     "typechain": "^1.0.4",
-    "typechain-target-ethers": "^1.0.3"
+    "typechain-target-ethers": "^1.0.3",
+    "typescript": "^3.8.3"
   },
   "files": [
     "dist/**/*"

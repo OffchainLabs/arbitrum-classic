@@ -53,8 +53,6 @@
     "eslint-plugin-mocha": "^7.0.1",
     "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
-    "prettier-plugin-solidity": "^1.0.0-alpha.54",
-    "ts-node": "^8.10.2",
-    "typescript": "^3.8.3"
+    "prettier-plugin-solidity": "^1.0.0-alpha.54"
   }
 }
