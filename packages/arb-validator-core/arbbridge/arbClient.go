@@ -64,31 +64,6 @@ type ArbAuthClient interface {
 	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
 }
 
-func WaitForBalance(ctx context.Context, client ArbClient, account common.Address, amount *big.Int) error {
-	balance, err := client.GetBalance(ctx, account)
-	if err != nil {
-		return err
-	}
-	if amount.Cmp(balance) >= 0 {
-		return nil
-	}
-	timer := time.NewTicker(time.Second * 5)
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.New("timed out waiting for balance")
-		case <-timer.C:
-			balance, err := client.GetBalance(ctx, account)
-			if err != nil {
-				return err
-			}
-			if amount.Cmp(balance) >= 0 {
-				return nil
-			}
-		}
-	}
-}
-
 func WaitForNonZeroBalance(ctx context.Context, client ArbClient, account common.Address) error {
 	balance, err := client.GetBalance(ctx, account)
 	if err != nil {
