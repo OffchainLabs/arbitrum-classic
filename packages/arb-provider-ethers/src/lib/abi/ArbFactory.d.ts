@@ -16,10 +16,6 @@ interface ArbFactoryInterface extends Interface {
       encode([]: []): string
     }>
 
-    globalInboxAddress: TypedFunctionDescription<{ encode([]: []): string }>
-
-    rollupTemplate: TypedFunctionDescription<{ encode([]: []): string }>
-
     createRollup: TypedFunctionDescription<{
       encode([
         _vmState,
@@ -39,6 +35,10 @@ interface ArbFactoryInterface extends Interface {
         string
       ]): string
     }>
+
+    globalInboxAddress: TypedFunctionDescription<{ encode([]: []): string }>
+
+    rollupTemplate: TypedFunctionDescription<{ encode([]: []): string }>
   }
 
   events: {
@@ -64,10 +64,6 @@ export class ArbFactory extends Contract {
   functions: {
     challengeFactoryAddress(): Promise<string>
 
-    globalInboxAddress(): Promise<string>
-
-    rollupTemplate(): Promise<string>
-
     createRollup(
       _vmState: Arrayish,
       _gracePeriodTicks: BigNumberish,
@@ -78,13 +74,13 @@ export class ArbFactory extends Contract {
       _owner: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
+
+    globalInboxAddress(): Promise<string>
+
+    rollupTemplate(): Promise<string>
   }
 
   challengeFactoryAddress(): Promise<string>
-
-  globalInboxAddress(): Promise<string>
-
-  rollupTemplate(): Promise<string>
 
   createRollup(
     _vmState: Arrayish,
@@ -97,16 +93,16 @@ export class ArbFactory extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  globalInboxAddress(): Promise<string>
+
+  rollupTemplate(): Promise<string>
+
   filters: {
     RollupCreated(vmAddress: null): EventFilter
   }
 
   estimate: {
     challengeFactoryAddress(): Promise<BigNumber>
-
-    globalInboxAddress(): Promise<BigNumber>
-
-    rollupTemplate(): Promise<BigNumber>
 
     createRollup(
       _vmState: Arrayish,
@@ -117,5 +113,9 @@ export class ArbFactory extends Contract {
       _stakeRequirement: BigNumberish,
       _owner: string
     ): Promise<BigNumber>
+
+    globalInboxAddress(): Promise<BigNumber>
+
+    rollupTemplate(): Promise<BigNumber>
   }
 }

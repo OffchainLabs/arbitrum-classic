@@ -16,9 +16,65 @@ interface ArbRollupInterface extends Interface {
 
     challengeFactory: TypedFunctionDescription<{ encode([]: []): string }>
 
+    confirm: TypedFunctionDescription<{
+      encode([
+        initalProtoStateHash,
+        branches,
+        deadlineTicks,
+        challengeNodeData,
+        logsAcc,
+        vmProtoStateHashes,
+        messageCounts,
+        messages,
+        stakerAddresses,
+        stakerProofs,
+        stakerProofOffsets,
+      ]: [
+        Arrayish,
+        BigNumberish[],
+        BigNumberish[],
+        Arrayish[],
+        Arrayish[],
+        Arrayish[],
+        BigNumberish[],
+        Arrayish,
+        string[],
+        Arrayish[],
+        BigNumberish[]
+      ]): string
+    }>
+
+    forwardContractMessage: TypedFunctionDescription<{
+      encode([_sender, _data]: [string, Arrayish]): string
+    }>
+
     getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>
 
     globalInbox: TypedFunctionDescription<{ encode([]: []): string }>
+
+    init: TypedFunctionDescription<{
+      encode([
+        _vmState,
+        _gracePeriodTicks,
+        _arbGasSpeedLimitPerTick,
+        _maxExecutionSteps,
+        _maxTimeBoundsWidth,
+        _stakeRequirement,
+        _owner,
+        _challengeFactoryAddress,
+        _globalInboxAddress,
+      ]: [
+        Arrayish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish[],
+        BigNumberish,
+        string,
+        string,
+        string
+      ]): string
+    }>
 
     isStaked: TypedFunctionDescription<{
       encode([_stakerAddress]: [string]): string
@@ -29,6 +85,44 @@ interface ArbRollupInterface extends Interface {
     }>
 
     latestConfirmed: TypedFunctionDescription<{ encode([]: []): string }>
+
+    makeAssertion: TypedFunctionDescription<{
+      encode([
+        _fields,
+        _beforeInboxCount,
+        _prevDeadlineTicks,
+        _prevChildType,
+        _numSteps,
+        _timeBounds,
+        _importedMessageCount,
+        _didInboxInsn,
+        _numArbGas,
+        _stakerProof,
+      ]: [
+        Arrayish[],
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish[],
+        BigNumberish,
+        boolean,
+        BigNumberish,
+        Arrayish[]
+      ]): string
+    }>
+
+    moveStake: TypedFunctionDescription<{
+      encode([proof1, proof2]: [Arrayish[], Arrayish[]]): string
+    }>
+
+    owner: TypedFunctionDescription<{ encode([]: []): string }>
+
+    ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>
+
+    placeStake: TypedFunctionDescription<{
+      encode([proof1, proof2]: [Arrayish[], Arrayish[]]): string
+    }>
 
     pruneLeaves: TypedFunctionDescription<{
       encode([
@@ -46,8 +140,47 @@ interface ArbRollupInterface extends Interface {
       ]): string
     }>
 
+    recoverStakeConfirmed: TypedFunctionDescription<{
+      encode([proof]: [Arrayish[]]): string
+    }>
+
+    recoverStakeMooted: TypedFunctionDescription<{
+      encode([stakerAddress, node, latestConfirmedProof, stakerProof]: [
+        string,
+        Arrayish,
+        Arrayish[],
+        Arrayish[]
+      ]): string
+    }>
+
+    recoverStakeOld: TypedFunctionDescription<{
+      encode([stakerAddress, proof]: [string, Arrayish[]]): string
+    }>
+
+    recoverStakePassedDeadline: TypedFunctionDescription<{
+      encode([
+        stakerAddress,
+        deadlineTicks,
+        disputableNodeHashVal,
+        childType,
+        vmProtoStateHash,
+        proof,
+      ]: [
+        string,
+        BigNumberish,
+        Arrayish,
+        BigNumberish,
+        Arrayish,
+        Arrayish[]
+      ]): string
+    }>
+
     resolveChallenge: TypedFunctionDescription<{
       encode([winner, loser]: [string, string, BigNumberish]): string
+    }>
+
+    spawnCallProxy: TypedFunctionDescription<{
+      encode([_arbContract]: [string]): string
     }>
 
     startChallenge: TypedFunctionDescription<{
@@ -83,137 +216,6 @@ interface ArbRollupInterface extends Interface {
     }>
 
     vmParams: TypedFunctionDescription<{ encode([]: []): string }>
-
-    init: TypedFunctionDescription<{
-      encode([
-        _vmState,
-        _gracePeriodTicks,
-        _arbGasSpeedLimitPerTick,
-        _maxExecutionSteps,
-        _maxTimeBoundsWidth,
-        _stakeRequirement,
-        _owner,
-        _challengeFactoryAddress,
-        _globalInboxAddress,
-      ]: [
-        Arrayish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish[],
-        BigNumberish,
-        string,
-        string,
-        string
-      ]): string
-    }>
-
-    forwardContractMessage: TypedFunctionDescription<{
-      encode([_sender, _data]: [string, Arrayish]): string
-    }>
-
-    spawnCallProxy: TypedFunctionDescription<{
-      encode([_arbContract]: [string]): string
-    }>
-
-    placeStake: TypedFunctionDescription<{
-      encode([proof1, proof2]: [Arrayish[], Arrayish[]]): string
-    }>
-
-    moveStake: TypedFunctionDescription<{
-      encode([proof1, proof2]: [Arrayish[], Arrayish[]]): string
-    }>
-
-    recoverStakeConfirmed: TypedFunctionDescription<{
-      encode([proof]: [Arrayish[]]): string
-    }>
-
-    recoverStakeOld: TypedFunctionDescription<{
-      encode([stakerAddress, proof]: [string, Arrayish[]]): string
-    }>
-
-    recoverStakeMooted: TypedFunctionDescription<{
-      encode([stakerAddress, node, latestConfirmedProof, stakerProof]: [
-        string,
-        Arrayish,
-        Arrayish[],
-        Arrayish[]
-      ]): string
-    }>
-
-    recoverStakePassedDeadline: TypedFunctionDescription<{
-      encode([
-        stakerAddress,
-        deadlineTicks,
-        disputableNodeHashVal,
-        childType,
-        vmProtoStateHash,
-        proof,
-      ]: [
-        string,
-        BigNumberish,
-        Arrayish,
-        BigNumberish,
-        Arrayish,
-        Arrayish[]
-      ]): string
-    }>
-
-    makeAssertion: TypedFunctionDescription<{
-      encode([
-        _fields,
-        _beforeInboxCount,
-        _prevDeadlineTicks,
-        _prevChildType,
-        _numSteps,
-        _timeBounds,
-        _importedMessageCount,
-        _didInboxInsn,
-        _numArbGas,
-        _stakerProof,
-      ]: [
-        Arrayish[],
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish[],
-        BigNumberish,
-        boolean,
-        BigNumberish,
-        Arrayish[]
-      ]): string
-    }>
-
-    ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>
-
-    confirm: TypedFunctionDescription<{
-      encode([
-        initalProtoStateHash,
-        branches,
-        deadlineTicks,
-        challengeNodeData,
-        logsAcc,
-        vmProtoStateHashes,
-        messageCounts,
-        messages,
-        stakerAddresses,
-        stakerProofs,
-        stakerProofOffsets,
-      ]: [
-        Arrayish,
-        BigNumberish[],
-        BigNumberish[],
-        Arrayish[],
-        Arrayish[],
-        Arrayish[],
-        BigNumberish[],
-        Arrayish,
-        string[],
-        Arrayish[],
-        BigNumberish[]
-      ]): string
-    }>
   }
 
   events: {
@@ -298,15 +300,81 @@ export class ArbRollup extends Contract {
 
     challengeFactory(): Promise<string>
 
+    confirm(
+      initalProtoStateHash: Arrayish,
+      branches: BigNumberish[],
+      deadlineTicks: BigNumberish[],
+      challengeNodeData: Arrayish[],
+      logsAcc: Arrayish[],
+      vmProtoStateHashes: Arrayish[],
+      messageCounts: BigNumberish[],
+      messages: Arrayish,
+      stakerAddresses: string[],
+      stakerProofs: Arrayish[],
+      stakerProofOffsets: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    forwardContractMessage(
+      _sender: string,
+      _data: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<string>
+
+    init(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _challengeFactoryAddress: string,
+      _globalInboxAddress: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     isStaked(_stakerAddress: string): Promise<boolean>
 
     isValidLeaf(leaf: Arrayish): Promise<boolean>
 
     latestConfirmed(): Promise<string>
+
+    makeAssertion(
+      _fields: Arrayish[],
+      _beforeInboxCount: BigNumberish,
+      _prevDeadlineTicks: BigNumberish,
+      _prevChildType: BigNumberish,
+      _numSteps: BigNumberish,
+      _timeBounds: BigNumberish[],
+      _importedMessageCount: BigNumberish,
+      _didInboxInsn: boolean,
+      _numArbGas: BigNumberish,
+      _stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    moveStake(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    owner(): Promise<string>
+
+    ownerShutdown(
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    placeStake(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     pruneLeaves(
       fromNodes: Arrayish[],
@@ -317,10 +385,44 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    recoverStakeConfirmed(
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    recoverStakeMooted(
+      stakerAddress: string,
+      node: Arrayish,
+      latestConfirmedProof: Arrayish[],
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    recoverStakeOld(
+      stakerAddress: string,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    recoverStakePassedDeadline(
+      stakerAddress: string,
+      deadlineTicks: BigNumberish,
+      disputableNodeHashVal: Arrayish,
+      childType: BigNumberish,
+      vmProtoStateHash: Arrayish,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     resolveChallenge(
       winner: string,
       loser: string,
       arg2: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    spawnCallProxy(
+      _arbContract: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -353,119 +455,85 @@ export class ArbRollup extends Contract {
       3: BigNumber
       4: BigNumber
     }>
-
-    init(
-      _vmState: Arrayish,
-      _gracePeriodTicks: BigNumberish,
-      _arbGasSpeedLimitPerTick: BigNumberish,
-      _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish[],
-      _stakeRequirement: BigNumberish,
-      _owner: string,
-      _challengeFactoryAddress: string,
-      _globalInboxAddress: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    forwardContractMessage(
-      _sender: string,
-      _data: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    spawnCallProxy(
-      _arbContract: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    placeStake(
-      proof1: Arrayish[],
-      proof2: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    moveStake(
-      proof1: Arrayish[],
-      proof2: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    recoverStakeConfirmed(
-      proof: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    recoverStakeOld(
-      stakerAddress: string,
-      proof: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    recoverStakeMooted(
-      stakerAddress: string,
-      node: Arrayish,
-      latestConfirmedProof: Arrayish[],
-      stakerProof: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    recoverStakePassedDeadline(
-      stakerAddress: string,
-      deadlineTicks: BigNumberish,
-      disputableNodeHashVal: Arrayish,
-      childType: BigNumberish,
-      vmProtoStateHash: Arrayish,
-      proof: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    makeAssertion(
-      _fields: Arrayish[],
-      _beforeInboxCount: BigNumberish,
-      _prevDeadlineTicks: BigNumberish,
-      _prevChildType: BigNumberish,
-      _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
-      _importedMessageCount: BigNumberish,
-      _didInboxInsn: boolean,
-      _numArbGas: BigNumberish,
-      _stakerProof: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    ownerShutdown(
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    confirm(
-      initalProtoStateHash: Arrayish,
-      branches: BigNumberish[],
-      deadlineTicks: BigNumberish[],
-      challengeNodeData: Arrayish[],
-      logsAcc: Arrayish[],
-      vmProtoStateHashes: Arrayish[],
-      messageCounts: BigNumberish[],
-      messages: Arrayish,
-      stakerAddresses: string[],
-      stakerProofs: Arrayish[],
-      stakerProofOffsets: BigNumberish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
   }
 
   VERSION(): Promise<string>
 
   challengeFactory(): Promise<string>
 
+  confirm(
+    initalProtoStateHash: Arrayish,
+    branches: BigNumberish[],
+    deadlineTicks: BigNumberish[],
+    challengeNodeData: Arrayish[],
+    logsAcc: Arrayish[],
+    vmProtoStateHashes: Arrayish[],
+    messageCounts: BigNumberish[],
+    messages: Arrayish,
+    stakerAddresses: string[],
+    stakerProofs: Arrayish[],
+    stakerProofOffsets: BigNumberish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  forwardContractMessage(
+    _sender: string,
+    _data: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   getStakeRequired(): Promise<BigNumber>
 
   globalInbox(): Promise<string>
+
+  init(
+    _vmState: Arrayish,
+    _gracePeriodTicks: BigNumberish,
+    _arbGasSpeedLimitPerTick: BigNumberish,
+    _maxExecutionSteps: BigNumberish,
+    _maxTimeBoundsWidth: BigNumberish[],
+    _stakeRequirement: BigNumberish,
+    _owner: string,
+    _challengeFactoryAddress: string,
+    _globalInboxAddress: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   isStaked(_stakerAddress: string): Promise<boolean>
 
   isValidLeaf(leaf: Arrayish): Promise<boolean>
 
   latestConfirmed(): Promise<string>
+
+  makeAssertion(
+    _fields: Arrayish[],
+    _beforeInboxCount: BigNumberish,
+    _prevDeadlineTicks: BigNumberish,
+    _prevChildType: BigNumberish,
+    _numSteps: BigNumberish,
+    _timeBounds: BigNumberish[],
+    _importedMessageCount: BigNumberish,
+    _didInboxInsn: boolean,
+    _numArbGas: BigNumberish,
+    _stakerProof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  moveStake(
+    proof1: Arrayish[],
+    proof2: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  owner(): Promise<string>
+
+  ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>
+
+  placeStake(
+    proof1: Arrayish[],
+    proof2: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   pruneLeaves(
     fromNodes: Arrayish[],
@@ -476,10 +544,44 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  recoverStakeConfirmed(
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  recoverStakeMooted(
+    stakerAddress: string,
+    node: Arrayish,
+    latestConfirmedProof: Arrayish[],
+    stakerProof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  recoverStakeOld(
+    stakerAddress: string,
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  recoverStakePassedDeadline(
+    stakerAddress: string,
+    deadlineTicks: BigNumberish,
+    disputableNodeHashVal: Arrayish,
+    childType: BigNumberish,
+    vmProtoStateHash: Arrayish,
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   resolveChallenge(
     winner: string,
     loser: string,
     arg2: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  spawnCallProxy(
+    _arbContract: string,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -512,102 +614,6 @@ export class ArbRollup extends Contract {
     3: BigNumber
     4: BigNumber
   }>
-
-  init(
-    _vmState: Arrayish,
-    _gracePeriodTicks: BigNumberish,
-    _arbGasSpeedLimitPerTick: BigNumberish,
-    _maxExecutionSteps: BigNumberish,
-    _maxTimeBoundsWidth: BigNumberish[],
-    _stakeRequirement: BigNumberish,
-    _owner: string,
-    _challengeFactoryAddress: string,
-    _globalInboxAddress: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  forwardContractMessage(
-    _sender: string,
-    _data: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  spawnCallProxy(
-    _arbContract: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  placeStake(
-    proof1: Arrayish[],
-    proof2: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  moveStake(
-    proof1: Arrayish[],
-    proof2: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  recoverStakeConfirmed(
-    proof: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  recoverStakeOld(
-    stakerAddress: string,
-    proof: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  recoverStakeMooted(
-    stakerAddress: string,
-    node: Arrayish,
-    latestConfirmedProof: Arrayish[],
-    stakerProof: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  recoverStakePassedDeadline(
-    stakerAddress: string,
-    deadlineTicks: BigNumberish,
-    disputableNodeHashVal: Arrayish,
-    childType: BigNumberish,
-    vmProtoStateHash: Arrayish,
-    proof: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  makeAssertion(
-    _fields: Arrayish[],
-    _beforeInboxCount: BigNumberish,
-    _prevDeadlineTicks: BigNumberish,
-    _prevChildType: BigNumberish,
-    _numSteps: BigNumberish,
-    _timeBounds: BigNumberish[],
-    _importedMessageCount: BigNumberish,
-    _didInboxInsn: boolean,
-    _numArbGas: BigNumberish,
-    _stakerProof: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>
-
-  confirm(
-    initalProtoStateHash: Arrayish,
-    branches: BigNumberish[],
-    deadlineTicks: BigNumberish[],
-    challengeNodeData: Arrayish[],
-    logsAcc: Arrayish[],
-    vmProtoStateHashes: Arrayish[],
-    messageCounts: BigNumberish[],
-    messages: Arrayish,
-    stakerAddresses: string[],
-    stakerProofs: Arrayish[],
-    stakerProofOffsets: BigNumberish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
 
   filters: {
     ConfirmedAssertion(logsAccHash: null): EventFilter
@@ -655,15 +661,64 @@ export class ArbRollup extends Contract {
 
     challengeFactory(): Promise<BigNumber>
 
+    confirm(
+      initalProtoStateHash: Arrayish,
+      branches: BigNumberish[],
+      deadlineTicks: BigNumberish[],
+      challengeNodeData: Arrayish[],
+      logsAcc: Arrayish[],
+      vmProtoStateHashes: Arrayish[],
+      messageCounts: BigNumberish[],
+      messages: Arrayish,
+      stakerAddresses: string[],
+      stakerProofs: Arrayish[],
+      stakerProofOffsets: BigNumberish[]
+    ): Promise<BigNumber>
+
+    forwardContractMessage(_sender: string, _data: Arrayish): Promise<BigNumber>
+
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<BigNumber>
+
+    init(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _maxTimeBoundsWidth: BigNumberish[],
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _challengeFactoryAddress: string,
+      _globalInboxAddress: string
+    ): Promise<BigNumber>
 
     isStaked(_stakerAddress: string): Promise<BigNumber>
 
     isValidLeaf(leaf: Arrayish): Promise<BigNumber>
 
     latestConfirmed(): Promise<BigNumber>
+
+    makeAssertion(
+      _fields: Arrayish[],
+      _beforeInboxCount: BigNumberish,
+      _prevDeadlineTicks: BigNumberish,
+      _prevChildType: BigNumberish,
+      _numSteps: BigNumberish,
+      _timeBounds: BigNumberish[],
+      _importedMessageCount: BigNumberish,
+      _didInboxInsn: boolean,
+      _numArbGas: BigNumberish,
+      _stakerProof: Arrayish[]
+    ): Promise<BigNumber>
+
+    moveStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
+
+    owner(): Promise<BigNumber>
+
+    ownerShutdown(): Promise<BigNumber>
+
+    placeStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
 
     pruneLeaves(
       fromNodes: Arrayish[],
@@ -673,11 +728,36 @@ export class ArbRollup extends Contract {
       latestConfirmedProofLengths: BigNumberish[]
     ): Promise<BigNumber>
 
+    recoverStakeConfirmed(proof: Arrayish[]): Promise<BigNumber>
+
+    recoverStakeMooted(
+      stakerAddress: string,
+      node: Arrayish,
+      latestConfirmedProof: Arrayish[],
+      stakerProof: Arrayish[]
+    ): Promise<BigNumber>
+
+    recoverStakeOld(
+      stakerAddress: string,
+      proof: Arrayish[]
+    ): Promise<BigNumber>
+
+    recoverStakePassedDeadline(
+      stakerAddress: string,
+      deadlineTicks: BigNumberish,
+      disputableNodeHashVal: Arrayish,
+      childType: BigNumberish,
+      vmProtoStateHash: Arrayish,
+      proof: Arrayish[]
+    ): Promise<BigNumber>
+
     resolveChallenge(
       winner: string,
       loser: string,
       arg2: BigNumberish
     ): Promise<BigNumber>
+
+    spawnCallProxy(_arbContract: string): Promise<BigNumber>
 
     startChallenge(
       asserterAddress: string,
@@ -696,77 +776,5 @@ export class ArbRollup extends Contract {
     supportedContracts(arg0: string): Promise<BigNumber>
 
     vmParams(): Promise<BigNumber>
-
-    init(
-      _vmState: Arrayish,
-      _gracePeriodTicks: BigNumberish,
-      _arbGasSpeedLimitPerTick: BigNumberish,
-      _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish[],
-      _stakeRequirement: BigNumberish,
-      _owner: string,
-      _challengeFactoryAddress: string,
-      _globalInboxAddress: string
-    ): Promise<BigNumber>
-
-    forwardContractMessage(_sender: string, _data: Arrayish): Promise<BigNumber>
-
-    spawnCallProxy(_arbContract: string): Promise<BigNumber>
-
-    placeStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
-
-    moveStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
-
-    recoverStakeConfirmed(proof: Arrayish[]): Promise<BigNumber>
-
-    recoverStakeOld(
-      stakerAddress: string,
-      proof: Arrayish[]
-    ): Promise<BigNumber>
-
-    recoverStakeMooted(
-      stakerAddress: string,
-      node: Arrayish,
-      latestConfirmedProof: Arrayish[],
-      stakerProof: Arrayish[]
-    ): Promise<BigNumber>
-
-    recoverStakePassedDeadline(
-      stakerAddress: string,
-      deadlineTicks: BigNumberish,
-      disputableNodeHashVal: Arrayish,
-      childType: BigNumberish,
-      vmProtoStateHash: Arrayish,
-      proof: Arrayish[]
-    ): Promise<BigNumber>
-
-    makeAssertion(
-      _fields: Arrayish[],
-      _beforeInboxCount: BigNumberish,
-      _prevDeadlineTicks: BigNumberish,
-      _prevChildType: BigNumberish,
-      _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
-      _importedMessageCount: BigNumberish,
-      _didInboxInsn: boolean,
-      _numArbGas: BigNumberish,
-      _stakerProof: Arrayish[]
-    ): Promise<BigNumber>
-
-    ownerShutdown(): Promise<BigNumber>
-
-    confirm(
-      initalProtoStateHash: Arrayish,
-      branches: BigNumberish[],
-      deadlineTicks: BigNumberish[],
-      challengeNodeData: Arrayish[],
-      logsAcc: Arrayish[],
-      vmProtoStateHashes: Arrayish[],
-      messageCounts: BigNumberish[],
-      messages: Arrayish,
-      stakerAddresses: string[],
-      stakerProofs: Arrayish[],
-      stakerProofOffsets: BigNumberish[]
-    ): Promise<BigNumber>
   }
 }

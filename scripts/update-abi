@@ -4,8 +4,6 @@
 ### --------------------------------------------------------------------
 
 cd packages/arb-bridge-eth/contracts
-cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
-cp -r ../installed_contracts/bytes/ ./bytes
 
 abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
 abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
@@ -40,7 +38,6 @@ abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 \mv machinetester.go ../../arb-validator/proofmachine/machinetester/
 \mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
 
-rm -rf @openzeppelin bytes
 cd ../../..
 
 yarn workspace arb-provider-ethers update-abi
