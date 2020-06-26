@@ -87,7 +87,9 @@ enum class OpCode : uint8_t {
     ERROR,
     HALT,
     DEBUG,
-    DEFAULT
+    DEFAULT,
+
+    ECRECOVER = 0x80
 };
 
 inline bool isValidOpcode(OpCode op) {
@@ -98,7 +100,8 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::HALT);
+           (op >= OpCode::SEND && op <= OpCode::HALT) ||
+           (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
 }
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -164,7 +167,9 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
-    {OpCode::DEBUG, "debug"}};
+    {OpCode::DEBUG, "debug"},
+
+    {OpCode::ECRECOVER, "ecrecover"}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {static_cast<OpCode>(0), {}},
@@ -229,7 +234,9 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::INBOX, {false}},
     {OpCode::ERROR, {}},
     {OpCode::HALT, {}},
-    {OpCode::DEBUG, {}}};
+    {OpCode::DEBUG, {}},
+
+    {OpCode::ECRECOVER, {true, true, true, true}}};
 
 const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {static_cast<OpCode>(0), {}},
@@ -294,7 +301,9 @@ const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::INBOX, {}},
     {OpCode::ERROR, {}},
     {OpCode::HALT, {}},
-    {OpCode::DEBUG, {}}};
+    {OpCode::DEBUG, {}},
+
+    {OpCode::ECRECOVER, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
@@ -358,6 +367,8 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},
-    {OpCode::DEBUG, 1}};
+    {OpCode::DEBUG, 1},
+
+    {OpCode::ECRECOVER, 20000}};
 
 #endif /* opcodes_hpp */

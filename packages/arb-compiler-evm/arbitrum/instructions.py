@@ -88,6 +88,7 @@ OP_CODES = [
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
     ("debug", 0x75, [], []),
+    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()],),
 ]
 
 

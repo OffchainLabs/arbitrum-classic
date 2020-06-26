@@ -6,42 +6,30 @@
 
 FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
-RUN apk update && apk add --no-cache boost-dev cmake g++ \
-    git make musl-dev python3-dev && \
+RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ \
+    git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
-    pip3 install virtualenv && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 WORKDIR "/home/user/"
-# Build dependencies
-COPY --chown=user arb-avm-cpp/conanfile.txt ./
-RUN python3 -m virtualenv vconan && \
-    . vconan/bin/activate && \
-    pip3 install --upgrade conan && \
-    mkdir -p build && cd build && \
-    conan profile new default --detect && \
-    conan profile update settings.compiler.libcxx=libstdc++11 default && \
-    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite && \
-    conan install .. && \
-    deactivate
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator --chown=user /cpp-build build/
 # Build arb-avm-cpp
-RUN cd build && \
+RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
-    cp lib/* ../cmachine
+    cp lib/*.a ../cmachine
 
 
 FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
 RUN apk add --no-cache build-base git go \
     libc-dev linux-headers && \
-    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
     mkdir /home/user/arb-validator && \

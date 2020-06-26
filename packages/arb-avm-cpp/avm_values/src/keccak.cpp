@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "avm_values/keccak.hpp"
 
-#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do
-                           // this in one cpp file
+extern "C" {
+#include <keccak/KeccakHash.h>
+}
 
-#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
-#include <catch2/catch.hpp>
+#include <limits>
+#include "avm_values/util.hpp"
+
+void keccak(const unsigned char* input,
+            unsigned int inputByteLen,
+            unsigned char* output) {
+    evm::Keccak_256(input, inputByteLen, output);
+}

@@ -19,6 +19,9 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+#include <secp256k1_recovery.h>
+#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
@@ -536,6 +539,61 @@ void tset(MachineState& m) {
 void tlen(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
+    ++m.pc;
+}
+
+namespace {
+uint256_t parseSignature(MachineState& m) {
+    auto recovery_int = assumeInt(m.stack[2]);
+    if (recovery_int != 0 && recovery_int != 1) {
+        return 0;
+    }
+    std::array<unsigned char, 64> sig_raw;
+    to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
+    to_big_endian(assumeInt(m.stack[1]), sig_raw.begin() + 32);
+
+    std::array<unsigned char, 32> message;
+    to_big_endian(assumeInt(m.stack[3]), message.begin());
+
+    static secp256k1_context* context = secp256k1_context_create(
+        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+
+    secp256k1_ecdsa_recoverable_signature sig;
+    int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
+        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+    if (!parsed_sig) {
+        return 0;
+    }
+
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.data())) {
+        return 0;
+    }
+
+    std::array<unsigned char, 65> pubkey_raw;
+    size_t output_length = pubkey_raw.size();
+    int serialized_pubkey = secp256k1_ec_pubkey_serialize(
+        context, pubkey_raw.data(), &output_length, &pubkey,
+        SECP256K1_EC_UNCOMPRESSED);
+    if (!serialized_pubkey) {
+        return 0;
+    }
+
+    std::array<unsigned char, 32> hash_data;
+    // Skip header byte
+    evm::Keccak_256(pubkey_raw.data() + 1, 64, hash_data.data());
+    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+    return from_big_endian(hash_data.begin(), hash_data.end());
+}
+}  // namespace
+
+void ec_recover(MachineState& m) {
+    m.stack.prepForMod(4);
+
+    m.stack[3] = parseSignature(m);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
     ++m.pc;
 }
 

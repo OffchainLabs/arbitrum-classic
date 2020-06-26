@@ -500,6 +500,23 @@ def test_tuple(vm):
     vm.error()
 
 
+def test_ecrecover(vm):
+    vm.push(
+        30389682118152071818050688435818811642998944855485126210296932908160964349251
+    )
+    vm.push(1)
+    vm.push(
+        51846986009028281302148438492841635320950266090793258738891771676577323106308
+    )
+    vm.push(
+        89187457569088100819123068890294098045489627058153492329444369343498977790775
+    )
+    vm.ecrecover()
+    vm.halt()
+    # The next line is required to fix https://github.com/OffchainLabs/arbitrum/pull/378
+    vm.error()
+
+
 code = arb.compile_block(test_arithmetic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
@@ -547,4 +564,11 @@ vm.static = 4
 print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
+    arb.marshall.marshall_vm(vm, f)
+code = arb.compile_block(test_ecrecover)
+vm = arb.compile_program(arb.ast.BlockStatement([]), code)
+vm.static = 4
+print("ecrecover ", len(vm.code), " codepoints")
+# print(vm.code)
+with open("../arb-validator/proofmachine/opcodetestecrecover.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)

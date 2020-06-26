@@ -48,6 +48,8 @@ def build_validator(sudo_flag=False):
     bootstrap_build_cache("arb-avm-cpp", sudo_flag)
     bootstrap_build_cache("arb-validator", sudo_flag)
 
+    run("git -C %s submodule update --init --recursive" % ROOT_DIR)
+
     return run(
         "docker build -t arb-validator -f %s/arb-validator.Dockerfile %s"
         % (validator_root, validator_root),

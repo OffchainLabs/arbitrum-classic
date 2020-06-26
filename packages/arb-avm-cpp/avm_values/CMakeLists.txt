@@ -29,6 +29,7 @@ set(LIB_HEADERS
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
   include/avm_values/vmValueParser.hpp
+        include/avm_values/keccak.hpp
 )
 
 set(LIB_SOURCES
@@ -38,6 +39,7 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/vmValueParser.cpp
+  src/keccak.cpp
 )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
@@ -61,7 +63,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
+target_link_libraries(avm_values PUBLIC nonstd::variant-lite Threads::Threads PRIVATE avm_utils)
 
 target_code_coverage(avm_values AUTO ALL)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do
-                           // this in one cpp file
+#ifndef ARB_AVM_CPP_KECCAK_H
 
-#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
-#include <catch2/catch.hpp>
+void keccak(const unsigned char* input,
+            unsigned int inputByteLen,
+            unsigned char* output);
+
+#define ARB_AVM_CPP_KECCAK_H
+
+#endif  // ARB_AVM_CPP_KECCAK_H

@@ -36,15 +36,6 @@ aliases:
     key: go-mod-v7-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
-  - &restore_conan_cache
-    keys:
-      - conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - conan-packages-v2-{{ .Branch }}-
-      - conan-packages-v2-
-  - &save_conan_cache
-    paths:
-      - ~/.conan/data
-    key: conan-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
   - &test-path /tmp/test-results
 version: 2
 workflows:
@@ -68,7 +59,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.2.1
+      - image: offchainlabs/backend-base:0.2.4
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -166,28 +157,29 @@ jobs:
             - data
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.2.0
+      - image: offchainlabs/cpp-base:0.2.5
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recursive
       - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_conan_cache
       - run:
           command: |
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
-            conan install ..
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* ../cmachine/
-      - save_cache: *save_conan_cache
       - run:
           name: test arb-avm-cpp
           command: |
             ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+            lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
           working_directory: /home/user/project/packages/arb-avm-cpp/build
       - persist_to_workspace: # store the built files into the workspace for other jobs.
@@ -199,7 +191,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.2.3
+      - image: offchainlabs/backend-base:0.2.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -274,7 +266,7 @@ jobs:
 
   backend-integration:
     docker:
-      - image: offchainlabs/backend-base:0.2.3
+      - image: offchainlabs/backend-base:0.2.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:

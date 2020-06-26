@@ -17,11 +17,7 @@ fi
 
 mkdir -p packages/arb-avm-cpp/${BUILD}
 cd packages/arb-avm-cpp/${BUILD}
-. ../../../vconan/bin/activate
-conan install ..
-deactivate
 cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
-
 
 if nproc >/dev/null 2>&1; then
     NPROC=$(nproc)

@@ -979,6 +979,38 @@ library OneStepProof {
         return true;
     }
 
+    function executeECRecoverInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3,
+        Value.Data memory val4
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
+            return false;
+        }
+        bytes32 r = bytes32(val1.intVal);
+        bytes32 s = bytes32(val2.intVal);
+        if (val3.intVal != 0 && val3.intVal != 1) {
+            machine.addDataStackInt(0);
+            return true;
+        }
+        uint8 v = uint8(val3.intVal) + 27;
+        bytes32 message = bytes32(val4.intVal);
+        address ret = ecrecover(
+            message,
+            v,
+            r,
+            s
+        );
+        machine.addDataStackInt(uint256(ret));
+        return true;
+    }
+
     // Stop and arithmetic ops
     uint8 constant internal OP_ADD = 0x01;
     uint8 constant internal OP_MUL = 0x02;
@@ -1048,6 +1080,8 @@ library OneStepProof {
     uint8 constant internal OP_INBOX = 0x72;
     uint8 constant internal OP_ERROR = 0x73;
     uint8 constant internal OP_STOP = 0x74;
+
+    uint8 constant internal OP_ECRECOVER = 0x80;
 
     function opInfo(uint opCode) internal pure returns (uint, uint) {
         if (opCode == OP_ADD) {
@@ -1158,6 +1192,8 @@ library OneStepProof {
             return (0, 0);
         } else if (opCode == OP_STOP) {
             return (0, 0);
+        } else if (opCode == OP_ECRECOVER) {
+            return (4, 1);
         } else {
             require(false, "Invalid opcode: opInfo()");
         }
@@ -1279,6 +1315,8 @@ library OneStepProof {
             return 5;
         } else if (opCode == OP_STOP) {
             return 10;
+        } else if (opCode == OP_ECRECOVER) {
+            return 20000;
         } else {
             require(false, "Invalid opcode: opGasCost()");
         }
@@ -1553,6 +1591,8 @@ library OneStepProof {
             correct = false;
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
+        } else if (opCode == OP_ECRECOVER) {
+            correct = executeECRecoverInsn(endMachine, stackVals[0], stackVals[1], stackVals[2], stackVals[3]);
         } else {
             correct = false;
         }

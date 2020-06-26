@@ -119,10 +119,10 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
 
-    return ::marshalState(
-        static_values->code, ::hash(static_values->code[pc]),
-        stackPreImage, auxStackPreImage, registerVal, static_values->staticVal,
-        CodePointStub{static_values->code[errpc]});
+    return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
+                          stackPreImage, auxStackPreImage, registerVal,
+                          static_values->staticVal,
+                          CodePointStub{static_values->code[errpc]});
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -140,9 +140,9 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         auxstack.marshalForProof(auxStackPops, static_values->code);
 
     auto buf = ::marshalState(
-        static_values->code, static_values->code[pc].nextHash,
-        stackProof.first, auxStackProof.first, registerVal,
-        static_values->staticVal, CodePointStub{static_values->code[errpc]});
+        static_values->code, static_values->code[pc].nextHash, stackProof.first,
+        auxStackProof.first, registerVal, static_values->staticVal,
+        CodePointStub{static_values->code[errpc]});
 
     static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
                                                static_values->code);
@@ -383,6 +383,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::HALT:
             state = Status::Halted;
+            break;
+            /*****************/
+            /*  Precompiles  */
+            /*****************/
+        case OpCode::ECRECOVER:
+            machineoperation::ec_recover(*this);
             break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)

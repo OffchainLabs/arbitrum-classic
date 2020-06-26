@@ -27,6 +27,7 @@ ignore:
   - 'packages/arb-validator-core/ethbridge/rollup'
   - 'packages/arb-provider-go/arbsys.go'
   - 'packages/arb-provider-go/arbinfo.go'
+  - 'packages/arb-avm-cpp/external/keccak'
   - 'tests/fibgo/fibabi.go'
   - 'packages/arb-provider-ethers/src/lib/abi'
   - '**/*.pb.go'

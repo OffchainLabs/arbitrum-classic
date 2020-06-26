@@ -24,13 +24,10 @@ set(AVM_VERSION_PATCH 5)
 
 set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
-message(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
 
 find_package(Threads REQUIRED)
+find_package(GMP REQUIRED)
 find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
 find_package(RocksDB)
 if (NOT ROCKSDB_FOUND)
@@ -57,6 +54,11 @@ file(GLOB KECCAK_SOURCES
   external/keccak/*.c
 )
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+add_subdirectory(external)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 add_subdirectory(utils)
 add_subdirectory(avm_values)
 add_subdirectory(data_storage)
