@@ -40,7 +40,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	continuedChallengeID = parsed.Events["Continued"].ID()
+	continuedChallengeID = parsed.Events["Continued"].ID
 }
 
 type bisectionChallenge struct {

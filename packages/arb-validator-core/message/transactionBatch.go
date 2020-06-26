@@ -23,12 +23,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/status-im/keycard-go/hexutils"
 
@@ -197,8 +197,8 @@ func (b BatchTx) ToBytes() []byte {
 	data := make([]byte, 2)
 	binary.BigEndian.PutUint16(data[:], uint16(len(b.Data)))
 	data = append(data, b.To[:]...)
-	data = append(data, abi.U256(b.SeqNum)...)
-	data = append(data, abi.U256(b.Value)...)
+	data = append(data, math.U256Bytes(b.SeqNum)...)
+	data = append(data, math.U256Bytes(b.Value)...)
 	data = append(data, b.Sig[:]...)
 	data = append(data, b.Data...)
 	return data

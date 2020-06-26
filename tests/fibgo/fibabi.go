@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -28,10 +27,16 @@ var (
 )
 
 // FibonacciABI is the input ABI used to generate the binding from.
-const FibonacciABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"generateFib\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"getFib\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"}]"
+const FibonacciABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"generateFib\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"getFib\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// FibonacciFuncSigs maps the 4-byte function signature to its string representation.
+var FibonacciFuncSigs = map[string]string{
+	"2ddec39b": "generateFib(uint256)",
+	"90a3e3de": "getFib(uint256)",
+}
 
 // FibonacciBin is the compiled bytecode used for deploying new contracts.
-var FibonacciBin = "0x608060405234801561001057600080fd5b50610212806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461005c575b600080fd5b61005a6004803603602081101561004457600080fd5b81019080803590602001909291905050506100ab565b005b34801561006857600080fd5b506100956004803603602081101561007f57600080fd5b81019080803590602001909291905050506101bd565b6040518082815260200191505060405180910390f35b6000600190806001815401808255809150509060018203906000526020600020016000909192909190915055506000600190806001815401808255809150509060018203906000526020600020016000909192909190915055506000600290505b8181101561018257600080600283038154811061012557fe5b90600052602060002001546000600184038154811061014057fe5b9060005260206000200154019080600181540180825580915050906001820390600052602060002001600090919290919091505550808060010191505061010c565b507f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414816040518082815260200191505060405180910390a150565b60008082815481106101cb57fe5b9060005260206000200154905091905056fea265627a7a723158204c3f70f2cc5c2546cf634b77450dacdda9fc45f6cd16868c7bfb393a59ed2c9464736f6c634300050b0032"
+var FibonacciBin = "0x608060405234801561001057600080fd5b506101b7806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461004d575b600080fd5b61004b6004803603602081101561004457600080fd5b5035610089565b005b34801561005957600080fd5b506100776004803603602081101561007057600080fd5b5035610162565b60408051918252519081900360200190f35b60008054600181810183558280527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563918201819055825480820190935591015560025b8181101561012b5760008060028303815481106100e557fe5b90600052602060002001546000600184038154811061010057fe5b60009182526020808320909101548454600181810187559584529190922092909101910155016100cc565b506040805182815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150565b600080828154811061017057fe5b9060005260206000200154905091905056fea265627a7a72315820515bc6d82b0eb4cda80d59fa288f11175d5bd6b6c66b463c2e85e8ff6fe2fd7964736f6c63430005110032"
 
 // DeployFibonacci deploys a new Ethereum contract, binding an instance of Fibonacci to it.
 func DeployFibonacci(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Fibonacci, error) {
@@ -191,7 +196,7 @@ func (_Fibonacci *FibonacciTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // GetFib is a free data retrieval call binding the contract method 0x90a3e3de.
 //
-// Solidity: function getFib(uint256 n) constant returns(uint256)
+// Solidity: function getFib(uint256 n) view returns(uint256)
 func (_Fibonacci *FibonacciCaller) GetFib(opts *bind.CallOpts, n *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -203,35 +208,35 @@ func (_Fibonacci *FibonacciCaller) GetFib(opts *bind.CallOpts, n *big.Int) (*big
 
 // GetFib is a free data retrieval call binding the contract method 0x90a3e3de.
 //
-// Solidity: function getFib(uint256 n) constant returns(uint256)
+// Solidity: function getFib(uint256 n) view returns(uint256)
 func (_Fibonacci *FibonacciSession) GetFib(n *big.Int) (*big.Int, error) {
 	return _Fibonacci.Contract.GetFib(&_Fibonacci.CallOpts, n)
 }
 
 // GetFib is a free data retrieval call binding the contract method 0x90a3e3de.
 //
-// Solidity: function getFib(uint256 n) constant returns(uint256)
+// Solidity: function getFib(uint256 n) view returns(uint256)
 func (_Fibonacci *FibonacciCallerSession) GetFib(n *big.Int) (*big.Int, error) {
 	return _Fibonacci.Contract.GetFib(&_Fibonacci.CallOpts, n)
 }
 
 // GenerateFib is a paid mutator transaction binding the contract method 0x2ddec39b.
 //
-// Solidity: function generateFib(uint256 n) returns()
+// Solidity: function generateFib(uint256 n) payable returns()
 func (_Fibonacci *FibonacciTransactor) GenerateFib(opts *bind.TransactOpts, n *big.Int) (*types.Transaction, error) {
 	return _Fibonacci.contract.Transact(opts, "generateFib", n)
 }
 
 // GenerateFib is a paid mutator transaction binding the contract method 0x2ddec39b.
 //
-// Solidity: function generateFib(uint256 n) returns()
+// Solidity: function generateFib(uint256 n) payable returns()
 func (_Fibonacci *FibonacciSession) GenerateFib(n *big.Int) (*types.Transaction, error) {
 	return _Fibonacci.Contract.GenerateFib(&_Fibonacci.TransactOpts, n)
 }
 
 // GenerateFib is a paid mutator transaction binding the contract method 0x2ddec39b.
 //
-// Solidity: function generateFib(uint256 n) returns()
+// Solidity: function generateFib(uint256 n) payable returns()
 func (_Fibonacci *FibonacciTransactorSession) GenerateFib(n *big.Int) (*types.Transaction, error) {
 	return _Fibonacci.Contract.GenerateFib(&_Fibonacci.TransactOpts, n)
 }
