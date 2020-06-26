@@ -45,7 +45,7 @@ RUN mkdir db && ganache-cli --db db -e 100000 \
         -p 7545 -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    CI=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
+    DOCKER=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
 
 
 # Minimize image

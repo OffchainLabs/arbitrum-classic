@@ -3,7 +3,7 @@ import 'dotenv/config'
 import fs from 'fs'
 
 usePlugin('buidler-deploy')
-if (!process.env.CI) {
+if (!process.env.DOCKER) {
   usePlugin('@nomiclabs/buidler-waffle')
   usePlugin('buidler-typechain')
   usePlugin('solidity-coverage')

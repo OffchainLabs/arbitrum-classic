@@ -26,7 +26,7 @@ RUN echo arbitrum > password.txt && \
     geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for geth on localhost:7545..." && \
-    CI=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
+    DOCKER=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
 
 FROM ethereum/client-go:stable
 
