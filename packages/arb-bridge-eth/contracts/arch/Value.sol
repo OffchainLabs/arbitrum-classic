@@ -291,8 +291,19 @@ library Value {
         return newCodePoint(CodePoint(opCode, nextHash, true, immediateVal));
     }
 
-    function newCodepointHash(bytes32 codepointHash) internal pure returns (Data memory) {
-        return Data(uint256(codepointHash), CodePoint(0, 0, false, 0), new Data[](0), CODEPOINT_HASH, uint256(1));
+    function newCodepointHash(bytes32 codepointHash)
+        internal
+        pure
+        returns (Data memory)
+    {
+        return
+            Data(
+                uint256(codepointHash),
+                CodePoint(0, 0, false, 0),
+                new Data[](0),
+                CODEPOINT_HASH,
+                uint256(1)
+            );
     }
 
     function isValidTupleSize(uint256 size) internal pure returns (bool) {

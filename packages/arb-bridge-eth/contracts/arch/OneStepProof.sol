@@ -562,11 +562,7 @@ library OneStepProof {
     function executeJumpInsn(
         Machine.Data memory machine,
         Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         if (!val1.isCodePoint()) {
             return false;
         }
@@ -607,11 +603,7 @@ library OneStepProof {
     function executePcpushInsn(
         Machine.Data memory machine,
         bytes32 codepointHash
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         machine.addDataStackValue(Value.newCodepointHash(codepointHash));
         return true;
     }
@@ -642,7 +634,9 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(Value.newCodepointHash(machine.errHandlerHash));
+        machine.addDataStackValue(
+            Value.newCodepointHash(machine.errHandlerHash)
+        );
         return true;
     }
 
@@ -1193,10 +1187,9 @@ library OneStepProof {
             "Proof had bad operation type"
         );
         if (immediate == 0) {
-            startMachine.instructionStackHash = Value.newCodePoint(
-                uint8(opCode),
-                startMachine.instructionStackHash
-            ).hash();
+            startMachine.instructionStackHash = Value
+                .newCodePoint(uint8(opCode), startMachine.instructionStackHash)
+                .hash();
         } else {
             Value.Data memory immediateVal;
             (valid, offset, immediateVal) = Value.deserialize(
@@ -1211,11 +1204,14 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStackHash = Value.newCodePoint(
+            startMachine.instructionStackHash = Value
+                .newCodePoint(
                 uint8(opCode),
-                startMachine.instructionStackHash,
+                startMachine
+                    .instructionStackHash,
                 Value.hash(immediateVal)
-            ).hash();
+            )
+                .hash();
         }
 
         uint256 i = 0;
@@ -1347,7 +1343,10 @@ library OneStepProof {
         } else if (opCode == OP_STACKEMPTY) {
             correct = executeStackemptyInsn(endMachine);
         } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStackHash);
+            correct = executePcpushInsn(
+                endMachine,
+                startMachine.instructionStackHash
+            );
         } else if (opCode == OP_AUXPUSH) {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
