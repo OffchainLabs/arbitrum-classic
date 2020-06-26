@@ -203,13 +203,7 @@ HashPreImage Tuple::getHashPreImage() const {
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash_value(get_element(i));
-        std::array<uint64_t, 4> valHashInts;
-        to_big_endian(valHash, valHashInts.begin());
-        std::copy(
-            reinterpret_cast<unsigned char*>(valHashInts.data()),
-            reinterpret_cast<unsigned char*>(valHashInts.data()) + val_length,
-            oit);
-        oit += val_length;
+        oit = to_big_endian(valHash, oit);
     }
 
     std::array<unsigned char, 32> hashData;
