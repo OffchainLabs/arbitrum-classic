@@ -1,5 +1,5 @@
 import { task, usePlugin } from '@nomiclabs/buidler/config'
-import {} from 'dotenv/config'
+import 'dotenv/config'
 import fs from 'fs'
 
 usePlugin('buidler-deploy')
