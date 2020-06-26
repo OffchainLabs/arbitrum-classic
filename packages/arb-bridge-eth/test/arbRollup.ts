@@ -15,8 +15,7 @@
  */
 
 /* eslint-env node, mocha */
-
-import { ethers, deployments } from '@nomiclabs/buidler'
+import bre from '@nomiclabs/buidler'
 import { Signer, ContractTransaction, providers, utils } from 'ethers'
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
@@ -24,9 +23,11 @@ import { ArbRollup } from '../build/types/ArbRollup'
 import { ArbFactory } from '../build/types/ArbFactory'
 import { InboxTopChallenge } from '../build/types/InboxTopChallenge'
 import { ArbValue } from 'arb-provider-ethers'
+import deploy_contracts from '../scripts/deploy'
 
 chai.use(chaiAsPromised)
 
+const { ethers, deployments } = bre
 const { assert, expect } = chai
 
 const initialVmState =
@@ -427,6 +428,7 @@ async function makeAssertion(
   }
 }
 
+let arbFactory: ArbFactory
 let arbRollup: ArbRollup
 let challenge: InboxTopChallenge
 let assertionInfo: Assertion
@@ -434,17 +436,13 @@ let originalNode: string
 let accounts: Signer[]
 
 describe('ArbRollup', function () {
-  before(async function () {
+  it('should deploy contracts', async function () {
     accounts = await ethers.getSigners()
-    await deployments.fixture()
+    const { ArbFactory } = await deploy_contracts(bre)
+    arbFactory = ArbFactory as ArbFactory
   })
 
   it('should initialize', async function () {
-    const arbFactoryDeployment = await deployments.get('ArbFactory')
-    const ArbRollupFactory = await ethers.getContractFactory('ArbFactory')
-    const arbFactory = ArbRollupFactory.attach(
-      arbFactoryDeployment.address
-    ) as ArbFactory
     const tx = arbFactory.createRollup(
       initialVmState, // vmState
       gracePeriodTicks, // gracePeriodTicks
