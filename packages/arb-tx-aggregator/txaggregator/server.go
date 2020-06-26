@@ -23,6 +23,7 @@ import (
 	"errors"
 	"log"
 	"math/big"
+	"net/http"
 	"sort"
 	"sync"
 	"time"
@@ -158,44 +159,41 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(
-	ctx context.Context,
-	args *SendTransactionArgs,
-) (*SendTransactionReply, error) {
+func (m *Server) SendTransaction(r *http.Request, args *SendTransactionArgs, reply *SendTransactionReply) error {
 	toBytes, err := hexutil.Decode(args.To)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error decoding to")
+		return errors2.Wrap(err, "error decoding to")
 	}
 	var to common.Address
 	copy(to[:], toBytes)
 
 	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
 	if !valid {
-		return nil, errors.New("Invalid sequence num")
+		return errors.New("Invalid sequence num")
 	}
 
 	valueInt, valid := new(big.Int).SetString(args.Value, 10)
 	if !valid {
-		return nil, errors.New("Invalid value")
+		return errors.New("Invalid value")
 	}
 
 	data, err := hexutil.Decode(args.Data)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error decoding data")
+		return errors2.Wrap(err, "error decoding data")
 	}
 
 	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error decoding pubkey")
+		return errors2.Wrap(err, "error decoding pubkey")
 	}
 
 	signature, err := hexutil.Decode(args.Signature)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error decoding signature")
+		return errors2.Wrap(err, "error decoding signature")
 	}
 
 	if len(signature) != signatureLength {
-		return nil, errors.New("signature of wrong length")
+		return errors.New("signature of wrong length")
 	}
 
 	// Convert sig with normalized v
@@ -220,7 +218,7 @@ func (m *Server) SendTransaction(
 		messageHash[:],
 		signature[:len(signature)-1],
 	) {
-		return nil, errors.New("Invalid signature")
+		return errors.New("Invalid signature")
 	}
 
 	var sigData [signatureLength]byte
@@ -262,13 +260,12 @@ func (m *Server) SendTransaction(
 	defer m.Unlock()
 
 	if !m.valid {
-		return nil, errors.New("Tx aggregator is not running")
+		return errors.New("Tx aggregator is not running")
 	}
 
 	m.transactions = append(m.transactions, DecodedBatchTx{
 		tx:     tx,
 		pubkey: pubkeyBytes,
 	})
-
-	return &SendTransactionReply{}, nil
+	return nil
 }

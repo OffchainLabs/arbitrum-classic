@@ -46,11 +46,11 @@ void Operation::marshal(std::vector<unsigned char>& buf,
                         const Code& code) const {
     if (immediate) {
         buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
         marshal_value(*immediate, buf, code);
     } else {
         buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
     }
 }
 
@@ -59,7 +59,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 const Code& code) const {
     if (immediate) {
         buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
         if (includeVal) {
             ::marshalForProof(*immediate, buf, code);
         } else {
@@ -67,7 +67,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
         }
     } else {
         buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
     }
 }
 
@@ -95,21 +95,13 @@ void CodePoint::marshal(std::vector<unsigned char>& buf,
 }
 
 uint256_t hash(const CodePoint& cp) {
-    std::array<uint64_t, 4> nextHashInts;
-    to_big_endian(cp.nextHash, nextHashInts.begin());
     if (cp.op.immediate) {
         std::array<unsigned char, 66> valData;
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
         auto immHash = hash_value(*cp.op.immediate);
-        std::array<uint64_t, 4> valHashInts;
-        to_big_endian(immHash, valHashInts.begin());
-        std::copy(reinterpret_cast<unsigned char*>(valHashInts.data()),
-                  reinterpret_cast<unsigned char*>(valHashInts.data()) + 32,
-                  valData.begin() + 2);
-        std::copy(reinterpret_cast<unsigned char*>(nextHashInts.data()),
-                  reinterpret_cast<unsigned char*>(nextHashInts.data()) + 32,
-                  valData.end() - 32);
+        auto it = to_big_endian(immHash, valData.begin() + 2);
+        to_big_endian(cp.nextHash, it);
         std::array<unsigned char, 32> hashData;
         evm::Keccak_256(valData.data(), valData.size(), hashData.data());
         return from_big_endian(hashData.begin(), hashData.end());
@@ -117,9 +109,7 @@ uint256_t hash(const CodePoint& cp) {
         std::array<unsigned char, 34> valData;
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
-        std::copy(reinterpret_cast<unsigned char*>(nextHashInts.data()),
-                  reinterpret_cast<unsigned char*>(nextHashInts.data()) + 32,
-                  valData.end() - 32);
+        to_big_endian(cp.nextHash, valData.begin() + 2);
         std::array<unsigned char, 32> hashData;
         evm::Keccak_256(valData.data(), valData.size(), hashData.data());
         return from_big_endian(hashData.begin(), hashData.end());

@@ -41,13 +41,13 @@ inline int get_sign(uint256_t v) {
     return (v >> 255) ? -1 : 1;
 }
 
-inline auto power(uint256_t b, uint64_t e) {
-    return boost::multiprecision::pow(b, static_cast<unsigned int>(e));
+inline auto power(uint256_t b, unsigned int e) {
+    return boost::multiprecision::pow(b, e);
 }
 
 uint256_t hash(const uint256_t& val);
 
-inline bool bit(uint256_t x, int i) {
+inline bool bit(uint256_t x, unsigned int i) {
     return boost::multiprecision::bit_test(x, i);
 }
 

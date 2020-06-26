@@ -42,7 +42,7 @@ struct AssertionContext {
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    AssertionContext() = default;
+    AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
 
     explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
         : timeBounds(tb),

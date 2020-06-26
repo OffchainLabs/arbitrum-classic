@@ -85,9 +85,9 @@ BlockReason Machine::runOne() {
         BlockReason blockReason = NotBlocked();
         try {
             blockReason = machine_state.runOp(instruction.op.opcode);
-        } catch (const bad_pop_type& e) {
+        } catch (const bad_pop_type&) {
             machine_state.state = Status::Error;
-        } catch (const bad_tuple_index& e) {
+        } catch (const bad_tuple_index&) {
             machine_state.state = Status::Error;
         }
         // if not blocked, increment step count and gas count

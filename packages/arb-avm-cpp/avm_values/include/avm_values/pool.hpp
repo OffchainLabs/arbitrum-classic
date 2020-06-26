@@ -24,8 +24,8 @@
 #include <vector>
 
 struct RawTuple {
-    std::vector<value> data;
     uint256_t cachedHash = 0;
+    std::vector<value> data;
     bool deferredHashing = true;
 };
 
@@ -44,7 +44,7 @@ class TuplePool {
      *
      * @return Resource instance.
      */
-    std::shared_ptr<RawTuple> getResource(int s);
+    std::shared_ptr<RawTuple> getResource(size_t s);
 
     /**
      * Return resource back to the pool.

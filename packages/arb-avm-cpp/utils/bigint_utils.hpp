@@ -26,24 +26,11 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include <limits>
-#include <sstream>
-#include <string>
 
 using uint256_t = boost::multiprecision::uint256_t;
 
-inline auto from_hex_str(const std::string& s) {
-    std::stringstream ss;
-    ss << std::hex << s;
-    uint256_t v;
-    ss >> v;
-    return v;
-}
-
-inline auto to_hex_str(const uint256_t& v) {
-    std::stringstream ss;
-    ss << "0x" << std::hex << v;
-    return ss.str();
-}
+uint256_t from_hex_str(const std::string& s);
+std::string to_hex_str(const uint256_t& v);
 
 template <typename Iterator>
 auto from_big_endian(const Iterator begin, const Iterator end) {

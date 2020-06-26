@@ -299,7 +299,6 @@ DbResult<value> getValue(const Transaction& transaction,
         }
         case HASH_PRE_IMAGE: {
             throw std::runtime_error("HASH_ONLY item");
-            return DbResult<value>();
         }
         default: {
             if (value_type - TUPLE > 8) {
