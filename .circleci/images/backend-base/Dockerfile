@@ -1,7 +1,7 @@
 FROM debian:buster-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
-    apt-get install -y curl git librocksdb-dev libgmp-dev sudo netcat-openbsd gcc && \
+    apt-get install -y curl git librocksdb-dev libgmp-dev sudo netcat-openbsd gcc libstdc++6 && \
     rm -rf /var/lib/apt/lists/* && \
     curl https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz --output go1.13.3.linux-amd64.tar.gz && \
     tar -xf go1.13.3.linux-amd64.tar.gz && \
