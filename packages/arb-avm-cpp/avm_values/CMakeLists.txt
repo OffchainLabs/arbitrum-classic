@@ -65,7 +65,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC nonstd::variant-lite Threads::Threads PRIVATE avm_utils)
+target_link_libraries(avm_values PUBLIC nonstd::variant-lite Threads::Threads avm_utils)
 
 target_code_coverage(avm_values AUTO ALL)
 
