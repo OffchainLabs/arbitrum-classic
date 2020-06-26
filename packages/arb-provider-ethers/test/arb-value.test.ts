@@ -36,7 +36,7 @@ const EMPTY_TUPLE_HASH =
 describe('Constructors', function () {
   const nullHash = '0x' + ZEROS_32B
 
-  test('BasicOp', function () {
+  it('BasicOp', function () {
     const bop = new arb.BasicOp(10)
     expect(bop.opcode).to.equal(10)
   })
