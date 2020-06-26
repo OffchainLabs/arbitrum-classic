@@ -13,7 +13,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
 	github.com/pkg/errors v0.9.1
-	google.golang.org/protobuf v1.24.0
+	google.golang.org/protobuf v1.25.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
