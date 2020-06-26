@@ -19,8 +19,6 @@ package proofmachine
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -33,6 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
