@@ -74,10 +74,10 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	}
 
 	timeBounds := &protocol.TimeBounds{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(10000)),
-		big.NewInt(100),
-		big.NewInt(120),
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(10000)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	steps := uint64(100000)
 	cont := true

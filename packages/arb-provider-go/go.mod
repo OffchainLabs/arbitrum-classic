@@ -7,6 +7,7 @@ require (
 	github.com/gorilla/rpc v1.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
+	github.com/pkg/errors v0.9.1
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../arb-validator-core

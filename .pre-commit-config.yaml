@@ -45,3 +45,10 @@ repos:
     rev: v0.0.16
     hooks:
       - id: circleci-config-validate
+  - repo: local
+    hooks:
+      - id: go-vet
+        name: Go Vet
+        entry: ./scripts/go-vet
+        language: script
+        files: \.go$
