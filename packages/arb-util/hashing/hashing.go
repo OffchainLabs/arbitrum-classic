@@ -22,7 +22,7 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	solsha3 "github.com/offchainlabs/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
