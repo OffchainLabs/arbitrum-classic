@@ -27,16 +27,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-const BytesPerInt = 32
-
 var hashOfOne common.Hash
 var hashOfZero common.Hash
-var IntegerZero IntValue
 
 func init() {
 	hashOfOne = NewInt64Value(1).hashImpl()
 	hashOfZero = NewInt64Value(0).hashImpl()
-	IntegerZero = NewInt64Value(0)
 }
 
 type IntValue struct {
@@ -55,13 +51,6 @@ func NewValueFromAddress(addr common.Address) IntValue {
 	addressBytes := [32]byte{}
 	copy(addressBytes[12:], addr[:])
 	return NewIntValue(big.NewInt(0).SetBytes(addressBytes[:]))
-}
-
-func NewBooleanValue(val bool) IntValue {
-	if val {
-		return NewInt64Value(1)
-	}
-	return NewInt64Value(0)
 }
 
 func NewIntValueFromReader(rd io.Reader) (IntValue, error) {
@@ -140,6 +129,6 @@ func (iv IntValue) Marshal(w io.Writer) error {
 	return err
 }
 
-func (tv IntValue) MarshalForProof(wr io.Writer) error {
-	return tv.Marshal(wr)
+func (iv IntValue) MarshalForProof(wr io.Writer) error {
+	return iv.Marshal(wr)
 }

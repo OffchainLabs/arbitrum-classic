@@ -35,7 +35,7 @@ func (b HaltBlocked) String() string {
 	return "HaltBlocked"
 }
 
-func (b HaltBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
+func (b HaltBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
 	return true
 }
 
@@ -51,7 +51,7 @@ func (b ErrorBlocked) String() string {
 	return "ErrorBlocked"
 }
 
-func (b ErrorBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
+func (b ErrorBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
 	return true
 }
 
@@ -67,7 +67,7 @@ func (b BreakpointBlocked) String() string {
 	return "BreakpointBlocked"
 }
 
-func (b BreakpointBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
+func (b BreakpointBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
 	return false
 }
 
@@ -84,7 +84,7 @@ func (b InboxBlocked) String() string {
 	return fmt.Sprintf("InboxBlocked(%v)", b.Timeout)
 }
 
-func (b InboxBlocked) IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
+func (b InboxBlocked) IsBlocked(_ Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
 	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0 && !newMessages
 }
 
