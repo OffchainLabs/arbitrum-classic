@@ -22,6 +22,7 @@ abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
 abigen --sol=test_only/ProtocolTester.sol --pkg=protocoltester --out=protocoltester.go
 abigen --sol=test_only/MachineTester.sol --pkg=machinetester --out=machinetester.go
 abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
+abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=onestepprooftester.go
 
 \mv arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
 \mv arbrollup.go ../../arb-validator-core/ethbridge/rollup/
@@ -37,6 +38,7 @@ abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 \mv protocoltester.go ../../arb-validator-core/ethbridgetest/protocoltester/
 \mv machinetester.go ../../arb-validator/proofmachine/machinetester/
 \mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
+\mv onestepprooftester.go ../../arb-validator-core/ethbridgetest/onestepprooftester/
 
 cd ../../..
 

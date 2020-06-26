@@ -19,6 +19,8 @@ package proofmachine
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -51,10 +53,18 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
-	osp, err := client.DeployOneStepProof(context.Background())
+	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, ethclint)
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
+	}
+	if _, err := ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		ethclint,
+		auth.From,
+		tx,
+		"DeployOneStepProof",
+	); err != nil {
+		return nil, err
 	}
 	proofbounds := [2]uint64{0, 10000}
 	return NewEthConnection(osp, proofbounds), nil

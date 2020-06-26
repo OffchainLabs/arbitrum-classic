@@ -19,6 +19,8 @@ package proofmachine
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"log"
 	"math/big"
 	"time"
@@ -27,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -37,11 +38,11 @@ type Machine struct {
 }
 
 type Connection struct {
-	osp         arbbridge.OneStepProof
+	osp         *onestepprooftester.OneStepProofTester
 	proofbounds [2]uint64
 }
 
-func NewEthConnection(osp arbbridge.OneStepProof, proofbounds [2]uint64) *Connection {
+func NewEthConnection(osp *onestepprooftester.OneStepProofTester, proofbounds [2]uint64) *Connection {
 	return &Connection{
 		osp:         osp,
 		proofbounds: proofbounds,
@@ -123,8 +124,23 @@ func (m *Machine) ExecuteAssertion(
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
 			precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
-
-			res, err := m.ethConn.osp.ValidateProof(context.Background(), precond, valprotocol.NewExecutionAssertionStubFromAssertion(a1), proof)
+			stub := valprotocol.NewExecutionAssertionStubFromAssertion(a1)
+			hashPreImage := precond.BeforeInbox.GetPreImage()
+			res, err := m.ethConn.osp.ValidateProof(
+				&bind.CallOpts{Context: context.Background()},
+				precond.BeforeHash,
+				precond.TimeBounds.AsIntArray(),
+				hashPreImage.GetInnerHash(),
+				big.NewInt(hashPreImage.Size()),
+				stub.AfterHash,
+				stub.DidInboxInsn,
+				stub.FirstMessageHash,
+				stub.LastMessageHash,
+				stub.FirstLogHash,
+				stub.LastLogHash,
+				stub.NumGas,
+				proof,
+			)
 			if err != nil {
 				log.Println("Machine ended with error:")
 				m.PrintState()

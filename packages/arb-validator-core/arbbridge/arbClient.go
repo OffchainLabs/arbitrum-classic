@@ -47,7 +47,6 @@ type ArbClient interface {
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
-	NewOneStepProof(address common.Address) (OneStepProof, error)
 
 	GetBalance(ctx context.Context, account common.Address) (*big.Int, error)
 }

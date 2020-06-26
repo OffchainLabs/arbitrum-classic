@@ -63,10 +63,6 @@ func (c *ArbClient) NewMessagesChallenge(address common.Address) (arbbridge.Mess
 	return NewMessagesChallenge(address, c.client)
 }
 
-func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return NewOneStepProof(address, c.client)
-}
-
 func (c *ArbClient) NewGlobalInbox(address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
 	return NewGlobalInbox(address, c.client)
 }
