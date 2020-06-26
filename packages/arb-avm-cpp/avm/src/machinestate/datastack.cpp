@@ -44,7 +44,7 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    for (auto const& si : stackInfo) {
+    for (auto si : stackInfo) {
         value val = c.pop();
         if (si) {
             ::marshalForProof(val, buf, code);

@@ -35,6 +35,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/codepoint.cpp
+  src/exceptions.cpp
   src/pool.cpp
   src/tuple.cpp
   src/value.cpp
@@ -52,6 +53,7 @@ set_target_properties(
 )
 
 target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_include_directories(avm_values PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

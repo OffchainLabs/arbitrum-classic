@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef exceptions_hpp
-#define exceptions_hpp
+#include <avm_values/exceptions.hpp>
 
-#include <nonstd/variant.hpp>
+const char* bad_tuple_index::what() const noexcept {
+    return "bad_tuple_index";
+}
 
-class bad_tuple_index : public std::exception {
-   public:
-    virtual const char* what() const noexcept override;
-};
+const char* bad_pop_type::what() const noexcept {
+    return "bad_variant_access";
+}
 
-class bad_pop_type : public std::exception {
-   public:
-    virtual const char* what() const noexcept override;
-};
-
-class int_out_of_bounds : public std::exception {
-   public:
-    virtual const char* what() const noexcept override;
-};
-
-#endif /* exceptions_hpp */
+const char* int_out_of_bounds::what() const noexcept {
+    return "int_out_of_bounds";
+}

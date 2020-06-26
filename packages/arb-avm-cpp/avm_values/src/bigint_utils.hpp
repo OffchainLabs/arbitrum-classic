@@ -56,7 +56,7 @@ inline void to_big_endian(uint256_t v, Iterator out) {
     // boost::multiprecision::export_bits() does not work here, because it
     // doesn't support fixed width export.
     uint64_t* o = reinterpret_cast<uint64_t*>(&*out);
-    constexpr uint64_t mask64 = 0xffffffff'ffffffff;
+    constexpr uint64_t mask64 = 0xffffffffffffffff;
 
     for (size_t i = 4; i-- > 0;) {
         uint64_t n = static_cast<uint64_t>(v & mask64);

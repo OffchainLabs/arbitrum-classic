@@ -40,15 +40,15 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 }
 
 CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
-    CodePoint ret;
-    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
-    bufptr += sizeof(ret.pc);
-    ret.pc = boost::endian::big_to_native(ret.pc);
-    ret.op = deserializeOperation(bufptr, pool);
-    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
+    uint64_t pc;
+    memcpy(&pc, bufptr, sizeof(pc));
+    bufptr += sizeof(pc);
+    pc = boost::endian::big_to_native(pc);
+    auto op = deserializeOperation(bufptr, pool);
+    auto nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
 
-    return ret;
+    return {pc, std::move(op), nextHash};
 }
 }  // namespace
 

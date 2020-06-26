@@ -46,11 +46,11 @@ void Operation::marshal(std::vector<unsigned char>& buf,
                         const Code& code) const {
     if (immediate) {
         buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
         marshal_value(*immediate, buf, code);
     } else {
         buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
     }
 }
 
@@ -59,7 +59,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 const Code& code) const {
     if (immediate) {
         buf.push_back(1);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
         if (includeVal) {
             ::marshalForProof(*immediate, buf, code);
         } else {
@@ -67,7 +67,7 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
         }
     } else {
         buf.push_back(0);
-        buf.push_back((uint8_t)opcode);
+        buf.push_back(static_cast<uint8_t>(opcode));
     }
 }
 

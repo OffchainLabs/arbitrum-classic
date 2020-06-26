@@ -30,13 +30,13 @@ enum CBlockType {
     BLOCK_TYPE_ERROR = 2,
     BLOCK_TYPE_BREAKPOINT = 3,
     BLOCK_TYPE_INBOX = 4,
-    BLOCK_TYPE_SEND = 5,
+    BLOCK_TYPE_SEND = 5
 };
 
 typedef enum {
     STATUS_EXTENSIVE = 0,
     STATUS_ERROR_STOP = 1,
-    STATUS_HALT = 2,
+    STATUS_HALT = 2
 } CStatus;
 
 typedef struct {

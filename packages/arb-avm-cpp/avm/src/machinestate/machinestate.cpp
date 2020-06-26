@@ -74,7 +74,7 @@ uint256_t MachineState::hash() const {
     }
     {
         auto val = ::hash(static_values->code[errpc]);
-        oit = to_big_endian(val, oit);
+        to_big_endian(val, oit);
     }
 
     std::array<unsigned char, 32> hashData;

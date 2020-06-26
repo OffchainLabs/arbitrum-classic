@@ -30,6 +30,9 @@ configure_file(contract.ao ${CMAKE_CURRENT_BINARY_DIR}/contract.ao COPYONLY)
 
 add_executable(avm_tests main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp confirmednodestore.cpp)
 
+target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
+
 target_link_libraries(
 	avm_tests
 PRIVATE
