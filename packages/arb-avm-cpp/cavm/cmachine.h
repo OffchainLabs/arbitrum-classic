@@ -36,7 +36,10 @@ enum CBlockType {
 typedef enum {
     STATUS_EXTENSIVE = 0,
     STATUS_ERROR_STOP = 1,
-    STATUS_HALT = 2
+    STATUS_HALT = 2,
+    // STATE_UNKNOWN is used if the underlying MachineState state isn't a valid
+    // value
+    STATE_UNKNOWN = 3
 } CStatus;
 
 typedef struct {

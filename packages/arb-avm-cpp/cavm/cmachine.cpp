@@ -92,6 +92,8 @@ CStatus machineCurrentStatus(CMachine* m) {
             return STATUS_ERROR_STOP;
         case Status::Halted:
             return STATUS_HALT;
+        default:
+            return STATE_UNKNOWN;
     }
 }
 
