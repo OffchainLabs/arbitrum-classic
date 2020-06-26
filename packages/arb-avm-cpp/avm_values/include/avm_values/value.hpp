@@ -58,11 +58,6 @@ void marshalStub(const value& val,
                  std::vector<unsigned char>& buf,
                  const Code& code);
 
-template <typename T>
-static T shrink(uint256_t i) {
-    return static_cast<T>(i & std::numeric_limits<T>::max());
-}
-
 uint256_t getSize(const value& val);
 
 #endif /* value_hpp */

@@ -87,7 +87,6 @@ enum class OpCode : uint8_t {
     ERROR,
     HALT,
     DEBUG,
-    DEFAULT,
 
     ECRECOVER = 0x80
 };

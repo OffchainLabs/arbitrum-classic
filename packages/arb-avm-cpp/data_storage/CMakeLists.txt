@@ -47,7 +47,7 @@ set(LIB_SOURCES
   src/value/value.cpp
 )
 
-add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
     data_storage
@@ -57,6 +57,7 @@ set_target_properties(
 )
 
 target_compile_options(data_storage PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(data_storage PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_include_directories(data_storage PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

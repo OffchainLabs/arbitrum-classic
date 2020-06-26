@@ -22,6 +22,13 @@
 #include <secp256k1_recovery.h>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 
+namespace {
+template <typename T>
+static T shrink(uint256_t i) {
+    return static_cast<T>(i & std::numeric_limits<T>::max());
+}
+}  // namespace
+
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
@@ -329,9 +336,9 @@ void signExtend(MachineState& m) {
     if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        uint256_t t = 248 - 8 * bNum;
-        int signBit = bit(aNum, (int)(255 - t));
-        uint256_t mask = power(uint256_t(2), uint64_t(255 - t)) - 1;
+        unsigned int t = 248 - 8 * static_cast<unsigned int>(bNum);
+        int signBit = bit(aNum, 255 - t);
+        uint256_t mask = power(uint256_t(2), 255 - t) - 1;
         if (signBit == 0) {
             m.stack[1] = aNum & mask;
         } else {

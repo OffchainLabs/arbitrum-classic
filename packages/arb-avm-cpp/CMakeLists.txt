@@ -53,6 +53,9 @@ add_code_coverage_all_targets()
 file(GLOB KECCAK_SOURCES
   external/keccak/*.c
 )
+file(GLOB KECCAK_HEADERS
+  external/keccak/*.h
+)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

@@ -24,7 +24,6 @@ struct Operation {
     OpCode opcode;
     std::unique_ptr<value> immediate;
 
-    Operation() { opcode = OpCode::DEFAULT; };
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
 
@@ -51,10 +50,6 @@ struct CodePoint {
     Operation op;
     uint256_t nextHash;
 
-    CodePoint() {
-        pc = pc_default;
-        nextHash = 0;
-    }
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
         : pc(pc_), op(op_), nextHash(nextHash_) {}
     void marshal(std::vector<unsigned char>& buf, const Code& code) const;

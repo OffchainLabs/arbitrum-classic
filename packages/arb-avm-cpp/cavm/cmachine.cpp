@@ -45,8 +45,9 @@ CMachine* machineCreate(const char* filename) {
 }
 
 void machineDestroy(CMachine* m) {
-    if (m == NULL)
+    if (m == nullptr) {
         return;
+    }
     delete static_cast<Machine*>(m);
 }
 
@@ -92,7 +93,7 @@ CStatus machineCurrentStatus(CMachine* m) {
         case Status::Halted:
             return STATUS_HALT;
         default:
-            throw std::runtime_error("Bad machine status type");
+            return STATE_UNKNOWN;
     }
 }
 

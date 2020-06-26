@@ -30,7 +30,8 @@
 
 inline unsigned char* returnCharVectorRaw(
     const std::vector<unsigned char>& data) {
-    unsigned char* cData = (unsigned char*)malloc(data.size());
+    unsigned char* cData =
+        reinterpret_cast<unsigned char*>(malloc(data.size()));
     std::copy(data.begin(), data.end(), cData);
     return cData;
 }
@@ -80,7 +81,7 @@ inline ByteSlice returnValueResult(const DbResult<value>& res,
     std::vector<unsigned char> value;
     marshal_value(res.data, value, code);
 
-    auto value_data = (unsigned char*)malloc(value.size());
+    auto value_data = reinterpret_cast<unsigned char*>(malloc(value.size()));
     std::copy(value.begin(), value.end(), value_data);
 
     auto void_data = reinterpret_cast<void*>(value_data);

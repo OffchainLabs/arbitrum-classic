@@ -28,6 +28,7 @@ set_target_properties(
 )
 
 target_compile_options(avm_utils PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(avm_utils PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_include_directories(avm_utils PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

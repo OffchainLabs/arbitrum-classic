@@ -65,7 +65,8 @@ HashList blockHashesAtHeight(const CBlockStore* storage_ptr,
     for (const auto& hash : hashes) {
         marshal_uint256_t(hash, serializedHashes);
     }
-    unsigned char* hashesData = (unsigned char*)malloc(serializedHashes.size());
+    unsigned char* hashesData =
+        reinterpret_cast<unsigned char*>(malloc(serializedHashes.size()));
     std::copy(serializedHashes.begin(), serializedHashes.end(), hashesData);
     return {hashesData, static_cast<int>(hashes.size())};
 }
