@@ -59,6 +59,7 @@
     "@typechain/web3-v1": "^1.0.0",
     "@types/chai": "^4.2.11",
     "@types/chai-as-promised": "^7.1.2",
+    "@types/dotenv": "^8.2.0",
     "@types/mocha": "^7.0.2",
     "arb-provider-ethers": "^0.6.5",
     "buidler-gas-reporter": "^0.1.3",
