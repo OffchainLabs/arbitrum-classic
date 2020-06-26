@@ -36,7 +36,7 @@ type WalletFlags struct {
 	gasPrice   *float64
 }
 
-func AddFlags(fs *flag.FlagSet) WalletFlags {
+func AddWalletFlags(fs *flag.FlagSet) WalletFlags {
 	passphrase := fs.String(
 		"password",
 		"",
