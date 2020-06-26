@@ -95,21 +95,21 @@ uint256_t MachineState::getMachineSize() {
 
 namespace {
 std::vector<unsigned char> marshalState(const Code& code,
-                                        CodePointStub next_codepoint,
+                                        uint256_t next_codepoint_hash,
                                         HashPreImage stackPreImage,
                                         HashPreImage auxStackPreImage,
                                         value registerVal,
                                         value staticVal,
                                         CodePointStub errpc) {
     auto buf = std::vector<unsigned char>();
-    ::marshalStub(next_codepoint, buf, code);
+    marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
     ::marshalStub(registerVal, buf, code);
     ::marshalStub(staticVal, buf, code);
-    ::marshalStub(errpc, buf, code);
+    marshal_uint256_t(::hash(errpc), buf);
 
     return buf;
 }
@@ -119,10 +119,10 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
 
-    return ::marshalState(
-        static_values->code, CodePointStub{static_values->code[pc]},
-        stackPreImage, auxStackPreImage, registerVal, static_values->staticVal,
-        CodePointStub{static_values->code[errpc]});
+    return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
+                          stackPreImage, auxStackPreImage, registerVal,
+                          static_values->staticVal,
+                          CodePointStub{static_values->code[errpc]});
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -140,9 +140,9 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         auxstack.marshalForProof(auxStackPops, static_values->code);
 
     auto buf = ::marshalState(
-        static_values->code, CodePointStub{static_values->code[pc + 1]},
-        stackProof.first, auxStackProof.first, registerVal,
-        static_values->staticVal, CodePointStub{static_values->code[errpc]});
+        static_values->code, static_values->code[pc].nextHash, stackProof.first,
+        auxStackProof.first, registerVal, static_values->staticVal,
+        CodePointStub{static_values->code[errpc]});
 
     static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
                                                static_values->code);
