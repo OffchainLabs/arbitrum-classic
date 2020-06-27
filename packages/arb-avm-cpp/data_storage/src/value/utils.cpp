@@ -46,7 +46,7 @@ namespace utils {
 
 void serializeCodePointStub(const CodePointStub& val,
                             std::vector<unsigned char>& value_vector) {
-    marshal_uint64_t(val.pc, value_vector);
+    marshal_uint64_t(val.pc.pc, value_vector);
     marshal_uint256_t(val.hash, value_vector);
 }
 

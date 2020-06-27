@@ -65,7 +65,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC nonstd::variant-lite Threads::Threads avm_utils)
+target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-lite Threads::Threads avm_utils PRIVATE nlohmann_json::nlohmann_json)
 
 target_code_coverage(avm_values AUTO ALL)
 

@@ -110,7 +110,7 @@ void marshal_value(const value& val,
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
     } else if (nonstd::holds_alternative<CodePointStub>(val)) {
         auto cpr = nonstd::get<CodePointStub>(val);
-        code[cpr].marshal(buf, code);
+        code[cpr.pc].marshal(buf, code);
     } else if (nonstd::holds_alternative<HashPreImage>(val)) {
         nonstd::get<HashPreImage>(val).marshal(buf);
     }
@@ -152,7 +152,7 @@ void marshalForProof(const Tuple& val,
 void marshalForProof(const CodePointStub& val,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    marshalForProof(code[val], buf, code);
+    marshalForProof(code[val.pc], buf, code);
 }
 
 void marshalForProof(const uint256_t& val,
@@ -217,7 +217,7 @@ struct ValuePrinter {
 
     std::ostream* operator()(const CodePointStub& val) const {
         //        std::printf("in CodePoint ostream operator\n");
-        os << "CodePointStub(" << val.pc << ")";
+        os << "CodePointStub(" << val.pc.pc << ")";
         return &os;
     }
 };

@@ -303,7 +303,7 @@ void checkSavedState(const Transaction& transaction,
 
     auto data = results.data;
     REQUIRE(data.status == expected_machine.machine_state.state);
-    REQUIRE(data.pc == expected_machine.machine_state.pc);
+    REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
     REQUIRE(data.datastack_hash ==
             hash(expected_machine.machine_state.stack.getTupleRepresentation(
                 &pool)));
@@ -366,7 +366,8 @@ Machine getComplexMachine() {
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));
     return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc, err_pc));
+                                data_stack, aux_stack, state, pc.pc,
+                                err_pc.pc));
 }
 
 Machine getDefaultMachine() {
@@ -382,7 +383,8 @@ Machine getDefaultMachine() {
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));
     return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc, err_pc));
+                                data_stack, aux_stack, state, pc.pc,
+                                err_pc.pc));
 }
 
 std::vector<uint256_t> getHashKeys(MachineStateKeys data) {

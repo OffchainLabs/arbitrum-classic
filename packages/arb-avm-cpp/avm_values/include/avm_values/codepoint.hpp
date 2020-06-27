@@ -72,32 +72,12 @@ uint256_t hash(const CodePoint& cp);
 
 const CodePoint& getErrCodePoint();
 
-struct CodePointStub {
-    uint64_t pc;
-    uint256_t hash;
-
-    CodePointStub() = default;
-    CodePointStub(const CodePoint& cp) : pc(cp.pc), hash(::hash(cp)) {}
-    CodePointStub(uint64_t pc_, uint256_t hash_) : pc(pc_), hash(hash_) {}
-
-    friend bool operator==(const CodePointStub& val1,
-                           const CodePointStub& val2) {
-        return val1.pc == val2.pc && val1.hash == val2.hash;
-    }
-};
-
-inline uint256_t hash(const CodePointStub& cp) {
-    return cp.hash;
-}
-
 struct CodePointRef {
     uint64_t pc;
     bool is_err;
 
     CodePointRef() = default;
     CodePointRef(uint64_t pc_, bool is_err_) : pc(pc_), is_err(is_err_) {}
-    CodePointRef(const CodePointStub& stub)
-        : pc(stub.pc), is_err(hash(stub) == hash(getErrCodePoint())) {}
 
     CodePointRef& operator=(uint64_t pc_) {
         pc = pc_;
@@ -122,6 +102,26 @@ struct CodePointRef {
     }
 };
 
+struct CodePointStub {
+    CodePointRef pc;
+    uint256_t hash;
+
+    CodePointStub() = default;
+    CodePointStub(const CodePoint& cp)
+        : pc(cp.pc, cp.isError()), hash(::hash(cp)) {}
+    CodePointStub(uint64_t pc_, uint256_t hash_)
+        : pc({pc_, hash_ == ::hash(getErrCodePoint())}), hash(hash_) {}
+
+    friend bool operator==(const CodePointStub& val1,
+                           const CodePointStub& val2) {
+        return val1.pc == val2.pc && val1.hash == val2.hash;
+    }
+};
+
+inline uint256_t hash(const CodePointStub& cp) {
+    return cp.hash;
+}
+
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops);
 
 class Code {
@@ -130,15 +130,6 @@ class Code {
    public:
     Code() = default;
     Code(std::vector<CodePoint> code_);
-
-    const CodePoint& operator[](const CodePointStub& ref) const {
-        const auto& err_codepoint = getErrCodePoint();
-        if (ref.hash == hash(err_codepoint)) {
-            return err_codepoint;
-        } else {
-            return code[ref.pc];
-        }
-    }
 
     const CodePoint& operator[](CodePointRef ref) const {
         if (ref.is_err) {
