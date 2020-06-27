@@ -345,7 +345,7 @@ void deleteCheckpoint(Transaction& transaction,
 
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
+    Code code{std::vector<CodePoint>{CodePoint{OpCode::ADD, 5453}}};
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
@@ -372,7 +372,7 @@ Machine getComplexMachine() {
 
 Machine getDefaultMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
+    Code code{std::vector<CodePoint>{CodePoint{OpCode::ADD, 5453}}};
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();

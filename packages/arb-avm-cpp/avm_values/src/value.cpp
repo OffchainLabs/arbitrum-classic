@@ -38,19 +38,16 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 
     return tup;
 }
+}  // namespace
 
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
+CodePointStub deserializeCodePointStub(const char*& bufptr) {
     uint64_t pc;
     memcpy(&pc, bufptr, sizeof(pc));
     bufptr += sizeof(pc);
     pc = boost::endian::big_to_native(pc);
-    auto op = deserializeOperation(bufptr, pool);
-    auto nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
-
-    return {pc, std::move(op), nextHash};
+    auto hash_val = deserializeUint256t(bufptr);
+    return {pc, hash_val};
 }
-}  // namespace
 
 uint256_t deserializeUint256t(const char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
@@ -73,6 +70,14 @@ Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     }
 }
 
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
+    auto op = deserializeOperation(bufptr, pool);
+    auto nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
+    bufptr += UINT256_SIZE;
+
+    return {std::move(op), nextHash};
+}
+
 value deserialize_value(const char*& bufptr, TuplePool& pool) {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
@@ -81,7 +86,7 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
         case NUM:
             return deserializeUint256t(bufptr);
         case CODEPT: {
-            return CodePointStub{deserializeCodePoint(bufptr, pool)};
+            return deserializeCodePointStub(bufptr);
         }
         default:
             if (valType >= TUPLE && valType <= TUPLE + 8) {

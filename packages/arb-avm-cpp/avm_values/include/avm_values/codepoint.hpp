@@ -46,18 +46,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& val);
 extern uint64_t pc_default;
 
 struct CodePoint {
-    uint64_t pc;
     Operation op;
     uint256_t nextHash;
 
-    CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
-        : pc(pc_), op(op_), nextHash(nextHash_) {}
+    CodePoint(Operation op_, uint256_t nextHash_)
+        : op(op_), nextHash(nextHash_) {}
     void marshal(std::vector<unsigned char>& buf, const Code& code) const;
-    bool isSet() {
-        return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
-                (nextHash != 0));
-    }
-    int getSize() const { return 1; }
 
     bool isError() const {
         return nextHash == 0 && op == Operation{static_cast<OpCode>(0)};
@@ -107,8 +101,8 @@ struct CodePointStub {
     uint256_t hash;
 
     CodePointStub() = default;
-    CodePointStub(const CodePoint& cp)
-        : pc(cp.pc, cp.isError()), hash(::hash(cp)) {}
+    CodePointStub(const CodePointRef& pc, const CodePoint& cp)
+        : pc(pc), hash(::hash(cp)) {}
     CodePointStub(uint64_t pc_, uint256_t hash_)
         : pc({pc_, hash_ == ::hash(getErrCodePoint())}), hash(hash_) {}
 

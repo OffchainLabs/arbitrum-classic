@@ -122,7 +122,7 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
                           stackPreImage, auxStackPreImage, registerVal,
                           static_values->staticVal,
-                          CodePointStub{static_values->code[errpc]});
+                          CodePointStub{errpc, static_values->code[errpc]});
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -142,7 +142,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto buf = ::marshalState(
         static_values->code, static_values->code[pc].nextHash, stackProof.first,
         auxStackProof.first, registerVal, static_values->staticVal,
-        CodePointStub{static_values->code[errpc]});
+        CodePointStub{errpc, static_values->code[errpc]});
 
     static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
                                                static_values->code);

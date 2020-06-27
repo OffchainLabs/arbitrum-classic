@@ -447,7 +447,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.static_values->code[m.pc]});
+    m.stack.push(CodePointStub{m.pc, m.static_values->code[m.pc]});
     ++m.pc;
 }
 
@@ -475,7 +475,7 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.static_values->code[m.errpc]});
+    m.stack.push(CodePointStub{m.errpc, m.static_values->code[m.errpc]});
     ++m.pc;
 }
 

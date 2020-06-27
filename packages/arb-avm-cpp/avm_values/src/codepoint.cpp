@@ -100,20 +100,16 @@ bool operator!=(const Operation& val1, const Operation& val2) {
 uint64_t pc_default = -1;
 
 bool operator==(const CodePoint& val1, const CodePoint& val2) {
-    if (val1.pc != val2.pc)
+    if (hash(val1) != hash(val2)) {
         return false;
-    else
+    } else {
         return true;
+    }
 }
 
 void CodePoint::marshal(std::vector<unsigned char>& buf,
                         const Code& code) const {
     buf.push_back(CODEPT);
-    uint64_t bepc = boost::endian::native_to_big(pc);
-    std::copy(
-        static_cast<const char*>(static_cast<const void*>(&bepc)),
-        static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
-        std::back_inserter(buf));
     op.marshal(buf, code);
     std::array<unsigned char, 32> val;
     to_big_endian(nextHash, val.begin());
@@ -153,23 +149,20 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
 }
 
 std::ostream& operator<<(std::ostream& os, const CodePoint& val) {
-    os << "CodePoint(" << val.pc << ", " << val.op << ", "
-       << to_hex_str(val.nextHash) << ")";
+    os << "CodePoint(" << val.op << ", " << to_hex_str(val.nextHash) << ")";
     return os;
 }
 
 const CodePoint& getErrCodePoint() {
-    CodePoint static errcp(pc_default, Operation(static_cast<OpCode>(0)), 0);
+    CodePoint static errcp(Operation(static_cast<OpCode>(0)), 0);
     return errcp;
 }
 
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
     std::vector<CodePoint> cps;
     cps.reserve(ops.size());
-    uint64_t pc = 0;
     for (auto& op : ops) {
-        cps.emplace_back(pc, std::move(op), 0);
-        pc++;
+        cps.emplace_back(std::move(op), 0);
     }
     for (uint64_t i = 0; i < cps.size() - 1; i++) {
         cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);

@@ -122,12 +122,6 @@ std::vector<std::vector<unsigned char>> parseTuple(
     return return_vector;
 }
 
-CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    auto pc_val = checkpoint::utils::deserialize_uint64(bufptr);
-    auto hash_val = deserializeUint256t(bufptr);
-    return {pc_val, hash_val};
-}
-
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
                          TuplePool* pool);

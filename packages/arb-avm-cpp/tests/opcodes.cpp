@@ -477,7 +477,7 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
+        CodePoint cp(OpCode::ADD, 0);
         auto static_values = std::make_shared<StaticVmValues>(
             Code{std::vector<CodePoint>{cp}}, uint256_t(5));
         MachineState m{static_values, pool};
@@ -485,7 +485,7 @@ TEST_CASE("PCPUSH opcode is correct") {
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res == value{CodePointStub({0, false}, cp)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -547,7 +547,7 @@ TEST_CASE("NOP opcode is correct") {
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
+        CodePoint cp(OpCode::ADD, 0);
         auto static_values = std::make_shared<StaticVmValues>(
             Code{std::vector<CodePoint>{cp}}, uint256_t(5));
         MachineState m{static_values, pool};
@@ -556,7 +556,7 @@ TEST_CASE("ERRPUSH opcode is correct") {
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == 1);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res == value{CodePointStub({0, false}, cp)});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
