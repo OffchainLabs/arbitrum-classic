@@ -175,10 +175,10 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
     }
 }
 
-void Tuple::marshal(std::vector<unsigned char>& buf, const Code& code) const {
+void Tuple::marshal(std::vector<unsigned char>& buf) const {
     buf.push_back(TUPLE + tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {
-        marshal_value(get_element(i), buf, code);
+        marshal_value(get_element(i), buf);
     }
 }
 

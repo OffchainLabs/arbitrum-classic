@@ -16,7 +16,7 @@ import io
 import json
 import random
 
-from arbitrum import value, marshall, ast
+from arbitrum import value, marshall
 
 if __name__ == "__main__":
     cases = []
@@ -27,7 +27,7 @@ if __name__ == "__main__":
         data = io.BytesIO()
         marshall.marshall_value(val, data)
         proof_data = io.BytesIO()
-        marshall.marshall_value(val, proof_data, True)
+        marshall.marshall_value(val, proof_data)
         cases.append(
             {
                 "value": data.getvalue().hex(),
@@ -41,15 +41,12 @@ if __name__ == "__main__":
     nest1_tup = value.Tuple([5, simple_tup, 6, simple_tup])
     add_case(10, "int")
     next_hash = bytearray(random.getrandbits(8) for _ in range(32))
-    basic = value.AVMCodePoint(0, ast.BasicOp(8), next_hash)
-    immediate = value.AVMCodePoint(
-        0, ast.ImmediateOp(ast.BasicOp(8), simple_tup), next_hash
-    )
-    add_case(basic, "simple codepoint")
-    add_case(immediate, "immediate codepoint")
-    print(basic.next_hash.hex())
-    print(basic)
-    print(immediate)
+    # basic = value.AVMCodePoint(0, ast.BasicOp(8), next_hash)
+    # immediate = value.AVMCodePoint(
+    #     0, ast.ImmediateOp(ast.BasicOp(8), simple_tup), next_hash
+    # )
+    # add_case(basic, "simple codepoint")
+    # add_case(immediate, "immediate codepoint")
     for i in range(9):
         add_case(value.Tuple([0] * i), "tup" + str(i))
     add_case(simple_tup, "simple_tup")
@@ -59,5 +56,9 @@ if __name__ == "__main__":
     )
     with open("test_cases.json", "w") as f:
         json.dump(cases, f, indent=4)
+
     with open("../arb-bridge-eth/test/test_cases.json", "w") as f:
+        json.dump(cases, f, indent=4)
+
+    with open("../arb-avm-cpp/tests/test_cases.json", "w") as f:
         json.dump(cases, f, indent=4)

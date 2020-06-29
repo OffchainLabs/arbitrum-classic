@@ -34,7 +34,6 @@ struct Assertion {
 
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    BlockReason runOne();
 
    public:
     MachineState machine_state;
@@ -74,10 +73,6 @@ class Machine {
     }
 
     TuplePool& getPool() { return *machine_state.pool; }
-
-    void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-        return ::marshal_value(val, buf, machine_state.static_values->code);
-    }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

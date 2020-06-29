@@ -303,7 +303,7 @@ void checkSavedState(const Transaction& transaction,
 
     auto data = results.data;
     REQUIRE(data.status == expected_machine.machine_state.state);
-    REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
+    REQUIRE(data.pc == expected_machine.machine_state.pc);
     REQUIRE(data.datastack_hash ==
             hash(expected_machine.machine_state.stack.getTupleRepresentation(
                 &pool)));
@@ -345,7 +345,10 @@ void deleteCheckpoint(Transaction& transaction,
 
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{OpCode::ADD, 5453}}};
+    Code code;
+    code.addOperation(Operation(OpCode::ADD));
+    code.addOperation(Operation(OpCode::MUL));
+    code.addOperation(Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
@@ -372,19 +375,18 @@ Machine getComplexMachine() {
 
 Machine getDefaultMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{OpCode::ADD, 5453}}};
+    Code code;
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
-    CodePointStub pc(0, false);
-    CodePointStub err_pc(0, true);
+    CodePointRef pc(0, false);
+    CodePointRef err_pc(0, true);
     Status state = Status::Extensive;
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));
     return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc.pc,
-                                err_pc.pc));
+                                data_stack, aux_stack, state, pc, err_pc));
 }
 
 std::vector<uint256_t> getHashKeys(MachineStateKeys data) {

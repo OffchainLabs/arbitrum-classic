@@ -785,11 +785,13 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        if (val1.size <= SEND_SIZE_LIMIT) {
-            return (true, val1.hash());
-        } else {
-            return (true, 0);
+        if (val1.size > SEND_SIZE_LIMIT) {
+            return (false, 0);
         }
+        if (!val1.isValidForSend()) {
+            return (false, 0);
+        }
+        return (true, val1.hash());
     }
 
     function executeInboxInsn(

@@ -32,12 +32,13 @@ rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
 
 using iterator = std::vector<unsigned char>::const_iterator;
 
-CodePointStub extractCodePointStub(iterator& iter) {
+CodePointRef extractCodePointRef(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto pc_val = checkpoint::utils::deserialize_uint64(ptr);
-    auto hash_val = deserializeUint256t(ptr);
-    iter += sizeof(pc_val) + 32;
-    return {pc_val, hash_val};
+    iter += sizeof(pc_val);
+    bool is_err = static_cast<bool>(*iter);
+    ++iter;
+    return {pc_val, is_err};
 }
 
 uint256_t extractUint256(iterator& iter) {
@@ -55,8 +56,8 @@ MachineStateKeys extractStateKeys(
     auto register_hash = extractUint256(current_iter);
     auto datastack_hash = extractUint256(current_iter);
     auto auxstack_hash = extractUint256(current_iter);
-    auto pc = extractCodePointStub(current_iter);
-    auto err_pc = extractCodePointStub(current_iter);
+    auto pc = extractCodePointRef(current_iter);
+    auto err_pc = extractCodePointRef(current_iter);
 
     return MachineStateKeys{register_hash, datastack_hash, auxstack_hash, pc,
                             err_pc,        status};
@@ -69,9 +70,8 @@ std::vector<unsigned char> serializeStateKeys(
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
-    checkpoint::utils::serializeCodePointStub(state_data.pc, state_data_vector);
-    checkpoint::utils::serializeCodePointStub(state_data.err_pc,
-                                              state_data_vector);
+    state_data.pc.marshal(state_data_vector);
+    state_data.err_pc.marshal(state_data_vector);
     return state_data_vector;
 }
 }  // namespace
@@ -144,12 +144,6 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     auto datastack_results = saveValue(transaction, datastack_tup);
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
     auto auxstack_results = saveValue(transaction, auxstack_tup);
-    auto err_pc_stub =
-        CodePointStub{machinestate.errpc,
-                      machinestate.static_values->code[machinestate.errpc]};
-    auto pc_stub = CodePointStub{
-        machinestate.pc, machinestate.static_values->code[machinestate.pc]};
-
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};
@@ -158,8 +152,8 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
         MachineStateKeys{hash_value(machinestate.registerVal),
                          hash(datastack_tup),
                          hash(auxstack_tup),
-                         pc_stub,
-                         err_pc_stub,
+                         machinestate.pc,
+                         machinestate.errpc,
                          machinestate.state};
     auto serialized_state = serializeStateKeys(machine_state_data);
     return saveRefCountedData(*transaction.transaction, key, serialized_state);

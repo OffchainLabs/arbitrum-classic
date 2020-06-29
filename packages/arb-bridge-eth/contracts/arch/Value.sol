@@ -237,6 +237,28 @@ library Value {
         }
     }
 
+    function isValidForSend(Data memory val) internal pure returns (bool) {
+        if (val.typeCode == INT_TYPECODE) {
+            return true;
+        } else if (val.typeCode == CODE_POINT_TYPECODE) {
+            return false;
+        } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
+            require(false, "must have full value");
+        } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
+            uint256 valueCount = tuple.tupleVal.length;
+            for (uint256 i = 0; i < valueCount; i++) {
+                if (!isValidForSend(tuple.tupleVal[i])) {
+                    return false;
+                }
+            }
+            return true;
+        } else if (val.typeCode == CODEPOINT_HASH) {
+            return false;
+        } else {
+            require(false, "Invalid type code");
+        }
+    }
+
     function newNone() internal pure returns (Data memory) {
         return
             Data(

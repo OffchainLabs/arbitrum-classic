@@ -45,8 +45,8 @@ def marshall_op(val, file):
 
 def marshall_codepoint(val, file):
     marshall_op(val.op, file)
-    val.next_hash = b"\0" * (32 - len(val.next_hash)) + val.next_hash
-    file.write(val.next_hash)
+    next_hash = b"\0" * (32 - len(val.next_hash)) + val.next_hash
+    file.write(next_hash)
 
 
 def marshall_value(val, file):
@@ -73,7 +73,7 @@ def marshall_value_json(val):
     if isinstance(val, value.Tuple):
         return {"Tuple": [marshall_value_json(item) for item in val]}
     if isinstance(val, int):
-        return {"Int": val}
+        return {"Int": str(val)}
     if isinstance(val, value.AVMCodePoint):
         return {"CodePoint": {"Internal": val.pc}}
     if isinstance(val, AVMLabeledCodePoint):

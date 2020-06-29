@@ -36,7 +36,7 @@ Assertion Machine::run(uint64_t stepCount,
     auto start_time = std::chrono::system_clock::now();
     machine_state.context = AssertionContext{timeBounds, std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
-        auto blockReason = runOne();
+        auto blockReason = machine_state.runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
         }
@@ -52,70 +52,4 @@ Assertion Machine::run(uint64_t stepCount,
             std::move(machine_state.context.outMessage),
             std::move(machine_state.context.logs),
             machine_state.context.didInboxInsn};
-}
-
-BlockReason Machine::runOne() {
-    if (machine_state.state == Status::Error) {
-        return ErrorBlocked();
-    }
-
-    if (machine_state.state == Status::Halted) {
-        return HaltBlocked();
-    }
-
-    auto& instruction = machine_state.static_values->code[machine_state.pc];
-
-    // if opcode is invalid, increment step count and return error or
-    // errorCodePoint
-    if (!isValidOpcode(instruction.op.opcode)) {
-        machine_state.state = Status::Error;
-        machine_state.context.numSteps++;
-        if (!machine_state.errpc.is_err) {
-            machine_state.pc = machine_state.errpc;
-            machine_state.state = Status::Extensive;
-        }
-        return NotBlocked();
-    } else {
-        if (instruction.op.immediate) {
-            auto imm = *instruction.op.immediate;
-            machine_state.stack.push(std::move(imm));
-        }
-        // save stack size for stack cleanup in case of error
-        uint64_t startStackSize = machine_state.stack.stacksize();
-        BlockReason blockReason = NotBlocked();
-        try {
-            blockReason = machine_state.runOp(instruction.op.opcode);
-        } catch (const bad_pop_type&) {
-            machine_state.state = Status::Error;
-        } catch (const bad_tuple_index&) {
-            machine_state.state = Status::Error;
-        }
-        // if not blocked, increment step count and gas count
-        if (nonstd::get_if<NotBlocked>(&blockReason)) {
-            machine_state.context.numSteps++;
-            machine_state.context.numGas +=
-                InstructionArbGasCost.at(instruction.op.opcode);
-        } else {
-            if (instruction.op.immediate) {
-                machine_state.stack.popClear();
-            }
-        }
-
-        if (machine_state.state != Status::Error) {
-            return blockReason;
-        }
-        // if state is Error, clean up stack
-        // Clear stack to base for instruction
-        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-        while (machine_state.stack.stacksize() > 0 &&
-               startStackSize - machine_state.stack.stacksize() < stackItems) {
-            machine_state.stack.popClear();
-        }
-
-        if (!machine_state.errpc.is_err) {
-            machine_state.pc = machine_state.errpc;
-            machine_state.state = Status::Extensive;
-        }
-        return blockReason;
-    }
 }

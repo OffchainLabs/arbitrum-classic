@@ -25,6 +25,7 @@ set(LIB_HEADERS
   include/avm_values/value.hpp
   include/avm_values/bigint.hpp
   include/avm_values/codepoint.hpp
+  include/avm_values/codepointstub.hpp
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
@@ -35,6 +36,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/codepoint.cpp
+  src/codepointstub.cpp
   src/exceptions.cpp
   src/pool.cpp
   src/tuple.cpp

@@ -16,10 +16,6 @@
 
 #include <avm/machinestate/blockreason.hpp>
 
-#include <avm_values/codepoint.hpp>
-#include <avm_values/tuple.hpp>
-#include <avm_values/value.hpp>
-
 constexpr BlockType InboxBlocked::type;
 
 std::ostream& operator<<(std::ostream& os, const NotBlocked&) {
