@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -30,7 +31,7 @@ var (
 const BytesLibABI = "[]"
 
 // BytesLibBin is the compiled bytecode used for deploying new contracts.
-var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158208665b32688d4c96486cc28d46b2357f88d5452e05a309ca0f9e30def208efbea64736f6c63430005110032"
+var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158204a4406891b86a3dacfb6ea735b92a605972908aec5c506cc187bb6f01ef6a24064736f6c634300050f0032"
 
 // DeployBytesLib deploys a new Ethereum contract, binding an instance of BytesLib to it.
 func DeployBytesLib(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BytesLib, error) {
@@ -192,7 +193,7 @@ func (_BytesLib *BytesLibTransactorRaw) Transact(opts *bind.TransactOpts, method
 const ProtocolABI = "[]"
 
 // ProtocolBin is the compiled bytecode used for deploying new contracts.
-var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158206c7201f79f1e83d2b45ed54a98c84803d9f79694b3f7ff9c6a9d21c88c584e9a64736f6c63430005110032"
+var ProtocolBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820b9dfda0e8967cce081d0a445c1a4924f7d5665789e802649e31b46830564633564736f6c634300050f0032"
 
 // DeployProtocol deploys a new Ethereum contract, binding an instance of Protocol to it.
 func DeployProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Protocol, error) {
@@ -360,7 +361,7 @@ var ProtocolTesterFuncSigs = map[string]string{
 }
 
 // ProtocolTesterBin is the compiled bytecode used for deploying new contracts.
-var ProtocolTesterBin = "0x608060405234801561001057600080fd5b50610236806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063c21ef0fa1461003b578063fcc6af6e1461009a575b600080fd5b610088600480360360e081101561005157600080fd5b50803590602081013515159067ffffffffffffffff6040820135169060608101359060808101359060a08101359060c001356100f2565b60408051918252519081900360200190f35b610088600480360360c08110156100b057600080fd5b604080516080818101909252833593928301929160a08301919060208401906004908390839080828437600092019190915250919450509035915061010f9050565b600061010388888888888888610124565b98975050505050505050565b600061011c848484610187565b949350505050565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b81516020808401516040808601516060968701518251808601999099526fffffffffffffffffffffffffffffffff19608096871b81168a85015293861b841660508a015290851b83169688019690965294831b166070860152818501929092528251808503909101815260a090930190915281519101209056fea265627a7a72315820f9cd16a8cb8e94790fd3bfd6932cabfd0689e5bbe1d620a22ac6066d380326ac64736f6c63430005110032"
+var ProtocolTesterBin = "0x608060405234801561001057600080fd5b50610236806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063c21ef0fa1461003b578063fcc6af6e1461009a575b600080fd5b610088600480360360e081101561005157600080fd5b50803590602081013515159067ffffffffffffffff6040820135169060608101359060808101359060a08101359060c001356100f2565b60408051918252519081900360200190f35b610088600480360360c08110156100b057600080fd5b604080516080818101909252833593928301929160a08301919060208401906004908390839080828437600092019190915250919450509035915061010f9050565b600061010388888888888888610124565b98975050505050505050565b600061011c848484610187565b949350505050565b6040805160208082019990995296151560f81b8782015260c09590951b6001600160c01b031916604187015260498601939093526069850191909152608984015260a9808401919091528151808403909101815260c99092019052805191012090565b81516020808401516040808601516060968701518251808601999099526fffffffffffffffffffffffffffffffff19608096871b81168a85015293861b841660508a015290851b83169688019690965294831b166070860152818501929092528251808503909101815260a090930190915281519101209056fea265627a7a72315820b902e27f6e9e98f566f1340dc8ad8c9be080be6d3bf67e5b7eb5676e605f6c6e64736f6c634300050f0032"
 
 // DeployProtocolTester deploys a new Ethereum contract, binding an instance of ProtocolTester to it.
 func DeployProtocolTester(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ProtocolTester, error) {
@@ -520,7 +521,7 @@ func (_ProtocolTester *ProtocolTesterTransactorRaw) Transact(opts *bind.Transact
 
 // GenerateAssertionHash is a free data retrieval call binding the contract method 0xc21ef0fa.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) pure returns(bytes32)
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterCaller) GenerateAssertionHash(opts *bind.CallOpts, _afterHash [32]byte, _didInboxInsn bool, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -532,21 +533,21 @@ func (_ProtocolTester *ProtocolTesterCaller) GenerateAssertionHash(opts *bind.Ca
 
 // GenerateAssertionHash is a free data retrieval call binding the contract method 0xc21ef0fa.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) pure returns(bytes32)
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterSession) GenerateAssertionHash(_afterHash [32]byte, _didInboxInsn bool, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
 	return _ProtocolTester.Contract.GenerateAssertionHash(&_ProtocolTester.CallOpts, _afterHash, _didInboxInsn, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
 }
 
 // GenerateAssertionHash is a free data retrieval call binding the contract method 0xc21ef0fa.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) pure returns(bytes32)
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterCallerSession) GenerateAssertionHash(_afterHash [32]byte, _didInboxInsn bool, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
 	return _ProtocolTester.Contract.GenerateAssertionHash(&_ProtocolTester.CallOpts, _afterHash, _didInboxInsn, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
 }
 
 // GeneratePreconditionHash is a free data retrieval call binding the contract method 0xfcc6af6e.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) pure returns(bytes32)
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterCaller) GeneratePreconditionHash(opts *bind.CallOpts, _beforeHash [32]byte, _timeBounds [4]*big.Int, _beforeInboxHash [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -558,14 +559,14 @@ func (_ProtocolTester *ProtocolTesterCaller) GeneratePreconditionHash(opts *bind
 
 // GeneratePreconditionHash is a free data retrieval call binding the contract method 0xfcc6af6e.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) pure returns(bytes32)
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [4]*big.Int, _beforeInboxHash [32]byte) ([32]byte, error) {
 	return _ProtocolTester.Contract.GeneratePreconditionHash(&_ProtocolTester.CallOpts, _beforeHash, _timeBounds, _beforeInboxHash)
 }
 
 // GeneratePreconditionHash is a free data retrieval call binding the contract method 0xfcc6af6e.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) pure returns(bytes32)
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[4] _timeBounds, bytes32 _beforeInboxHash) constant returns(bytes32)
 func (_ProtocolTester *ProtocolTesterCallerSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [4]*big.Int, _beforeInboxHash [32]byte) ([32]byte, error) {
 	return _ProtocolTester.Contract.GeneratePreconditionHash(&_ProtocolTester.CallOpts, _beforeHash, _timeBounds, _beforeInboxHash)
 }
@@ -574,7 +575,7 @@ func (_ProtocolTester *ProtocolTesterCallerSession) GeneratePreconditionHash(_be
 const ValueABI = "[]"
 
 // ValueBin is the compiled bytecode used for deploying new contracts.
-var ValueBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158209e078afdc2706f589fe998ea512f9ad21d14fef0ee3254ac52d0c646aad1e36564736f6c63430005110032"
+var ValueBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158208ee905886c683022f063711a65435844571ece73993149dfb05f636dca5a99c464736f6c634300050f0032"
 
 // DeployValue deploys a new Ethereum contract, binding an instance of Value to it.
 func DeployValue(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Value, error) {

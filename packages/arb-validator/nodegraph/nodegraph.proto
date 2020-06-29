@@ -15,11 +15,11 @@
  */
 
 syntax = "proto3";
-package rollup;
+package nodegraph;
 import "arb-util/common/common.proto";
 import "arb-validator/structures/structures.proto";
 import "arb-validator-core/valprotocol/valprotocol.proto";
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph";
 
 message NodeGraphBuf {
     repeated structures.NodeBuf nodes = 1;
@@ -33,16 +33,6 @@ message StakedNodeGraphBuf {
     NodeGraphBuf nodeGraph = 1;
     repeated StakerBuf stakers = 2;
     repeated ChallengeBuf challenges = 3;
-}
-
-message ChainObserverBuf {
-    StakedNodeGraphBuf stakedNodeGraph = 1;
-    common.AddressBuf contractAddress = 2;
-    structures.InboxBuf inbox = 3;
-    common.HashBuf knownValidNode = 4;
-    common.HashBuf calculatedValidNode = 5;
-    common.BlockIdBuf latestBlockId = 6;
-    bool isOpinionated = 7;
 }
 
 message StakerBuf {

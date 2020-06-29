@@ -159,12 +159,12 @@ func TestTxTracker(t *testing.T) {
 		findLogMissingTest(nil, &height1)
 	})
 
-	txTracker.ConfirmedNode(context.Background(), nil, arbbridge.ConfirmedEvent{
+	txTracker.ConfirmedNode(context.Background(), arbbridge.ConfirmedEvent{
 		ChainInfo: arbbridge.ChainInfo{},
 		NodeHash:  nodes[0].Hash(),
 	})
 
-	txTracker.RestartingFromLatestValid(context.Background(), nil, nodes[0])
+	txTracker.RestartingFromLatestValid(context.Background(), nodes[0])
 
 	t.Run("AssertionCountAfterReorg", countTest(nodes[0]))
 	t.Run("FindLogsAfterReorg", findLogMissingTest(nil, nil))

@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
@@ -107,7 +107,7 @@ func ValidateRollupChain(
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(
+	validatorListener := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupArgs.Address,
 		rollupActor,
@@ -130,7 +130,7 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(&chainlistener.AnnouncerListener{})
 	manager.AddListener(validatorListener)
 
 	if *rpcEnable {

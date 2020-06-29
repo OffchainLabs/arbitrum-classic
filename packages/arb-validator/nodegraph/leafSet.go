@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package nodegraph
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"

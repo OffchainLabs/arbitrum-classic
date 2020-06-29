@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -186,7 +187,7 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 
 // BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function blockLowerBound() view returns(uint256)
+// Solidity: function blockLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysCaller) BlockLowerBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -198,21 +199,21 @@ func (_ArbSys *ArbSysCaller) BlockLowerBound(opts *bind.CallOpts) (*big.Int, err
 
 // BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function blockLowerBound() view returns(uint256)
+// Solidity: function blockLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysSession) BlockLowerBound() (*big.Int, error) {
 	return _ArbSys.Contract.BlockLowerBound(&_ArbSys.CallOpts)
 }
 
 // BlockLowerBound is a free data retrieval call binding the contract method 0xd8541077.
 //
-// Solidity: function blockLowerBound() view returns(uint256)
+// Solidity: function blockLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysCallerSession) BlockLowerBound() (*big.Int, error) {
 	return _ArbSys.Contract.BlockLowerBound(&_ArbSys.CallOpts)
 }
 
 // BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
 //
-// Solidity: function blockUpperBound() view returns(uint256)
+// Solidity: function blockUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysCaller) BlockUpperBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -224,21 +225,21 @@ func (_ArbSys *ArbSysCaller) BlockUpperBound(opts *bind.CallOpts) (*big.Int, err
 
 // BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
 //
-// Solidity: function blockUpperBound() view returns(uint256)
+// Solidity: function blockUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysSession) BlockUpperBound() (*big.Int, error) {
 	return _ArbSys.Contract.BlockUpperBound(&_ArbSys.CallOpts)
 }
 
 // BlockUpperBound is a free data retrieval call binding the contract method 0x4baa4a24.
 //
-// Solidity: function blockUpperBound() view returns(uint256)
+// Solidity: function blockUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysCallerSession) BlockUpperBound() (*big.Int, error) {
 	return _ArbSys.Contract.BlockUpperBound(&_ArbSys.CallOpts)
 }
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) view returns(uint256)
+// Solidity: function getTransactionCount(address account) constant returns(uint256)
 func (_ArbSys *ArbSysCaller) GetTransactionCount(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -250,21 +251,21 @@ func (_ArbSys *ArbSysCaller) GetTransactionCount(opts *bind.CallOpts, account co
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) view returns(uint256)
+// Solidity: function getTransactionCount(address account) constant returns(uint256)
 func (_ArbSys *ArbSysSession) GetTransactionCount(account common.Address) (*big.Int, error) {
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
-// Solidity: function getTransactionCount(address account) view returns(uint256)
+// Solidity: function getTransactionCount(address account) constant returns(uint256)
 func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) (*big.Int, error) {
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
 // TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timestampLowerBound() view returns(uint256)
+// Solidity: function timestampLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysCaller) TimestampLowerBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -276,21 +277,21 @@ func (_ArbSys *ArbSysCaller) TimestampLowerBound(opts *bind.CallOpts) (*big.Int,
 
 // TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timestampLowerBound() view returns(uint256)
+// Solidity: function timestampLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysSession) TimestampLowerBound() (*big.Int, error) {
 	return _ArbSys.Contract.TimestampLowerBound(&_ArbSys.CallOpts)
 }
 
 // TimestampLowerBound is a free data retrieval call binding the contract method 0xc87fcabb.
 //
-// Solidity: function timestampLowerBound() view returns(uint256)
+// Solidity: function timestampLowerBound() constant returns(uint256)
 func (_ArbSys *ArbSysCallerSession) TimestampLowerBound() (*big.Int, error) {
 	return _ArbSys.Contract.TimestampLowerBound(&_ArbSys.CallOpts)
 }
 
 // TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
 //
-// Solidity: function timestampUpperBound() view returns(uint256)
+// Solidity: function timestampUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysCaller) TimestampUpperBound(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -302,14 +303,14 @@ func (_ArbSys *ArbSysCaller) TimestampUpperBound(opts *bind.CallOpts) (*big.Int,
 
 // TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
 //
-// Solidity: function timestampUpperBound() view returns(uint256)
+// Solidity: function timestampUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysSession) TimestampUpperBound() (*big.Int, error) {
 	return _ArbSys.Contract.TimestampUpperBound(&_ArbSys.CallOpts)
 }
 
 // TimestampUpperBound is a free data retrieval call binding the contract method 0xf5e71ccd.
 //
-// Solidity: function timestampUpperBound() view returns(uint256)
+// Solidity: function timestampUpperBound() constant returns(uint256)
 func (_ArbSys *ArbSysCallerSession) TimestampUpperBound() (*big.Int, error) {
 	return _ArbSys.Contract.TimestampUpperBound(&_ArbSys.CallOpts)
 }

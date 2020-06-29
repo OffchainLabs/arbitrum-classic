@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
@@ -150,9 +150,9 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
-	manager1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
+	manager1.AddListener(&chainlistener.AnnouncerListener{"chainObserver1: "})
 
-	validatorListener1 := rollup.NewValidatorChainListener(
+	validatorListener1 := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupAddress,
 		rollupActor1,
@@ -173,9 +173,9 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
-	manager2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
+	manager2.AddListener(&chainlistener.AnnouncerListener{"chainObserver2: "})
 
-	validatorListener2 := rollup.NewValidatorChainListener(
+	validatorListener2 := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupAddress,
 		rollupActor2,

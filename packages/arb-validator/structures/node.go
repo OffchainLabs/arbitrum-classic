@@ -113,6 +113,29 @@ func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
 	return nextNode
 }
 
+func NewRandomInvalidNodeFromValidPrev(
+	prev *Node,
+	assertion *protocol.ExecutionAssertion,
+	kind valprotocol.ChildType,
+	params valprotocol.ChainParams,
+) *Node {
+	disputableNode := valprotocol.NewRandomDisputableNode(
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+	)
+
+	nextNode := NewInvalidNodeFromPrev(
+		prev,
+		disputableNode,
+		kind,
+		params,
+		common.NewTimeBlocks(common.RandBigInt()),
+		common.RandHash(),
+	)
+
+	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	return nextNode
+}
+
 func NewInvalidNodeFromPrev(
 	prev *Node,
 	disputable *valprotocol.DisputableNode,

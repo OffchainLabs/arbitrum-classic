@@ -14,11 +14,12 @@
 * limitations under the License.
  */
 
-package rollup
+package chainobserver
 
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
@@ -51,7 +52,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	if chain.nodeGraph.leaves.NumLeaves() != 1 {
+	if chain.NodeGraph.Leaves().NumLeaves() != 1 {
 		t.Fatal("unexpected leaf count")
 	}
 	tryMarshalUnmarshal(chain, t)
@@ -79,14 +80,14 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := doAnAssertion(chain, chain.nodeGraph.latestConfirmed); err != nil {
+	if err := doAnAssertion(chain, chain.NodeGraph.LatestConfirmed()); err != nil {
 		t.Fatal(err)
 	}
-	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
+	validTip := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.ValidChildType)
 	if err := doAnAssertion(chain, validTip); err != nil {
 		t.Fatal(err)
 	}
-	if chain.nodeGraph.leaves.NumLeaves() != 7 {
+	if chain.NodeGraph.Leaves().NumLeaves() != 7 {
 		t.Fatal("unexpected leaf count")
 	}
 
@@ -105,20 +106,20 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 		t.Fatal(err)
 	}
 
-	if err := doAnAssertion(chain, chain.nodeGraph.latestConfirmed); err != nil {
+	if err := doAnAssertion(chain, chain.NodeGraph.LatestConfirmed()); err != nil {
 		t.Fatal(err)
 	}
 	staker1addr := common.Address{1}
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
-	validTip := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.ValidChildType)
-	tip2 := chain.nodeGraph.NodeGraph.GetSuccessor(chain.nodeGraph.latestConfirmed, valprotocol.InvalidMessagesChildType)
-	n1, _, childType, err := GetConflictAncestor(validTip, tip2)
+	validTip := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.ValidChildType)
+	tip2 := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.InvalidMessagesChildType)
+	n1, _, childType, err := nodegraph.GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	confNode := n1.Prev()
-	if !confNode.Equals(chain.nodeGraph.latestConfirmed) {
+	if !confNode.Equals(chain.NodeGraph.LatestConfirmed()) {
 		t.Fatal("unexpected value for conflict ancestor")
 	}
 	if childType != valprotocol.InvalidMessagesChildType {
@@ -127,18 +128,18 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 	createOneStaker(chain, staker1addr, validTip.Hash())
 	createOneStaker(chain, staker2addr, tip2.Hash())
-	chain.nodeGraph.NewChallenge(&Challenge{
-		blockId:      chain.latestBlockId,
-		logIndex:     0,
-		asserter:     staker1addr,
-		challenger:   staker2addr,
-		contract:     contractAddr,
-		conflictNode: confNode,
-	})
+	challenge := nodegraph.MakeChallenge(
+		chain.LatestBlockId,
+		0,
+		staker1addr,
+		staker2addr,
+		contractAddr,
+		confNode)
+	chain.NodeGraph.NewChallenge(challenge)
 
 	tryMarshalUnmarshal(chain, t)
 
-	chain.nodeGraph.ChallengeResolved(contractAddr, staker1addr, staker2addr)
+	chain.NodeGraph.ChallengeResolved(contractAddr, staker1addr, staker2addr)
 
 	tryMarshalUnmarshal(chain, t)
 }
@@ -161,25 +162,25 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	}
 	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
 	assertionClaim := &valprotocol.AssertionClaim{
-		AfterInboxTop:         chain.inbox.GetTopHash(),
+		AfterInboxTop:         chain.Inbox.GetTopHash(),
 		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
 		AssertionStub:         assertionStub,
 	}
 	disputableNode := valprotocol.NewDisputableNode(
 		assertionParams,
 		assertionClaim,
-		chain.inbox.GetTopHash(),
+		chain.Inbox.GetTopHash(),
 		big.NewInt(0),
 	)
 
-	chain.nodeGraph.CreateNodesOnAssert(
+	chain.NodeGraph.CreateNodesOnAssert(
 		baseNode,
 		disputableNode,
 		common.NewTimeBlocks(big.NewInt(10)),
 		common.Hash{},
 	)
 
-	nextValid := chain.nodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)
+	nextValid := chain.NodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)
 
 	if err := nextValid.UpdateValidOpinion(theMachine, execAssertion); err != nil {
 		return err
@@ -239,7 +240,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 
 func createSomeStakers(chain *ChainObserver) {
 	for i := byte(0); i < 5; i++ {
-		createOneStaker(chain, common.Address{i}, chain.nodeGraph.latestConfirmed.Hash())
+		createOneStaker(chain, common.Address{i}, chain.NodeGraph.LatestConfirmed().Hash())
 	}
 }
 
