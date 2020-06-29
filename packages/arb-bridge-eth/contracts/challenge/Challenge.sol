@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,72 +16,73 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../vm/IStaking.sol";
 import "../libraries/RollupTime.sol";
 
 contract Challenge {
+    enum State { NoChallenge, AsserterTurn, ChallengerTurn }
 
-    enum State {
-        NoChallenge,
-        AsserterTurn,
-        ChallengerTurn
-    }
-
-    event InitiatedChallenge(
-        uint256 deadlineTicks
-    );
+    event InitiatedChallenge(uint256 deadlineTicks);
 
     event AsserterTimedOut();
     event ChallengerTimedOut();
 
     // Can online initialize once
-    string constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
+    string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
     // Can only continue challenge in response to bisection
 
-    string constant CON_STATE = "CON_STATE";
+    string private constant CON_STATE = "CON_STATE";
     // deadline expired
-    string constant CON_DEADLINE = "CON_DEADLINE";
+    string private constant CON_DEADLINE = "CON_DEADLINE";
     // Only original challenger can continue challenge
-    string constant CON_SENDER = "CON_SENDER";
+    string private constant CON_SENDER = "CON_SENDER";
 
     // Can only bisect assertion in response to a challenge
-    string constant BIS_STATE = "BIS_STATE";
+    string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
-    string constant BIS_DEADLINE = "BIS_DEADLINE";
+    string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
-    string constant BIS_SENDER = "BIS_SENDER";
+    string private constant BIS_SENDER = "BIS_SENDER";
 
+    address internal vmAddress;
+    address payable internal asserter;
+    address payable internal challenger;
 
-    address vmAddress;
-    address payable asserter;
-    address payable challenger;
-
-    uint256 deadlineTicks;
+    uint256 internal deadlineTicks;
 
     // The current deadline at which the challenge timeouts and a winner is
     // declared. This deadline resets at each step in the challenge
-    uint256 challengePeriodTicks;
+    uint256 private challengePeriodTicks;
 
-    State state;
+    State private state;
 
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
-        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
+        require(
+            RollupTime.blocksToTicks(block.number) <= deadlineTicks,
+            BIS_DEADLINE
+        );
         require(msg.sender == asserter, BIS_SENDER);
         _;
     }
 
     modifier challengerAction {
         require(State.ChallengerTurn == state, CON_STATE);
-        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
+        require(
+            RollupTime.blocksToTicks(block.number) <= deadlineTicks,
+            CON_DEADLINE
+        );
         require(msg.sender == challenger, CON_SENDER);
         _;
     }
 
     function timeoutChallenge() public {
-        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, "Deadline hasn't expired");
+        require(
+            RollupTime.blocksToTicks(block.number) > deadlineTicks,
+            "Deadline hasn't expired"
+        );
 
         if (state == State.AsserterTurn) {
             emit AsserterTimedOut();
@@ -95,9 +98,7 @@ contract Challenge {
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks
-    )
-        internal
-    {
+    ) internal {
         require(state == State.NoChallenge, CHAL_INIT_STATE);
 
         vmAddress = _vmAddress;
@@ -107,13 +108,13 @@ contract Challenge {
         state = State.AsserterTurn;
         updateDeadline();
 
-        emit InitiatedChallenge(
-            deadlineTicks
-        );
+        emit InitiatedChallenge(deadlineTicks);
     }
 
     function updateDeadline() internal {
-        deadlineTicks = RollupTime.blocksToTicks(block.number) + challengePeriodTicks;
+        deadlineTicks =
+            RollupTime.blocksToTicks(block.number) +
+            challengePeriodTicks;
     }
 
     function asserterResponded() internal {

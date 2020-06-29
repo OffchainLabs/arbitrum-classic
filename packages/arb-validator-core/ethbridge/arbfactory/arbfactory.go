@@ -38,7 +38,7 @@ var ArbFactoryFuncSigs = map[string]string{
 }
 
 // ArbFactoryBin is the compiled bytecode used for deploying new contracts.
-var ArbFactoryBin = "0x608060405234801561001057600080fd5b5060405161051e38038061051e8339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b031991821617909155600180549484169482169490941790935560028054929091169190921617905561048f8061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063b10c5f8414610085575b600080fd5b6100596100e9565b604080516001600160a01b039092168252519081900360200190f35b6100596100f8565b610059610107565b6100e7600480360361010081101561009c57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff1691608081019160c0820135169060e001356001600160a01b0316610116565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b6000805461012c906001600160a01b03166102a1565b60025460015460408051638e0f716760e01b8152600481018d81526001600160801b03808e1660248401528c16604483015267ffffffffffffffff8b1660648301529495506001600160a01b0380871695638e0f7167958f958f958f958f958f958f958f95908316949216929091608490910190879080828437600081840152601f19601f820116905080830192505050856001600160801b03166001600160801b03168152602001846001600160a01b03166001600160a01b03168152602001836001600160a01b03166001600160a01b03168152602001826001600160a01b03166001600160a01b031681526020019950505050505050505050600060405180830381600087803b15801561024257600080fd5b505af1158015610256573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a15050505050505050565b60006060604051806020016102b5906103be565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b6020831061031c5780518252601f1990920191602091820191016102fd565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106103645780518252601f199092019160209182019101610345565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836103b6573d6000803e3d6000fd5b505050919050565b6090806103cb8339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a72315820c487d33c2137a02e2226b3f3ba3bd9de8f946b27f98fc3a309111c5b4643856464736f6c63430005110032"
+var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516103b73803806103b78339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556103288061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063b10c5f8414610085575b600080fd5b6100596100e9565b604080516001600160a01b039092168252519081900360200190f35b6100596100f8565b610059610107565b6100e7600480360361010081101561009c57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff1691608081019160c0820135169060e001356001600160a01b0316610116565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b6000805461012c906001600160a01b03166102a1565b60025460015460408051638e0f716760e01b8152600481018d81526001600160801b03808e1660248401528c16604483015267ffffffffffffffff8b1660648301529495506001600160a01b0380871695638e0f7167958f958f958f958f958f958f958f95908316949216929091608490910190879080828437600081840152601f19601f820116905080830192505050856001600160801b03166001600160801b03168152602001846001600160a01b03166001600160a01b03168152602001836001600160a01b03166001600160a01b03168152602001826001600160a01b03166001600160a01b031681526020019950505050505050505050600060405180830381600087803b15801561024257600080fd5b505af1158015610256573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a15050505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820047446ed2b72c0bbbddfb9c2505199655e1ff296f6795c6c175122e9de0ef94964736f6c63430005110032"
 
 // DeployArbFactory deploys a new Ethereum contract, binding an instance of ArbFactory to it.
 func DeployArbFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _rollupTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ArbFactory, error) {
@@ -432,7 +432,7 @@ func (_ArbFactory *ArbFactoryFilterer) ParseRollupCreated(log types.Log) (*ArbFa
 const CloneFactoryABI = "[]"
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582014499adf675d1d9478ed19c566b4f750dc94b33ec36c0cd9ed6abd9987faa64f64736f6c63430005110032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820796a132d4efb93bcf19bd98efef09e26e851946439e650891a87138b9b93c94f64736f6c63430005110032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -781,166 +781,4 @@ func (_IArbRollup *IArbRollupSession) Init(_vmState [32]byte, _gracePeriodTicks 
 // Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
 func (_IArbRollup *IArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
 	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
-}
-
-// SpawnABI is the input ABI used to generate the binding from.
-const SpawnABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"logicContract\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
-
-// SpawnBin is the compiled bytecode used for deploying new contracts.
-var SpawnBin = "0x6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fe"
-
-// DeploySpawn deploys a new Ethereum contract, binding an instance of Spawn to it.
-func DeploySpawn(auth *bind.TransactOpts, backend bind.ContractBackend, logicContract common.Address) (common.Address, *types.Transaction, *Spawn, error) {
-	parsed, err := abi.JSON(strings.NewReader(SpawnABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(SpawnBin), backend, logicContract)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &Spawn{SpawnCaller: SpawnCaller{contract: contract}, SpawnTransactor: SpawnTransactor{contract: contract}, SpawnFilterer: SpawnFilterer{contract: contract}}, nil
-}
-
-// Spawn is an auto generated Go binding around an Ethereum contract.
-type Spawn struct {
-	SpawnCaller     // Read-only binding to the contract
-	SpawnTransactor // Write-only binding to the contract
-	SpawnFilterer   // Log filterer for contract events
-}
-
-// SpawnCaller is an auto generated read-only Go binding around an Ethereum contract.
-type SpawnCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type SpawnTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type SpawnFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnSession is an auto generated Go binding around an Ethereum contract,
-// with pre-set call and transact options.
-type SpawnSession struct {
-	Contract     *Spawn            // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// SpawnCallerSession is an auto generated read-only Go binding around an Ethereum contract,
-// with pre-set call options.
-type SpawnCallerSession struct {
-	Contract *SpawnCaller  // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts // Call options to use throughout this session
-}
-
-// SpawnTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
-// with pre-set transact options.
-type SpawnTransactorSession struct {
-	Contract     *SpawnTransactor  // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// SpawnRaw is an auto generated low-level Go binding around an Ethereum contract.
-type SpawnRaw struct {
-	Contract *Spawn // Generic contract binding to access the raw methods on
-}
-
-// SpawnCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type SpawnCallerRaw struct {
-	Contract *SpawnCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// SpawnTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type SpawnTransactorRaw struct {
-	Contract *SpawnTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewSpawn creates a new instance of Spawn, bound to a specific deployed contract.
-func NewSpawn(address common.Address, backend bind.ContractBackend) (*Spawn, error) {
-	contract, err := bindSpawn(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &Spawn{SpawnCaller: SpawnCaller{contract: contract}, SpawnTransactor: SpawnTransactor{contract: contract}, SpawnFilterer: SpawnFilterer{contract: contract}}, nil
-}
-
-// NewSpawnCaller creates a new read-only instance of Spawn, bound to a specific deployed contract.
-func NewSpawnCaller(address common.Address, caller bind.ContractCaller) (*SpawnCaller, error) {
-	contract, err := bindSpawn(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnCaller{contract: contract}, nil
-}
-
-// NewSpawnTransactor creates a new write-only instance of Spawn, bound to a specific deployed contract.
-func NewSpawnTransactor(address common.Address, transactor bind.ContractTransactor) (*SpawnTransactor, error) {
-	contract, err := bindSpawn(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnTransactor{contract: contract}, nil
-}
-
-// NewSpawnFilterer creates a new log filterer instance of Spawn, bound to a specific deployed contract.
-func NewSpawnFilterer(address common.Address, filterer bind.ContractFilterer) (*SpawnFilterer, error) {
-	contract, err := bindSpawn(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnFilterer{contract: contract}, nil
-}
-
-// bindSpawn binds a generic wrapper to an already deployed contract.
-func bindSpawn(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(SpawnABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Spawn *SpawnRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Spawn.Contract.SpawnCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Spawn *SpawnRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Spawn.Contract.SpawnTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Spawn *SpawnRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Spawn.Contract.SpawnTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Spawn *SpawnCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Spawn.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Spawn *SpawnTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Spawn.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Spawn *SpawnTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Spawn.Contract.contract.Transact(opts, method, params...)
 }

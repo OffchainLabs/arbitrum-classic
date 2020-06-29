@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,27 +16,20 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 interface IChallengeFactory {
-
     function createChallenge(
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks,
         bytes32 _challengeHash,
         uint256 challengeType
-    )
-        external
-        returns(address);
+    ) external returns (address);
 
     function generateCloneAddress(
         address asserter,
         address challenger,
         uint256 challengeType
-    )
-        external
-        view
-        returns(address);
+    ) external view returns (address);
 }

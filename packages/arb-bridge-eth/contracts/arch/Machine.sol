@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,12 +16,11 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./Value.sol";
 
 import "../libraries/DebugPrint.sol";
-
 
 library Machine {
     using Value for Value.Data;
@@ -31,11 +32,7 @@ library Machine {
     function addStackVal(
         Value.Data memory stackValHash,
         Value.Data memory valHash
-    )
-        internal
-        pure
-        returns (Value.Data memory)
-    {
+    ) internal pure returns (Value.Data memory) {
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = valHash;
         vals[1] = stackValHash;
@@ -53,24 +50,29 @@ library Machine {
         uint256 status;
     }
 
-    function toString(Data memory machine) internal pure returns (string memory) {
-        return string(
-            abi.encodePacked(
-                "Machine(",
-                DebugPrint.bytes32string(machine.instructionStackHash),
-                ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.dataStack)),
-                ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.auxStack)),
-                ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.registerVal)),
-                ", \n",
-                DebugPrint.bytes32string(Value.hash(machine.staticVal)),
-                ", \n",
-                DebugPrint.bytes32string(machine.errHandlerHash),
-                ")\n"
-            )
-        );
+    function toString(Data memory machine)
+        internal
+        pure
+        returns (string memory)
+    {
+        return
+            string(
+                abi.encodePacked(
+                    "Machine(",
+                    DebugPrint.bytes32string(machine.instructionStackHash),
+                    ", \n",
+                    DebugPrint.bytes32string(Value.hash(machine.dataStack)),
+                    ", \n",
+                    DebugPrint.bytes32string(Value.hash(machine.auxStack)),
+                    ", \n",
+                    DebugPrint.bytes32string(Value.hash(machine.registerVal)),
+                    ", \n",
+                    DebugPrint.bytes32string(Value.hash(machine.staticVal)),
+                    ", \n",
+                    DebugPrint.bytes32string(machine.errHandlerHash),
+                    ")\n"
+                )
+            );
     }
 
     function setExtensive(Data memory machine) internal pure {
@@ -85,19 +87,22 @@ library Machine {
         machine.status = MACHINE_HALT;
     }
 
-    function addDataStackValue(Data memory machine, Value.Data memory val) internal pure {
+    function addDataStackValue(Data memory machine, Value.Data memory val)
+        internal
+        pure
+    {
         machine.dataStack = addStackVal(machine.dataStack, val);
     }
 
-    function addAuxStackValue(Data memory machine, Value.Data memory val) internal pure {
+    function addAuxStackValue(Data memory machine, Value.Data memory val)
+        internal
+        pure
+    {
         machine.auxStack = addStackVal(machine.auxStack, val);
     }
 
     function addDataStackInt(Data memory machine, uint256 val) internal pure {
-        machine.dataStack = addStackVal(
-            machine.dataStack,
-            Value.newInt(val)
-        );
+        machine.dataStack = addStackVal(machine.dataStack, Value.newInt(val));
     }
 
     function machineHash(
@@ -107,63 +112,58 @@ library Machine {
         Value.Data memory registerVal,
         Value.Data memory staticVal,
         bytes32 errHandlerHash
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return hash(
-            Data(
-                instructionStackHash,
-                dataStack,
-                auxStack,
-                registerVal,
-                staticVal,
-                errHandlerHash,
-                MACHINE_EXTENSIVE
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            hash(
+                Data(
+                    instructionStackHash,
+                    dataStack,
+                    auxStack,
+                    registerVal,
+                    staticVal,
+                    errHandlerHash,
+                    MACHINE_EXTENSIVE
+                )
+            );
     }
 
     function hash(Data memory machine) internal pure returns (bytes32) {
         if (machine.status == MACHINE_HALT) {
-            return bytes32(uint(0));
+            return bytes32(uint256(0));
         } else if (machine.status == MACHINE_ERRORSTOP) {
-            return bytes32(uint(1));
+            return bytes32(uint256(1));
         } else {
-            return keccak256(
-                abi.encodePacked(
-                    machine.instructionStackHash,
-                    Value.hash(machine.dataStack),
-                    Value.hash(machine.auxStack),
-                    Value.hash(machine.registerVal),
-                    Value.hash(machine.staticVal),
-                    machine.errHandlerHash
-                )
-            );
+            return
+                keccak256(
+                    abi.encodePacked(
+                        machine.instructionStackHash,
+                        Value.hash(machine.dataStack),
+                        Value.hash(machine.auxStack),
+                        Value.hash(machine.registerVal),
+                        Value.hash(machine.staticVal),
+                        machine.errHandlerHash
+                    )
+                );
         }
-
     }
 
     function clone(Data memory machine) internal pure returns (Data memory) {
-        return Data(
-            machine.instructionStackHash,
-            machine.dataStack,
-            machine.auxStack,
-            machine.registerVal,
-            machine.staticVal,
-            machine.errHandlerHash,
-            machine.status
-        );
+        return
+            Data(
+                machine.instructionStackHash,
+                machine.dataStack,
+                machine.auxStack,
+                machine.registerVal,
+                machine.staticVal,
+                machine.errHandlerHash,
+                machine.status
+            );
     }
 
-    function deserializeMachine(
-        bytes memory data,
-        uint256 offset
-    )
+    function deserializeMachine(bytes memory data, uint256 offset)
         internal
         pure
-        returns(
+        returns (
             bool, // valid
             uint256, // offset
             Data memory // machine
@@ -172,16 +172,25 @@ library Machine {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
         bool valid;
-        (valid, offset, m.instructionStackHash) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.instructionStackHash) = Value.deserializeHashed(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, offset, m);
         }
 
-        (valid, offset, m.dataStack) = Value.deserializeHashPreImage(data, offset);
+        (valid, offset, m.dataStack) = Value.deserializeHashPreImage(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, offset, m);
         }
-        (valid, offset, m.auxStack) = Value.deserializeHashPreImage(data, offset);
+        (valid, offset, m.auxStack) = Value.deserializeHashPreImage(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, offset, m);
         }
@@ -195,7 +204,10 @@ library Machine {
             return (false, offset, m);
         }
 
-        (valid, offset, m.errHandlerHash) = Value.deserializeHashed(data, offset);
+        (valid, offset, m.errHandlerHash) = Value.deserializeHashed(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, offset, m);
         }

@@ -60,33 +60,35 @@ export class AggregatorClient {
     data: string,
     pubkey: string,
     signature: string
-  ): Promise<{}> {
-    return new Promise<{}>((resolve, reject): void => {
-      const params: txaggregator.SendTransactionArgs = {
-        to,
-        sequenceNum: sequenceNum.toString(),
-        value: value.toString(),
-        data,
-        pubkey,
-        signature,
-      }
-      this.client.request(
-        'TxAggregator.SendTransaction',
-        [params],
-        (
-          err: Error,
-          error: Error,
-          result: txaggregator.SendTransactionReply
-        ) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(result)
-          }
+  ): Promise<txaggregator.SendTransactionReply> {
+    return new Promise<txaggregator.SendTransactionReply>(
+      (resolve, reject): void => {
+        const params: txaggregator.SendTransactionArgs = {
+          to,
+          sequenceNum: sequenceNum.toString(),
+          value: value.toString(),
+          data,
+          pubkey,
+          signature,
         }
-      )
-    })
+        this.client.request(
+          'TxAggregator.SendTransaction',
+          [params],
+          (
+            err: Error,
+            error: Error,
+            result: txaggregator.SendTransactionReply
+          ) => {
+            if (err) {
+              reject(err)
+            } else if (error) {
+              reject(error)
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      }
+    )
   }
 }

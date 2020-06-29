@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,19 +16,19 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Value.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-
+import "../libraries/SafeMath.sol";
 
 library VM {
     using SafeMath for uint256;
 
     bytes32 private constant MACHINE_HALT_HASH = bytes32(0);
-    bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
+    bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint256(1));
 
-    struct Params {  // these are defined just once for each vM
+    struct Params {
+        // these are defined just once for each vM
         uint256 gracePeriodTicks;
         uint256 arbGasSpeedLimitPerTick;
         uint64 maxExecutionSteps;
@@ -34,19 +36,25 @@ library VM {
         uint64 maxTimestampBoundsWidth;
     }
 
-    function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
+    function isErrored(bytes32 vmStateHash) internal pure returns (bool) {
         return vmStateHash == MACHINE_ERROR_HASH;
     }
 
-    function isHalted(bytes32 vmStateHash) internal pure returns(bool) {
+    function isHalted(bytes32 vmStateHash) internal pure returns (bool) {
         return vmStateHash == MACHINE_HALT_HASH;
     }
 
-    function withinTimeBounds(uint128[4] memory _timeBoundsBlocks) internal view returns (bool) {
+    function withinTimeBounds(uint128[4] memory _timeBoundsBlocks)
+        internal
+        view
+        returns (bool)
+    {
+        // solhint-disable-next-line not-rely-on-time
+        uint256 currentTime = block.timestamp;
         return
             block.number >= _timeBoundsBlocks[0] &&
             block.number <= _timeBoundsBlocks[1] &&
-            block.timestamp >= _timeBoundsBlocks[2] &&
-            block.timestamp <= _timeBoundsBlocks[3];
+            currentTime >= _timeBoundsBlocks[2] &&
+            currentTime <= _timeBoundsBlocks[3];
     }
 }

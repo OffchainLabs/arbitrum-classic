@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../libraries/CloneFactory.sol";
 
@@ -23,7 +25,6 @@ import "./IBisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
-
     // Invalid challenge type
     string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
@@ -45,25 +46,24 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address asserter,
         address challenger,
         uint256 challengeType
-    )
-        public
-        view
-        returns(address)
-    {
-        return address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            generateNonce(asserter, challenger),
-                            cloneCodeHash(getChallengeTemplate(challengeType))
+    ) public view returns (address) {
+        return
+            address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xff),
+                                address(this),
+                                generateNonce(asserter, challenger),
+                                cloneCodeHash(
+                                    getChallengeTemplate(challengeType)
+                                )
+                            )
                         )
                     )
                 )
-            )
-        );
+            );
     }
 
     function createChallenge(
@@ -72,10 +72,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         uint256 _challengePeriodTicks,
         bytes32 _challengeHash,
         uint256 challengeType
-    )
-        external
-        returns(address)
-    {
+    ) external returns (address) {
         address challengeTemplate = getChallengeTemplate(challengeType);
         address clone = createClone(challengeTemplate);
         IBisectionChallenge(clone).initializeBisection(
@@ -88,19 +85,22 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         return address(clone);
     }
 
-    function generateNonce(address asserter, address challenger) private view returns(uint) {
-        return uint(
-            keccak256(
-                abi.encodePacked(
-                    asserter,
-                    challenger,
-                    msg.sender
-                )
-            )
-        );
+    function generateNonce(address asserter, address challenger)
+        private
+        view
+        returns (uint256)
+    {
+        return
+            uint256(
+                keccak256(abi.encodePacked(asserter, challenger, msg.sender))
+            );
     }
 
-    function getChallengeTemplate(uint256 challengeType) private view returns(address) {
+    function getChallengeTemplate(uint256 challengeType)
+        private
+        view
+        returns (address)
+    {
         if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
         } else if (challengeType == ChallengeUtils.getInvalidMsgsType()) {

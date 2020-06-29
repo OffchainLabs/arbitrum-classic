@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
 import "../arch/Protocol.sol";
@@ -22,26 +24,20 @@ import "../libraries/RollupTime.sol";
 import "../challenge/ChallengeUtils.sol";
 import "./VM.sol";
 
-library NodeGraphUtils 
-{
-	struct AssertionData {
+library NodeGraphUtils {
+    struct AssertionData {
         bytes32 beforeVMHash;
         bytes32 beforeInboxTop;
         uint256 beforeInboxCount;
-
         bytes32 prevPrevLeafHash;
         uint256 prevDeadlineTicks;
         bytes32 prevDataHash;
-        uint32  prevChildType;
-
+        uint32 prevChildType;
         uint64 numSteps;
         uint128[4] timeBounds;
         uint256 importedMessageCount;
-
         bytes32 afterInboxTop;
-
         bytes32 importedMessagesSlice;
-
         bytes32 afterVMHash;
         bool didInboxInsn;
         uint64 numArbGas;
@@ -49,10 +45,10 @@ library NodeGraphUtils
         bytes32 logsAccHash;
     }
 
-    function computePrevLeaf(AssertionData memory data) 
-        internal 
-        pure 
-        returns (bytes32, bytes32) 
+    function computePrevLeaf(AssertionData memory data)
+        internal
+        pure
+        returns (bytes32, bytes32)
     {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
@@ -70,13 +66,15 @@ library NodeGraphUtils
         return (prevLeaf, vmProtoHashBefore);
     }
 
-    function getTimeData(VM.Params memory vmParams, AssertionData memory data, uint256 blockNum)
-        internal
-        pure
-        returns (uint256, uint256)
-    {
-        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
-        uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) + vmParams.gracePeriodTicks;
+    function getTimeData(
+        VM.Params memory vmParams,
+        AssertionData memory data,
+        uint256 blockNum
+    ) internal pure returns (uint256, uint256) {
+        uint256 checkTimeTicks = data.numArbGas /
+            vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) +
+            vmParams.gracePeriodTicks;
         if (deadlineTicks < data.prevDeadlineTicks) {
             deadlineTicks = data.prevDeadlineTicks;
         }
@@ -85,7 +83,7 @@ library NodeGraphUtils
         return (checkTimeTicks, deadlineTicks);
     }
 
-	function generateInvalidInboxTopLeaf(
+    function generateInvalidInboxTopLeaf(
         AssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
@@ -93,26 +91,23 @@ library NodeGraphUtils
         uint256 inboxCount,
         bytes32 vmProtoHashBefore,
         uint256 gracePeriodTicks
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
+    ) internal pure returns (bytes32) {
         bytes32 challengeHash = ChallengeUtils.inboxTopHash(
             data.afterInboxTop,
             inboxValue,
             inboxCount - (data.beforeInboxCount + data.importedMessageCount)
         );
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            RollupUtils.challengeDataHash(
-                challengeHash,
-                gracePeriodTicks + RollupTime.blocksToTicks(1)
-            ),
-            ChallengeUtils.getInvalidInboxType(),
-            vmProtoHashBefore
-        );
+        return
+            RollupUtils.childNodeHash(
+                prevLeaf,
+                deadlineTicks,
+                RollupUtils.challengeDataHash(
+                    challengeHash,
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
+                ),
+                ChallengeUtils.getInvalidInboxType(),
+                vmProtoHashBefore
+            );
     }
 
     function generateInvalidMessagesLeaf(
@@ -121,11 +116,7 @@ library NodeGraphUtils
         uint256 deadlineTicks,
         bytes32 vmProtoHashBefore,
         uint256 gracePeriodTicks
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
+    ) internal pure returns (bytes32) {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
             data.beforeInboxTop,
             data.afterInboxTop,
@@ -137,13 +128,14 @@ library NodeGraphUtils
             challengeHash,
             gracePeriodTicks + RollupTime.blocksToTicks(1)
         );
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            nodeDataHash,
-            ChallengeUtils.getInvalidMsgsType(),
-            vmProtoHashBefore
-        );
+        return
+            RollupUtils.childNodeHash(
+                prevLeaf,
+                deadlineTicks,
+                nodeDataHash,
+                ChallengeUtils.getInvalidMsgsType(),
+                vmProtoHashBefore
+            );
     }
 
     function generateInvalidExecutionLeaf(
@@ -153,15 +145,11 @@ library NodeGraphUtils
         bytes32 vmProtoHashBefore,
         uint256 gracePeriodTicks,
         uint256 checkTimeTicks
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
+    ) internal pure returns (bytes32) {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
-             data.beforeVMHash,
-             data.timeBounds,
-             data.importedMessagesSlice
+            data.beforeVMHash,
+            data.timeBounds,
+            data.importedMessagesSlice
         );
 
         bytes32 assertionHash = Protocol.generateAssertionHash(
@@ -180,40 +168,38 @@ library NodeGraphUtils
             assertionHash
         );
 
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            RollupUtils.challengeDataHash(
-                executionHash,
-                gracePeriodTicks + checkTimeTicks
-            ),
-            ChallengeUtils.getInvalidExType(),
-            vmProtoHashBefore
-        );
+        return
+            RollupUtils.childNodeHash(
+                prevLeaf,
+                deadlineTicks,
+                RollupUtils.challengeDataHash(
+                    executionHash,
+                    gracePeriodTicks + checkTimeTicks
+                ),
+                ChallengeUtils.getInvalidExType(),
+                vmProtoHashBefore
+            );
     }
 
     function generateValidLeaf(
         AssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return RollupUtils.childNodeHash(
-            prevLeaf,
-            deadlineTicks,
-            RollupUtils.validDataHash(
-                data.messagesAccHash,
-                data.logsAccHash
-            ),
-            ChallengeUtils.getValidChildType(),
-            RollupUtils.protoStateHash(
-                data.afterVMHash,
-                data.afterInboxTop,
-                data.beforeInboxCount + data.importedMessageCount
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            RollupUtils.childNodeHash(
+                prevLeaf,
+                deadlineTicks,
+                RollupUtils.validDataHash(
+                    data.messagesAccHash,
+                    data.logsAccHash
+                ),
+                ChallengeUtils.getValidChildType(),
+                RollupUtils.protoStateHash(
+                    data.afterVMHash,
+                    data.afterInboxTop,
+                    data.beforeInboxCount + data.importedMessageCount
+                )
+            );
     }
 }

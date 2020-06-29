@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
@@ -23,9 +25,7 @@ import "../arch/Protocol.sol";
 import "../arch/Value.sol";
 import "../Messages.sol";
 
-
 contract MessagesChallenge is BisectionChallenge {
-
     event Bisected(
         bytes32[] chainHashes,
         bytes32[] segmentHashes,
@@ -36,16 +36,13 @@ contract MessagesChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Incorrect previous state
-    string constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
+    string private constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
 
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
         uint256 _chainLength
-    )
-        public
-        asserterAction
-    {
+    ) public asserterAction {
         uint256 bisectionCount = _chainHashes.length - 1;
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
 
@@ -102,11 +99,7 @@ contract MessagesChallenge is BisectionChallenge {
         bytes memory _data,
         uint256 _blockNumber,
         uint256 _timestamp
-    )
-        public
-        asserterAction
-    {
-
+    ) public asserterAction {
         bytes32 messageHash = Messages.transactionHash(
             _addresses[0],
             _addresses[1],
@@ -115,8 +108,13 @@ contract MessagesChallenge is BisectionChallenge {
             _value,
             keccak256(_data)
         );
-        Value.Data memory dataValue = Value.bytesToBytestackHash(_data, 0, _data.length);
-        (Value.Data memory arbMessage, bytes32 receiptHash) = Messages.transactionMessageValue(
+        Value.Data memory dataValue = Value.bytesToBytestackHash(
+            _data,
+            0,
+            _data.length
+        );
+        (Value.Data memory arbMessage, bytes32 receiptHash) = Messages
+            .transactionMessageValue(
             _addresses[0],
             _addresses[1],
             _addresses[2],
@@ -126,7 +124,10 @@ contract MessagesChallenge is BisectionChallenge {
             dataValue
         );
 
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
+        );
 
         oneStepProof(
             _lowerHashA,
@@ -149,23 +150,18 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _blockNumber,
         uint256 _timestamp,
         uint256 _messageNum
-    )
-        public
-        asserterAction
-    {
-
-        bytes32 messageHash = Messages.ethHash(
-            _to,
-            _from,
-            _value
-        );
+    ) public asserterAction {
+        bytes32 messageHash = Messages.ethHash(_to, _from, _value);
         Value.Data memory arbMessage = Messages.ethMessageValue(
             _to,
             _from,
             _value
         );
 
-       Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
+        );
 
         oneStepProof(
             _lowerHashA,
@@ -189,17 +185,8 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _blockNumber,
         uint256 _timestamp,
         uint256 _messageNum
-    )
-        public
-        asserterAction
-    {
-
-        bytes32 messageHash = Messages.erc20Hash(
-            _to,
-            _from,
-            _erc20,
-            _value
-        );
+    ) public asserterAction {
+        bytes32 messageHash = Messages.erc20Hash(_to, _from, _erc20, _value);
         Value.Data memory arbMessage = Messages.erc20MessageValue(
             _to,
             _from,
@@ -207,7 +194,10 @@ contract MessagesChallenge is BisectionChallenge {
             _value
         );
 
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
+        );
 
         oneStepProof(
             _lowerHashA,
@@ -231,17 +221,8 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _blockNumber,
         uint256 _timestamp,
         uint256 _messageNum
-    )
-        public
-        asserterAction
-    {
-
-        bytes32 messageHash = Messages.erc721Hash(
-            _to,
-            _from,
-            _erc721,
-            _value
-        );
+    ) public asserterAction {
+        bytes32 messageHash = Messages.erc721Hash(_to, _from, _erc721, _value);
         Value.Data memory arbMessage = Messages.erc721MessageValue(
             _to,
             _from,
@@ -249,7 +230,10 @@ contract MessagesChallenge is BisectionChallenge {
             _value
         );
 
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
+        );
 
         oneStepProof(
             _lowerHashA,
@@ -273,11 +257,7 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _blockNumber,
         uint256 _timestamp,
         uint256 _messageNum
-    )
-        public
-        asserterAction
-    {
-
+    ) public asserterAction {
         bytes32 messageHash = Messages.contractTransactionHash(
             _to,
             _from,
@@ -292,7 +272,10 @@ contract MessagesChallenge is BisectionChallenge {
             _data
         );
 
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(_preImageBHash, _preImageBSize);
+        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
+        );
 
         oneStepProof(
             _lowerHashA,
@@ -314,10 +297,7 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 blockNum,
         uint256 blockTimestamp,
         uint256 messageNum
-    )
-        public
-        asserterAction
-    {
+    ) public asserterAction {
         bytes32 messageHash = Messages.transactionBatchHash(transactions);
         bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
             preImageBHash,
@@ -354,9 +334,7 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _blockNum,
         uint256 _blockTimestamp,
         uint256 _messageNum
-    )
-        private
-    {
+    ) private {
         Value.Data memory inbox = Messages.addMessageToVMInboxHash(
             _lowerHashBValue,
             _blockNum,
@@ -389,10 +367,18 @@ contract MessagesChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidMsgsType());
+        IStaking(vmAddress).resolveChallenge(
+            asserter,
+            challenger,
+            ChallengeUtils.getInvalidMsgsType()
+        );
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidMsgsType());
+        IStaking(vmAddress).resolveChallenge(
+            challenger,
+            asserter,
+            ChallengeUtils.getInvalidMsgsType()
+        );
     }
 }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,9 +16,12 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 interface IStaking {
-    function resolveChallenge(address payable winner, address loser, uint256 challengeType) external;
+    function resolveChallenge(
+        address payable winner,
+        address loser,
+        uint256 challengeType
+    ) external;
 }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,8 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 library ChallengeUtils {
     uint256 public constant INVALID_INBOX_TOP_TYPE = 0;
@@ -43,18 +44,8 @@ library ChallengeUtils {
         bytes32 _lowerHash,
         bytes32 _topHash,
         uint256 _chainLength
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _lowerHash,
-                _topHash,
-                _chainLength
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_lowerHash, _topHash, _chainLength));
     }
 
     function messagesHash(
@@ -63,37 +54,27 @@ library ChallengeUtils {
         bytes32 _lowerHashB,
         bytes32 _topHashB,
         uint256 _chainLength
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _lowerHashA,
-                _topHashA,
-                _lowerHashB,
-                _topHashB,
-                _chainLength
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _lowerHashA,
+                    _topHashA,
+                    _lowerHashB,
+                    _topHashB,
+                    _chainLength
+                )
+            );
     }
 
     function executionHash(
         uint64 _numSteps,
         bytes32 _preconditionHash,
         bytes32 _assertionHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _numSteps,
-                _preconditionHash,
-                _assertionHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(_numSteps, _preconditionHash, _assertionHash)
+            );
     }
 }

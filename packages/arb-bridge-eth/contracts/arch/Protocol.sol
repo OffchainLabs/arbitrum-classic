@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,10 +16,9 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./Value.sol";
-
 
 library Protocol {
     using Value for Value.Data;
@@ -26,46 +27,40 @@ library Protocol {
         bytes32 _beforeHash,
         uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _beforeHash,
-                _timeBounds[0],
-                _timeBounds[1],
-                _timeBounds[2],
-                _timeBounds[3],
-                _beforeInboxHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _beforeHash,
+                    _timeBounds[0],
+                    _timeBounds[1],
+                    _timeBounds[2],
+                    _timeBounds[3],
+                    _beforeInboxHash
+                )
+            );
     }
 
     function generateAssertionHash(
         bytes32 _afterHash,
-        bool    _didInboxInsn,
-        uint64  _numGas,
+        bool _didInboxInsn,
+        uint64 _numGas,
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
         bytes32 _lastLogHash
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _afterHash,
-                _didInboxInsn,
-                _numGas,
-                _firstMessageHash,
-                _lastMessageHash,
-                _firstLogHash,
-                _lastLogHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _afterHash,
+                    _didInboxInsn,
+                    _numGas,
+                    _firstMessageHash,
+                    _lastMessageHash,
+                    _firstLogHash,
+                    _lastLogHash
+                )
+            );
     }
 }

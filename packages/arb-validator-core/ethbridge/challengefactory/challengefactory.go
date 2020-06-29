@@ -40,7 +40,7 @@ var ChallengeFactoryFuncSigs = map[string]string{
 }
 
 // ChallengeFactoryBin is the compiled bytecode used for deploying new contracts.
-var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516108173803806108178339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556107888061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c8063729406c814610067578063865da1c2146100b95780639b5f4dfc146100fb578063e252f79a14610103578063e6fcd1941461010b578063f089f1c214610188575b600080fd5b61009d6004803603606081101561007d57600080fd5b506001600160a01b03813581169160208101359091169060400135610190565b604080516001600160a01b039092168252519081900360200190f35b61009d600480360360a08110156100cf57600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060800135610227565b61009d6102ce565b61009d6102dd565b6101136102ec565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014d578181015183820152602001610135565b50505050905090810190601f16801561017a5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61009d610314565b60006001600160f81b0319306101a68686610323565b6101b76101b286610370565b610481565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b60008061023383610370565b905060006102408261058b565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6040518060400160405280600c81526020016b494e56414c49445f5459504560a01b81525081565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b600061037a6106a8565b82141561039357506001546001600160a01b031661047c565b61039b6106ad565b8214156103b457506000546001600160a01b031661047c565b6103bc6106b2565b8214156103d557506002546001600160a01b031661047c565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610441578181015183820152602001610429565b50505050905090810190601f16801561046e5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b6000606060405180602001610495906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106104fc5780518252601f1990920191602091820191016104dd565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b602083106105445780518252601f199092019160209182019101610525565b6001836020036101000a0380198251168184511680821785525050505050509050019250505060405160208183030381529060405290508080519060200120915050919050565b600060606040518060200161059f906106b7565b601f1982820381018352601f9091011660408181526001600160a01b038616602083810191909152815180840382018152828401909252835191926060019182918501908083835b602083106106065780518252601f1990920191602091820191016105e7565b51815160209384036101000a600019018019909216911617905285519190930192850191508083835b6020831061064e5780518252601f19909201916020918201910161062f565b6001836020036101000a038019825116818451168082178552505050505050905001925050506040516020818303038152906040529050806020018151808234f09350836106a0573d6000803e3d6000fd5b505050919050565b600090565b600190565b600290565b6090806106c48339019056fe6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fea265627a7a7231582025f356c5250d1d39d88f1701aa91754c7b64a8258a45a8208e638b046e8518ed64736f6c63430005110032"
+var ChallengeFactoryBin = "0x608060405234801561001057600080fd5b506040516105ed3803806105ed8339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b031991821617909155600180549484169482169490941790935560028054929091169190921617905561055e8061008f6000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c8063729406c814610067578063865da1c2146100b95780639b5f4dfc146100fb578063e252f79a14610103578063e6fcd1941461010b578063f089f1c214610188575b600080fd5b61009d6004803603606081101561007d57600080fd5b506001600160a01b03813581169160208101359091169060400135610190565b604080516001600160a01b039092168252519081900360200190f35b61009d600480360360a08110156100cf57600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060800135610227565b61009d6102ce565b61009d6102dd565b6101136102ec565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014d578181015183820152602001610135565b50505050905090810190601f16801561017a5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61009d610314565b60006001600160f81b0319306101a68686610323565b6101b76101b286610370565b610481565b60405160200180856001600160f81b0319166001600160f81b0319168152600101846001600160a01b03166001600160a01b031660601b81526014018381526020018281526020019450505050506040516020818303038152906040528051906020012060001c90509392505050565b60008061023383610370565b90506000610240826104c8565b604080516301568f2760e11b81523360048201526001600160a01b038b811660248301528a81166044830152606482018a9052608482018990529151929350908316916302ad1e4e9160a48082019260009290919082900301818387803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b50929a9950505050505050505050565b6002546001600160a01b031681565b6000546001600160a01b031681565b6040518060400160405280600c81526020016b494e56414c49445f5459504560a01b81525081565b6001546001600160a01b031681565b604080516bffffffffffffffffffffffff19606094851b811660208084019190915293851b1660348201523390931b60488401528051603c818503018152605c9093019052815191012090565b600061037a61051a565b82141561039357506001546001600160a01b031661047c565b61039b61051f565b8214156103b457506000546001600160a01b031661047c565b6103bc610524565b8214156103d557506002546001600160a01b031661047c565b60408051808201909152600c81526b494e56414c49445f5459504560a01b602082015260405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610441578181015183820152602001610429565b50505050905090810190601f16801561046e5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b919050565b604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b815260609190911b60148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037902090565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f0949350505050565b600090565b600190565b60029056fea265627a7a7231582021944845c9f291061518a283557407d2373508a9c66185b5474f8fb11fb5420864736f6c63430005110032"
 
 // DeployChallengeFactory deploys a new Ethereum contract, binding an instance of ChallengeFactory to it.
 func DeployChallengeFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _messagesChallengeTemplate common.Address, _inboxTopChallengeTemplate common.Address, _executionChallengeTemplate common.Address) (common.Address, *types.Transaction, *ChallengeFactory, error) {
@@ -361,7 +361,7 @@ var ChallengeUtilsFuncSigs = map[string]string{
 }
 
 // ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
-var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820ba9f38222d69e81a75675f06da9325b78df15816f56ed13980746298a2cb39cf64736f6c63430005110032"
+var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820c280990b95818baaf8ee3caded0e9484dbb4af3ca80c8d1a575334ffdc8d07fa64736f6c63430005110032"
 
 // DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
 func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
@@ -627,7 +627,7 @@ func (_ChallengeUtils *ChallengeUtilsCallerSession) VALIDCHILDTYPE() (*big.Int, 
 const CloneFactoryABI = "[]"
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582014499adf675d1d9478ed19c566b4f750dc94b33ec36c0cd9ed6abd9987faa64f64736f6c63430005110032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820796a132d4efb93bcf19bd98efef09e26e851946439e650891a87138b9b93c94f64736f6c63430005110032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -1152,166 +1152,4 @@ func (_IChallengeFactory *IChallengeFactorySession) CreateChallenge(_asserter co
 // Solidity: function createChallenge(address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeHash, uint256 challengeType) returns(address)
 func (_IChallengeFactory *IChallengeFactoryTransactorSession) CreateChallenge(_asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
 	return _IChallengeFactory.Contract.CreateChallenge(&_IChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriodTicks, _challengeHash, challengeType)
-}
-
-// SpawnABI is the input ABI used to generate the binding from.
-const SpawnABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"logicContract\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
-
-// SpawnBin is the compiled bytecode used for deploying new contracts.
-var SpawnBin = "0x6080604052348015600f57600080fd5b506040516090380380609083398181016040526020811015602f57600080fd5b50516040805169363d3d373d3d3d363d7360b01b6020828101919091526001600160601b0319606085901b16602a8301526e5af43d82803e903d91602b57fd5bf360881b603e8301528251602d81840381018252604d9093019093528201f3fe"
-
-// DeploySpawn deploys a new Ethereum contract, binding an instance of Spawn to it.
-func DeploySpawn(auth *bind.TransactOpts, backend bind.ContractBackend, logicContract common.Address) (common.Address, *types.Transaction, *Spawn, error) {
-	parsed, err := abi.JSON(strings.NewReader(SpawnABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(SpawnBin), backend, logicContract)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &Spawn{SpawnCaller: SpawnCaller{contract: contract}, SpawnTransactor: SpawnTransactor{contract: contract}, SpawnFilterer: SpawnFilterer{contract: contract}}, nil
-}
-
-// Spawn is an auto generated Go binding around an Ethereum contract.
-type Spawn struct {
-	SpawnCaller     // Read-only binding to the contract
-	SpawnTransactor // Write-only binding to the contract
-	SpawnFilterer   // Log filterer for contract events
-}
-
-// SpawnCaller is an auto generated read-only Go binding around an Ethereum contract.
-type SpawnCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type SpawnTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type SpawnFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// SpawnSession is an auto generated Go binding around an Ethereum contract,
-// with pre-set call and transact options.
-type SpawnSession struct {
-	Contract     *Spawn            // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// SpawnCallerSession is an auto generated read-only Go binding around an Ethereum contract,
-// with pre-set call options.
-type SpawnCallerSession struct {
-	Contract *SpawnCaller  // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts // Call options to use throughout this session
-}
-
-// SpawnTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
-// with pre-set transact options.
-type SpawnTransactorSession struct {
-	Contract     *SpawnTransactor  // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// SpawnRaw is an auto generated low-level Go binding around an Ethereum contract.
-type SpawnRaw struct {
-	Contract *Spawn // Generic contract binding to access the raw methods on
-}
-
-// SpawnCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type SpawnCallerRaw struct {
-	Contract *SpawnCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// SpawnTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type SpawnTransactorRaw struct {
-	Contract *SpawnTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewSpawn creates a new instance of Spawn, bound to a specific deployed contract.
-func NewSpawn(address common.Address, backend bind.ContractBackend) (*Spawn, error) {
-	contract, err := bindSpawn(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &Spawn{SpawnCaller: SpawnCaller{contract: contract}, SpawnTransactor: SpawnTransactor{contract: contract}, SpawnFilterer: SpawnFilterer{contract: contract}}, nil
-}
-
-// NewSpawnCaller creates a new read-only instance of Spawn, bound to a specific deployed contract.
-func NewSpawnCaller(address common.Address, caller bind.ContractCaller) (*SpawnCaller, error) {
-	contract, err := bindSpawn(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnCaller{contract: contract}, nil
-}
-
-// NewSpawnTransactor creates a new write-only instance of Spawn, bound to a specific deployed contract.
-func NewSpawnTransactor(address common.Address, transactor bind.ContractTransactor) (*SpawnTransactor, error) {
-	contract, err := bindSpawn(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnTransactor{contract: contract}, nil
-}
-
-// NewSpawnFilterer creates a new log filterer instance of Spawn, bound to a specific deployed contract.
-func NewSpawnFilterer(address common.Address, filterer bind.ContractFilterer) (*SpawnFilterer, error) {
-	contract, err := bindSpawn(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &SpawnFilterer{contract: contract}, nil
-}
-
-// bindSpawn binds a generic wrapper to an already deployed contract.
-func bindSpawn(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(SpawnABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Spawn *SpawnRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Spawn.Contract.SpawnCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Spawn *SpawnRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Spawn.Contract.SpawnTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Spawn *SpawnRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Spawn.Contract.SpawnTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_Spawn *SpawnCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _Spawn.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_Spawn *SpawnTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Spawn.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_Spawn *SpawnTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Spawn.Contract.contract.Transact(opts, method, params...)
 }

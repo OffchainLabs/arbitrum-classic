@@ -37,6 +37,7 @@ aliases:
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
+  - &ethbridge-test-path /tmp/test-results/ethbridge.xml
 version: 2
 workflows:
   version: 2
@@ -95,29 +96,20 @@ jobs:
           name: test arb-provider-ethers
           command: |
             yarn
-            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-ethers.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-ethers.xml
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
           name: test arb-provider-web3
           command: |
-            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-web3.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-web3.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
           name: test arb-provider-truffle
           command: |
-            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-truffle.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: *test-path
-            JEST_JUNIT_OUTPUT_NAME: arb-provider-truffle.xml
           working_directory: /home/user/project/packages/arb-provider-truffle
       - run:
           name: Upload Coverage to Codecov
@@ -127,32 +119,69 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/ethbridge-base:0.2.0
+      - image: offchainlabs/ethbridge-base:0.2.1
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
-      - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
+      - run: mkdir -p $TEST_RESULTS
+      - restore_cache: *restore_yarn_cache
+      - run:
+          name: install
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+            yarn build
+          working_directory: /home/user/project
+      - run:
+          name: test arb-bridge-eth
+          command: |
+            yarn test:coverage
+            yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
+            yarn lint:solidity
+          environment:
+            MOCHA_FILE: *ethbridge-test-path
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
+          command: yarn buidler node
+          background: true
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: while ! nc -z localhost 8545; do sleep 2; done
+      - run:
+          name: test arb-bridge-eth gas usage
+          command: |
+            yarn test:gas:ci
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
+          name: codechecks
+          command: npx codechecks
+          working_directory: /home/user/project
       - run:
           command: |
-            yarn
             echo arbitrum > ~/password.txt
             mkdir data
             geth --datadir data init geth/ethbridge.json
             cp geth/keystore/* data/keystore
-          working_directory: /home/user/arb-bridge-eth
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
           command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
           background: true
-          working_directory: /home/user/arb-bridge-eth
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
-          name: test arb-bridge-eth
+          name: deploy arb-bridge-eth
           command: |
-            truffle migrate --network parity
-          working_directory: /home/user/arb-bridge-eth
-      - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
+            yarn buidler deploy --network parity
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: cat /home/user/project/packages/arb-bridge-eth/bridge_eth_addresses.json
       - run: killall geth
+      - run:
+          name: Upload Coverage to Codecov
+          command: codecovbash -R /home/user/project -c -F unit
+          working_directory: /home/user/project/packages
+      - store_test_results:
+          path: *test-path
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/arb-bridge-eth
+          root: /home/user/project/packages/arb-bridge-eth
           paths:
             - data
   cpp-avm:
@@ -186,7 +215,7 @@ jobs:
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:
             - ./*.a
-      - run: codecovbash -R /home/user/project
+      - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
           path: *test-path
   backend:

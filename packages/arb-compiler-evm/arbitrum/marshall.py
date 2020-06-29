@@ -43,8 +43,11 @@ def marshall_op(val, file):
         raise Exception("Tried to marshall bad operation type {}".format(val))
 
 
-def marshall_codepoint(val, file):
-    file.write(val.pc.to_bytes(8, byteorder="big", signed=False))
+def marshall_codepoint(val, file, proof=None):
+    if proof is None:
+        proof = False
+    if not proof:
+        file.write(val.pc.to_bytes(8, byteorder="big", signed=False))
     marshall_op(val.op, file)
     val.next_hash = b"\0" * (32 - len(val.next_hash)) + val.next_hash
     file.write(val.next_hash)
@@ -55,7 +58,26 @@ def marshall_tuple(val, file):
         marshall_value(item, file)
 
 
-def marshall_value(val, file):
+def marshall_value(val, file, proof=None):
+    if isinstance(val, value.Tuple):
+        file.write(
+            (TUPLE_TYPE_CODE + len(val)).to_bytes(1, byteorder="big", signed=False)
+        )
+        marshall_tuple(val, file)
+    elif isinstance(val, int):
+        file.write(INT_TYPE_CODE.to_bytes(1, byteorder="big", signed=False))
+        marshall_int(val, file)
+    elif isinstance(val, value.AVMCodePoint):
+        file.write(CODE_POINT_TYPE_CODE.to_bytes(1, byteorder="big", signed=False))
+        marshall_codepoint(val, file, proof)
+    elif isinstance(val, AVMLabeledCodePoint):
+        file.write(CODE_POINT_TYPE_CODE.to_bytes(1, byteorder="big", signed=False))
+        marshall_codepoint(val.pc, file, proof)
+    else:
+        raise Exception("Can't marshall unexcepted value {}".format(val))
+
+
+def marshall_value_for_proof(val, file):
     if isinstance(val, value.Tuple):
         file.write(
             (TUPLE_TYPE_CODE + len(val)).to_bytes(1, byteorder="big", signed=False)
