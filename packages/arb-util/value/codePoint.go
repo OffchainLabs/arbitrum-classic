@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ type Operation interface {
 	GetOp() Opcode
 	TypeCode() uint8
 	Marshal(wr io.Writer) error
-	MarshalProof(wr io.Writer, includeVal bool) error
 }
 
 type BasicOperation struct {
@@ -74,25 +73,11 @@ func (op BasicOperation) Marshal(wr io.Writer) error {
 	return op.Op.Marshal(wr)
 }
 
-func (op BasicOperation) MarshalProof(wr io.Writer, includeVal bool) error {
-	return op.Op.Marshal(wr)
-}
-
 func (op ImmediateOperation) Marshal(wr io.Writer) error {
 	if err := op.Op.Marshal(wr); err != nil {
 		return err
 	}
 	return MarshalValue(op.Val, wr)
-}
-
-func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
-	if err := op.Op.Marshal(wr); err != nil {
-		return err
-	}
-	if includeVal {
-		return MarshalValueForProof(op.Val.CloneShallow(), wr)
-	}
-	return MarshalValueForProof(op.Val, wr)
 }
 
 func (op BasicOperation) TypeCode() uint8 {
@@ -142,36 +127,12 @@ func MarshalOperation(op Operation, wr io.Writer) error {
 	return op.Marshal(wr)
 }
 
-func MarshalOperationProof(op Operation, wr io.Writer, includeVal bool) error {
-	typ := op.TypeCode()
-	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
-		return err
-	}
-	return op.MarshalProof(wr, includeVal)
-}
-
-func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {
-	var op Operation
-	op, err := NewOperationFromReader(rd)
-	if err != nil {
-		return CodePointValue{}, err
-	}
-	var nextHash common.Hash
-	_, err = io.ReadFull(rd, nextHash[:])
-	return CodePointValue{0, op, nextHash}, err
-}
-
 type CodePointValue struct {
-	InsnNum  int64
 	Op       Operation
 	NextHash common.Hash
 }
 
 func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
-	var insnNum int64
-	if err := binary.Read(rd, binary.BigEndian, &insnNum); err != nil {
-		return CodePointValue{}, err
-	}
 	var op Operation
 	op, err := NewOperationFromReader(rd)
 	if err != nil {
@@ -179,36 +140,19 @@ func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
 	}
 	var nextHash common.Hash
 	_, err = io.ReadFull(rd, nextHash[:])
-	return CodePointValue{insnNum, op, nextHash}, err
+	return CodePointValue{op, nextHash}, err
 }
 
 func (cv CodePointValue) TypeCode() uint8 {
 	return TypeCodeCodePoint
 }
 
-func (cv CodePointValue) InternalTypeCode() uint8 {
-	return TypeCodeCodePoint
-}
-
 func (cv CodePointValue) Clone() Value {
-	return CodePointValue{cv.InsnNum, cv.Op, cv.NextHash}
-}
-
-func (cv CodePointValue) CloneShallow() Value {
-	return CodePointValue{cv.InsnNum, cv.Op, cv.NextHash}
+	return CodePointValue{cv.Op, cv.NextHash}
 }
 
 func (cv CodePointValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashPreImage {
-		return cv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeCodePoint {
-		return false
-	} else {
-		if cv.InsnNum != val.(CodePointValue).InsnNum {
-			return false
-		}
-		return true
-	}
+	return cv.Hash() == val.Hash()
 }
 
 func (cv CodePointValue) Size() int64 {
@@ -231,23 +175,12 @@ func (cv CodePointValue) Hash() common.Hash {
 			hashing.Bytes32(cv.NextHash),
 		)
 	default:
-		panic(fmt.Sprintf("Bad operation type: %T in with pc %d", op, cv.InsnNum))
+		panic(fmt.Sprintf("Bad operation type: %T", op))
 	}
 }
 
 func (cv CodePointValue) Marshal(w io.Writer) error {
-	if err := binary.Write(w, binary.BigEndian, &cv.InsnNum); err != nil {
-		return err
-	}
-	if err := cv.Op.Marshal(w); err != nil {
-		return err
-	}
-	_, err := w.Write(cv.NextHash[:])
-	return err
-}
-
-func (cv CodePointValue) MarshalForProof(w io.Writer) error {
-	if err := MarshalOperationProof(cv.Op, w, false); err != nil {
+	if err := MarshalOperation(cv.Op, w); err != nil {
 		return err
 	}
 	_, err := w.Write(cv.NextHash[:])
@@ -255,5 +188,5 @@ func (cv CodePointValue) MarshalForProof(w io.Writer) error {
 }
 
 func (cv CodePointValue) String() string {
-	return fmt.Sprintf("CodePoint(%v, %v)", cv.InsnNum, cv.Op)
+	return fmt.Sprintf("CodePoint(%v)", cv.Op)
 }

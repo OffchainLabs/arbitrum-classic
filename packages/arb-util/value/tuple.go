@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,10 +101,6 @@ func (tv TupleValue) Marshal(wr io.Writer) error {
 	return nil
 }
 
-func (tv TupleValue) MarshalForProof(wr io.Writer) error {
-	return tv.Marshal(wr)
-}
-
 func IsValidTupleSizeI64(size int64) bool {
 	return size >= 0 && size <= MaxTupleSize
 }
@@ -125,10 +121,6 @@ func (tv TupleValue) GetByInt64(idx int64) (Value, error) {
 }
 
 func (tv TupleValue) TypeCode() uint8 {
-	return TypeCodeTuple
-}
-
-func (tv TupleValue) InternalTypeCode() uint8 {
 	return TypeCodeTuple + byte(tv.itemCount)
 }
 
@@ -140,28 +132,15 @@ func (tv TupleValue) Clone() Value {
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
-func (tv TupleValue) CloneShallow() Value {
-	var newContents [MaxTupleSize]Value
-	for i, b := range tv.Contents() {
-		if b.TypeCode() == TypeCodeInt {
-			newContents[i] = b
-		} else if b.TypeCode() == TypeCodeTuple {
-			newContents[i] = b.(TupleValue).GetPreImage()
-		} else {
-			newContents[i] = b.CloneShallow()
-		}
-	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
-}
-
 func (tv TupleValue) Equal(val Value) bool {
 	if val.TypeCode() == TypeCodeHashPreImage {
 		return tv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeTuple {
-		return false
-	} else {
-		return tv.Hash() == val.Hash()
 	}
+	tup, ok := val.(TupleValue)
+	if !ok {
+		return false
+	}
+	return tv.Hash() == tup.Hash()
 }
 
 func (tv TupleValue) internalSize() int64 {

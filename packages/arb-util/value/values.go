@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,31 +29,13 @@ const (
 	TypeCodeTuple        uint8 = 3
 )
 
-func TypeCodeName(code uint8) string {
-	switch code {
-	case TypeCodeInt:
-		return "Int"
-	case TypeCodeTuple:
-		return "Tuple"
-	case TypeCodeHashPreImage:
-		return "HashOnly"
-	case TypeCodeCodePoint:
-		return "CodePoint"
-	default:
-		return "Unknown"
-	}
-}
-
 type Value interface {
 	TypeCode() uint8
-	InternalTypeCode() uint8
 	Clone() Value
-	CloneShallow() Value
 	Equal(Value) bool
 	Hash() common.Hash
 	Size() int64
 	Marshal(io.Writer) error
-	MarshalForProof(io.Writer) error
 }
 
 func Eq(x, y Value) bool {
@@ -69,19 +51,11 @@ func (e UnmarshalError) Error() string {
 }
 
 func MarshalValue(v Value, w io.Writer) error {
-	_, err := w.Write([]byte{v.InternalTypeCode()})
+	_, err := w.Write([]byte{v.TypeCode()})
 	if err != nil {
 		return err
 	}
 	return v.Marshal(w)
-}
-
-func MarshalValueForProof(v Value, w io.Writer) error {
-	_, err := w.Write([]byte{v.InternalTypeCode()})
-	if err != nil {
-		return err
-	}
-	return v.MarshalForProof(w)
 }
 
 func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {

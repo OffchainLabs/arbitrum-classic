@@ -56,15 +56,7 @@ func (hp HashPreImage) TypeCode() uint8 {
 	return TypeCodeHashPreImage
 }
 
-func (hp HashPreImage) InternalTypeCode() uint8 {
-	return TypeCodeHashPreImage
-}
-
 func (hp HashPreImage) Clone() Value {
-	return HashPreImage{hp.hashImage, hp.size}
-}
-
-func (hp HashPreImage) CloneShallow() Value {
 	return HashPreImage{hp.hashImage, hp.size}
 }
 
@@ -83,10 +75,6 @@ func (hp HashPreImage) Marshal(wr io.Writer) error {
 	}
 	sizeVal := NewInt64Value(hp.Size())
 	return sizeVal.Marshal(wr)
-}
-
-func (hp HashPreImage) MarshalForProof(wr io.Writer) error {
-	return hp.Marshal(wr)
 }
 
 func (hp HashPreImage) Hash() common.Hash {
