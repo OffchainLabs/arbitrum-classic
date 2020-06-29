@@ -42,9 +42,9 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	initiatedChallengeID = parsed.Events["InitiatedChallenge"].ID()
-	timedOutAsserterID = parsed.Events["AsserterTimedOut"].ID()
-	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID()
+	initiatedChallengeID = parsed.Events["InitiatedChallenge"].ID
+	timedOutAsserterID = parsed.Events["AsserterTimedOut"].ID
+	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID
 }
 
 type challenge struct {

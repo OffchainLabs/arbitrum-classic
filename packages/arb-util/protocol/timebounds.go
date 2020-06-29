@@ -51,21 +51,21 @@ func NewRandomTimeBounds() *TimeBounds {
 	}
 }
 
-func (a *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
+func (tb *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
-		LowerBoundBlock:     a.LowerBoundBlock.Marshal(),
-		UpperBoundBlock:     a.UpperBoundBlock.Marshal(),
-		LowerBoundTimestamp: common.MarshalBigInt(a.LowerBoundTimestamp),
-		UpperBoundTimestamp: common.MarshalBigInt(a.UpperBoundTimestamp),
+		LowerBoundBlock:     tb.LowerBoundBlock.Marshal(),
+		UpperBoundBlock:     tb.UpperBoundBlock.Marshal(),
+		LowerBoundTimestamp: common.MarshalBigInt(tb.LowerBoundTimestamp),
+		UpperBoundTimestamp: common.MarshalBigInt(tb.UpperBoundTimestamp),
 	}
 }
 
-func (a *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
+func (x *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
 	return &TimeBounds{
-		LowerBoundBlock:     a.LowerBoundBlock.Unmarshal(),
-		UpperBoundBlock:     a.UpperBoundBlock.Unmarshal(),
-		LowerBoundTimestamp: a.LowerBoundTimestamp.Unmarshal(),
-		UpperBoundTimestamp: a.UpperBoundTimestamp.Unmarshal(),
+		LowerBoundBlock:     x.LowerBoundBlock.Unmarshal(),
+		UpperBoundBlock:     x.UpperBoundBlock.Unmarshal(),
+		LowerBoundTimestamp: x.LowerBoundTimestamp.Unmarshal(),
+		UpperBoundTimestamp: x.UpperBoundTimestamp.Unmarshal(),
 	}
 }
 

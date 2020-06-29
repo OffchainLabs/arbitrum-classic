@@ -69,7 +69,7 @@ func (hp HashPreImage) CloneShallow() Value {
 }
 
 func (hp HashPreImage) Equal(val Value) bool {
-	return hp.Hash() == hp.Hash()
+	return hp.Hash() == val.Hash()
 }
 
 func (hp HashPreImage) Size() int64 {
@@ -78,10 +78,11 @@ func (hp HashPreImage) Size() int64 {
 
 func (hp HashPreImage) Marshal(wr io.Writer) error {
 	_, err := wr.Write(hp.hashImage[:])
+	if err != nil {
+		return err
+	}
 	sizeVal := NewInt64Value(hp.Size())
-	sizeVal.Marshal(wr)
-
-	return err
+	return sizeVal.Marshal(wr)
 }
 
 func (hp HashPreImage) MarshalForProof(wr io.Writer) error {

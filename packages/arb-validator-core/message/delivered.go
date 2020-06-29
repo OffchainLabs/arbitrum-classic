@@ -19,7 +19,7 @@ package message
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -60,7 +60,7 @@ func (d DeliveryInfo) deliveredTimestamp() *big.Int {
 
 func (d DeliveryInfo) TxHash() common.Hash {
 	var hash common.Hash
-	copy(hash[:], abi.U256(d.TxId))
+	copy(hash[:], math.U256Bytes(d.TxId))
 	return hash
 }
 

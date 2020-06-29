@@ -54,16 +54,16 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID()
-	stakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
-	challengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
-	challengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
+	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
+	stakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID
+	challengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID
+	challengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID
+	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID
+	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID
+	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID
+	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID
+	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID
+	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID
 }
 
 type ethRollupWatcher struct {

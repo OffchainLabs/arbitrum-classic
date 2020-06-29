@@ -24,7 +24,8 @@
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "prepare": "yarn workspace arb-provider-ethers prepare"
+    "prepare": "yarn workspace arb-provider-ethers prepare",
+    "go:vet": "./scripts/go-vet"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",

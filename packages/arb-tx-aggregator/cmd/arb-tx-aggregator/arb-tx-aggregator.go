@@ -86,7 +86,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := txaggregator.NewRPCServer(
+	server := txaggregator.NewServer(
 		context.Background(),
 		globalInbox, rollupArgs.Address,
 	)

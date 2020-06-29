@@ -115,14 +115,6 @@ func (op ImmediateOperation) String() string {
 	return fmt.Sprintf("0x%x Imd(%v)", op.GetOp(), op.Val)
 }
 
-// func (op BasicOperation) String() string {
-//	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
-//}
-//
-// func (op ImmediateOperation) String() string {
-//	return fmt.Sprintf("Immediate(%v, %v)", code.InstructionNames[op.Op], op.Val)
-//}
-
 func (op ImmediateOperation) GetOp() Opcode {
 	return op.Op
 }
@@ -215,25 +207,12 @@ func (cv CodePointValue) Equal(val Value) bool {
 		if cv.InsnNum != val.(CodePointValue).InsnNum {
 			return false
 		}
-		// for now only check InsnNum
-		// if cv.Op != val.(CodePointValue).Op {
-		//	return false
-		//}
-		// if cv.NextHash != val.(CodePointValue).NextHash {
-		//	return false
-		//}
 		return true
 	}
 }
 
 func (cv CodePointValue) Size() int64 {
 	return 1
-}
-
-var ErrorCodePoint CodePointValue
-
-func init() {
-	ErrorCodePoint = CodePointValue{0, BasicOperation{0}, common.Hash{}}
 }
 
 func (cv CodePointValue) Hash() common.Hash {

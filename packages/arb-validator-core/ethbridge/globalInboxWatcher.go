@@ -50,12 +50,12 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	transactionID = inbox.Events["TransactionMessageDelivered"].ID()
-	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID()
-	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID()
-	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID()
-	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID()
-	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID()
+	transactionID = inbox.Events["TransactionMessageDelivered"].ID
+	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID
+	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID
+	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID
+	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID
+	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID
 	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
 }
 

@@ -53,3 +53,8 @@ repos:
         additional_dependencies:
           - 'prettier@2.0.5'
           - 'prettier-plugin-solidity@^1.0.0-alpha.54'
+      - id: go-vet
+        name: Go Vet
+        entry: ./scripts/go-vet
+        language: script
+        files: \.go$
