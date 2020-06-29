@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	TypeCodeInt          uint8 = 0
-	TypeCodeCodePoint    uint8 = 1
-	TypeCodeHashPreImage uint8 = 2
-	TypeCodeTuple        uint8 = 3
+	TypeCodeInt           uint8 = 0
+	TypeCodeCodePoint     uint8 = 1
+	TypeCodeHashPreImage  uint8 = 2
+	TypeCodeTuple         uint8 = 3
+	TypeCodeCodePointStub uint8 = 12
 )
 
 type Value interface {
@@ -68,6 +69,8 @@ func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 		return NewHashPreImageFromReader(r)
 	case tipe <= TypeCodeTuple+MaxTupleSize:
 		return NewSizedTupleFromReader(r, tipe-TypeCodeTuple)
+	case tipe == TypeCodeCodePointStub:
+		return NewCodePointStubFromReader(r)
 	default:
 		return NewEmptyTuple(), UnmarshalError{"Unmarshal: invalid value type"}
 	}

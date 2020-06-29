@@ -98,7 +98,7 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf) {
         buf.push_back(NUM);
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
     } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-        buf.push_back(CODEPT);
+        buf.push_back(CODE_POINT_STUB);
         nonstd::get<CodePointStub>(val).marshal(buf);
     } else if (nonstd::holds_alternative<HashPreImage>(val)) {
         buf.push_back(HASH_PRE_IMAGE);

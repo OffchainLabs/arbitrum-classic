@@ -133,8 +133,8 @@ func (tv TupleValue) Clone() Value {
 }
 
 func (tv TupleValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashPreImage {
-		return tv.Hash() == val.Hash()
+	if preImage, ok := val.(HashPreImage); ok {
+		return tv.Hash() == preImage.Hash()
 	}
 	tup, ok := val.(TupleValue)
 	if !ok {
