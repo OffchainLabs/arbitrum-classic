@@ -23,11 +23,48 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+namespace {
+uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
+}
+
 void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
+
+MachineState::MachineState()
+    : pool(std::make_unique<TuplePool>()),
+      arb_gas_remaining(max_arb_gas_remaining),
+      pc(0, false),
+      errpc(0, true) {}
+
+MachineState::MachineState(std::shared_ptr<const StaticVmValues> static_values_,
+                           std::shared_ptr<TuplePool> pool_)
+    : pool(std::move(pool_)),
+      static_values(std::move(static_values_)),
+      arb_gas_remaining(max_arb_gas_remaining),
+      pc(static_values->code.initialCodePointRef()),
+      errpc(0, true) {}
+
+MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
+                           std::shared_ptr<const StaticVmValues> static_values_,
+                           value register_val_,
+                           Datastack stack_,
+                           Datastack auxstack_,
+                           uint256_t arb_gas_remaining_,
+                           Status state_,
+                           CodePointRef pc_,
+                           CodePointRef errpc_)
+    : pool(std::move(pool_)),
+      static_values(std::move(static_values_)),
+      registerVal(std::move(register_val_)),
+      stack(std::move(stack_)),
+      auxstack(std::move(auxstack_)),
+      arb_gas_remaining(arb_gas_remaining_),
+      state(state_),
+      pc(pc_),
+      errpc(errpc_) {}
 
 std::pair<MachineState, bool> MachineState::loadFromFile(
     const std::string& contract_filename) {
@@ -50,7 +87,7 @@ uint256_t MachineState::hash() const {
     if (state == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 6> data;
+    std::array<unsigned char, 32 * 7> data;
     auto oit = data.begin();
     {
         auto val = ::hash(static_values->code[pc]);
@@ -72,6 +109,7 @@ uint256_t MachineState::hash() const {
         auto val = ::hash_value(static_values->staticVal);
         oit = to_big_endian(val, oit);
     }
+    { oit = to_big_endian(arb_gas_remaining, oit); }
     {
         auto val = ::hash(static_values->code[errpc]);
         to_big_endian(val, oit);
@@ -100,6 +138,7 @@ std::vector<unsigned char> marshalState(const Code& code,
                                         HashPreImage auxStackPreImage,
                                         value registerVal,
                                         value staticVal,
+                                        uint256_t arb_gas_remaining,
                                         CodePointStub errpc) {
     auto buf = std::vector<unsigned char>();
     marshal_uint256_t(next_codepoint_hash, buf);
@@ -109,6 +148,7 @@ std::vector<unsigned char> marshalState(const Code& code,
 
     ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
+    marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
 
     return buf;
@@ -121,7 +161,7 @@ std::vector<unsigned char> MachineState::marshalState() const {
 
     return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
                           stackPreImage, auxStackPreImage, registerVal,
-                          static_values->staticVal,
+                          static_values->staticVal, arb_gas_remaining,
                           CodePointStub{errpc, static_values->code[errpc]});
 }
 
@@ -133,16 +173,15 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.begin());
     }
-    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
-
     auto stackProof = stack.marshalForProof(stackPops, static_values->code);
+    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto auxStackProof =
         auxstack.marshalForProof(auxStackPops, static_values->code);
 
     auto buf = ::marshalState(
         static_values->code, static_values->code[pc].nextHash, stackProof.first,
         auxStackProof.first, registerVal, static_values->staticVal,
-        CodePointStub{errpc, static_values->code[errpc]});
+        arb_gas_remaining, CodePointStub{errpc, static_values->code[errpc]});
 
     static_values->code[pc].op.marshalForProof(buf, immediateMarshalLevel,
                                                static_values->code);
@@ -208,6 +247,16 @@ BlockReason MachineState::runOne() {
             state = Status::Extensive;
         }
         return NotBlocked();
+    } else if (arb_gas_remaining <
+               InstructionArbGasCost.at(instruction.op.opcode)) {
+        arb_gas_remaining = max_arb_gas_remaining;
+        state = Status::Error;
+        context.numSteps++;
+        if (!errpc.is_err) {
+            pc = errpc;
+            state = Status::Extensive;
+        }
+        return NotBlocked();
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
@@ -226,7 +275,9 @@ BlockReason MachineState::runOne() {
         // if not blocked, increment step count and gas count
         if (nonstd::get_if<NotBlocked>(&blockReason)) {
             context.numSteps++;
-            context.numGas += InstructionArbGasCost.at(instruction.op.opcode);
+            auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
+            context.numGas += gasUsed;
+            arb_gas_remaining -= gasUsed;
         } else {
             if (instruction.op.immediate) {
                 stack.popClear();
@@ -423,7 +474,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::LOG:
             machineoperation::log(*this);
             break;
-        case OpCode::DEBUG:
+        case OpCode::DEBUG_PRINT:
             machineoperation::debug(*this);
             break;
             /**********************/
@@ -449,6 +500,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::HALT:
             state = Status::Halted;
             break;
+        case OpCode::SET_GAS:
+            machineoperation::setgas(*this);
+            break;
+        case OpCode::PUSH_GAS:
+            machineoperation::pushgas(*this);
+            break;
             /*****************/
             /*  Precompiles  */
             /*****************/
@@ -466,6 +523,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
+    os << "pc " << val.pc << "\n";
+    os << "data stack: " << val.stack << "\n";
+    os << "operation " << val.static_values->code[val.pc].op << "\n";
     os << "codePointHash " << to_hex_str(hash(val.static_values->code[val.pc]))
        << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
@@ -473,6 +533,8 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
     os << "staticHash " << to_hex_str(hash_value(val.static_values->staticVal))
        << "\n";
+    os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
+    os << "err handler " << val.errpc << "\n";
     os << "errHandlerHash "
        << to_hex_str(hash(val.static_values->code[val.errpc])) << "\n";
     return os;

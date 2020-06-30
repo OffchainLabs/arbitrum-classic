@@ -56,11 +56,13 @@ MachineStateKeys extractStateKeys(
     auto register_hash = extractUint256(current_iter);
     auto datastack_hash = extractUint256(current_iter);
     auto auxstack_hash = extractUint256(current_iter);
+    auto arb_gas_remaining = extractUint256(current_iter);
     auto pc = extractCodePointRef(current_iter);
     auto err_pc = extractCodePointRef(current_iter);
 
-    return MachineStateKeys{register_hash, datastack_hash, auxstack_hash, pc,
-                            err_pc,        status};
+    return MachineStateKeys{
+        register_hash, datastack_hash, auxstack_hash, arb_gas_remaining, pc,
+        err_pc,        status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
@@ -70,6 +72,7 @@ std::vector<unsigned char> serializeStateKeys(
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
+    marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
     state_data.pc.marshal(state_data_vector);
     state_data.err_pc.marshal(state_data_vector);
     return state_data_vector;
@@ -152,6 +155,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
         MachineStateKeys{hash_value(machinestate.registerVal),
                          hash(datastack_tup),
                          hash(auxstack_tup),
+                         machinestate.arb_gas_remaining,
                          machinestate.pc,
                          machinestate.errpc,
                          machinestate.state};

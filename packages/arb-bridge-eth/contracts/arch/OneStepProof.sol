@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -812,6 +812,26 @@ library OneStepProof {
         return true;
     }
 
+    function executeSetgasInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    ) internal pure returns (bool) {
+        if (!val1.isInt()) {
+            return false;
+        }
+        machine.arbGasRemaining = val1.intVal;
+        return true;
+    }
+
+    function executePushgasInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
     function executeECRecoverInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
@@ -904,6 +924,8 @@ library OneStepProof {
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
+    uint8 internal constant OP_SETGAS = 0x75;
+    uint8 internal constant OP_PUSHGAS = 0x76;
 
     uint8 internal constant OP_ECRECOVER = 0x80;
 
@@ -1016,6 +1038,10 @@ library OneStepProof {
             return (0, 0);
         } else if (opCode == OP_STOP) {
             return (0, 0);
+        } else if (opCode == OP_SETGAS) {
+            return (1, 0);
+        } else if (opCode == OP_PUSHGAS) {
+            return (0, 1);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 1);
         } else {
@@ -1139,6 +1165,10 @@ library OneStepProof {
             return 5;
         } else if (opCode == OP_STOP) {
             return 10;
+        } else if (opCode == OP_SETGAS) {
+            return 0;
+        } else if (opCode == OP_PUSHGAS) {
+            return 1;
         } else if (opCode == OP_ECRECOVER) {
             return 20000;
         } else {
@@ -1253,7 +1283,10 @@ library OneStepProof {
                 (!_data.didInboxInsn && opCode != OP_INBOX),
             "Invalid didInboxInsn claim"
         );
-        if (opCode == OP_ADD) {
+        if (startMachine.arbGasRemaining < opGasCost(opCode)) {
+            endMachine.arbGasRemaining = ((1 << 128) + 1) * ((1 << 128) - 1); // = MaxUint256
+            correct = false;
+        } else if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_MUL) {
             correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
@@ -1446,6 +1479,10 @@ library OneStepProof {
             correct = false;
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
+        } else if (opCode == OP_SETGAS) {
+            correct = executeSetgasInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_PUSHGAS) {
+            correct = executePushgasInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
             correct = executeECRecoverInsn(
                 endMachine,
@@ -1468,6 +1505,10 @@ library OneStepProof {
                 "Log not called, but message is nonzero"
             );
         }
+
+        endMachine.arbGasRemaining =
+            endMachine.arbGasRemaining -
+            opGasCost(opCode);
 
         if (!correct) {
             if (endMachine.errHandlerHash == CODE_POINT_ERROR) {

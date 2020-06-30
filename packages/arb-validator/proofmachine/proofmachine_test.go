@@ -71,7 +71,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
-	fmt.Println("proof test contact: ", contract)
+	t.Log("proof test contact: ", contract)
 	basemach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 
 	if err != nil {
@@ -102,8 +102,6 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 			if blocked != nil {
 				cont = false
 			}
-			fmt.Println(" machine halted ")
-			//break
 		}
 		if stepsExecuted != 1 {
 			t.Log("Num steps = ", stepsExecuted)
@@ -123,6 +121,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodetestethhash2.mexe",
 		"opcodeteststack.mexe",
 		"opcodetestdup.mexe",
+		"opcodetestarbgas.mexe",
 		"opcodetestecrecover.mexe",
 		gotest.TestMachinePath(),
 	}

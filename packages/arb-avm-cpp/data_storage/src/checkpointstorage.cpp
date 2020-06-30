@@ -116,6 +116,7 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         std::move(register_results.data),
         Datastack(nonstd::get<Tuple>(stack_results.data)),
         Datastack(nonstd::get<Tuple>(auxstack_results.data)),
+        state_data.arb_gas_remaining,
         state_data.status,
         state_data.pc,
         state_data.err_pc};

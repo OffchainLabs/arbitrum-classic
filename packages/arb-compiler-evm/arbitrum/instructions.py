@@ -87,8 +87,10 @@ OP_CODES = [
     ("inbox", 0x72, [IntType()], [TupleType()]),
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
-    ("debug", 0x75, [], []),
-    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()],),
+    ("setgas", 0x75, [IntType()], []),
+    ("pushgas", 0x76, [], [IntType()]),
+    ("debug", 0x7A, [], []),
+    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()]),
 ]
 
 

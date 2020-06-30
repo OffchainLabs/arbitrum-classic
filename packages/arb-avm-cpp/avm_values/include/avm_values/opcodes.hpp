@@ -86,7 +86,9 @@ enum class OpCode : uint8_t {
     INBOX,
     ERROR,
     HALT,
-    DEBUG,
+    SET_GAS,
+    PUSH_GAS,
+    DEBUG_PRINT = 0x7a,
 
     ECRECOVER = 0x80
 };
@@ -99,7 +101,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::HALT) ||
+           (op >= OpCode::SEND && op <= OpCode::DEBUG_PRINT) ||
            (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
 }
 
@@ -166,7 +168,9 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
-    {OpCode::DEBUG, "debug"},
+    {OpCode::SET_GAS, "setgas"},
+    {OpCode::PUSH_GAS, "pushgas"},
+    {OpCode::DEBUG_PRINT, "debug"},
 
     {OpCode::ECRECOVER, "ecrecover"}};
 
@@ -241,7 +245,9 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::INBOX, {MarshalLevel::SINGLE}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
-        {OpCode::DEBUG, {}},
+        {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
+        {OpCode::PUSH_GAS, {}},
+        {OpCode::DEBUG_PRINT, {}},
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
@@ -310,7 +316,9 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::INBOX, {}},
                                {OpCode::ERROR, {}},
                                {OpCode::HALT, {}},
-                               {OpCode::DEBUG, {}},
+                               {OpCode::SET_GAS, {}},
+                               {OpCode::PUSH_GAS, {}},
+                               {OpCode::DEBUG_PRINT, {}},
 
                                {OpCode::ECRECOVER, {}}};
 
@@ -376,7 +384,9 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},
-    {OpCode::DEBUG, 1},
+    {OpCode::SET_GAS, 0},
+    {OpCode::PUSH_GAS, 1},
+    {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000}};
 

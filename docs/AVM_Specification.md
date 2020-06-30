@@ -56,7 +56,6 @@ An Integer marshals to
 A Codepoint marshals to:
 
 - byte val of 1
-- 8-byte big-endian representation of the pc.
 - the marshalling of the operation
 - 32-byte nextHash value
 
@@ -97,9 +96,10 @@ An extensive state of a VM contains the following:
 - Aux Stack: a Stack that provides auxiliary storage;
 - Register: a mutable storage cell that can hold a single Value;
 - Static: an immutable Value that is initialized when the VM is created;
+- ArbGas Remaining: an Integer holding the amount of ArbGas that can be consumed before an Error is generated;
 - Error Codepoint: a Codepoint that is meant to be used in response to an Error.
 
-When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, and Error Codepoint are initialized to None, None, None, and the Codepoint (0, 0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.
+When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, ArbGas Remaining, and Error Codepoint are initialized to None, None, None, MaxUint256, and the Codepoint (0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.
 
 ## Hashing a VM State
 
@@ -107,7 +107,7 @@ If a VM is in the Halted state, its state hash is the Integer 0.
 
 If a VM is in the ErrorStop state, its state hash is the Integer 1.
 
-If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, and the hash of the Error Codepoint, hashing the result using Keccak-256.
+If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, the 32-byte big-endian representation of ArbGas Remaining, and the hash of the Error Codepoint, hashing the result using Keccak-256.
 
 ## The Runtime Environment
 
@@ -148,7 +148,10 @@ Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (A
 
 The ArbGas costs of instructions might change in the future.
 
-There is no charge for ArbGas and there is no limit on the amount of ArbGas that a VM can use. The purpose of ArbGas is to allow clients and validators to monitor and control how much computational work a VM is requiring. For example, it is likely that features will be added to allow validators to limit the amount of ArbGas that any one call to a VM or contract can consume.
+When an instruction is about to be executed, if the ArbGas cost of that instruction is G:
+
+- If ArbGas Remaining < G, ArbGas Remaining is set to MaxUint256 and an Error is raised. The instruction is not executed.
+- Otherwise, ArbGas Remaining is reduced by G and the instruction is executed.
 
 ## Instructions
 
@@ -231,5 +234,7 @@ The instructions are as follows:
 | 0x72                                            | inbox         | Pop a Value (A) off of the Data Stack. Block until either (a) the VM's inbox is non-empty, or (b) the lower bound on current time (as would be returned by the gettime instruction) is greater than or equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack, and set the inbox to None.                                                                                                                                                 | 40          |
 | 0x73                                            | error         | Raise an Error.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | 5           |
 | 0x74                                            | halt          | Enter the Halted state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 10          |
+| 0x75                                            | setgas        | Pop a Value (A) off of the Data Stack. If A is an Integer, write A to the ArbGasRemaining register. Otherwise, raise an Error.                                                                                                                                                                                                                                                                                                                                                           | 0           |
+| 0x76                                            | pushgas       | Push the current value of ArbGasRemaining onto the Data Stack.                                                                                                                                                                                                                                                                                                                                                                                                                           | 1           |
 | 80s: Precompile Operations                      |               | &nbsp;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 0x80                                            | ecrecover     | Pop four values off the Data Stack. If not all of the values are integers raise an error. The first two values first and second half of a compact ecdsa signature, the third is the recovery ID of the signature, and the forth is the message. If the recovered ethereum address was valid push the address, otherwise push 0. This instruction matches the behavior of the EVM ecrecover opcode, except it expects the recover ID to be a 0 or 1 as opposed to a 27 or 28 in Ethereum. | 20000       |

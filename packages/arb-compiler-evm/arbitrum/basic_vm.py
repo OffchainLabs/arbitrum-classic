@@ -83,8 +83,8 @@ class BasicVM:
         self.aux_stack = Stack()
         self.register = value.Tuple([])
         self.static = value.Tuple([])
+        self.arb_gas_remaining = (1 << 256) - 1
         self.err_handler = None
-        self.atomic_count = 0
 
         self.env = VMEnv()
         self.halted = False
@@ -393,11 +393,12 @@ class BasicVM:
         else:
             self.stack.push((op2 // 256 ** (31 - op1)) % 256)
 
-    def incatomic(self):
-        self.atomic_count += 1
+    def setgas(self):
+        gas = self.stack.pop()
+        self.arb_gas_remaining = gas
 
-    def decatomic(self):
-        self.atomic_count -= 1
+    def pushgas(self):
+        self.stack.push(self.arb_gas_remaining)
 
     def cast(self, typ):
         pass

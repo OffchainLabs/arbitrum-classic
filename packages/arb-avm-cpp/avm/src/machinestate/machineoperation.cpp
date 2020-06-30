@@ -674,4 +674,18 @@ BlockReason inboxOp(MachineState& m) {
         return NotBlocked{};
     }
 }
+
+void setgas(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& aNum = assumeInt(m.stack[0]);
+    m.arb_gas_remaining = aNum;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void pushgas(MachineState& m) {
+    auto& gas = m.arb_gas_remaining;
+    m.stack.push(gas);
+    ++m.pc;
+}
 }  // namespace machineoperation

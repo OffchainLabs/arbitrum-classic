@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ library Machine {
         Value.Data auxStack;
         Value.Data registerVal;
         Value.Data staticVal;
+        uint256 arbGasRemaining;
         bytes32 errHandlerHash;
         uint256 status;
     }
@@ -68,6 +69,8 @@ library Machine {
                     DebugPrint.bytes32string(Value.hash(machine.registerVal)),
                     ", \n",
                     DebugPrint.bytes32string(Value.hash(machine.staticVal)),
+                    ", \n",
+                    DebugPrint.uint2str(machine.arbGasRemaining),
                     ", \n",
                     DebugPrint.bytes32string(machine.errHandlerHash),
                     ")\n"
@@ -111,6 +114,7 @@ library Machine {
         Value.Data memory auxStack,
         Value.Data memory registerVal,
         Value.Data memory staticVal,
+        uint256 arbGasRemaining,
         bytes32 errHandlerHash
     ) internal pure returns (bytes32) {
         return
@@ -121,6 +125,7 @@ library Machine {
                     auxStack,
                     registerVal,
                     staticVal,
+                    arbGasRemaining,
                     errHandlerHash,
                     MACHINE_EXTENSIVE
                 )
@@ -141,6 +146,7 @@ library Machine {
                         Value.hash(machine.auxStack),
                         Value.hash(machine.registerVal),
                         Value.hash(machine.staticVal),
+                        machine.arbGasRemaining,
                         machine.errHandlerHash
                     )
                 );
@@ -155,6 +161,7 @@ library Machine {
                 machine.auxStack,
                 machine.registerVal,
                 machine.staticVal,
+                machine.arbGasRemaining,
                 machine.errHandlerHash,
                 machine.status
             );
@@ -200,6 +207,11 @@ library Machine {
         }
 
         (valid, offset, m.staticVal) = Value.deserialize(data, offset);
+        if (!valid) {
+            return (false, offset, m);
+        }
+
+        (valid, offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
         if (!valid) {
             return (false, offset, m);
         }
