@@ -19,7 +19,6 @@ package proofmachine
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -108,22 +107,24 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		}
 	}
 	t.Log("called ValidateProof")
+
 	time.Sleep(5 * time.Second)
+
 	t.Log("done")
 }
 
 func TestValidateProof(t *testing.T) {
 	testMachines := []string{
 		"opcodetesttuple.mexe",
-		"opcodetestlogic.mexe",
-		"opcodetestmath.mexe",
-		"opcodetesthash.mexe",
-		"opcodetestethhash2.mexe",
-		"opcodeteststack.mexe",
-		"opcodetestdup.mexe",
-		"opcodetestarbgas.mexe",
-		"opcodetestecrecover.mexe",
-		gotest.TestMachinePath(),
+		//"opcodetestlogic.mexe",
+		//"opcodetestmath.mexe",
+		//"opcodetesthash.mexe",
+		//"opcodetestethhash2.mexe",
+		//"opcodeteststack.mexe",
+		//"opcodetestdup.mexe",
+		//"opcodetestarbgas.mexe",
+		//"opcodetestecrecover.mexe",
+		//gotest.TestMachinePath(),
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {

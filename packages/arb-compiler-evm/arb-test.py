@@ -431,6 +431,22 @@ def test_dup(vm):
     vm.error()
 
 
+label_num = 0
+
+
+def should_error_block(vm, code):
+    global label_num
+    block_label = arb.ast.AVMLabel("test_block_" + str(label_num))
+    vm.push(block_label)
+    vm.errset()
+    code(vm)
+    vm.error()
+    vm.set_label(block_label)
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+    label_num += 1
+
+
 def test_tuple(vm):
     vm.push(arb.ast.AVMLabel("base_error_handler"))
     vm.errset()
@@ -439,15 +455,9 @@ def test_tuple(vm):
     vm.push(1)
     vm.tget()
     cmpEqual(vm, 8)
-    vm.push(arb.ast.AVMLabel("TGET_index_out_of_range"))
-    vm.errset()
-    vm.push(arb.value.Tuple([9, 8, 7, 6]))
-    vm.push(5)
-    vm.tget()
-    vm.error()
-    vm.set_label(arb.ast.AVMLabel("TGET_index_out_of_range"))
-    vm.push(arb.ast.AVMLabel("base_error_handler"))
-    vm.errset()
+    should_error_block(
+        vm, lambda vm: [vm.push(arb.value.Tuple([9, 8, 7, 6])), vm.push(5), vm.tget()]
+    )
     # TSET
     vm.push(3)
     vm.push(arb.value.Tuple([1, 2]))
@@ -459,20 +469,37 @@ def test_tuple(vm):
     vm.push(7)
     vm.tset()
     cmpEqual(vm, arb.value.Tuple([9, 9, 9, 9, 9, 9, 9, 3]))
-    vm.push(arb.ast.AVMLabel("TSET_index_out_of_range"))
-    vm.errset()
-    vm.push(3)
-    vm.push(arb.value.Tuple([1, 2]))
-    vm.push(2)
-    vm.tset()
-    vm.error()
-    vm.set_label(arb.ast.AVMLabel("TSET_index_out_of_range"))
-    vm.push(arb.ast.AVMLabel("base_error_handler"))
-    vm.errset()
+
+    should_error_block(
+        vm,
+        lambda vm: [
+            vm.push(3),
+            vm.push(arb.value.Tuple([1, 2])),
+            vm.push(2),
+            vm.tset(),
+        ],
+    )
     # TLEN
     vm.push(arb.value.Tuple([9, 8, 7, 6]))
     vm.tlen()
     cmpEqual(vm, 4)
+
+    # XGET
+    vm.push(arb.value.Tuple([9, 8, 7, 6]))
+    vm.auxpush()
+    vm.push(2)
+    vm.xget()
+    cmpEqual(vm, 7)
+
+    # XSET
+    vm.push(arb.value.Tuple([9, 8, 7, 6]))
+    vm.auxpush()
+    vm.push(1)
+    vm.push(2)
+    vm.xset()
+    vm.auxpop()
+    cmpEqual(vm, arb.value.Tuple([9, 8, 1, 6]))
+
     # BREAKPOINT
     vm.breakpoint()
     # LOG
@@ -545,55 +572,22 @@ def test_ecrecover(vm):
     vm.error()
 
 
-code = arb.compile_block(test_arithmetic)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestmath.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
+tests = [
+    ["opcodetestmath", test_arithmetic],
+    ["opcodetestlogic", test_logic],
+    ["opcodetesthash", test_hash, 4],
+    ["opcodetestethhash2", test_ethhash2],
+    ["opcodeteststack", test_stack],
+    ["opcodetestdup", test_dup],
+    ["opcodetesttuple", test_tuple],
+    ["opcodetestarbgas", test_arbgas],
+    ["opcodetestecrecover", test_ecrecover],
+]
 
-code = arb.compile_block(test_logic)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestlogic.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_hash)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetesthash.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_ethhash2)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestethhash2.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_stack)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-with open("../arb-validator/proofmachine/opcodeteststack.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_dup)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestdup.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_tuple)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetesttuple.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_arbgas)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestarbgas.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
-
-code = arb.compile_block(test_ecrecover)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-with open("../arb-validator/proofmachine/opcodetestecrecover.mexe", "w") as f:
-    json.dump(arb.marshall.marshall_vm_json(vm), f)
+for vm_test in tests:
+    code = arb.compile_block(vm_test[1])
+    vm = arb.compile_program(arb.ast.BlockStatement([]), code)
+    if len(vm_test) > 2:
+        vm.static = vm_test[2]
+    with open("../arb-validator/proofmachine/" + vm_test[0] + ".mexe", "w") as f:
+        json.dump(arb.marshall.marshall_vm_json(vm), f)
