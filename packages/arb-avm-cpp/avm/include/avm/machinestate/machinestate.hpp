@@ -59,7 +59,7 @@ struct AssertionContext {
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
-    std::shared_ptr<const StaticVmValues> static_values;
+    std::shared_ptr<StaticVmValues> static_values;
     value registerVal;
     Datastack stack;
     Datastack auxstack;
@@ -74,11 +74,11 @@ struct MachineState {
 
     MachineState();
 
-    MachineState(std::shared_ptr<const StaticVmValues> static_values_,
+    MachineState(std::shared_ptr<StaticVmValues> static_values_,
                  std::shared_ptr<TuplePool> pool_);
 
     MachineState(std::shared_ptr<TuplePool> pool_,
-                 std::shared_ptr<const StaticVmValues> static_values_,
+                 std::shared_ptr<StaticVmValues> static_values_,
                  value register_val_,
                  Datastack stack_,
                  Datastack auxstack_,

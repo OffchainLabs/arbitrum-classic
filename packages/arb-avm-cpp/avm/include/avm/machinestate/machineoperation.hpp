@@ -81,6 +81,8 @@ void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
 void setgas(MachineState& m);
 void pushgas(MachineState& m);
+void pushinsn(MachineState& m);
+void pushinsnimm(MachineState& m);
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

@@ -39,7 +39,7 @@ MachineState::MachineState()
       pc(0, 0, false),
       errpc(0, 0, true) {}
 
-MachineState::MachineState(std::shared_ptr<const StaticVmValues> static_values_,
+MachineState::MachineState(std::shared_ptr<StaticVmValues> static_values_,
                            std::shared_ptr<TuplePool> pool_)
     : pool(std::move(pool_)),
       static_values(std::move(static_values_)),
@@ -48,7 +48,7 @@ MachineState::MachineState(std::shared_ptr<const StaticVmValues> static_values_,
       errpc(0, 0, true) {}
 
 MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
-                           std::shared_ptr<const StaticVmValues> static_values_,
+                           std::shared_ptr<StaticVmValues> static_values_,
                            value register_val_,
                            Datastack stack_,
                            Datastack auxstack_,
@@ -75,10 +75,10 @@ std::pair<MachineState, bool> MachineState::loadFromFile(
         return std::make_pair(MachineState{}, false);
     }
 
-    return std::make_pair(MachineState{std::make_shared<const StaticVmValues>(
-                                           std::move(ret.first)),
-                                       std::move(pool)},
-                          true);
+    return std::make_pair(
+        MachineState{std::make_shared<StaticVmValues>(std::move(ret.first)),
+                     std::move(pool)},
+        true);
 }
 
 uint256_t MachineState::hash() const {

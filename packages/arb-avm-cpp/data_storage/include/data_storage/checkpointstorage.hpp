@@ -36,7 +36,7 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<const StaticVmValues> initial_state;
+    std::shared_ptr<StaticVmValues> initial_state;
 
    public:
     std::shared_ptr<TuplePool> pool;

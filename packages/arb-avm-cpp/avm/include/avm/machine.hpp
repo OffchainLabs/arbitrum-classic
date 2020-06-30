@@ -41,7 +41,7 @@ class Machine {
     Machine() = default;
     Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<const StaticVmValues> static_values,
+    Machine(std::shared_ptr<StaticVmValues> static_values,
             std::shared_ptr<TuplePool> pool_)
         : machine_state(std::move(static_values), std::move(pool_)) {}
 

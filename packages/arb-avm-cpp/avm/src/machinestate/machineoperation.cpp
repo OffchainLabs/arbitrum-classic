@@ -48,8 +48,9 @@ const uint256_t& assumeInt(const value& val) {
 }
 
 uint64_t assumeInt64(uint256_t& val) {
-    if (val > std::numeric_limits<uint64_t>::max())
+    if (val > std::numeric_limits<uint64_t>::max()) {
         throw int_out_of_bounds{};
+    }
 
     return static_cast<uint64_t>(val);
 }
@@ -709,5 +710,34 @@ void pushgas(MachineState& m) {
     auto& gas = m.arb_gas_remaining;
     m.stack.push(gas);
     ++m.pc;
+}
+
+void pushinsn(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
+    if (!target) {
+        m.state = Status::Error;
+        return;
+    }
+    auto& op_int = assumeInt(m.stack[1]);
+    auto op = static_cast<uint8_t>(op_int);
+    m.stack[1] = m.static_values->code.addOperation(target->pc,
+                                                    {static_cast<OpCode>(op)});
+    m.stack.popClear();
+}
+
+void pushinsnimm(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
+    if (!target) {
+        m.state = Status::Error;
+        return;
+    }
+    auto& op_int = assumeInt(m.stack[1]);
+    auto op = static_cast<uint8_t>(op_int);
+    m.stack[2] = m.static_values->code.addOperation(
+        target->pc, {static_cast<OpCode>(op), std::move(m.stack[2])});
+    m.stack.popClear();
+    m.stack.popClear();
 }
 }  // namespace machineoperation

@@ -348,10 +348,10 @@ void deleteCheckpoint(Transaction& transaction,
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
     Code code;
-    auto ref = code.addSegment();
-    ref = code.addOperation(ref, Operation(OpCode::ADD));
-    ref = code.addOperation(ref, Operation(OpCode::MUL));
-    ref = code.addOperation(ref, Operation(OpCode::SUB));
+    auto stub = code.addSegment();
+    stub = code.addOperation(stub.pc, Operation(OpCode::ADD));
+    stub = code.addOperation(stub.pc, Operation(OpCode::MUL));
+    stub = code.addOperation(stub.pc, Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 

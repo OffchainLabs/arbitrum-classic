@@ -20,12 +20,16 @@
 #include <avm_values/codepoint.hpp>
 
 class CodeSegment {
+    uint64_t segment;
     std::vector<CodePoint> code;
 
-    CodeSegment(std::vector<CodePoint> code_) : code(std::move(code_)) {}
+    CodeSegment(uint64_t segment_, std::vector<CodePoint> code_)
+        : segment(segment_), code(std::move(code_)) {}
 
    public:
-    CodeSegment() { code.push_back(getErrCodePoint()); }
+    CodeSegment(uint64_t segment_) : segment(segment_) {
+        code.push_back(getErrCodePoint());
+    }
 
     size_t size() const { return code.size(); }
 
@@ -33,17 +37,19 @@ class CodeSegment {
 
     const CodePoint& at(uint64_t pc) const { return code.at(pc); }
 
-    void addOperation(Operation op) {
+    CodePointStub addOperation(Operation op) {
         uint256_t prev_hash = 0;
         if (code.size() > 0) {
             prev_hash = hash(code.back());
         }
         code.emplace_back(std::move(op), prev_hash);
+        return {{segment, code.size() - 1, false}, hash(code.back())};
     }
 
     // Return the subset of this code segment starting in the given pc
-    CodeSegment getSubset(uint64_t pc) const {
-        return {std::vector<CodePoint>{code.begin(), code.begin() + pc}};
+    CodeSegment getSubset(uint64_t new_segment, uint64_t pc) const {
+        return {new_segment,
+                std::vector<CodePoint>{code.begin(), code.begin() + pc}};
     }
 
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
@@ -69,25 +75,26 @@ class Code {
         }
     }
 
-    CodePointRef addSegment() {
-        segments.emplace_back();
-        return {segments.size() - 1, 0, false};
+    CodePointStub addSegment() {
+        uint64_t segment_num = segments.size();
+        segments.emplace_back(segment_num);
+        auto& segment = segments.back();
+        return {{segment_num, 0, false}, hash(segment[0])};
     }
 
-    CodePointRef addOperation(const CodePointRef& ref, Operation op) {
+    CodePointStub addOperation(const CodePointRef& ref, Operation op) {
         auto& segment = segments[ref.segment];
 
         // This is the first pc in the segment so we can append directly
         if (ref.pc == segment.size() - 1) {
-            segment.addOperation(std::move(op));
-            return {ref.segment, ref.pc + 1, false};
+            return segment.addOperation(std::move(op));
         } else {
             // This segment was already mutated elsewhere, therefore we must
             // make a copy
-            auto new_segment = segment.getSubset(ref.pc);
-            new_segment.addOperation(std::move(op));
+            uint64_t new_segment_num = segments.size();
+            auto new_segment = segment.getSubset(new_segment_num, ref.pc);
             segments.push_back(new_segment);
-            return {segments.size() - 1, ref.pc + 1, false};
+            return segments.back().addOperation(std::move(op));
         }
     }
 
