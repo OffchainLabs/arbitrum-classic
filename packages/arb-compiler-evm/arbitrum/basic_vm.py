@@ -197,6 +197,20 @@ class BasicVM:
     def tget(self):
         instructions.tget(self.stack)
 
+    def xset(self):
+        index = self.stack.pop(value.IntType())
+        val = self.stack.pop(value.ValueType())
+        tup = self.aux_stack.pop(value.TupleType())
+        self.aux_stack.push(tup.set_tup_val(index, val))
+
+    def xget(self):
+        index = self.stack.pop(value.IntType())
+        tup = self.aux_stack.pop(value.TupleType())
+        if not tup.has_member_at_index(index):
+            raise Exception("Tried to get index {} from tuple {}".format(index, tup))
+        self.aux_stack.push(tup)
+        self.stack.push(tup.get_tup(index))
+
     def type(self):
         item = self.stack.pop()
         if isinstance(item, int):
