@@ -50,7 +50,7 @@ class Code {
     }
 
     CodePointRef initialCodePointRef() const {
-        return {code.size() - 1, false};
+        return {0, code.size() - 1, false};
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Code& code);

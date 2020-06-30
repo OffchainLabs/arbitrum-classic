@@ -23,18 +23,20 @@
 struct CodePoint;
 
 struct CodePointRef {
+    uint64_t segment;
     uint64_t pc;
     bool is_err;
 
-    CodePointRef(uint64_t pc_, bool is_err_) : pc(pc_), is_err(is_err_) {}
+    CodePointRef(uint64_t segment_, uint64_t pc_, bool is_err_)
+        : segment(segment_), pc(pc_), is_err(is_err_) {}
 
     CodePointRef& operator++() {
         --pc;
         return *this;
     }
 
-    CodePointRef operator+(uint64_t i) { return {pc - i, is_err}; }
-    CodePointRef operator-(uint64_t i) { return {pc + i, is_err}; }
+    CodePointRef operator+(uint64_t i) { return {segment, pc - i, is_err}; }
+    CodePointRef operator-(uint64_t i) { return {segment, pc + i, is_err}; }
 
     friend bool operator==(CodePointRef val1, CodePointRef val2) {
         if (!val1.is_err && !val2.is_err && val1.pc == val2.pc) {

@@ -37,16 +37,22 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 
     return tup;
 }
+
+uint64_t deserialize_uint64_t(const char*& bufptr) {
+    uint64_t val;
+    memcpy(&val, bufptr, sizeof(val));
+    val = boost::endian::big_to_native(val);
+    bufptr += sizeof(val);
+    return val;
+}
 }  // namespace
 
 CodePointRef deserializeCodePointRef(const char*& bufptr) {
-    uint64_t pc;
-    memcpy(&pc, bufptr, sizeof(pc));
-    pc = boost::endian::big_to_native(pc);
-    bufptr += sizeof(pc);
+    uint64_t segment = deserialize_uint64_t(bufptr);
+    uint64_t pc = deserialize_uint64_t(bufptr);
     bool is_err = static_cast<bool>(*bufptr);
     ++bufptr;
-    return {pc, is_err};
+    return {segment, pc, is_err};
 }
 
 CodePointStub deserializeCodePointStub(const char*& bufptr) {

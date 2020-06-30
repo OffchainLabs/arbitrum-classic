@@ -45,6 +45,7 @@ std::ostream& operator<<(std::ostream& os, const CodePointRef& cpr) {
 }
 
 void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
+    marshal_uint64_t(segment, buf);
     marshal_uint64_t(pc, buf);
     buf.push_back(is_err);
 }
