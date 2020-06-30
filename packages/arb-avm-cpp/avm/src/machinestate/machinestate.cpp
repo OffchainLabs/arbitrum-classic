@@ -466,6 +466,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::TLEN:
             machineoperation::tlen(*this);
             break;
+        case OpCode::XGET:
+            machineoperation::xget(*this);
+            break;
+        case OpCode::XSET:
+            machineoperation::xset(*this);
+            break;
             /***********************/
             /*  Logging Operations */
             /***********************/
