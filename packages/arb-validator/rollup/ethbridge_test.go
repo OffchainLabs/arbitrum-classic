@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -191,6 +192,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
+	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
 	results := make([]evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
