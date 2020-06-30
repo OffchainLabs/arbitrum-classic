@@ -37,10 +37,10 @@ module.exports = {
         ],
         '@typescript-eslint/no-use-before-define': [
           'warn',
-          { functions: true },
+          { functions: false },
         ],
         '@typescript-eslint/member-delimiter-style': ['off'],
-        '@typescript-eslint/no-explicit-any': ['warn'],
+        '@typescript-eslint/no-explicit-any': ['off'],
       },
     },
   ],
