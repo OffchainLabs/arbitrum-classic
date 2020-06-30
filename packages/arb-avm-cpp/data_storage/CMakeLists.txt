@@ -21,6 +21,7 @@ project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/data_storage/blockstore.hpp
+  include/data_storage/checkpointstorage.hpp
   include/data_storage/confirmednodestore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp

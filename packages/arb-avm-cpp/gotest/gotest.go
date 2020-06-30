@@ -29,5 +29,5 @@ func TestMachinePath() string {
 		panic(err)
 	}
 
-	return filepath.Join(filepath.Dir(filename), "contract.mexe")
+	return filepath.Join(filepath.Dir(filename), "../tests/contract.mexe")
 }
