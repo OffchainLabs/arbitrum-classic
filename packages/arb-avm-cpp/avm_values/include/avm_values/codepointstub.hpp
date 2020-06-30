@@ -26,14 +26,7 @@ struct CodePointRef {
     uint64_t pc;
     bool is_err;
 
-    CodePointRef() = default;
     CodePointRef(uint64_t pc_, bool is_err_) : pc(pc_), is_err(is_err_) {}
-
-    CodePointRef& operator=(uint64_t pc_) {
-        pc = pc_;
-        is_err = false;
-        return *this;
-    }
 
     CodePointRef& operator++() {
         --pc;
@@ -42,8 +35,6 @@ struct CodePointRef {
 
     CodePointRef operator+(uint64_t i) { return {pc - i, is_err}; }
     CodePointRef operator-(uint64_t i) { return {pc + i, is_err}; }
-
-    bool operator==(uint64_t val) const { return pc == val && is_err == false; }
 
     friend bool operator==(CodePointRef val1, CodePointRef val2) {
         if (!val1.is_err && !val2.is_err && val1.pc == val2.pc) {
@@ -61,9 +52,8 @@ struct CodePointStub {
     CodePointRef pc;
     uint256_t hash;
 
-    CodePointStub() = default;
     CodePointStub(const CodePointRef& pc, const CodePoint& cp);
-    CodePointStub(uint64_t pc_, uint256_t hash_);
+    CodePointStub(const CodePointRef& pc_, uint256_t hash_);
 
     friend bool operator==(const CodePointStub& val1,
                            const CodePointStub& val2) {

@@ -90,6 +90,10 @@ enum class OpCode : uint8_t {
     HALT,
     SET_GAS,
     PUSH_GAS,
+    ERR_CODE_POINT,
+    PUSH_INSN,
+    PUSH_INSN_IMM,
+    OPEN_INSN,
     DEBUG_PRINT = 0x7a,
 
     ECRECOVER = 0x80

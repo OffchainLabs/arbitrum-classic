@@ -62,45 +62,4 @@ uint256_t hash(const CodePoint& cp);
 
 const CodePoint& getErrCodePoint();
 
-class Code {
-    std::vector<CodePoint> code;
-
-   public:
-    Code() { code.push_back(getErrCodePoint()); }
-
-    const CodePoint& operator[](const CodePointRef& ref) const {
-        if (ref.is_err) {
-            return getErrCodePoint();
-        } else {
-            return code[ref.pc];
-        }
-    }
-
-    const CodePoint& at(const CodePointRef& ref) const {
-        if (ref.is_err) {
-            return getErrCodePoint();
-        } else {
-            return code.at(ref.pc);
-        }
-    }
-
-    const CodePoint& operator[](uint64_t pos) const { return code[pos]; }
-
-    void addOperation(Operation op) {
-        uint256_t prev_hash = 0;
-        if (code.size() > 0) {
-            prev_hash = hash(code.back());
-        }
-        code.emplace_back(std::move(op), prev_hash);
-    }
-
-    CodePointRef initialCodePointRef() const {
-        return {code.size() - 1, false};
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const Code& code);
-};
-
-std::ostream& operator<<(std::ostream& os, const Code& code);
-
 #endif /* codepoint_hpp */

@@ -29,11 +29,11 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 }
 }  // namespace
 
-CodePointStub::CodePointStub(const CodePointRef& pc, const CodePoint& cp)
-    : pc(pc), hash(::hash(cp)) {}
+CodePointStub::CodePointStub(const CodePointRef& pc_, const CodePoint& cp_)
+    : pc(pc_), hash(::hash(cp_)) {}
 
-CodePointStub::CodePointStub(uint64_t pc_, uint256_t hash_)
-    : pc({pc_, hash_ == ::hash(getErrCodePoint())}), hash(hash_) {}
+CodePointStub::CodePointStub(const CodePointRef& pc_, uint256_t hash_)
+    : pc(pc_), hash(hash_) {}
 
 std::ostream& operator<<(std::ostream& os, const CodePointRef& cpr) {
     if (cpr.is_err) {
@@ -50,6 +50,6 @@ void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
 }
 
 void CodePointStub::marshal(std::vector<unsigned char>& buf) const {
-    marshal_uint64_t(pc.pc, buf);
+    pc.marshal(buf);
     marshal_uint256_t(hash, buf);
 }

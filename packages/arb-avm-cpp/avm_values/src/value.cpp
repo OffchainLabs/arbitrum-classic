@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/code.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
@@ -50,12 +50,9 @@ CodePointRef deserializeCodePointRef(const char*& bufptr) {
 }
 
 CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    uint64_t pc;
-    memcpy(&pc, bufptr, sizeof(pc));
-    bufptr += sizeof(pc);
-    pc = boost::endian::big_to_native(pc);
+    auto ref = deserializeCodePointRef(bufptr);
     auto hash_val = deserializeUint256t(bufptr);
-    return {pc, hash_val};
+    return {ref, hash_val};
 }
 
 uint256_t deserializeUint256t(const char*& bufptr) {

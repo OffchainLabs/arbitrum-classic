@@ -50,12 +50,13 @@ value value_from_json(const nlohmann::json& value_json,
     } else if (value_json.contains(CP_VAL_LABEL)) {
         auto& cp_json = value_json[CP_VAL_LABEL];
         auto internal_offset = cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
-        CodePointRef ref;
-        if (internal_offset == std::numeric_limits<uint64_t>::max()) {
-            ref = {0, true};
-        } else {
-            ref = {op_count - internal_offset, false};
-        }
+        auto ref = [&]() -> CodePointRef {
+            if (internal_offset == std::numeric_limits<uint64_t>::max()) {
+                return {0, true};
+            } else {
+                return {op_count - internal_offset, false};
+            }
+        }();
         return CodePointStub(ref, code.at(ref));
     } else {
         throw std::runtime_error("invalid value type");

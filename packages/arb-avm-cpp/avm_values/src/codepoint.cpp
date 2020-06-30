@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/codepoint.hpp>
+
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
@@ -111,11 +112,4 @@ std::ostream& operator<<(std::ostream& os, const CodePoint& val) {
 const CodePoint& getErrCodePoint() {
     CodePoint static errcp(Operation(static_cast<OpCode>(0)), 0);
     return errcp;
-}
-
-std::ostream& operator<<(std::ostream& os, const Code& code) {
-    for (const auto& cp : code.code) {
-        os << cp << "\n";
-    }
-    return os;
 }
