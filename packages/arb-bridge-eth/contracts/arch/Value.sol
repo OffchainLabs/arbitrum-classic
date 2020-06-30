@@ -244,7 +244,9 @@ library Value {
             return false;
         } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
             require(false, "must have full value");
-        } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
+        } else if (
+            val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
+        ) {
             uint256 valueCount = val.tupleVal.length;
             for (uint256 i = 0; i < valueCount; i++) {
                 if (!isValidForSend(val.tupleVal[i])) {
