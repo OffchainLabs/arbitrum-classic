@@ -17,7 +17,7 @@
 #include <avm_values/code.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Code& code) {
-    for (const auto& cp : code.code) {
+    for (const auto& cp : code.segments) {
         os << cp << "\n";
     }
     return os;

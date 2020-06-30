@@ -92,8 +92,10 @@ std::pair<StaticVmValues, bool> parseStaticVmValues(
         }
         auto op_count = json_code.size();
         Code code;
+        CodePointRef prev = code.addSegment();
         for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-            code.addOperation(operation_from_json(*it, op_count, code, pool));
+            prev = code.addOperation(
+                prev, operation_from_json(*it, op_count, code, pool));
         }
         value static_val = value_from_json(contract_json.at(STATIC_LABEL),
                                            op_count, code, pool);
