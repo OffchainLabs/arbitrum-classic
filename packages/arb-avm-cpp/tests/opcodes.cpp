@@ -357,7 +357,7 @@ TEST_CASE("TYPE opcode is correct") {
     }
     SECTION("type codepoint stub") {
         MachineState m;
-        m.stack.push(value{CodePointStub()});
+        m.stack.push(value{CodePointStub({0, 0, true}, 0)});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
         REQUIRE(m.stack.stacksize() == 1);
@@ -426,31 +426,34 @@ TEST_CASE("RSET opcode is correct") {
 TEST_CASE("JUMP opcode is correct") {
     SECTION("jump") {
         MachineState m;
-        m.stack.push(value{CodePointStub(2, 73665)});
+        CodePointRef cpr{0, 2, false};
+        m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::JUMP);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 2);
+        REQUIRE(m.pc == cpr);
     }
 }
 
 TEST_CASE("CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
-        m.pc = 3;
+        CodePointRef cpr{0, 2, false};
+        m.pc = {0, 3, false};
         m.stack.push(uint256_t{1});
-        m.stack.push(value{CodePointStub(10, 73665)});
+        m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 10);
+        REQUIRE(m.pc == cpr);
     }
     SECTION("cjump false") {
         MachineState m;
-        m.pc = 3;
+        CodePointRef initial_pc{0, 3, false};
+        m.pc = initial_pc;
         m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePointStub(10, 73665)});
+        m.stack.push(value{CodePointStub({0, 10, false}, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 2);
+        REQUIRE(m.pc == initial_pc + 1);
     }
 }
 
@@ -485,7 +488,7 @@ TEST_CASE("PCPUSH opcode is correct") {
         auto initial_pc = m.pc;
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 0);
+        REQUIRE(m.pc == CodePointRef{0, 0, false});
         value res = m.stack.pop();
         REQUIRE(res == value{CodePointStub(initial_pc,
                                            m.static_values->code[initial_pc])});
@@ -566,10 +569,10 @@ TEST_CASE("ERRPUSH opcode is correct") {
         auto static_values =
             std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
         MachineState m{static_values, pool};
-        m.errpc = CodePointRef(0, false);
+        m.errpc = CodePointRef(0, 0, false);
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 0);
+        REQUIRE(m.pc == CodePointRef{0, 0, false});
         value res = m.stack.pop();
         REQUIRE(res ==
                 value{CodePointStub{m.errpc, m.static_values->code[m.errpc]}});
@@ -581,11 +584,11 @@ TEST_CASE("ERRSET opcode is correct") {
     SECTION("errset") {
         MachineState m = createTestMachineState(OpCode::ERRSET);
         auto start_pc = m.pc;
-        m.stack.push(value{CodePointStub(54, 968967)});
+        m.stack.push(value{CodePointStub({0, 54, false}, 968967)});
         m.runOne();
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == start_pc + 1);
-        REQUIRE(m.errpc == CodePointRef(54, false));
+        REQUIRE(m.errpc == CodePointRef(0, 54, false));
     }
 }
 

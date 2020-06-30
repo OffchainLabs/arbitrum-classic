@@ -32,7 +32,7 @@
 
 void saveValue(Transaction& transaction,
                const value& val,
-               int expected_ref_count,
+               uint32_t expected_ref_count,
                bool expected_status) {
     auto results = saveValue(transaction, val);
     transaction.commit();
@@ -42,7 +42,7 @@ void saveValue(Transaction& transaction,
 
 void getValue(const Transaction& transaction,
               const value& value,
-              int expected_ref_count,
+              uint32_t expected_ref_count,
               bool expected_status) {
     TuplePool pool;
     auto results = getValue(transaction, hash_value(value), &pool);
@@ -54,7 +54,7 @@ void getValue(const Transaction& transaction,
 
 void getTuple(const Transaction& transaction,
               const Tuple& tuple,
-              int expected_ref_count,
+              uint32_t expected_ref_count,
               bool expected_status) {
     TuplePool pool;
     auto results = getValue(transaction, hash(tuple), &pool);
@@ -99,8 +99,8 @@ TEST_CASE("Save value") {
         saveValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        auto code_point = CodePointStub(1, 654546);
-        saveValue(*transaction, code_point, 1, true);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
+        saveValue(*transaction, code_point_stub, 1, true);
     }
 }
 
@@ -153,12 +153,12 @@ TEST_CASE("Save and get value") {
         getValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true);
     }
     SECTION("save err codepoint") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true);
     }
@@ -178,14 +178,14 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
@@ -199,7 +199,7 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
         auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
@@ -209,7 +209,7 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple, saveValue()") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
         auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
@@ -233,7 +233,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true);
     }
     SECTION("save codepoint in tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1, false}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true);
@@ -297,7 +297,7 @@ void saveState(Transaction& transaction,
 
 void checkSavedState(const Transaction& transaction,
                      const Machine& expected_machine,
-                     int expected_ref_count) {
+                     uint32_t expected_ref_count) {
     TuplePool pool;
     auto results = getMachineState(transaction, expected_machine.hash());
     REQUIRE(results.status.ok());
@@ -354,7 +354,7 @@ Machine getComplexMachine() {
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
-    CodePointStub code_point_stub(1, 654546);
+    CodePointStub code_point_stub({0, 1, false}, 654546);
     auto tup1 = Tuple(register_val, pool.get());
     auto tup2 = Tuple(code_point_stub, tup1, pool.get());
 
@@ -366,8 +366,8 @@ Machine getComplexMachine() {
 
     uint256_t arb_gas_remaining = 534574678365;
 
-    CodePointStub pc(0, 645357);
-    CodePointStub err_pc(0, 968769876);
+    CodePointStub pc({0, 0, false}, 645357);
+    CodePointStub err_pc({0, 0, true}, 968769876);
     Status state = Status::Extensive;
 
     auto static_values = std::make_shared<StaticVmValues>(
@@ -385,8 +385,8 @@ Machine getDefaultMachine() {
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
     uint256_t arb_gas_remaining = 534574678365;
-    CodePointRef pc(0, false);
-    CodePointRef err_pc(0, true);
+    CodePointRef pc(0, 0, false);
+    CodePointRef err_pc(0, 0, true);
     Status state = Status::Extensive;
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));

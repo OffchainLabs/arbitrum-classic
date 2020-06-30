@@ -35,7 +35,7 @@ std::string dbpath =
 void initializeDatastack(const Transaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
-                         int expected_size) {
+                         uint64_t expected_size) {
     TuplePool pool;
 
     auto results = ::getValue(transaction, tuple_hash, &pool);
@@ -140,7 +140,7 @@ TEST_CASE("Initialize datastack") {
                             1);
     }
     SECTION("push num, tuple") {
-        CodePointStub code_point_stub{0, 3452345};
+        CodePointStub code_point_stub{{0, 0, false}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple(code_point_stub, &pool);
         data_stack.push(num);
@@ -152,7 +152,7 @@ TEST_CASE("Initialize datastack") {
                             2);
     }
     SECTION("push codepoint, tuple") {
-        CodePointStub code_point_stub{0, 3452345};
+        CodePointStub code_point_stub{{0, 0, false}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
         data_stack.push(code_point_stub);

@@ -40,6 +40,22 @@ struct MachineStateKeys {
     CodePointRef pc;
     CodePointRef err_pc;
     Status status;
+
+    MachineStateKeys() : pc(0, 0, true), err_pc(0, 0, false) {}
+    MachineStateKeys(uint256_t register_hash_,
+                     uint256_t datastack_hash_,
+                     uint256_t auxstack_hash_,
+                     uint256_t arb_gas_remaining_,
+                     CodePointRef pc_,
+                     CodePointRef err_pc_,
+                     Status status_)
+        : register_hash(register_hash_),
+          datastack_hash(datastack_hash_),
+          auxstack_hash(auxstack_hash_),
+          arb_gas_remaining(arb_gas_remaining_),
+          pc(pc_),
+          err_pc(err_pc_),
+          status(status_) {}
 };
 
 DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
