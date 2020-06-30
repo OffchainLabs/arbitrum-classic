@@ -19,6 +19,7 @@ package proofmachine
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -123,7 +124,7 @@ func TestValidateProof(t *testing.T) {
 		"opcodeteststack.ao",
 		"opcodetestdup.ao",
 		"opcodetestecrecover.ao",
-		"../contract.ao",
+		gotest.TestMachinePath(),
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {

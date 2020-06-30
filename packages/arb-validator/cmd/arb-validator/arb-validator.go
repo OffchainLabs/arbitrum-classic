@@ -78,7 +78,7 @@ func createRollupChain() error {
 	ethURL := createCmd.Arg(1)
 	addressString := createCmd.Arg(2)
 	factoryAddress := common.HexToAddress(addressString)
-	contractFile := filepath.Join(validatorFolder, "contract.ao")
+	contractFile := filepath.Join(validatorFolder, cmdhelper.ContractName)
 
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
