@@ -57,8 +57,11 @@ if __name__ == "__main__":
     with open("test_cases.json", "w") as f:
         json.dump(cases, f, indent=4)
 
-    with open("../arb-bridge-eth/test/test_cases.json", "w") as f:
-        json.dump(cases, f, indent=4)
-
-    with open("../arb-avm-cpp/tests/test_cases.json", "w") as f:
-        json.dump(cases, f, indent=4)
+    locations = [
+        "../arb-bridge-eth/test/test_cases.json",
+        "../arb-avm-cpp/tests/test_cases.json",
+        "../arb-util/value/test_cases.json",
+    ]
+    for loc in locations:
+        with open(loc, "w") as f:
+            json.dump(cases, f, indent=4)
