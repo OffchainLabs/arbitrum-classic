@@ -78,8 +78,8 @@ OP_CODES = [
     ("tget", 0x50, [IntType(), TupleType()], [ValueType()]),
     ("tset", 0x51, [IntType(), TupleType(), ValueType()], [TupleType()]),
     ("tlen", 0x52, [TupleType()], [IntType()]),
-    ("xget", 0x50, [IntType()], [ValueType()]),
-    ("xset", 0x51, [IntType(), ValueType()], []),
+    ("xget", 0x53, [IntType()], [ValueType()]),
+    ("xset", 0x54, [IntType(), ValueType()], []),
     # Logging Operations
     ("breakpoint", 0x60, [ValueType()], []),
     ("log", 0x61, [ValueType()], []),
