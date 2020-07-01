@@ -20,16 +20,25 @@
 
 #include <fstream>
 
+const char* INT_VAL_LABEL = "Int";
+const char* TUP_VAL_LABEL = "Tuple";
+const char* CP_VAL_LABEL = "CodePoint";
+const char* CP_INTERNAL_LABEL = "Internal";
+const char* OPCODE_LABEL = "opcode";
+const char* IMMEDIATE_LABEL = "immediate";
+const char* CODE_LABEL = "code";
+const char* STATIC_LABEL = "static_val";
+
 namespace {
 
-value value_from_json(const nlohmann::json& j,
+value value_from_json(const nlohmann::json& value_json,
                       size_t op_count,
                       const Code& code,
                       TuplePool& pool) {
-    if (j.contains("Int")) {
-        return uint256_t{j["Int"].get<std::string>()};
-    } else if (j.contains("Tuple")) {
-        auto& json_tup = j["Tuple"];
+    if (value_json.contains(INT_VAL_LABEL)) {
+        return uint256_t{value_json[INT_VAL_LABEL].get<std::string>()};
+    } else if (value_json.contains(TUP_VAL_LABEL)) {
+        auto& json_tup = value_json[TUP_VAL_LABEL];
         if (!json_tup.is_array()) {
             throw std::runtime_error("tuple must contain array");
         }
@@ -38,9 +47,9 @@ value value_from_json(const nlohmann::json& j,
             values.push_back(value_from_json(json_val, op_count, code, pool));
         }
         return Tuple(std::move(values), &pool);
-    } else if (j.contains("CodePoint")) {
-        auto& cp_json = j["CodePoint"];
-        auto internal_offset = cp_json.at("Internal").get<uint64_t>();
+    } else if (value_json.contains(CP_VAL_LABEL)) {
+        auto& cp_json = value_json[CP_VAL_LABEL];
+        auto internal_offset = cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
         CodePointRef ref;
         if (internal_offset == std::numeric_limits<uint64_t>::max()) {
             ref = {0, true};
@@ -53,12 +62,12 @@ value value_from_json(const nlohmann::json& j,
     }
 }
 
-Operation operation_from_json(const nlohmann::json& j,
+Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
                               const Code& code,
                               TuplePool& pool) {
-    auto opcode = j.at("opcode").get<OpCode>();
-    auto& imm = j.at("immediate");
+    auto opcode = op_json.at(OPCODE_LABEL).get<OpCode>();
+    auto& imm = op_json.at(IMMEDIATE_LABEL);
     if (imm.is_null()) {
         return {opcode};
     }
@@ -70,13 +79,13 @@ std::pair<StaticVmValues, bool> parseStaticVmValues(
     const std::string& contract_filename,
     TuplePool& pool) {
     try {
-        std::ifstream i(contract_filename);
-        if (!i.is_open()) {
+        std::ifstream contract_input_stream(contract_filename);
+        if (!contract_input_stream.is_open()) {
             throw std::runtime_error("doesn't exist");
         }
-        nlohmann::json j;
-        i >> j;
-        auto& json_code = j.at("code");
+        nlohmann::json contract_json;
+        contract_input_stream >> contract_json;
+        auto& json_code = contract_json.at(CODE_LABEL);
         if (!json_code.is_array()) {
             throw std::runtime_error("expected code to be array");
         }
@@ -85,8 +94,8 @@ std::pair<StaticVmValues, bool> parseStaticVmValues(
         for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
             code.addOperation(operation_from_json(*it, op_count, code, pool));
         }
-        value static_val =
-            value_from_json(j.at("static_val"), op_count, code, pool);
+        value static_val = value_from_json(contract_json.at(STATIC_LABEL),
+                                           op_count, code, pool);
         return std::make_pair(
             StaticVmValues{std::move(code), std::move(static_val)}, true);
     } catch (std::exception& e) {

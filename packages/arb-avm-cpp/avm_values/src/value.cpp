@@ -115,6 +115,14 @@ void marshalForProof(const HashPreImage& val,
     val.marshal(buf);
 }
 
+MarshalLevel childNestLevel(MarshalLevel level) {
+    if (level == MarshalLevel::FULL) {
+        return MarshalLevel::FULL;
+    } else {
+        return MarshalLevel::STUB;
+    }
+}
+
 void marshalForProof(const Tuple& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
@@ -123,10 +131,7 @@ void marshalForProof(const Tuple& val,
         marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
     } else {
         buf.push_back(TUPLE + val.tuple_size());
-        MarshalLevel nested_level = MarshalLevel::STUB;
-        if (marshal_level == MarshalLevel::FULL) {
-            nested_level = MarshalLevel::FULL;
-        }
+        MarshalLevel nested_level = childNestLevel(marshal_level);
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto itemval = val.get_element(i);
             marshalForProof(itemval, nested_level, buf, code);
@@ -139,12 +144,8 @@ void marshalForProof(const CodePointStub& val,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
     auto& cp = code[val.pc];
-    MarshalLevel nested_level = MarshalLevel::STUB;
-    if (marshal_level == MarshalLevel::FULL) {
-        nested_level = MarshalLevel::FULL;
-    }
     buf.push_back(CODEPT);
-    cp.op.marshalForProof(buf, nested_level, code);
+    cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
     std::array<unsigned char, 32> hashVal;
     to_big_endian(cp.nextHash, hashVal.begin());
     buf.insert(buf.end(), hashVal.begin(), hashVal.end());

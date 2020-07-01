@@ -788,7 +788,7 @@ library OneStepProof {
         if (val1.size > SEND_SIZE_LIMIT) {
             return (false, 0);
         }
-        if (!val1.isValidForSend()) {
+        if (!val1.isValidTypeForSend()) {
             return (false, 0);
         }
         return (true, val1.hash());

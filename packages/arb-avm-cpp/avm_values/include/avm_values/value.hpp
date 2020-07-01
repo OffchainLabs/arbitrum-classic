@@ -22,6 +22,9 @@
 
 #include <nonstd/variant.hpp>
 
+// Proof values will only include values types up to TUPLE + 8 (11)
+// All types declared with types creater than 11 are used for the internal
+// marshalling format Used to pass values between the AVM and the validator
 enum ValueTypes { NUM, CODEPT, HASH_PRE_IMAGE, TUPLE, CODE_POINT_STUB = 12 };
 
 class TuplePool;
