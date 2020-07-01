@@ -1474,7 +1474,7 @@ library OneStepProof {
             require(valid, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             correct = executeXgetInsn(endMachine, stackVals[0], auxVal);
-        } else if (opCode == OP_TSET) {
+        } else if (opCode == OP_XSET) {
             Value.Data memory auxVal;
             (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
             require(valid, "Proof of auxpop had bad aux value");

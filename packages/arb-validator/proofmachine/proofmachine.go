@@ -103,6 +103,7 @@ func (m *Machine) ExecuteAssertion(
 		}
 		beforeHash := m.Hash()
 		beforeMach := m.machine.Clone()
+		beforeMachine := m.machine.Clone()
 		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds, inbox, timeLeft)
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
@@ -148,6 +149,7 @@ func (m *Machine) ExecuteAssertion(
 			)
 			if err != nil {
 				log.Println("Machine ended with error:")
+				beforeMachine.PrintState()
 				m.PrintState()
 				log.Fatal("Proof invalid ", err)
 			}
