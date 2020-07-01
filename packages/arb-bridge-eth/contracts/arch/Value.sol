@@ -28,7 +28,11 @@ library Value {
     uint8 internal constant CODE_POINT_TYPECODE = 1;
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
+    // All values received from clients will have type codes less than the VALUE_TYPE_COUNT
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
+
+    // CODEPOINT_HASH does not show up in the marshalled format and is
+    // only used for internal tracking purposes
     uint8 internal constant CODEPOINT_HASH = 100;
 
     struct CodePoint {
@@ -232,6 +236,30 @@ library Value {
             return hashTuple(val);
         } else if (val.typeCode == CODEPOINT_HASH) {
             return bytes32(val.intVal);
+        } else {
+            require(false, "Invalid type code");
+        }
+    }
+
+    function isValidTypeForSend(Data memory val) internal pure returns (bool) {
+        if (val.typeCode == INT_TYPECODE) {
+            return true;
+        } else if (val.typeCode == CODE_POINT_TYPECODE) {
+            return false;
+        } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
+            require(false, "must have full value");
+        } else if (
+            val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
+        ) {
+            uint256 valueCount = val.tupleVal.length;
+            for (uint256 i = 0; i < valueCount; i++) {
+                if (!isValidTypeForSend(val.tupleVal[i])) {
+                    return false;
+                }
+            }
+            return true;
+        } else if (val.typeCode == CODEPOINT_HASH) {
+            return false;
         } else {
             require(false, "Invalid type code");
         }

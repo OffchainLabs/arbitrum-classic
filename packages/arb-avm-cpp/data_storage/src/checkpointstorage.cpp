@@ -24,7 +24,7 @@
 
 #include <avm/machine.hpp>
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/vmValueParser.hpp>
 
@@ -117,8 +117,8 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         Datastack(nonstd::get<Tuple>(stack_results.data)),
         Datastack(nonstd::get<Tuple>(auxstack_results.data)),
         state_data.status,
-        CodePointRef(state_data.pc),
-        CodePointRef(state_data.err_pc)};
+        state_data.pc,
+        state_data.err_pc};
     return std::make_pair(std::move(machine_state), true);
 }
 

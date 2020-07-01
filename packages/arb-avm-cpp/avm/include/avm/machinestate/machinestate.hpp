@@ -78,7 +78,7 @@ struct MachineState {
                  std::shared_ptr<TuplePool> pool_)
         : pool(std::move(pool_)),
           static_values(std::move(static_values_)),
-          pc(0, false),
+          pc(static_values->code.initialCodePointRef()),
           errpc(0, true) {}
 
     MachineState(std::shared_ptr<TuplePool> pool_,
@@ -102,6 +102,7 @@ struct MachineState {
     std::vector<unsigned char> marshalForProof();
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
+    BlockReason runOne();
     uint256_t hash() const;
     BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
 };

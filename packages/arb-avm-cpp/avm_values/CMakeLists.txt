@@ -25,6 +25,7 @@ set(LIB_HEADERS
   include/avm_values/value.hpp
   include/avm_values/bigint.hpp
   include/avm_values/codepoint.hpp
+  include/avm_values/codepointstub.hpp
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
@@ -35,6 +36,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/codepoint.cpp
+  src/codepointstub.cpp
   src/exceptions.cpp
   src/pool.cpp
   src/tuple.cpp
@@ -65,7 +67,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC nonstd::variant-lite Threads::Threads avm_utils)
+target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-lite Threads::Threads avm_utils PRIVATE nlohmann_json::nlohmann_json)
 
 target_code_coverage(avm_values AUTO ALL)
 

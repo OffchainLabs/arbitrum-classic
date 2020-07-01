@@ -18,23 +18,20 @@
 #define codepoint_hpp
 
 #include <avm_values/opcodes.hpp>
+#include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
+
+#include <nonstd/optional.hpp>
 
 struct Operation {
     OpCode opcode;
-    std::unique_ptr<value> immediate;
+    nonstd::optional<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
 
-    Operation(const Operation&);
-    Operation(Operation&&);
-    Operation& operator=(const Operation&);
-    Operation& operator=(Operation&&);
-    ~Operation();
-    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
     void marshalForProof(std::vector<unsigned char>& buf,
-                         bool includeVal,
+                         MarshalLevel marshal_level,
                          const Code& code) const;
 };
 
@@ -46,18 +43,11 @@ std::ostream& operator<<(std::ostream& os, const Operation& val);
 extern uint64_t pc_default;
 
 struct CodePoint {
-    uint64_t pc;
     Operation op;
     uint256_t nextHash;
 
-    CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
-        : pc(pc_), op(op_), nextHash(nextHash_) {}
-    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
-    bool isSet() {
-        return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
-                (nextHash != 0));
-    }
-    int getSize() const { return 1; }
+    CodePoint(Operation op_, uint256_t nextHash_)
+        : op(op_), nextHash(nextHash_) {}
 
     bool isError() const {
         return nextHash == 0 && op == Operation{static_cast<OpCode>(0)};
@@ -72,75 +62,13 @@ uint256_t hash(const CodePoint& cp);
 
 const CodePoint& getErrCodePoint();
 
-struct CodePointStub {
-    uint64_t pc;
-    uint256_t hash;
-
-    CodePointStub() = default;
-    CodePointStub(const CodePoint& cp) : pc(cp.pc), hash(::hash(cp)) {}
-    CodePointStub(uint64_t pc_, uint256_t hash_) : pc(pc_), hash(hash_) {}
-
-    friend bool operator==(const CodePointStub& val1,
-                           const CodePointStub& val2) {
-        return val1.pc == val2.pc && val1.hash == val2.hash;
-    }
-};
-
-inline uint256_t hash(const CodePointStub& cp) {
-    return cp.hash;
-}
-
-struct CodePointRef {
-    uint64_t pc;
-    bool is_err;
-
-    CodePointRef() = default;
-    CodePointRef(uint64_t pc_, bool is_err_) : pc(pc_), is_err(is_err_) {}
-    CodePointRef(const CodePointStub& stub)
-        : pc(stub.pc), is_err(hash(stub) == hash(getErrCodePoint())) {}
-
-    CodePointRef& operator=(uint64_t pc_) {
-        pc = pc_;
-        is_err = false;
-        return *this;
-    }
-
-    CodePointRef& operator++() {
-        ++pc;
-        return *this;
-    }
-
-    CodePointRef operator+(uint64_t i) { return {pc + i, is_err}; }
-
-    bool operator==(uint64_t val) const { return pc == val && is_err == false; }
-
-    friend bool operator==(CodePointRef val1, CodePointRef val2) {
-        if (!val1.is_err && !val2.is_err && val1.pc == val2.pc) {
-            return true;
-        }
-        return val1.is_err && val2.is_err;
-    }
-};
-
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops);
-
 class Code {
     std::vector<CodePoint> code;
 
    public:
-    Code() = default;
-    Code(std::vector<CodePoint> code_);
+    Code() { code.push_back(getErrCodePoint()); }
 
-    const CodePoint& operator[](const CodePointStub& ref) const {
-        const auto& err_codepoint = getErrCodePoint();
-        if (ref.hash == hash(err_codepoint)) {
-            return err_codepoint;
-        } else {
-            return code[ref.pc];
-        }
-    }
-
-    const CodePoint& operator[](CodePointRef ref) const {
+    const CodePoint& operator[](const CodePointRef& ref) const {
         if (ref.is_err) {
             return getErrCodePoint();
         } else {
@@ -148,7 +76,27 @@ class Code {
         }
     }
 
+    const CodePoint& at(const CodePointRef& ref) const {
+        if (ref.is_err) {
+            return getErrCodePoint();
+        } else {
+            return code.at(ref.pc);
+        }
+    }
+
     const CodePoint& operator[](uint64_t pos) const { return code[pos]; }
+
+    void addOperation(Operation op) {
+        uint256_t prev_hash = 0;
+        if (code.size() > 0) {
+            prev_hash = hash(code.back());
+        }
+        code.emplace_back(std::move(op), prev_hash);
+    }
+
+    CodePointRef initialCodePointRef() const {
+        return {code.size() - 1, false};
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Code& code);
 };

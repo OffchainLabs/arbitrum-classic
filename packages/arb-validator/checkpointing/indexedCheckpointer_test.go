@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodeview"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -33,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-var contractPath = "../contract.ao"
+var contractPath = gotest.TestMachinePath()
 
 var initialEntryBlockId = &common.BlockId{
 	Height:     common.NewTimeBlocksInt(10),

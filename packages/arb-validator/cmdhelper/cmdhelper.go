@@ -39,6 +39,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
+var ContractName = "contract.mexe"
+
 // ValidateRollupChain creates a validator given the managerCreationFunc.
 // This allows for the abstraction of the manager setup away from command line
 // parsing and initialization of common structures and behavior
@@ -118,7 +120,7 @@ func ValidateRollupChain(
 		return err
 	}
 
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.ao")
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, ContractName)
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	manager, err := managerCreationFunc(

@@ -19,7 +19,7 @@
 
 #include "ctypes.h"
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
@@ -72,14 +72,13 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
     return {val.data, true};
 }
 
-inline ByteSlice returnValueResult(const DbResult<value>& res,
-                                   const Code& code) {
+inline ByteSlice returnValueResult(const DbResult<value>& res) {
     if (!res.status.ok()) {
         return {nullptr, 0};
     }
 
     std::vector<unsigned char> value;
-    marshal_value(res.data, value, code);
+    marshal_value(res.data, value);
 
     auto value_data = reinterpret_cast<unsigned char*>(malloc(value.size()));
     std::copy(value.begin(), value.end(), value_data);

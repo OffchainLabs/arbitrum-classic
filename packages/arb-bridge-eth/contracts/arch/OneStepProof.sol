@@ -785,11 +785,13 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        if (val1.size <= SEND_SIZE_LIMIT) {
-            return (true, val1.hash());
-        } else {
-            return (true, 0);
+        if (val1.size > SEND_SIZE_LIMIT) {
+            return (false, 0);
         }
+        if (!val1.isValidTypeForSend()) {
+            return (false, 0);
+        }
+        return (true, val1.hash());
     }
 
     function executeInboxInsn(
@@ -816,11 +818,7 @@ library OneStepProof {
         Value.Data memory val2,
         Value.Data memory val3,
         Value.Data memory val4
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
             return false;
         }
@@ -832,12 +830,7 @@ library OneStepProof {
         }
         uint8 v = uint8(val3.intVal) + 27;
         bytes32 message = bytes32(val4.intVal);
-        address ret = ecrecover(
-            message,
-            v,
-            r,
-            s
-        );
+        address ret = ecrecover(message, v, r, s);
         machine.addDataStackInt(uint256(ret));
         return true;
     }
@@ -912,7 +905,7 @@ library OneStepProof {
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
 
-    uint8 constant internal OP_ECRECOVER = 0x80;
+    uint8 internal constant OP_ECRECOVER = 0x80;
 
     function opInfo(uint256 opCode) internal pure returns (uint256, uint256) {
         if (opCode == OP_ADD) {
@@ -1454,7 +1447,13 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
         } else if (opCode == OP_ECRECOVER) {
-            correct = executeECRecoverInsn(endMachine, stackVals[0], stackVals[1], stackVals[2], stackVals[3]);
+            correct = executeECRecoverInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1],
+                stackVals[2],
+                stackVals[3]
+            );
         } else {
             correct = false;
         }

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import arbitrum as arb
+import json
 
 count = 0
 
@@ -182,7 +183,7 @@ def test_arithmetic(vm):
     testBinaryOp(vm, 2, 256, 0, vm.exp)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -264,7 +265,7 @@ def test_logic(vm):
     testBinaryOp(vm, 65537, 2, 65537, vm.signextend)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -281,14 +282,14 @@ def test_hash(vm):
     )
     # TYPE
     testUnaryOp(vm, 3, 0, vm.type)
-    testUnaryOp(vm, arb.value.AVMCodePoint(0, 0, b"\0" * 32), 1, vm.type)
+    testUnaryOp(vm, arb.value.ERROR_CODE_POINT, 1, vm.type)
     testUnaryOp(vm, arb.value.Tuple([1, 2]), 3, vm.type)
     # SPUSH
     vm.spush()
     cmpEqual(vm, 4)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -309,7 +310,7 @@ def test_ethhash2(vm):
     )
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -380,7 +381,7 @@ def test_stack(vm):
     # ERRSET
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -425,7 +426,7 @@ def test_dup(vm):
     cmpEqual(vm, 8)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -495,7 +496,7 @@ def test_tuple(vm):
     #
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -522,53 +523,54 @@ vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("math ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestmath.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+
+with open("../arb-validator/proofmachine/opcodetestmath.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_logic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("logic ", len(vm.code), " codepoints")
-with open("../arb-validator/proofmachine/opcodetestlogic.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetestlogic.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_hash)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("hash ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetesthash.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetesthash.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_ethhash2)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("ethhash2 ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestethhash2.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetestethhash2.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_stack)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 # vm.static = 4
 print("stack ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodeteststack.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodeteststack.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_dup)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("dup ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestdup.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetestdup.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_tuple)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetesttuple.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)
 code = arb.compile_block(test_ecrecover)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
 print("ecrecover ", len(vm.code), " codepoints")
 # print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestecrecover.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+with open("../arb-validator/proofmachine/opcodetestecrecover.mexe", "w") as f:
+    json.dump(arb.marshall.marshall_vm_json(vm), f)

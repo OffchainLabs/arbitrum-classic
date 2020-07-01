@@ -437,17 +437,17 @@ TEST_CASE("CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePointStub(2, 73665)});
+        m.stack.push(uint256_t{1});
+        m.stack.push(value{CodePointStub(10, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 4);
+        REQUIRE(m.pc == 10);
     }
     SECTION("cjump false") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(uint256_t{1});
-        m.stack.push(value{CodePointStub(2, 73665)});
+        m.stack.push(uint256_t{0});
+        m.stack.push(value{CodePointStub(10, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -477,15 +477,18 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
-        auto static_values = std::make_shared<StaticVmValues>(
-            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        Code code;
+        code.addOperation(Operation(OpCode::ADD));
+        auto static_values =
+            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
         MachineState m{static_values, pool};
+        auto initial_pc = m.pc;
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == 0);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res == value{CodePointStub(initial_pc,
+                                           m.static_values->code[initial_pc])});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -534,51 +537,66 @@ TEST_CASE("AUXSTACKEMPTY opcode is correct") {
     }
 }
 
+MachineState createTestMachineState(OpCode op) {
+    Code code;
+    code.addOperation({OpCode::HALT});
+    code.addOperation({op});
+    auto static_vals =
+        std::make_shared<StaticVmValues>(std::move(code), Tuple());
+    auto pool = std::make_shared<TuplePool>();
+    return {std::move(static_vals), std::move(pool)};
+}
+
 TEST_CASE("NOP opcode is correct") {
     SECTION("nop") {
-        MachineState m;
-        m.runOp(OpCode::NOP);
+        MachineState m = createTestMachineState(OpCode::NOP);
+        auto start_pc = m.pc;
+        m.runOne();
         REQUIRE(m.auxstack.stacksize() == 0);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
     }
 }
 
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
-        auto static_values = std::make_shared<StaticVmValues>(
-            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        Code code;
+        code.addOperation(Operation(OpCode::ADD));
+        auto static_values =
+            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
         MachineState m{static_values, pool};
         m.errpc = CodePointRef(0, false);
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == 0);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res ==
+                value{CodePointStub{m.errpc, m.static_values->code[m.errpc]}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
 
 TEST_CASE("ERRSET opcode is correct") {
     SECTION("errset") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::ERRSET);
+        auto start_pc = m.pc;
         m.stack.push(value{CodePointStub(54, 968967)});
-        m.runOp(OpCode::ERRSET);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         REQUIRE(m.errpc == CodePointRef(54, false));
     }
 }
 
 TEST_CASE("DUP0 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP0);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
-        m.runOp(OpCode::DUP0);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 2);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -588,12 +606,13 @@ TEST_CASE("DUP0 opcode is correct") {
 
 TEST_CASE("DUP1 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP1);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
-        m.runOp(OpCode::DUP1);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 3);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -605,13 +624,14 @@ TEST_CASE("DUP1 opcode is correct") {
 
 TEST_CASE("DUP2 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP2);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{7});
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::DUP2);
         REQUIRE(m.stack.stacksize() == 4);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(7)});
         res = m.stack.pop();
@@ -625,12 +645,13 @@ TEST_CASE("DUP2 opcode is correct") {
 
 TEST_CASE("SWAP1 opcode is correct") {
     SECTION("swap") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::SWAP1);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP1);
         REQUIRE(m.stack.stacksize() == 2);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -640,13 +661,14 @@ TEST_CASE("SWAP1 opcode is correct") {
 
 TEST_CASE("SWAP2 opcode is correct") {
     SECTION("swap") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::SWAP2);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{7});
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP2);
         REQUIRE(m.stack.stacksize() == 3);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(7)});
         res = m.stack.pop();

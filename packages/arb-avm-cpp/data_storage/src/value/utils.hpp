@@ -17,7 +17,7 @@
 #ifndef checkpointutils_hpp
 #define checkpointutils_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
 extern std::unordered_map<int, int> blockreason_type_length;
@@ -25,8 +25,6 @@ extern std::unordered_map<int, int> blockreason_type_length;
 namespace checkpoint {
 namespace utils {
 uint64_t deserialize_uint64(const char*& bufptr);
-void serializeCodePointStub(const CodePointStub& val,
-                            std::vector<unsigned char>& value_vector);
 }  // namespace utils
 }  // namespace checkpoint
 

@@ -18,6 +18,7 @@ package rollupvalidator
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -33,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var contractPath = "../contract.ao"
+var contractPath = gotest.TestMachinePath()
 var dbPath = "./testdb"
 
 func generateResults() []evm.Result {

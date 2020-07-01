@@ -49,7 +49,6 @@ func setupValidators(
 	rand.Seed(seed)
 
 	ethURL := test.GetEthUrl()
-	contract := "contract.ao"
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 
@@ -108,6 +107,8 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
+
+	contract := "contract.mexe"
 
 	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {

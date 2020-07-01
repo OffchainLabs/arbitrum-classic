@@ -29,6 +29,8 @@ numeric_limits<int256_t>::max() == numeric_limits<uint256_t>::max() == (1 <<
 256) -1 I.e., the sign is stored in a separate bit.
 */
 
+#define UINT256_SIZE 32
+
 using uint128_t = boost::multiprecision::uint128_t;
 using uint256_t = boost::multiprecision::uint256_t;
 using uint512_t = boost::multiprecision::uint512_t;

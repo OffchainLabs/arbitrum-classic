@@ -397,7 +397,7 @@ func TestDeliveredMessage(t *testing.T) {
 	}
 
 	var msgDataBuf bytes.Buffer
-	if err := msg.AsInboxValue().MarshalForProof(&msgDataBuf); err != nil {
+	if err := msg.AsInboxValue().Marshal(&msgDataBuf); err != nil {
 		t.Fatal(err)
 	}
 
