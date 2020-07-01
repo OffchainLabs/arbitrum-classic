@@ -712,6 +712,11 @@ void pushgas(MachineState& m) {
     ++m.pc;
 }
 
+void errcodept(MachineState& m) {
+    m.stack.push(m.static_values->code->addSegment());
+    ++m.pc;
+}
+
 void pushinsn(MachineState& m) {
     m.stack.prepForMod(2);
     auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
@@ -724,6 +729,7 @@ void pushinsn(MachineState& m) {
     m.stack[1] = m.static_values->code.addOperation(target->pc,
                                                     {static_cast<OpCode>(op)});
     m.stack.popClear();
+    ++m.pc;
 }
 
 void pushinsnimm(MachineState& m) {
@@ -739,5 +745,24 @@ void pushinsnimm(MachineState& m) {
         target->pc, {static_cast<OpCode>(op), std::move(m.stack[2])});
     m.stack.popClear();
     m.stack.popClear();
+    ++m.pc;
+}
+
+void openinsn(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
+    if (!target) {
+        m.state = Status::Error;
+        return;
+    }
+    auto& cp = m.static_values->code->loadCodePoint(target->pc);
+    auto& op = cp.op;
+    if (op.immediate) {
+        m.stack[0] = *op.immediate;
+    } else {
+        m.stack[0] = Tuple();
+    }
+    m.stack.push(uint256_t{op.opcode});
+    ++m.pc;
 }
 }  // namespace machineoperation

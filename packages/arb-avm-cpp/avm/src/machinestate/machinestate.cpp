@@ -525,6 +525,18 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::PUSH_GAS:
             machineoperation::pushgas(*this);
             break;
+        case OpCode::ERR_CODE_POINT:
+            machineoperation::errcodept(*this);
+            break;
+        case OpCode::PUSH_INSN:
+            machineoperation::pushinsn(*this);
+            break;
+        case OpCode::PUSH_INSN_IMM:
+            machineoperation::pushinsnimm(*this);
+            break;
+        case OpCode::OPEN_INSN:
+            machineoperation::openinsn(*this);
+            break;
             /*****************/
             /*  Precompiles  */
             /*****************/
