@@ -43,7 +43,7 @@ class CodeSegment {
             prev_hash = hash(code.back());
         }
         code.emplace_back(std::move(op), prev_hash);
-        return {{segment, code.size() - 1, false}, hash(code.back())};
+        return {{segment, code.size() - 1}, hash(code.back())};
     }
 
     // Return the subset of this code segment starting in the given pc
@@ -56,30 +56,21 @@ class CodeSegment {
 };
 
 class Code {
-    std::vector<CodeSegment> segments;
+    std::vector<std::shared_ptr<CodeSegment>> segments;
 
    public:
-    const CodePoint& operator[](const CodePointRef& ref) const {
-        if (ref.is_err) {
-            return getErrCodePoint();
-        } else {
-            return segments[ref.segment][ref.pc];
-        }
-    }
 
-    const CodePoint& at(const CodePointRef& ref) const {
-        if (ref.is_err) {
-            return getErrCodePoint();
-        } else {
-            return segments.at(ref.segment).at(ref.pc);
-        }
+    const CodePoint& loadCodePoint(const CodePointRef& ref) const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return (*segments[ref.segment])[ref.pc];
     }
 
     CodePointStub addSegment() {
         uint64_t segment_num = segments.size();
-        segments.emplace_back(segment_num);
-        auto& segment = segments.back();
-        return {{segment_num, 0, false}, hash(segment[0])};
+        auto new_segment = std::make_shared<CodeSegment>(segment_num);
+        segments.emplace_back(std::move(new_segment));
+        auto& segment = *segments.back();
+        return {{segment_num, 0}, hash(segment[0])};
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
@@ -99,7 +90,8 @@ class Code {
     }
 
     CodePointRef initialCodePointRef() const {
-        return {0, segments[0].size() - 1, false};
+        const std::lock_guard<std::mutex> lock(mutex);
+        return {0, segments[0]->size() - 1};
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Code& code);

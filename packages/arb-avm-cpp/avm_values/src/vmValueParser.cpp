@@ -52,9 +52,10 @@ value value_from_json(const nlohmann::json& value_json,
         auto internal_offset = cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
         auto ref = [&]() -> CodePointRef {
             if (internal_offset == std::numeric_limits<uint64_t>::max()) {
-                return {0, 0, true};
+                // Special handle python compiler's marker for error code point
+                return {0, 0};
             } else {
-                return {0, op_count - internal_offset, false};
+                return {0, op_count - internal_offset};
             }
         }();
         return CodePointStub(ref, code.at(ref));

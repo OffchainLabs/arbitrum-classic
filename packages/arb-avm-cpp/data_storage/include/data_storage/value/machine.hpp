@@ -41,7 +41,7 @@ struct MachineStateKeys {
     CodePointRef err_pc;
     Status status;
 
-    MachineStateKeys() : pc(0, 0, true), err_pc(0, 0, false) {}
+    MachineStateKeys() : pc(0, 0), err_pc({0, 0}, 0) {}
     MachineStateKeys(uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,

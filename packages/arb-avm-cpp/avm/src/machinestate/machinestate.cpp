@@ -36,16 +36,16 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
       arb_gas_remaining(max_arb_gas_remaining),
-      pc(0, 0, false),
-      errpc(0, 0, true) {}
+      pc(0, 0),
+      errpc({0, 0}, getErrCodePoint()) {}
 
 MachineState::MachineState(std::shared_ptr<StaticVmValues> static_values_,
                            std::shared_ptr<TuplePool> pool_)
     : pool(std::move(pool_)),
       static_values(std::move(static_values_)),
       arb_gas_remaining(max_arb_gas_remaining),
-      pc(static_values->code.initialCodePointRef()),
-      errpc(0, 0, true) {}
+      pc(static_values->code->initialCodePointRef()),
+      errpc({0, 0}, static_values->code->loadCodePoint({0, 0})) {}
 
 MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            std::shared_ptr<StaticVmValues> static_values_,
@@ -295,8 +295,8 @@ BlockReason MachineState::runOne() {
             }
         }
 
-        if (state == Status::Error && !errpc.is_err) {
-            pc = errpc;
+        if (state == Status::Error && !errpc.is_error()) {
+            pc = errpc.pc;
             state = Status::Extensive;
         }
 

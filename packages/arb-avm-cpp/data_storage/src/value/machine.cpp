@@ -37,9 +37,7 @@ CodePointRef extractCodePointRef(iterator& iter) {
     auto segment_val = checkpoint::utils::deserialize_uint64(ptr);
     auto pc_val = checkpoint::utils::deserialize_uint64(ptr);
     iter += sizeof(pc_val) + sizeof(segment_val);
-    bool is_err = static_cast<bool>(*iter);
-    ++iter;
-    return {segment_val, pc_val, is_err};
+    return {segment_val, pc_val};
 }
 
 uint256_t extractUint256(iterator& iter) {

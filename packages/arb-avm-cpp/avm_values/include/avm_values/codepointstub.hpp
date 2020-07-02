@@ -25,24 +25,21 @@ struct CodePoint;
 struct CodePointRef {
     uint64_t segment;
     uint64_t pc;
-    bool is_err;
 
-    CodePointRef(uint64_t segment_, uint64_t pc_, bool is_err_)
-        : segment(segment_), pc(pc_), is_err(is_err_) {}
+    CodePointRef(uint64_t segment_, uint64_t pc_)
+        : segment(segment_), pc(pc_) {}
 
     CodePointRef& operator++() {
         --pc;
         return *this;
     }
 
-    CodePointRef operator+(uint64_t i) { return {segment, pc - i, is_err}; }
-    CodePointRef operator-(uint64_t i) { return {segment, pc + i, is_err}; }
+    CodePointRef operator+(uint64_t i) { return {segment, pc - i}; }
+    CodePointRef operator-(uint64_t i) { return {segment, pc + i}; }
 
     friend bool operator==(CodePointRef val1, CodePointRef val2) {
-        if (!val1.is_err && !val2.is_err && val1.pc == val2.pc) {
-            return true;
-        }
-        return val1.is_err && val2.is_err;
+        return std::tie(val1.segment, val1.pc) ==
+               std::tie(val2.segment, val2.pc);
     }
 
     void marshal(std::vector<unsigned char>& buf) const;
@@ -63,6 +60,8 @@ struct CodePointStub {
     }
 
     void marshal(std::vector<unsigned char>& buf) const;
+
+    bool is_error() const;
 };
 
 inline uint256_t hash(const CodePointStub& cp) {

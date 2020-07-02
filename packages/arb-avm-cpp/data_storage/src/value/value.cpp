@@ -26,7 +26,7 @@
 
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
-constexpr int TUP_CODEPT_LENGTH = 50;
+constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
 rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {

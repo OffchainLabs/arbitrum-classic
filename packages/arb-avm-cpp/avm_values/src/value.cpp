@@ -50,9 +50,7 @@ uint64_t deserialize_uint64_t(const char*& bufptr) {
 CodePointRef deserializeCodePointRef(const char*& bufptr) {
     uint64_t segment = deserialize_uint64_t(bufptr);
     uint64_t pc = deserialize_uint64_t(bufptr);
-    bool is_err = static_cast<bool>(*bufptr);
-    ++bufptr;
-    return {segment, pc, is_err};
+    return {segment, pc};
 }
 
 CodePointStub deserializeCodePointStub(const char*& bufptr) {
