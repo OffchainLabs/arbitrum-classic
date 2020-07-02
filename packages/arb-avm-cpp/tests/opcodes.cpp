@@ -390,11 +390,9 @@ TEST_CASE("POP opcode is correct") {
 TEST_CASE("SPUSH opcode is correct") {
     SECTION("spush") {
         auto pool = std::make_shared<TuplePool>();
-        Code code;
-        code.addSegment();
-        auto static_values =
-            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
-        MachineState m{static_values, pool};
+        auto code = std::make_shared<Code>();
+        code->addSegment();
+        MachineState m{std::move(code), uint256_t{5}, pool};
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -482,13 +480,11 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto pool = std::make_shared<TuplePool>();
-        Code code;
-        auto stub = code.addSegment();
-        code.addOperation(stub.pc, Operation(OpCode::ADD));
-        auto static_values =
-            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
-        MachineState m{static_values, pool};
-        auto initial_pc = m.pc;
+        auto code = std::make_shared<Code>();
+        auto stub = code->addSegment();
+        code->addOperation(stub.pc, Operation(OpCode::ADD));
+        MachineState m{std::move(code), uint256_t(5), pool};
+        auto initial_stub = CodePointStub(m.pc, m.loadCurrentInstruction());
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == CodePointRef{0, 0});
@@ -544,14 +540,12 @@ TEST_CASE("AUXSTACKEMPTY opcode is correct") {
 }
 
 MachineState createTestMachineState(OpCode op) {
-    Code code;
-    auto stub = code.addSegment();
-    stub = code.addOperation(stub.pc, {OpCode::HALT});
-    code.addOperation(stub.pc, {op});
-    auto static_vals =
-        std::make_shared<StaticVmValues>(std::move(code), Tuple());
+    auto code = std::make_shared<Code>();
+    auto stub = code->addSegment();
+    stub = code->addOperation(stub.pc, {OpCode::HALT});
+    code->addOperation(stub.pc, {op});
     auto pool = std::make_shared<TuplePool>();
-    return {std::move(static_vals), std::move(pool)};
+    return {std::move(code), Tuple(), std::move(pool)};
 }
 
 TEST_CASE("NOP opcode is correct") {
@@ -568,13 +562,11 @@ TEST_CASE("NOP opcode is correct") {
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto pool = std::make_shared<TuplePool>();
-        Code code;
-        auto stub = code.addSegment();
-        code.addOperation(stub.pc, Operation(OpCode::ADD));
-        auto static_values =
-            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
-        MachineState m{static_values, pool};
-        m.errpc = CodePointRef(0, 0, false);
+        auto code = std::make_shared<Code>();
+        auto stub = code->addSegment();
+        stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
+        MachineState m{std::move(code), uint256_t(5), pool};
+        m.errpc = stub;
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == CodePointRef{0, 0});

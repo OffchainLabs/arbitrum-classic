@@ -33,7 +33,7 @@ namespace {
 
 value value_from_json(const nlohmann::json& value_json,
                       size_t op_count,
-                      const Code& code,
+                      const CodeSegment& code,
                       TuplePool& pool) {
     if (value_json.contains(INT_VAL_LABEL)) {
         return uint256_t{value_json[INT_VAL_LABEL].get<std::string>()};
@@ -50,15 +50,12 @@ value value_from_json(const nlohmann::json& value_json,
     } else if (value_json.contains(CP_VAL_LABEL)) {
         auto& cp_json = value_json[CP_VAL_LABEL];
         auto internal_offset = cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
-        auto ref = [&]() -> CodePointRef {
-            if (internal_offset == std::numeric_limits<uint64_t>::max()) {
-                // Special handle python compiler's marker for error code point
-                return {0, 0};
-            } else {
-                return {0, op_count - internal_offset};
-            }
-        }();
-        return CodePointStub(ref, code.at(ref));
+        uint64_t pc = 0;
+        // Special handle python compiler's marker for error code point
+        if (internal_offset != std::numeric_limits<uint64_t>::max()) {
+            pc = op_count - internal_offset;
+        }
+        return CodePointStub({code.segmentID(), pc}, code[pc]);
     } else {
         throw std::runtime_error("invalid value type");
     }
@@ -66,7 +63,7 @@ value value_from_json(const nlohmann::json& value_json,
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const Code& code,
+                              const CodeSegment& code,
                               TuplePool& pool) {
     auto opcode = op_json.at(OPCODE_LABEL).get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
@@ -77,34 +74,25 @@ Operation operation_from_json(const nlohmann::json& op_json,
 }
 }  // namespace
 
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool) {
-    try {
-        std::ifstream contract_input_stream(contract_filename);
-        if (!contract_input_stream.is_open()) {
-            throw std::runtime_error("doesn't exist");
-        }
-        nlohmann::json contract_json;
-        contract_input_stream >> contract_json;
-        auto& json_code = contract_json.at(CODE_LABEL);
-        if (!json_code.is_array()) {
-            throw std::runtime_error("expected code to be array");
-        }
-        auto op_count = json_code.size();
-        Code code;
-        CodePointStub prev = code.addSegment();
-        for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-            prev = code.addOperation(
-                prev.pc, operation_from_json(*it, op_count, code, pool));
-        }
-        value static_val = value_from_json(contract_json.at(STATIC_LABEL),
-                                           op_count, code, pool);
-        return std::make_pair(
-            StaticVmValues{std::move(code), std::move(static_val)}, true);
-    } catch (std::exception& e) {
-        std::cerr << "Failed to load code file " << contract_filename << ": "
-                  << e.what() << "\n";
-        return std::make_pair(StaticVmValues{}, false);
+LoadedExecutable loadExecutable(const std::string& contract_filename,
+                                TuplePool& pool) {
+    std::ifstream contract_input_stream(contract_filename);
+    if (!contract_input_stream.is_open()) {
+        throw std::runtime_error("doesn't exist");
     }
+    nlohmann::json contract_json;
+    contract_input_stream >> contract_json;
+    auto& json_code = contract_json.at(CODE_LABEL);
+    if (!json_code.is_array()) {
+        throw std::runtime_error("expected code to be array");
+    }
+    auto op_count = json_code.size();
+    auto segment = std::make_shared<CodeSegment>(0);
+    for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
+        segment->addOperation(
+            operation_from_json(*it, op_count, *segment, pool));
+    }
+    value static_val = value_from_json(contract_json.at(STATIC_LABEL), op_count,
+                                       *segment, pool);
+    return {std::move(segment), std::move(static_val)};
 }

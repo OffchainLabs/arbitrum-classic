@@ -20,17 +20,15 @@
 #include <avm_values/code.hpp>
 #include <avm_values/tuple.hpp>
 
-struct StaticVmValues {
-    Code code;
-    value staticVal;
+struct LoadedExecutable {
+    std::shared_ptr<CodeSegment> code;
+    value static_val;
 
-    StaticVmValues() = default;
-    StaticVmValues(Code code_, value staticVal_)
-        : code(std::move(code_)), staticVal(std::move(staticVal_)) {}
+    LoadedExecutable(std::shared_ptr<CodeSegment> code_, value static_val_)
+        : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool);
+LoadedExecutable loadExecutable(const std::string& contract_filename,
+                                TuplePool& pool);
 
 #endif /* vmValueParser_hpp */

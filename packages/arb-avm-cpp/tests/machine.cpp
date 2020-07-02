@@ -70,19 +70,15 @@ TEST_CASE("Checkpoint State") {
     CheckpointStorage storage(dbpath, test_contract_path);
 
     SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        checkpointState(storage, ret.first);
+        auto machine = Machine::loadFromFile(test_contract_path);
+        checkpointState(storage, machine);
     }
     SECTION("save twice") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        checkpointStateTwice(storage, ret.first);
+        auto machine = Machine::loadFromFile(test_contract_path);
+        checkpointStateTwice(storage, machine);
     }
     SECTION("assert machine hash") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        auto machine = std::move(ret.first);
+        auto machine = Machine::loadFromFile(test_contract_path);
         Machine machine2 = storage.getInitialMachine();
         auto hash1 = machine.hash();
         auto hash2 = machine2.hash();
@@ -105,11 +101,10 @@ TEST_CASE("Delete machine checkpoint") {
     CheckpointStorage storage(dbpath, test_contract_path);
 
     SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
+        auto machine = Machine::loadFromFile(test_contract_path);
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, ret.first);
-        deleteCheckpoint(*transaction, ret.first);
+        auto results = saveMachine(*transaction, machine);
+        deleteCheckpoint(*transaction, machine);
         REQUIRE(transaction->commit().ok());
     }
 }
@@ -120,22 +115,20 @@ TEST_CASE("Restore checkpoint") {
     CheckpointStorage storage(dbpath, test_contract_path);
 
     SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
+        auto machine = Machine::loadFromFile(test_contract_path);
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, ret.first);
+        auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        restoreCheckpoint(storage, ret.first);
+        restoreCheckpoint(storage, machine);
     }
 }
 
 TEST_CASE("Proof") {
-    auto ret = Machine::loadFromFile(test_contract_path);
-    REQUIRE(ret.second);
+    auto machine = Machine::loadFromFile(test_contract_path);
     while (true) {
-        auto assertion = ret.first.run(1, {}, {}, std::chrono::seconds{0});
-        ret.first.marshalForProof();
+        auto assertion = machine.run(1, {}, {}, std::chrono::seconds{0});
+        machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
         }
@@ -143,9 +136,7 @@ TEST_CASE("Proof") {
 }
 
 TEST_CASE("Clone") {
-    auto ret = Machine::loadFromFile(test_contract_path);
-    REQUIRE(ret.second);
-    auto machine = std::move(ret.first);
+    auto machine = Machine::loadFromFile(test_contract_path);
     for (int i = 0; i < 100; i++) {
         machine.machine_state.stack.push(Tuple(uint256_t{3}, uint256_t{6},
                                                uint256_t{7}, uint256_t{2},
@@ -165,13 +156,13 @@ TEST_CASE("Machine hash") {
     DBDeleter deleter;
     TuplePool pool;
     CheckpointStorage storage(dbpath, test_contract_path);
-    MachineState machine = MachineState::loadFromFile(test_contract_path).first;
-    auto pcHash = ::hash(machine.static_values->code[machine.pc]);
+    MachineState machine = MachineState::loadFromFile(test_contract_path);
+    auto pcHash = ::hash(machine.loadCurrentInstruction());
     auto stackHash = machine.stack.hash();
     auto auxstackHash = machine.auxstack.hash();
     auto registerHash = ::hash_value(machine.registerVal);
-    auto staticHash = ::hash_value(machine.static_values->staticVal);
-    auto errHash = ::hash(machine.static_values->code[machine.errpc]);
+    auto staticHash = ::hash_value(machine.static_val);
+    auto errHash = ::hash(machine.errpc);
     auto machineHash = machine.hash();
 
     REQUIRE(pcHash == uint256_t("9437065110668622075464824926507979877827393212"

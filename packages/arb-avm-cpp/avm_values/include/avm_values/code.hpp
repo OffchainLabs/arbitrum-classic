@@ -19,17 +19,19 @@
 
 #include <avm_values/codepoint.hpp>
 
+class Code;
+struct LoadedExecutable;
+
+// The public interface of CodeSegment is thread safe assuming that the indexes
+// used to access the segment are less than or equal to the size of the segment
+// when you initially load it
 class CodeSegment {
     uint64_t segment;
     std::vector<CodePoint> code;
 
-    CodeSegment(uint64_t segment_, std::vector<CodePoint> code_)
-        : segment(segment_), code(std::move(code_)) {}
-
-   public:
-    CodeSegment(uint64_t segment_) : segment(segment_) {
-        code.push_back(getErrCodePoint());
-    }
+    friend class Code;
+    friend LoadedExecutable loadExecutable(const std::string& contract_filename,
+                                           TuplePool& pool);
 
     size_t size() const { return code.size(); }
 
@@ -59,6 +61,20 @@ class Code {
     std::vector<std::shared_ptr<CodeSegment>> segments;
 
    public:
+
+    Code() = default;
+    Code(std::shared_ptr<CodeSegment> segment) {
+        assert(segment->segmentID() == 0);
+        segments.emplace_back(std::move(segment));
+    }
+
+    std::shared_ptr<const CodeSegment> loadCodeSegment(
+        uint64_t segment_num) const {
+        mutex.lock();
+        std::shared_ptr<const CodeSegment> segment = segments[segment_num];
+        mutex.unlock();
+        return segment;
+    }
 
     const CodePoint& loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);

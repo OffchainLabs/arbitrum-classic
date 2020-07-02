@@ -59,8 +59,10 @@ struct AssertionContext {
 
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
-    std::shared_ptr<StaticVmValues> static_values;
+    std::shared_ptr<Code> code;
+    mutable std::shared_ptr<const CodeSegment> loaded_segment;
     value registerVal;
+    value static_val;
     Datastack stack;
     Datastack auxstack;
     uint256_t arb_gas_remaining;
@@ -69,17 +71,18 @@ struct MachineState {
     CodePointRef errpc;
     AssertionContext context;
 
-    static std::pair<MachineState, bool> loadFromFile(
-        const std::string& contract_filename);
+    static MachineState loadFromFile(const std::string& contract_filename);
 
     MachineState();
 
-    MachineState(std::shared_ptr<StaticVmValues> static_values_,
+    MachineState(std::shared_ptr<Code> code_,
+                 value static_val,
                  std::shared_ptr<TuplePool> pool_);
 
     MachineState(std::shared_ptr<TuplePool> pool_,
-                 std::shared_ptr<StaticVmValues> static_values_,
+                 std::shared_ptr<Code> code_,
                  value register_val_,
+                 value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,

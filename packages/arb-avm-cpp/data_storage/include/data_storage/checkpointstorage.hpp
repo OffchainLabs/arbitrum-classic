@@ -34,12 +34,20 @@ class TransactionDB;
 }
 
 class CheckpointStorage {
-   private:
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<StaticVmValues> initial_state;
+    std::shared_ptr<Code> code;
+    value static_val;
+
+    CheckpointStorage(std::shared_ptr<DataStorage>,
+                      const std::string& contract_path,
+                      std::shared_ptr<TuplePool> pool);
+    CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
+                      LoadedExecutable exec,
+                      std::shared_ptr<TuplePool> pool_);
 
    public:
     std::shared_ptr<TuplePool> pool;
+
     CheckpointStorage(const std::string& db_path,
                       const std::string& contract_path);
     bool closeCheckpointStorage();

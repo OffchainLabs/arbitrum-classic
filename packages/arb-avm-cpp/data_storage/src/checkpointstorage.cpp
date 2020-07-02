@@ -32,16 +32,26 @@
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
+CheckpointStorage::CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
+                                     LoadedExecutable exec,
+                                     std::shared_ptr<TuplePool> pool_)
+    : datastorage(std::move(datastorage_)),
+      code(std::make_shared<Code>(std::move(exec.code))),
+      static_val(std::move(exec.static_val)),
+      pool(std::move(pool_)) {}
+
+CheckpointStorage::CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
+                                     const std::string& contract_path,
+                                     std::shared_ptr<TuplePool> pool)
+    : CheckpointStorage(std::move(datastorage_),
+                        loadExecutable(contract_path, *pool),
+                        std::move(pool)) {}
+
 CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const std::string& contract_path)
-    : datastorage(std::make_shared<DataStorage>(db_path)),
-      pool(std::make_shared<TuplePool>()) {
-    auto ret = parseStaticVmValues(contract_path, *pool.get());
-    if (!ret.second) {
-        throw std::runtime_error("invalid initial values");
-    }
-    initial_state = std::make_shared<StaticVmValues>(std::move(ret.first));
-}
+    : CheckpointStorage(std::make_shared<DataStorage>(db_path),
+                        contract_path,
+                        std::make_shared<TuplePool>()) {}
 
 bool CheckpointStorage::closeCheckpointStorage() {
     auto status = datastorage->closeDb();
@@ -77,7 +87,7 @@ std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
 }
 
 Machine CheckpointStorage::getInitialMachine() const {
-    return {MachineState{initial_state, pool}};
+    return {MachineState{code, static_val, pool}};
 }
 
 std::pair<Machine, bool> CheckpointStorage::getMachine(
@@ -112,8 +122,9 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
 
     MachineState machine_state{
         pool,
-        initial_state,
+        code,
         std::move(register_results.data),
+        static_val,
         Datastack(nonstd::get<Tuple>(stack_results.data)),
         Datastack(nonstd::get<Tuple>(auxstack_results.data)),
         state_data.arb_gas_remaining,

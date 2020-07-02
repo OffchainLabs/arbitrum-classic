@@ -232,7 +232,7 @@ TEST_CASE("Initial VM Values") {
     SECTION("parse invalid path") {
         TuplePool pool = TuplePool();
         TuplePool& pool_ref = pool;
-        auto values = parseStaticVmValues("nonexistent/path", pool_ref);
+        CHECK_THROWS(loadExecutable("nonexistent/path", pool_ref));
     }
     boost::filesystem::remove_all(dbpath);
 }

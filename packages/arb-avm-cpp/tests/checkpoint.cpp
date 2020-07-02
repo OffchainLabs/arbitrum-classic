@@ -347,11 +347,11 @@ void deleteCheckpoint(Transaction& transaction,
 
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code;
-    auto stub = code.addSegment();
-    stub = code.addOperation(stub.pc, Operation(OpCode::ADD));
-    stub = code.addOperation(stub.pc, Operation(OpCode::MUL));
-    stub = code.addOperation(stub.pc, Operation(OpCode::SUB));
+    auto code = std::make_shared<Code>();
+    auto stub = code->addSegment();
+    stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
+    stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
+    stub = code->addOperation(stub.pc, Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
@@ -371,17 +371,15 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    auto static_values = std::make_shared<StaticVmValues>(
-        std::move(code), std::move(static_val));
-    return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, arb_gas_remaining, state,
-                                pc.pc, err_pc.pc));
+    return Machine(MachineState(pool, std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc));
 }
 
 Machine getDefaultMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code;
-    code.addSegment();
+    auto code = std::make_shared<Code>();
+    code->addSegment();
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
@@ -390,11 +388,9 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    auto static_values = std::make_shared<StaticVmValues>(
-        std::move(code), std::move(static_val));
-    return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, arb_gas_remaining, state,
-                                pc, err_pc));
+    return Machine(MachineState(pool, std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc));
 }
 
 TEST_CASE("Save Machinestatedata") {

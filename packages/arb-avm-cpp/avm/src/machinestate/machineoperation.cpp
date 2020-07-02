@@ -392,7 +392,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.static_values->staticVal;
+    value copiedStatic = m.static_val;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -713,7 +713,7 @@ void pushgas(MachineState& m) {
 }
 
 void errcodept(MachineState& m) {
-    m.stack.push(m.static_values->code->addSegment());
+    m.stack.push(m.code->addSegment());
     ++m.pc;
 }
 
@@ -726,8 +726,7 @@ void pushinsn(MachineState& m) {
     }
     auto& op_int = assumeInt(m.stack[1]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.static_values->code.addOperation(target->pc,
-                                                    {static_cast<OpCode>(op)});
+    m.stack[1] = m.code->addOperation(target->pc, {static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }
@@ -741,7 +740,7 @@ void pushinsnimm(MachineState& m) {
     }
     auto& op_int = assumeInt(m.stack[1]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[2] = m.static_values->code.addOperation(
+    m.stack[2] = m.code->addOperation(
         target->pc, {static_cast<OpCode>(op), std::move(m.stack[2])});
     m.stack.popClear();
     m.stack.popClear();
@@ -755,7 +754,7 @@ void openinsn(MachineState& m) {
         m.state = Status::Error;
         return;
     }
-    auto& cp = m.static_values->code->loadCodePoint(target->pc);
+    auto& cp = m.code->loadCodePoint(target->pc);
     auto& op = cp.op;
     if (op.immediate) {
         m.stack[0] = *op.immediate;

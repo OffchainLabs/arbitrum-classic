@@ -39,17 +39,20 @@ MachineState::MachineState()
       pc(0, 0),
       errpc({0, 0}, getErrCodePoint()) {}
 
-MachineState::MachineState(std::shared_ptr<StaticVmValues> static_values_,
+MachineState::MachineState(std::shared_ptr<Code> code_,
+                           value static_val_,
                            std::shared_ptr<TuplePool> pool_)
     : pool(std::move(pool_)),
-      static_values(std::move(static_values_)),
+      code(std::move(code_)),
+      static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
-      pc(static_values->code->initialCodePointRef()),
-      errpc({0, 0}, static_values->code->loadCodePoint({0, 0})) {}
+      pc(code->initialCodePointRef()),
+      errpc({0, 0}, code->loadCodePoint({0, 0})) {}
 
 MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
-                           std::shared_ptr<StaticVmValues> static_values_,
+                           std::shared_ptr<Code> code_,
                            value register_val_,
+                           value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
                            uint256_t arb_gas_remaining_,
@@ -57,8 +60,9 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            CodePointRef pc_,
                            CodePointRef errpc_)
     : pool(std::move(pool_)),
-      static_values(std::move(static_values_)),
+      code(std::move(code_)),
       registerVal(std::move(register_val_)),
+      static_val(static_val_),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
@@ -66,19 +70,12 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
       pc(pc_),
       errpc(errpc_) {}
 
-std::pair<MachineState, bool> MachineState::loadFromFile(
-    const std::string& contract_filename) {
+MachineState MachineState::loadFromFile(const std::string& contract_filename) {
     auto pool = std::make_shared<TuplePool>();
-    auto ret = parseStaticVmValues(contract_filename, *pool.get());
-
-    if (!ret.second) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    return std::make_pair(
-        MachineState{std::make_shared<StaticVmValues>(std::move(ret.first)),
-                     std::move(pool)},
-        true);
+    auto executable = loadExecutable(contract_filename, *pool);
+    auto code = std::make_shared<Code>(std::move(executable.code));
+    return MachineState{std::move(code), std::move(executable.static_val),
+                        std::move(pool)};
 }
 
 uint256_t MachineState::hash() const {
@@ -106,7 +103,7 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash_value(static_values->staticVal);
+        auto val = ::hash_value(static_val);
         oit = to_big_endian(val, oit);
     }
     { oit = to_big_endian(arb_gas_remaining, oit); }
@@ -123,7 +120,7 @@ uint256_t MachineState::hash() const {
 uint256_t MachineState::getMachineSize() {
     uint256_t machine_size = 0;
 
-    machine_size += getSize(static_values->staticVal);
+    machine_size += getSize(static_val);
     machine_size += getSize(registerVal);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
@@ -159,10 +156,9 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
 
-    return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
+    return ::marshalState(*code, ::hash(loadCurrentInstruction()),
                           stackPreImage, auxStackPreImage, registerVal,
-                          static_values->staticVal, arb_gas_remaining,
-                          CodePointStub{errpc, static_values->code[errpc]});
+                          static_val, arb_gas_remaining, errpc);
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -173,18 +169,16 @@ std::vector<unsigned char> MachineState::marshalForProof() {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.begin());
     }
-    auto stackProof = stack.marshalForProof(stackPops, static_values->code);
+
+    auto stackProof = stack.marshalForProof(stackPops, *code);
     std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
-    auto auxStackProof =
-        auxstack.marshalForProof(auxStackPops, static_values->code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
     auto buf = ::marshalState(
-        static_values->code, static_values->code[pc].nextHash, stackProof.first,
-        auxStackProof.first, registerVal, static_values->staticVal,
-        arb_gas_remaining, CodePointStub{errpc, static_values->code[errpc]});
+        *code, currentInstruction.nextHash, stackProof.first,
+        auxStackProof.first, registerVal, static_val, arb_gas_remaining, errpc);
 
-    static_values->code[pc].op.marshalForProof(buf, immediateMarshalLevel,
-                                               static_values->code);
+    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
@@ -224,6 +218,13 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
     } else {
         return NotBlocked();
     }
+}
+
+const CodePoint& MachineState::loadCurrentInstruction() const {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
+        loaded_segment = code->loadCodeSegment(pc.segment);
+    }
+    return (*loaded_segment)[pc.pc];
 }
 
 BlockReason MachineState::runOne() {
@@ -556,17 +557,16 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";
-    os << "operation " << val.static_values->code[val.pc].op << "\n";
-    os << "codePointHash " << to_hex_str(hash(val.static_values->code[val.pc]))
-       << "\n";
+    auto& current_code_point = val.code->loadCodePoint(val.pc);
+    os << "operation " << current_code_point.op << "\n";
+    os << "codePointHash " << to_hex_str(hash(current_code_point)) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
     os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash_value(val.static_values->staticVal))
-       << "\n";
+    os << "staticHash " << to_hex_str(hash_value(val.static_val)) << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
-    os << "err handler " << val.errpc << "\n";
-    os << "errHandlerHash "
-       << to_hex_str(hash(val.static_values->code[val.errpc])) << "\n";
+    os << "err handler " << val.errpc.pc << "\n";
+    auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
+    os << "errHandlerHash " << to_hex_str(hash(err_code_point)) << "\n";
     return os;
 }

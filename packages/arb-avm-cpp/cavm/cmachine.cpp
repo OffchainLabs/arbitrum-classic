@@ -31,11 +31,13 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto ret = Machine::loadFromFile(filename);
-    if (!ret.second) {
+    try {
+        return new Machine(Machine::loadFromFile(filename));
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading machine " << filename << ": " << e.what()
+                  << "\n";
         return nullptr;
     }
-    return new Machine(std::move(ret.first));
 }
 
 // cmachine_t *machine_create(char *data)

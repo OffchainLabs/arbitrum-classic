@@ -41,17 +41,15 @@ class Machine {
     Machine() = default;
     Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<StaticVmValues> static_values,
+    Machine(std::shared_ptr<Code> code,
+            value static_val,
             std::shared_ptr<TuplePool> pool_)
-        : machine_state(std::move(static_values), std::move(pool_)) {}
+        : machine_state(std::move(code),
+                        std::move(static_val),
+                        std::move(pool_)) {}
 
-    static std::pair<Machine, bool> loadFromFile(
-        const std::string& contract_filename) {
-        auto result = MachineState::loadFromFile(contract_filename);
-        if (!result.second) {
-            return std::make_pair(Machine{}, false);
-        }
-        return std::make_pair(Machine{std::move(result.first)}, true);
+    static Machine loadFromFile(const std::string& contract_filename) {
+        return {MachineState::loadFromFile(contract_filename)};
     }
 
     Assertion run(uint64_t stepCount,
