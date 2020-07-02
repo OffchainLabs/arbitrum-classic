@@ -39,7 +39,6 @@ import { ArbSys } from './abi/ArbSys'
 import { ArbInfoFactory } from './abi/ArbInfoFactory'
 
 // EthBridge event names
-// const EB_EVENT_VMC = 'VMCreated'
 const EB_EVENT_CDA = 'RollupAsserted'
 const TransactionMessageDelivered = 'TransactionMessageDelivered'
 const EthDepositMessageDelivered = 'EthDepositMessageDelivered'
@@ -325,14 +324,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
-  public async perform(
-    method: string,
-    params: {
-      address: string
-      transactionHash: string
-      filter: ethers.ethers.providers.Filter
-    }
-  ): Promise<any> {
+  public async perform(method: string, params: any): Promise<any> {
     // console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
