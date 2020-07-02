@@ -22,25 +22,25 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine/machinetester"
-	"log"
 	"testing"
 )
 
 var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
-func getTester(m *testing.T) *machinetester.MachineTester {
+func getTester(t *testing.T) *machinetester.MachineTester {
 	auth, err := test.SetupAuth(privHex)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	client, err := ethclient.Dial(test.GetEthUrl())
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	_, machineTx, deployedMachineTester, err := machinetester.DeployMachineTester(
@@ -48,7 +48,7 @@ func getTester(m *testing.T) *machinetester.MachineTester {
 		client,
 	)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
@@ -58,7 +58,7 @@ func getTester(m *testing.T) *machinetester.MachineTester {
 		"deployedMachineTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	return deployedMachineTester
@@ -66,7 +66,7 @@ func getTester(m *testing.T) *machinetester.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := loader.LoadMachineFromFile("../contract.ao", true, "cpp")
+	machine, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), true, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}

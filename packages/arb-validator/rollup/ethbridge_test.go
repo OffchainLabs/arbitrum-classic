@@ -19,16 +19,26 @@ package rollup
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/rolluptester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 )
 
 var dbPath = "./testdb"
@@ -155,7 +165,7 @@ func TestConfirmAssertion(t *testing.T) {
 		true,
 	)
 
-	chain, err := NewChain(
+	chain, err := chainobserver.NewChain(
 		rollupAddress,
 		checkpointer,
 		chainParams,
@@ -184,6 +194,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
+	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
 	results := make([]evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
@@ -200,12 +211,12 @@ func TestConfirmAssertion(t *testing.T) {
 
 	assertion := evm.NewRandomEVMAssertion(results, messages)
 	assertion.NumGas = 100
-	prepared := chain.prepareAssertion()
-	prepared.assertion = assertion
-	prepared.claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared := chain.PrepareAssertion()
+	prepared.Assertion = assertion
+	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	t.Run("make assertion", func(t *testing.T) {
 		var stakerProof []common.Hash
-		events, err := makeAssertion(context.Background(), rollupContract, prepared, stakerProof)
+		events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -216,9 +227,9 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
-	latestConf := chain.nodeGraph.latestConfirmed
-	validNode := chain.nodeGraph.nodeFromHash[latestConf.SuccessorHashes()[3]]
-	if err := validNode.UpdateValidOpinion(prepared.machine, prepared.assertion); err != nil {
+	latestConf := chain.NodeGraph.LatestConfirmed()
+	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	if err := validNode.UpdateValidOpinion(prepared.Machine, prepared.Assertion); err != nil {
 		t.Fatal(err)
 	}
 
@@ -231,7 +242,7 @@ func TestConfirmAssertion(t *testing.T) {
 	confTime := new(big.Int).Add(currentTime.Height.AsInt(), big.NewInt(1))
 
 	t.Run("confirm assertion", func(t *testing.T) {
-		opp, nodes := chain.nodeGraph.generateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+		opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
 		if opp == nil {
 			t.Fatal("should have had opp")
 		}

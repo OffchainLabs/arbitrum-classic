@@ -27,16 +27,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-const BytesPerInt = 32
-
 var hashOfOne common.Hash
 var hashOfZero common.Hash
-var IntegerZero IntValue
 
 func init() {
 	hashOfOne = NewInt64Value(1).hashImpl()
 	hashOfZero = NewInt64Value(0).hashImpl()
-	IntegerZero = NewInt64Value(0)
 }
 
 type IntValue struct {
@@ -57,13 +53,6 @@ func NewValueFromAddress(addr common.Address) IntValue {
 	return NewIntValue(big.NewInt(0).SetBytes(addressBytes[:]))
 }
 
-func NewBooleanValue(val bool) IntValue {
-	if val {
-		return NewInt64Value(1)
-	}
-	return NewInt64Value(0)
-}
-
 func NewIntValueFromReader(rd io.Reader) (IntValue, error) {
 	var data common.Hash
 	_, err := rd.Read(data[:])
@@ -78,26 +67,16 @@ func (iv IntValue) TypeCode() uint8 {
 	return TypeCodeInt
 }
 
-func (iv IntValue) InternalTypeCode() uint8 {
-	return TypeCodeInt
-}
-
 func (iv IntValue) Clone() Value {
 	return IntValue{new(big.Int).Set(iv.val)}
 }
 
-func (iv IntValue) CloneShallow() Value {
-	return IntValue{iv.val}
-}
-
 func (iv IntValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashPreImage {
-		return iv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeInt {
+	other, ok := val.(IntValue)
+	if !ok {
 		return false
-	} else {
-		return iv.val.Cmp(val.(IntValue).val) == 0
 	}
+	return iv.val.Cmp(other.val) == 0
 }
 
 func (iv IntValue) Size() int64 {
@@ -138,8 +117,4 @@ func (iv IntValue) Marshal(w io.Writer) error {
 	bytesVal := iv.ToBytes()
 	_, err := w.Write(bytesVal[:])
 	return err
-}
-
-func (tv IntValue) MarshalForProof(wr io.Writer) error {
-	return tv.Marshal(wr)
 }

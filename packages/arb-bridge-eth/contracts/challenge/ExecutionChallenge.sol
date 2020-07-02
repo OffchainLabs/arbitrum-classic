@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
@@ -24,9 +26,7 @@ import "../arch/Protocol.sol";
 
 import "../libraries/MerkleLib.sol";
 
-
 contract ExecutionChallenge is BisectionChallenge {
-
     event BisectedAssertion(
         bytes32[] machineHashes,
         bool[] didInboxInsns,
@@ -40,9 +40,9 @@ contract ExecutionChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Incorrect previous state
-    string constant BIS_INPLEN = "BIS_INPLEN";
+    string private constant BIS_INPLEN = "BIS_INPLEN";
     // Proof was incorrect
-    string constant OSP_PROOF = "OSP_PROOF";
+    string private constant OSP_PROOF = "OSP_PROOF";
 
     struct BisectAssertionData {
         bytes32 beforeInbox;
@@ -64,10 +64,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] memory _logAccs,
         uint64[] memory _gases,
         uint64 _totalSteps
-    )
-        public
-        asserterAction
-    {
+    ) public asserterAction {
         _bisectAssertion(
             BisectAssertionData(
                 _beforeInbox,
@@ -97,9 +94,9 @@ contract ExecutionChallenge is BisectionChallenge {
         }
 
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
-             _data.machineHashes[0],
-             _data.timeBounds,
-             _data.beforeInbox
+            _data.machineHashes[0],
+            _data.timeBounds,
+            _data.beforeInbox
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             _data.machineHashes[bisectionCount],
@@ -112,7 +109,11 @@ contract ExecutionChallenge is BisectionChallenge {
         );
 
         requireMatchesPrevState(
-            ChallengeUtils.executionHash(_data.totalSteps, preconditionHash, assertionHash)
+            ChallengeUtils.executionHash(
+                _data.totalSteps,
+                preconditionHash,
+                assertionHash
+            )
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
@@ -126,17 +127,17 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.logAccs[1]
         );
         hashes[0] = ChallengeUtils.executionHash(
-            uint32(firstSegmentSize(uint(_data.totalSteps), bisectionCount)),
+            uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
             Protocol.generatePreconditionHash(
-                 _data.machineHashes[0],
-                 _data.timeBounds,
-                 _data.beforeInbox
+                _data.machineHashes[0],
+                _data.timeBounds,
+                _data.beforeInbox
             ),
             assertionHash
         );
 
         for (uint256 i = 1; i < bisectionCount; i++) {
-            if (_data.didInboxInsns[i-1]) {
+            if (_data.didInboxInsns[i - 1]) {
                 _data.beforeInbox = Value.hashEmptyTuple();
             }
             assertionHash = Protocol.generateAssertionHash(
@@ -149,11 +150,13 @@ contract ExecutionChallenge is BisectionChallenge {
                 _data.logAccs[i + 1]
             );
             hashes[i] = ChallengeUtils.executionHash(
-                uint32(otherSegmentSize(uint(_data.totalSteps), bisectionCount)),
+                uint32(
+                    otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
+                ),
                 Protocol.generatePreconditionHash(
-                     _data.machineHashes[i],
-                     _data.timeBounds,
-                     _data.beforeInbox
+                    _data.machineHashes[i],
+                    _data.timeBounds,
+                    _data.beforeInbox
                 ),
                 assertionHash
             );
@@ -184,23 +187,22 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _lastMessage,
         bytes32 _firstLog,
         bytes32 _lastLog,
-        uint64  _gas,
+        uint64 _gas,
         bytes memory _proof
-    )
-        public
-        asserterAction
-    {
-        verifyPreCondition(_beforeHash,
-                        _timeBounds,
-                        _beforeInbox,
-                        _beforeInboxValueSize,
-                        _afterHash,
-                        _didInboxInsns,
-                        _gas,
-                        _firstMessage,
-                        _lastMessage,
-                        _firstLog,
-                        _lastLog);
+    ) public asserterAction {
+        verifyPreCondition(
+            _beforeHash,
+            _timeBounds,
+            _beforeInbox,
+            _beforeInboxValueSize,
+            _afterHash,
+            _didInboxInsns,
+            _gas,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog
+        );
 
         uint256 correctProof = OneStepProof.validateProof(
             _beforeHash,
@@ -229,16 +231,19 @@ contract ExecutionChallenge is BisectionChallenge {
         uint256 _beforeInboxValueSize,
         bytes32 _afterHash,
         bool _didInboxInsns,
-        uint64  _gas,
+        uint64 _gas,
         bytes32 _firstMessage,
         bytes32 _lastMessage,
         bytes32 _firstLog,
-        bytes32 _lastLog) internal view {
-
-        bytes32 beforeInbox = Value.hashTuplePreImage(_beforeInbox, _beforeInboxValueSize);
+        bytes32 _lastLog
+    ) internal view {
+        bytes32 beforeInbox = Value.hashTuplePreImage(
+            _beforeInbox,
+            _beforeInboxValueSize
+        );
         bytes32 precondition = Protocol.generatePreconditionHash(
-             _beforeHash,
-             _timeBounds,
+            _beforeHash,
+            _timeBounds,
             beforeInbox
         );
         requireMatchesPrevState(
@@ -259,10 +264,18 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidExType());
+        IStaking(vmAddress).resolveChallenge(
+            asserter,
+            challenger,
+            ChallengeUtils.getInvalidExType()
+        );
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidExType());
+        IStaking(vmAddress).resolveChallenge(
+            challenger,
+            asserter,
+            ChallengeUtils.getInvalidExType()
+        );
     }
 }

@@ -15,8 +15,12 @@
  */
 
 #include <avm/machine.hpp>
+#include <avm_values/keccak.hpp>
 #include <bigint_utils.hpp>
 
+#include <secp256k1_recovery.h>
+
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
@@ -211,10 +215,26 @@ TEST_CASE("LT opcode is correct") {
 }
 
 TEST_CASE("GT opcode is correct") {
-    SECTION("less") { testBinaryOp(3, 9, 0, OpCode::GT); }
-    SECTION("greater") { testBinaryOp(9, 3, 1, OpCode::GT); }
-    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::GT); }
-    SECTION("First neg, second pos") { testBinaryOp(-3, 9, 1, OpCode::GT); }
+    testBinaryOp(3, 9, 0, OpCode::GT);
+    testBinaryOp(9, 3, 1, OpCode::GT);
+    testBinaryOp(3, 3, 0, OpCode::GT);
+    testBinaryOp(-3, 9, 1, OpCode::GT);
+
+    BENCHMARK_ADVANCED("gt 100x")(Catch::Benchmark::Chronometer meter) {
+        MachineState sample_machine;
+        for (int i = 0; i < 101; i++) {
+            sample_machine.stack.push(uint256_t{100});
+        }
+        std::vector<MachineState> machines(meter.runs());
+        std::fill(machines.begin(), machines.end(), sample_machine);
+        meter.measure([&machines](int i) {
+            auto& mach = machines[i];
+            for (int i = 0; i < 100; i++) {
+                mach.runOp(OpCode::GT);
+            }
+            return mach;
+        });
+    };
 }
 
 TEST_CASE("SLT opcode is correct") {
@@ -417,17 +437,17 @@ TEST_CASE("CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePointStub(2, 73665)});
+        m.stack.push(uint256_t{1});
+        m.stack.push(value{CodePointStub(10, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 4);
+        REQUIRE(m.pc == 10);
     }
     SECTION("cjump false") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(uint256_t{1});
-        m.stack.push(value{CodePointStub(2, 73665)});
+        m.stack.push(uint256_t{0});
+        m.stack.push(value{CodePointStub(10, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == 2);
@@ -457,15 +477,18 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
-        auto static_values = std::make_shared<StaticVmValues>(
-            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        Code code;
+        code.addOperation(Operation(OpCode::ADD));
+        auto static_values =
+            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
         MachineState m{static_values, pool};
+        auto initial_pc = m.pc;
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == 0);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res == value{CodePointStub(initial_pc,
+                                           m.static_values->code[initial_pc])});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -514,51 +537,66 @@ TEST_CASE("AUXSTACKEMPTY opcode is correct") {
     }
 }
 
+MachineState createTestMachineState(OpCode op) {
+    Code code;
+    code.addOperation({OpCode::HALT});
+    code.addOperation({op});
+    auto static_vals =
+        std::make_shared<StaticVmValues>(std::move(code), Tuple());
+    auto pool = std::make_shared<TuplePool>();
+    return {std::move(static_vals), std::move(pool)};
+}
+
 TEST_CASE("NOP opcode is correct") {
     SECTION("nop") {
-        MachineState m;
-        m.runOp(OpCode::NOP);
+        MachineState m = createTestMachineState(OpCode::NOP);
+        auto start_pc = m.pc;
+        m.runOne();
         REQUIRE(m.auxstack.stacksize() == 0);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
     }
 }
 
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto pool = std::make_shared<TuplePool>();
-        CodePoint cp(0, OpCode::ADD, 0);
-        auto static_values = std::make_shared<StaticVmValues>(
-            Code{std::vector<CodePoint>{cp}}, uint256_t(5));
+        Code code;
+        code.addOperation(Operation(OpCode::ADD));
+        auto static_values =
+            std::make_shared<StaticVmValues>(std::move(code), uint256_t(5));
         MachineState m{static_values, pool};
         m.errpc = CodePointRef(0, false);
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == 0);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(cp)});
+        REQUIRE(res ==
+                value{CodePointStub{m.errpc, m.static_values->code[m.errpc]}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
 
 TEST_CASE("ERRSET opcode is correct") {
     SECTION("errset") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::ERRSET);
+        auto start_pc = m.pc;
         m.stack.push(value{CodePointStub(54, 968967)});
-        m.runOp(OpCode::ERRSET);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         REQUIRE(m.errpc == CodePointRef(54, false));
     }
 }
 
 TEST_CASE("DUP0 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP0);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
-        m.runOp(OpCode::DUP0);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 2);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -568,12 +606,13 @@ TEST_CASE("DUP0 opcode is correct") {
 
 TEST_CASE("DUP1 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP1);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
-        m.runOp(OpCode::DUP1);
+        m.runOne();
         REQUIRE(m.stack.stacksize() == 3);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -585,13 +624,14 @@ TEST_CASE("DUP1 opcode is correct") {
 
 TEST_CASE("DUP2 opcode is correct") {
     SECTION("dup") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::DUP2);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{7});
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::DUP2);
         REQUIRE(m.stack.stacksize() == 4);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(7)});
         res = m.stack.pop();
@@ -605,12 +645,13 @@ TEST_CASE("DUP2 opcode is correct") {
 
 TEST_CASE("SWAP1 opcode is correct") {
     SECTION("swap") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::SWAP1);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP1);
         REQUIRE(m.stack.stacksize() == 2);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(5)});
         res = m.stack.pop();
@@ -620,13 +661,14 @@ TEST_CASE("SWAP1 opcode is correct") {
 
 TEST_CASE("SWAP2 opcode is correct") {
     SECTION("swap") {
-        MachineState m;
+        MachineState m = createTestMachineState(OpCode::SWAP2);
+        auto start_pc = m.pc;
         m.stack.push(uint256_t{7});
         m.stack.push(uint256_t{5});
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP2);
         REQUIRE(m.stack.stacksize() == 3);
-        REQUIRE(m.pc == 1);
+        REQUIRE(m.pc == start_pc + 1);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(7)});
         res = m.stack.pop();
@@ -736,6 +778,71 @@ TEST_CASE("SEND opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.state == Status::Extensive);
     }
+}
+
+uint256_t& assumeInt(value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
+TEST_CASE("ecrecover opcode is correct") {
+    std::array<unsigned char, 32> msg;
+    std::generate(msg.begin(), msg.end(), std::rand);
+    std::array<unsigned char, 32> seckey;
+    std::generate(seckey.begin(), seckey.end(), std::rand);
+
+    auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                        SECP256K1_CONTEXT_VERIFY);
+    secp256k1_ecdsa_recoverable_signature sig;
+    secp256k1_pubkey pubkey;
+    REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey.data()) == 1);
+    std::array<unsigned char, 65> pubkey_raw;
+    size_t output_length = 65;
+    REQUIRE(secp256k1_ec_pubkey_serialize(ctx, pubkey_raw.data(),
+                                          &output_length, &pubkey,
+                                          SECP256K1_EC_UNCOMPRESSED));
+    REQUIRE(output_length == 65);
+
+    REQUIRE(secp256k1_ecdsa_sign_recoverable(
+                ctx, &sig, msg.data(), seckey.data(), nullptr, nullptr) == 1);
+
+    std::array<unsigned char, 64> sig_raw;
+    int recovery_id;
+    REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
+                ctx, sig_raw.data(), &recovery_id, &sig) == 1);
+
+    MachineState s;
+    s.stack.push(from_big_endian(msg.begin(), msg.end()));
+    s.stack.push(uint256_t{recovery_id});
+    s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+    s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+    s.runOp(OpCode::ECRECOVER);
+    REQUIRE(s.stack[0] != value(0));
+    std::array<unsigned char, 32> hash_data;
+    keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
+    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+    auto correct_address = from_big_endian(hash_data.begin(), hash_data.end());
+    auto calculated_address = assumeInt(s.stack[0]);
+    REQUIRE(correct_address == calculated_address);
+
+    BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
+        MachineState sample_machine;
+        sample_machine.stack.push(from_big_endian(msg.begin(), msg.end()));
+        sample_machine.stack.push(uint256_t{recovery_id});
+        sample_machine.stack.push(
+            from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+        sample_machine.stack.push(
+            from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+
+        std::vector<MachineState> machines(meter.runs());
+        std::fill(machines.begin(), machines.end(), sample_machine);
+        meter.measure([&machines](int i) {
+            return machines[i].runOp(OpCode::ECRECOVER);
+        });
+    };
 }
 
 TEST_CASE("GETTIME opcode is correct") {

@@ -117,7 +117,7 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	return nil
 }
 
-func makeAssertion(
+func MakeAssertion(
 	ctx context.Context,
 	rollup arbbridge.ArbRollup,
 	prepared *PreparedAssertion,
@@ -174,7 +174,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		lis.Unlock()
 		log.Printf("%v is making an assertion\n", stakingAddress)
 		go func() {
-			_, err := makeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
+			_, err := MakeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
 				log.Println("Error making assertion", prepared, err)
 				lis.Lock()

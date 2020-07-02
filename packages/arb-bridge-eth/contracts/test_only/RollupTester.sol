@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -13,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-  pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
-  import "../vm/RollupUtils.sol";
-  import "../vm/NodeGraphUtils.sol";
+import "../vm/RollupUtils.sol";
+import "../vm/NodeGraphUtils.sol";
 
-  contract RollupTester {
-
+contract RollupTester {
     function confirm(
         bytes32 confNode,
         bytes32 initalProtoStateHash,
@@ -30,28 +31,30 @@
         bytes32[] memory vmProtoStateHashes,
         uint256[] memory messageCounts,
         bytes memory messages
-    )
-        public
-        pure
-        returns(bytes32[] memory validNodeHashes, bytes32 lastNode)
-    {
-        return RollupUtils.confirm(
-            RollupUtils.ConfirmData(
-                initalProtoStateHash,
-                branches,
-                deadlineTicks,
-                challengeNodeData,
-                logsAcc,
-                vmProtoStateHashes,
-                messageCounts,
-                messages
-            ),
-            confNode
-        );
+    ) public pure returns (bytes32[] memory validNodeHashes, bytes32 lastNode) {
+        return
+            RollupUtils.confirm(
+                RollupUtils.ConfirmData(
+                    initalProtoStateHash,
+                    branches,
+                    deadlineTicks,
+                    challengeNodeData,
+                    logsAcc,
+                    vmProtoStateHashes,
+                    messageCounts,
+                    messages
+                ),
+                confNode
+            );
     }
 
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 length) public pure returns (bytes32, uint) {
-        return RollupUtils.generateLastMessageHash(messages, startOffset, length);
+    function generateLastMessageHash(
+        bytes memory messages,
+        uint256 startOffset,
+        uint256 length
+    ) public pure returns (bytes32, uint256) {
+        return
+            RollupUtils.generateLastMessageHash(messages, startOffset, length);
     }
 
     function processValidNode(
@@ -68,56 +71,64 @@
     )
         public
         pure
-        returns(uint256, bytes32, bytes32)
+        returns (
+            uint256,
+            bytes32,
+            bytes32
+        )
     {
-        return RollupUtils.processValidNode(
-            RollupUtils.ConfirmData(
-                initalProtoStateHash,
-                branches,
-                deadlineTicks,
-                challengeNodeData,
-                logsAcc,
-                vmProtoStateHashes,
-                messageCounts,
-                messages
-            ),
-            validNum,
-            startOffset
-        );
+        return
+            RollupUtils.processValidNode(
+                RollupUtils.ConfirmData(
+                    initalProtoStateHash,
+                    branches,
+                    deadlineTicks,
+                    challengeNodeData,
+                    logsAcc,
+                    vmProtoStateHashes,
+                    messageCounts,
+                    messages
+                ),
+                validNum,
+                startOffset
+            );
     }
 
-  	function calculateLeafFromPath(
-  		bytes32 from,
-        bytes32[] memory proof) public pure returns(bytes32) 
-  	{
-  		return RollupUtils.calculateLeafFromPath(from, proof);
-  	}
+    function calculateLeafFromPath(bytes32 from, bytes32[] memory proof)
+        public
+        pure
+        returns (bytes32)
+    {
+        return RollupUtils.calculateLeafFromPath(from, proof);
+    }
 
-  	function childNodeHash(
-  		bytes32 prevNodeHash,
+    function childNodeHash(
+        bytes32 prevNodeHash,
         uint256 deadlineTicks,
         bytes32 nodeDataHash,
         uint256 childType,
-        bytes32 vmProtoStateHash) public pure returns(bytes32)
-  	{
-  		return RollupUtils.childNodeHash(
-  			prevNodeHash, 
-  			deadlineTicks, 
-  			nodeDataHash, 
-  			childType, 
-  			vmProtoStateHash);
-  	}
+        bytes32 vmProtoStateHash
+    ) public pure returns (bytes32) {
+        return
+            RollupUtils.childNodeHash(
+                prevNodeHash,
+                deadlineTicks,
+                nodeDataHash,
+                childType,
+                vmProtoStateHash
+            );
+    }
 
-  	function computeProtoHashBefore(
-  		bytes32 machineHash,
+    function computeProtoHashBefore(
+        bytes32 machineHash,
         bytes32 inboxTop,
-        uint256 inboxCount) public pure returns (bytes32)
-  	{
-  		return RollupUtils.protoStateHash(machineHash, inboxTop, inboxCount);
-  	}
+        uint256 inboxCount
+    ) public pure returns (bytes32) {
+        return RollupUtils.protoStateHash(machineHash, inboxTop, inboxCount);
+    }
 
-  	function computePrevLeaf(
-  		bytes32[9] memory _fields,
+    function computePrevLeaf(
+        bytes32[9] memory _fields,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -125,26 +136,22 @@
         uint128[4] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
-        uint64 _numArbGas) public pure returns (bytes32, bytes32)
-  	{
-  		NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+        uint64 _numArbGas
+    ) public pure returns (bytes32, bytes32) {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -153,11 +160,11 @@
         );
 
         return NodeGraphUtils.computePrevLeaf(assertData);
-  	}
+    }
 
-	function generateInvalidInboxTopLeaf(
+    function generateInvalidInboxTopLeaf(
         uint256[4] memory invalidInboxData,
-  		bytes32[9] memory _fields,
+        bytes32[9] memory _fields,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -165,26 +172,22 @@
         uint128[4] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
-        uint64 _numArbGas) public pure returns(bytes32)
-	{
-		NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+        uint64 _numArbGas
+    ) public pure returns (bytes32) {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -192,35 +195,32 @@
             _fields[8]
         );
 
-		return _generateInvalidInboxTopLeaf(
-            assertData,
-            invalidInboxData
-        );
-	}
+        return _generateInvalidInboxTopLeaf(assertData, invalidInboxData);
+    }
 
-	function _generateInvalidInboxTopLeaf(
-		NodeGraphUtils.AssertionData memory assertData,
-		uint256[4] memory invalidInboxData
-  	) 
-		private pure returns(bytes32)
-	{
-		(bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
+    function _generateInvalidInboxTopLeaf(
+        NodeGraphUtils.AssertionData memory assertData,
+        uint256[4] memory invalidInboxData
+    ) private pure returns (bytes32) {
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
+            .computePrevLeaf(assertData);
 
-		return NodeGraphUtils.generateInvalidInboxTopLeaf(
-            assertData,
-            prevLeaf,
-            invalidInboxData[3],
-            bytes32(invalidInboxData[0]),
-            invalidInboxData[1],
-            vmProtoHashBefore,
-            invalidInboxData[2]
-        );
-	}
+        return
+            NodeGraphUtils.generateInvalidInboxTopLeaf(
+                assertData,
+                prevLeaf,
+                invalidInboxData[3],
+                bytes32(invalidInboxData[0]),
+                invalidInboxData[1],
+                vmProtoHashBefore,
+                invalidInboxData[2]
+            );
+    }
 
-	function generateInvalidMessagesLeaf(
-		uint256 gracePeriodTicks,
-		uint256 deadlineTicks,
-  		bytes32[9] memory _fields,
+    function generateInvalidMessagesLeaf(
+        uint256 gracePeriodTicks,
+        uint256 deadlineTicks,
+        bytes32[9] memory _fields,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -228,26 +228,22 @@
         uint128[4] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
-        uint64 _numArbGas) public pure returns(bytes32)
-	{
-		NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+        uint64 _numArbGas
+    ) public pure returns (bytes32) {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -255,36 +251,37 @@
             _fields[8]
         );
 
-		return _generateInvalidMessagesLeaf(
-            assertData,
-            gracePeriodTicks,
-            deadlineTicks
-        );
-	}
+        return
+            _generateInvalidMessagesLeaf(
+                assertData,
+                gracePeriodTicks,
+                deadlineTicks
+            );
+    }
 
-	function _generateInvalidMessagesLeaf(
-		NodeGraphUtils.AssertionData memory assertData,
-		uint256 gracePeriodTicks,
-		uint256 deadlineTicks
-	) 
-		private pure returns(bytes32)
-	{
-		(bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
+    function _generateInvalidMessagesLeaf(
+        NodeGraphUtils.AssertionData memory assertData,
+        uint256 gracePeriodTicks,
+        uint256 deadlineTicks
+    ) private pure returns (bytes32) {
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
+            .computePrevLeaf(assertData);
 
-		return NodeGraphUtils.generateInvalidMessagesLeaf(
-            assertData,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            gracePeriodTicks
-        );
-	}
+        return
+            NodeGraphUtils.generateInvalidMessagesLeaf(
+                assertData,
+                prevLeaf,
+                deadlineTicks,
+                vmProtoHashBefore,
+                gracePeriodTicks
+            );
+    }
 
-	function generateInvalidExecutionLeaf(
-		uint256 gracePeriodTicks,
-		uint256 checkTimeTicks,
-		uint256 deadlineTicks,
-  		bytes32[9] memory _fields,
+    function generateInvalidExecutionLeaf(
+        uint256 gracePeriodTicks,
+        uint256 checkTimeTicks,
+        uint256 deadlineTicks,
+        bytes32[9] memory _fields,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -292,26 +289,22 @@
         uint128[4] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
-        uint64 _numArbGas) public pure returns(bytes32)
-	{
-		NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+        uint64 _numArbGas
+    ) public pure returns (bytes32) {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -319,37 +312,38 @@
             _fields[8]
         );
 
-		return _generateInvalidExecutionLeaf(
-            assertData,
-            gracePeriodTicks,
-            checkTimeTicks,
-            deadlineTicks
-        );
-	}
+        return
+            _generateInvalidExecutionLeaf(
+                assertData,
+                gracePeriodTicks,
+                checkTimeTicks,
+                deadlineTicks
+            );
+    }
 
-	function _generateInvalidExecutionLeaf(
-		NodeGraphUtils.AssertionData memory assertData,
-		uint256 gracePeriodTicks,
-		uint256 checkTimeTicks,
-		uint256 deadlineTicks
-	)
-	 	private pure returns(bytes32)
-	{
-		(bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
+    function _generateInvalidExecutionLeaf(
+        NodeGraphUtils.AssertionData memory assertData,
+        uint256 gracePeriodTicks,
+        uint256 checkTimeTicks,
+        uint256 deadlineTicks
+    ) private pure returns (bytes32) {
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
+            .computePrevLeaf(assertData);
 
-		return NodeGraphUtils.generateInvalidExecutionLeaf(
-            assertData,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            gracePeriodTicks,
-            checkTimeTicks
-        );
-	}
+        return
+            NodeGraphUtils.generateInvalidExecutionLeaf(
+                assertData,
+                prevLeaf,
+                deadlineTicks,
+                vmProtoHashBefore,
+                gracePeriodTicks,
+                checkTimeTicks
+            );
+    }
 
-	function generateValidLeaf(
-		uint256 deadlineTicks,
-  		bytes32[9] memory _fields,
+    function generateValidLeaf(
+        uint256 deadlineTicks,
+        bytes32[9] memory _fields,
         uint256 _beforeInboxCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -357,26 +351,22 @@
         uint128[4] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
-        uint64 _numArbGas) public pure returns(bytes32)
-	{
-		NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.AssertionData(
+        uint64 _numArbGas
+    ) public pure returns (bytes32) {
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
+            .AssertionData(
             _fields[0],
             _fields[1],
             _beforeInboxCount,
-
             _fields[2],
             _prevDeadlineTicks,
             _fields[3],
             _prevChildType,
-
             _numSteps,
             _timeBounds,
             _importedMessageCount,
-
             _fields[4],
-
             _fields[5],
-
             _fields[6],
             _didInboxInsn,
             _numArbGas,
@@ -384,23 +374,20 @@
             _fields[8]
         );
 
-		return _generateValidLeaf(
-            assertData,
-            deadlineTicks
-        );
-	}
+        return _generateValidLeaf(assertData, deadlineTicks);
+    }
 
-	function _generateValidLeaf(
-		NodeGraphUtils.AssertionData memory assertData,
-		uint256 deadlineTicks) private pure returns(bytes32)
-	{
-		(bytes32 prevLeaf, ) = NodeGraphUtils.computePrevLeaf(assertData);
+    function _generateValidLeaf(
+        NodeGraphUtils.AssertionData memory assertData,
+        uint256 deadlineTicks
+    ) private pure returns (bytes32) {
+        (bytes32 prevLeaf, ) = NodeGraphUtils.computePrevLeaf(assertData);
 
-		return NodeGraphUtils.generateValidLeaf(
-            assertData,
-            prevLeaf,
-            deadlineTicks
-        );
-	}
-
+        return
+            NodeGraphUtils.generateValidLeaf(
+                assertData,
+                prevLeaf,
+                deadlineTicks
+            );
+    }
 }

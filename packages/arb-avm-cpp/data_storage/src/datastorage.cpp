@@ -21,7 +21,7 @@
 #include <string>
 
 #include <rocksdb/options.h>
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
 #include <rocksdb/utilities/transaction.h>

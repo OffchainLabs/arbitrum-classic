@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,14 +16,12 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./IArbRollup.sol";
 
-
 contract ArbVMContractProxy {
-
-    IArbRollup arbChain;
+    IArbRollup private arbChain;
 
     constructor(address _arbChain) public {
         arbChain = IArbRollup(_arbChain);

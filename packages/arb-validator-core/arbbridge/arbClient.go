@@ -47,7 +47,6 @@ type ArbClient interface {
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
-	NewOneStepProof(address common.Address) (OneStepProof, error)
 
 	GetBalance(ctx context.Context, account common.Address) (*big.Int, error)
 }
@@ -62,31 +61,6 @@ type ArbAuthClient interface {
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
-}
-
-func WaitForBalance(ctx context.Context, client ArbClient, account common.Address, amount *big.Int) error {
-	balance, err := client.GetBalance(ctx, account)
-	if err != nil {
-		return err
-	}
-	if amount.Cmp(balance) >= 0 {
-		return nil
-	}
-	timer := time.NewTicker(time.Second * 5)
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.New("timed out waiting for balance")
-		case <-timer.C:
-			balance, err := client.GetBalance(ctx, account)
-			if err != nil {
-				return err
-			}
-			if amount.Cmp(balance) >= 0 {
-				return nil
-			}
-		}
-	}
 }
 
 func WaitForNonZeroBalance(ctx context.Context, client ArbClient, account common.Address) error {

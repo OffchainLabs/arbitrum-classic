@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,13 +16,11 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
+import "./interfaces/IERC721.sol";
 
 contract GlobalNFTWallet {
-
     struct NFTWallet {
         address contractAddress;
         mapping(uint256 => uint256) tokenIndex;
@@ -32,9 +32,13 @@ contract GlobalNFTWallet {
         NFTWallet[] nftWalletList;
     }
 
-    mapping(address => UserNFTWallet) nftWallets;
+    mapping(address => UserNFTWallet) private nftWallets;
 
-    function ownedERC721s(address _owner) external view returns (address[] memory) {
+    function ownedERC721s(address _owner)
+        external
+        view
+        returns (address[] memory)
+    {
         UserNFTWallet storage wallet = nftWallets[_owner];
         address[] memory addresses = new address[](wallet.nftWalletList.length);
         uint256 addressCount = addresses.length;
@@ -44,7 +48,11 @@ contract GlobalNFTWallet {
         return addresses;
     }
 
-    function getERC721Tokens(address _erc721, address _owner) external view returns (uint256[] memory) {
+    function getERC721Tokens(address _erc721, address _owner)
+        external
+        view
+        returns (uint256[] memory)
+    {
         UserNFTWallet storage wallet = nftWallets[_owner];
         uint256 index = wallet.nftWalletIndex[_erc721];
         if (index == 0) {
@@ -53,7 +61,11 @@ contract GlobalNFTWallet {
         return wallet.nftWalletList[index - 1].tokenList;
     }
 
-    function hasERC721(address _erc721, address _owner, uint256 _tokenId) external view returns (bool) {
+    function hasERC721(
+        address _erc721,
+        address _owner,
+        uint256 _tokenId
+    ) external view returns (bool) {
         UserNFTWallet storage wallet = nftWallets[_owner];
         uint256 index = wallet.nftWalletIndex[_erc721];
         if (index == 0) {
@@ -70,7 +82,11 @@ contract GlobalNFTWallet {
         IERC721(_erc721).safeTransferFrom(address(this), msg.sender, _tokenId);
     }
 
-    function depositERC721(address _erc721, address _destination, uint256 _tokenId) internal {
+    function depositERC721(
+        address _erc721,
+        address _destination,
+        uint256 _tokenId
+    ) internal {
         IERC721(_erc721).transferFrom(msg.sender, address(this), _tokenId);
         addNFTToken(_destination, _erc721, _tokenId);
     }
@@ -80,10 +96,7 @@ contract GlobalNFTWallet {
         address _to,
         address _erc721,
         uint256 _tokenId
-    )
-        internal
-        returns (bool)
-    {
+    ) internal returns (bool) {
         if (!removeNFTToken(_from, _erc721, _tokenId)) {
             return false;
         }
@@ -91,20 +104,33 @@ contract GlobalNFTWallet {
         return true;
     }
 
-    function addNFTToken(address _user, address _erc721, uint256 _tokenId) private {
+    function addNFTToken(
+        address _user,
+        address _erc721,
+        uint256 _tokenId
+    ) private {
         UserNFTWallet storage wallet = nftWallets[_user];
         uint256 index = wallet.nftWalletIndex[_erc721];
         if (index == 0) {
-            index = wallet.nftWalletList.push(NFTWallet(_erc721, new uint256[](0)));
+            index = wallet.nftWalletList.push(
+                NFTWallet(_erc721, new uint256[](0))
+            );
             wallet.nftWalletIndex[_erc721] = index;
         }
         NFTWallet storage nftWallet = wallet.nftWalletList[index - 1];
-        require(nftWallet.tokenIndex[_tokenId] == 0, "can't add already owned token");
+        require(
+            nftWallet.tokenIndex[_tokenId] == 0,
+            "can't add already owned token"
+        );
         nftWallet.tokenList.push(_tokenId);
         nftWallet.tokenIndex[_tokenId] = nftWallet.tokenList.length;
     }
 
-    function removeNFTToken(address _user, address _erc721, uint256 _tokenId) private returns (bool) {
+    function removeNFTToken(
+        address _user,
+        address _erc721,
+        uint256 _tokenId
+    ) private returns (bool) {
         UserNFTWallet storage wallet = nftWallets[_user];
         uint256 walletIndex = wallet.nftWalletIndex[_erc721];
         if (walletIndex == 0) {
@@ -117,13 +143,21 @@ contract GlobalNFTWallet {
             // Wallet does not own specific NFT
             return false;
         }
-        nftWallet.tokenIndex[nftWallet.tokenList[nftWallet.tokenList.length - 1]] = tokenIndex;
-        nftWallet.tokenList[tokenIndex - 1] = nftWallet.tokenList[nftWallet.tokenList.length - 1];
+        nftWallet.tokenIndex[nftWallet.tokenList[nftWallet.tokenList.length -
+            1]] = tokenIndex;
+        nftWallet.tokenList[tokenIndex - 1] = nftWallet.tokenList[nftWallet
+            .tokenList
+            .length - 1];
         delete nftWallet.tokenIndex[_tokenId];
         nftWallet.tokenList.pop();
         if (nftWallet.tokenList.length == 0) {
-            wallet.nftWalletIndex[wallet.nftWalletList[wallet.nftWalletList.length - 1].contractAddress] = walletIndex;
-            wallet.nftWalletList[walletIndex - 1] = wallet.nftWalletList[wallet.nftWalletList.length - 1];
+            wallet.nftWalletIndex[wallet.nftWalletList[wallet
+                .nftWalletList
+                .length - 1]
+                .contractAddress] = walletIndex;
+            wallet.nftWalletList[walletIndex - 1] = wallet.nftWalletList[wallet
+                .nftWalletList
+                .length - 1];
             delete wallet.nftWalletIndex[_erc721];
             wallet.nftWalletList.pop();
         }

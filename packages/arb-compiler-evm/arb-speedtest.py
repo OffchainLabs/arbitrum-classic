@@ -49,6 +49,21 @@ def speedtestTernaryOp_Pushes(vm, arg1, arg2, arg3, op):
     )
 
 
+def speedtestQuaternaryOp_Pushes(vm, arg1, arg2, arg3, arg4, op):
+    speedtestUnaryOp(
+        vm,
+        0,
+        lambda v: [
+            v.push(arg4),
+            v.push(arg3),
+            v.push(arg2),
+            v.push(arg1),
+            op(v),
+            v.pop(),
+        ],
+    )
+
+
 def makeAoFile(func, filepath):
     code = arb.compile_block(func)
     vm = arb.compile_program(arb.ast.BlockStatement([]), code)
@@ -232,6 +247,17 @@ aos = (
     (
         "inbox_1_1",
         lambda vm: speedtestUnaryOp(vm, 0, lambda v: [v.push(0), v.inbox(), v.pop()]),
+    ),
+    (
+        "ecrecover_4_1",
+        lambda vm: speedtestQuaternaryOp_Pushes(
+            vm,
+            89187457569088100819123068890294098045489627058153492329444369343498977790775,
+            51846986009028281302148438492841635320950266090793258738891771676577323106308,
+            1,
+            30389682118152071818050688435818811642998944855485126210296932908160964349251,
+            lambda v: v.ecrecover(),
+        ),
     ),
 )
 

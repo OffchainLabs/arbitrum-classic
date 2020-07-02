@@ -49,7 +49,7 @@ class Datastack {
         if (values.size() > hashes.size() + lazyCount) {
             addHash();
         }
-    };
+    }
 
     const value& operator[](size_t index) const {
         return values[values.size() - 1 - index];
@@ -84,7 +84,7 @@ class Datastack {
     }
 
     std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
-        const std::vector<bool>& stackInfo,
+        const std::vector<MarshalLevel>& stackInfo,
         const Code& code);
 
     value& peek() {

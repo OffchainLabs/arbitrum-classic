@@ -21,6 +21,7 @@ project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/data_storage/blockstore.hpp
+  include/data_storage/checkpointstorage.hpp
   include/data_storage/confirmednodestore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
@@ -47,7 +48,7 @@ set(LIB_SOURCES
   src/value/value.cpp
 )
 
-add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
     data_storage
@@ -57,6 +58,7 @@ set_target_properties(
 )
 
 target_compile_options(data_storage PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(data_storage PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_include_directories(data_storage PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -68,7 +70,7 @@ target_include_directories(data_storage PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(data_storage PUBLIC avm avm_values CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
+target_link_libraries(data_storage PUBLIC avm avm_values Threads::Threads PRIVATE avm_utils)
 
 target_code_coverage(data_storage AUTO ALL)
 

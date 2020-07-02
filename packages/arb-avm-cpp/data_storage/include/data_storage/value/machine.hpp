@@ -20,7 +20,7 @@
 #include <avm/machinestate/status.hpp>
 
 #include <avm_values/bigint.hpp>
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 
 class Transaction;
 
@@ -36,8 +36,8 @@ struct MachineStateKeys {
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
-    CodePointStub pc;
-    CodePointStub err_pc;
+    CodePointRef pc;
+    CodePointRef err_pc;
     Status status;
 };
 

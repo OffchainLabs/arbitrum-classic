@@ -15,3 +15,20 @@
  */
 
 #include "bigint_utils.hpp"
+
+#include <sstream>
+#include <string>
+
+uint256_t from_hex_str(const std::string& s) {
+    std::stringstream ss;
+    ss << std::hex << s;
+    uint256_t v;
+    ss >> v;
+    return v;
+}
+
+std::string to_hex_str(const uint256_t& v) {
+    std::stringstream ss;
+    ss << "0x" << std::hex << v;
+    return ss.str();
+}

@@ -21,12 +21,15 @@
     "prepare": "install-peers",
     "build": "./scripts/builder",
     "watch": "tsc --watch",
-    "test": "jest --config jest.config.js",
-    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
+    "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update-abi": "./scripts/update-abi && yarn format"
   },
   "dependencies": {
+    "@types/promise-poller": "^1.7.0",
     "jayson": "^3.2.0",
     "promise-poller": "^1.9.1"
   },
@@ -34,13 +37,15 @@
     "ethers": "~4.0.47"
   },
   "devDependencies": {
-    "@types/jest": "^26.0.0",
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^7.0.2",
+    "chai": "^4.2.0",
     "install-peers-cli": "^2.2.0",
-    "jest": "^25.1.0",
-    "jest-junit": "^10.0.0",
-    "ts-jest": "^25.2.0",
+    "mocha": "^7.2.0",
+    "nyc": "^15.1.0",
     "typechain": "^1.0.4",
-    "typechain-target-ethers": "^1.0.3"
+    "typechain-target-ethers": "^1.0.3",
+    "typescript": "^3.8.3"
   },
   "files": [
     "dist/**/*"

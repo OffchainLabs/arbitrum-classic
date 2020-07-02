@@ -22,34 +22,6 @@ function assertNever(x: never): never {
   throw new Error('Unexpected object: ' + x)
 }
 
-// Error and Halt opcodes
-export enum OpCode {
-  Error = 0x74,
-  Halt = 0x75,
-}
-
-// Valid opcode ranges (inclusive)
-const OP_CODE_RANGES: Array<[number, number]> = [
-  [0x00, 0x0a],
-  [0x10, 0x1b],
-  [0x20, 0x22],
-  [0x30, 0x3d],
-  [0x40, 0x44],
-  [0x50, 0x52],
-  [0x60, 0x61],
-  [0x70, 0x75],
-]
-
-const VALID_OP_CODES = OP_CODE_RANGES.reduce(
-  (acc: number[], range: [number, number]) =>
-    acc.concat(
-      Array(range[1] - range[0] + 1)
-        .fill(0)
-        .map((_, i) => range[0] + i)
-    ),
-  []
-)
-
 // Max tuple size
 export const MAX_TUPLE_SIZE = 8
 
@@ -553,11 +525,6 @@ function unmarshalOpCode(array: Uint8Array, offset: number): [number, number] {
   let head
   ;[head, offset] = extractBytes(array, offset, 1)
   const opcode = ethers.utils.bigNumberify(head).toNumber()
-  if (!VALID_OP_CODES.includes(opcode)) {
-    throw Error(
-      'Error unmarshalOpCode no such opcode: 0x' + opcode.toString(16)
-    )
-  }
   return [opcode, offset]
 }
 

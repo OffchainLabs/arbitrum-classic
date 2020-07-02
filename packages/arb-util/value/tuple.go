@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"io"
 )
 
 const MaxTupleSize = 8
@@ -64,19 +62,6 @@ func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleV
 	return ret, nil
 }
 
-func NewRepeatedTuple(value Value, size int64) (TupleValue, error) {
-	if !IsValidTupleSize(big.NewInt(size)) {
-		return TupleValue{}, errors.New("requested tuple size is too big")
-	}
-
-	ret := TupleValue{[MaxTupleSize]Value{}, int8(size), common.Hash{}, HashPreImage{}, 0, true}
-	for i := int64(0); i < size; i++ {
-		ret.contentsArr[i] = value
-	}
-	ret.size = ret.internalSize()
-	return ret, nil
-}
-
 func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(len(slice))) {
 		return TupleValue{}, errors.New("requested tuple size is too big")
@@ -92,14 +77,6 @@ func NewTuple2(value1 Value, value2 Value) TupleValue {
 	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
-}
-
-func (tv TupleValue) init2(value1 Value, value2 Value) {
-	tv.contentsArr[0] = value1
-	tv.contentsArr[1] = value2
-	tv.itemCount = 2
-	tv.size = tv.internalSize()
-	tv.deferredHashing = true
 }
 
 func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
@@ -124,16 +101,8 @@ func (tv TupleValue) Marshal(wr io.Writer) error {
 	return nil
 }
 
-func (tv TupleValue) MarshalForProof(wr io.Writer) error {
-	return tv.Marshal(wr)
-}
-
 func IsValidTupleSizeI64(size int64) bool {
 	return size >= 0 && size <= MaxTupleSize
-}
-
-func IsValidTupleSize(size *big.Int) bool {
-	return size.Cmp(big.NewInt(0)) >= 0 && size.Cmp(big.NewInt(MaxTupleSize)) <= 0
 }
 
 func (tv TupleValue) Contents() []Value {
@@ -144,14 +113,6 @@ func (tv TupleValue) Len() int64 {
 	return int64(tv.itemCount)
 }
 
-func (tv TupleValue) IsValidIndex(idx IntValue) bool {
-	return idx.val.Cmp(big.NewInt(0)) >= 0 && idx.val.Cmp(big.NewInt(tv.Len())) < 0
-}
-
-func (tv TupleValue) Get(idx IntValue) (Value, error) {
-	return tv.GetByInt64(idx.val.Int64())
-}
-
 func (tv TupleValue) GetByInt64(idx int64) (Value, error) {
 	if idx < 0 || idx >= tv.Len() {
 		return nil, errors.New("tuple index out of bounds")
@@ -159,27 +120,7 @@ func (tv TupleValue) GetByInt64(idx int64) (Value, error) {
 	return tv.contentsArr[idx], nil
 }
 
-func (tv TupleValue) Set(idx IntValue, val Value) (TupleValue, error) {
-	return tv.SetByInt64(idx.val.Int64(), val)
-}
-
-func (tv TupleValue) SetByInt64(idx int64, val Value) (TupleValue, error) {
-	if idx < 0 || idx >= tv.Len() {
-		return TupleValue{}, errors.New("tuple index out of bounds")
-	}
-	var contents [MaxTupleSize]Value
-	for i, v := range tv.Contents() {
-		contents[i] = v
-	}
-	contents[idx] = val
-	return NewTupleOfSizeWithContents(contents, tv.itemCount)
-}
-
 func (tv TupleValue) TypeCode() uint8 {
-	return TypeCodeTuple
-}
-
-func (tv TupleValue) InternalTypeCode() uint8 {
 	return TypeCodeTuple + byte(tv.itemCount)
 }
 
@@ -191,28 +132,15 @@ func (tv TupleValue) Clone() Value {
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
-func (tv TupleValue) CloneShallow() Value {
-	var newContents [MaxTupleSize]Value
-	for i, b := range tv.Contents() {
-		if b.TypeCode() == TypeCodeInt {
-			newContents[i] = b
-		} else if b.TypeCode() == TypeCodeTuple {
-			newContents[i] = b.(TupleValue).GetPreImage()
-		} else {
-			newContents[i] = b.CloneShallow()
-		}
-	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
-}
-
 func (tv TupleValue) Equal(val Value) bool {
-	if val.TypeCode() == TypeCodeHashPreImage {
-		return tv.Hash() == val.Hash()
-	} else if val.TypeCode() != TypeCodeTuple {
-		return false
-	} else {
-		return tv.Hash() == val.Hash()
+	if preImage, ok := val.(HashPreImage); ok {
+		return tv.Hash() == preImage.Hash()
 	}
+	tup, ok := val.(TupleValue)
+	if !ok {
+		return false
+	}
+	return tv.Hash() == tup.Hash()
 }
 
 func (tv TupleValue) internalSize() int64 {

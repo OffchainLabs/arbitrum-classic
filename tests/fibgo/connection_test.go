@@ -49,7 +49,6 @@ func setupValidators(
 	rand.Seed(seed)
 
 	ethURL := test.GetEthUrl()
-	contract := "contract.ao"
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 
@@ -108,6 +107,8 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
+
+	contract := "contract.mexe"
 
 	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
@@ -208,7 +209,7 @@ func setupValidators(
 			t.Fatal(err)
 		}
 
-		if err := utils.LaunchRPC(s, "1235"); err != nil {
+		if err := utils.LaunchRPC(s, "1235", utils.RPCFlags{}); err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -229,6 +230,8 @@ waitloop:
 			if err := conn.Close(); err != nil {
 				t.Fatal(err)
 			}
+			// Wait for the validator to catch up to head
+			time.Sleep(time.Second * 2)
 			break waitloop
 		case <-time.After(time.Second * 5):
 			t.Fatal("Couldn't connect to rpc")

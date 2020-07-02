@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,11 +16,10 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 library RollupTime {
-    uint256 constant TICKS_PER_BLOCK = 1000;  // 1 tick == 1 milliblock
+    uint256 private constant TICKS_PER_BLOCK = 1000; // 1 tick == 1 milliblock
 
     function ticksToBlocks(uint256 ticks) internal pure returns (uint128) {
         return uint128(ticks / TICKS_PER_BLOCK);

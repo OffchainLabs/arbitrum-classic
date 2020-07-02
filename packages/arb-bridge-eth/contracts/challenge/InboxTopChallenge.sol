@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,16 +16,14 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 import "../Messages.sol";
 
-
 contract InboxTopChallenge is BisectionChallenge {
-
     event Bisected(
         bytes32[] chainHashes,
         uint256 totalLength,
@@ -33,12 +33,9 @@ contract InboxTopChallenge is BisectionChallenge {
     event OneStepProofCompleted();
 
     // Proof was incorrect
-    string constant HC_OSP_PROOF = "HC_OSP_PROOF";
+    string private constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
-    function bisect(
-        bytes32[] memory _chainHashes,
-        uint256 _chainLength
-    )
+    function bisect(bytes32[] memory _chainHashes, uint256 _chainLength)
         public
         asserterAction
     {
@@ -69,14 +66,13 @@ contract InboxTopChallenge is BisectionChallenge {
 
         commitToSegment(hashes);
         asserterResponded();
-        emit Bisected(
-            _chainHashes,
-            _chainLength,
-            deadlineTicks
-        );
+        emit Bisected(_chainHashes, _chainLength, deadlineTicks);
     }
 
-    function oneStepProof(bytes32 _lowerHash, bytes32 _value) public asserterAction {
+    function oneStepProof(bytes32 _lowerHash, bytes32 _value)
+        public
+        asserterAction
+    {
         requireMatchesPrevState(
             ChallengeUtils.inboxTopHash(
                 _lowerHash,
@@ -90,10 +86,18 @@ contract InboxTopChallenge is BisectionChallenge {
     }
 
     function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, ChallengeUtils.getInvalidInboxType());
+        IStaking(vmAddress).resolveChallenge(
+            asserter,
+            challenger,
+            ChallengeUtils.getInvalidInboxType()
+        );
     }
 
     function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, ChallengeUtils.getInvalidInboxType());
+        IStaking(vmAddress).resolveChallenge(
+            challenger,
+            asserter,
+            ChallengeUtils.getInvalidInboxType()
+        );
     }
 }

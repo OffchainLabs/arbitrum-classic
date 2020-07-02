@@ -64,7 +64,7 @@ func main() {
 
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	walletVars := utils.AddFlags(createCmd)
+	walletVars := utils.AddWalletFlags(createCmd)
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func createRollupChain() error {
 	ethURL := createCmd.Arg(1)
 	addressString := createCmd.Arg(2)
 	factoryAddress := common.HexToAddress(addressString)
-	contractFile := filepath.Join(validatorFolder, "contract.ao")
+	contractFile := filepath.Join(validatorFolder, cmdhelper.ContractName)
 
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")

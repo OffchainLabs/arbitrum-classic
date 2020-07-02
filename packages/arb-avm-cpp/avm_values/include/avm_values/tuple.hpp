@@ -17,7 +17,7 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/value.hpp>
@@ -67,7 +67,7 @@ class Tuple {
     friend uint256_t hash(const Tuple&);
 
    public:
-    Tuple() = default;
+    Tuple() : tuplePool(nullptr) {}
     uint256_t calculateHash() const;
     uint256_t getSize() const;
 
@@ -158,8 +158,7 @@ class Tuple {
         return tpl->data[pos];
     }
 
-    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
-    value clone_shallow();
+    void marshal(std::vector<unsigned char>& buf) const;
 
     HashPreImage getHashPreImage() const;
 };

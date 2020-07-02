@@ -23,7 +23,6 @@ import (
 	"testing"
 )
 
-var codeFile = "contract.ao"
 var dePath = "dbPath"
 
 var nodeHeight = uint64(3)

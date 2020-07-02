@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -184,9 +185,7 @@ func getAuth() (*ethclient.Client, *ethclient.Client, error) {
 }
 
 func getTestMachine(t *testing.T) machine.Machine {
-	contract := "../contract.ao"
-
-	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
+	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), true, "cpp")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}

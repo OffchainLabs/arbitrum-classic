@@ -19,6 +19,7 @@ package proofmachine
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -31,6 +32,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
@@ -51,10 +53,18 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
-	osp, err := client.DeployOneStepProof(context.Background())
+	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, ethclint)
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
+	}
+	if _, err := ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		ethclint,
+		auth.From,
+		tx,
+		"DeployOneStepProof",
+	); err != nil {
+		return nil, err
 	}
 	proofbounds := [2]uint64{0, 10000}
 	return NewEthConnection(osp, proofbounds), nil
@@ -74,10 +84,10 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	}
 
 	timeBounds := &protocol.TimeBounds{
-		common.NewTimeBlocks(big.NewInt(0)),
-		common.NewTimeBlocks(big.NewInt(10000)),
-		big.NewInt(100),
-		big.NewInt(120),
+		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(10000)),
+		LowerBoundTimestamp: big.NewInt(100),
+		UpperBoundTimestamp: big.NewInt(120),
 	}
 	steps := uint64(100000)
 	cont := true
@@ -106,14 +116,15 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 
 func TestValidateProof(t *testing.T) {
 	testMachines := []string{
-		"opcodetestlogic.ao",
-		"opcodetesttuple.ao",
-		"opcodetestmath.ao",
-		"opcodetesthash.ao",
-		"opcodetestethhash2.ao",
-		"opcodeteststack.ao",
-		"opcodetestdup.ao",
-		"../contract.ao",
+		"opcodetesttuple.mexe",
+		"opcodetestlogic.mexe",
+		"opcodetestmath.mexe",
+		"opcodetesthash.mexe",
+		"opcodetestethhash2.mexe",
+		"opcodeteststack.mexe",
+		"opcodetestdup.mexe",
+		"opcodetestecrecover.mexe",
+		gotest.TestMachinePath(),
 	}
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {

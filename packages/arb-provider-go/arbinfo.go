@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -197,7 +196,7 @@ func (_ArbInfo *ArbInfoTransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // GetBalance is a free data retrieval call binding the contract method 0xf8b2cb4f.
 //
-// Solidity: function getBalance(address account) constant returns(uint256)
+// Solidity: function getBalance(address account) view returns(uint256)
 func (_ArbInfo *ArbInfoCaller) GetBalance(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -209,21 +208,21 @@ func (_ArbInfo *ArbInfoCaller) GetBalance(opts *bind.CallOpts, account common.Ad
 
 // GetBalance is a free data retrieval call binding the contract method 0xf8b2cb4f.
 //
-// Solidity: function getBalance(address account) constant returns(uint256)
+// Solidity: function getBalance(address account) view returns(uint256)
 func (_ArbInfo *ArbInfoSession) GetBalance(account common.Address) (*big.Int, error) {
 	return _ArbInfo.Contract.GetBalance(&_ArbInfo.CallOpts, account)
 }
 
 // GetBalance is a free data retrieval call binding the contract method 0xf8b2cb4f.
 //
-// Solidity: function getBalance(address account) constant returns(uint256)
+// Solidity: function getBalance(address account) view returns(uint256)
 func (_ArbInfo *ArbInfoCallerSession) GetBalance(account common.Address) (*big.Int, error) {
 	return _ArbInfo.Contract.GetBalance(&_ArbInfo.CallOpts, account)
 }
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) constant returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes o_code)
 func (_ArbInfo *ArbInfoCaller) GetCode(opts *bind.CallOpts, account common.Address) ([]byte, error) {
 	var (
 		ret0 = new([]byte)
@@ -235,14 +234,14 @@ func (_ArbInfo *ArbInfoCaller) GetCode(opts *bind.CallOpts, account common.Addre
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) constant returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes o_code)
 func (_ArbInfo *ArbInfoSession) GetCode(account common.Address) ([]byte, error) {
 	return _ArbInfo.Contract.GetCode(&_ArbInfo.CallOpts, account)
 }
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) constant returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes o_code)
 func (_ArbInfo *ArbInfoCallerSession) GetCode(account common.Address) ([]byte, error) {
 	return _ArbInfo.Contract.GetCode(&_ArbInfo.CallOpts, account)
 }

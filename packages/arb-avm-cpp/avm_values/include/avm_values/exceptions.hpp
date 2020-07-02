@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,23 +21,17 @@
 
 class bad_tuple_index : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
-        return "bad_tuple_index";
-    }
+    virtual const char* what() const noexcept override;
 };
 
 class bad_pop_type : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
-        return "bad_variant_access";
-    }
+    virtual const char* what() const noexcept override;
 };
 
 class int_out_of_bounds : public std::exception {
    public:
-    virtual const char* what() const noexcept override {
-        return "int_out_of_bounds";
-    }
+    virtual const char* what() const noexcept override;
 };
 
 #endif /* exceptions_hpp */

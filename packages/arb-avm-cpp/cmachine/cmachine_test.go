@@ -23,7 +23,6 @@ import (
 )
 
 func TestMachineCreation(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {

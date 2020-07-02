@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,11 +16,10 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 contract GlobalEthWallet {
-
-    mapping(address => uint256) ethWallets;
+    mapping(address => uint256) private ethWallets;
 
     function withdrawEth() external {
         uint256 value = getEthBalance(msg.sender);
@@ -38,10 +39,7 @@ contract GlobalEthWallet {
         address _from,
         address _to,
         uint256 _value
-    )
-        internal
-        returns (bool)
-    {
+    ) internal returns (bool) {
         if (_value > ethWallets[_from]) {
             return false;
         }

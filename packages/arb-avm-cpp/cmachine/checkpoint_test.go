@@ -17,7 +17,7 @@
 package cmachine
 
 import (
-	"log"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
 	"os"
 	"testing"
@@ -29,8 +29,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
+var codeFile = gotest.TestMachinePath()
+
 func TestCheckpoint(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath"
 
 	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
@@ -46,12 +47,11 @@ func TestCheckpoint(t *testing.T) {
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
 func TestCheckpointMachine(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath2"
 
 	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
@@ -95,6 +95,6 @@ func TestCheckpointMachine(t *testing.T) {
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }

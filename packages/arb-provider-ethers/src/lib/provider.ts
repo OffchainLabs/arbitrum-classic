@@ -25,7 +25,7 @@ import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
-const promisePoller = require('promise-poller').default
+import promisePoller from 'promise-poller'
 
 import { ArbRollupFactory } from './abi/ArbRollupFactory'
 import { ArbRollup } from './abi/ArbRollup'

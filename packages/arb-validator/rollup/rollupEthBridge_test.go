@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -72,7 +73,8 @@ func TestMainSetup(m *testing.T) {
 	tester = deployedArbRollup
 }
 
-var contractPath string = "contract.ao"
+//var contractPath string = "contract.ao"
+var contractPath = gotest.TestMachinePath()
 
 func TestGenerateLastMessageHash(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")

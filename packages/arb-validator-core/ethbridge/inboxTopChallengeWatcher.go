@@ -42,8 +42,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	inboxTopBisectedID = parsed.Events["Bisected"].ID()
-	inboxTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+	inboxTopBisectedID = parsed.Events["Bisected"].ID
+	inboxTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID
 }
 
 type inboxTopChallengeWatcher struct {

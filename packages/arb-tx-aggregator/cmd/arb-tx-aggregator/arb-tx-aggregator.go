@@ -36,7 +36,8 @@ import (
 
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	walletArgs := utils.AddFlags(fs)
+	walletArgs := utils.AddWalletFlags(fs)
+	rpcVars := utils.AddRPCFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -85,7 +86,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := txaggregator.NewRPCServer(
+	server := txaggregator.NewServer(
 		context.Background(),
 		globalInbox, rollupArgs.Address,
 	)
@@ -104,5 +105,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Fatal(utils.LaunchRPC(s, "1237"))
+	log.Fatal(utils.LaunchRPC(s, "1237", rpcVars))
 }

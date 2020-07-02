@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2012, Offchain Labs, Inc.
  *
@@ -14,48 +16,43 @@
  * limitations under the License.
  */
 
- pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
- import "../arch/Machine.sol";
- import "../arch/Value.sol";
+import "../arch/Machine.sol";
+import "../arch/Value.sol";
 
- contract MachineTester {
+contract MachineTester {
+    using Machine for Machine.Data;
 
- 	using Machine for Machine.Data;
+    function deserializeMachine(bytes memory data)
+        public
+        pure
+        returns (bytes32)
+    {
+        bool valid;
+        uint256 offset;
+        Machine.Data memory machine;
+        (valid, offset, machine) = Machine.deserializeMachine(data, 0);
 
- 	function deserializeMachine(bytes memory data) 
- 		public 
- 		pure 
- 		returns (bytes32) 
- 	{
- 		bool valid;
- 		uint offset;
- 		Machine.Data memory machine;
- 		(valid, offset, machine) = Machine.deserializeMachine(data, 0);
+        return Machine.hash(machine);
+    }
 
- 		return Machine.hash(machine);
- 	}
+    function addStackVal(bytes memory data1, bytes memory data2)
+        public
+        pure
+        returns (bytes32)
+    {
+        bool valid;
+        uint256 offset;
+        Value.Data memory val1;
+        Value.Data memory val2;
 
- 	function addStackVal(
- 		bytes memory data1,
- 		bytes memory data2
- 	)
- 		public 
- 		pure 
- 		returns (bytes32)
- 	{
- 		bool valid;
- 		uint offset;
- 		Value.Data memory val1;
- 		Value.Data memory val2;
+        (valid, offset, val1) = Value.deserialize(data1, 0);
+        require(valid, "value1 incorrect");
 
- 		(valid, offset, val1) = Value.deserialize(data1, 0);
- 		require(valid, "value1 incorrect");
+        (valid, offset, val2) = Value.deserialize(data2, 0);
+        require(valid, "value2 incorrect");
 
- 		(valid, offset, val2) = Value.deserialize(data2, 0);
- 		require(valid, "value2 incorrect");
-
-		return Value.hash(Machine.addStackVal(val1, val2)); 		
- 	}
-
- }
+        return Value.hash(Machine.addStackVal(val1, val2));
+    }
+}

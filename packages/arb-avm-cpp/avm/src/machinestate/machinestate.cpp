@@ -74,7 +74,7 @@ uint256_t MachineState::hash() const {
     }
     {
         auto val = ::hash(static_values->code[errpc]);
-        oit = to_big_endian(val, oit);
+        to_big_endian(val, oit);
     }
 
     std::array<unsigned char, 32> hashData;
@@ -107,8 +107,8 @@ std::vector<unsigned char> marshalState(const Code& code,
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
-    ::marshalStub(registerVal, buf, code);
-    ::marshalStub(staticVal, buf, code);
+    ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
+    ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
     marshal_uint256_t(::hash(errpc), buf);
 
     return buf;
@@ -119,32 +119,32 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
 
-    return ::marshalState(
-        static_values->code, ::hash(static_values->code[pc]),
-        stackPreImage, auxStackPreImage, registerVal, static_values->staticVal,
-        CodePointStub{static_values->code[errpc]});
+    return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
+                          stackPreImage, auxStackPreImage, registerVal,
+                          static_values->staticVal,
+                          CodePointStub{errpc, static_values->code[errpc]});
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     auto opcode = static_values->code[pc].op.opcode;
-    std::vector<bool> stackPops = InstructionStackPops.at(opcode);
-    bool includeImmediateVal = false;
+    std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
+    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (static_values->code[pc].op.immediate && !stackPops.empty()) {
-        includeImmediateVal = stackPops[0] == true;
+        immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.begin());
     }
-    std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
+    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
 
     auto stackProof = stack.marshalForProof(stackPops, static_values->code);
     auto auxStackProof =
         auxstack.marshalForProof(auxStackPops, static_values->code);
 
     auto buf = ::marshalState(
-        static_values->code, static_values->code[pc].nextHash,
-        stackProof.first, auxStackProof.first, registerVal,
-        static_values->staticVal, CodePointStub{static_values->code[errpc]});
+        static_values->code, static_values->code[pc].nextHash, stackProof.first,
+        auxStackProof.first, registerVal, static_values->staticVal,
+        CodePointStub{errpc, static_values->code[errpc]});
 
-    static_values->code[pc].op.marshalForProof(buf, includeImmediateVal,
+    static_values->code[pc].op.marshalForProof(buf, immediateMarshalLevel,
                                                static_values->code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
@@ -167,13 +167,13 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
         }
 
         auto& immediate = instruction.op.immediate;
-        const value* param;
+        value param;
         if (immediate) {
-            param = immediate.get();
+            param = *immediate;
         } else {
-            param = &stack[0];
+            param = stack[0];
         }
-        auto paramNum = nonstd::get_if<uint256_t>(param);
+        auto paramNum = nonstd::get_if<uint256_t>(&param);
         if (!paramNum) {
             return NotBlocked();
         }
@@ -184,6 +184,71 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
         }
     } else {
         return NotBlocked();
+    }
+}
+
+BlockReason MachineState::runOne() {
+    if (state == Status::Error) {
+        return ErrorBlocked();
+    }
+
+    if (state == Status::Halted) {
+        return HaltBlocked();
+    }
+
+    auto& instruction = static_values->code[pc];
+
+    // if opcode is invalid, increment step count and return error or
+    // errorCodePoint
+    if (!isValidOpcode(instruction.op.opcode)) {
+        state = Status::Error;
+        context.numSteps++;
+        if (!errpc.is_err) {
+            pc = errpc;
+            state = Status::Extensive;
+        }
+        return NotBlocked();
+    } else {
+        if (instruction.op.immediate) {
+            auto imm = *instruction.op.immediate;
+            stack.push(std::move(imm));
+        }
+        // save stack size for stack cleanup in case of error
+        uint64_t startStackSize = stack.stacksize();
+        BlockReason blockReason = NotBlocked();
+        try {
+            blockReason = runOp(instruction.op.opcode);
+        } catch (const bad_pop_type&) {
+            state = Status::Error;
+        } catch (const bad_tuple_index&) {
+            state = Status::Error;
+        }
+        // if not blocked, increment step count and gas count
+        if (nonstd::get_if<NotBlocked>(&blockReason)) {
+            context.numSteps++;
+            context.numGas += InstructionArbGasCost.at(instruction.op.opcode);
+        } else {
+            if (instruction.op.immediate) {
+                stack.popClear();
+            }
+        }
+
+        if (state != Status::Error) {
+            return blockReason;
+        }
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        while (stack.stacksize() > 0 &&
+               startStackSize - stack.stacksize() < stackItems) {
+            stack.popClear();
+        }
+
+        if (!errpc.is_err) {
+            pc = errpc;
+            state = Status::Extensive;
+        }
+        return blockReason;
     }
 }
 
@@ -383,6 +448,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::HALT:
             state = Status::Halted;
+            break;
+            /*****************/
+            /*  Precompiles  */
+            /*****************/
+        case OpCode::ECRECOVER:
+            machineoperation::ec_recover(*this);
             break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)

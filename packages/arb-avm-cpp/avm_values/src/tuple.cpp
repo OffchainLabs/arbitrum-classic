@@ -161,43 +161,25 @@ Tuple::Tuple(value val1,
     computeValueSize();
 }
 
-Tuple::Tuple(std::vector<value> values, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(values.size())) {
-    if (values.size() < 9) {
+Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
+    if (!values.empty() && values.size() < 9) {
+        tpl = pool->getResource(values.size());
         for (auto& val : values) {
             tpl->data.push_back(std::move(val));
         }
-
-        tpl->cachedHash = calculateHash();
-        computeValueSize();
-    }
-}
-
-void Tuple::marshal(std::vector<unsigned char>& buf, const Code& code) const {
-    buf.push_back(TUPLE + tuple_size());
-    for (uint64_t i = 0; i < tuple_size(); i++) {
-        marshal_value(get_element(i), buf, code);
-    }
-}
-
-// marshalForProof does not use this
-// see similar functionality in value.marshalForProof
-value Tuple::clone_shallow() {
-    Tuple tup(tuplePool, tuple_size());
-    for (uint64_t i = 0; i < tuple_size(); i++) {
-        auto val = get_element(i);
-        if (nonstd::holds_alternative<uint256_t>(val)) {
-            tup.set_element(i, val);
-        } else {
-            auto valHash = hash_value(get_element(i));
-            tup.set_element(i, valHash);
+        // tpl is only defined if values has nonzero length
+        if (tpl) {
+            tpl->cachedHash = calculateHash();
+            computeValueSize();
         }
     }
-    if (tuple_size() > 0) {
-        computeValueSize();
-    }
+}
 
-    return tup;
+void Tuple::marshal(std::vector<unsigned char>& buf) const {
+    buf.push_back(TUPLE + tuple_size());
+    for (uint64_t i = 0; i < tuple_size(); i++) {
+        marshal_value(get_element(i), buf);
+    }
 }
 
 uint256_t Tuple::getSize() const {
@@ -221,17 +203,12 @@ HashPreImage Tuple::getHashPreImage() const {
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash_value(get_element(i));
-        std::array<uint64_t, 4> valHashInts;
-        to_big_endian(valHash, valHashInts.begin());
-        std::copy(
-            reinterpret_cast<unsigned char*>(valHashInts.data()),
-            reinterpret_cast<unsigned char*>(valHashInts.data()) + val_length,
-            oit);
-        oit += val_length;
+        oit = to_big_endian(valHash, oit);
     }
 
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 1 + val_length * (tuple_size()),
+    evm::Keccak_256(tupData.data(),
+                    static_cast<unsigned int>(1 + val_length * (tuple_size())),
                     hashData.data());
 
     return HashPreImage{hashData, getSize()};

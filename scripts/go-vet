@@ -1,0 +1,36 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### install-deps
+### --------------------------------------------------------------------
+
+# When running `pip3 install --user ...` the bin location is in:
+# python3 -c "import site; print(site.USER_BASE + '/bin')"
+
+# Exit on error
+set -e
+
+cd packages
+
+cd arb-util
+go vet ./...
+cd ..
+
+cd arb-avm-cpp
+go vet ./...
+cd ..
+
+cd arb-validator-core
+go vet ./...
+cd ..
+
+cd arb-validator
+go vet ./...
+cd ..
+
+cd arb-provider-go
+go vet ./...
+cd ..
+
+cd arb-tx-aggregator
+go vet ./...
+cd ..
