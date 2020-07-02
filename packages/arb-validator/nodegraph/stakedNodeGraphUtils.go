@@ -37,7 +37,7 @@ func (sa SortableAddressList) Swap(i, j int) {
 	sa[i], sa[j] = sa[j], sa[i]
 }
 
-func makePruneParams(
+func newPruneParams(
 	leaf *structures.Node,
 	leafAncestor *structures.Node,
 	latestConfirmed *structures.Node,
@@ -76,36 +76,4 @@ func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportu
 		}
 	}
 	return confOpp
-}
-
-func (sng *StakedNodeGraph) makeConfirmOpp(
-	nodeOps []valprotocol.ConfirmNodeOpportunity,
-	confNodes []*structures.Node,
-	currentTime common.TimeTicks,
-	stakerAddrs []common.Address,
-) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
-	nodeLimit := len(nodeOps)
-	for nodeLimit > 0 {
-		totalSize := 0
-		for _, opp := range nodeOps[:nodeLimit] {
-			totalSize += opp.ProofSize()
-		}
-		proofs := sng.generateAlignedStakersProofs(
-			confNodes[nodeLimit-1],
-			currentTime,
-			stakerAddrs,
-		)
-		for _, proof := range proofs {
-			totalSize += len(proof)
-		}
-		if totalSize < MaxAssertionSize || nodeLimit == 1 {
-			return &valprotocol.ConfirmOpportunity{
-				Nodes:                  nodeOps[:nodeLimit],
-				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
-				StakerAddresses:        stakerAddrs,
-				StakerProofs:           proofs,
-			}, confNodes
-		}
-	}
-	panic("Unreachable code")
 }

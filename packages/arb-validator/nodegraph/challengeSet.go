@@ -33,25 +33,25 @@ type Challenge struct {
 	conflictNode *structures.Node
 }
 
-func MakeChallenge(
-	_blockId *common.BlockId,
-	_logIndex uint,
-	_asserter common.Address,
-	_challenger common.Address,
-	_contract common.Address,
-	_conflictNode *structures.Node,
+func NewChallenge(
+	blockId *common.BlockId,
+	logIndex uint,
+	asserter common.Address,
+	challenger common.Address,
+	contract common.Address,
+	conflictNode *structures.Node,
 ) *Challenge {
 	return &Challenge{
-		blockId:      _blockId,
-		logIndex:     _logIndex,
-		asserter:     _asserter,
-		challenger:   _challenger,
-		contract:     _contract,
-		conflictNode: _conflictNode,
+		blockId:      blockId,
+		logIndex:     logIndex,
+		asserter:     asserter,
+		challenger:   challenger,
+		contract:     contract,
+		conflictNode: conflictNode,
 	}
 }
 
-func NewChallenge(event arbbridge.ChallengeStartedEvent, challengerAncestor *structures.Node) *Challenge {
+func NewChallengeFromEvent(event arbbridge.ChallengeStartedEvent, challengerAncestor *structures.Node) *Challenge {
 	return &Challenge{
 		blockId:      event.BlockId,
 		logIndex:     event.LogIndex,

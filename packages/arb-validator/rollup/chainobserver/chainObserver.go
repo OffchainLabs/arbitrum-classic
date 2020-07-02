@@ -409,7 +409,7 @@ func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.Chall
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
-	challenge := nodegraph.NewChallenge(ev, challengerAncestor)
+	challenge := nodegraph.NewChallengeFromEvent(ev, challengerAncestor)
 
 	chain.NodeGraph.NewChallenge(challenge)
 	for _, lis := range chain.listeners {

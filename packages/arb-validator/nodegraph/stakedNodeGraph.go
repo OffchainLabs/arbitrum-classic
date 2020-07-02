@@ -172,7 +172,7 @@ func (sng *StakedNodeGraph) GenerateNodePruneInfo(stakers *StakerSet) []valproto
 					}
 				})
 				if noStakersOnLeaf {
-					prunesToDo = append(prunesToDo, makePruneParams(leaf, leafAncestor, sng.latestConfirmed))
+					prunesToDo = append(prunesToDo, newPruneParams(leaf, leafAncestor, sng.latestConfirmed))
 				}
 			}
 		}
@@ -381,4 +381,36 @@ func (sng *StakedNodeGraph) checkChallengeOpportunityAllPairs() []*ChallengeOppo
 		}
 	}
 	return ret
+}
+
+func (sng *StakedNodeGraph) makeConfirmOpp(
+	nodeOps []valprotocol.ConfirmNodeOpportunity,
+	confNodes []*structures.Node,
+	currentTime common.TimeTicks,
+	stakerAddrs []common.Address,
+) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
+	nodeLimit := len(nodeOps)
+	for nodeLimit > 0 {
+		totalSize := 0
+		for _, opp := range nodeOps[:nodeLimit] {
+			totalSize += opp.ProofSize()
+		}
+		proofs := sng.generateAlignedStakersProofs(
+			confNodes[nodeLimit-1],
+			currentTime,
+			stakerAddrs,
+		)
+		for _, proof := range proofs {
+			totalSize += len(proof)
+		}
+		if totalSize < MaxAssertionSize || nodeLimit == 1 {
+			return &valprotocol.ConfirmOpportunity{
+				Nodes:                  nodeOps[:nodeLimit],
+				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
+				StakerAddresses:        stakerAddrs,
+				StakerProofs:           proofs,
+			}, confNodes
+		}
+	}
+	panic("Unreachable code")
 }
