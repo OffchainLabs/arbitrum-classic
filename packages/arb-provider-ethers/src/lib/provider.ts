@@ -324,6 +324,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // This should return a Promise (and may throw errors)
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public async perform(
     method: string,
     params: {
@@ -421,6 +422,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             confirmations: 1000,
           }
         }
+        /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
         return promisePoller({
           interval: 100,
           shouldContinue: (reason?: any, value?: any): boolean => {
