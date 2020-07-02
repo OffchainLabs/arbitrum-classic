@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package nodegraph
 
 import (
 	"errors"
@@ -30,12 +30,46 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
+//go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. nodegraph.proto
+
 type NodeGraph struct {
 	latestConfirmed *structures.Node
 	leaves          *LeafSet
 	nodeFromHash    map[common.Hash]*structures.Node
 	oldestNode      *structures.Node
 	params          valprotocol.ChainParams
+}
+
+func (ng *NodeGraph) LatestConfirmed() *structures.Node {
+	return ng.latestConfirmed
+}
+
+func (ng *NodeGraph) UpdateLatestConfirmed(node *structures.Node) {
+	ng.latestConfirmed = node
+}
+
+func (ng *NodeGraph) Leaves() *LeafSet {
+	return ng.leaves
+}
+
+func (ng *NodeGraph) DeleteLeaf(leaf *structures.Node) {
+	ng.leaves.Delete(leaf)
+}
+
+func (ng *NodeGraph) NodeFromHash(hash common.Hash) *structures.Node {
+	return ng.nodeFromHash[hash]
+}
+
+func (ng *NodeGraph) OldestNode() *structures.Node {
+	return ng.oldestNode
+}
+
+func (ng *NodeGraph) UpdateOldestNode(node *structures.Node) {
+	ng.oldestNode = node
+}
+
+func (ng *NodeGraph) Params() valprotocol.ChainParams {
+	return ng.params
 }
 
 func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *NodeGraph {
@@ -168,12 +202,12 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 func (ng *NodeGraph) pruneNode(node *structures.Node) {
 	oldNode := node.Prev()
 	if node.UnlinkPrev() {
-		ng.considerPruningNode(oldNode)
+		ng.ConsiderPruningNode(oldNode)
 	}
 	delete(ng.nodeFromHash, node.Hash())
 }
 
-func (ng *NodeGraph) pruneOldestNode(oldest *structures.Node) {
+func (ng *NodeGraph) PruneOldestNode(oldest *structures.Node) {
 	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
 		succHash := oldest.SuccessorHashes()[i]
 		if !succHash.Equals(common.Hash{}) {
@@ -188,23 +222,23 @@ func (ng *NodeGraph) HasReference(node *structures.Node) bool {
 		return true
 	}
 	for _, nodeHash := range node.SuccessorHashes() {
-		if nodeHash != zeroBytes32 {
+		if nodeHash != ZeroBytes32 {
 			return true
 		}
 	}
 	return false
 }
 
-func (ng *NodeGraph) considerPruningNode(node *structures.Node) {
+func (ng *NodeGraph) ConsiderPruningNode(node *structures.Node) {
 	if !ng.HasReference(node) {
 		ng.pruneNode(node)
 	}
 }
 
-func (ng *NodeGraph) getLeaf(node *structures.Node) *structures.Node {
+func (ng *NodeGraph) GetLeaf(node *structures.Node) *structures.Node {
 	for _, successor := range node.SuccessorHashes() {
-		if successor != zeroBytes32 {
-			return ng.getLeaf(ng.nodeFromHash[successor])
+		if successor != ZeroBytes32 {
+			return ng.GetLeaf(ng.nodeFromHash[successor])
 		}
 	}
 	return node
