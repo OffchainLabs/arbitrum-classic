@@ -58,56 +58,65 @@ class CodeSegment {
 };
 
 class Code {
-    std::vector<std::shared_ptr<CodeSegment>> segments;
+    mutable std::mutex mutex;
+    std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
+    uint64_t next_segment_num;
 
    public:
 
     Code() = default;
     Code(std::shared_ptr<CodeSegment> segment) {
         assert(segment->segmentID() == 0);
-        segments.emplace_back(std::move(segment));
+        segments[0] = std::move(segment);
     }
 
     std::shared_ptr<const CodeSegment> loadCodeSegment(
         uint64_t segment_num) const {
         mutex.lock();
-        std::shared_ptr<const CodeSegment> segment = segments[segment_num];
+        std::shared_ptr<const CodeSegment> segment = segments.at(segment_num);
         mutex.unlock();
         return segment;
     }
 
     const CodePoint& loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return (*segments[ref.segment])[ref.pc];
+        return (*segments.at(ref.segment))[ref.pc];
     }
 
     CodePointStub addSegment() {
-        uint64_t segment_num = segments.size();
+        const std::lock_guard<std::mutex> lock(mutex);
+        uint64_t segment_num = next_segment_num++;
         auto new_segment = std::make_shared<CodeSegment>(segment_num);
-        segments.emplace_back(std::move(new_segment));
-        auto& segment = *segments.back();
-        return {{segment_num, 0}, hash(segment[0])};
+        CodePointStub stub{{segment_num, 0}, hash((*new_segment)[0])};
+        segments[segment_num] = std::move(new_segment);
+        return stub;
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
         auto& segment = segments[ref.segment];
-
-        // This is the first pc in the segment so we can append directly
-        if (ref.pc == segment.size() - 1) {
-            return segment.addOperation(std::move(op));
+        auto initial_pc = segment->size() - 1;
+        if (ref.pc == initial_pc) {
+            // This is the first pc in the segment so we can append directly
+            if (segment->size() == segment->capacity()) {
+                // Segment is full, so we must allocate a new segment
+                segments[ref.segment] = segment->clone();
+                segment = segments[ref.segment];
+            }
+            return segment->addOperation(std::move(op));
         } else {
             // This segment was already mutated elsewhere, therefore we must
             // make a copy
-            uint64_t new_segment_num = segments.size();
-            auto new_segment = segment.getSubset(new_segment_num, ref.pc);
-            segments.push_back(new_segment);
-            return segments.back().addOperation(std::move(op));
+            uint64_t new_segment_num = next_segment_num++;
+            auto new_segment = segment->getSubset(new_segment_num, ref.pc);
+            auto stub = new_segment->addOperation(std::move(op));
+            segments[new_segment_num] = std::move(new_segment);
+            return stub;
         }
     }
 
     CodePointRef initialCodePointRef() const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return {0, segments[0]->size() - 1};
+        return {0, segments.at(0)->size() - 1};
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Code& code);
