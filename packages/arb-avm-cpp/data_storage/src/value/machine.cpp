@@ -79,6 +79,7 @@ std::vector<unsigned char> serializeStateKeys(
 }  // namespace
 
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
+    std::unordered_map<uint64_t, uint64_t> segmentCounts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
@@ -93,12 +94,12 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
     if (delete_results.reference_count < 1) {
         auto parsed_state = extractStateKeys(results.stored_value);
 
-        auto delete_register_res =
-            deleteValue(transaction, parsed_state.register_hash);
-        auto delete_datastack_res =
-            deleteValue(transaction, parsed_state.datastack_hash);
-        auto delete_auxstack_res =
-            deleteValue(transaction, parsed_state.auxstack_hash);
+        auto delete_register_res = deleteValueImpl(
+            transaction, parsed_state.register_hash, segmentCounts);
+        auto delete_datastack_res = deleteValueImpl(
+            transaction, parsed_state.datastack_hash, segmentCounts);
+        auto delete_auxstack_res = deleteValueImpl(
+            transaction, parsed_state.auxstack_hash, segmentCounts);
 
         if (!(delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
@@ -127,6 +128,8 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
 }
 
 SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
+    std::unordered_map<uint64_t, uint64_t> segmentCounts;
+
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
@@ -141,11 +144,13 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     auto& machinestate = machine.machine_state;
     auto pool = machinestate.pool.get();
     auto register_val_results =
-        saveValue(transaction, machinestate.registerVal);
+        saveValueImpl(transaction, machinestate.registerVal, segmentCounts);
     auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
-    auto datastack_results = saveValue(transaction, datastack_tup);
+    auto datastack_results =
+        saveValueImpl(transaction, datastack_tup, segmentCounts);
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
-    auto auxstack_results = saveValue(transaction, auxstack_tup);
+    auto auxstack_results =
+        saveValueImpl(transaction, auxstack_tup, segmentCounts);
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};

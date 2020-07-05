@@ -26,6 +26,15 @@ class Transaction;
 template <typename T>
 struct DbResult;
 
+SaveResults saveValueImpl(
+    Transaction& transaction,
+    const value& val,
+    std::unordered_map<uint64_t, uint64_t>& segmentCounts);
+DeleteResults deleteValueImpl(
+    Transaction& transaction,
+    const uint256_t& value_hash,
+    std::unordered_map<uint64_t, uint64_t>& segmentCounts);
+
 DbResult<value> getValue(const Transaction& transaction,
                          uint256_t value_hash,
                          TuplePool* pool);
