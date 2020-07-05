@@ -141,39 +141,29 @@ DbResult<value> getTuple(const Transaction& transaction,
 }
 
 struct ValueSerializer {
+    std::vector<unsigned char>& value_vector;
     std::unordered_map<uint64_t, uint64_t>& segmentCounts;
 
-    std::vector<unsigned char> operator()(const Tuple& val) const {
-        std::vector<unsigned char> value_vector;
+    void operator()(const Tuple& val) const {
         value_vector.push_back(TUPLE);
         auto hash_key = hash_value(val);
         marshal_uint256_t(hash_key, value_vector);
-
-        return value_vector;
     }
 
-    std::vector<unsigned char> operator()(const uint256_t& val) const {
-        std::vector<unsigned char> value_vector;
+    void operator()(const uint256_t& val) const {
         value_vector.push_back(NUM);
         marshal_uint256_t(val, value_vector);
-
-        return value_vector;
     }
 
-    std::vector<unsigned char> operator()(const CodePointStub& val) const {
-        ++segmentCounts[val.pc.segment];
-        std::vector<unsigned char> value_vector;
+    void operator()(const CodePointStub& val) const {
         value_vector.push_back(CODE_POINT_STUB);
         val.marshal(value_vector);
-        return value_vector;
+        ++segmentCounts[val.pc.segment];
     }
 
-    std::vector<unsigned char> operator()(const HashPreImage& val) const {
-        std::vector<unsigned char> value_vector;
+    void operator()(const HashPreImage& val) const {
         value_vector.push_back(HASH_PRE_IMAGE);
         val.marshal(value_vector);
-
-        return value_vector;
     }
 };
 
@@ -195,10 +185,8 @@ SaveResults saveTuple(Transaction& transaction,
 
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto current_val = val.get_element(i);
-        auto serialized_val =
-            nonstd::visit(ValueSerializer{segmentCounts}, current_val);
-        value_vector.insert(value_vector.end(), serialized_val.begin(),
-                            serialized_val.end());
+        nonstd::visit(ValueSerializer{value_vector, segmentCounts},
+                      current_val);
 
         if (nonstd::holds_alternative<Tuple>(current_val)) {
             auto tup_val = nonstd::get<Tuple>(current_val);
@@ -219,7 +207,8 @@ struct ValueSaver {
 
     template <typename T>
     SaveResults operator()(const T& val) const {
-        auto serialized_value = ValueSerializer{segmentCounts}(val);
+        std::vector<unsigned char> serialized_value;
+        ValueSerializer{serialized_value, segmentCounts}(val);
         auto hash_key = getHashKey(val);
         auto key = vecToSlice(hash_key);
         return saveRefCountedData(*transaction.transaction, key,
