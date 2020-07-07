@@ -556,7 +556,7 @@ func (lis *ValidatorChainListener) AdvancedKnownNode(
 	// TODO: It would be better to rate limit how often the stake can be moved
 	// and just move to the latest position at the end of a delay period
 	for stakingAddress := range lis.stakingKeys {
-		staker := nodeGraph.Stakers().Idx[stakingAddress]
+		staker := nodeGraph.Stakers().Get(stakingAddress)
 		if staker == nil {
 			continue
 		}

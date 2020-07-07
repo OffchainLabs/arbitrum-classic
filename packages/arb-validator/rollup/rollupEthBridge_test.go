@@ -73,7 +73,6 @@ func TestMainSetup(m *testing.T) {
 	tester = deployedArbRollup
 }
 
-//var contractPath string = "contract.ao"
 var contractPath = gotest.TestMachinePath()
 
 func TestGenerateLastMessageHash(t *testing.T) {
