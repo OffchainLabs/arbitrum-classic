@@ -29,11 +29,15 @@ struct DbResult;
 SaveResults saveValueImpl(
     Transaction& transaction,
     const value& val,
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts);
+    std::unordered_map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueImpl(
     Transaction& transaction,
     const uint256_t& value_hash,
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts);
+    std::unordered_map<uint64_t, uint64_t>& segment_counts);
+DbResult<value> getValueImpl(const Transaction& transaction,
+                             uint256_t value_hash,
+                             TuplePool* pool,
+                             std::set<uint64_t>& segment_ids);
 
 DbResult<value> getValue(const Transaction& transaction,
                          uint256_t value_hash,

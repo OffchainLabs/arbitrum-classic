@@ -21,15 +21,12 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/code.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
 namespace {
-rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
-    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
-}
-
 using iterator = std::vector<unsigned char>::const_iterator;
 
 CodePointRef extractCodePointRef(iterator& iter) {
@@ -79,7 +76,7 @@ std::vector<unsigned char> serializeStateKeys(
 }  // namespace
 
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
-    std::unordered_map<uint64_t, uint64_t> segmentCounts;
+    std::unordered_map<uint64_t, uint64_t> segment_counts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
@@ -95,11 +92,13 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
         auto parsed_state = extractStateKeys(results.stored_value);
 
         auto delete_register_res = deleteValueImpl(
-            transaction, parsed_state.register_hash, segmentCounts);
+            transaction, parsed_state.register_hash, segment_counts);
         auto delete_datastack_res = deleteValueImpl(
-            transaction, parsed_state.datastack_hash, segmentCounts);
+            transaction, parsed_state.datastack_hash, segment_counts);
         auto delete_auxstack_res = deleteValueImpl(
-            transaction, parsed_state.auxstack_hash, segmentCounts);
+            transaction, parsed_state.auxstack_hash, segment_counts);
+
+        deleteCode(transaction, segment_counts);
 
         if (!(delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
@@ -128,7 +127,7 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
 }
 
 SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
-    std::unordered_map<uint64_t, uint64_t> segmentCounts;
+    std::unordered_map<uint64_t, uint64_t> segment_counts;
 
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine.hash(), checkpoint_name);
@@ -144,17 +143,20 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     auto& machinestate = machine.machine_state;
     auto pool = machinestate.pool.get();
     auto register_val_results =
-        saveValueImpl(transaction, machinestate.registerVal, segmentCounts);
+        saveValueImpl(transaction, machinestate.registerVal, segment_counts);
     auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
     auto datastack_results =
-        saveValueImpl(transaction, datastack_tup, segmentCounts);
+        saveValueImpl(transaction, datastack_tup, segment_counts);
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
     auto auxstack_results =
-        saveValueImpl(transaction, auxstack_tup, segmentCounts);
+        saveValueImpl(transaction, auxstack_tup, segment_counts);
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};
     }
+
+    saveCode(transaction, *machinestate.code, segment_counts);
+
     auto machine_state_data =
         MachineStateKeys{hash_value(machinestate.registerVal),
                          hash(datastack_tup),

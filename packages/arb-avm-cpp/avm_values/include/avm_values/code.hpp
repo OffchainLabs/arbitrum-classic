@@ -20,6 +20,7 @@
 #include <avm_values/codepoint.hpp>
 
 class Code;
+class Transaction;
 struct LoadedExecutable;
 
 // The public interface of CodeSegment is thread safe assuming that the indexes
@@ -57,6 +58,11 @@ class CodeSegment {
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
 };
 
+struct CodeSegmentSnapshot {
+    std::shared_ptr<const CodeSegment> segment;
+    uint64_t op_count;
+};
+
 class Code {
     mutable std::mutex mutex;
     std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
@@ -78,6 +84,28 @@ class Code {
         return segment;
     }
 
+    bool containsSegment(uint64_t segment_id) const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return segments.find(segment_id) != segments.end();
+    }
+
+    void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
+        const std::lock_guard<std::mutex> lock(mutex);
+        uint64_t segment_id = segment->segmentID();
+        if (segments.find(segment->segmentID()) == segments.end()) {
+            segments[segment_id] = std::move(segment);
+        }
+    }
+
+    std::vector<CodeSegmentSnapshot> snapshot() const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        std::vector<CodeSegmentSnapshot> ret;
+        for (const auto& key_val : segments) {
+            ret.push_back({key_val.second, key_val.second->size()});
+        }
+        return ret;
+    }
+
     const CodePoint& loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
         return (*segments.at(ref.segment))[ref.pc];
@@ -97,7 +125,8 @@ class Code {
         auto initial_pc = segment->size() - 1;
         if (ref.pc == initial_pc) {
             // This is the first pc in the segment so we can append directly
-            if (segment->size() == segment->capacity()) {
+            if (segment->size() == segment->capacity() &&
+                segment.use_count() > 1) {
                 // Segment is full, so we must allocate a new segment
                 segments[ref.segment] = segment->clone();
                 segment = segments[ref.segment];

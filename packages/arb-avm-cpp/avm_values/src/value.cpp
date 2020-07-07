@@ -86,6 +86,14 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
     }
 }
 
+void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
+    auto big_endian_val = boost::endian::native_to_big(val);
+    std::array<unsigned char, sizeof(val)> tmpbuf;
+    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());

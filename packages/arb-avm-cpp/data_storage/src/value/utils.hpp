@@ -20,7 +20,14 @@
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
+#include <rocksdb/slice.h>
+
 extern std::unordered_map<int, int> blockreason_type_length;
+
+template <typename T>
+inline rocksdb::Slice vecToSlice(const T& vec) {
+    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
+}
 
 namespace checkpoint {
 namespace utils {

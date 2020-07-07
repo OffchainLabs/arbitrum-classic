@@ -32,10 +32,13 @@ GetResults getRefCountedData(rocksdb::Transaction& transaction,
                              const rocksdb::Slice& hash_key);
 SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
                                const rocksdb::Slice& hash_key,
-                               const std::vector<unsigned char>& value);
+                               const std::vector<unsigned char>& value,
+                               uint32_t new_references = 1);
 SaveResults incrementReference(rocksdb::Transaction& transaction,
-                               const rocksdb::Slice& hash_key);
+                               const rocksdb::Slice& hash_key,
+                               uint32_t new_references = 1);
 DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
-                                   const rocksdb::Slice& hash_key);
+                                   const rocksdb::Slice& hash_key,
+                                   uint32_t deleted_references = 1);
 
 #endif /* transaction_hpp */

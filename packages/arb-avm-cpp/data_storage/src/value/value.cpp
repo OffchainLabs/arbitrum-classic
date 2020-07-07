@@ -29,10 +29,6 @@ constexpr int TUP_NUM_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
-rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
-    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
-}
-
 std::vector<unsigned char> getHashKey(const value& val) {
     auto hash_key = hash_value(val);
     std::vector<unsigned char> hash_key_vector;
@@ -88,7 +84,8 @@ std::vector<std::vector<unsigned char>> parseTuple(
 
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
-                         TuplePool* pool) {
+                         TuplePool* pool,
+                         std::set<uint64_t>& segment_ids) {
     auto value_vectors = parseTuple(results.stored_value);
 
     if (value_vectors.empty()) {
@@ -110,6 +107,7 @@ DbResult<value> getTuple(const Transaction& transaction,
             case CODE_POINT_STUB: {
                 auto code_point = deserializeCodePointStub(buf);
                 values.push_back(code_point);
+                segment_ids.insert(code_point.pc.segment);
                 break;
             }
             case HASH_PRE_IMAGE: {
@@ -130,7 +128,8 @@ DbResult<value> getTuple(const Transaction& transaction,
                     return DbResult<value>{results.status,
                                            results.reference_count, Tuple()};
                 }
-                auto tuple = getTuple(transaction, results, pool).data;
+                auto tuple =
+                    getTuple(transaction, results, pool, segment_ids).data;
                 values.push_back(tuple);
                 break;
             }
@@ -142,7 +141,7 @@ DbResult<value> getTuple(const Transaction& transaction,
 
 struct ValueSerializer {
     std::vector<unsigned char>& value_vector;
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts;
+    std::unordered_map<uint64_t, uint64_t>& segment_counts;
 
     void operator()(const Tuple& val) const {
         value_vector.push_back(TUPLE);
@@ -158,7 +157,7 @@ struct ValueSerializer {
     void operator()(const CodePointStub& val) const {
         value_vector.push_back(CODE_POINT_STUB);
         val.marshal(value_vector);
-        ++segmentCounts[val.pc.segment];
+        ++segment_counts[val.pc.segment];
     }
 
     void operator()(const HashPreImage& val) const {
@@ -169,7 +168,7 @@ struct ValueSerializer {
 
 SaveResults saveTuple(Transaction& transaction,
                       const Tuple& val,
-                      std::unordered_map<uint64_t, uint64_t>& segmentCounts) {
+                      std::unordered_map<uint64_t, uint64_t>& segment_counts) {
     auto hash_key = getHashKey(val);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(*transaction.transaction, key);
@@ -185,13 +184,13 @@ SaveResults saveTuple(Transaction& transaction,
 
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto current_val = val.get_element(i);
-        nonstd::visit(ValueSerializer{value_vector, segmentCounts},
+        nonstd::visit(ValueSerializer{value_vector, segment_counts},
                       current_val);
 
         if (nonstd::holds_alternative<Tuple>(current_val)) {
             auto tup_val = nonstd::get<Tuple>(current_val);
             auto tuple_save_results =
-                saveTuple(transaction, tup_val, segmentCounts);
+                saveTuple(transaction, tup_val, segment_counts);
         }
     }
     return saveRefCountedData(*transaction.transaction, key, value_vector);
@@ -199,16 +198,16 @@ SaveResults saveTuple(Transaction& transaction,
 
 struct ValueSaver {
     Transaction& transaction;
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts;
+    std::unordered_map<uint64_t, uint64_t>& segment_counts;
 
     SaveResults operator()(const Tuple& val) const {
-        return saveTuple(transaction, val, segmentCounts);
+        return saveTuple(transaction, val, segment_counts);
     }
 
     template <typename T>
     SaveResults operator()(const T& val) const {
         std::vector<unsigned char> serialized_value;
-        ValueSerializer{serialized_value, segmentCounts}(val);
+        ValueSerializer{serialized_value, segment_counts}(val);
         auto hash_key = getHashKey(val);
         auto key = vecToSlice(hash_key);
         return saveRefCountedData(*transaction.transaction, key,
@@ -219,7 +218,7 @@ struct ValueSaver {
 DeleteResults deleteValue(
     Transaction& transaction,
     const rocksdb::Slice& hash_key,
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts) {
+    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
     auto results = getRefCountedData(*transaction.transaction, hash_key);
 
     if (!results.status.ok()) {
@@ -239,11 +238,11 @@ DeleteResults deleteValue(
                     reinterpret_cast<const char*>(vec.data()) + 1,
                     vec.size() - 1};
                 auto delete_status =
-                    deleteValue(transaction, tupKey, segmentCounts);
+                    deleteValue(transaction, tupKey, segment_counts);
             }
         } else if (value_type == CODE_POINT_STUB) {
             auto code_point = deserializeCodePointStub(buf);
-            ++segmentCounts[code_point.pc.segment];
+            ++segment_counts[code_point.pc.segment];
         }
     }
 
@@ -251,9 +250,10 @@ DeleteResults deleteValue(
 }
 }  // namespace
 
-DbResult<value> getValue(const Transaction& transaction,
-                         uint256_t value_hash,
-                         TuplePool* pool) {
+DbResult<value> getValueImpl(const Transaction& transaction,
+                             uint256_t value_hash,
+                             TuplePool* pool,
+                             std::set<uint64_t>& segment_ids) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
@@ -276,6 +276,7 @@ DbResult<value> getValue(const Transaction& transaction,
         }
         case CODE_POINT_STUB: {
             auto code_point = deserializeCodePointStub(buf);
+            segment_ids.insert(code_point.pc.segment);
             return DbResult<value>{results.status, results.reference_count,
                                    code_point};
         }
@@ -286,34 +287,41 @@ DbResult<value> getValue(const Transaction& transaction,
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            return getTuple(transaction, results, pool);
+            return getTuple(transaction, results, pool, segment_ids);
         }
     }
+}
+
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         TuplePool* pool) {
+    std::set<uint64_t> segment_ids;
+    return getValueImpl(transaction, value_hash, pool, segment_ids);
 }
 
 SaveResults saveValueImpl(
     Transaction& transaction,
     const value& val,
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts) {
-    return nonstd::visit(ValueSaver{transaction, segmentCounts}, val);
+    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
+    return nonstd::visit(ValueSaver{transaction, segment_counts}, val);
 }
 
 SaveResults saveValue(Transaction& transaction, const value& val) {
-    std::unordered_map<uint64_t, uint64_t> segmentCounts;
-    return saveValueImpl(transaction, val, segmentCounts);
+    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    return saveValueImpl(transaction, val, segment_counts);
 }
 
 DeleteResults deleteValueImpl(
     Transaction& transaction,
     const uint256_t& value_hash,
-    std::unordered_map<uint64_t, uint64_t>& segmentCounts) {
+    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
-    return deleteValue(transaction, key, segmentCounts);
+    return deleteValue(transaction, key, segment_counts);
 }
 
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
-    std::unordered_map<uint64_t, uint64_t> segmentCounts;
-    return deleteValueImpl(transaction, value_hash, segmentCounts);
+    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    return deleteValueImpl(transaction, value_hash, segment_counts);
 }

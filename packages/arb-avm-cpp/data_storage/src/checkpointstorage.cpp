@@ -19,6 +19,7 @@
 #include <data_storage/blockstore.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/code.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -92,6 +93,7 @@ Machine CheckpointStorage::getInitialMachine() const {
 
 std::pair<Machine, bool> CheckpointStorage::getMachine(
     uint256_t machineHash) const {
+    std::set<uint64_t> segment_ids;
     auto transaction = makeConstTransaction();
     auto results = getMachineState(*transaction, machineHash);
     if (!results.status.ok()) {
@@ -100,24 +102,41 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
 
     auto state_data = results.data;
 
-    auto register_results =
-        ::getValue(*transaction, state_data.register_hash, pool.get());
+    auto register_results = ::getValueImpl(
+        *transaction, state_data.register_hash, pool.get(), segment_ids);
     if (!register_results.status.ok()) {
         return std::make_pair(Machine{}, false);
     }
 
-    auto stack_results =
-        ::getValue(*transaction, state_data.datastack_hash, pool.get());
+    auto stack_results = ::getValueImpl(*transaction, state_data.datastack_hash,
+                                        pool.get(), segment_ids);
     if (!stack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(stack_results.data)) {
         return std::make_pair(Machine{}, false);
     }
 
-    auto auxstack_results =
-        ::getValue(*transaction, state_data.auxstack_hash, pool.get());
+    auto auxstack_results = ::getValueImpl(
+        *transaction, state_data.auxstack_hash, pool.get(), segment_ids);
     if (!auxstack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(auxstack_results.data)) {
         return std::make_pair(Machine{}, false);
+    }
+
+    segment_ids.insert(state_data.pc.segment);
+    segment_ids.insert(state_data.err_pc.pc.segment);
+
+    // Later segments can reference earlier ones, so load the segments backwards
+    for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
+        if (code->containsSegment(*it)) {
+            // If the segment is already loaded, no need to restore it
+            continue;
+        }
+        auto segment =
+            getCodeSegment(*transaction, *it, pool.get(), segment_ids);
+        if (!segment) {
+            return std::make_pair(Machine{}, false);
+        }
+        code->restoreExistingSegment(std::move(segment));
     }
 
     MachineState machine_state{

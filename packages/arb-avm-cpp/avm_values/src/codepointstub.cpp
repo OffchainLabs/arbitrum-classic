@@ -19,16 +19,6 @@
 
 #include <bigint_utils.hpp>
 
-namespace {
-void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, sizeof(val)> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-}  // namespace
-
 CodePointStub::CodePointStub(const CodePointRef& pc_, const CodePoint& cp_)
     : pc(pc_), hash(::hash(cp_)) {}
 
