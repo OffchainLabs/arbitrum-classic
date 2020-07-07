@@ -64,7 +64,7 @@ func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleV
 
 func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(len(slice))) {
-		return TupleValue{}, errors.New("requested tuple  size is too big")
+		return TupleValue{}, errors.New("requested tuple size is too big")
 	}
 	var contents [MaxTupleSize]Value
 	for i, v := range slice {
