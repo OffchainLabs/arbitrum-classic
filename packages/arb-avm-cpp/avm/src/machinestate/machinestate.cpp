@@ -237,70 +237,83 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = static_values->code[pc];
 
-    // if opcode is invalid, increment step count and return error or
-    // errorCodePoint
-    if (!isValidOpcode(instruction.op.opcode)) {
-        state = Status::Error;
-        context.numSteps++;
-        if (!errpc.is_err) {
-            pc = errpc;
-            state = Status::Extensive;
-        }
-        return NotBlocked();
-    } else if (arb_gas_remaining <
-               InstructionArbGasCost.at(instruction.op.opcode)) {
-        arb_gas_remaining = max_arb_gas_remaining;
-        state = Status::Error;
-        context.numSteps++;
-        if (!errpc.is_err) {
-            pc = errpc;
-            state = Status::Extensive;
-        }
-        return NotBlocked();
-    } else {
+    // We're only blocked if we can't execute at all
+    BlockReason blockReason = [&]() -> BlockReason {
+        // Always push the immediate to the stack if we're not blocked
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
             stack.push(std::move(imm));
         }
+
+        if (!isValidOpcode(instruction.op.opcode)) {
+            // If the opcode is invalid, execute by transitioning to the error
+            // state
+            state = Status::Error;
+            return NotBlocked();
+        }
+        auto gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
+
+        if (arb_gas_remaining < gas_cost) {
+            // If there's insufficient gas remaining, execute by transitioning
+            // to the error state with remaining gas set to max
+            arb_gas_remaining = max_arb_gas_remaining;
+            state = Status::Error;
+            return NotBlocked();
+        }
+
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = stack.stacksize();
         BlockReason blockReason = NotBlocked();
         try {
             blockReason = runOp(instruction.op.opcode);
-        } catch (const bad_pop_type&) {
-            state = Status::Error;
-        } catch (const bad_tuple_index&) {
+        } catch (const std::exception&) {
             state = Status::Error;
         }
-        // if not blocked, increment step count and gas count
-        if (nonstd::get_if<NotBlocked>(&blockReason)) {
-            context.numSteps++;
-            auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
-            context.numGas += gasUsed;
-            arb_gas_remaining -= gasUsed;
-        } else {
+
+        if (!nonstd::holds_alternative<NotBlocked>(blockReason)) {
+            // Get rid of the immediate and finish if the machine was actually
+            // blocked
             if (instruction.op.immediate) {
+                stack.popClear();
+            }
+            return blockReason;
+        }
+
+        // adjust for the gas used
+        auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
+        context.numGas += gasUsed;
+        arb_gas_remaining -= gasUsed;
+
+        if (state == Status::Error) {
+            // if state is Error, clean up stack
+            // Clear stack to base for instruction
+            auto stackItems =
+                InstructionStackPops.at(instruction.op.opcode).size();
+            while (stack.stacksize() > 0 &&
+                   startStackSize - stack.stacksize() < stackItems) {
                 stack.popClear();
             }
         }
 
-        if (state != Status::Error) {
-            return blockReason;
-        }
-        // if state is Error, clean up stack
-        // Clear stack to base for instruction
-        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-        while (stack.stacksize() > 0 &&
-               startStackSize - stack.stacksize() < stackItems) {
-            stack.popClear();
-        }
+        return NotBlocked();
 
         if (!errpc.is_err) {
             pc = errpc;
             state = Status::Extensive;
         }
-        return blockReason;
+    }();
+
+    if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
+        context.numSteps++;
     }
+
+    // If we're in the error state, jump to the error handler if one is set
+    if (state == Status::Error && errpc.is_err) {
+        pc = errpc;
+        state = Status::Extensive;
+    }
+
+    return blockReason;
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
