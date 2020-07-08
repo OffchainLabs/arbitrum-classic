@@ -68,7 +68,7 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state = Status::Extensive;
     CodePointRef pc;
-    CodePointRef errpc;
+    CodePointStub errpc;
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& contract_filename);
@@ -88,7 +88,7 @@ struct MachineState {
                  uint256_t arb_gas_remaining_,
                  Status state_,
                  CodePointRef pc_,
-                 CodePointRef errpc_);
+                 CodePointStub errpc_);
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();

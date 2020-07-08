@@ -489,8 +489,7 @@ TEST_CASE("PCPUSH opcode is correct") {
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == stub.pc);
         value res = m.stack.pop();
-        REQUIRE(res == value{CodePointStub(initial_pc,
-                                           m.static_values->code[initial_pc])});
+        REQUIRE(res == value{initial_stub});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -571,8 +570,7 @@ TEST_CASE("ERRPUSH opcode is correct") {
         REQUIRE(m.stack.stacksize() == 1);
         REQUIRE(m.pc == CodePointRef{0, 0});
         value res = m.stack.pop();
-        REQUIRE(res ==
-                value{CodePointStub{m.errpc, m.static_values->code[m.errpc]}});
+        REQUIRE(res == value{stub});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -586,7 +584,7 @@ TEST_CASE("ERRSET opcode is correct") {
         m.runOne();
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == start_pc + 1);
-        REQUIRE(m.errpc == CodePointRef(0, 54, false));
+        REQUIRE(m.errpc == new_err_stub);
     }
 }
 

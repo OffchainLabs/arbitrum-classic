@@ -39,7 +39,7 @@ struct MachineStateKeys {
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
     CodePointRef pc;
-    CodePointRef err_pc;
+    CodePointStub err_pc;
     Status status;
 
     MachineStateKeys() : pc(0, 0), err_pc({0, 0}, 0) {}
@@ -49,7 +49,7 @@ struct MachineStateKeys {
                      uint256_t auxstack_hash_,
                      uint256_t arb_gas_remaining_,
                      CodePointRef pc_,
-                     CodePointRef err_pc_,
+                     CodePointStub err_pc_,
                      Status status_)
         : static_hash(static_hash_),
           register_hash(register_hash_),

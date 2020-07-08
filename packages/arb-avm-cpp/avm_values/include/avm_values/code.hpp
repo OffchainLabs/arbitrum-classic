@@ -34,11 +34,9 @@ class CodeSegment {
     friend LoadedExecutable loadExecutable(const std::string& contract_filename,
                                            TuplePool& pool);
 
+    size_t capacity() const { return code.capacity(); }
+
     size_t size() const { return code.size(); }
-
-    const CodePoint& operator[](uint64_t pc) const { return code[pc]; }
-
-    const CodePoint& at(uint64_t pc) const { return code.at(pc); }
 
     CodePointStub addOperation(Operation op) {
         uint256_t prev_hash = 0;
@@ -50,10 +48,19 @@ class CodeSegment {
     }
 
     // Return the subset of this code segment starting in the given pc
-    CodeSegment getSubset(uint64_t new_segment, uint64_t pc) const {
-        return {new_segment,
-                std::vector<CodePoint>{code.begin(), code.begin() + pc}};
+    std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment,
+                                           uint64_t pc) const {
+        return std::make_shared<CodeSegment>(
+            new_segment,
+            std::vector<CodePoint>{code.begin(), code.begin() + pc});
     }
+
+   public:
+    CodeSegment(uint64_t segment_) : segment(segment_) {
+        code.push_back(getErrCodePoint());
+    }
+    CodeSegment(uint64_t segment_, std::vector<CodePoint> code_)
+        : segment(segment_), code(std::move(code_)) {}
 
     uint64_t segmentID() const { return segment; }
 
@@ -142,7 +149,8 @@ class Code {
             if (segment->size() == segment->capacity() &&
                 segment.use_count() > 1) {
                 // Segment is full, so we must allocate a new segment
-                segments[ref.segment] = segment->clone();
+                segments[ref.segment] =
+                    std::make_shared<CodeSegment>(ref.segment, segment->code);
                 segment = segments[ref.segment];
             }
             return segment->addOperation(std::move(op));

@@ -57,7 +57,6 @@ class CheckpointStorage {
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
 
-    const Code& getCode() const { return initial_state->code; }
     Machine getInitialMachine() const;
     std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
     DbResult<value> getValue(uint256_t value_hash) const;

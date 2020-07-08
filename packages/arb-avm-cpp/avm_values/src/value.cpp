@@ -152,7 +152,7 @@ void marshalForProof(const CodePointStub& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    auto& cp = code[val.pc];
+    auto& cp = code.loadCodePoint(val.pc);
     buf.push_back(CODEPT);
     cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
     std::array<unsigned char, 32> hashVal;

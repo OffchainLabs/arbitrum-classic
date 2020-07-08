@@ -58,7 +58,7 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            uint256_t arb_gas_remaining_,
                            Status state_,
                            CodePointRef pc_,
-                           CodePointRef errpc_)
+                           CodePointStub errpc_)
     : pool(std::move(pool_)),
       code(std::move(code_)),
       registerVal(std::move(register_val_)),
@@ -88,7 +88,7 @@ uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 7> data;
     auto oit = data.begin();
     {
-        auto val = ::hash(static_values->code[pc]);
+        auto val = ::hash(loadCurrentInstruction());
         oit = to_big_endian(val, oit);
     }
     {
@@ -109,7 +109,7 @@ uint256_t MachineState::hash() const {
     }
     { oit = to_big_endian(arb_gas_remaining, oit); }
     {
-        auto val = ::hash(static_values->code[errpc]);
+        auto val = ::hash_value(errpc);
         to_big_endian(val, oit);
     }
 
@@ -163,10 +163,11 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
-    auto opcode = static_values->code[pc].op.opcode;
+    auto currentInstruction = loadCurrentInstruction();
+    auto opcode = currentInstruction.op.opcode;
     std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (static_values->code[pc].op.immediate && !stackPops.empty()) {
+    if (currentInstruction.op.immediate && !stackPops.empty()) {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.begin());
     }
@@ -193,7 +194,7 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = static_values->code[pc];
+    auto& instruction = loadCurrentInstruction();
     if (instruction.op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
@@ -220,7 +221,7 @@ BlockReason MachineState::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = static_values->code[pc];
+    auto& instruction = loadCurrentInstruction();
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
@@ -293,8 +294,8 @@ BlockReason MachineState::runOne() {
     }
 
     // If we're in the error state, jump to the error handler if one is set
-    if (state == Status::Error && errpc.is_err) {
-        pc = errpc;
+    if (state == Status::Error && errpc.is_error()) {
+        pc = errpc.pc;
         state = Status::Extensive;
     }
 

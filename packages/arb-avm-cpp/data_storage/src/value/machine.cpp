@@ -29,6 +29,13 @@
 namespace {
 using iterator = std::vector<unsigned char>::const_iterator;
 
+uint256_t extractUint256(iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
+}
+
 CodePointRef extractCodePointRef(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto segment_val = checkpoint::utils::deserialize_uint64(ptr);
@@ -37,11 +44,10 @@ CodePointRef extractCodePointRef(iterator& iter) {
     return {segment_val, pc_val};
 }
 
-uint256_t extractUint256(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto int_val = deserializeUint256t(ptr);
-    iter += 32;
-    return int_val;
+CodePointStub extractCodePointStub(iterator& iter) {
+    auto ref = extractCodePointRef(iter);
+    auto next_hash = extractUint256(iter);
+    return {ref, next_hash};
 }
 
 MachineStateKeys extractStateKeys(
@@ -55,7 +61,7 @@ MachineStateKeys extractStateKeys(
     auto auxstack_hash = extractUint256(current_iter);
     auto arb_gas_remaining = extractUint256(current_iter);
     auto pc = extractCodePointRef(current_iter);
-    auto err_pc = extractCodePointRef(current_iter);
+    auto err_pc = extractCodePointStub(current_iter);
 
     return MachineStateKeys{static_hash,
                             register_hash,

@@ -448,7 +448,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.pc, m.static_values->code[m.pc]});
+    m.stack.push(CodePointStub{m.pc, m.loadCurrentInstruction()});
     ++m.pc;
 }
 
@@ -476,7 +476,7 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.errpc, m.static_values->code[m.errpc]});
+    m.stack.push(m.errpc);
     ++m.pc;
 }
 
@@ -486,7 +486,7 @@ void errSet(MachineState& m) {
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
-        m.errpc = codePointVal->pc;
+        m.errpc = *codePointVal;
     }
     m.stack.popClear();
     ++m.pc;
