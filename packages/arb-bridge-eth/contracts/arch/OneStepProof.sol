@@ -877,7 +877,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackInt(machine.arbGasRemaining);
+        machine.addDataStackValue(Value.newCodepointHash(CODE_POINT_ERROR));
         return true;
     }
 
@@ -886,7 +886,15 @@ library OneStepProof {
         Value.Data memory val1,
         Value.Data memory val2
     ) internal pure returns (bool) {
-        machine.addDataStackInt(machine.arbGasRemaining);
+        if (!val1.isInt()) {
+            return false;
+        }
+        if (!val2.isCodePoint()) {
+            return false;
+        }
+        machine.addDataStackValue(
+            Value.newCodePoint(uint8(val1.intVal), val2.hash())
+        );
         return true;
     }
 
@@ -896,7 +904,15 @@ library OneStepProof {
         Value.Data memory val2,
         Value.Data memory val3
     ) internal pure returns (bool) {
-        machine.addDataStackInt(machine.arbGasRemaining);
+        if (!val1.isInt()) {
+            return false;
+        }
+        if (!val3.isCodePoint()) {
+            return false;
+        }
+        machine.addDataStackValue(
+            Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2.hash())
+        );
         return true;
     }
 
@@ -904,6 +920,15 @@ library OneStepProof {
         Machine.Data memory machine,
         Value.Data memory val1
     ) internal pure returns (bool) {
+        // if (!val1.isCodePoint()) {
+        //     return false;
+        // }
+
+        // CodePoint memory cp = val1.cpVal;
+        // if (cp.immediate) {
+        //     machine
+        // }
+
         machine.addDataStackInt(machine.arbGasRemaining);
         return true;
     }
