@@ -14,10 +14,12 @@
 * limitations under the License.
  */
 
-package rollup
+package chainobserver
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -32,9 +34,9 @@ import (
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		assertionPreparedChan := make(chan *PreparedAssertion, 20)
+		assertionPreparedChan := make(chan *chainlistener.PreparedAssertion, 20)
 		preparingAssertions := make(map[common.Hash]bool)
-		preparedAssertions := make(map[common.Hash]*PreparedAssertion)
+		preparedAssertions := make(map[common.Hash]*chainlistener.PreparedAssertion)
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
@@ -43,8 +45,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			successorHashes := currentOpinion.SuccessorHashes()
 			successor := func() *structures.Node {
 				for _, successor := range successorHashes {
-					if successor != zeroBytes32 {
-						return chain.nodeGraph.nodeFromHash[successor]
+					if successor != nodegraph.ZeroBytes32 {
+						return chain.NodeGraph.NodeFromHash(successor)
 					}
 				}
 				return nil
@@ -66,24 +68,24 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			}
 
 			if found &&
-				prepped.params.Equals(disputable.AssertionParams) &&
-				prepped.claim.Equals(disputable.AssertionClaim) {
+				prepped.Params.Equals(disputable.AssertionParams) &&
+				prepped.Claim.Equals(disputable.AssertionClaim) {
 				newOpinion = valprotocol.ValidChildType
-				nextMachine = prepped.machine
-				validExecution = prepped.assertion
+				nextMachine = prepped.Machine
+				validExecution = prepped.Assertion
 				chain.RUnlock()
 			} else {
 				params := disputable.AssertionParams.Clone()
 				claim := disputable.AssertionClaim.Clone()
 				prevInboxCount := new(big.Int).Set(currentOpinion.VMProtoData().InboxCount)
 				afterInboxTopHeight := new(big.Int).Add(prevInboxCount, params.ImportedMessageCount)
-				afterInboxTopVal, err := chain.inbox.GetHashAtIndex(afterInboxTopHeight)
+				afterInboxTopVal, err := chain.Inbox.GetHashAtIndex(afterInboxTopHeight)
 				var afterInboxTop *common.Hash
 				if err == nil {
 					afterInboxTop = &afterInboxTopVal
 				}
-				inbox, _ := chain.inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
-				messages, _ := chain.inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
+				inbox, _ := chain.Inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
+				messages, _ := chain.Inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
 				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.Machine().Clone()
 				log.Println("Forming opinion on", successor.Hash().ShortString(), "which imported", messages, "messages")
@@ -94,10 +96,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			}
 			// Reset prepared
 			preparingAssertions = make(map[common.Hash]bool)
-			preparedAssertions = make(map[common.Hash]*PreparedAssertion)
+			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
 
 			chain.RLock()
-			correctNode := chain.nodeGraph.GetSuccessor(currentOpinion, newOpinion)
+			correctNode := chain.NodeGraph.GetSuccessor(currentOpinion, newOpinion)
 			if correctNode != nil {
 				chain.RUnlock()
 				chain.Lock()
@@ -108,13 +110,13 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.Machine().Hash())
 				chain.calculatedValidNode = correctNode
-				if correctNode.Depth() > chain.knownValidNode.Depth() {
-					chain.knownValidNode = correctNode
+				if correctNode.Depth() > chain.KnownValidNode.Depth() {
+					chain.KnownValidNode = correctNode
 				}
 				chain.Unlock()
 				chain.RLock()
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownNode(ctx, chain, correctNode)
+					listener.AdvancedKnownNode(ctx, chain.NodeGraph, correctNode)
 				}
 			} else {
 				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
@@ -127,11 +129,11 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case prepped := <-assertionPreparedChan:
-				preparedAssertions[prepped.prev.Hash()] = prepped
+				preparedAssertions[prepped.Prev.Hash()] = prepped
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
-				for !chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
+				for !chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 					updateCurrent()
 					chain.RUnlock()
 					select {
@@ -148,22 +150,22 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
 				if !isPreparing {
-					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.inbox.GetTopHash()
+					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.Inbox.GetTopHash()
 					if chain.calculatedValidNode.Machine() != nil &&
-						chain.calculatedValidNode.Machine().IsBlocked(chain.latestBlockId.Height, newMessages) == nil {
+						chain.calculatedValidNode.Machine().IsBlocked(chain.LatestBlockId.Height, newMessages) == nil {
 						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
-							assertionPreparedChan <- chain.prepareAssertion()
+							assertionPreparedChan <- chain.PrepareAssertion()
 						}()
 					}
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
-					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						lowerBoundBlock := prepared.params.TimeBounds.LowerBoundBlock
-						upperBoundBlock := prepared.params.TimeBounds.UpperBoundBlock
-						lowerBoundTime := prepared.params.TimeBounds.LowerBoundTimestamp
-						upperBoundTime := prepared.params.TimeBounds.UpperBoundTimestamp
-						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockId.Height.AsInt(), big.NewInt(3)))
+					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
+						lowerBoundBlock := prepared.Params.TimeBounds.LowerBoundBlock
+						upperBoundBlock := prepared.Params.TimeBounds.UpperBoundBlock
+						lowerBoundTime := prepared.Params.TimeBounds.LowerBoundTimestamp
+						upperBoundTime := prepared.Params.TimeBounds.UpperBoundTimestamp
+						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.LatestBlockId.Height.AsInt(), big.NewInt(3)))
 
 						// We're predicting what the timestamp will be when we
 						// submit which is likely to be close to the current
@@ -171,20 +173,26 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						// doesn't effect correctness since the failure modes
 						// are dropping a valid assertion or submitting an
 						// assertion that will be rejected.
-						if chain.latestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
+						if chain.LatestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
 							endCushion.Cmp(upperBoundBlock) <= 0 &&
 							time.Now().Unix() >= lowerBoundTime.Int64() &&
 							time.Now().Unix() <= upperBoundTime.Int64() {
 							chain.RUnlock()
 							chain.Lock()
-							chain.pendingState = prepared.machine
+							chain.pendingState = prepared.Machine
 							chain.Unlock()
 							chain.RLock()
 							for _, lis := range chain.listeners {
-								lis.AssertionPrepared(ctx, chain, prepared.Clone())
+								lis.AssertionPrepared(
+									ctx,
+									chain.GetChainParams(),
+									chain.NodeGraph,
+									chain.KnownValidNode,
+									chain.LatestBlockId,
+									prepared.Clone())
 							}
 						} else {
-							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", lowerBoundBlock.AsInt(), upperBoundBlock.AsInt(), chain.latestBlockId.Height.AsInt())
+							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", lowerBoundBlock.AsInt(), upperBoundBlock.AsInt(), chain.LatestBlockId.Height.AsInt())
 							// Prepared assertion is out of date
 							delete(preparingAssertions, chain.calculatedValidNode.Hash())
 							delete(preparedAssertions, chain.calculatedValidNode.Hash())
@@ -198,24 +206,24 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
+func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
 	beforeState := currentOpinion.VMProtoData().Clone()
-	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
+	if !chain.NodeGraph.Leaves().IsLeaf(currentOpinion) {
 		return nil
 	}
-	afterInboxTop := chain.inbox.GetTopHash()
+	afterInboxTop := chain.Inbox.GetTopHash()
 	beforeInboxTop := beforeState.InboxTop
-	newMessageCount := new(big.Int).Sub(chain.inbox.TopCount(), beforeState.InboxCount)
+	newMessageCount := new(big.Int).Sub(chain.Inbox.TopCount(), beforeState.InboxCount)
 
-	inbox, _ := chain.inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
+	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.Machine().Clone()
 	timeBounds := chain.currentTimeBounds()
 	log.Println("timeBounds: ", timeBounds.LowerBoundBlock.String(), timeBounds.UpperBoundBlock.String())
-	maxSteps := chain.nodeGraph.params.MaxExecutionSteps
-	currentHeight := chain.latestBlockId.Height.Clone()
+	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
+	currentHeight := chain.LatestBlockId.Height.Clone()
 	timeBoundsLength := new(big.Int).Sub(timeBounds.UpperBoundBlock.AsInt(), timeBounds.LowerBoundBlock.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
 	runDuration := common.NewTimeBlocks(runBlocks).Duration()
@@ -267,13 +275,13 @@ func (chain *ChainObserver) prepareAssertion() *PreparedAssertion {
 			AssertionStub:         stub,
 		}
 	}
-	return &PreparedAssertion{
-		prev:        currentOpinion,
-		beforeState: beforeState,
-		params:      params,
-		claim:       claim,
-		assertion:   assertion,
-		machine:     mach,
+	return &chainlistener.PreparedAssertion{
+		Prev:        currentOpinion,
+		BeforeState: beforeState,
+		Params:      params,
+		Claim:       claim,
+		Assertion:   assertion,
+		Machine:     mach,
 	}
 }
 

@@ -27,56 +27,6 @@ import (
 	"testing"
 )
 
-//func TestGenerateLastMessageHash(t *testing.T){
-//	msgs := make([]value.Value, 0)
-//	for i := 0; i < 5; i++ {
-//		//intVal := value.NewHashOnlyValueFromValue(value.NewInt64Value(1))
-//		intVal := value.NewEmptyTuple()
-//		msgs = append(msgs, intVal)
-//	}
-//	confirmOpp := valprotocol.ConfirmValidOpportunity{}
-//	confirmOpp.Messages = msgs
-//
-//	msgBytes := confirmOpp.MarshalMsgsForConfirmation()
-//	expectedCount := 5
-//	expectedHash := hashMsgs(msgs)
-//
-//	ethbridgeHash, msgCounts, err := protocolTester.GenerateLastMessageHash(
-//		nil,
-//		msgBytes,
-//		big.NewInt(0),
-//		big.NewInt(int64(len(msgBytes))))
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	if expectedHash != ethbridgeHash {
-//		t.Error(errors.New("calculated wrong last message hash"))
-//		fmt.Println(expectedHash)
-//		fmt.Println(ethbridgeHash)
-//	}
-//
-//	if big.NewInt(int64(expectedCount)) != msgCounts {
-//		t.Error(errors.New("calculated wrong message count"))
-//		fmt.Println(expectedCount)
-//		fmt.Println(msgCounts)
-//	}
-//}
-//
-//func hashMsgs(msgs []value.Value) common.Hash {
-//	currentHash := value.NewEmptyTuple().Hash()
-//
-//	for _, val := range msgs {
-//		currentHash = hash2(currentHash, val.Hash())
-//	}
-//
-//	return currentHash
-//}
-
-//func hash2(h1, h2 common.Hash) common.Hash {
-//	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
-//}
-
 func TestGeneratePreconditionHash(t *testing.T) {
 	intVal := value.NewInt64Value(1)
 	tuple := value.NewTuple2(intVal, intVal)

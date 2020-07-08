@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package nodegraph
 
 import (
 	"bytes"
@@ -32,8 +32,24 @@ type Staker struct {
 	challenge    common.Address
 }
 
+func (staker *Staker) Challenge() common.Address {
+	return staker.challenge
+}
+
+func (staker *Staker) Location() *structures.Node {
+	return staker.location
+}
+
+func (staker *Staker) CreationTime() common.TimeTicks {
+	return staker.creationTime
+}
+
+func (staker *Staker) Address() common.Address {
+	return staker.address
+}
+
 type StakerSet struct {
-	idx map[common.Address]*Staker
+	Idx map[common.Address]*Staker
 }
 
 func NewStakerSet() *StakerSet {
@@ -42,22 +58,22 @@ func NewStakerSet() *StakerSet {
 
 func (sl *StakerSet) Add(newStaker *Staker) {
 	newStaker.location.AddStaker()
-	if _, ok := sl.idx[newStaker.address]; ok {
+	if _, ok := sl.Idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
-	sl.idx[newStaker.address] = newStaker
+	sl.Idx[newStaker.address] = newStaker
 }
 
 func (sl *StakerSet) Delete(staker *Staker) {
-	delete(sl.idx, staker.address)
+	delete(sl.Idx, staker.address)
 }
 
 func (sl *StakerSet) Get(addr common.Address) *Staker {
-	return sl.idx[addr]
+	return sl.Idx[addr]
 }
 
 func (sl *StakerSet) forall(f func(*Staker)) {
-	for _, v := range sl.idx {
+	for _, v := range sl.Idx {
 		f(v)
 	}
 }
@@ -119,11 +135,11 @@ func (s *Staker) DebugString(prefix string) string {
 }
 
 func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
-	if len(ss.idx) != len(ss2.idx) {
+	if len(ss.Idx) != len(ss2.Idx) {
 		return false
 	}
-	for addr, staker := range ss.idx {
-		staker2 := ss2.idx[addr]
+	for addr, staker := range ss.Idx {
+		staker2 := ss2.Idx[addr]
 		if staker2 == nil {
 			return false
 		}

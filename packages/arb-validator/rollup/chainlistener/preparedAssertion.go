@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package chainlistener
 
 import (
 	"fmt"
@@ -28,42 +28,42 @@ import (
 )
 
 type PreparedAssertion struct {
-	prev        *structures.Node
-	beforeState *valprotocol.VMProtoData
-	params      *valprotocol.AssertionParams
-	claim       *valprotocol.AssertionClaim
-	assertion   *protocol.ExecutionAssertion
-	machine     machine.Machine
+	Prev        *structures.Node
+	BeforeState *valprotocol.VMProtoData
+	Params      *valprotocol.AssertionParams
+	Claim       *valprotocol.AssertionClaim
+	Assertion   *protocol.ExecutionAssertion
+	Machine     machine.Machine
 }
 
 func (pa *PreparedAssertion) String() string {
 	return fmt.Sprintf(
 		"PreparedAssertion(%v, %v, %v, %v, %v)",
-		pa.prev.Hash(),
-		pa.beforeState,
-		pa.params,
-		pa.claim,
-		pa.assertion,
+		pa.Prev.Hash(),
+		pa.BeforeState,
+		pa.Params,
+		pa.Claim,
+		pa.Assertion,
 	)
 }
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 	return &PreparedAssertion{
-		prev:        pa.prev,
-		beforeState: pa.beforeState.Clone(),
-		params:      pa.params.Clone(),
-		claim:       pa.claim.Clone(),
-		assertion:   pa.assertion,
-		machine:     pa.machine,
+		Prev:        pa.Prev,
+		BeforeState: pa.BeforeState.Clone(),
+		Params:      pa.Params.Clone(),
+		Claim:       pa.Claim.Clone(),
+		Assertion:   pa.Assertion,
+		Machine:     pa.Machine,
 	}
 }
 
 func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
 	node := structures.NewValidNodeFromPrev(
-		pa.prev,
+		pa.Prev,
 		valprotocol.NewDisputableNode(
-			pa.params,
-			pa.claim,
+			pa.Params,
+			pa.Claim,
 			common.Hash{},
 			big.NewInt(0),
 		),
@@ -71,20 +71,20 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 		common.BlocksFromSeconds(time.Now().Unix()),
 		common.Hash{},
 	)
-	_ = node.UpdateValidOpinion(pa.machine, pa.assertion)
+	_ = node.UpdateValidOpinion(pa.Machine, pa.Assertion)
 	return node
 }
 
-func (prep *PreparedAssertion) getAssertionParams() [9][32]byte {
+func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
 	return [9][32]byte{
-		prep.beforeState.MachineHash,
-		prep.beforeState.InboxTop,
-		prep.prev.PrevHash(),
-		prep.prev.NodeDataHash(),
-		prep.claim.AfterInboxTop,
-		prep.claim.ImportedMessagesSlice,
-		prep.claim.AssertionStub.AfterHash,
-		prep.claim.AssertionStub.LastMessageHash,
-		prep.claim.AssertionStub.LastLogHash,
+		prep.BeforeState.MachineHash,
+		prep.BeforeState.InboxTop,
+		prep.Prev.PrevHash(),
+		prep.Prev.NodeDataHash(),
+		prep.Claim.AfterInboxTop,
+		prep.Claim.ImportedMessagesSlice,
+		prep.Claim.AssertionStub.AfterHash,
+		prep.Claim.AssertionStub.LastMessageHash,
+		prep.Claim.AssertionStub.LastLogHash,
 	}
 }

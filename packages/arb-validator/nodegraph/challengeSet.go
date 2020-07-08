@@ -14,9 +14,10 @@
 * limitations under the License.
  */
 
-package rollup
+package nodegraph
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
@@ -30,6 +31,59 @@ type Challenge struct {
 	challenger   common.Address
 	contract     common.Address
 	conflictNode *structures.Node
+}
+
+func NewChallenge(
+	blockId *common.BlockId,
+	logIndex uint,
+	asserter common.Address,
+	challenger common.Address,
+	contract common.Address,
+	conflictNode *structures.Node,
+) *Challenge {
+	return &Challenge{
+		blockId:      blockId,
+		logIndex:     logIndex,
+		asserter:     asserter,
+		challenger:   challenger,
+		contract:     contract,
+		conflictNode: conflictNode,
+	}
+}
+
+func NewChallengeFromEvent(event arbbridge.ChallengeStartedEvent, challengerAncestor *structures.Node) *Challenge {
+	return &Challenge{
+		blockId:      event.BlockId,
+		logIndex:     event.LogIndex,
+		asserter:     event.Asserter,
+		challenger:   event.Challenger,
+		contract:     event.ChallengeContract,
+		conflictNode: challengerAncestor,
+	}
+}
+
+func (c *Challenge) ConflictNode() *structures.Node {
+	return c.conflictNode
+}
+
+func (c *Challenge) Contract() common.Address {
+	return c.contract
+}
+
+func (c *Challenge) Challenger() common.Address {
+	return c.challenger
+}
+
+func (c *Challenge) Asserter() common.Address {
+	return c.asserter
+}
+
+func (c *Challenge) LogIndex() uint {
+	return c.logIndex
+}
+
+func (c *Challenge) BlockId() *common.BlockId {
+	return c.blockId
 }
 
 type ChallengeSet struct {
@@ -55,7 +109,7 @@ func (cs *ChallengeSet) Get(addr common.Address) *Challenge {
 	return cs.idx[addr]
 }
 
-func (cs *ChallengeSet) forall(f func(*Challenge)) {
+func (cs *ChallengeSet) Forall(f func(*Challenge)) {
 	for _, v := range cs.idx {
 		f(v)
 	}
