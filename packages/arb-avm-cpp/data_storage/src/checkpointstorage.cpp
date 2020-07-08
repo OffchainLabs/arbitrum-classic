@@ -69,6 +69,15 @@ void CheckpointStorage::initialize(const std::string& contract_path) {
     }
 }
 
+bool CheckpointStorage::initialized() const {
+    auto tx = makeConstTransaction();
+    std::string initial_raw;
+    auto s =
+        tx->transaction->Get(rocksdb::ReadOptions(),
+                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    return s.ok();
+}
+
 bool CheckpointStorage::closeCheckpointStorage() {
     auto status = datastorage->closeDb();
     return status.ok();

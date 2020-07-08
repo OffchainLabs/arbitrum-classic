@@ -98,7 +98,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 			t.Fatal("Machine in error state")
 		}
 		if stepsExecuted == 0 {
-			blocked := mach.IsBlocked(common.NewTimeBlocks(big.NewInt(0)), false)
+			blocked := mach.IsBlocked(false)
 			if blocked != nil {
 				cont = false
 			}

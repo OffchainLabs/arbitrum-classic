@@ -25,8 +25,9 @@ extern "C" {
 #endif
 
 CCheckpointStorage* createCheckpointStorage(const char* filename);
-bool initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
-                                 const char* contract_path);
+int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
+                                const char* contract_path);
+int checkpointStorageInitialized(CCheckpointStorage* storage_ptr);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,

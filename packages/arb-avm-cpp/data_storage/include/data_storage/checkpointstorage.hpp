@@ -50,6 +50,7 @@ class CheckpointStorage {
     CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
     void initialize(const std::string& contract_path);
+    bool initialized() const;
 
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;

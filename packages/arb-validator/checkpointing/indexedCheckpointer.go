@@ -49,14 +49,12 @@ type IndexedCheckpointer struct {
 
 func NewIndexedCheckpointer(
 	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
 	databasePath string,
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
 ) *IndexedCheckpointer {
 	ret, err := newIndexedCheckpointer(
 		rollupAddr,
-		arbitrumCodeFilePath,
 		databasePath,
 		new(big.Int).Set(maxReorgHeight),
 		forceFreshStart,
@@ -76,7 +74,6 @@ func NewIndexedCheckpointer(
 // testing
 func newIndexedCheckpointer(
 	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
 	databasePath string,
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
@@ -90,7 +87,7 @@ func newIndexedCheckpointer(
 			return nil, err
 		}
 	}
-	cCheckpointer, err := cmachine.NewCheckpoint(databasePath, arbitrumCodeFilePath)
+	cCheckpointer, err := cmachine.NewCheckpoint(databasePath)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +100,14 @@ func newIndexedCheckpointer(
 		nil,
 		maxReorgHeight,
 	}, nil
+}
+
+func (cp *IndexedCheckpointer) Initialize(arbitrumCodeFilePath string) error {
+	return cp.db.Initialize(arbitrumCodeFilePath)
+}
+
+func (cp *IndexedCheckpointer) Initialized() bool {
+	return cp.db.Initialized()
 }
 
 func (cp *IndexedCheckpointer) MaxReorgHeight() *big.Int {

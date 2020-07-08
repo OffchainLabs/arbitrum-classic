@@ -34,9 +34,12 @@ var codeFile = gotest.TestMachinePath()
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"
 
-	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
+		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
@@ -54,8 +57,11 @@ func TestCheckpoint(t *testing.T) {
 func TestCheckpointMachine(t *testing.T) {
 	dePath := "dbPath2"
 
-	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()

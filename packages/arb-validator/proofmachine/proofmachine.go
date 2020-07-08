@@ -72,8 +72,8 @@ func (m *Machine) CurrentStatus() machine.Status {
 	return m.machine.CurrentStatus()
 }
 
-func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	return m.machine.IsBlocked(currentTime, newMessages)
+func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
+	return m.machine.IsBlocked(newMessages)
 }
 
 func (m *Machine) ExecuteAssertion(

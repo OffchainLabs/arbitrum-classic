@@ -159,11 +159,14 @@ func TestConfirmAssertion(t *testing.T) {
 
 	checkpointer := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
-		contractPath,
 		dbPath,
 		big.NewInt(100000),
 		true,
 	)
+
+	if err := checkpointer.Initialize(contractPath); err != nil {
+		t.Fatal(err)
+	}
 
 	chain, err := chainobserver.NewChain(
 		rollupAddress,

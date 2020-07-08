@@ -53,8 +53,11 @@ func runAoFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fail()
 	}
-	ckp, err := cmachine.NewCheckpoint(ckpDir, filePath)
+	ckp, err := cmachine.NewCheckpoint(ckpDir)
 	if err != nil {
+		b.Fail()
+	}
+	if err := ckp.Initialize(filePath); err != nil {
 		b.Fail()
 	}
 	mach, err := ckp.GetInitialMachine()

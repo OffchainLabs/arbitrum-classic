@@ -39,8 +39,8 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path) {
     }
 }
 
-bool initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
-                                 const char* contract_path) {
+int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
+                                const char* contract_path) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     try {
         storage->initialize(contract_path);
@@ -48,6 +48,10 @@ bool initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
     } catch (const std::exception&) {
         return false;
     }
+}
+
+int checkpointStorageInitialized(CCheckpointStorage* storage_ptr) {
+    return static_cast<CheckpointStorage*>(storage_ptr)->initialized();
 }
 
 int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {

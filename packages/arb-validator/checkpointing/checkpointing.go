@@ -26,6 +26,8 @@ import (
 )
 
 type RollupCheckpointer interface {
+	Initialize(arbitrumCodeFilePath string) error
+	Initialized() bool
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)

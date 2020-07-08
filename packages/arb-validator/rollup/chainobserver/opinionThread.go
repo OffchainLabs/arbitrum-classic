@@ -152,7 +152,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				if !isPreparing {
 					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.Inbox.GetTopHash()
 					if chain.calculatedValidNode.Machine() != nil &&
-						chain.calculatedValidNode.Machine().IsBlocked(chain.LatestBlockId.Height, newMessages) == nil {
+						chain.calculatedValidNode.Machine().IsBlocked(newMessages) == nil {
 						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
 							assertionPreparedChan <- chain.PrepareAssertion()
@@ -223,7 +223,6 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 	timeBounds := chain.currentTimeBounds()
 	log.Println("timeBounds: ", timeBounds.LowerBoundBlock.String(), timeBounds.UpperBoundBlock.String())
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
-	currentHeight := chain.LatestBlockId.Height.Clone()
 	timeBoundsLength := new(big.Int).Sub(timeBounds.UpperBoundBlock.AsInt(), timeBounds.LowerBoundBlock.AsInt())
 	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
 	runDuration := common.NewTimeBlocks(runBlocks).Duration()
@@ -236,7 +235,7 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 
 	afterHash := mach.Hash()
 
-	blockReason := mach.IsBlocked(currentHeight, false)
+	blockReason := mach.IsBlocked(false)
 
 	log.Printf(
 		"Prepared assertion of %v steps, from %v to %v with block reason %v and timebounds [%v, %v] on top of leaf %v\n",

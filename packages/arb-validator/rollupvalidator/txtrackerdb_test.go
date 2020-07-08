@@ -73,8 +73,11 @@ func saveNode(checkpointer *cmachine.CheckpointStorage, ns machine.ConfirmedNode
 }
 
 func TestTrackerDB(t *testing.T) {
-	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
+	checkpointer, err := cmachine.NewCheckpoint(dbPath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointer.Initialize(contractPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -256,8 +259,11 @@ func TestMetadataLogMatch(t *testing.T) {
 }
 
 func TestUnconfirmedDB(t *testing.T) {
-	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
+	checkpointer, err := cmachine.NewCheckpoint(dbPath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointer.Initialize(contractPath); err != nil {
 		t.Fatal(err)
 	}
 

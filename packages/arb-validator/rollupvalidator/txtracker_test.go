@@ -29,8 +29,11 @@ import (
 )
 
 func TestTxTracker(t *testing.T) {
-	checkpointer, err := cmachine.NewCheckpoint(dbPath, contractPath)
+	checkpointer, err := cmachine.NewCheckpoint(dbPath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointer.Initialize(contractPath); err != nil {
 		t.Fatal(err)
 	}
 
