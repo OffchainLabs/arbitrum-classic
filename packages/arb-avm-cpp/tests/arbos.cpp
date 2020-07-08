@@ -19,6 +19,8 @@
 
 #include <avm/machine.hpp>
 #include <data_storage/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
 
 #include <avm_values/vmValueParser.hpp>
 
@@ -67,6 +69,8 @@ TEST_CASE("ARBOS test vectors") {
             for (size_t i = 0; i < assertion.logs.size(); ++i) {
                 REQUIRE(assertion.logs[i] == logs[i]);
             }
+            auto tx = storage.makeTransaction();
+            saveMachine(*tx, mach);
         }
     }
 }

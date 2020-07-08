@@ -115,7 +115,7 @@ SaveResults saveCodeSegment(
         }
     }
     return saveRefCountedData(*transaction.transaction, key, serialized_code,
-                              added_ref_count);
+                              added_ref_count, true);
 }
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,

@@ -61,12 +61,13 @@ SaveResults incrementReference(rocksdb::Transaction& transaction,
 SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
                                const rocksdb::Slice& hash_key,
                                const std::vector<unsigned char>& value,
-                               uint32_t new_references) {
+                               uint32_t new_references,
+                               bool allow_replacement) {
     auto results = getRefCountedData(transaction, hash_key);
     int ref_count;
 
     if (results.status.ok()) {
-        if (results.stored_value != value) {
+        if (!allow_replacement && results.stored_value != value) {
             std::cout << "Different value for key: ";
             boost::algorithm::hex(hash_key.data(),
                                   hash_key.data() + hash_key.size(),
@@ -79,8 +80,8 @@ SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
             boost::algorithm::hex(value.begin(), value.end(),
                                   std::ostream_iterator<char>{std::cout, ""});
             std::cout << std::endl;
+            assert(false);
         }
-        assert(results.stored_value == value);
         ref_count = results.reference_count + new_references;
     } else {
         ref_count = new_references;

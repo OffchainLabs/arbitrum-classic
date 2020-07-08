@@ -200,18 +200,30 @@ struct ValueSaver {
     Transaction& transaction;
     std::unordered_map<uint64_t, uint64_t>& segment_counts;
 
-    SaveResults operator()(const Tuple& val) const {
-        return saveTuple(transaction, val, segment_counts);
-    }
-
     template <typename T>
-    SaveResults operator()(const T& val) const {
+    SaveResults saveImpl(const T& val, bool allow_replacement) const {
         std::vector<unsigned char> serialized_value;
         ValueSerializer{serialized_value, segment_counts}(val);
         auto hash_key = getHashKey(val);
         auto key = vecToSlice(hash_key);
         return saveRefCountedData(*transaction.transaction, key,
-                                  serialized_value);
+                                  serialized_value, 1, allow_replacement);
+    }
+
+    SaveResults operator()(const Tuple& val) const {
+        return saveTuple(transaction, val, segment_counts);
+    }
+
+    SaveResults operator()(const CodePointStub& val) const {
+        // The same code point can exist in different segments with different
+        // serializations mapping to the same hash. If this occurs, the
+        // different versions are interchangeable
+        return saveImpl(val, true);
+    }
+
+    template <typename T>
+    SaveResults operator()(const T& val) const {
+        return saveImpl(val, false);
     }
 };
 
