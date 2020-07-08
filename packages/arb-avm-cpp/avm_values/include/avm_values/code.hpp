@@ -69,6 +69,11 @@ struct CodeSegmentSnapshot {
     uint64_t op_count;
 };
 
+struct CodeSnapshot {
+    std::vector<CodeSegmentSnapshot> segments;
+    uint64_t op_count;
+};
+
 class Code {
     mutable std::mutex mutex;
     std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
@@ -102,13 +107,13 @@ class Code {
         }
     }
 
-    std::vector<CodeSegmentSnapshot> snapshot() const {
+    CodeSnapshot snapshot() const {
         const std::lock_guard<std::mutex> lock(mutex);
         std::vector<CodeSegmentSnapshot> ret;
         for (const auto& key_val : segments) {
             ret.push_back({key_val.second, key_val.second->size()});
         }
-        return ret;
+        return {std::move(ret), next_segment_num};
     }
 
     const CodePoint& loadCodePoint(const CodePointRef& ref) const {

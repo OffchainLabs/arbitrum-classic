@@ -180,12 +180,12 @@ void saveCode(Transaction& transaction,
     auto snapshots = code.snapshot();
     // Sort segments in reverse order by segment ID since later segments could
     // reference earlier ones
-    std::sort(snapshots.begin(), snapshots.end(),
+    std::sort(snapshots.segments.begin(), snapshots.segments.end(),
               [](const auto& first, const auto& second) {
                   return first.segment->segmentID() >
                          second.segment->segmentID();
               });
-    for (const auto& snapshot : snapshots) {
+    for (const auto& snapshot : snapshots.segments) {
         if (segment_counts[snapshot.segment->segmentID()] > 0) {
             saveCodeSegment(transaction, snapshot, segment_counts);
         }
