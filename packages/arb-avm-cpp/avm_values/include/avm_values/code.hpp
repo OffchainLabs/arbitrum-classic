@@ -80,11 +80,8 @@ class Code {
     uint64_t next_segment_num;
 
    public:
-    Code() : next_segment_num(0) {}
-    Code(std::shared_ptr<CodeSegment> segment) : next_segment_num(1) {
-        assert(segment->segmentID() == 0);
-        segments[0] = std::move(segment);
-    }
+    Code() : Code(0) {}
+    Code(uint64_t next_segment_num_) : next_segment_num(next_segment_num_) {}
 
     std::shared_ptr<const CodeSegment> loadCodeSegment(
         uint64_t segment_num) const {

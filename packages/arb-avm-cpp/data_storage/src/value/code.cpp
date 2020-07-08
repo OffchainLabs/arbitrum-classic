@@ -31,7 +31,8 @@
 
 namespace {
 
-constexpr auto segment_key_prefix = std::array<char, 1>{0};
+const char* max_code_segment_key = "max_code_segment";
+constexpr auto segment_key_prefix = std::array<char, 1>{87};
 constexpr auto segment_key_size = segment_key_prefix.size() + sizeof(uint64_t);
 
 std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
@@ -103,6 +104,7 @@ SaveResults saveCodeSegment(
     }
 
     std::vector<unsigned char> serialized_code;
+    marshal_uint64_t(snapshot.op_count, serialized_code);
     for (uint64_t i = 0; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
         // Ignore referemces to other code segments
@@ -174,10 +176,34 @@ void deleteCode(Transaction& transaction,
     }
 }
 
+uint64_t getNextSegmentID(const Transaction& transaction) {
+    std::string segment_id_raw;
+    auto s = transaction.transaction->Get(rocksdb::ReadOptions(),
+                                          rocksdb::Slice(max_code_segment_key),
+                                          &segment_id_raw);
+    if (s.IsNotFound()) {
+        return 0;
+    }
+    if (!s.ok()) {
+        throw std::runtime_error("couldn't load segment id");
+    }
+    auto ptr = segment_id_raw.data();
+    return checkpoint::utils::deserialize_uint64(ptr);
+}
+
 void saveCode(Transaction& transaction,
               const Code& code,
               std::unordered_map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
+
+    std::vector<unsigned char> value_data;
+    marshal_uint64_t(snapshots.op_count, value_data);
+    auto value_slice = vecToSlice(value_data);
+    auto status = transaction.transaction->Put(
+        rocksdb::Slice(max_code_segment_key), value_slice);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to size mac code segment");
+    }
     // Sort segments in reverse order by segment ID since later segments could
     // reference earlier ones
     std::sort(snapshots.segments.begin(), snapshots.segments.end(),

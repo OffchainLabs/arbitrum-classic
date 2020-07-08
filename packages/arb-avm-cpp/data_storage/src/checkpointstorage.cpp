@@ -41,7 +41,7 @@ const char* initial_slice_label = "initial";
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      code(std::make_shared<Code>()),
+      code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))),
       pool(std::make_shared<TuplePool>()) {}
 
 void CheckpointStorage::initialize(const std::string& contract_path) {
