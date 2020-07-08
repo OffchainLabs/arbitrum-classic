@@ -41,5 +41,5 @@ void CodePointStub::marshal(std::vector<unsigned char>& buf) const {
 }
 
 bool CodePointStub::is_error() const {
-    return hash == ::hash(getErrCodePoint());
+    return hash == getErrCodePointHash();
 }

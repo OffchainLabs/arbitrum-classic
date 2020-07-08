@@ -55,6 +55,12 @@ class CodeSegment {
                 std::vector<CodePoint>{code.begin(), code.begin() + pc}};
     }
 
+    uint64_t segmentID() const { return segment; }
+
+    const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
+
+    const CodePoint& at(uint64_t pc) const { return code.at(pc); }
+
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
 };
 
@@ -69,9 +75,8 @@ class Code {
     uint64_t next_segment_num;
 
    public:
-
-    Code() = default;
-    Code(std::shared_ptr<CodeSegment> segment) {
+    Code() : next_segment_num(0) { addSegment(); }
+    Code(std::shared_ptr<CodeSegment> segment) : next_segment_num(1) {
         assert(segment->segmentID() == 0);
         segments[0] = std::move(segment);
     }

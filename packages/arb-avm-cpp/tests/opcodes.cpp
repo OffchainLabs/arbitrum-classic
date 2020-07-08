@@ -391,7 +391,6 @@ TEST_CASE("SPUSH opcode is correct") {
     SECTION("spush") {
         auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
-        code->addSegment();
         MachineState m{std::move(code), uint256_t{5}, pool};
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
@@ -481,13 +480,13 @@ TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        code->addOperation(stub.pc, Operation(OpCode::ADD));
+        auto stub = code->initialCodePointRef();
+        code->addOperation(stub, Operation(OpCode::ADD));
         MachineState m{std::move(code), uint256_t(5), pool};
         auto initial_stub = CodePointStub(m.pc, m.loadCurrentInstruction());
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == CodePointRef{0, 0});
+        REQUIRE(m.pc == stub);
         value res = m.stack.pop();
         REQUIRE(res == value{CodePointStub(initial_pc,
                                            m.static_values->code[initial_pc])});
@@ -541,8 +540,8 @@ TEST_CASE("AUXSTACKEMPTY opcode is correct") {
 
 MachineState createTestMachineState(OpCode op) {
     auto code = std::make_shared<Code>();
-    auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, {OpCode::HALT});
+    auto initial_pc = code->initialCodePointRef();
+    auto stub = code->addOperation(initial_pc, {OpCode::HALT});
     code->addOperation(stub.pc, {op});
     auto pool = std::make_shared<TuplePool>();
     return {std::move(code), Tuple(), std::move(pool)};
@@ -563,8 +562,8 @@ TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
+        auto initial_pc = code->initialCodePointRef();
+        auto stub = code->addOperation(initial_pc, Operation(OpCode::ADD));
         MachineState m{std::move(code), uint256_t(5), pool};
         m.errpc = stub;
         m.runOp(OpCode::ERRPUSH);

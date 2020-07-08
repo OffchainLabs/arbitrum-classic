@@ -43,9 +43,6 @@ struct BreakpointBlocked {
 
 struct InboxBlocked {
     static constexpr BlockType type = Inbox;
-    uint256_t timout;
-
-    InboxBlocked(uint256_t timeout_) { timout = timeout_; }
 };
 
 using BlockReason = nonstd::variant<NotBlocked,

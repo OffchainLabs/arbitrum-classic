@@ -59,8 +59,8 @@ class Machine {
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const {
-        return machine_state.isBlocked(currentTime, newMessages);
+    BlockReason isBlocked(bool newMessages) const {
+        return machine_state.isBlocked(newMessages);
     }
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();

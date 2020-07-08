@@ -116,20 +116,15 @@ struct ReasonConverter {
         return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const InboxBlocked& val) const {
-        std::vector<unsigned char> inboxDataVec;
-        marshal_uint256_t(val.timout, inboxDataVec);
-        return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
+    CBlockReason operator()(const InboxBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_INBOX, ByteSlice{nullptr, 0}};
     }
 };
 
-CBlockReason machineIsBlocked(CMachine* m,
-                              void* currentTimeData,
-                              int newMessages) {
+CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto currentTime = receiveUint256(currentTimeData);
-    auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
+    auto blockReason = mach->isBlocked(newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 

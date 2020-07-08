@@ -26,7 +26,7 @@ class Transaction;
 struct SaveResults;
 
 class Datastack {
-    static constexpr int lazyCount = 100;
+    static constexpr int lazyCount = 1000;
 
     void addHash() const;
     void calculateAllHashes() const;
@@ -71,6 +71,9 @@ class Datastack {
     }
 
     void prepForMod(int count) {
+        if (static_cast<size_t>(count) > values.size()) {
+            throw stack_too_small();
+        }
         while (hashes.size() > values.size() - count) {
             hashes.pop_back();
         }

@@ -96,7 +96,9 @@ struct MachineState {
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
     uint256_t hash() const;
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
+    BlockReason isBlocked(bool newMessages) const;
+
+    const CodePoint& loadCurrentInstruction() const;
 };
 
 #endif /* machinestate_hpp */

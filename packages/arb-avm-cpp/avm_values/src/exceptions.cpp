@@ -27,3 +27,7 @@ const char* bad_pop_type::what() const noexcept {
 const char* int_out_of_bounds::what() const noexcept {
     return "int_out_of_bounds";
 }
+
+const char* stack_too_small::what() const noexcept {
+    return "stack_too_small";
+}

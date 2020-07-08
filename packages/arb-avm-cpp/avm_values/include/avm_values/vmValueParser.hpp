@@ -20,6 +20,8 @@
 #include <avm_values/code.hpp>
 #include <avm_values/tuple.hpp>
 
+#include <nlohmann/json.hpp>
+
 struct LoadedExecutable {
     std::shared_ptr<CodeSegment> code;
     value static_val;
@@ -27,6 +29,8 @@ struct LoadedExecutable {
     LoadedExecutable(std::shared_ptr<CodeSegment> code_, value static_val_)
         : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
+
+value simple_value_from_json(const nlohmann::json& value_json, TuplePool& pool);
 
 LoadedExecutable loadExecutable(const std::string& contract_filename,
                                 TuplePool& pool);

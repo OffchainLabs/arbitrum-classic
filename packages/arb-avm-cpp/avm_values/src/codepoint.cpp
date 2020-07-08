@@ -113,3 +113,8 @@ const CodePoint& getErrCodePoint() {
     CodePoint static errcp(Operation(static_cast<OpCode>(0)), 0);
     return errcp;
 }
+
+const uint256_t& getErrCodePointHash() {
+    uint256_t static errpc_hash = hash(getErrCodePoint());
+    return errpc_hash;
+}

@@ -34,8 +34,8 @@ std::ostream& operator<<(std::ostream& os, const BreakpointBlocked&) {
     return os << "BreakpointBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const InboxBlocked& val) {
-    return os << "InboxBlocked(" << val.timout << ")";
+std::ostream& operator<<(std::ostream& os, const InboxBlocked&) {
+    return os << "InboxBlocked";
 }
 
 std::ostream& operator<<(std::ostream& os, const BlockReason& val) {

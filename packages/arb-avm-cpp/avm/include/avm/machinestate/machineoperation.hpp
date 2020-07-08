@@ -85,6 +85,7 @@ void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 void openinsn(MachineState& m);
+void sideload(MachineState& m);
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

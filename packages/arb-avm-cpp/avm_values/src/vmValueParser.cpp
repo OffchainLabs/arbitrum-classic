@@ -25,18 +25,23 @@ const char* TUP_VAL_LABEL = "Tuple";
 const char* CP_VAL_LABEL = "CodePoint";
 const char* CP_INTERNAL_LABEL = "Internal";
 const char* OPCODE_LABEL = "opcode";
+const char* OPCODE_SUB_LABEL = "AVMOpcode";
 const char* IMMEDIATE_LABEL = "immediate";
 const char* CODE_LABEL = "code";
 const char* STATIC_LABEL = "static_val";
 
 namespace {
 
+uint256_t int_value_from_json(const nlohmann::json& value_json) {
+    return uint256_t{"0x" + value_json[INT_VAL_LABEL].get<std::string>()};
+}
+
 value value_from_json(const nlohmann::json& value_json,
                       size_t op_count,
                       const CodeSegment& code,
                       TuplePool& pool) {
     if (value_json.contains(INT_VAL_LABEL)) {
-        return uint256_t{value_json[INT_VAL_LABEL].get<std::string>()};
+        return int_value_from_json(value_json);
     } else if (value_json.contains(TUP_VAL_LABEL)) {
         auto& json_tup = value_json[TUP_VAL_LABEL];
         if (!json_tup.is_array()) {
@@ -65,7 +70,14 @@ Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
                               const CodeSegment& code,
                               TuplePool& pool) {
-    auto opcode = op_json.at(OPCODE_LABEL).get<OpCode>();
+    auto opcode_json = op_json.at(OPCODE_LABEL);
+    if (opcode_json.contains(OPCODE_SUB_LABEL)) {
+        opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
+    }
+    if (!opcode_json.is_number_integer()) {
+        std::cerr << "Invalid opcode " << opcode_json << "\n";
+    }
+    auto opcode = opcode_json.get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
     if (imm.is_null()) {
         return {opcode};
@@ -73,6 +85,25 @@ Operation operation_from_json(const nlohmann::json& op_json,
     return {opcode, value_from_json(imm, op_count, code, pool)};
 }
 }  // namespace
+
+value simple_value_from_json(const nlohmann::json& value_json,
+                             TuplePool& pool) {
+    if (value_json.contains(INT_VAL_LABEL)) {
+        return int_value_from_json(value_json);
+    } else if (value_json.contains(TUP_VAL_LABEL)) {
+        auto& json_tup = value_json[TUP_VAL_LABEL];
+        if (!json_tup.is_array()) {
+            throw std::runtime_error("tuple must contain array");
+        }
+        std::vector<value> values;
+        for (auto& json_val : json_tup) {
+            values.push_back(simple_value_from_json(json_val, pool));
+        }
+        return Tuple(std::move(values), &pool);
+    } else {
+        throw std::runtime_error("invalid value type");
+    }
+}
 
 LoadedExecutable loadExecutable(const std::string& contract_filename,
                                 TuplePool& pool) {

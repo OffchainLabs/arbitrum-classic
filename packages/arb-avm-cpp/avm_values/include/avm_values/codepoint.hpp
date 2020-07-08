@@ -61,5 +61,6 @@ bool operator==(const CodePoint& val1, const CodePoint& val2);
 uint256_t hash(const CodePoint& cp);
 
 const CodePoint& getErrCodePoint();
+const uint256_t& getErrCodePointHash();
 
 #endif /* codepoint_hpp */

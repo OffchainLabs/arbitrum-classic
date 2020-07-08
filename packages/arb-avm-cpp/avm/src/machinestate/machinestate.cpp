@@ -186,8 +186,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     return buf;
 }
 
-BlockReason MachineState::isBlocked(uint256_t currentTime,
-                                    bool newMessages) const {
+BlockReason MachineState::isBlocked(bool newMessages) const {
     if (state == Status::Error) {
         return ErrorBlocked();
     } else if (state == Status::Halted) {
@@ -198,23 +197,7 @@ BlockReason MachineState::isBlocked(uint256_t currentTime,
         if (newMessages) {
             return NotBlocked();
         }
-
-        auto& immediate = instruction.op.immediate;
-        value param;
-        if (immediate) {
-            param = *immediate;
-        } else {
-            param = stack[0];
-        }
-        auto paramNum = nonstd::get_if<uint256_t>(&param);
-        if (!paramNum) {
-            return NotBlocked();
-        }
-        if (currentTime < *paramNum) {
-            return InboxBlocked(*paramNum);
-        } else {
-            return NotBlocked();
-        }
+        return NotBlocked();
     } else {
         return NotBlocked();
     }
@@ -537,6 +520,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::OPEN_INSN:
             machineoperation::openinsn(*this);
+            break;
+        case OpCode::SIDELOAD:
+            machineoperation::sideload(*this);
             break;
             /*****************/
             /*  Precompiles  */

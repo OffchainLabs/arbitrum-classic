@@ -94,6 +94,7 @@ enum class OpCode : uint8_t {
     PUSH_INSN,
     PUSH_INSN_IMM,
     OPEN_INSN,
+    SIDELOAD,
 
     ECRECOVER = 0x80,
 
@@ -183,6 +184,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::PUSH_INSN, "pushinsn"},
     {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
     {OpCode::OPEN_INSN, "openinsn"},
+    {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"}};
 
@@ -256,7 +258,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
         {OpCode::SEND, {MarshalLevel::FULL}},
         {OpCode::GETTIME, {}},
-        {OpCode::INBOX, {MarshalLevel::SINGLE}},
+        {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
         {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
@@ -265,6 +267,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::PUSH_INSN, {MarshalLevel::SINGLE}},
         {OpCode::PUSH_INSN_IMM, {MarshalLevel::SINGLE, MarshalLevel::STUB}},
         {OpCode::OPEN_INSN, {MarshalLevel::SINGLE}},
+        {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 
         {OpCode::ECRECOVER,
@@ -342,6 +345,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::PUSH_INSN, {}},
                                {OpCode::PUSH_INSN_IMM, {}},
                                {OpCode::OPEN_INSN, {}},
+                               {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
                                {OpCode::ECRECOVER, {}}};
@@ -416,6 +420,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::PUSH_INSN, 25},
     {OpCode::PUSH_INSN_IMM, 25},
     {OpCode::OPEN_INSN, 25},
+    {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000}};
