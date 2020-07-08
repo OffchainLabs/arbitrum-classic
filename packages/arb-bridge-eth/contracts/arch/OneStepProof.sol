@@ -29,6 +29,8 @@ library OneStepProof {
 
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
+    uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+
     struct ValidateProofData {
         bytes32 beforeHash;
         uint128[4] timeBounds;
@@ -850,7 +852,7 @@ library OneStepProof {
         return true;
     }
 
-    function executeSetgasInsn(
+    function executeSetGasInsn(
         Machine.Data memory machine,
         Value.Data memory val1
     ) internal pure returns (bool) {
@@ -861,7 +863,7 @@ library OneStepProof {
         return true;
     }
 
-    function executePushgasInsn(Machine.Data memory machine)
+    function executePushGasInsn(Machine.Data memory machine)
         internal
         pure
         returns (bool)
@@ -1332,7 +1334,7 @@ library OneStepProof {
             "Invalid didInboxInsn claim"
         );
         if (startMachine.arbGasRemaining < opGasCost(opCode)) {
-            endMachine.arbGasRemaining = ((1 << 128) + 1) * ((1 << 128) - 1); // = MaxUint256
+            endMachine.arbGasRemaining = MAX_UINT256;
             correct = false;
         } else if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
@@ -1545,9 +1547,9 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
         } else if (opCode == OP_SETGAS) {
-            correct = executeSetgasInsn(endMachine, stackVals[0]);
+            correct = executeSetGasInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_PUSHGAS) {
-            correct = executePushgasInsn(endMachine);
+            correct = executePushGasInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
             correct = executeECRecoverInsn(
                 endMachine,
