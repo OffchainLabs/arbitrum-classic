@@ -295,12 +295,12 @@ BlockReason MachineState::runOne() {
             }
         }
 
-        return NotBlocked();
-
-        if (!errpc.is_err) {
+        if (state == Status::Error && !errpc.is_err) {
             pc = errpc;
             state = Status::Extensive;
         }
+
+        return NotBlocked();
     }();
 
     if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
