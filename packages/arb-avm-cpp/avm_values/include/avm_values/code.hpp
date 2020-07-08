@@ -19,6 +19,11 @@
 
 #include <avm_values/codepoint.hpp>
 
+#include <memory>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+
 class Code;
 class Transaction;
 struct LoadedExecutable;
