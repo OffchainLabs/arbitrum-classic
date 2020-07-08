@@ -31,13 +31,13 @@ TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     TuplePool pool;
 
-    std::vector<std::string> files = {
-        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_load_add_and_verify", "evm_load_fib_and_verify"
-        //        "evm_test_arbsys",
-        //        "evm_xcontract_call_and_verify",
-        //        "evm_xcontract_call_with_constructors"
-    };
+    std::vector<std::string> files = {"evm_direct_deploy_add",
+                                      "evm_direct_deploy_and_call_add",
+                                      "evm_load_add_and_verify",
+                                      "evm_load_fib_and_verify",
+                                      "evm_test_arbsys",
+                                      "evm_xcontract_call_and_verify",
+                                      "evm_xcontract_call_with_constructors"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
@@ -61,8 +61,6 @@ TEST_CASE("ARBOS test vectors") {
             mach.machine_state.stack.push(uint256_t{0});
             auto assertion = mach.run(1000000000, TimeBounds{}, inbox,
                                       std::chrono::seconds{0});
-            std::cout << "test: Machine ran for " << assertion.stepCount
-                      << " steps\n";
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
             auto log = logs[0].get<Tuple>();
