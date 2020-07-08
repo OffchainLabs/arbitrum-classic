@@ -50,7 +50,7 @@ void initializeDatastack(const Transaction& transaction,
 
 void saveDataStack(Datastack data_stack) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -64,7 +64,7 @@ void saveDataStack(Datastack data_stack) {
 
 void saveDataStackTwice(Datastack data_stack) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -119,7 +119,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     Datastack data_stack;
 
@@ -199,7 +199,7 @@ TEST_CASE("Save datastack") {
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     Datastack datastack;
 
     SECTION("save datastack and get") {

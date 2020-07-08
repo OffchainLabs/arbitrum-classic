@@ -85,7 +85,7 @@ void getTupleValues(const Transaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -106,7 +106,7 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     TuplePool pool;
 
@@ -132,7 +132,7 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save empty tuple") {
@@ -166,7 +166,7 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     TuplePool pool;
 
@@ -223,7 +223,7 @@ TEST_CASE("Save and get tuple values") {
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -396,7 +396,7 @@ Machine getDefaultMachine() {
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
@@ -412,7 +412,7 @@ TEST_CASE("Save Machinestatedata") {
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
@@ -430,7 +430,7 @@ TEST_CASE("Get Machinestate data") {
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {

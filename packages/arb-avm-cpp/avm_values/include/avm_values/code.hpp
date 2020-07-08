@@ -80,7 +80,7 @@ class Code {
     uint64_t next_segment_num;
 
    public:
-    Code() : next_segment_num(0) { addSegment(); }
+    Code() : next_segment_num(0) {}
     Code(std::shared_ptr<CodeSegment> segment) : next_segment_num(1) {
         assert(segment->segmentID() == 0);
         segments[0] = std::move(segment);
@@ -128,6 +128,13 @@ class Code {
         CodePointStub stub{{segment_num, 0}, hash((*new_segment)[0])};
         segments[segment_num] = std::move(new_segment);
         return stub;
+    }
+
+    void addSegment(std::shared_ptr<CodeSegment> segment) {
+        const std::lock_guard<std::mutex> lock(mutex);
+        assert(segment->segmentID() == next_segment_num);
+        segments[next_segment_num] = std::move(segment);
+        next_segment_num++;
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {

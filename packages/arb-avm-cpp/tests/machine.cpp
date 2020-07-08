@@ -67,41 +67,35 @@ void restoreCheckpoint(CheckpointStorage& storage, Machine& expected_machine) {
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
-    SECTION("default") {
-        auto machine = Machine::loadFromFile(test_contract_path);
-        checkpointState(storage, machine);
-    }
-    SECTION("save twice") {
-        auto machine = Machine::loadFromFile(test_contract_path);
-        checkpointStateTwice(storage, machine);
-    }
+    auto machine = storage.getInitialMachine();
+    machine.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
+
+    SECTION("default") { checkpointState(storage, machine); }
+    SECTION("save twice") { checkpointStateTwice(storage, machine); }
     SECTION("assert machine hash") {
-        auto machine = Machine::loadFromFile(test_contract_path);
-        Machine machine2 = storage.getInitialMachine();
         auto hash1 = machine.hash();
-        auto hash2 = machine2.hash();
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        auto ret2 = storage.getMachine(hash1);
-        REQUIRE(ret2.second);
-        auto machine3 = std::move(ret2.first);
-        auto hash3 = machine3.hash();
-        REQUIRE(hash3 == hash2);
-        REQUIRE(hash1 == hash2);
+        auto machine2 = storage.getMachine(hash1);
+        auto hash2 = machine2.hash();
+        REQUIRE(hash2 == hash1);
     }
 }
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
     SECTION("default") {
-        auto machine = Machine::loadFromFile(test_contract_path);
+        auto machine = storage.getInitialMachine();
+        machine.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         deleteCheckpoint(*transaction, machine);
@@ -112,10 +106,11 @@ TEST_CASE("Delete machine checkpoint") {
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
     SECTION("default") {
-        auto machine = Machine::loadFromFile(test_contract_path);
+        auto machine = storage.getInitialMachine();
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
@@ -153,9 +148,6 @@ TEST_CASE("Clone") {
 }
 
 TEST_CASE("Machine hash") {
-    DBDeleter deleter;
-    TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
     MachineState machine = MachineState::loadFromFile(test_contract_path);
     auto pcHash = ::hash(machine.loadCurrentInstruction());
     auto stackHash = machine.stack.hash();

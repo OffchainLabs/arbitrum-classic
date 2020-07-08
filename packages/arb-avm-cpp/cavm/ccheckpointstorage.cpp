@@ -29,17 +29,24 @@
 
 #include <string>
 
-CCheckpointStorage* createCheckpointStorage(const char* db_path,
-                                            const char* contract_path) {
+CCheckpointStorage* createCheckpointStorage(const char* db_path) {
     auto string_filename = std::string(db_path);
-    auto string_contract_path = std::string(contract_path);
-
     try {
-        auto storage =
-            new CheckpointStorage(string_filename, string_contract_path);
+        auto storage = new CheckpointStorage(string_filename);
         return static_cast<void*>(storage);
     } catch (const std::exception&) {
         return nullptr;
+    }
+}
+
+bool initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
+                                 const char* contract_path) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    try {
+        storage->initialize(contract_path);
+        return true;
+    } catch (const std::exception&) {
+        return false;
     }
 }
 

@@ -36,7 +36,6 @@ class TransactionDB;
 class CheckpointStorage {
     std::shared_ptr<DataStorage> datastorage;
     std::shared_ptr<Code> code;
-    value static_val;
 
     CheckpointStorage(std::shared_ptr<DataStorage>,
                       const std::string& contract_path,
@@ -48,9 +47,10 @@ class CheckpointStorage {
    public:
     std::shared_ptr<TuplePool> pool;
 
-    CheckpointStorage(const std::string& db_path,
-                      const std::string& contract_path);
+    CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
+    void initialize(const std::string& contract_path);
+
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();

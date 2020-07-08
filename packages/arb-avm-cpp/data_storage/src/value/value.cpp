@@ -242,7 +242,7 @@ DeleteResults deleteValue(
         auto value_type = static_cast<ValueTypes>(*buf);
         ++buf;
 
-        if (value_type == CODE_POINT_STUB) {
+        if (value_type == TUPLE) {
             auto value_vectors = parseTuple(results.stored_value);
 
             for (const auto& vec : value_vectors) {

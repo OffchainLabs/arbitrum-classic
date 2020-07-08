@@ -49,6 +49,7 @@ MachineStateKeys extractStateKeys(
     auto current_iter = stored_state.begin();
     auto status = static_cast<Status>(*current_iter);
     ++current_iter;
+    auto static_hash = extractUint256(current_iter);
     auto register_hash = extractUint256(current_iter);
     auto datastack_hash = extractUint256(current_iter);
     auto auxstack_hash = extractUint256(current_iter);
@@ -56,15 +57,21 @@ MachineStateKeys extractStateKeys(
     auto pc = extractCodePointRef(current_iter);
     auto err_pc = extractCodePointRef(current_iter);
 
-    return MachineStateKeys{
-        register_hash, datastack_hash, auxstack_hash, arb_gas_remaining, pc,
-        err_pc,        status};
+    return MachineStateKeys{static_hash,
+                            register_hash,
+                            datastack_hash,
+                            auxstack_hash,
+                            arb_gas_remaining,
+                            pc,
+                            err_pc,
+                            status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(static_cast<unsigned char>(state_data.status));
+    marshal_uint256_t(state_data.static_hash, state_data_vector);
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
@@ -90,7 +97,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
 
     if (delete_results.reference_count < 1) {
         auto parsed_state = extractStateKeys(results.stored_value);
-
+        auto delete_static_res = deleteValueImpl(
+            transaction, parsed_state.static_hash, segment_counts);
         auto delete_register_res = deleteValueImpl(
             transaction, parsed_state.register_hash, segment_counts);
         auto delete_datastack_res = deleteValueImpl(
@@ -100,7 +108,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
 
         deleteCode(transaction, segment_counts);
 
-        if (!(delete_register_res.status.ok() &&
+        if (!(delete_static_res.status.ok() &&
+              delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
               delete_auxstack_res.status.ok())) {
             std::cout << "error deleting checkpoint" << std::endl;
@@ -142,6 +151,8 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
 
     auto& machinestate = machine.machine_state;
     auto pool = machinestate.pool.get();
+    auto static_val_results =
+        saveValueImpl(transaction, machinestate.static_val, segment_counts);
     auto register_val_results =
         saveValueImpl(transaction, machinestate.registerVal, segment_counts);
     auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
@@ -158,7 +169,8 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     saveCode(transaction, *machinestate.code, segment_counts);
 
     auto machine_state_data =
-        MachineStateKeys{hash_value(machinestate.registerVal),
+        MachineStateKeys{hash_value(machinestate.static_val),
+                         hash_value(machinestate.registerVal),
                          hash(datastack_tup),
                          hash(auxstack_tup),
                          machinestate.arb_gas_remaining,

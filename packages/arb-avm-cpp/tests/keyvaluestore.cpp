@@ -37,7 +37,7 @@ std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
 TEST_CASE("KeyValueStore test") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto store = storage.makeKeyValueStore();
 
     auto status = store->saveData(hash_key1, value1);
@@ -56,7 +56,7 @@ TEST_CASE("KeyValueStore test") {
 
 TEST_CASE("CCheckpointStorage test") {
     DBDeleter deleter;
-    auto store = createCheckpointStorage(dbpath.c_str(), test_contract_path);
+    auto store = createCheckpointStorage(dbpath.c_str());
     auto res = getData(store, hash_key2.data(), hash_key2.size());
 
     REQUIRE(res.found == false);

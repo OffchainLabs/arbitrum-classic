@@ -58,7 +58,8 @@ TEST_CASE("ARBOS test vectors") {
                 logs.push_back(simple_value_from_json(log_json, pool));
             }
 
-            CheckpointStorage storage(dbpath, arb_os_path);
+            CheckpointStorage storage(dbpath);
+            storage.initialize(arb_os_path);
             auto mach = storage.getInitialMachine();
             mach.machine_state.stack.push(uint256_t{0});
             auto assertion = mach.run(1000000000, TimeBounds{}, inbox,
@@ -69,8 +70,25 @@ TEST_CASE("ARBOS test vectors") {
             for (size_t i = 0; i < assertion.logs.size(); ++i) {
                 REQUIRE(assertion.logs[i] == logs[i]);
             }
-            auto tx = storage.makeTransaction();
-            saveMachine(*tx, mach);
+            {
+                auto tx = storage.makeTransaction();
+                saveMachine(*tx, mach);
+                tx->commit();
+            }
+            auto mach_hash = mach.hash();
+            auto mach2 = storage.getMachine(mach_hash);
+            REQUIRE(mach_hash == mach2.hash());
+            storage.closeCheckpointStorage();
+
+            CheckpointStorage storage2(dbpath);
+            auto mach3 = storage2.getMachine(mach_hash);
+            REQUIRE(mach_hash == mach3.hash());
+
+            {
+                auto tx = storage2.makeTransaction();
+                deleteMachine(*tx, mach_hash);
+                tx->commit();
+            }
         }
     }
 }

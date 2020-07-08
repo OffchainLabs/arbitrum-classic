@@ -29,30 +29,45 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/vmValueParser.hpp>
 
+#include "bigint_utils.hpp"
+
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-CheckpointStorage::CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
-                                     LoadedExecutable exec,
-                                     std::shared_ptr<TuplePool> pool_)
-    : datastorage(std::move(datastorage_)),
-      code(std::make_shared<Code>(std::move(exec.code))),
-      static_val(std::move(exec.static_val)),
-      pool(std::move(pool_)) {}
+namespace {
+const char* initial_slice_label = "initial";
+}
 
-CheckpointStorage::CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
-                                     const std::string& contract_path,
-                                     std::shared_ptr<TuplePool> pool)
-    : CheckpointStorage(std::move(datastorage_),
-                        loadExecutable(contract_path, *pool),
-                        std::move(pool)) {}
+CheckpointStorage::CheckpointStorage(const std::string& db_path)
+    : datastorage(std::make_shared<DataStorage>(db_path)),
+      code(std::make_shared<Code>()),
+      pool(std::make_shared<TuplePool>()) {}
 
-CheckpointStorage::CheckpointStorage(const std::string& db_path,
-                                     const std::string& contract_path)
-    : CheckpointStorage(std::make_shared<DataStorage>(db_path),
-                        contract_path,
-                        std::make_shared<TuplePool>()) {}
+void CheckpointStorage::initialize(const std::string& contract_path) {
+    auto executable = loadExecutable(contract_path, *pool);
+    auto tx = makeTransaction();
+    code->addSegment(std::move(executable.code));
+    Machine mach{MachineState{code, std::move(executable.static_val), pool}};
+    auto res = saveMachine(*tx, mach);
+    auto save_exp = std::runtime_error("failed to save");
+    if (!res.status.ok()) {
+        throw save_exp;
+    }
+    std::vector<unsigned char> value_data;
+    marshal_uint256_t(mach.hash(), value_data);
+    rocksdb::Slice value_slice{reinterpret_cast<const char*>(value_data.data()),
+                               value_data.size()};
+    auto s =
+        tx->transaction->Put(rocksdb::Slice(initial_slice_label), value_slice);
+    if (!s.ok()) {
+        throw save_exp;
+    }
+    s = tx->commit();
+    if (!s.ok()) {
+        throw save_exp;
+    }
+}
 
 bool CheckpointStorage::closeCheckpointStorage() {
     auto status = datastorage->closeDb();
@@ -88,7 +103,17 @@ std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
 }
 
 Machine CheckpointStorage::getInitialMachine() const {
-    return {MachineState{code, static_val, pool}};
+    auto tx = makeConstTransaction();
+    std::string initial_raw;
+    auto s =
+        tx->transaction->Get(rocksdb::ReadOptions(),
+                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    if (!s.ok()) {
+        throw std::runtime_error("failed to load initial val");
+    }
+    auto machine_hash =
+        from_big_endian(initial_raw.data(), initial_raw.data() + UINT256_SIZE);
+    return getMachine(machine_hash);
 }
 
 std::pair<Machine, bool> CheckpointStorage::getMachine(
@@ -101,6 +126,12 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
     }
 
     auto state_data = results.data;
+
+    auto static_results = ::getValueImpl(*transaction, state_data.static_hash,
+                                         pool.get(), segment_ids);
+    if (!static_results.status.ok()) {
+        throw std::runtime_error("failed loaded core machine static");
+    }
 
     auto register_results = ::getValueImpl(
         *transaction, state_data.register_hash, pool.get(), segment_ids);
@@ -139,18 +170,16 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         code->restoreExistingSegment(std::move(segment));
     }
 
-    MachineState machine_state{
-        pool,
-        code,
-        std::move(register_results.data),
-        static_val,
-        Datastack(nonstd::get<Tuple>(stack_results.data)),
-        Datastack(nonstd::get<Tuple>(auxstack_results.data)),
-        state_data.arb_gas_remaining,
-        state_data.status,
-        state_data.pc,
-        state_data.err_pc};
-    return std::make_pair(std::move(machine_state), true);
+    return MachineState{pool,
+                        code,
+                        std::move(register_results.data),
+                        std::move(static_results.data),
+                        Datastack(nonstd::get<Tuple>(stack_results.data)),
+                        Datastack(nonstd::get<Tuple>(auxstack_results.data)),
+                        state_data.arb_gas_remaining,
+                        state_data.status,
+                        state_data.pc,
+                        state_data.err_pc};
 }
 
 DbResult<value> CheckpointStorage::getValue(uint256_t value_hash) const {
