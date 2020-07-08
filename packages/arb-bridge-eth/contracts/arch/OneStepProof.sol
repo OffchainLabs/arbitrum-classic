@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ library OneStepProof {
     using Value for Value.Data;
 
     uint256 private constant SEND_SIZE_LIMIT = 10000;
+
+    uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
 
     struct ValidateProofData {
         bytes32 beforeHash;
@@ -760,6 +762,44 @@ library OneStepProof {
         return true;
     }
 
+    function executeXgetInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory auxVal
+    ) internal pure returns (bool) {
+        if (!val1.isInt() || !auxVal.isTuple()) {
+            return false;
+        }
+
+        if (val1.intVal >= auxVal.valLength()) {
+            return false;
+        }
+
+        machine.addAuxStackValue(auxVal);
+        machine.addDataStackValue(auxVal.tupleVal[val1.intVal]);
+        return true;
+    }
+
+    function executeXsetInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory auxVal
+    ) internal pure returns (bool) {
+        if (!auxVal.isTuple() || !val1.isInt()) {
+            return false;
+        }
+
+        if (val1.intVal >= auxVal.valLength()) {
+            return false;
+        }
+        Value.Data[] memory tupleVals = auxVal.tupleVal;
+        tupleVals[val1.intVal] = val2;
+
+        machine.addAuxStackValue(Value.newTuple(tupleVals));
+        return true;
+    }
+
     // Logging
 
     function executeBreakpointInsn(Machine.Data memory)
@@ -809,6 +849,26 @@ library OneStepProof {
             "Inbox instruction was blocked"
         );
         machine.addDataStackValue(beforeInbox);
+        return true;
+    }
+
+    function executeSetGasInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    ) internal pure returns (bool) {
+        if (!val1.isInt()) {
+            return false;
+        }
+        machine.arbGasRemaining = val1.intVal;
+        return true;
+    }
+
+    function executePushGasInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
         return true;
     }
 
@@ -893,6 +953,8 @@ library OneStepProof {
     uint8 internal constant OP_TGET = 0x50;
     uint8 internal constant OP_TSET = 0x51;
     uint8 internal constant OP_TLEN = 0x52;
+    uint8 internal constant OP_XGET = 0x53;
+    uint8 internal constant OP_XSET = 0x54;
 
     // Logging opertations
     uint8 internal constant OP_BREAKPOINT = 0x60;
@@ -904,6 +966,8 @@ library OneStepProof {
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
+    uint8 internal constant OP_SETGAS = 0x75;
+    uint8 internal constant OP_PUSHGAS = 0x76;
 
     uint8 internal constant OP_ECRECOVER = 0x80;
 
@@ -1002,6 +1066,10 @@ library OneStepProof {
             return (3, 1);
         } else if (opCode == OP_TLEN) {
             return (1, 1);
+        } else if (opCode == OP_XGET) {
+            return (1, 1);
+        } else if (opCode == OP_XSET) {
+            return (2, 1);
         } else if (opCode == OP_BREAKPOINT) {
             return (0, 0);
         } else if (opCode == OP_LOG) {
@@ -1016,6 +1084,10 @@ library OneStepProof {
             return (0, 0);
         } else if (opCode == OP_STOP) {
             return (0, 0);
+        } else if (opCode == OP_SETGAS) {
+            return (1, 0);
+        } else if (opCode == OP_PUSHGAS) {
+            return (0, 1);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 1);
         } else {
@@ -1125,6 +1197,10 @@ library OneStepProof {
             return 40;
         } else if (opCode == OP_TLEN) {
             return 2;
+        } else if (opCode == OP_XGET) {
+            return 3;
+        } else if (opCode == OP_XSET) {
+            return 41;
         } else if (opCode == OP_BREAKPOINT) {
             return 100;
         } else if (opCode == OP_LOG) {
@@ -1139,6 +1215,10 @@ library OneStepProof {
             return 5;
         } else if (opCode == OP_STOP) {
             return 10;
+        } else if (opCode == OP_SETGAS) {
+            return 0;
+        } else if (opCode == OP_PUSHGAS) {
+            return 1;
         } else if (opCode == OP_ECRECOVER) {
             return 20000;
         } else {
@@ -1253,7 +1333,10 @@ library OneStepProof {
                 (!_data.didInboxInsn && opCode != OP_INBOX),
             "Invalid didInboxInsn claim"
         );
-        if (opCode == OP_ADD) {
+        if (startMachine.arbGasRemaining < opGasCost(opCode)) {
+            endMachine.arbGasRemaining = MAX_UINT256;
+            correct = false;
+        } else if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_MUL) {
             correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
@@ -1387,6 +1470,23 @@ library OneStepProof {
             );
         } else if (opCode == OP_TLEN) {
             correct = executeTlenInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_XGET) {
+            Value.Data memory auxVal;
+            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
+            require(valid, "Proof of auxpop had bad aux value");
+            startMachine.addAuxStackValue(auxVal);
+            correct = executeXgetInsn(endMachine, stackVals[0], auxVal);
+        } else if (opCode == OP_XSET) {
+            Value.Data memory auxVal;
+            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
+            require(valid, "Proof of auxpop had bad aux value");
+            startMachine.addAuxStackValue(auxVal);
+            correct = executeXsetInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1],
+                auxVal
+            );
         } else if (opCode == OP_BREAKPOINT) {
             correct = executeBreakpointInsn(endMachine);
         } else if (opCode == OP_LOG) {
@@ -1446,6 +1546,10 @@ library OneStepProof {
             correct = false;
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
+        } else if (opCode == OP_SETGAS) {
+            correct = executeSetGasInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_PUSHGAS) {
+            correct = executePushGasInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
             correct = executeECRecoverInsn(
                 endMachine,
@@ -1468,6 +1572,10 @@ library OneStepProof {
                 "Log not called, but message is nonzero"
             );
         }
+
+        endMachine.arbGasRemaining =
+            endMachine.arbGasRemaining -
+            opGasCost(opCode);
 
         if (!correct) {
             if (endMachine.errHandlerHash == CODE_POINT_ERROR) {

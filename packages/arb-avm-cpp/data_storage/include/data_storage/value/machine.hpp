@@ -36,6 +36,7 @@ struct MachineStateKeys {
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
+    uint256_t arb_gas_remaining;
     CodePointRef pc;
     CodePointRef err_pc;
     Status status;

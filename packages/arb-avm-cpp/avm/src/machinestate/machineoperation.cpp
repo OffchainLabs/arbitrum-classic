@@ -543,6 +543,28 @@ void tset(MachineState& m) {
     ++m.pc;
 }
 
+void xget(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
+    auto& tup = assumeTuple(m.auxstack[0]);
+    m.stack[0] = tup.get_element(index);
+    ++m.pc;
+}
+
+void xset(MachineState& m) {
+    m.stack.prepForMod(2);
+    m.auxstack.prepForMod(1);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
+    auto& tup = assumeTuple(m.auxstack[0]);
+    tup.set_element(index, std::move(m.stack[1]));
+    m.auxstack[0] = std::move(tup);
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void tlen(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
@@ -673,5 +695,19 @@ BlockReason inboxOp(MachineState& m) {
         m.context.executedInbox();
         return NotBlocked{};
     }
+}
+
+void setgas(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& aNum = assumeInt(m.stack[0]);
+    m.arb_gas_remaining = aNum;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void pushgas(MachineState& m) {
+    auto& gas = m.arb_gas_remaining;
+    m.stack.push(gas);
+    ++m.pc;
 }
 }  // namespace machineoperation
