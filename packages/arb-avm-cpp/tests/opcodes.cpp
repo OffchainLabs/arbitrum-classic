@@ -756,7 +756,7 @@ TEST_CASE("XGET opcode is correct") {
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(8)});
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.auxstack.stacksize() == 0);
+        REQUIRE(m.auxstack.stacksize() == 1);
     }
 
     SECTION("index out range") {
@@ -767,7 +767,6 @@ TEST_CASE("XGET opcode is correct") {
 
         CHECK_THROWS(m.runOp(OpCode::XGET));
         // should throw bad_tuple_index and leave two items on stack
-        REQUIRE(m.state == Status::Error);
         REQUIRE(m.stack.stacksize() == 1);
     }
 }
@@ -833,7 +832,7 @@ TEST_CASE("SET_GAS opcode is correct") {
     MachineState m;
     m.stack.push(uint256_t{100});
     m.runOp(OpCode::SET_GAS);
-    REQUIRE(m.arb_gas_remaining == 250);
+    REQUIRE(m.arb_gas_remaining == 100);
     REQUIRE(m.stack.stacksize() == 0);
     REQUIRE(m.auxstack.stacksize() == 0);
 }
