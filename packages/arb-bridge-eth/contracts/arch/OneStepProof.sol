@@ -872,6 +872,51 @@ library OneStepProof {
         return true;
     }
 
+    function executeErrCodePointInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
+    function executePushInsnInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
+    ) internal pure returns (bool) {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
+    function executePushInsnImmInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
+    ) internal pure returns (bool) {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
+    function executeOpenInsnInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    ) internal pure returns (bool) {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
+    function executeSideloadInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
     function executeECRecoverInsn(
         Machine.Data memory machine,
         Value.Data memory val1,
@@ -968,6 +1013,11 @@ library OneStepProof {
     uint8 internal constant OP_STOP = 0x74;
     uint8 internal constant OP_SETGAS = 0x75;
     uint8 internal constant OP_PUSHGAS = 0x76;
+    uint8 internal constant OP_ERR_CODE_POINT = 0x77;
+    uint8 internal constant OP_PUSH_INSN = 0x78;
+    uint8 internal constant OP_PUSH_INSN_IMM = 0x79;
+    uint8 internal constant OP_OPEN_INSN = 0x7a;
+    uint8 internal constant OP_SIDELOAD = 0x7b;
 
     uint8 internal constant OP_ECRECOVER = 0x80;
 
@@ -1087,6 +1137,16 @@ library OneStepProof {
         } else if (opCode == OP_SETGAS) {
             return (1, 0);
         } else if (opCode == OP_PUSHGAS) {
+            return (0, 1);
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            return (0, 1);
+        } else if (opCode == OP_PUSH_INSN) {
+            return (2, 1);
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            return (3, 1);
+        } else if (opCode == OP_OPEN_INSN) {
+            return (1, 3);
+        } else if (opCode == OP_SIDELOAD) {
             return (0, 1);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 1);
@@ -1219,6 +1279,16 @@ library OneStepProof {
             return 0;
         } else if (opCode == OP_PUSHGAS) {
             return 1;
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            return 25;
+        } else if (opCode == OP_PUSH_INSN) {
+            return 25;
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            return 25;
+        } else if (opCode == OP_OPEN_INSN) {
+            return 25;
+        } else if (opCode == OP_SIDELOAD) {
+            return 10;
         } else if (opCode == OP_ECRECOVER) {
             return 20000;
         } else {
@@ -1550,6 +1620,25 @@ library OneStepProof {
             correct = executeSetGasInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_PUSHGAS) {
             correct = executePushGasInsn(endMachine);
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            correct = executeErrCodePointInsn(endMachine);
+        } else if (opCode == OP_PUSH_INSN) {
+            correct = executePushInsnInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1]
+            );
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            correct = executePushInsnImmInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1],
+                stackVals[2]
+            );
+        } else if (opCode == OP_OPEN_INSN) {
+            correct = executeOpenInsnInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_SIDELOAD) {
+            correct = executeSideloadInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
             correct = executeECRecoverInsn(
                 endMachine,
