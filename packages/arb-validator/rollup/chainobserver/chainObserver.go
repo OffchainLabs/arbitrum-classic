@@ -371,16 +371,6 @@ func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEv
 	chain.updateOldest()
 }
 
-//func (chain *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
-//	chain.NodeGraph.CreateStake(ev)
-//	for _, lis := range chain.listeners {
-//		challengeOpp := lis.StakeCreated(ctx, chain, ev)
-//		if challengeOpp != nil {
-//
-//		}
-//	}
-//}
-
 func (chain *ChainObserver) createStake(ctx context.Context, ev arbbridge.StakeCreatedEvent) {
 	chain.NodeGraph.CreateStake(ev)
 	for _, listener := range chain.listeners {
