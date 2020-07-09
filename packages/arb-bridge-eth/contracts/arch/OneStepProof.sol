@@ -606,7 +606,7 @@ library OneStepProof {
         Machine.Data memory machine,
         bytes32 codepointHash
     ) internal pure returns (bool) {
-        machine.addDataStackValue(Value.newCodepointHash(codepointHash));
+        machine.addDataStackValue(Value.newHashedValue(codepointHash, 1));
         return true;
     }
 
@@ -637,7 +637,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newCodepointHash(machine.errHandlerHash)
+            Value.newHashedValue(machine.errHandlerHash, 1)
         );
         return true;
     }
@@ -877,7 +877,7 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackValue(Value.newCodepointHash(CODE_POINT_ERROR));
+        machine.addDataStackValue(Value.newHashedValue(CODE_POINT_ERROR, 1));
         return true;
     }
 
@@ -911,7 +911,7 @@ library OneStepProof {
             return false;
         }
         machine.addDataStackValue(
-            Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2.hash())
+            Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2)
         );
         return true;
     }
@@ -920,16 +920,21 @@ library OneStepProof {
         Machine.Data memory machine,
         Value.Data memory val1
     ) internal pure returns (bool) {
-        // if (!val1.isCodePoint()) {
-        //     return false;
-        // }
+        if (!val1.isCodePoint()) {
+            return false;
+        }
 
-        // CodePoint memory cp = val1.cpVal;
-        // if (cp.immediate) {
-        //     machine
-        // }
+        Value.CodePoint memory cp = val1.cpVal;
+        if (cp.immediate) {
+            machine.addDataStackValue(
+                Value.newHashedValue(cp.immediateHash, cp.immediateSize)
+            );
+        } else {
+            Value.Data[] memory values = new Value.Data[](0);
+            machine.addDataStackValue(Value.newTuple(values));
+        }
 
-        machine.addDataStackInt(machine.arbGasRemaining);
+        machine.addDataStackInt(uint256(cp.opcode));
         return true;
     }
 
@@ -938,7 +943,8 @@ library OneStepProof {
         pure
         returns (bool)
     {
-        machine.addDataStackInt(machine.arbGasRemaining);
+        Value.Data[] memory values = new Value.Data[](0);
+        machine.addDataStackValue(Value.newTuple(values));
         return true;
     }
 
@@ -1237,7 +1243,7 @@ library OneStepProof {
                 uint8(opCode),
                 startMachine
                     .instructionStackHash,
-                Value.hash(immediateVal)
+                immediateVal
             )
                 .hash();
         }

@@ -31,15 +31,16 @@ library Value {
     // All values received from clients will have type codes less than the VALUE_TYPE_COUNT
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
-    // CODEPOINT_HASH does not show up in the marshalled format and is
+    // The following types do not show up in the marshalled format and is
     // only used for internal tracking purposes
-    uint8 internal constant CODEPOINT_HASH = 100;
+    uint8 internal constant HASH_ONLY = 100;
 
     struct CodePoint {
         uint8 opcode;
         bytes32 nextCodePoint;
         bool immediate;
-        bytes32 immediateVal;
+        bytes32 immediateHash;
+        uint256 immediateSize;
     }
 
     struct Data {
@@ -69,7 +70,7 @@ library Value {
     function hashCodePoint(
         uint8 opcode,
         bool immediate,
-        bytes32 immediateVal,
+        bytes32 immediateHash,
         bytes32 nextCodePoint
     ) internal pure returns (bytes32) {
         if (immediate) {
@@ -78,7 +79,7 @@ library Value {
                     abi.encodePacked(
                         CODE_POINT_TYPECODE,
                         opcode,
-                        immediateVal,
+                        immediateHash,
                         nextCodePoint
                     )
                 );
@@ -102,7 +103,7 @@ library Value {
 
     function hashCodePointImmediate(
         uint8 opcode,
-        bytes32 immediateVal,
+        bytes32 immediateHash,
         bytes32 nextCodePoint
     ) internal pure returns (bytes32) {
         return
@@ -110,7 +111,7 @@ library Value {
                 abi.encodePacked(
                     CODE_POINT_TYPECODE,
                     opcode,
-                    immediateVal,
+                    immediateHash,
                     nextCodePoint
                 )
             );
@@ -225,7 +226,7 @@ library Value {
                 hashCodePoint(
                     val.cpVal.opcode,
                     val.cpVal.immediate,
-                    val.cpVal.immediateVal,
+                    val.cpVal.immediateHash,
                     val.cpVal.nextCodePoint
                 );
         } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
@@ -234,7 +235,7 @@ library Value {
             val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
         ) {
             return hashTuple(val);
-        } else if (val.typeCode == CODEPOINT_HASH) {
+        } else if (val.typeCode == HASH_ONLY) {
             return bytes32(val.intVal);
         } else {
             require(false, "Invalid type code");
@@ -258,7 +259,7 @@ library Value {
                 }
             }
             return true;
-        } else if (val.typeCode == CODEPOINT_HASH) {
+        } else if (val.typeCode == HASH_ONLY) {
             return false;
         } else {
             require(false, "Invalid type code");
@@ -269,7 +270,7 @@ library Value {
         return
             Data(
                 0,
-                CodePoint(0, 0, false, 0),
+                CodePoint(0, 0, false, 0, 0),
                 new Data[](0),
                 TUPLE_TYPECODE,
                 uint256(1)
@@ -288,7 +289,7 @@ library Value {
         return
             Data(
                 _val,
-                CodePoint(0, 0, false, 0),
+                CodePoint(0, 0, false, 0, 0),
                 new Data[](0),
                 INT_TYPECODE,
                 uint256(1)
@@ -308,29 +309,38 @@ library Value {
         pure
         returns (Data memory)
     {
-        return newCodePoint(CodePoint(opCode, nextHash, false, 0));
+        return newCodePoint(CodePoint(opCode, nextHash, false, 0, 0));
     }
 
     function newCodePoint(
         uint8 opCode,
         bytes32 nextHash,
-        bytes32 immediateVal
+        Data memory immediate
     ) internal pure returns (Data memory) {
-        return newCodePoint(CodePoint(opCode, nextHash, true, immediateVal));
+        return
+            newCodePoint(
+                CodePoint(
+                    opCode,
+                    nextHash,
+                    true,
+                    immediate.hash(),
+                    immediate.size
+                )
+            );
     }
 
-    function newCodepointHash(bytes32 codepointHash)
+    function newHashedValue(bytes32 valueHash, uint256 valueSize)
         internal
         pure
         returns (Data memory)
     {
         return
             Data(
-                uint256(codepointHash),
-                CodePoint(0, 0, false, 0),
+                uint256(valueHash),
+                CodePoint(0, 0, false, 0, 0),
                 new Data[](0),
-                CODEPOINT_HASH,
-                uint256(1)
+                HASH_ONLY,
+                valueSize
             );
     }
 
@@ -349,7 +359,7 @@ library Value {
         return
             Data(
                 0,
-                CodePoint(0, 0, false, 0),
+                CodePoint(0, 0, false, 0, 0),
                 _val,
                 uint8(TUPLE_TYPECODE + _val.length),
                 size
@@ -395,7 +405,7 @@ library Value {
         return
             Data(
                 uint256(preImageHash),
-                CodePoint(0, 0, false, 0),
+                CodePoint(0, 0, false, 0, 0),
                 new Data[](0),
                 HASH_PRE_IMAGE_TYPECODE,
                 size
@@ -503,15 +513,17 @@ library Value {
         offset++;
         uint8 opCode = uint8(data[offset]);
         offset++;
-        bytes32 immediateVal;
+        bytes32 immediateHash;
+        uint256 immediateSize;
         if (immediateType == 1) {
             bool valid;
             Data memory value;
             (valid, offset, value) = deserialize(data, offset);
             if (!valid) {
-                return (false, startOffset, CodePoint(0, 0, false, 0));
+                return (false, startOffset, CodePoint(0, 0, false, 0, 0));
             }
-            immediateVal = value.hash();
+            immediateHash = value.hash();
+            immediateSize = value.size;
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
@@ -519,10 +531,10 @@ library Value {
             return (
                 true,
                 offset,
-                CodePoint(opCode, nextHash, true, immediateVal)
+                CodePoint(opCode, nextHash, true, immediateHash, immediateSize)
             );
         }
-        return (true, offset, CodePoint(opCode, nextHash, false, 0));
+        return (true, offset, CodePoint(opCode, nextHash, false, 0, 0));
     }
 
     function deserializeTuple(
