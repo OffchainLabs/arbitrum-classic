@@ -20,15 +20,15 @@
 
 #include <fstream>
 
-std::string INT_VAL_LABEL = "Int";
-std::string TUP_VAL_LABEL = "Tuple";
-std::string CP_VAL_LABEL = "CodePoint";
-std::string CP_INTERNAL_LABEL = "Internal";
-std::string OPCODE_LABEL = "opcode";
-std::string OPCODE_SUB_LABEL = "AVMOpcode";
-std::string IMMEDIATE_LABEL = "immediate";
-std::string CODE_LABEL = "code";
-std::string STATIC_LABEL = "static_val";
+const std::string INT_VAL_LABEL = "Int";
+const std::string TUP_VAL_LABEL = "Tuple";
+const std::string CP_VAL_LABEL = "CodePoint";
+const std::string CP_INTERNAL_LABEL = "Internal";
+const std::string OPCODE_LABEL = "opcode";
+const std::string OPCODE_SUB_LABEL = "AVMOpcode";
+const std::string IMMEDIATE_LABEL = "immediate";
+const std::string CODE_LABEL = "code";
+const std::string STATIC_LABEL = "static_val";
 
 namespace {
 

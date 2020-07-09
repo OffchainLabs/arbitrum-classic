@@ -31,7 +31,7 @@
 
 namespace {
 
-std::string max_code_segment_key = "max_code_segment";
+const std::string max_code_segment_key = "max_code_segment";
 constexpr auto segment_key_prefix = std::array<char, 1>{87};
 constexpr auto segment_key_size = segment_key_prefix.size() + sizeof(uint64_t);
 
