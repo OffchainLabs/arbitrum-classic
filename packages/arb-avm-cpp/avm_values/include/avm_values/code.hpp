@@ -97,10 +97,8 @@ class Code {
 
     std::shared_ptr<const CodeSegment> loadCodeSegment(
         uint64_t segment_num) const {
-        mutex.lock();
-        std::shared_ptr<const CodeSegment> segment = segments.at(segment_num);
-        mutex.unlock();
-        return segment;
+        const std::lock_guard<std::mutex> lock(mutex);
+        return segments.at(segment_num);
     }
 
     bool containsSegment(uint64_t segment_id) const {
@@ -153,6 +151,7 @@ class Code {
             // This is the first pc in the segment so we can append directly
             if (segment->size() == segment->capacity() &&
                 segment.use_count() > 1) {
+                const std::lock_guard<std::mutex> lock(mutex);
                 // Segment is full, so we must allocate a new segment
                 segments[ref.segment] =
                     std::make_shared<CodeSegment>(ref.segment, segment->code);
@@ -160,6 +159,7 @@ class Code {
             }
             return segment->addOperation(std::move(op));
         } else {
+            const std::lock_guard<std::mutex> lock(mutex);
             // This segment was already mutated elsewhere, therefore we must
             // make a copy
             uint64_t new_segment_num = next_segment_num++;
