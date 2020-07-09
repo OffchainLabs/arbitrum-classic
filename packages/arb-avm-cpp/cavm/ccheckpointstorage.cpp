@@ -85,15 +85,8 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-
     auto hash = receiveUint256(machine_hash);
-
-    auto ret = storage->getMachine(hash);
-    if (!ret.second) {
-        return nullptr;
-    }
-    auto machine = new Machine(std::move(ret.first));
-    return machine;
+    return new Machine(storage->getMachine(hash));
 }
 
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,

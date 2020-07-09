@@ -112,6 +112,9 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
         auto delete_auxstack_res = deleteValueImpl(
             transaction, parsed_state.auxstack_hash, segment_counts);
 
+        ++segment_counts[parsed_state.pc.segment];
+        ++segment_counts[parsed_state.err_pc.pc.segment];
+
         deleteCode(transaction, segment_counts);
 
         if (!(delete_static_res.status.ok() &&
@@ -171,6 +174,9 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
         !register_val_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};
     }
+
+    ++segment_counts[machinestate.pc.segment];
+    ++segment_counts[machinestate.errpc.pc.segment];
 
     saveCode(transaction, *machinestate.code, segment_counts);
 

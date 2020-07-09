@@ -59,7 +59,7 @@ class CheckpointStorage {
     std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
 
     Machine getInitialMachine() const;
-    std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
+    Machine getMachine(uint256_t machineHash) const;
     DbResult<value> getValue(uint256_t value_hash) const;
 };
 

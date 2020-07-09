@@ -129,7 +129,7 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
     auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
-        return nullptr;
+        throw std::runtime_error("failed to load segment");
     }
 
     auto iter = results.stored_value.begin();

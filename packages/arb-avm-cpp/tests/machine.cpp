@@ -59,9 +59,8 @@ void deleteCheckpoint(Transaction& transaction, Machine& machine) {
 }
 
 void restoreCheckpoint(CheckpointStorage& storage, Machine& expected_machine) {
-    auto ret = storage.getMachine(expected_machine.hash());
-    REQUIRE(ret.second);
-    REQUIRE(ret.first.hash() == expected_machine.hash());
+    auto mach = storage.getMachine(expected_machine.hash());
+    REQUIRE(mach.hash() == expected_machine.hash());
 }
 
 TEST_CASE("Checkpoint State") {

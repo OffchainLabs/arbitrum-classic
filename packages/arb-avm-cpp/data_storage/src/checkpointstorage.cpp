@@ -125,13 +125,12 @@ Machine CheckpointStorage::getInitialMachine() const {
     return getMachine(machine_hash);
 }
 
-std::pair<Machine, bool> CheckpointStorage::getMachine(
-    uint256_t machineHash) const {
+Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
     std::set<uint64_t> segment_ids;
     auto transaction = makeConstTransaction();
     auto results = getMachineState(*transaction, machineHash);
     if (!results.status.ok()) {
-        return std::make_pair(Machine{}, false);
+        throw std::runtime_error("failed to load machine state");
     }
 
     auto state_data = results.data;
@@ -145,21 +144,21 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
     auto register_results = ::getValueImpl(
         *transaction, state_data.register_hash, pool.get(), segment_ids);
     if (!register_results.status.ok()) {
-        return std::make_pair(Machine{}, false);
+        throw std::runtime_error("failed to load machine register");
     }
 
     auto stack_results = ::getValueImpl(*transaction, state_data.datastack_hash,
                                         pool.get(), segment_ids);
     if (!stack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(stack_results.data)) {
-        return std::make_pair(Machine{}, false);
+        throw std::runtime_error("failed to load machine stack");
     }
 
     auto auxstack_results = ::getValueImpl(
         *transaction, state_data.auxstack_hash, pool.get(), segment_ids);
     if (!auxstack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(auxstack_results.data)) {
-        return std::make_pair(Machine{}, false);
+        throw std::runtime_error("failed to load machine auxstack");
     }
 
     segment_ids.insert(state_data.pc.segment);
@@ -173,9 +172,6 @@ std::pair<Machine, bool> CheckpointStorage::getMachine(
         }
         auto segment =
             getCodeSegment(*transaction, *it, pool.get(), segment_ids);
-        if (!segment) {
-            return std::make_pair(Machine{}, false);
-        }
         code->restoreExistingSegment(std::move(segment));
     }
 
