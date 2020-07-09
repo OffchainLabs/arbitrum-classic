@@ -744,24 +744,6 @@ void pushinsnimm(MachineState& m) {
     ++m.pc;
 }
 
-void openinsn(MachineState& m) {
-    m.stack.prepForMod(1);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
-    if (!target) {
-        m.state = Status::Error;
-        return;
-    }
-    auto& cp = m.code->loadCodePoint(target->pc);
-    auto& op = cp.op;
-    if (op.immediate) {
-        m.stack[0] = *op.immediate;
-    } else {
-        m.stack[0] = Tuple();
-    }
-    m.stack.push(uint256_t{op.opcode});
-    ++m.pc;
-}
-
 void sideload(MachineState& m) {
     m.stack.push(Tuple{});
     ++m.pc;

@@ -231,13 +231,15 @@ BlockReason MachineState::runOne() {
             stack.push(std::move(imm));
         }
 
-        if (!isValidOpcode(instruction.op.opcode)) {
-            // If the opcode is invalid, execute by transitioning to the error
+        uint64_t gas_cost;
+        try {
+            gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
+        } catch (const std::exception& e) {
+            // The opcode is invalid, execute by transitioning to the error
             // state
             state = Status::Error;
             return NotBlocked();
         }
-        auto gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
 
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
@@ -514,9 +516,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::PUSH_INSN_IMM:
             machineoperation::pushinsnimm(*this);
-            break;
-        case OpCode::OPEN_INSN:
-            machineoperation::openinsn(*this);
             break;
         case OpCode::SIDELOAD:
             machineoperation::sideload(*this);

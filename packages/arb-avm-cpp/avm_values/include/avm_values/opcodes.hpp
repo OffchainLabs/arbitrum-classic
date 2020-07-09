@@ -93,25 +93,13 @@ enum class OpCode : uint8_t {
     ERR_CODE_POINT,
     PUSH_INSN,
     PUSH_INSN_IMM,
-    OPEN_INSN,
-    SIDELOAD,
+    //    OPEN_INSN,
+    SIDELOAD = 0x7B,
 
     ECRECOVER = 0x80,
 
     DEBUG_PRINT = 0x90,
 };
-
-inline bool isValidOpcode(OpCode op) {
-    return (op >= OpCode::ADD && op <= OpCode::EXP) ||
-           (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
-           (op >= OpCode::POP && op <= OpCode::ERRSET) ||
-           (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
-           (op >= OpCode::TGET && op <= OpCode::XSET) ||
-           (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::DEBUG_PRINT) ||
-           (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
-}
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
@@ -183,7 +171,6 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::ERR_CODE_POINT, "errcodepoint"},
     {OpCode::PUSH_INSN, "pushinsn"},
     {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
-    {OpCode::OPEN_INSN, "openinsn"},
     {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"}};
@@ -266,7 +253,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::ERR_CODE_POINT, {}},
         {OpCode::PUSH_INSN, {MarshalLevel::SINGLE}},
         {OpCode::PUSH_INSN_IMM, {MarshalLevel::SINGLE, MarshalLevel::STUB}},
-        {OpCode::OPEN_INSN, {MarshalLevel::SINGLE}},
         {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 
@@ -344,7 +330,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::ERR_CODE_POINT, {}},
                                {OpCode::PUSH_INSN, {}},
                                {OpCode::PUSH_INSN_IMM, {}},
-                               {OpCode::OPEN_INSN, {}},
                                {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
@@ -419,7 +404,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ERR_CODE_POINT, 25},
     {OpCode::PUSH_INSN, 25},
     {OpCode::PUSH_INSN_IMM, 25},
-    {OpCode::OPEN_INSN, 25},
     {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
 

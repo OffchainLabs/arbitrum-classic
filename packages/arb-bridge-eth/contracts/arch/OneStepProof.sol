@@ -916,28 +916,6 @@ library OneStepProof {
         return true;
     }
 
-    function executeOpenInsnInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    ) internal pure returns (bool) {
-        if (!val1.isCodePoint()) {
-            return false;
-        }
-
-        Value.CodePoint memory cp = val1.cpVal;
-        if (cp.immediate) {
-            machine.addDataStackValue(
-                Value.newHashedValue(cp.immediateHash, cp.immediateSize)
-            );
-        } else {
-            Value.Data[] memory values = new Value.Data[](0);
-            machine.addDataStackValue(Value.newTuple(values));
-        }
-
-        machine.addDataStackInt(uint256(cp.opcode));
-        return true;
-    }
-
     function executeSideloadInsn(Machine.Data memory machine)
         internal
         pure
@@ -1047,7 +1025,7 @@ library OneStepProof {
     uint8 internal constant OP_ERR_CODE_POINT = 0x77;
     uint8 internal constant OP_PUSH_INSN = 0x78;
     uint8 internal constant OP_PUSH_INSN_IMM = 0x79;
-    uint8 internal constant OP_OPEN_INSN = 0x7a;
+    // uint8 internal constant OP_OPEN_INSN = 0x7a;
     uint8 internal constant OP_SIDELOAD = 0x7b;
 
     uint8 internal constant OP_ECRECOVER = 0x80;
@@ -1532,8 +1510,6 @@ library OneStepProof {
                 stackVals[1],
                 stackVals[2]
             );
-        } else if (opCode == OP_OPEN_INSN) {
-            correct = executeOpenInsnInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_SIDELOAD) {
             correct = executeSideloadInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
