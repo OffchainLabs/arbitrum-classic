@@ -242,6 +242,7 @@ BlockReason MachineState::runOne() {
             state = Status::Error;
             return NotBlocked();
         }
+        arb_gas_remaining -= gas_cost;
 
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = stack.stacksize();
@@ -253,8 +254,9 @@ BlockReason MachineState::runOne() {
         }
 
         if (!nonstd::holds_alternative<NotBlocked>(blockReason)) {
-            // Get rid of the immediate and finish if the machine was actually
-            // blocked
+            // Get rid of the immediate and reset the gas if the machine was
+            // actually blocked
+            arb_gas_remaining += gas_cost;
             if (instruction.op.immediate) {
                 stack.popClear();
             }
@@ -264,7 +266,6 @@ BlockReason MachineState::runOne() {
         // adjust for the gas used
         auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
         context.numGas += gasUsed;
-        arb_gas_remaining -= gasUsed;
 
         if (state == Status::Error) {
             // if state is Error, clean up stack

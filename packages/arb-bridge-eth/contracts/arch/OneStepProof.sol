@@ -1276,6 +1276,11 @@ library OneStepProof {
                 (!_data.didInboxInsn && opCode != OP_INBOX),
             "Invalid didInboxInsn claim"
         );
+        // Update end machine gas remaining before running opcode
+        // No need to overflow check since the check for whether we
+        // have sufficient gas fixes the overflow case
+        endMachine.arbGasRemaining = endMachine.arbGasRemaining - gasCost;
+
         if (startMachine.arbGasRemaining < gasCost) {
             endMachine.arbGasRemaining = MAX_UINT256;
             correct = false;
@@ -1532,8 +1537,6 @@ library OneStepProof {
                 "Log not called, but message is nonzero"
             );
         }
-
-        endMachine.arbGasRemaining = endMachine.arbGasRemaining - gasCost;
 
         if (!correct) {
             if (endMachine.errHandlerHash == CODE_POINT_ERROR) {
