@@ -145,21 +145,30 @@ class Code {
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
+        const std::lock_guard<std::mutex> lock(mutex);
         auto& segment = segments[ref.segment];
         auto initial_pc = segment->size() - 1;
         if (ref.pc == initial_pc) {
-            // This is the first pc in the segment so we can append directly
-            if (segment->size() == segment->capacity() &&
-                segment.use_count() > 1) {
-                const std::lock_guard<std::mutex> lock(mutex);
-                // Segment is full, so we must allocate a new segment
-                segments[ref.segment] =
-                    std::make_shared<CodeSegment>(ref.segment, segment->code);
-                segment = segments[ref.segment];
+            if (segment.use_count() == 1) {
+                // No other code has a reference to this segment. That means we
+                // can modify the segment even if it forces a reallocation
+                return segment->addOperation(std::move(op));
             }
-            return segment->addOperation(std::move(op));
+
+            if (segment->size() < segment->capacity()) {
+                // The segment has extra capacity so we can add to it even if
+                // other code has references to it
+                return segment->addOperation(std::move(op));
+            }
+
+            // The segment is full and other code is referencing it, so we must
+            // allocate a new segment
+            auto new_segment =
+                std::make_shared<CodeSegment>(ref.segment, segment->code);
+            auto stub = new_segment->addOperation(std::move(op));
+            segments[ref.segment] = std::move(new_segment);
+            return stub;
         } else {
-            const std::lock_guard<std::mutex> lock(mutex);
             // This segment was already mutated elsewhere, therefore we must
             // make a copy
             uint64_t new_segment_num = next_segment_num++;
