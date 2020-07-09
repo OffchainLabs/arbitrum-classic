@@ -36,8 +36,9 @@ class CodeSegment {
     std::vector<CodePoint> code;
 
     friend class Code;
-    friend LoadedExecutable loadExecutable(const std::string& contract_filename,
-                                           TuplePool& pool);
+    friend LoadedExecutable loadExecutable(
+        const std::string& executable_filename,
+        TuplePool& pool);
 
     size_t capacity() const { return code.capacity(); }
 

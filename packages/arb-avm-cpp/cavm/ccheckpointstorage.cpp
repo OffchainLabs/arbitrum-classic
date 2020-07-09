@@ -40,10 +40,10 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path) {
 }
 
 int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
-                                const char* contract_path) {
+                                const char* executable_path) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     try {
-        storage->initialize(contract_path);
+        storage->initialize(executable_path);
         return true;
     } catch (const std::exception&) {
         return false;

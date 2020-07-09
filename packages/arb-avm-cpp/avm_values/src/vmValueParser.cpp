@@ -105,15 +105,15 @@ value simple_value_from_json(const nlohmann::json& value_json,
     }
 }
 
-LoadedExecutable loadExecutable(const std::string& contract_filename,
+LoadedExecutable loadExecutable(const std::string& executable_filename,
                                 TuplePool& pool) {
-    std::ifstream contract_input_stream(contract_filename);
-    if (!contract_input_stream.is_open()) {
+    std::ifstream executable_input_stream(executable_filename);
+    if (!executable_input_stream.is_open()) {
         throw std::runtime_error("doesn't exist");
     }
-    nlohmann::json contract_json;
-    contract_input_stream >> contract_json;
-    auto& json_code = contract_json.at(CODE_LABEL);
+    nlohmann::json executable_json;
+    executable_input_stream >> executable_json;
+    auto& json_code = executable_json.at(CODE_LABEL);
     if (!json_code.is_array()) {
         throw std::runtime_error("expected code to be array");
     }
@@ -123,7 +123,7 @@ LoadedExecutable loadExecutable(const std::string& contract_filename,
         segment->addOperation(
             operation_from_json(*it, op_count, *segment, pool));
     }
-    value static_val = value_from_json(contract_json.at(STATIC_LABEL), op_count,
-                                       *segment, pool);
+    value static_val = value_from_json(executable_json.at(STATIC_LABEL),
+                                       op_count, *segment, pool);
     return {std::move(segment), std::move(static_val)};
 }

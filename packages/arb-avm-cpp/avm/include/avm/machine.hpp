@@ -48,8 +48,8 @@ class Machine {
                         std::move(static_val),
                         std::move(pool_)) {}
 
-    static Machine loadFromFile(const std::string& contract_filename) {
-        return {MachineState::loadFromFile(contract_filename)};
+    static Machine loadFromFile(const std::string& executable_filename) {
+        return {MachineState::loadFromFile(executable_filename)};
     }
 
     Assertion run(uint64_t stepCount,

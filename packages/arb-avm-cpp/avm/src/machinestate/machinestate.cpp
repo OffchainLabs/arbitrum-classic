@@ -64,9 +64,10 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
       pc(pc_),
       errpc(errpc_) {}
 
-MachineState MachineState::loadFromFile(const std::string& contract_filename) {
+MachineState MachineState::loadFromFile(
+    const std::string& executable_filename) {
     auto pool = std::make_shared<TuplePool>();
-    auto executable = loadExecutable(contract_filename, *pool);
+    auto executable = loadExecutable(executable_filename, *pool);
     auto code = std::make_shared<Code>(0);
     code->addSegment(std::move(executable.code));
     return MachineState{std::move(code), std::move(executable.static_val),

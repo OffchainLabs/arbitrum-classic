@@ -44,8 +44,8 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path)
       code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))),
       pool(std::make_shared<TuplePool>()) {}
 
-void CheckpointStorage::initialize(const std::string& contract_path) {
-    auto executable = loadExecutable(contract_path, *pool);
+void CheckpointStorage::initialize(const std::string& executable_path) {
+    auto executable = loadExecutable(executable_path, *pool);
     auto tx = makeTransaction();
     code->addSegment(std::move(executable.code));
     Machine mach{MachineState{code, std::move(executable.static_val), pool}};

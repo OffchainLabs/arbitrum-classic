@@ -71,7 +71,7 @@ struct MachineState {
     CodePointStub errpc;
     AssertionContext context;
 
-    static MachineState loadFromFile(const std::string& contract_filename);
+    static MachineState loadFromFile(const std::string& executable_filename);
 
     MachineState();
 

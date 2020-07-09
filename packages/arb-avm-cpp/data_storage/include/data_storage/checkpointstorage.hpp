@@ -37,19 +37,12 @@ class CheckpointStorage {
     std::shared_ptr<DataStorage> datastorage;
     std::shared_ptr<Code> code;
 
-    CheckpointStorage(std::shared_ptr<DataStorage>,
-                      const std::string& contract_path,
-                      std::shared_ptr<TuplePool> pool);
-    CheckpointStorage(std::shared_ptr<DataStorage> datastorage_,
-                      LoadedExecutable exec,
-                      std::shared_ptr<TuplePool> pool_);
-
    public:
     std::shared_ptr<TuplePool> pool;
 
     CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
-    void initialize(const std::string& contract_path);
+    void initialize(const std::string& executable_path);
     bool initialized() const;
 
     std::unique_ptr<Transaction> makeTransaction();

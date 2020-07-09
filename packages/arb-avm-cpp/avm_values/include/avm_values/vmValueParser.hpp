@@ -32,7 +32,7 @@ struct LoadedExecutable {
 
 value simple_value_from_json(const nlohmann::json& value_json, TuplePool& pool);
 
-LoadedExecutable loadExecutable(const std::string& contract_filename,
+LoadedExecutable loadExecutable(const std::string& executable_filename,
                                 TuplePool& pool);
 
 #endif /* vmValueParser_hpp */
