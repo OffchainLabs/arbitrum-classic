@@ -21,7 +21,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <unordered_map>
 
 class Transaction;
 class CodeSegment;
@@ -38,6 +37,6 @@ void saveCode(Transaction& transaction,
               const Code& code,
               std::map<uint64_t, uint64_t>& segment_counts);
 void deleteCode(Transaction& transaction,
-                std::unordered_map<uint64_t, uint64_t>& segment_counts);
+                std::map<uint64_t, uint64_t>& segment_counts);
 
 #endif /* checkpoint_code_hpp */

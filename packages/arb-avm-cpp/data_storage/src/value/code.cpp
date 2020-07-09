@@ -46,36 +46,20 @@ std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
 }
 }  // namespace
 
-DeleteResults deleteCodeSegment(
-    Transaction& transaction,
-    uint64_t segment_id,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
-    uint64_t deleted_ref_count = segment_counts[segment_id];
-    auto key_vec = segment_key(segment_id);
-    auto key = vecToSlice(key_vec);
-    auto results = getRefCountedData(*transaction.transaction, key);
-
-    if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
-    }
-
-    auto delete_results =
-        deleteRefCountedData(*transaction.transaction, key, deleted_ref_count);
-
-    if (delete_results.reference_count < 1) {
-        auto iter = results.stored_value.begin();
-        auto ptr = reinterpret_cast<const char*>(&*iter);
-        auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
-        for (uint64_t i = 0; i < cp_count; i++) {
-            bool is_immediate = static_cast<bool>(*ptr);
-            ptr += 34;
-            if (is_immediate) {
-                uint256_t value_hash = deserializeUint256t(ptr);
-                deleteValueImpl(transaction, value_hash, segment_counts);
-            }
+void deleteCodeSegmentReferences(Transaction& transaction,
+                                 const std::vector<unsigned char>& stored_value,
+                                 std::map<uint64_t, uint64_t>& segment_counts) {
+    auto iter = stored_value.begin();
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
+    for (uint64_t i = 0; i < cp_count; i++) {
+        bool is_immediate = static_cast<bool>(*ptr);
+        ptr += 34;
+        if (is_immediate) {
+            uint256_t value_hash = deserializeUint256t(ptr);
+            deleteValueImpl(transaction, value_hash, segment_counts);
         }
     }
-    return delete_results;
 }
 
 std::vector<unsigned char> prepareToSaveCodeSegment(
@@ -163,21 +147,51 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
 }
 
 void deleteCode(Transaction& transaction,
-                std::unordered_map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<uint64_t> segment_ids;
-    segment_ids.reserve(segment_counts.size());
-    for (const auto& item : segment_counts) {
-        segment_ids.push_back(item.first);
+                std::map<uint64_t, uint64_t>& segment_counts) {
+    std::unordered_map<uint64_t, GetResults> current_values;
+    std::unordered_map<uint64_t, uint64_t> total_deleted_segment_references;
+    auto current_segment_counts = segment_counts;
+    bool deleted_segment = true;
+
+    while (deleted_segment) {
+        deleted_segment = false;
+        std::map<uint64_t, uint64_t> next_segment_counts;
+        for (auto it = current_segment_counts.rbegin();
+             it != current_segment_counts.rend(); ++it) {
+            uint64_t segment_id = it->first;
+            auto current_value_it = current_values.find(segment_id);
+            // Load the segment if it isn't already loaded
+            if (current_value_it == current_values.end()) {
+                auto key_vec = segment_key(segment_id);
+                auto key = vecToSlice(key_vec);
+                auto inserted = current_values.insert(std::make_pair(
+                    segment_id,
+                    getRefCountedData(*transaction.transaction, key)));
+                current_value_it = inserted.first;
+            }
+            total_deleted_segment_references[segment_id] += it->second;
+            uint64_t total_reference_count =
+                total_deleted_segment_references[segment_id];
+            if (total_reference_count <
+                current_value_it->second.reference_count) {
+                // There are still other references to this section, so we won't
+                // delete it
+                continue;
+            }
+            deleteCodeSegmentReferences(transaction,
+                                        current_value_it->second.stored_value,
+                                        next_segment_counts);
+            deleted_segment = true;
+        }
+        current_segment_counts = std::move(next_segment_counts);
     }
 
-    // Sort segments in reverse order by segment ID since later segments could
-    // reference earlier ones
-    std::sort(segment_ids.begin(), segment_ids.end(),
-              [](uint64_t first, uint64_t second) { return first > second; });
-    for (uint64_t segment_id : segment_ids) {
-        if (segment_counts[segment_id] > 0) {
-            deleteCodeSegment(transaction, segment_id, segment_counts);
-        }
+    // Now that we've handled all reference of removed segments, decrement all
+    // reference counts
+    for (const auto& item : total_deleted_segment_references) {
+        auto key_vec = segment_key(item.first);
+        auto key = vecToSlice(key_vec);
+        deleteRefCountedData(*transaction.transaction, key, item.second);
     }
 }
 
@@ -210,7 +224,7 @@ void saveCode(Transaction& transaction,
         throw std::runtime_error("failed to size mac code segment");
     }
 
-    std::map<uint64_t, uint64_t> total_segment_counts;
+    std::unordered_map<uint64_t, uint64_t> total_segment_counts;
     auto current_segment_counts = segment_counts;
     std::unordered_map<uint64_t, std::vector<unsigned char>>
         code_segments_to_save;
@@ -222,7 +236,10 @@ void saveCode(Transaction& transaction,
         for (auto it = current_segment_counts.rbegin();
              it != current_segment_counts.rend(); ++it) {
             uint64_t segment_id = it->first;
-            if (current_segment_counts[segment_id] == 0) {
+            uint64_t reference_count = it->second;
+            total_segment_counts[segment_id] += reference_count;
+
+            if (reference_count == 0) {
                 // If there are no references, don't bother saving
                 continue;
             }
@@ -235,10 +252,6 @@ void saveCode(Transaction& transaction,
                 transaction, snapshots.segments[segment_id],
                 next_segment_counts);
             saved_segment = true;
-        }
-        // Aggregate total reference count for saving
-        for (const auto& item : next_segment_counts) {
-            total_segment_counts[item.first] += item.second;
         }
         current_segment_counts = std::move(next_segment_counts);
     }

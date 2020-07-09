@@ -89,7 +89,7 @@ std::vector<unsigned char> serializeStateKeys(
 }  // namespace
 
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
-    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    std::map<uint64_t, uint64_t> segment_counts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);

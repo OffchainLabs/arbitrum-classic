@@ -227,10 +227,9 @@ struct ValueSaver {
     }
 };
 
-DeleteResults deleteValue(
-    Transaction& transaction,
-    const rocksdb::Slice& hash_key,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
+DeleteResults deleteValue(Transaction& transaction,
+                          const rocksdb::Slice& hash_key,
+                          std::map<uint64_t, uint64_t>& segment_counts) {
     auto results = getRefCountedData(*transaction.transaction, hash_key);
 
     if (!results.status.ok()) {
@@ -322,10 +321,9 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
     return saveValueImpl(transaction, val, segment_counts);
 }
 
-DeleteResults deleteValueImpl(
-    Transaction& transaction,
-    const uint256_t& value_hash,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
+DeleteResults deleteValueImpl(Transaction& transaction,
+                              const uint256_t& value_hash,
+                              std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
@@ -333,6 +331,6 @@ DeleteResults deleteValueImpl(
 }
 
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
-    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    std::map<uint64_t, uint64_t> segment_counts;
     return deleteValueImpl(transaction, value_hash, segment_counts);
 }

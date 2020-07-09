@@ -21,7 +21,6 @@
 
 #include <map>
 #include <set>
-#include <unordered_map>
 
 struct DeleteResults;
 struct SaveResults;
@@ -33,10 +32,9 @@ struct DbResult;
 SaveResults saveValueImpl(Transaction& transaction,
                           const value& val,
                           std::map<uint64_t, uint64_t>& segment_counts);
-DeleteResults deleteValueImpl(
-    Transaction& transaction,
-    const uint256_t& value_hash,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts);
+DeleteResults deleteValueImpl(Transaction& transaction,
+                              const uint256_t& value_hash,
+                              std::map<uint64_t, uint64_t>& segment_counts);
 DbResult<value> getValueImpl(const Transaction& transaction,
                              uint256_t value_hash,
                              TuplePool* pool,
