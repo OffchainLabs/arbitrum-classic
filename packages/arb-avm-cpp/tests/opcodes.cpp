@@ -689,9 +689,8 @@ TEST_CASE("TGET opcode is correct") {
         REQUIRE(res == value{uint256_t(8)});
         REQUIRE(m.stack.stacksize() == 0);
     }
-}
-TEST_CASE("TGET index out of range") {
-    SECTION("index ouf range") {
+
+    SECTION("index out range") {
         MachineState m;
         m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
                            uint256_t{6}, m.pool.get()});
@@ -747,6 +746,45 @@ TEST_CASE("TLEN opcode is correct") {
     }
 }
 
+TEST_CASE("XGET opcode is correct") {
+    SECTION("correct") {
+        MachineState m;
+        m.auxstack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
+                              uint256_t{6}, m.pool.get()});
+        m.stack.push(uint256_t{1});
+        m.runOp(OpCode::XGET);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(8)});
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.auxstack.stacksize() == 1);
+    }
+
+    SECTION("index out range") {
+        MachineState m;
+        m.auxstack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
+                              uint256_t{6}, m.pool.get()});
+        m.stack.push(uint256_t{5});
+
+        CHECK_THROWS(m.runOp(OpCode::XGET));
+        // should throw bad_tuple_index and leave two items on stack
+        REQUIRE(m.stack.stacksize() == 1);
+    }
+}
+
+TEST_CASE("XSET opcode is correct") {
+    SECTION("2 tup") {
+        MachineState m;
+        m.auxstack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(uint256_t{3});
+        m.stack.push(uint256_t{1});
+        m.runOp(OpCode::XSET);
+        value res = m.auxstack.pop();
+        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()}});
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.auxstack.stacksize() == 0);
+    }
+}
+
 TEST_CASE("BREAKPOINT opcode is correct") {
     SECTION("break") {
         MachineState m;
@@ -778,6 +816,25 @@ TEST_CASE("SEND opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.state == Status::Extensive);
     }
+}
+
+TEST_CASE("PUSHGAS opcode is correct") {
+    MachineState m;
+    m.arb_gas_remaining = 250;
+    m.runOp(OpCode::PUSH_GAS);
+    value res = m.stack.pop();
+    REQUIRE(res == value{uint256_t(250)});
+    REQUIRE(m.stack.stacksize() == 0);
+    REQUIRE(m.auxstack.stacksize() == 0);
+}
+
+TEST_CASE("SET_GAS opcode is correct") {
+    MachineState m;
+    m.stack.push(uint256_t{100});
+    m.runOp(OpCode::SET_GAS);
+    REQUIRE(m.arb_gas_remaining == 100);
+    REQUIRE(m.stack.stacksize() == 0);
+    REQUIRE(m.auxstack.stacksize() == 0);
 }
 
 uint256_t& assumeInt(value& val) {

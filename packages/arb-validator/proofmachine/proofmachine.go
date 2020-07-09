@@ -102,6 +102,8 @@ func (m *Machine) ExecuteAssertion(
 			}
 		}
 		beforeHash := m.Hash()
+		beforeMach := m.machine.Clone()
+		beforeMachine := m.machine.Clone()
 		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds, inbox, timeLeft)
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
@@ -116,6 +118,10 @@ func (m *Machine) ExecuteAssertion(
 		}
 		if ranSteps != 1 {
 			log.Println("Num steps = ", ranSteps)
+		}
+		if m.machine.CurrentStatus() == machine.ErrorStop {
+			beforeMach.PrintState()
+			m.machine.PrintState()
 		}
 		stepsRan++
 
@@ -143,12 +149,11 @@ func (m *Machine) ExecuteAssertion(
 			)
 			if err != nil {
 				log.Println("Machine ended with error:")
+				beforeMachine.PrintState()
 				m.PrintState()
 				log.Fatal("Proof invalid ", err)
 			}
-			if res.Cmp(big.NewInt(0)) == 0 {
-				log.Println("Proof valid")
-			} else {
+			if res.Cmp(big.NewInt(0)) != 0 {
 				log.Println("Machine ended with invalid proof:")
 				m.PrintState()
 				log.Fatalln("Proof invalid")
@@ -166,7 +171,6 @@ func (m *Machine) ExecuteAssertion(
 			timeLeft = maxWallTime - endTime.Sub(startTime)
 		}
 	}
-	fmt.Println("Proof mode ran ", stepsRan, " steps")
 	return a, totalSteps
 }
 

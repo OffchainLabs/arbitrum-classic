@@ -78,6 +78,8 @@ OP_CODES = [
     ("tget", 0x50, [IntType(), TupleType()], [ValueType()]),
     ("tset", 0x51, [IntType(), TupleType(), ValueType()], [TupleType()]),
     ("tlen", 0x52, [TupleType()], [IntType()]),
+    ("xget", 0x53, [IntType()], [ValueType()]),
+    ("xset", 0x54, [IntType(), ValueType()], []),
     # Logging Operations
     ("breakpoint", 0x60, [ValueType()], []),
     ("log", 0x61, [ValueType()], []),
@@ -87,8 +89,10 @@ OP_CODES = [
     ("inbox", 0x72, [IntType()], [TupleType()]),
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
-    ("debug", 0x75, [], []),
-    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()],),
+    ("setgas", 0x75, [IntType()], []),
+    ("pushgas", 0x76, [], [IntType()]),
+    ("debug", 0x7A, [], []),
+    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()]),
 ]
 
 

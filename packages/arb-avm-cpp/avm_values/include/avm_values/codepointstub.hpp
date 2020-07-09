@@ -67,7 +67,7 @@ struct CodePointStub {
 
     friend bool operator==(const CodePointStub& val1,
                            const CodePointStub& val2) {
-        return val1.pc == val2.pc && val1.hash == val2.hash;
+        return val1.hash == val2.hash;
     }
 
     void marshal(std::vector<unsigned char>& buf) const;

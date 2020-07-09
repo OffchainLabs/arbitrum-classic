@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -76,17 +77,17 @@ func TestDeserializeMachine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedHash := machine.Hash().ToEthHash()
+	expectedHash := machine.Hash()
 
 	bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if expectedHash != bridgeHash {
+	if expectedHash.ToEthHash() != bridgeHash {
+		t.Log("local hash", expectedHash)
+		t.Log("ethbridge hash", hexutil.Encode(bridgeHash[:]))
 		t.Error(errors.New("calculated wrong state hash"))
-		fmt.Println(expectedHash)
-		fmt.Println(bridgeHash)
 	}
 }
 
