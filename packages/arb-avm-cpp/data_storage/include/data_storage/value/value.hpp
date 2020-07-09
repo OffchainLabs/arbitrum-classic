@@ -19,6 +19,9 @@
 
 #include <avm_values/value.hpp>
 
+#include <set>
+#include <unordered_set>
+
 struct DeleteResults;
 struct SaveResults;
 class Transaction;
