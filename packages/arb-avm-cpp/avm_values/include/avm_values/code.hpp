@@ -32,7 +32,7 @@ struct LoadedExecutable;
 // used to access the segment are less than or equal to the size of the segment
 // when you initially load it
 class CodeSegment {
-    uint64_t segment;
+    uint64_t segment_id;
     std::vector<CodePoint> code;
 
     friend class Code;
@@ -49,25 +49,25 @@ class CodeSegment {
             prev_hash = hash(code.back());
         }
         code.emplace_back(std::move(op), prev_hash);
-        return {{segment, code.size() - 1}, hash(code.back())};
+        return {{segment_id, code.size() - 1}, hash(code.back())};
     }
 
     // Return the subset of this code segment starting in the given pc
-    std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment,
+    std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment_id,
                                            uint64_t pc) const {
         return std::make_shared<CodeSegment>(
-            new_segment,
+            new_segment_id,
             std::vector<CodePoint>{code.begin(), code.begin() + pc});
     }
 
    public:
-    CodeSegment(uint64_t segment_) : segment(segment_) {
+    CodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
         code.push_back(getErrCodePoint());
     }
-    CodeSegment(uint64_t segment_, std::vector<CodePoint> code_)
-        : segment(segment_), code(std::move(code_)) {}
+    CodeSegment(uint64_t segment_id_, std::vector<CodePoint> code_)
+        : segment_id(segment_id_), code(std::move(code_)) {}
 
-    uint64_t segmentID() const { return segment; }
+    uint64_t segmentID() const { return segment_id; }
 
     const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
 
