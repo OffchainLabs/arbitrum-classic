@@ -32,6 +32,7 @@ import (
 )
 
 type ChallengeTester struct {
+	Address  ethcommon.Address
 	contract *challengetester.ChallengeTester
 	client   *ethclient.Client
 	auth     *bind.TransactOpts
@@ -63,7 +64,7 @@ func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, aut
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
 	}
-	return &ChallengeTester{vmCreatorContract, client, auth}, nil
+	return &ChallengeTester{address, vmCreatorContract, client, auth}, nil
 }
 
 func (con *ChallengeTester) StartChallenge(

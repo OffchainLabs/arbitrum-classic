@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
@@ -53,12 +54,15 @@ func testChallenge(
 	challengerKey string,
 	asserterFunc ChallengeFunc,
 	challengerFunc ChallengeFunc,
+	testerAddress common.Address,
 ) error {
 	asserterClient, challengerClient, challengeAddress, blockId, err := getChallengeInfo(
 		asserterKey,
 		challengerKey,
 		challengeType,
-		challengeHash)
+		challengeHash,
+		testerAddress,
+	)
 	if err != nil {
 		return errors2.Wrap(err, "Error starting challenge")
 	}
@@ -143,6 +147,41 @@ func testChallenge(
 	}
 }
 
+func launchChallengeTester(
+	key string,
+) (common.Address, error) {
+	auth, err := test.SetupAuth(key)
+	if err != nil {
+		return common.Address{}, err
+	}
+	ethclint, err := ethclient.Dial(test.GetEthUrl())
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	connectionInfo, err := getConnectionInfo()
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	factory, err := arbfactory.NewArbFactory(connectionInfo.ArbFactoryAddress().ToEthAddress(), ethclint)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	challengeFactoryAddress, err := factory.ChallengeFactoryAddress(nil)
+	if err != nil {
+		return common.Address{}, errors2.Wrap(err, "Error getting challenge factory address")
+	}
+
+	tester, err := ethbridgetest.DeployChallengeTest(context.Background(), ethclint, auth, common.NewAddressFromEth(challengeFactoryAddress))
+	if err != nil {
+		return common.Address{}, errors2.Wrap(err, "Error deploying challenge")
+	}
+
+	return common.NewAddressFromEth(tester.Address), nil
+}
+
 func getConnectionInfo() (ethbridge.ArbAddresses, error) {
 	bridge_eth_addresses := "../bridge_eth_addresses.json"
 	var connectionInfo ethbridge.ArbAddresses
@@ -198,6 +237,7 @@ func getChallengeInfo(
 	challengerKey string,
 	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
+	testerAddress common.Address,
 ) (*ethbridge.EthArbAuthClient, *ethbridge.EthArbAuthClient, common.Address, *common.BlockId, error) {
 	auth1, err := test.SetupAuth(asserterKey)
 	if err != nil {
@@ -213,24 +253,9 @@ func getChallengeInfo(
 	asserterClient := ethbridge.NewEthAuthClient(ethclint1, auth1)
 	challengerClient := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
-	connectionInfo, err := getConnectionInfo()
+	tester, err := ethbridgetest.NewChallengeTester(testerAddress.ToEthAddress(), ethclint1, auth1)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
-	}
-
-	factory, err := asserterClient.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
-	if err != nil {
-		return nil, nil, common.Address{}, nil, err
-	}
-
-	challengeFactoryAddress, err := factory.ChallengeFactoryAddress()
-	if err != nil {
-		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error getting challenge factory address")
-	}
-
-	tester, err := ethbridgetest.DeployChallengeTest(context.Background(), ethclint1, auth1, challengeFactoryAddress)
-	if err != nil {
-		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error deploying challenge")
 	}
 
 	challengeAddress, blockId, err := tester.StartChallenge(
