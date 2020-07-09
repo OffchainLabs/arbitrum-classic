@@ -164,15 +164,21 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
     segment_ids.insert(state_data.pc.segment);
     segment_ids.insert(state_data.err_pc.pc.segment);
 
-    // Later segments can reference earlier ones, so load the segments backwards
-    for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
-        if (code->containsSegment(*it)) {
-            // If the segment is already loaded, no need to restore it
-            continue;
+    bool loaded_segment = true;
+    while (loaded_segment) {
+        loaded_segment = false;
+        std::set<uint64_t> next_segment_ids;
+        for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
+            if (code->containsSegment(*it)) {
+                // If the segment is already loaded, no need to restore it
+                continue;
+            }
+            auto segment =
+                getCodeSegment(*transaction, *it, pool.get(), next_segment_ids);
+            code->restoreExistingSegment(std::move(segment));
+            loaded_segment = true;
         }
-        auto segment =
-            getCodeSegment(*transaction, *it, pool.get(), segment_ids);
-        code->restoreExistingSegment(std::move(segment));
+        segment_ids = std::move(next_segment_ids);
     }
 
     return MachineState{pool,
