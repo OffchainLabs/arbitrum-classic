@@ -121,6 +121,8 @@ SaveResults saveCodeSegment(
             marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
         }
     }
+    // Ignore internal references to this segment
+    segment_counts[segment_id] = added_ref_count;
     return saveRefCountedData(*transaction.transaction, key, serialized_code,
                               added_ref_count, true);
 }
@@ -209,6 +211,7 @@ void saveCode(Transaction& transaction,
     if (!status.ok()) {
         throw std::runtime_error("failed to size mac code segment");
     }
+    std::unordered_map<uint64_t, uint64_t> segment_counts_snapshot;
     // Sort segments in reverse order by segment ID since later segments could
     // reference earlier ones
     std::sort(snapshots.segments.begin(), snapshots.segments.end(),
@@ -217,8 +220,37 @@ void saveCode(Transaction& transaction,
                          second.segment->segmentID();
               });
     for (const auto& snapshot : snapshots.segments) {
-        if (segment_counts[snapshot.segment->segmentID()] > 0) {
+        uint64_t segment_id = snapshot.segment->segmentID();
+        if (segment_counts[segment_id] > 0) {
             saveCodeSegment(transaction, snapshot, segment_counts);
+        }
+        segment_counts_snapshot[segment_id] = segment_counts[segment_id];
+    }
+
+    // Code segment creation is handled by ArbOS and which ensures that there
+    // are no forward references between code segments. However this invariant
+    // is not true in the AVM itself. For now, just throw if this assumption is
+    // violated. In the future, we should properly support forward references.
+    auto forward_ref_exception = std::runtime_error(
+        "unexpected forward reference between code segments");
+    if (segment_counts.size() != segment_counts_snapshot.size()) {
+        std::cerr << "mismatching segment counts " << segment_counts.size()
+                  << " and " << segment_counts_snapshot.size() << "\n";
+        throw forward_ref_exception;
+    }
+    for (const auto& item : segment_counts) {
+        auto it = segment_counts_snapshot.find(item.first);
+        if (it == segment_counts_snapshot.end()) {
+            std::cerr << "segment count not found\n";
+            throw forward_ref_exception;
+        }
+        if (item.second != it->second) {
+            std::cerr << "mismatching reference count\n";
+            std::cerr << "segment_counts " << item.first << " " << item.second
+                      << std::endl;
+            std::cerr << "segment_counts_snapshot " << it->first << " "
+                      << it->second << std::endl;
+            throw forward_ref_exception;
         }
     }
 }
