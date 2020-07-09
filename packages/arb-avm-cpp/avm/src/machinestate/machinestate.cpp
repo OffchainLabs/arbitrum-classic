@@ -199,7 +199,7 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
         if (newMessages) {
             return NotBlocked();
         }
-        return NotBlocked();
+        return InboxBlocked();
     } else {
         return NotBlocked();
     }
