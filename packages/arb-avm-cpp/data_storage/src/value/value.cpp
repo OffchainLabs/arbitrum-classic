@@ -141,7 +141,7 @@ DbResult<value> getTuple(const Transaction& transaction,
 
 struct ValueSerializer {
     std::vector<unsigned char>& value_vector;
-    std::unordered_map<uint64_t, uint64_t>& segment_counts;
+    std::map<uint64_t, uint64_t>& segment_counts;
 
     void operator()(const Tuple& val) const {
         value_vector.push_back(TUPLE);
@@ -168,7 +168,7 @@ struct ValueSerializer {
 
 SaveResults saveTuple(Transaction& transaction,
                       const Tuple& val,
-                      std::unordered_map<uint64_t, uint64_t>& segment_counts) {
+                      std::map<uint64_t, uint64_t>& segment_counts) {
     auto hash_key = getHashKey(val);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(*transaction.transaction, key);
@@ -198,7 +198,7 @@ SaveResults saveTuple(Transaction& transaction,
 
 struct ValueSaver {
     Transaction& transaction;
-    std::unordered_map<uint64_t, uint64_t>& segment_counts;
+    std::map<uint64_t, uint64_t>& segment_counts;
 
     template <typename T>
     SaveResults saveImpl(const T& val, bool allow_replacement) const {
@@ -311,15 +311,14 @@ DbResult<value> getValue(const Transaction& transaction,
     return getValueImpl(transaction, value_hash, pool, segment_ids);
 }
 
-SaveResults saveValueImpl(
-    Transaction& transaction,
-    const value& val,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts) {
+SaveResults saveValueImpl(Transaction& transaction,
+                          const value& val,
+                          std::map<uint64_t, uint64_t>& segment_counts) {
     return nonstd::visit(ValueSaver{transaction, segment_counts}, val);
 }
 
 SaveResults saveValue(Transaction& transaction, const value& val) {
-    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    std::map<uint64_t, uint64_t> segment_counts;
     return saveValueImpl(transaction, val, segment_counts);
 }
 

@@ -83,7 +83,7 @@ struct CodeSegmentSnapshot {
 };
 
 struct CodeSnapshot {
-    std::vector<CodeSegmentSnapshot> segments;
+    std::unordered_map<uint64_t, CodeSegmentSnapshot> segments;
     uint64_t op_count;
 };
 
@@ -117,11 +117,12 @@ class Code {
 
     CodeSnapshot snapshot() const {
         const std::lock_guard<std::mutex> lock(mutex);
-        std::vector<CodeSegmentSnapshot> ret;
+        std::unordered_map<uint64_t, CodeSegmentSnapshot> copied_segments;
         for (const auto& key_val : segments) {
-            ret.push_back({key_val.second, key_val.second->size()});
+            copied_segments[key_val.first] = {key_val.second,
+                                              key_val.second->size()};
         }
-        return {std::move(ret), next_segment_num};
+        return {std::move(copied_segments), next_segment_num};
     }
 
     const CodePoint& loadCodePoint(const CodePointRef& ref) const {

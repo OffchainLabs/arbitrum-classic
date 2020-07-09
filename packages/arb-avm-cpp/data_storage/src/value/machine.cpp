@@ -145,7 +145,7 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
 }
 
 SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
-    std::unordered_map<uint64_t, uint64_t> segment_counts;
+    std::map<uint64_t, uint64_t> segment_counts;
 
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine.hash(), checkpoint_name);

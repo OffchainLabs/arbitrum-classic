@@ -19,8 +19,9 @@
 
 #include <avm_values/value.hpp>
 
+#include <map>
 #include <set>
-#include <unordered_set>
+#include <unordered_map>
 
 struct DeleteResults;
 struct SaveResults;
@@ -29,10 +30,9 @@ class Transaction;
 template <typename T>
 struct DbResult;
 
-SaveResults saveValueImpl(
-    Transaction& transaction,
-    const value& val,
-    std::unordered_map<uint64_t, uint64_t>& segment_counts);
+SaveResults saveValueImpl(Transaction& transaction,
+                          const value& val,
+                          std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueImpl(
     Transaction& transaction,
     const uint256_t& value_hash,
