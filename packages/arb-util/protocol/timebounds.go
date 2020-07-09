@@ -25,10 +25,8 @@ import (
 )
 
 type TimeBounds struct {
-	LowerBoundBlock     *common.TimeBlocks
-	UpperBoundBlock     *common.TimeBlocks
-	LowerBoundTimestamp *big.Int
-	UpperBoundTimestamp *big.Int
+	LowerBoundBlock *common.TimeBlocks
+	UpperBoundBlock *common.TimeBlocks
 }
 
 func sortedRandomBigInts() (*big.Int, *big.Int) {
@@ -42,54 +40,43 @@ func sortedRandomBigInts() (*big.Int, *big.Int) {
 
 func NewRandomTimeBounds() *TimeBounds {
 	lowerBlockBound, upperBlockBound := sortedRandomBigInts()
-	lowerTimestampBound, upperTimestampBound := sortedRandomBigInts()
 	return &TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(upperBlockBound),
-		UpperBoundBlock:     common.NewTimeBlocks(lowerBlockBound),
-		LowerBoundTimestamp: lowerTimestampBound,
-		UpperBoundTimestamp: upperTimestampBound,
+		LowerBoundBlock: common.NewTimeBlocks(upperBlockBound),
+		UpperBoundBlock: common.NewTimeBlocks(lowerBlockBound),
 	}
 }
 
 func (tb *TimeBounds) MarshalToBuf() *TimeBoundsBlocksBuf {
 	return &TimeBoundsBlocksBuf{
-		LowerBoundBlock:     tb.LowerBoundBlock.Marshal(),
-		UpperBoundBlock:     tb.UpperBoundBlock.Marshal(),
-		LowerBoundTimestamp: common.MarshalBigInt(tb.LowerBoundTimestamp),
-		UpperBoundTimestamp: common.MarshalBigInt(tb.UpperBoundTimestamp),
+		LowerBoundBlock: tb.LowerBoundBlock.Marshal(),
+		UpperBoundBlock: tb.UpperBoundBlock.Marshal(),
 	}
 }
 
 func (x *TimeBoundsBlocksBuf) Unmarshal() *TimeBounds {
 	return &TimeBounds{
-		LowerBoundBlock:     x.LowerBoundBlock.Unmarshal(),
-		UpperBoundBlock:     x.UpperBoundBlock.Unmarshal(),
-		LowerBoundTimestamp: x.LowerBoundTimestamp.Unmarshal(),
-		UpperBoundTimestamp: x.UpperBoundTimestamp.Unmarshal(),
+		LowerBoundBlock: x.LowerBoundBlock.Unmarshal(),
+		UpperBoundBlock: x.UpperBoundBlock.Unmarshal(),
 	}
 }
 
 func (tb *TimeBounds) Clone() *TimeBounds {
 	return &TimeBounds{
-		LowerBoundBlock:     tb.LowerBoundBlock.Clone(),
-		UpperBoundBlock:     tb.UpperBoundBlock.Clone(),
-		LowerBoundTimestamp: new(big.Int).Set(tb.LowerBoundTimestamp),
-		UpperBoundTimestamp: new(big.Int).Set(tb.UpperBoundTimestamp),
+		LowerBoundBlock: tb.LowerBoundBlock.Clone(),
+		UpperBoundBlock: tb.UpperBoundBlock.Clone(),
 	}
 }
 
-func (tb *TimeBounds) AsIntArray() [4]*big.Int {
-	return [4]*big.Int{tb.LowerBoundBlock.AsInt(), tb.UpperBoundBlock.AsInt(), tb.LowerBoundTimestamp, tb.UpperBoundTimestamp}
+func (tb *TimeBounds) AsIntArray() [2]*big.Int {
+	return [2]*big.Int{tb.LowerBoundBlock.AsInt(), tb.UpperBoundBlock.AsInt()}
 }
 
 func (tb *TimeBounds) Equals(other *TimeBounds) bool {
 	return tb.LowerBoundBlock.AsInt().Cmp(other.LowerBoundBlock.AsInt()) == 0 &&
-		tb.UpperBoundBlock.AsInt().Cmp(other.UpperBoundBlock.AsInt()) == 0 &&
-		tb.LowerBoundTimestamp.Cmp(other.LowerBoundTimestamp) == 0 &&
-		tb.UpperBoundTimestamp.Cmp(other.UpperBoundTimestamp) == 0
+		tb.UpperBoundBlock.AsInt().Cmp(other.UpperBoundBlock.AsInt()) == 0
 }
 
-func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) error {
+func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks) error {
 	lowerBoundBlock := tb.LowerBoundBlock.AsInt()
 	if block.AsInt().Cmp(lowerBoundBlock) < 0 {
 		return errors.New("TimeBounds minimum block must less than the block")
@@ -98,14 +85,6 @@ func (tb *TimeBounds) IsValidTime(block *common.TimeBlocks, timestamp *big.Int) 
 	if block.AsInt().Cmp(upperBoundBlock) > 0 {
 		return errors.New("TimeBounds maximum block must greater than the block")
 	}
-
-	if timestamp.Cmp(tb.LowerBoundTimestamp) < 0 {
-		return errors.New("TimeBounds minimum timestamp must less than the timestamp")
-	}
-	if timestamp.Cmp(tb.UpperBoundTimestamp) > 0 {
-		return errors.New("TimeBounds maximum timestamp must greater than the timestamp")
-	}
-
 	return nil
 }
 
@@ -113,8 +92,6 @@ func (tb *TimeBounds) AsValue() value.TupleValue {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(tb.LowerBoundBlock.AsInt()),
 		value.NewIntValue(tb.UpperBoundBlock.AsInt()),
-		value.NewIntValue(tb.LowerBoundTimestamp),
-		value.NewIntValue(tb.UpperBoundTimestamp),
 	})
 	return newTup
 }

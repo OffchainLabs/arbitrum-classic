@@ -163,20 +163,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 						lowerBoundBlock := prepared.Params.TimeBounds.LowerBoundBlock
 						upperBoundBlock := prepared.Params.TimeBounds.UpperBoundBlock
-						lowerBoundTime := prepared.Params.TimeBounds.LowerBoundTimestamp
-						upperBoundTime := prepared.Params.TimeBounds.UpperBoundTimestamp
 						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.LatestBlockId.Height.AsInt(), big.NewInt(3)))
 
-						// We're predicting what the timestamp will be when we
-						// submit which is likely to be close to the current
-						// time rather than the time of the previous block. This
-						// doesn't effect correctness since the failure modes
-						// are dropping a valid assertion or submitting an
-						// assertion that will be rejected.
 						if chain.LatestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
-							endCushion.Cmp(upperBoundBlock) <= 0 &&
-							time.Now().Unix() >= lowerBoundTime.Int64() &&
-							time.Now().Unix() <= upperBoundTime.Int64() {
+							endCushion.Cmp(upperBoundBlock) <= 0 {
 							chain.RUnlock()
 							chain.Lock()
 							chain.pendingState = prepared.Machine

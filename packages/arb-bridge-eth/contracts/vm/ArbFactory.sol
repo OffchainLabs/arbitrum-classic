@@ -44,7 +44,7 @@ contract ArbFactory is CloneFactory {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64[2] calldata _maxTimeBoundsWidth,
+        uint64 _maxBlockBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner
     ) external {
@@ -54,7 +54,7 @@ contract ArbFactory is CloneFactory {
             _gracePeriodTicks,
             _arbGasSpeedLimitPerTick,
             _maxExecutionSteps,
-            _maxTimeBoundsWidth,
+            _maxBlockBoundsWidth,
             _stakeRequirement,
             _owner,
             challengeFactoryAddress,

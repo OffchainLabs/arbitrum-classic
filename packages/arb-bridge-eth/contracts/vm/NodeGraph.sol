@@ -65,7 +65,7 @@ contract NodeGraph {
         bytes32[8] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
-        uint128[4] timeBounds,
+        uint128[2] timeBounds,
         uint64 numArbGas,
         uint64 numSteps,
         bool didInboxInsn
@@ -87,7 +87,7 @@ contract NodeGraph {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64[2] memory _maxTimeBoundsWidth,
+        uint64 _maxBlockBoundsWidth,
         address _globalInboxAddress
     ) internal {
         globalInbox = IGlobalInbox(_globalInboxAddress);
@@ -112,8 +112,7 @@ contract NodeGraph {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.maxBlockBoundsWidth = _maxTimeBoundsWidth[0];
-        vmParams.maxTimestampBoundsWidth = _maxTimeBoundsWidth[1];
+        vmParams.maxBlockBoundsWidth = _maxBlockBoundsWidth;
 
         emit RollupCreated(_vmState);
     }
@@ -275,10 +274,6 @@ contract NodeGraph {
         require(
             data.timeBounds[1] <=
                 data.timeBounds[0] + vmParams.maxBlockBoundsWidth
-        );
-        require(
-            data.timeBounds[2] <=
-                data.timeBounds[3] + vmParams.maxTimestampBoundsWidth
         );
         require(VM.withinTimeBounds(data.timeBounds), MAKE_TIME);
         require(

@@ -44,17 +44,13 @@ library VM {
         return vmStateHash == MACHINE_HALT_HASH;
     }
 
-    function withinTimeBounds(uint128[4] memory _timeBoundsBlocks)
+    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks)
         internal
         view
         returns (bool)
     {
-        // solhint-disable-next-line not-rely-on-time
-        uint256 currentTime = block.timestamp;
         return
             block.number >= _timeBoundsBlocks[0] &&
-            block.number <= _timeBoundsBlocks[1] &&
-            currentTime >= _timeBoundsBlocks[2] &&
-            currentTime <= _timeBoundsBlocks[3];
+            block.number <= _timeBoundsBlocks[1];
     }
 }

@@ -133,7 +133,7 @@ contract RollupTester {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas
@@ -169,7 +169,7 @@ contract RollupTester {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas
@@ -225,7 +225,7 @@ contract RollupTester {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas
@@ -286,7 +286,7 @@ contract RollupTester {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas
@@ -348,7 +348,7 @@ contract RollupTester {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas

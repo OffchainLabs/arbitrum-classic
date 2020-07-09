@@ -30,7 +30,6 @@ func DefaultChainParams() valprotocol.ChainParams {
 		GracePeriod:             common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(gracePeriodInBlocks))),
 		MaxExecutionSteps:       10000000000,
 		MaxBlockBoundsWidth:     20,
-		MaxTimestampBoundsWidth: 600,
 		ArbGasSpeedLimitPerTick: 80000000,
 	}
 }

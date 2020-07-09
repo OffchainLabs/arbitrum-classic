@@ -34,7 +34,7 @@ library NodeGraphUtils {
         bytes32 prevDataHash;
         uint32 prevChildType;
         uint64 numSteps;
-        uint128[4] timeBounds;
+        uint128[2] timeBounds;
         uint256 importedMessageCount;
         bytes32 afterInboxTop;
         bytes32 importedMessagesSlice;

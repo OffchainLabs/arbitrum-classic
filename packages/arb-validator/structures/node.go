@@ -297,14 +297,8 @@ func (node *Node) Equals(node2 *Node) bool {
 }
 
 func (node *Node) executionPreconditionHash() common.Hash {
-	vmProtoData := node.prev.vmProtoData
-
 	return hashing.SoliditySHA3(
-		hashing.Bytes32(vmProtoData.MachineHash),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.LowerBoundBlock),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.UpperBoundBlock),
-		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.LowerBoundTimestamp),
-		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.UpperBoundTimestamp),
+		hashing.Bytes32(node.prev.vmProtoData.MachineHash),
 		hashing.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
 	)
 }

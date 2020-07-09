@@ -245,10 +245,8 @@ func (vm *ethRollupWatcher) processEvents(
 		params := &valprotocol.AssertionParams{
 			NumSteps: eventVal.NumSteps,
 			TimeBounds: &protocol.TimeBounds{
-				LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
-				UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
-				LowerBoundTimestamp: eventVal.TimeBounds[2],
-				UpperBoundTimestamp: eventVal.TimeBounds[3],
+				LowerBoundBlock: common.NewTimeBlocks(eventVal.TimeBounds[0]),
+				UpperBoundBlock: common.NewTimeBlocks(eventVal.TimeBounds[1]),
 			},
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
@@ -317,7 +315,6 @@ func (vm *ethRollupWatcher) GetParams(
 		},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
 		MaxBlockBoundsWidth:     rawParams.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: rawParams.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }

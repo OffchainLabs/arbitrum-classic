@@ -24,14 +24,6 @@ interface ArbSysInterface extends Interface {
       encode([dest, amount]: [string, BigNumberish]): string
     }>
 
-    blockLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
-
-    timestampLowerBound: TypedFunctionDescription<{ encode([]: []): string }>
-
-    blockUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
-
-    timestampUpperBound: TypedFunctionDescription<{ encode([]: []): string }>
-
     getTransactionCount: TypedFunctionDescription<{
       encode([account]: [string]): string
     }>
@@ -76,14 +68,6 @@ export class ArbSys extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    blockLowerBound(): Promise<BigNumber>
-
-    timestampLowerBound(): Promise<BigNumber>
-
-    blockUpperBound(): Promise<BigNumber>
-
-    timestampUpperBound(): Promise<BigNumber>
-
     getTransactionCount(account: string): Promise<BigNumber>
 
     cloneContract(
@@ -110,14 +94,6 @@ export class ArbSys extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  blockLowerBound(): Promise<BigNumber>
-
-  timestampLowerBound(): Promise<BigNumber>
-
-  blockUpperBound(): Promise<BigNumber>
-
-  timestampUpperBound(): Promise<BigNumber>
-
   getTransactionCount(account: string): Promise<BigNumber>
 
   cloneContract(
@@ -133,14 +109,6 @@ export class ArbSys extends Contract {
     withdrawERC721(dest: string, id: BigNumberish): Promise<BigNumber>
 
     withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>
-
-    blockLowerBound(): Promise<BigNumber>
-
-    timestampLowerBound(): Promise<BigNumber>
-
-    blockUpperBound(): Promise<BigNumber>
-
-    timestampUpperBound(): Promise<BigNumber>
 
     getTransactionCount(account: string): Promise<BigNumber>
 

@@ -506,12 +506,8 @@ func (chain *ChainObserver) ExecutionPrecondition(node *structures.Node) *valpro
 
 func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBounds {
 	latestBlock := chain.LatestBlockId.Height
-	// Start timestamp slightly in the past to avoid it being invalid
-	latestTimestamp := time.Now().Unix() - 60
 	return &protocol.TimeBounds{
-		LowerBoundBlock:     latestBlock,
-		UpperBoundBlock:     common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.NodeGraph.Params().MaxBlockBoundsWidth)))),
-		LowerBoundTimestamp: big.NewInt(latestTimestamp),
-		UpperBoundTimestamp: big.NewInt(latestTimestamp + int64(chain.NodeGraph.Params().MaxTimestampBoundsWidth)),
+		LowerBoundBlock: latestBlock,
+		UpperBoundBlock: common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.NodeGraph.Params().MaxBlockBoundsWidth)))),
 	}
 }

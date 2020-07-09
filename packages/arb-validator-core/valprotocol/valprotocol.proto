@@ -25,8 +25,7 @@ message ChainParamsBuf {
     common.TimeTicksBuf gracePeriod = 2;
     uint64 maxExecutionSteps = 3;
     uint64 maxBlockBoundsWidth = 4;
-    uint64 maxTimestampBoundsWidth = 5;
-    uint64 ArbGasSpeedLimitPerTick = 6;
+    uint64 ArbGasSpeedLimitPerTick = 5;
 }
 
 message TokenTypeBuf {

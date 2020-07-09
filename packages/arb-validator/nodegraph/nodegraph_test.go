@@ -33,8 +33,8 @@ import (
 var contractPath = gotest.TestMachinePath()
 
 func TestInitial(t *testing.T) {
-	machine, _, txHash, nodeGraph := getStakedNodeGraph(t)
-	expectedNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, nodeGraph := getStakedNodeGraph(t)
+	expectedNode := structures.NewInitialNode(mach, txHash)
 
 	if nodeGraph.Stakers().GetSize() != 0 {
 		t.Fatal("initial stakers incorrect")
@@ -54,8 +54,8 @@ func TestInitial(t *testing.T) {
 }
 
 func TestCreateNodes(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, nodes := createNodesOnAssert(
 		stakedNodeGraph,
@@ -92,8 +92,8 @@ func TestCreateNodes(t *testing.T) {
 }
 
 func TestGetLeaves(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	leaves := stakedNodeGraph.Leaves()
 
 	if leaves.NumLeaves() != 1 || !leaves.IsLeaf(initialNode) {
@@ -152,8 +152,8 @@ func TestGetLeaves(t *testing.T) {
 }
 
 func TestPruneInitialNodes(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	stakedNodeGraph.PruneNodeByHash(initialNode.Hash())
 	getNode := stakedNodeGraph.NodeFromHash(initialNode.Hash())
 	if getNode != nil {
@@ -162,8 +162,8 @@ func TestPruneInitialNodes(t *testing.T) {
 }
 
 func TestPrunePrevNodes(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
@@ -189,8 +189,8 @@ func TestPrunePrevNodes(t *testing.T) {
 }
 
 func TestPrunePrevNode(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, _, nodes := createNodesOnAssert(
 		stakedNodeGraph,
@@ -218,8 +218,8 @@ func TestPrunePrevNode(t *testing.T) {
 }
 
 func TestGetLeaf(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	if !stakedNodeGraph.Leaves().IsLeaf(initialNode) {
 		t.Fatal("error getting leaf")
 	}
@@ -246,8 +246,8 @@ func TestGetLeaf(t *testing.T) {
 }
 
 func TestHasReference(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	if !stakedNodeGraph.Leaves().IsLeaf(initialNode) {
 		t.Fatal("error getting leaf")
 	}
@@ -261,8 +261,8 @@ func TestHasReference(t *testing.T) {
 }
 
 func TestHasReferenceWithSuccessors(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 
 	dispNode, execAssert := getDisputableNode(initialNode)
 	_, _, _ = createNodesOnAssert(
@@ -283,8 +283,8 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 }
 
 func TestPruneNewNode(t *testing.T) {
-	machine, _, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
@@ -305,8 +305,8 @@ func TestPruneNewNode(t *testing.T) {
 }
 
 func TestPruneAllNodes(t *testing.T) {
-	machine, _, txHash, nodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(machine, txHash)
+	mach, _, txHash, nodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, _, nodes := createNodesOnAssert(
 		nodeGraph,
@@ -394,12 +394,10 @@ func createNodesOnAssert(
 func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
 	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
+		LowerBoundBlock: common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock: common.NewTimeBlocks(big.NewInt(1000)),
 	}
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
@@ -422,7 +420,7 @@ func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, 
 }
 
 func getNodeGraph(t *testing.T) (machine.Machine, valprotocol.ChainParams, common.Hash, *NodeGraph) {
-	machine, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
+	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,9 +430,8 @@ func getNodeGraph(t *testing.T) (machine.Machine, valprotocol.ChainParams, commo
 		GracePeriod:             common.TicksFromSeconds(60 * 60),
 		MaxExecutionSteps:       1000000,
 		MaxBlockBoundsWidth:     20,
-		MaxTimestampBoundsWidth: 900,
 		ArbGasSpeedLimitPerTick: 1000,
 	}
 	txHash := common.Hash{}
-	return machine, vmParams, txHash, NewNodeGraph(machine, vmParams, txHash)
+	return mach, vmParams, txHash, NewNodeGraph(mach, vmParams, txHash)
 }

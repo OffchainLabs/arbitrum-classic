@@ -18,6 +18,7 @@ package chainobserver
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -148,10 +149,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
 	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
+		LowerBoundBlock: common.NewTimeBlocks(big.NewInt(0)),
+		UpperBoundBlock: common.NewTimeBlocks(big.NewInt(1000)),
 	}
 	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
@@ -213,6 +212,8 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		checkpointer = checkpointing.NewDummyCheckpointer()
 	case "fresh_rocksdb":
 		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
+	default:
+		return nil, errors.New("invalid checkpoint type")
 	}
 	if err := checkpointer.Initialize(contractPath); err != nil {
 		return nil, err
@@ -225,7 +226,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
 			MaxBlockBoundsWidth:     20,
-			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,

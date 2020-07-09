@@ -219,7 +219,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
 			MaxBlockBoundsWidth:     20,
-			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
