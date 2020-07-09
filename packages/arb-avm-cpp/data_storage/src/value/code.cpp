@@ -62,21 +62,35 @@ void deleteCodeSegmentReferences(Transaction& transaction,
     }
 }
 
+std::vector<unsigned char> serializeCodeSegment(
+    const CodeSegmentSnapshot& snapshot) {
+    std::vector<unsigned char> serialized_code;
+    marshal_uint64_t(snapshot.op_count, serialized_code);
+
+    for (uint64_t i = 0; i < snapshot.op_count; ++i) {
+        const auto& cp = (*snapshot.segment)[i];
+        // Ignore referemces to other code segments
+        serialized_code.push_back(cp.op.immediate ? 1 : 0);
+        serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
+        marshal_uint256_t(cp.nextHash, serialized_code);
+        if (cp.op.immediate) {
+            marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
+        }
+    }
+    return serialized_code;
+}
+
 std::vector<unsigned char> prepareToSaveCodeSegment(
     Transaction& transaction,
     const CodeSegmentSnapshot& snapshot,
     std::map<uint64_t, uint64_t>& segment_counts) {
     uint64_t segment_id = snapshot.segment->segmentID();
-    uint64_t added_ref_count = segment_counts[segment_id];
-    auto key_vec = segment_key(segment_id);
-    auto key = vecToSlice(key_vec);
-
-    auto results = getRefCountedData(*transaction.transaction, key);
-
-    auto incr_ref_count = results.status.ok() && results.reference_count > 0;
+    auto key = segment_key(segment_id);
+    auto results = getRefCountedData(*transaction.transaction, vecToSlice(key));
 
     uint64_t existing_cp_count = 0;
-    if (incr_ref_count) {
+
+    if (results.status.ok() && results.reference_count > 0) {
         auto iter = results.stored_value.begin();
         auto ptr = reinterpret_cast<const char*>(&*iter);
         existing_cp_count = checkpoint::utils::deserialize_uint64(ptr);
@@ -87,26 +101,16 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
         }
     }
 
-    std::vector<unsigned char> serialized_code;
-    marshal_uint64_t(snapshot.op_count, serialized_code);
-    for (uint64_t i = 0; i < snapshot.op_count; ++i) {
+    uint64_t current_segment_count = segment_counts[segment_id];
+    // Save the immediate values, that weren't already saved for this code
+    // segment
+    for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
-        // Ignore referemces to other code segments
-        serialized_code.push_back(cp.op.immediate ? 1 : 0);
-        serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
-        marshal_uint256_t(cp.nextHash, serialized_code);
-        if (cp.op.immediate) {
-            // Only save the immediate value, if it hasn't been already saved
-            // for this code segment
-            if (i >= existing_cp_count) {
-                saveValueImpl(transaction, *cp.op.immediate, segment_counts);
-            }
-            marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
-        }
+        saveValueImpl(transaction, *cp.op.immediate, segment_counts);
     }
     // Ignore internal references to this segment
-    segment_counts[segment_id] = added_ref_count;
-    return serialized_code;
+    segment_counts[segment_id] = current_segment_count;
+    return serializeCodeSegment(snapshot);
 }
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
