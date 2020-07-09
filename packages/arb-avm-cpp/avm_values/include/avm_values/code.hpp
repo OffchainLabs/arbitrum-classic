@@ -50,7 +50,7 @@ class CodeSegment {
             prev_hash = hash(code.back());
         }
         code.emplace_back(std::move(op), prev_hash);
-        return {{segment_id, code.size() - 1}, hash(code.back())};
+        return codePointStub(code.size() - 1);
     }
 
     // Return the subset of this code segment starting in the given pc
@@ -75,6 +75,10 @@ class CodeSegment {
     const CodePoint& at(uint64_t pc) const { return code.at(pc); }
 
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
+
+    CodePointStub codePointStub(uint64_t pc) const {
+        return {{segment_id, pc}, hash(code.at(pc))};
+    }
 };
 
 struct CodeSegmentSnapshot {
@@ -134,7 +138,7 @@ class Code {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_num = next_segment_num++;
         auto new_segment = std::make_shared<CodeSegment>(segment_num);
-        CodePointStub stub{{segment_num, 0}, hash((*new_segment)[0])};
+        auto stub = new_segment->codePointStub(0);
         segments[segment_num] = std::move(new_segment);
         return stub;
     }
