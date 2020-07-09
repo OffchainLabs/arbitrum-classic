@@ -281,11 +281,6 @@ BlockReason MachineState::runOne() {
             }
         }
 
-        if (state == Status::Error && !errpc.is_error()) {
-            pc = errpc.pc;
-            state = Status::Extensive;
-        }
-
         return NotBlocked();
     }();
 
@@ -294,7 +289,7 @@ BlockReason MachineState::runOne() {
     }
 
     // If we're in the error state, jump to the error handler if one is set
-    if (state == Status::Error && errpc.is_error()) {
+    if (state == Status::Error && !errpc.is_error()) {
         pc = errpc.pc;
         state = Status::Extensive;
     }
