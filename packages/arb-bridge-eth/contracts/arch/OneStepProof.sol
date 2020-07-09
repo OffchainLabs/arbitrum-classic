@@ -1154,8 +1154,6 @@ library OneStepProof {
             return (2, 25);
         } else if (opCode == OP_PUSH_INSN_IMM) {
             return (3, 25);
-        } else if (opCode == OP_OPEN_INSN) {
-            return (1, 25);
         } else if (opCode == OP_SIDELOAD) {
             return (0, 10);
         } else if (opCode == OP_ECRECOVER) {
