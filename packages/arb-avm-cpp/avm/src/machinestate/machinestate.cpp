@@ -27,12 +27,6 @@ namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }
 
-void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
       arb_gas_remaining(max_arb_gas_remaining),
