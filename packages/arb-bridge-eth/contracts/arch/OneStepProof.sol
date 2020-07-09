@@ -836,16 +836,10 @@ library OneStepProof {
 
     function executeInboxInsn(
         Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory beforeInbox,
-        uint256 lowerTimeBound
+        Value.Data memory beforeInbox
     ) internal pure returns (bool) {
-        if (!val1.isInt()) {
-            return false;
-        }
         require(
-            val1.intVal >= lowerTimeBound ||
-                Value.hash(beforeInbox) != Value.hashEmptyTuple(),
+            Value.hash(beforeInbox) != Value.hashEmptyTuple(),
             "Inbox instruction was blocked"
         );
         machine.addDataStackValue(beforeInbox);
@@ -1139,7 +1133,7 @@ library OneStepProof {
         } else if (opCode == OP_GETTIME) {
             return (0, 40);
         } else if (opCode == OP_INBOX) {
-            return (1, 40);
+            return (0, 40);
         } else if (opCode == OP_ERROR) {
             return (0, 5);
         } else if (opCode == OP_STOP) {
@@ -1484,12 +1478,7 @@ library OneStepProof {
             contents[3] = Value.newInt(_data.timeBounds[3]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(
-                endMachine,
-                stackVals[0],
-                _data.beforeInbox,
-                _data.timeBounds[0]
-            );
+            correct = executeInboxInsn(endMachine, _data.beforeInbox);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {
