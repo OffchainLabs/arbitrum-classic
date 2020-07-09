@@ -589,5 +589,5 @@ for vm_test in tests:
     vm = arb.compile_program(arb.ast.BlockStatement([]), code)
     if len(vm_test) > 2:
         vm.static = vm_test[2]
-    with open("../arb-validator/proofmachine/" + vm_test[0] + ".mexe", "w") as f:
+    with open("../arb-avm-cpp/tests/machine-cases/" + vm_test[0] + ".mexe", "w") as f:
         json.dump(arb.marshall.marshall_vm_json(vm), f)

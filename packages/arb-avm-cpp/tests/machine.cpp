@@ -171,3 +171,27 @@ TEST_CASE("Machine hash") {
     REQUIRE(machineHash == uint256_t("11528385126570723501128253300669877639621"
                                      "3105852964584656443015717233391763774"));
 }
+
+TEST_CASE("MachineTestVectors") {
+    DBDeleter deleter;
+    TuplePool pool;
+
+    std::vector<std::string> files = {
+        "opcodetestarbgas",   "opcodetestdup",   "opcodetestecrecover",
+        "opcodetestethhash2", "opcodetesthash",  "opcodetestlogic",
+        "opcodetestmath",     "opcodeteststack", "opcodetesttuple"};
+
+    for (const auto& filename : files) {
+        DYNAMIC_SECTION(filename) {
+            auto test_file =
+                std::string{machine_test_cases_path} + "/" + filename + ".mexe";
+
+            auto mach = Machine::loadFromFile(test_file);
+            while (
+                nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
+                mach.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
+            }
+            REQUIRE(mach.currentStatus() == Status::Halted);
+        }
+    }
+}
