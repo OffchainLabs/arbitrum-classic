@@ -251,8 +251,9 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
         {OpCode::PUSH_GAS, {}},
         {OpCode::ERR_CODE_POINT, {}},
-        {OpCode::PUSH_INSN, {MarshalLevel::SINGLE}},
-        {OpCode::PUSH_INSN_IMM, {MarshalLevel::SINGLE, MarshalLevel::STUB}},
+        {OpCode::PUSH_INSN, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::PUSH_INSN_IMM,
+         {MarshalLevel::SINGLE, MarshalLevel::STUB, MarshalLevel::SINGLE}},
         {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 

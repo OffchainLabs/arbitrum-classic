@@ -179,7 +179,8 @@ TEST_CASE("MachineTestVectors") {
     std::vector<std::string> files = {
         "opcodetestarbgas",   "opcodetestdup",   "opcodetestecrecover",
         "opcodetestethhash2", "opcodetesthash",  "opcodetestlogic",
-        "opcodetestmath",     "opcodeteststack", "opcodetesttuple"};
+        "opcodetestmath",     "opcodeteststack", "opcodetesttuple",
+        "opcodetestcode"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {

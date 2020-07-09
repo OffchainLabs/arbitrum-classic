@@ -414,6 +414,18 @@ class BasicVM:
     def pushgas(self):
         self.stack.push(self.arb_gas_remaining)
 
+    def errcodepoint(self):
+        raise Exception("not implemented")
+
+    def pushinsn(self):
+        raise Exception("not implemented")
+
+    def pushinsnimm(self):
+        raise Exception("not implemented")
+
+    def sideload(self):
+        raise Exception("not implemented")
+
     def cast(self, typ):
         pass
         # if not typ.accepts_cast(self.stack[0]):

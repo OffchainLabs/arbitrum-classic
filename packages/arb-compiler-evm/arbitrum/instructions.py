@@ -91,7 +91,11 @@ OP_CODES = [
     ("halt", 0x74, [], []),
     ("setgas", 0x75, [IntType()], []),
     ("pushgas", 0x76, [], [IntType()]),
-    ("debug", 0x7A, [], []),
+    ("errcodepoint", 0x77, [], [CodePointType()]),
+    ("pushinsn", 0x78, [IntType(), CodePointType()], [CodePointType()]),
+    ("pushinsnimm", 0x79, [IntType(), ValueType(), CodePointType()], [CodePointType()]),
+    ("sideload", 0x7B, [], [TupleType()]),
+    ("debug", 0x7C, [], []),
     ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()]),
 ]
 
