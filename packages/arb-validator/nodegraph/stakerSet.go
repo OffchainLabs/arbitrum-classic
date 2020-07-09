@@ -17,39 +17,12 @@
 package nodegraph
 
 import (
-	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-	"strconv"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"log"
 )
 
-type Staker struct {
-	address      common.Address
-	location     *structures.Node
-	creationTime common.TimeTicks
-	challenge    common.Address
-}
-
-func (staker *Staker) Challenge() common.Address {
-	return staker.challenge
-}
-
-func (staker *Staker) Location() *structures.Node {
-	return staker.location
-}
-
-func (staker *Staker) CreationTime() common.TimeTicks {
-	return staker.creationTime
-}
-
-func (staker *Staker) Address() common.Address {
-	return staker.address
-}
-
 type StakerSet struct {
-	Idx map[common.Address]*Staker
+	idx map[common.Address]*Staker
 }
 
 func NewStakerSet() *StakerSet {
@@ -58,62 +31,27 @@ func NewStakerSet() *StakerSet {
 
 func (sl *StakerSet) Add(newStaker *Staker) {
 	newStaker.location.AddStaker()
-	if _, ok := sl.Idx[newStaker.address]; ok {
+	if _, ok := sl.idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
-	sl.Idx[newStaker.address] = newStaker
+	sl.idx[newStaker.address] = newStaker
 }
 
 func (sl *StakerSet) Delete(staker *Staker) {
-	delete(sl.Idx, staker.address)
+	delete(sl.idx, staker.address)
 }
 
 func (sl *StakerSet) Get(addr common.Address) *Staker {
-	return sl.Idx[addr]
+	return sl.idx[addr]
+}
+
+func (sl *StakerSet) GetSize() int {
+	return len(sl.idx)
 }
 
 func (sl *StakerSet) forall(f func(*Staker)) {
-	for _, v := range sl.Idx {
+	for _, v := range sl.idx {
 		f(v)
-	}
-}
-
-func (staker *Staker) MarshalToBuf() *StakerBuf {
-	emptyAddress := common.Address{}
-	if staker.challenge == emptyAddress {
-		return &StakerBuf{
-			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.Hash().MarshalToBuf(),
-			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: nil,
-		}
-	} else {
-		return &StakerBuf{
-			Address:       staker.address.MarshallToBuf(),
-			Location:      staker.location.Hash().MarshalToBuf(),
-			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: staker.challenge.MarshallToBuf(),
-		}
-	}
-}
-
-func (buf *StakerBuf) Unmarshal(chain *NodeGraph) *Staker {
-	// chain.nodeFromHash must have already been unmarshaled
-	locArr := buf.Location.Unmarshal()
-	if buf.ChallengeAddr != nil {
-		return &Staker{
-			address:      buf.Address.Unmarshal(),
-			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    buf.ChallengeAddr.Unmarshal(),
-		}
-	} else {
-		return &Staker{
-			address:      buf.Address.Unmarshal(),
-			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    common.Address{},
-		}
 	}
 }
 
@@ -126,20 +64,12 @@ func (ss *StakerSet) DebugString(prefix string) string {
 	return ret
 }
 
-func (s *Staker) DebugString(prefix string) string {
-	ret := prefix + "depth:" + strconv.FormatUint(s.location.Depth(), 10) + " addr:" + s.address.ShortString() + " created:" + s.creationTime.String() + " loc:" + s.location.Hash().ShortString()
-	if !s.challenge.IsZero() {
-		ret = ret + " chal:" + s.challenge.ShortString()
-	}
-	return ret + "\n"
-}
-
 func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
-	if len(ss.Idx) != len(ss2.Idx) {
+	if len(ss.idx) != len(ss2.idx) {
 		return false
 	}
-	for addr, staker := range ss.Idx {
-		staker2 := ss2.Idx[addr]
+	for addr, staker := range ss.idx {
+		staker2 := ss2.idx[addr]
 		if staker2 == nil {
 			return false
 		}
@@ -148,17 +78,4 @@ func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
 		}
 	}
 	return true
-}
-
-func (s *Staker) Equals(s2 *Staker) bool {
-	if bytes.Compare(s.address[:], s2.address[:]) != 0 {
-		return false
-	}
-	if s.location.Hash() != s2.location.Hash() {
-		return false
-	}
-	if !s.creationTime.Equals(s2.creationTime) {
-		return false
-	}
-	return s.challenge == s2.challenge
 }

@@ -251,6 +251,10 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	assertionTxHash common.Hash,
 ) []*structures.Node {
 	newNodes := make([]*structures.Node, 0, 4)
+	_, ok := ng.nodeFromHash[prevNode.Hash()]
+	if !ok {
+		log.Fatal("can't assert on non-existent node")
+	}
 	if !ng.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}

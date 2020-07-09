@@ -29,12 +29,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func testInboxTopChallenge(tester *testing.T) {
-	tester.Parallel()
+func testInboxTopChallenge(t *testing.T) {
+	t.Parallel()
 
 	messageStack := getInboxMsgStack()
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
-	bottomHash, challengeHash := getChallengeData(tester, messageStack, count)
+	bottomHash, challengeHash := getChallengeData(t, messageStack, count)
 
 	if err := testChallenge(
 		valprotocol.InvalidInboxTopChildType,
@@ -65,8 +65,9 @@ func testInboxTopChallenge(tester *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
-		tester.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
