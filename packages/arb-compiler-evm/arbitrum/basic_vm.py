@@ -109,13 +109,9 @@ class BasicVM:
             self.stack.push(val)
 
     def inbox(self):
-        if (
-            self.env.messages == value.Tuple([])
-            and self.stack.peak() > self.env.time_bounds[0]
-        ):
+        if self.env.messages == value.Tuple([]):
             raise VMBlocked()
 
-        self.stack.pop()
         self.stack.push(self.env.messages)
         self.env.messages = value.Tuple([])
 
