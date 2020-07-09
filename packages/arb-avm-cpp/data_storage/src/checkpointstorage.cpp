@@ -36,7 +36,7 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 namespace {
-const char* initial_slice_label = "initial";
+std::string initial_slice_label = "initial";
 }
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path)
