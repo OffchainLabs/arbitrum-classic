@@ -23,7 +23,6 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 	"strconv"
@@ -211,19 +210,9 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		},
 	}
 	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
-
-	latestTime := big.NewInt(time.Now().Unix())
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     latestBlock.Height,
-		UpperBoundBlock:     latestBlock.Height,
-		LowerBoundTimestamp: latestTime,
-		UpperBoundTimestamp: latestTime,
-	}
-
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
-		timeBounds,
 		inbox,
 		m.maxCallTime,
 	)

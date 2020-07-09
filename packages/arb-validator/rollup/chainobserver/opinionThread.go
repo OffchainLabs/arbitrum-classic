@@ -231,7 +231,7 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal, runDuration)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messagesVal, runDuration)
 
 	afterHash := mach.Hash()
 
@@ -303,7 +303,6 @@ func getNodeOpinion(
 
 	assertion, stepsRun := mach.ExecuteAssertion(
 		params.NumSteps,
-		params.TimeBounds,
 		messagesVal,
 		0,
 	)

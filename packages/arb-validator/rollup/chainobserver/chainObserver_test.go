@@ -153,7 +153,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 		LowerBoundTimestamp: big.NewInt(100),
 		UpperBoundTimestamp: big.NewInt(120),
 	}
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{

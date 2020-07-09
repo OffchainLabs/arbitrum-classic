@@ -500,7 +500,6 @@ func (chain *ChainObserver) ExecutionPrecondition(node *structures.Node) *valpro
 	inbox, _ := chain.Inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
-		TimeBounds:  params.TimeBounds,
 		BeforeInbox: inbox.AsValue(),
 	}
 }

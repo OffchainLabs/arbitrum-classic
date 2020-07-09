@@ -20,44 +20,35 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Precondition struct {
 	BeforeHash  common.Hash
-	TimeBounds  *protocol.TimeBounds
 	BeforeInbox value.TupleValue
 }
 
-func NewPrecondition(beforeHash common.Hash, timeBounds *protocol.TimeBounds, beforeInbox value.TupleValue) *Precondition {
-	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
+func NewPrecondition(beforeHash common.Hash, beforeInbox value.TupleValue) *Precondition {
+	return &Precondition{BeforeHash: beforeHash, BeforeInbox: beforeInbox}
 }
 
 func (pre *Precondition) String() string {
 	inboxHash := pre.BeforeInbox.Hash()
 	return fmt.Sprintf(
-		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
+		"Precondition(beforeHash: %v, BeforeInbox: %v)",
 		pre.BeforeHash,
-		pre.TimeBounds.LowerBoundBlock.AsInt(),
-		pre.TimeBounds.UpperBoundBlock.AsInt(),
 		inboxHash,
 	)
 }
 
 func (pre *Precondition) Equals(b *Precondition) bool {
 	return pre.BeforeHash == b.BeforeHash ||
-		pre.TimeBounds.Equals(b.TimeBounds) ||
 		value.Eq(pre.BeforeInbox, b.BeforeInbox)
 }
 
 func (pre *Precondition) Hash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Bytes32(pre.BeforeHash),
-		hashing.TimeBlocks(pre.TimeBounds.LowerBoundBlock),
-		hashing.TimeBlocks(pre.TimeBounds.UpperBoundBlock),
-		hashing.Uint128(pre.TimeBounds.LowerBoundTimestamp),
-		hashing.Uint128(pre.TimeBounds.UpperBoundTimestamp),
 		hashing.Bytes32(pre.BeforeInbox.Hash()),
 	)
 }
@@ -69,7 +60,6 @@ func (pre *Precondition) GeneratePostcondition(a *ExecutionAssertionStub) *Preco
 	}
 	return &Precondition{
 		BeforeHash:  a.AfterHash,
-		TimeBounds:  pre.TimeBounds,
 		BeforeInbox: nextBeforeInbox,
 	}
 }

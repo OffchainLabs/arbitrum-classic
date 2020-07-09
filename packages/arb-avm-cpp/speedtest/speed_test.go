@@ -19,15 +19,12 @@ package speedtest
 import (
 	"io/ioutil"
 	"log"
-	"math/big"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -51,28 +48,22 @@ func runAoFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(filePath)
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	ckp, err := cmachine.NewCheckpoint(ckpDir)
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	if err := ckp.Initialize(filePath); err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	mach, err := ckp.GetInitialMachine()
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 
-	unusedTimeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
-	}
 	b.ResetTimer()
-	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, unusedTimeBounds, value.NewEmptyTuple(), time.Hour)
+	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, value.NewEmptyTuple(), time.Hour)
 }
 
 func nameFromFn(fn string) string {

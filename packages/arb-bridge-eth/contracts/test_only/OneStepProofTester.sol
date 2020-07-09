@@ -23,7 +23,6 @@ import "../arch/OneStepProof.sol";
 contract OneStepProofTester {
     function validateProof(
         bytes32 beforeHash,
-        uint128[4] memory timeBounds,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
         bytes32 afterHash,
@@ -38,7 +37,6 @@ contract OneStepProofTester {
         return
             OneStepProof.validateProof(
                 beforeHash,
-                timeBounds,
                 beforeInbox,
                 beforeInboxValueSize,
                 afterHash,

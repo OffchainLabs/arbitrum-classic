@@ -26,15 +26,7 @@
 #include <memory>
 #include <vector>
 
-struct TimeBounds {
-    uint256_t lowerBoundBlock;
-    uint256_t upperBoundBlock;
-    uint256_t lowerBoundTimestamp;
-    uint256_t upperBoundTimestamp;
-};
-
 struct AssertionContext {
-    TimeBounds timeBounds;
     Tuple inbox;
     uint32_t numSteps;
     bool didInboxInsn;
@@ -44,9 +36,8 @@ struct AssertionContext {
 
     AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
 
-    explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
-        : timeBounds(tb),
-          inbox(std::move(inbox)),
+    explicit AssertionContext(Tuple inbox)
+        : inbox(std::move(inbox)),
           numSteps{0},
           didInboxInsn(false),
           numGas{0} {}

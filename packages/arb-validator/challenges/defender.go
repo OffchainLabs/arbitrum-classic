@@ -61,7 +61,6 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.TimeBounds,
 			pre.BeforeInbox,
 			0,
 		)
@@ -93,7 +92,6 @@ func ChooseAssertionToChallenge(
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.TimeBounds,
 			pre.BeforeInbox,
 			0,
 		)

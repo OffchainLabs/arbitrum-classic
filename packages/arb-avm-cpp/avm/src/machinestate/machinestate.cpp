@@ -487,9 +487,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
 
             break;
         }
-        case OpCode::GETTIME:
-            machineoperation::getTime(*this);
-            break;
         case OpCode::INBOX:
             return machineoperation::inboxOp(*this);
         case OpCode::ERROR:

@@ -70,7 +70,7 @@ TEST_CASE("Checkpoint State") {
     storage.initialize(test_contract_path);
 
     auto machine = storage.getInitialMachine();
-    machine.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
+    machine.run(1, Tuple(), std::chrono::seconds{0});
 
     SECTION("default") { checkpointState(storage, machine); }
     SECTION("save twice") { checkpointStateTwice(storage, machine); }
@@ -94,7 +94,7 @@ TEST_CASE("Delete machine checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine();
-        machine.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
+        machine.run(1, Tuple(), std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         deleteCheckpoint(*transaction, machine);
@@ -121,7 +121,7 @@ TEST_CASE("Restore checkpoint") {
 TEST_CASE("Proof") {
     auto machine = Machine::loadFromFile(test_contract_path);
     while (true) {
-        auto assertion = machine.run(1, {}, {}, std::chrono::seconds{0});
+        auto assertion = machine.run(1, {}, std::chrono::seconds{0});
         machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
@@ -190,7 +190,7 @@ TEST_CASE("MachineTestVectors") {
             auto mach = Machine::loadFromFile(test_file);
             while (
                 nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
-                mach.run(1, TimeBounds{}, Tuple(), std::chrono::seconds{0});
+                mach.run(1, Tuple(), std::chrono::seconds{0});
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
         }

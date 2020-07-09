@@ -114,19 +114,9 @@ func (m *Machine) PrintState() {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	lowerBoundBlockDataC := intToData(timeBounds.LowerBoundBlock.AsInt())
-	defer C.free(lowerBoundBlockDataC)
-	upperBoundBlockDataC := intToData(timeBounds.UpperBoundBlock.AsInt())
-	defer C.free(upperBoundBlockDataC)
-	lowerBoundTimestampDataC := intToData(timeBounds.LowerBoundTimestamp)
-	defer C.free(lowerBoundTimestampDataC)
-	upperBoundTimestampDataC := intToData(timeBounds.UpperBoundTimestamp)
-	defer C.free(upperBoundTimestampDataC)
-
 	var buf bytes.Buffer
 	_ = value.MarshalValue(inbox, &buf)
 
@@ -137,10 +127,6 @@ func (m *Machine) ExecuteAssertion(
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		lowerBoundBlockDataC,
-		upperBoundBlockDataC,
-		lowerBoundTimestampDataC,
-		upperBoundTimestampDataC,
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)

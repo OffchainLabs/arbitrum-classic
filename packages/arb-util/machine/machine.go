@@ -42,7 +42,6 @@ type Machine interface {
 
 	ExecuteAssertion(
 		maxSteps uint64,
-		timeBounds *protocol.TimeBounds,
 		inbox value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)

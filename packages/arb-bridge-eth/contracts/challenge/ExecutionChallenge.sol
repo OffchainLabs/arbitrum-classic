@@ -46,7 +46,6 @@ contract ExecutionChallenge is BisectionChallenge {
 
     struct BisectAssertionData {
         bytes32 beforeInbox;
-        uint128[4] timeBounds;
         bytes32[] machineHashes;
         bool[] didInboxInsns;
         bytes32[] messageAccs;
@@ -57,7 +56,6 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function bisectAssertion(
         bytes32 _beforeInbox,
-        uint128[4] memory _timeBounds,
         bytes32[] memory _machineHashes,
         bool[] memory _didInboxInsns,
         bytes32[] memory _messageAccs,
@@ -68,7 +66,6 @@ contract ExecutionChallenge is BisectionChallenge {
         _bisectAssertion(
             BisectAssertionData(
                 _beforeInbox,
-                _timeBounds,
                 _machineHashes,
                 _didInboxInsns,
                 _messageAccs,
@@ -95,7 +92,6 @@ contract ExecutionChallenge is BisectionChallenge {
 
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
             _data.machineHashes[0],
-            _data.timeBounds,
             _data.beforeInbox
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
@@ -130,7 +126,6 @@ contract ExecutionChallenge is BisectionChallenge {
             uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
             Protocol.generatePreconditionHash(
                 _data.machineHashes[0],
-                _data.timeBounds,
                 _data.beforeInbox
             ),
             assertionHash
@@ -155,7 +150,6 @@ contract ExecutionChallenge is BisectionChallenge {
                 ),
                 Protocol.generatePreconditionHash(
                     _data.machineHashes[i],
-                    _data.timeBounds,
                     _data.beforeInbox
                 ),
                 assertionHash
@@ -180,7 +174,6 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
         uint256 _beforeInboxValueSize,
-        uint128[4] memory _timeBounds,
         bytes32 _afterHash,
         bool _didInboxInsns,
         bytes32 _firstMessage,
@@ -192,7 +185,6 @@ contract ExecutionChallenge is BisectionChallenge {
     ) public asserterAction {
         verifyPreCondition(
             _beforeHash,
-            _timeBounds,
             _beforeInbox,
             _beforeInboxValueSize,
             _afterHash,
@@ -206,7 +198,6 @@ contract ExecutionChallenge is BisectionChallenge {
 
         uint256 correctProof = OneStepProof.validateProof(
             _beforeHash,
-            _timeBounds,
             _beforeInbox,
             _beforeInboxValueSize,
             _afterHash,
@@ -226,7 +217,6 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function verifyPreCondition(
         bytes32 _beforeHash,
-        uint128[4] memory _timeBounds,
         bytes32 _beforeInbox,
         uint256 _beforeInboxValueSize,
         bytes32 _afterHash,
@@ -243,7 +233,6 @@ contract ExecutionChallenge is BisectionChallenge {
         );
         bytes32 precondition = Protocol.generatePreconditionHash(
             _beforeHash,
-            _timeBounds,
             beforeInbox
         );
         requireMatchesPrevState(

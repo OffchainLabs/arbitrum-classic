@@ -25,9 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
@@ -70,12 +68,6 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 		t.Fatal(err)
 	}
 
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(10000)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
-	}
 	maxSteps := uint64(100000)
 	inbox := value.NewEmptyTuple()
 
@@ -86,7 +78,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 		}
 		beforeHash := mach.Hash()
 		beforeMach := mach.Clone()
-		a, ranSteps := mach.ExecuteAssertion(1, timeBounds, inbox, 0)
+		a, ranSteps := mach.ExecuteAssertion(1, inbox, 0)
 		if ranSteps == 0 {
 			break
 		}
@@ -99,13 +91,12 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 			t.Fatal("machine stopped in error state")
 		}
 
-		precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
+		//precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(a)
-		hashPreImage := precond.BeforeInbox.GetPreImage()
+		hashPreImage := inbox.GetPreImage()
 		res, err := osp.ValidateProof(
 			&bind.CallOpts{Context: context.Background()},
-			precond.BeforeHash,
-			precond.TimeBounds.AsIntArray(),
+			beforeHash,
 			hashPreImage.GetInnerHash(),
 			big.NewInt(hashPreImage.Size()),
 			stub.AfterHash,

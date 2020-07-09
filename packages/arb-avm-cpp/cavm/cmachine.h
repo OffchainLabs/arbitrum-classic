@@ -70,10 +70,6 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit);
 

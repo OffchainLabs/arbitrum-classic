@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
@@ -58,12 +57,10 @@ func toEth(val *big.Int) *big.Float {
 }
 
 func runMessage(mach machine.Machine, msg message.Delivered) (evm.Result, error) {
-	tb := protocol.NewRandomTimeBounds()
 	vmInbox := structures.NewVMInbox()
 	vmInbox.DeliverMessage(msg)
 	assertion, _ := mach.ExecuteAssertion(
 		100000,
-		tb,
 		vmInbox.AsValue(),
 		1000,
 	)

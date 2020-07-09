@@ -148,7 +148,6 @@ library NodeGraphUtils {
     ) internal pure returns (bytes32) {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
             data.beforeVMHash,
-            data.timeBounds,
             data.importedMessagesSlice
         );
 

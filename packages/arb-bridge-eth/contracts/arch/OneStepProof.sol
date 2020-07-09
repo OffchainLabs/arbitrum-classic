@@ -33,7 +33,6 @@ library OneStepProof {
 
     struct ValidateProofData {
         bytes32 beforeHash;
-        uint128[4] timeBounds;
         Value.Data beforeInbox;
         bytes32 afterHash;
         bool didInboxInsn;
@@ -47,7 +46,6 @@ library OneStepProof {
 
     function validateProof(
         bytes32 beforeHash,
-        uint128[4] memory timeBounds,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
         bytes32 afterHash,
@@ -63,7 +61,6 @@ library OneStepProof {
             checkProof(
                 ValidateProofData(
                     beforeHash,
-                    timeBounds,
                     Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
                     afterHash,
                     didInboxInsn,
@@ -1010,7 +1007,6 @@ library OneStepProof {
 
     // System operations
     uint8 internal constant OP_SEND = 0x70;
-    uint8 internal constant OP_GETTIME = 0x71;
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
@@ -1130,8 +1126,6 @@ library OneStepProof {
             return (1, 100);
         } else if (opCode == OP_SEND) {
             return (1, 100);
-        } else if (opCode == OP_GETTIME) {
-            return (0, 40);
         } else if (opCode == OP_INBOX) {
             return (0, 40);
         } else if (opCode == OP_ERROR) {
@@ -1470,13 +1464,6 @@ library OneStepProof {
             } else {
                 messageHash = 0;
             }
-        } else if (opCode == OP_GETTIME) {
-            Value.Data[] memory contents = new Value.Data[](4);
-            contents[0] = Value.newInt(_data.timeBounds[0]);
-            contents[1] = Value.newInt(_data.timeBounds[1]);
-            contents[2] = Value.newInt(_data.timeBounds[2]);
-            contents[3] = Value.newInt(_data.timeBounds[3]);
-            endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
             correct = executeInboxInsn(endMachine, _data.beforeInbox);
         } else if (opCode == OP_ERROR) {

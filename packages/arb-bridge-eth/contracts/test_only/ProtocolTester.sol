@@ -44,14 +44,8 @@ contract ProtocolTester {
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
-        uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
     ) public pure returns (bytes32) {
-        return
-            Protocol.generatePreconditionHash(
-                _beforeHash,
-                _timeBounds,
-                _beforeInboxHash
-            );
+        return Protocol.generatePreconditionHash(_beforeHash, _beforeInboxHash);
     }
 }

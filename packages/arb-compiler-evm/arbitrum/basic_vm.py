@@ -373,9 +373,6 @@ class BasicVM:
         print("ecrecover does not yet support native python execution")
         exit()
 
-    def gettime(self):
-        self.stack.push(self.env.time_bounds)
-
     def bitwise_and(self):
         op1 = self.stack.pop()
         op2 = self.stack.pop()

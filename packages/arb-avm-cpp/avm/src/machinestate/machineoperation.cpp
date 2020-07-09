@@ -675,15 +675,6 @@ bool send(MachineState& m) {
     return success;
 }
 
-void getTime(MachineState& m) {
-    Tuple tup(m.context.timeBounds.lowerBoundBlock,
-              m.context.timeBounds.upperBoundBlock,
-              m.context.timeBounds.lowerBoundTimestamp,
-              m.context.timeBounds.upperBoundTimestamp, m.pool.get());
-    m.stack.push(std::move(tup));
-    ++m.pc;
-}
-
 BlockReason inboxOp(MachineState& m) {
     if (m.context.inbox.tuple_size() == 0) {
         return InboxBlocked();
