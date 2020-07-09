@@ -73,6 +73,7 @@ func testMessagesChallenge(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}

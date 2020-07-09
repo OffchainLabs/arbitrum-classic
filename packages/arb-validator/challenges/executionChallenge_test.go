@@ -65,6 +65,7 @@ func testExecutionChallenge(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
