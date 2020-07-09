@@ -91,11 +91,12 @@ SaveResults saveCodeSegment(
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
+    uint64_t existing_cp_count = 0;
     if (incr_ref_count) {
         auto iter = results.stored_value.begin();
         auto ptr = reinterpret_cast<const char*>(&*iter);
-        auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
-        if (cp_count >= snapshot.op_count) {
+        existing_cp_count = checkpoint::utils::deserialize_uint64(ptr);
+        if (existing_cp_count >= snapshot.op_count) {
             // If this segment is already saved with at least as many ops as is
             // currently contains, just increment the reference count
             return incrementReference(*transaction.transaction, key,
@@ -112,7 +113,11 @@ SaveResults saveCodeSegment(
         serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
         marshal_uint256_t(cp.nextHash, serialized_code);
         if (cp.op.immediate) {
-            saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+            // Only save the immediate value, if it hasn't been already saved
+            // for this code segment
+            if (i >= existing_cp_count) {
+                saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+            }
             marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
         }
     }
