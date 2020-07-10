@@ -25,12 +25,6 @@ import "./IGlobalInbox.sol";
 import "./Messages.sol";
 import "./PaymentRecords.sol";
 
-import "./arch/Protocol.sol";
-import "./arch/Value.sol";
-
-import "./libraries/SigUtils.sol";
-import "./libraries/BytesLib.sol";
-
 contract GlobalInbox is
     GlobalEthWallet,
     GlobalFTWallet,
@@ -42,12 +36,6 @@ contract GlobalInbox is
     uint8 internal constant ERC20_DEPOSIT = 1;
     uint8 internal constant ERC721_DEPOSIT = 2;
     uint8 internal constant L2_MSG = 3;
-
-    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
-
-    using Value for Value.Data;
-
-    address internal constant ETH_ADDRESS = address(0);
 
     struct Inbox {
         bytes32 value;

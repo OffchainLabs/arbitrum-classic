@@ -31,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/messagetester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/sigutilstester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
@@ -39,7 +38,6 @@ var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 
 var auth *bind.TransactOpts
 var tester *messagetester.MessageTester
-var sigTester *sigutilstester.SigUtilsTester
 var valueTester *valuetester.ValueTester
 var protocolTester *protocoltester.ProtocolTester
 
@@ -107,24 +105,6 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	_, sigTx, deployedSigTester, err := sigutilstester.DeploySigUtilsTester(
-		auth,
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
-		client,
-		auth.From,
-		sigTx,
-		"DeploySigUtilsTester",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	_, valTx, deployedValueTester, err := valuetester.DeployValueTester(
 		auth,
 		client,
@@ -161,7 +141,6 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	sigTester = deployedSigTester
 	tester = deployedMessageTester
 	valueTester = deployedValueTester
 	protocolTester = deployedProtocolTester
