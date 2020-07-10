@@ -17,10 +17,8 @@
 package ethbridge
 
 import (
-	"bytes"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func addressSliceToRaw(slice []common.Address) []ethcommon.Address {
@@ -31,28 +29,10 @@ func addressSliceToRaw(slice []common.Address) []ethcommon.Address {
 	return ret
 }
 
-func addressSliceToAddresses(slice []ethcommon.Address) []common.Address {
-	ret := make([]common.Address, 0, len(slice))
-	for _, a := range slice {
-		ret = append(ret, common.NewAddressFromEth(a))
-	}
-	return ret
-}
-
 func hashSliceToHashes(slice [][32]byte) []common.Hash {
 	ret := make([]common.Hash, 0, len(slice))
 	for _, a := range slice {
 		ret = append(ret, a)
 	}
 	return ret
-}
-
-func combineMessages(
-	messages []value.Value,
-) []byte {
-	var messageData bytes.Buffer
-	for _, msg := range messages {
-		_ = value.MarshalValue(msg, &messageData)
-	}
-	return messageData.Bytes()
 }

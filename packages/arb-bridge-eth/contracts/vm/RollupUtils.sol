@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,19 +16,13 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
 
-
 library RollupUtils {
-
-    uint256 constant VALID_CHILD_TYPE = 3;
-
-    event ConfirmedValidAssertion(
-        bytes32 indexed nodeHash
-    );
+    uint256 private constant VALID_CHILD_TYPE = 3;
 
     struct ConfirmData {
         bytes32 initalProtoStateHash;
@@ -39,71 +35,101 @@ library RollupUtils {
         bytes messages;
     }
 
-    function confirm(
-        RollupUtils.ConfirmData memory data,
-        bytes32 confNode
-    )
-        internal
-        pure
-        returns(bytes32[] memory validNodeHashes, bytes32 lastNode)
-    {
-        uint256 nodeCount = data.branches.length;
-        _verifyDataLength(data);
-        uint256 validNum = 0;
-        uint256 invalidNum = 0;
-        uint256 messagesOffset = 0;
-
-        validNodeHashes = new bytes32[](nodeCount);
-
-        bytes32 vmProtoStateHash = data.initalProtoStateHash;
-
-        for (uint256 i = 0; i < nodeCount; i++) {
-            uint256 branchType = data.branches[i];
-            bytes32 nodeDataHash;
-            if (branchType == VALID_CHILD_TYPE) {
-                (messagesOffset, nodeDataHash, vmProtoStateHash) = processValidNode(data, validNum, messagesOffset);
-                validNum++;
-            } else {
-                nodeDataHash = data.challengeNodeData[invalidNum];
-                invalidNum++;
-            }
-
-            confNode = childNodeHash(
-                confNode,
-                data.deadlineTicks[i],
-                nodeDataHash,
-                branchType,
-                vmProtoStateHash
-            );
-
-            if (branchType == VALID_CHILD_TYPE) {
-                validNodeHashes[validNum - 1] = confNode;
-            }
-        }
-        return (validNodeHashes, confNode);
+    struct NodeData {
+        uint256 validNum;
+        uint256 invalidNum;
+        uint256 messagesOffset;
+        bytes32 vmProtoStateHash;
+        bytes32 nodeHash;
     }
 
-    function generateLastMessageHash(bytes memory messages, uint256 startOffset, uint256 count) internal pure returns (bytes32, uint256) {
-        bool valid;
-        bytes32 hashVal = 0x00;
-        Value.Data memory messageVal;
-        uint256 offset = startOffset;
-        for (uint256 i = 0; i < count; i++) {
-            (valid, offset, messageVal) = Value.deserialize(messages, offset);
-            require(valid, "Invalid output message");
-            hashVal = keccak256(abi.encodePacked(hashVal, Value.hash(messageVal)));
+    function getInitialNodeData(bytes32 vmProtoStateHash, bytes32 confNode)
+        private
+        pure
+        returns (NodeData memory)
+    {
+        return NodeData(0, 0, 0, vmProtoStateHash, confNode);
+    }
+
+    function confirm(ConfirmData memory data, bytes32 confNode)
+        internal
+        pure
+        returns (bytes32[] memory validNodeHashes, bytes32)
+    {
+        verifyDataLength(data);
+
+        uint256 nodeCount = data.branches.length;
+        uint256 validNodeCount = data.messageCounts.length;
+        validNodeHashes = new bytes32[](validNodeCount);
+        NodeData memory currentNodeData = getInitialNodeData(
+            data.initalProtoStateHash,
+            confNode
+        );
+        bool isValidChildType;
+
+        for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+            (currentNodeData, isValidChildType) = processNode(
+                data,
+                currentNodeData,
+                nodeIndex
+            );
+
+            if (isValidChildType) {
+                validNodeHashes[currentNodeData.validNum - 1] = currentNodeData
+                    .nodeHash;
+            }
         }
-        return (hashVal, offset);
+        return (validNodeHashes, currentNodeData.nodeHash);
+    }
+
+    function processNode(
+        ConfirmData memory data,
+        NodeData memory nodeData,
+        uint256 nodeIndex
+    ) private pure returns (NodeData memory, bool) {
+        uint256 branchType = data.branches[nodeIndex];
+        bool isValidChildType = (branchType == VALID_CHILD_TYPE);
+        bytes32 nodeDataHash;
+
+        if (isValidChildType) {
+            (
+                nodeData.messagesOffset,
+                nodeDataHash,
+                nodeData.vmProtoStateHash
+            ) = processValidNode(
+                data,
+                nodeData.validNum,
+                nodeData.messagesOffset
+            );
+            nodeData.validNum++;
+        } else {
+            nodeDataHash = data.challengeNodeData[nodeData.invalidNum];
+            nodeData.invalidNum++;
+        }
+
+        nodeData.nodeHash = childNodeHash(
+            nodeData.nodeHash,
+            data.deadlineTicks[nodeIndex],
+            nodeDataHash,
+            branchType,
+            nodeData.vmProtoStateHash
+        );
+
+        return (nodeData, isValidChildType);
     }
 
     function processValidNode(
-        RollupUtils.ConfirmData memory data,
+        ConfirmData memory data,
         uint256 validNum,
         uint256 startOffset
     )
         internal
         pure
-        returns(uint256, bytes32, bytes32)
+        returns (
+            uint256,
+            bytes32,
+            bytes32
+        )
     {
         (bytes32 lastMsgHash, uint256 messagesOffset) = generateLastMessageHash(
             data.messages,
@@ -118,7 +144,29 @@ library RollupUtils {
         return (messagesOffset, nodeDataHash, vmProtoStateHash);
     }
 
-    function _verifyDataLength(RollupUtils.ConfirmData memory data) private pure{
+    function generateLastMessageHash(
+        bytes memory messages,
+        uint256 startOffset,
+        uint256 count
+    ) internal pure returns (bytes32, uint256) {
+        bool valid;
+        bytes32 hashVal = 0x00;
+        Value.Data memory messageVal;
+        uint256 offset = startOffset;
+        for (uint256 i = 0; i < count; i++) {
+            (valid, offset, messageVal) = Value.deserialize(messages, offset);
+            require(valid, "Invalid output message");
+            hashVal = keccak256(
+                abi.encodePacked(hashVal, Value.hash(messageVal))
+            );
+        }
+        return (hashVal, offset);
+    }
+
+    function verifyDataLength(RollupUtils.ConfirmData memory data)
+        private
+        pure
+    {
         uint256 nodeCount = data.branches.length;
         uint256 validNodeCount = data.messageCounts.length;
         require(data.vmProtoStateHashes.length == validNodeCount);
@@ -131,50 +179,24 @@ library RollupUtils {
         bytes32 machineHash,
         bytes32 inboxTop,
         uint256 inboxCount
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                machineHash,
-                inboxTop,
-                inboxCount
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(machineHash, inboxTop, inboxCount));
     }
 
-    function validDataHash(
-        bytes32 messagesAcc,
-        bytes32 logsAcc
-    )
+    function validDataHash(bytes32 messagesAcc, bytes32 logsAcc)
         internal
         pure
-        returns(bytes32)
+        returns (bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                messagesAcc,
-                logsAcc
-            )
-        );
+        return keccak256(abi.encodePacked(messagesAcc, logsAcc));
     }
 
-    function challengeDataHash(
-        bytes32 challenge,
-        uint256 challengePeriod
-    )
+    function challengeDataHash(bytes32 challenge, uint256 challengePeriod)
         internal
         pure
-        returns(bytes32)
+        returns (bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                challenge,
-                challengePeriod
-            )
-        );
+        return keccak256(abi.encodePacked(challenge, challengePeriod));
     }
 
     function childNodeHash(
@@ -183,54 +205,39 @@ library RollupUtils {
         bytes32 nodeDataHash,
         uint256 childType,
         bytes32 vmProtoStateHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                prevNodeHash,
-                keccak256(
-                    abi.encodePacked(
-                        vmProtoStateHash,
-                        deadlineTicks,
-                        nodeDataHash,
-                        childType
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    prevNodeHash,
+                    keccak256(
+                        abi.encodePacked(
+                            vmProtoStateHash,
+                            deadlineTicks,
+                            nodeDataHash,
+                            childType
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
-    function calculatePath(
-        bytes32 from,
-        bytes32[] memory proof
-    )
+    function calculateLeafFromPath(bytes32 from, bytes32[] memory proof)
         internal
         pure
-        returns(bytes32)
+        returns (bytes32)
     {
-        return calculatePathOffset(
-            from,
-            proof,
-            0,
-            proof.length
-        );
+        return calculateLeafFromPath(from, proof, 0, proof.length);
     }
 
-    function calculatePathOffset(
+    function calculateLeafFromPath(
         bytes32 from,
         bytes32[] memory proof,
         uint256 start,
         uint256 end
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
+    ) internal pure returns (bytes32) {
         bytes32 node = from;
-        for (uint256 i = start; i<end; i++) {
+        for (uint256 i = start; i < end; i++) {
             node = keccak256(abi.encodePacked(node, proof[i]));
         }
         return node;

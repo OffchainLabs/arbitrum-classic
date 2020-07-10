@@ -27,7 +27,7 @@
  *
  * @return Resource instance.
  */
-std::shared_ptr<RawTuple> TuplePool::getResource(int s) {
+std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     if (s == 0) {
         return nullptr;
     }

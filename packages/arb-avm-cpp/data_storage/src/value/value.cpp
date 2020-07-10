@@ -61,16 +61,14 @@ struct ValueSerializer {
 
     std::vector<unsigned char> operator()(const CodePointStub& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(CODEPT);
-        value_vector.push_back(type_code);
-        checkpoint::utils::serializeCodePointStub(val, value_vector);
+        value_vector.push_back(CODEPT);
+        val.marshal(value_vector);
         return value_vector;
     }
 
     std::vector<unsigned char> operator()(const HashPreImage& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(HASH_PRE_IMAGE);
-        value_vector.push_back(type_code);
+        value_vector.push_back(HASH_PRE_IMAGE);
         val.marshal(value_vector);
 
         return value_vector;
@@ -120,12 +118,6 @@ std::vector<std::vector<unsigned char>> parseTuple(
         return_vector.push_back(current);
     }
     return return_vector;
-}
-
-CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    auto pc_val = checkpoint::utils::deserialize_uint64(bufptr);
-    auto hash_val = deserializeUint256t(bufptr);
-    return {pc_val, hash_val};
 }
 
 DbResult<value> getTuple(const Transaction& transaction,
@@ -299,7 +291,6 @@ DbResult<value> getValue(const Transaction& transaction,
         }
         case HASH_PRE_IMAGE: {
             throw std::runtime_error("HASH_ONLY item");
-            return DbResult<value>();
         }
         default: {
             if (value_type - TUPLE > 8) {

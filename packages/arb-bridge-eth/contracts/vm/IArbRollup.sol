@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,8 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 interface IArbRollup {
     function init(
@@ -28,8 +29,9 @@ interface IArbRollup {
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress
-    )
-        external;
+    ) external;
 
-    function forwardContractMessage(address _sender, bytes calldata _data) external payable;
+    function forwardContractMessage(address _sender, bytes calldata _data)
+        external
+        payable;
 }

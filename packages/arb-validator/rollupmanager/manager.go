@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -33,11 +35,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
 const (
-	ValidEthBridgeVersion = "4"
+	ValidEthBridgeVersion = "develop"
 )
 
 var errNoActiveChain = errors.New("validator has no active chain")
@@ -54,8 +55,8 @@ type Manager struct {
 	// set and whenever activeChain is going to be set (but not when it is accessed)
 	sync.Mutex
 
-	listeners   []rollup.ChainListener
-	activeChain *rollup.ChainObserver
+	listeners   []chainlistener.ChainListener
+	activeChain *chainobserver.ChainObserver
 	// reorgCache is nil when the validator is functioning normally. When the
 	// validator experiences a reorg it stores the current state in the reorg
 	// cache. It uses this cache to respond to non-mutating queries from users
@@ -305,7 +306,7 @@ func CreateManagerAdvanced(
 	return man, nil
 }
 
-func (man *Manager) AddListener(listener rollup.ChainListener) {
+func (man *Manager) AddListener(listener chainlistener.ChainListener) {
 	man.Lock()
 	defer man.Unlock()
 	man.listeners = append(man.listeners, listener)
@@ -410,11 +411,11 @@ func initializeChainObserver(
 	clnt arbbridge.ChainTimeGetter,
 	watcher arbbridge.ArbRollupWatcher,
 	checkpointer checkpointing.RollupCheckpointer,
-) (*rollup.ChainObserver, error) {
+) (*chainobserver.ChainObserver, error) {
 	if checkpointer.HasCheckpointedState() {
-		var chain *rollup.ChainObserver
+		var chain *chainobserver.ChainObserver
 		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
-			chainObserverBuf := &rollup.ChainObserverBuf{}
+			chainObserverBuf := &chainobserver.ChainObserverBuf{}
 			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 				return err
 			}
@@ -435,5 +436,5 @@ func initializeChainObserver(
 	if err != nil {
 		log.Fatal(err)
 	}
-	return rollup.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
+	return chainobserver.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
 }

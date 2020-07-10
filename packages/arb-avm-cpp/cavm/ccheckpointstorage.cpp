@@ -38,7 +38,7 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
         auto storage =
             new CheckpointStorage(string_filename, string_contract_path);
         return static_cast<void*>(storage);
-    } catch (const std::exception& exp) {
+    } catch (const std::exception&) {
         return nullptr;
     }
 }
@@ -49,8 +49,9 @@ int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
 }
 
 void destroyCheckpointStorage(CCheckpointStorage* storage) {
-    if (storage == NULL)
+    if (storage == nullptr) {
         return;
+    }
     delete static_cast<CheckpointStorage*>(storage);
 }
 
@@ -116,7 +117,7 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
-    return returnValueResult(storage->getValue(hash), storage->getCode());
+    return returnValueResult(storage->getValue(hash));
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {

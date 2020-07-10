@@ -83,8 +83,8 @@ class BasicVM:
         self.aux_stack = Stack()
         self.register = value.Tuple([])
         self.static = value.Tuple([])
+        self.arb_gas_remaining = (1 << 256) - 1
         self.err_handler = None
-        self.atomic_count = 0
 
         self.env = VMEnv()
         self.halted = False
@@ -196,6 +196,20 @@ class BasicVM:
 
     def tget(self):
         instructions.tget(self.stack)
+
+    def xset(self):
+        index = self.stack.pop(value.IntType())
+        val = self.stack.pop(value.ValueType())
+        tup = self.aux_stack.pop(value.TupleType())
+        self.aux_stack.push(tup.set_tup_val(index, val))
+
+    def xget(self):
+        index = self.stack.pop(value.IntType())
+        tup = self.aux_stack.pop(value.TupleType())
+        if not tup.has_member_at_index(index):
+            raise Exception("Tried to get index {} from tuple {}".format(index, tup))
+        self.aux_stack.push(tup)
+        self.stack.push(tup.get_tup(index))
 
     def type(self):
         item = self.stack.pop()
@@ -358,6 +372,11 @@ class BasicVM:
         res = keccak(encode_single_packed("(uint256,uint256)", [op1, op2]))
         self.stack.push(big_endian_to_int(res))
 
+    def ecrecover(self):
+        self.stack.push(0)
+        print("ecrecover does not yet support native python execution")
+        exit()
+
     def gettime(self):
         self.stack.push(self.env.time_bounds)
 
@@ -388,11 +407,12 @@ class BasicVM:
         else:
             self.stack.push((op2 // 256 ** (31 - op1)) % 256)
 
-    def incatomic(self):
-        self.atomic_count += 1
+    def setgas(self):
+        gas = self.stack.pop()
+        self.arb_gas_remaining = gas
 
-    def decatomic(self):
-        self.atomic_count -= 1
+    def pushgas(self):
+        self.stack.push(self.arb_gas_remaining)
 
     def cast(self, typ):
         pass

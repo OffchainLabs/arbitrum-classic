@@ -4,8 +4,6 @@
 ### --------------------------------------------------------------------
 
 cd packages/arb-bridge-eth/contracts
-cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
-cp -r ../installed_contracts/bytes/ ./bytes
 
 abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
 abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
@@ -21,7 +19,10 @@ abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challenge
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 abigen --sol=test_only/SigUtilsTester.sol --pkg=sigutilstester --out=sigutilstester.go
 abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
+abigen --sol=test_only/ProtocolTester.sol --pkg=protocoltester --out=protocoltester.go
+abigen --sol=test_only/MachineTester.sol --pkg=machinetester --out=machinetester.go
 abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
+abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=onestepprooftester.go
 
 \mv arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
 \mv arbrollup.go ../../arb-validator-core/ethbridge/rollup/
@@ -34,8 +35,11 @@ abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 \mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
 \mv sigutilstester.go ../../arb-validator-core/ethbridgetest/sigutilstester/
 \mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
+\mv protocoltester.go ../../arb-validator-core/ethbridgetest/protocoltester/
+\mv machinetester.go ../../arb-validator/proofmachine/machinetester/
 \mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
-rm -rf @openzeppelin bytes
+\mv onestepprooftester.go ../../arb-validator-core/ethbridgetest/onestepprooftester/
+
 cd ../../..
 
 yarn workspace arb-provider-ethers update-abi

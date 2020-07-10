@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import arbitrum as arb
+import json
 
 count = 0
 
@@ -182,7 +183,7 @@ def test_arithmetic(vm):
     testBinaryOp(vm, 2, 256, 0, vm.exp)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -264,7 +265,7 @@ def test_logic(vm):
     testBinaryOp(vm, 65537, 2, 65537, vm.signextend)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -281,14 +282,14 @@ def test_hash(vm):
     )
     # TYPE
     testUnaryOp(vm, 3, 0, vm.type)
-    testUnaryOp(vm, arb.value.AVMCodePoint(0, 0, b"\0" * 32), 1, vm.type)
+    testUnaryOp(vm, arb.value.ERROR_CODE_POINT, 1, vm.type)
     testUnaryOp(vm, arb.value.Tuple([1, 2]), 3, vm.type)
     # SPUSH
     vm.spush()
     cmpEqual(vm, 4)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -309,7 +310,7 @@ def test_ethhash2(vm):
     )
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -380,7 +381,7 @@ def test_stack(vm):
     # ERRSET
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
@@ -425,9 +426,25 @@ def test_dup(vm):
     cmpEqual(vm, 8)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
+
+
+label_num = 0
+
+
+def should_error_block(vm, code):
+    global label_num
+    block_label = arb.ast.AVMLabel("test_block_" + str(label_num))
+    vm.push(block_label)
+    vm.errset()
+    code(vm)
+    vm.error()
+    vm.set_label(block_label)
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+    label_num += 1
 
 
 def test_tuple(vm):
@@ -438,15 +455,9 @@ def test_tuple(vm):
     vm.push(1)
     vm.tget()
     cmpEqual(vm, 8)
-    vm.push(arb.ast.AVMLabel("TGET_index_out_of_range"))
-    vm.errset()
-    vm.push(arb.value.Tuple([9, 8, 7, 6]))
-    vm.push(5)
-    vm.tget()
-    vm.error()
-    vm.set_label(arb.ast.AVMLabel("TGET_index_out_of_range"))
-    vm.push(arb.ast.AVMLabel("base_error_handler"))
-    vm.errset()
+    should_error_block(
+        vm, lambda vm: [vm.push(arb.value.Tuple([9, 8, 7, 6])), vm.push(5), vm.tget()]
+    )
     # TSET
     vm.push(3)
     vm.push(arb.value.Tuple([1, 2]))
@@ -458,20 +469,37 @@ def test_tuple(vm):
     vm.push(7)
     vm.tset()
     cmpEqual(vm, arb.value.Tuple([9, 9, 9, 9, 9, 9, 9, 3]))
-    vm.push(arb.ast.AVMLabel("TSET_index_out_of_range"))
-    vm.errset()
-    vm.push(3)
-    vm.push(arb.value.Tuple([1, 2]))
-    vm.push(2)
-    vm.tset()
-    vm.error()
-    vm.set_label(arb.ast.AVMLabel("TSET_index_out_of_range"))
-    vm.push(arb.ast.AVMLabel("base_error_handler"))
-    vm.errset()
+
+    should_error_block(
+        vm,
+        lambda vm: [
+            vm.push(3),
+            vm.push(arb.value.Tuple([1, 2])),
+            vm.push(2),
+            vm.tset(),
+        ],
+    )
     # TLEN
     vm.push(arb.value.Tuple([9, 8, 7, 6]))
     vm.tlen()
     cmpEqual(vm, 4)
+
+    # XGET
+    vm.push(arb.value.Tuple([9, 8, 7, 6]))
+    vm.auxpush()
+    vm.push(2)
+    vm.xget()
+    cmpEqual(vm, 7)
+
+    # XSET
+    vm.push(arb.value.Tuple([9, 8, 7, 6]))
+    vm.auxpush()
+    vm.push(1)
+    vm.push(2)
+    vm.xset()
+    vm.auxpop()
+    cmpEqual(vm, arb.value.Tuple([9, 8, 1, 6]))
+
     # BREAKPOINT
     vm.breakpoint()
     # LOG
@@ -495,56 +523,71 @@ def test_tuple(vm):
     #
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
-    vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
+    vm.push(arb.value.ERROR_CODE_POINT)
     vm.errset()
     vm.error()
 
 
-code = arb.compile_block(test_arithmetic)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("math ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestmath.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_logic)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("logic ", len(vm.code), " codepoints")
-with open("../arb-validator/proofmachine/opcodetestlogic.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_hash)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("hash ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodetesthash.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_ethhash2)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("ethhash2 ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestethhash2.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_stack)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-# vm.static = 4
-print("stack ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodeteststack.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_dup)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("dup ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodetestdup.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
-code = arb.compile_block(test_tuple)
-vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
-print("tuple ", len(vm.code), " codepoints")
-# print(vm.code)
-with open("../arb-validator/proofmachine/opcodetesttuple.ao", "wb") as f:
-    arb.marshall.marshall_vm(vm, f)
+def test_arbgas(vm):
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+
+    vm.push(1000000000000)
+    vm.setgas()
+
+    vm.pushgas()
+
+    vm.push(2)
+    vm.dup0()
+    vm.push(arb.ast.AVMLabel("out_of_arbgas_error"))
+    vm.errset()
+    vm.push(1)
+    vm.add()
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("out_of_arbgas_error"))
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+
+    vm.halt()
+    vm.set_label(arb.ast.AVMLabel("base_error_handler"))
+    vm.push(arb.value.ERROR_CODE_POINT)
+    vm.errset()
+    vm.error()
+
+
+def test_ecrecover(vm):
+    vm.push(
+        30389682118152071818050688435818811642998944855485126210296932908160964349251
+    )
+    vm.push(1)
+    vm.push(
+        51846986009028281302148438492841635320950266090793258738891771676577323106308
+    )
+    vm.push(
+        89187457569088100819123068890294098045489627058153492329444369343498977790775
+    )
+    vm.ecrecover()
+    vm.halt()
+    # The next line is required to fix https://github.com/OffchainLabs/arbitrum/pull/378
+    vm.error()
+
+
+tests = [
+    ["opcodetestmath", test_arithmetic],
+    ["opcodetestlogic", test_logic],
+    ["opcodetesthash", test_hash, 4],
+    ["opcodetestethhash2", test_ethhash2],
+    ["opcodeteststack", test_stack],
+    ["opcodetestdup", test_dup],
+    ["opcodetesttuple", test_tuple],
+    ["opcodetestarbgas", test_arbgas],
+    ["opcodetestecrecover", test_ecrecover],
+]
+
+for vm_test in tests:
+    code = arb.compile_block(vm_test[1])
+    vm = arb.compile_program(arb.ast.BlockStatement([]), code)
+    if len(vm_test) > 2:
+        vm.static = vm_test[2]
+    with open("../arb-validator/proofmachine/" + vm_test[0] + ".mexe", "w") as f:
+        json.dump(arb.marshall.marshall_vm_json(vm), f)

@@ -17,13 +17,30 @@
 package utils
 
 import (
+	"flag"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
-func LaunchRPC(handler http.Handler, port string) error {
+type RPCFlags struct {
+	certFile *string
+	keyFile  *string
+}
+
+func AddRPCFlags(fs *flag.FlagSet) RPCFlags {
+	certFile := fs.String("cert", "", "path to certificate file (if using ssl)")
+	privkeyFile := fs.String("privkey", "", "path to private key file (if using ssl)")
+
+	return RPCFlags{
+		certFile: certFile,
+		keyFile:  privkeyFile,
+	}
+}
+
+func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	r := mux.NewRouter()
 	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
 
@@ -34,9 +51,22 @@ func LaunchRPC(handler http.Handler, port string) error {
 	methodsOk := handlers.AllowedMethods(
 		[]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"},
 	)
+	h := handlers.CORS(headersOk, originsOk, methodsOk)(r)
 
-	return http.ListenAndServe(
-		":"+port,
-		handlers.CORS(headersOk, originsOk, methodsOk)(r),
-	)
+	if flags.certFile != nil && flags.keyFile != nil && *flags.certFile != "" && *flags.keyFile != "" {
+		log.Println("Launching rpc server over https with cert", *flags.certFile, "and key", *flags.keyFile)
+		return http.ListenAndServeTLS(
+			":"+port,
+			*flags.certFile,
+			*flags.keyFile,
+			h,
+		)
+	} else {
+		log.Println("Launching rpc server over http")
+		return http.ListenAndServe(
+			":"+port,
+			h,
+		)
+	}
+
 }

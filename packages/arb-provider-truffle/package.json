@@ -11,7 +11,9 @@
     "directory": "packages/arb-provider-truffle"
   },
   "scripts": {
-    "test": "jest --config jest.config.js",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "format": "prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "lint": "eslint ."
   },
@@ -24,7 +26,6 @@
     "ganache-core": "^2.10.1"
   },
   "devDependencies": {
-    "jest": "^25.1.0",
-    "jest-junit": "^10.0.0"
+    "mocha": "^7.2.0"
   }
 }

@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lavm_utils -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp
 #include "../cavm/cmachine.h"
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
@@ -170,6 +170,11 @@ func (m *Machine) ExecuteAssertion(
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+}
+
+func (m *Machine) MarshalState() ([]byte, error) {
+	stateData := C.machineMarshallState(m.c)
+	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {

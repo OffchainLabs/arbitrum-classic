@@ -5,7 +5,7 @@ import json
 import pkg_resources
 
 from arbitrum.evm.contract import Contract, create_evm_vm
-from arbitrum.marshall import marshall_vm
+from arbitrum.marshall import marshall_vm_json
 
 NAME = "arb-compiler-evm"
 __version__ = pkg_resources.require(NAME)[0].version
@@ -40,8 +40,8 @@ def main():
     contracts = [Contract(contract) for contract in raw_contracts if "code" in contract]
     vm = create_evm_vm(contracts, not args.optimize_off)
 
-    with open(args.output_file, "wb") as f:
-        marshall_vm(vm, f)
+    with open(args.output_file, "w") as outfile:
+        json.dump(marshall_vm_json(vm), outfile)
 
     print("Successfully created VM")
 

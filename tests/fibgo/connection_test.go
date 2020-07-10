@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -28,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
@@ -49,7 +49,6 @@ func setupValidators(
 	rand.Seed(seed)
 
 	ethURL := test.GetEthUrl()
-	contract := "contract.ao"
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 
@@ -109,6 +108,8 @@ func setupValidators(
 		return err
 	}
 
+	contract := "contract.mexe"
+
 	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
 		return err
@@ -150,9 +151,9 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
-	manager1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
+	manager1.AddListener(&chainlistener.AnnouncerListener{"chainObserver1: "})
 
-	validatorListener1 := rollup.NewValidatorChainListener(
+	validatorListener1 := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupAddress,
 		rollupActor1,
@@ -173,9 +174,9 @@ func setupValidators(
 	if err != nil {
 		return err
 	}
-	manager2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
+	manager2.AddListener(&chainlistener.AnnouncerListener{"chainObserver2: "})
 
-	validatorListener2 := rollup.NewValidatorChainListener(
+	validatorListener2 := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupAddress,
 		rollupActor2,
@@ -208,7 +209,7 @@ func setupValidators(
 			t.Fatal(err)
 		}
 
-		if err := utils.LaunchRPC(s, "1235"); err != nil {
+		if err := utils.LaunchRPC(s, "1235", utils.RPCFlags{}); err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -229,6 +230,8 @@ waitloop:
 			if err := conn.Close(); err != nil {
 				t.Fatal(err)
 			}
+			// Wait for the validator to catch up to head
+			time.Sleep(time.Second * 2)
 			break waitloop
 		case <-time.After(time.Second * 5):
 			t.Fatal("Couldn't connect to rpc")

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,44 +16,68 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 contract PaymentRecords {
-	mapping(bytes32 => mapping(uint256 => mapping(address => address))) paymentMap;
+    mapping(bytes32 => address) private payments;
 
     event PaymentTransfer(
-        bytes32 nodeHash, 
+        bytes32 nodeHash,
         uint256 messageIndex,
         address originalOwner,
         address prevOwner,
-        address newOwner);
-
+        address newOwner
+    );
 
     function transferPayment(
         address originalOwner,
-        address newOwner, 
-        bytes32 nodeHash, 
-        uint256 messageIndex) external
-    {
-        address currentOwner = getPaymentOwner(originalOwner, nodeHash, messageIndex);
+        address newOwner,
+        bytes32 nodeHash,
+        uint256 messageIndex
+    ) external {
+        address currentOwner = getPaymentOwner(
+            originalOwner,
+            nodeHash,
+            messageIndex
+        );
         require(msg.sender == currentOwner, "Must be payment owner.");
 
-        paymentMap[nodeHash][messageIndex][originalOwner] = newOwner;
+        payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )] = newOwner;
 
-        emit PaymentTransfer(nodeHash, messageIndex, originalOwner, currentOwner, newOwner);
+        emit PaymentTransfer(
+            nodeHash,
+            messageIndex,
+            originalOwner,
+            currentOwner,
+            newOwner
+        );
     }
 
     function getPaymentOwner(
         address originalOwner,
-        bytes32 nodeHash, 
-        uint256 messageIndex) public view returns(address)
-    {
-    	address currentOwner = paymentMap[nodeHash][messageIndex][originalOwner];
+        bytes32 nodeHash,
+        uint256 messageIndex
+    ) public view returns (address) {
+        address currentOwner = payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )];
 
-    	if(currentOwner == address(0)){
-    		return originalOwner;
-		}else{
-			return currentOwner;
-		}
+        if (currentOwner == address(0)) {
+            return originalOwner;
+        } else {
+            return currentOwner;
+        }
+    }
+
+    function deletePayment(
+        address originalOwner,
+        bytes32 nodeHash,
+        uint256 messageIndex
+    ) internal {
+        delete payments[keccak256(
+            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+        )];
     }
 }

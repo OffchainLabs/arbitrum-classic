@@ -46,6 +46,7 @@ set_target_properties(
 )
 
 target_compile_options(avm PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(avm PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_include_directories(avm PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -57,7 +58,9 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC avm_values Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
+find_package(GMP REQUIRED)
+
+target_link_libraries(avm PUBLIC avm_values Boost::boost Boost::filesystem RocksDB::RocksDB Threads::Threads secp256k1 ff PRIVATE avm_utils ${GMP_LIBRARY})
 
 target_code_coverage(avm AUTO ALL)
 

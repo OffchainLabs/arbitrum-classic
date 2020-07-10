@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,76 +16,51 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./Value.sol";
 
-
 library Protocol {
     using Value for Value.Data;
-
-    function generateMessageStubHash(
-        Value.Data memory _dataHashValue,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _destination
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        Value.Data[] memory values = new Value.Data[](4);
-        values[0] = _dataHashValue;
-        values[1] = Value.newInt(uint256(_destination));
-        values[2] = Value.newInt(_value);
-        values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-        return Value.newTuple(values).hash();
-    }
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _beforeHash,
-                _timeBounds[0],
-                _timeBounds[1],
-                _timeBounds[2],
-                _timeBounds[3],
-                _beforeInboxHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _beforeHash,
+                    _timeBounds[0],
+                    _timeBounds[1],
+                    _timeBounds[2],
+                    _timeBounds[3],
+                    _beforeInboxHash
+                )
+            );
     }
 
     function generateAssertionHash(
         bytes32 _afterHash,
-        bool    _didInboxInsn,
-        uint64  _numGas,
+        bool _didInboxInsn,
+        uint64 _numGas,
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
         bytes32 _lastLogHash
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _afterHash,
-                _didInboxInsn,
-                _numGas,
-                _firstMessageHash,
-                _lastMessageHash,
-                _firstLogHash,
-                _lastLogHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _afterHash,
+                    _didInboxInsn,
+                    _numGas,
+                    _firstMessageHash,
+                    _lastMessageHash,
+                    _firstLogHash,
+                    _lastLogHash
+                )
+            );
     }
 }

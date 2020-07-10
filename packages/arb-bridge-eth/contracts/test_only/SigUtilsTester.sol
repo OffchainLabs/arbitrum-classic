@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,39 +16,28 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../libraries/SigUtils.sol";
 
 contract SigUtilsTester {
-
-    function parseSignature(
-        bytes memory _data,
-        uint256 _start
-    )
+    function parseSignature(bytes memory _data, uint256 _start)
         public
         pure
-        returns (uint8 v, bytes32 r, bytes32 s)
+        returns (
+            uint8 v,
+            bytes32 r,
+            bytes32 s
+        )
     {
-        return SigUtils.parseSignature(
-            _data,
-            _start
-        );
+        return SigUtils.parseSignature(_data, _start);
     }
 
     function recoverAddressFromData(
         bytes32 _messageHash,
         bytes memory _data,
         uint256 _offset
-    )
-        public
-        pure
-        returns (address)
-    {
-        return SigUtils.recoverAddressFromData(
-            _messageHash,
-            _data,
-            _offset
-        );
+    ) public pure returns (address) {
+        return SigUtils.recoverAddressFromData(_messageHash, _data, _offset);
     }
 }

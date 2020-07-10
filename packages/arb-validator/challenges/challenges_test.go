@@ -16,9 +16,19 @@
 
 package challenges
 
-import "testing"
+import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"testing"
+)
+
+var testerAddress common.Address
 
 func TestChallenges(t *testing.T) {
+	var err error
+	testerAddress, err = launchChallengeTester("e4b33c0bb790b88f2463facaf86ae7c17cbdab41187e69ddde8cc1c1fda7c9ab")
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Run("Inbox Top Challenge", testInboxTopChallenge)
 	t.Run("Messages Challenge", testMessagesChallenge)
 	t.Run("Execution Challenge", testExecutionChallenge)

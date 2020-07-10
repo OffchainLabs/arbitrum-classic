@@ -19,6 +19,16 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
+#include <secp256k1_recovery.h>
+#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
+namespace {
+template <typename T>
+static T shrink(uint256_t i) {
+    return static_cast<T>(i & std::numeric_limits<T>::max());
+}
+}  // namespace
+
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
@@ -326,9 +336,9 @@ void signExtend(MachineState& m) {
     if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        uint256_t t = 248 - 8 * bNum;
-        int signBit = bit(aNum, (int)(255 - t));
-        uint256_t mask = power(uint256_t(2), uint64_t(255 - t)) - 1;
+        unsigned int t = 248 - 8 * static_cast<unsigned int>(bNum);
+        int signBit = bit(aNum, 255 - t);
+        uint256_t mask = power(uint256_t(2), 255 - t) - 1;
         if (signBit == 0) {
             m.stack[1] = aNum & mask;
         } else {
@@ -403,7 +413,7 @@ void jump(MachineState& m) {
     m.stack.prepForMod(1);
     auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
     if (target) {
-        m.pc = *target;
+        m.pc = target->pc;
     } else {
         m.state = Status::Error;
     }
@@ -416,7 +426,7 @@ void cjump(MachineState& m) {
     auto& bNum = assumeInt(m.stack[1]);
     if (bNum != 0) {
         if (target) {
-            m.pc = *target;
+            m.pc = target->pc;
         } else {
             m.state = Status::Error;
         }
@@ -437,7 +447,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.static_values->code[m.pc]});
+    m.stack.push(CodePointStub{m.pc, m.static_values->code[m.pc]});
     ++m.pc;
 }
 
@@ -465,7 +475,7 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.static_values->code[m.errpc]});
+    m.stack.push(CodePointStub{m.errpc, m.static_values->code[m.errpc]});
     ++m.pc;
 }
 
@@ -475,7 +485,7 @@ void errSet(MachineState& m) {
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
-        m.errpc = *codePointVal;
+        m.errpc = codePointVal->pc;
     }
     m.stack.popClear();
     ++m.pc;
@@ -533,9 +543,86 @@ void tset(MachineState& m) {
     ++m.pc;
 }
 
+void xget(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
+    auto& tup = assumeTuple(m.auxstack[0]);
+    m.stack[0] = tup.get_element(index);
+    ++m.pc;
+}
+
+void xset(MachineState& m) {
+    m.stack.prepForMod(2);
+    m.auxstack.prepForMod(1);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
+    auto& tup = assumeTuple(m.auxstack[0]);
+    tup.set_element(index, std::move(m.stack[1]));
+    m.auxstack[0] = std::move(tup);
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void tlen(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
+    ++m.pc;
+}
+
+namespace {
+uint256_t parseSignature(MachineState& m) {
+    auto recovery_int = assumeInt(m.stack[2]);
+    if (recovery_int != 0 && recovery_int != 1) {
+        return 0;
+    }
+    std::array<unsigned char, 64> sig_raw;
+    to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
+    to_big_endian(assumeInt(m.stack[1]), sig_raw.begin() + 32);
+
+    std::array<unsigned char, 32> message;
+    to_big_endian(assumeInt(m.stack[3]), message.begin());
+
+    static secp256k1_context* context = secp256k1_context_create(
+        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+
+    secp256k1_ecdsa_recoverable_signature sig;
+    int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
+        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+    if (!parsed_sig) {
+        return 0;
+    }
+
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.data())) {
+        return 0;
+    }
+
+    std::array<unsigned char, 65> pubkey_raw;
+    size_t output_length = pubkey_raw.size();
+    int serialized_pubkey = secp256k1_ec_pubkey_serialize(
+        context, pubkey_raw.data(), &output_length, &pubkey,
+        SECP256K1_EC_UNCOMPRESSED);
+    if (!serialized_pubkey) {
+        return 0;
+    }
+
+    std::array<unsigned char, 32> hash_data;
+    // Skip header byte
+    evm::Keccak_256(pubkey_raw.data() + 1, 64, hash_data.data());
+    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
+    return from_big_endian(hash_data.begin(), hash_data.end());
+}
+}  // namespace
+
+void ec_recover(MachineState& m) {
+    m.stack.prepForMod(4);
+
+    m.stack[3] = parseSignature(m);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
     ++m.pc;
 }
 
@@ -608,5 +695,19 @@ BlockReason inboxOp(MachineState& m) {
         m.context.executedInbox();
         return NotBlocked{};
     }
+}
+
+void setgas(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& aNum = assumeInt(m.stack[0]);
+    m.arb_gas_remaining = aNum;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void pushgas(MachineState& m) {
+    auto& gas = m.arb_gas_remaining;
+    m.stack.push(gas);
+    ++m.pc;
 }
 }  // namespace machineoperation

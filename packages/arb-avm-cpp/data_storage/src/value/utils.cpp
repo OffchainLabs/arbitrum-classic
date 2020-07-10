@@ -18,7 +18,6 @@
 
 #include "utils.hpp"
 
-#include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
 
@@ -34,21 +33,7 @@ std::unordered_map<int, int> blockreason_type_length = {{0, 1},
 
 namespace checkpoint {
 
-void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, UINT64_SIZE> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
 namespace utils {
-
-void serializeCodePointStub(const CodePointStub& val,
-                            std::vector<unsigned char>& value_vector) {
-    marshal_uint64_t(val.pc, value_vector);
-    marshal_uint256_t(val.hash, value_vector);
-}
 
 uint64_t deserialize_uint64(const char*& bufptr) {
     uint64_t ret_value;

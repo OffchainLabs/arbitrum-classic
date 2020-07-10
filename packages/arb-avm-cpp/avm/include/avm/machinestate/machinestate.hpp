@@ -42,7 +42,7 @@ struct AssertionContext {
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    AssertionContext() = default;
+    AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
 
     explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
         : timeBounds(tb),
@@ -63,6 +63,7 @@ struct MachineState {
     value registerVal;
     Datastack stack;
     Datastack auxstack;
+    uint256_t arb_gas_remaining;
     Status state = Status::Extensive;
     CodePointRef pc;
     CodePointRef errpc;
@@ -71,36 +72,26 @@ struct MachineState {
     static std::pair<MachineState, bool> loadFromFile(
         const std::string& contract_filename);
 
-    MachineState()
-        : pool(std::make_unique<TuplePool>()), pc(0, false), errpc(0, true) {}
+    MachineState();
 
     MachineState(std::shared_ptr<const StaticVmValues> static_values_,
-                 std::shared_ptr<TuplePool> pool_)
-        : pool(std::move(pool_)),
-          static_values(std::move(static_values_)),
-          pc(0, false),
-          errpc(0, true) {}
+                 std::shared_ptr<TuplePool> pool_);
 
     MachineState(std::shared_ptr<TuplePool> pool_,
                  std::shared_ptr<const StaticVmValues> static_values_,
                  value register_val_,
                  Datastack stack_,
                  Datastack auxstack_,
+                 uint256_t arb_gas_remaining_,
                  Status state_,
                  CodePointRef pc_,
-                 CodePointRef errpc_)
-        : pool(std::move(pool_)),
-          static_values(std::move(static_values_)),
-          registerVal(std::move(register_val_)),
-          stack(std::move(stack_)),
-          auxstack(std::move(auxstack_)),
-          state(state_),
-          pc(pc_),
-          errpc(errpc_) {}
+                 CodePointRef errpc_);
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();
+    std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
+    BlockReason runOne();
     uint256_t hash() const;
     BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
 };

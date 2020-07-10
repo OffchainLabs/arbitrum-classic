@@ -27,7 +27,7 @@ var (
 )
 
 // ChallengeTesterABI is the input ABI used to generate the binding from.
-const ChallengeTesterABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"challengeFactory_\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeTemplate\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"codeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"cloneAddress\",\"type\":\"address\"}],\"name\":\"ChallengeInfo\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ChallengeTesterABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"challengeFactory_\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ChallengeTesterFuncSigs maps the 4-byte function signature to its string representation.
 var ChallengeTesterFuncSigs = map[string]string{
@@ -36,7 +36,7 @@ var ChallengeTesterFuncSigs = map[string]string{
 }
 
 // ChallengeTesterBin is the compiled bytecode used for deploying new contracts.
-var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516102073803806102078339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b03199092169190911790556101a2806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80636bc3cd221461003b5780638f43ee3214610073575b600080fd5b6100716004803603606081101561005157600080fd5b506001600160a01b038135811691602081013590911690604001356100be565b005b610071600480360360a081101561008957600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100c3565b505050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013a57600080fd5b505af115801561014e573d6000803e3d6000fd5b505050506040513d602081101561016457600080fd5b5050505050505056fea265627a7a72315820bd8fc0c9d6bf3bde3d10ff96eff9b4aefcc24d6b3f20c9ed251e0306f690e14b64736f6c634300050d0032"
+var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516102073803806102078339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b03199092169190911790556101a2806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80636bc3cd221461003b5780638f43ee3214610073575b600080fd5b6100716004803603606081101561005157600080fd5b506001600160a01b038135811691602081013590911690604001356100be565b005b610071600480360360a081101561008957600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100c3565b505050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013a57600080fd5b505af115801561014e573d6000803e3d6000fd5b505050506040513d602081101561016457600080fd5b5050505050505056fea265627a7a7231582092bda98c44ad349f3d9dd3c416d2abff2fe3edd7d4d503ffbfd42998df23f17a64736f6c634300050f0032"
 
 // DeployChallengeTester deploys a new Ethereum contract, binding an instance of ChallengeTester to it.
 func DeployChallengeTester(auth *bind.TransactOpts, backend bind.ContractBackend, challengeFactory_ common.Address) (common.Address, *types.Transaction, *ChallengeTester, error) {
@@ -194,28 +194,25 @@ func (_ChallengeTester *ChallengeTesterTransactorRaw) Transact(opts *bind.Transa
 	return _ChallengeTester.Contract.contract.Transact(opts, method, params...)
 }
 
-// ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
-func (_ChallengeTester *ChallengeTesterCaller) ResolveChallenge(opts *bind.CallOpts, winner common.Address, loser common.Address, challengeType *big.Int) error {
-	var ()
-	out := &[]interface{}{}
-	err := _ChallengeTester.contract.Call(opts, out, "resolveChallenge", winner, loser, challengeType)
-	return err
+// Solidity: function resolveChallenge(address , address , uint256 ) returns()
+func (_ChallengeTester *ChallengeTesterTransactor) ResolveChallenge(opts *bind.TransactOpts, arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
+	return _ChallengeTester.contract.Transact(opts, "resolveChallenge", arg0, arg1, arg2)
 }
 
-// ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
-func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
-	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address , address , uint256 ) returns()
+func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
+	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1, arg2)
 }
 
-// ResolveChallenge is a free data retrieval call binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) view returns()
-func (_ChallengeTester *ChallengeTesterCallerSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) error {
-	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.CallOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address , address , uint256 ) returns()
+func (_ChallengeTester *ChallengeTesterTransactorSession) ResolveChallenge(arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
+	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1, arg2)
 }
 
 // StartChallenge is a paid mutator transaction binding the contract method 0x8f43ee32.
@@ -237,142 +234,6 @@ func (_ChallengeTester *ChallengeTesterSession) StartChallenge(asserterAddress c
 // Solidity: function startChallenge(address asserterAddress, address challengerAddress, uint128 challengerPeriodTicks, bytes32 challengerDataHash, uint256 challengeType) returns()
 func (_ChallengeTester *ChallengeTesterTransactorSession) StartChallenge(asserterAddress common.Address, challengerAddress common.Address, challengerPeriodTicks *big.Int, challengerDataHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
 	return _ChallengeTester.Contract.StartChallenge(&_ChallengeTester.TransactOpts, asserterAddress, challengerAddress, challengerPeriodTicks, challengerDataHash, challengeType)
-}
-
-// ChallengeTesterChallengeInfoIterator is returned from FilterChallengeInfo and is used to iterate over the raw logs and unpacked data for ChallengeInfo events raised by the ChallengeTester contract.
-type ChallengeTesterChallengeInfoIterator struct {
-	Event *ChallengeTesterChallengeInfo // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ChallengeTesterChallengeInfoIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ChallengeTesterChallengeInfo)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ChallengeTesterChallengeInfo)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ChallengeTesterChallengeInfoIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ChallengeTesterChallengeInfoIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ChallengeTesterChallengeInfo represents a ChallengeInfo event raised by the ChallengeTester contract.
-type ChallengeTesterChallengeInfo struct {
-	ChallengeTemplate common.Address
-	Nonce             *big.Int
-	CodeHash          [32]byte
-	CloneAddress      common.Address
-	Raw               types.Log // Blockchain specific contextual infos
-}
-
-// FilterChallengeInfo is a free log retrieval operation binding the contract event 0xf6894746d43f1ffb08f3b07337aed4e8f9d76fb78b92516ba96d89eb9976812a.
-//
-// Solidity: event ChallengeInfo(address challengeTemplate, uint256 nonce, bytes32 codeHash, address cloneAddress)
-func (_ChallengeTester *ChallengeTesterFilterer) FilterChallengeInfo(opts *bind.FilterOpts) (*ChallengeTesterChallengeInfoIterator, error) {
-
-	logs, sub, err := _ChallengeTester.contract.FilterLogs(opts, "ChallengeInfo")
-	if err != nil {
-		return nil, err
-	}
-	return &ChallengeTesterChallengeInfoIterator{contract: _ChallengeTester.contract, event: "ChallengeInfo", logs: logs, sub: sub}, nil
-}
-
-// WatchChallengeInfo is a free log subscription operation binding the contract event 0xf6894746d43f1ffb08f3b07337aed4e8f9d76fb78b92516ba96d89eb9976812a.
-//
-// Solidity: event ChallengeInfo(address challengeTemplate, uint256 nonce, bytes32 codeHash, address cloneAddress)
-func (_ChallengeTester *ChallengeTesterFilterer) WatchChallengeInfo(opts *bind.WatchOpts, sink chan<- *ChallengeTesterChallengeInfo) (event.Subscription, error) {
-
-	logs, sub, err := _ChallengeTester.contract.WatchLogs(opts, "ChallengeInfo")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ChallengeTesterChallengeInfo)
-				if err := _ChallengeTester.contract.UnpackLog(event, "ChallengeInfo", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseChallengeInfo is a log parse operation binding the contract event 0xf6894746d43f1ffb08f3b07337aed4e8f9d76fb78b92516ba96d89eb9976812a.
-//
-// Solidity: event ChallengeInfo(address challengeTemplate, uint256 nonce, bytes32 codeHash, address cloneAddress)
-func (_ChallengeTester *ChallengeTesterFilterer) ParseChallengeInfo(log types.Log) (*ChallengeTesterChallengeInfo, error) {
-	event := new(ChallengeTesterChallengeInfo)
-	if err := _ChallengeTester.contract.UnpackLog(event, "ChallengeInfo", log); err != nil {
-		return nil, err
-	}
-	return event, nil
 }
 
 // IChallengeFactoryABI is the input ABI used to generate the binding from.
@@ -571,4 +432,175 @@ func (_IChallengeFactory *IChallengeFactorySession) CreateChallenge(_asserter co
 // Solidity: function createChallenge(address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeHash, uint256 challengeType) returns(address)
 func (_IChallengeFactory *IChallengeFactoryTransactorSession) CreateChallenge(_asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
 	return _IChallengeFactory.Contract.CreateChallenge(&_IChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriodTicks, _challengeHash, challengeType)
+}
+
+// IStakingABI is the input ABI used to generate the binding from.
+const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// IStakingFuncSigs maps the 4-byte function signature to its string representation.
+var IStakingFuncSigs = map[string]string{
+	"6bc3cd22": "resolveChallenge(address,address,uint256)",
+}
+
+// IStaking is an auto generated Go binding around an Ethereum contract.
+type IStaking struct {
+	IStakingCaller     // Read-only binding to the contract
+	IStakingTransactor // Write-only binding to the contract
+	IStakingFilterer   // Log filterer for contract events
+}
+
+// IStakingCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IStakingCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IStakingTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IStakingTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IStakingFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IStakingFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IStakingSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type IStakingSession struct {
+	Contract     *IStaking         // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IStakingCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type IStakingCallerSession struct {
+	Contract *IStakingCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts   // Call options to use throughout this session
+}
+
+// IStakingTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type IStakingTransactorSession struct {
+	Contract     *IStakingTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+}
+
+// IStakingRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IStakingRaw struct {
+	Contract *IStaking // Generic contract binding to access the raw methods on
+}
+
+// IStakingCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IStakingCallerRaw struct {
+	Contract *IStakingCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IStakingTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IStakingTransactorRaw struct {
+	Contract *IStakingTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIStaking creates a new instance of IStaking, bound to a specific deployed contract.
+func NewIStaking(address common.Address, backend bind.ContractBackend) (*IStaking, error) {
+	contract, err := bindIStaking(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IStaking{IStakingCaller: IStakingCaller{contract: contract}, IStakingTransactor: IStakingTransactor{contract: contract}, IStakingFilterer: IStakingFilterer{contract: contract}}, nil
+}
+
+// NewIStakingCaller creates a new read-only instance of IStaking, bound to a specific deployed contract.
+func NewIStakingCaller(address common.Address, caller bind.ContractCaller) (*IStakingCaller, error) {
+	contract, err := bindIStaking(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IStakingCaller{contract: contract}, nil
+}
+
+// NewIStakingTransactor creates a new write-only instance of IStaking, bound to a specific deployed contract.
+func NewIStakingTransactor(address common.Address, transactor bind.ContractTransactor) (*IStakingTransactor, error) {
+	contract, err := bindIStaking(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IStakingTransactor{contract: contract}, nil
+}
+
+// NewIStakingFilterer creates a new log filterer instance of IStaking, bound to a specific deployed contract.
+func NewIStakingFilterer(address common.Address, filterer bind.ContractFilterer) (*IStakingFilterer, error) {
+	contract, err := bindIStaking(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IStakingFilterer{contract: contract}, nil
+}
+
+// bindIStaking binds a generic wrapper to an already deployed contract.
+func bindIStaking(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IStakingABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IStaking *IStakingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IStaking.Contract.IStakingCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IStaking *IStakingRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IStaking.Contract.IStakingTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IStaking *IStakingRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IStaking.Contract.IStakingTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IStaking *IStakingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IStaking.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IStaking *IStakingTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IStaking.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IStaking *IStakingTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IStaking.Contract.contract.Transact(opts, method, params...)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+//
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser, challengeType)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+//
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+//
+// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
+func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
 }

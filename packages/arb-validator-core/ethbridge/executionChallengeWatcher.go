@@ -43,8 +43,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
-	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID
+	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID
 }
 
 type executionChallengeWatcher struct {

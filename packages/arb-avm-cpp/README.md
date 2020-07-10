@@ -7,8 +7,6 @@ Arbitrum technologies are patent pending. This repository is offered under the A
 ```bash
 mkdir release
 cd release
-conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
-conan install ..
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 ctest .

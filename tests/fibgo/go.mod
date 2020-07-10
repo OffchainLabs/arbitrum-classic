@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/tests/fibgo
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.9.13
+	github.com/ethereum/go-ethereum v1.9.15
 	github.com/gorilla/rpc v1.2.0
 	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.4
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
@@ -16,8 +16,6 @@ replace github.com/offchainlabs/arbitrum/packages/arb-provider-go => ../../packa
 replace github.com/offchainlabs/arbitrum/packages/arb-validator => ../../packages/arb-validator
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../../packages/arb-validator-core
-
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../../packages/arb-avm-go
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../../packages/arb-avm-cpp
 

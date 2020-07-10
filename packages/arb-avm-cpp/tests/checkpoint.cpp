@@ -286,9 +286,11 @@ TEST_CASE("Save And Get Tuple") {
     }
 }
 
-void saveState(Transaction& transaction, const Machine& machine) {
+void saveState(Transaction& transaction,
+               const Machine& machine,
+               uint256_t expected_ref_count) {
     auto results = saveMachine(transaction, machine);
-    REQUIRE(results.reference_count == 1);
+    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok());
     REQUIRE(transaction.commit().ok());
 }
@@ -345,7 +347,10 @@ void deleteCheckpoint(Transaction& transaction,
 
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
+    Code code;
+    code.addOperation(Operation(OpCode::ADD));
+    code.addOperation(Operation(OpCode::MUL));
+    code.addOperation(Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
@@ -359,6 +364,8 @@ Machine getComplexMachine() {
     aux_stack.push(register_val);
     aux_stack.push(code_point_stub);
 
+    uint256_t arb_gas_remaining = 534574678365;
+
     CodePointStub pc(0, 645357);
     CodePointStub err_pc(0, 968769876);
     Status state = Status::Extensive;
@@ -366,33 +373,26 @@ Machine getComplexMachine() {
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));
     return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc, err_pc));
+                                data_stack, aux_stack, arb_gas_remaining, state,
+                                pc.pc, err_pc.pc));
 }
 
 Machine getDefaultMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code{std::vector<CodePoint>{CodePoint{0, OpCode::ADD, 5453}}};
+    Code code;
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
-    CodePointStub pc(0, false);
-    CodePointStub err_pc(0, true);
+    uint256_t arb_gas_remaining = 534574678365;
+    CodePointRef pc(0, false);
+    CodePointRef err_pc(0, true);
     Status state = Status::Extensive;
     auto static_values = std::make_shared<StaticVmValues>(
         std::move(code), std::move(static_val));
     return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc, err_pc));
-}
-
-std::vector<uint256_t> getHashKeys(MachineStateKeys data) {
-    std::vector<uint256_t> hash_keys;
-
-    hash_keys.push_back(data.auxstack_hash);
-    hash_keys.push_back(data.datastack_hash);
-    hash_keys.push_back(data.register_hash);
-
-    return hash_keys;
+                                data_stack, aux_stack, arb_gas_remaining, state,
+                                pc, err_pc));
 }
 
 TEST_CASE("Save Machinestatedata") {
@@ -403,11 +403,11 @@ TEST_CASE("Save Machinestatedata") {
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
     }
     SECTION("with values") {
         auto machine = getComplexMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
     }
 }
 
@@ -419,13 +419,12 @@ TEST_CASE("Get Machinestate data") {
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         checkSavedState(*transaction, machine, 1);
     }
     SECTION("with values") {
         auto machine = getComplexMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
         checkSavedState(*transaction, machine, 1);
     }
 }
@@ -438,35 +437,33 @@ TEST_CASE("Delete checkpoint") {
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         deleteCheckpoint(*transaction, machine);
     }
     SECTION("with actual state values") {
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         deleteCheckpoint(*transaction, machine);
     }
     SECTION("delete checkpoint saved twice") {
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        saveMachine(*transaction, machine);
-        transaction->commit();
-
-        auto res = deleteMachine(*transaction, machine.hash());
+        saveState(*transaction, machine, 1);
+        {
+            auto transaction2 = storage.makeTransaction();
+            saveState(*transaction2, machine, 2);
+        }
+        auto transaction3 = storage.makeTransaction();
+        auto res = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction, machine.hash());
+        auto res2 = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res2.status.ok());
-        checkDeletedCheckpoint(*transaction, machine);
+        checkDeletedCheckpoint(*transaction3, machine);
     }
     SECTION("delete checkpoint saved twice, reordered") {
         auto transaction2 = storage.makeTransaction();
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
-        saveMachine(*transaction2, machine);
-        transaction2->commit();
+        saveState(*transaction, machine, 1);
+        saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
         auto res = deleteMachine(*transaction, machine.hash());

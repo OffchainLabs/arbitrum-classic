@@ -21,7 +21,9 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"sync"
@@ -45,7 +47,7 @@ func (l logResponse) Equals(o logResponse) bool {
 
 // txTracker is thread safe
 type txTracker struct {
-	rollup.NoopListener
+	chainlistener.NoopListener
 	chainAddress common.Address
 
 	// The RWMutex protects the variables listed below it
@@ -80,7 +82,7 @@ func getNodeLocation(node *structures.Node) *evm.NodeLocation {
 }
 
 // Delete assertion and transaction data from the reorged blocks if there are any
-func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+func (tr *txTracker) RestartingFromLatestValid(_ context.Context, node *structures.Node) {
 	startDepth := node.Depth()
 	location := getNodeLocation(node)
 	tr.Lock()
@@ -102,14 +104,13 @@ func (tr *txTracker) RestartingFromLatestValid(_ context.Context, _ *rollup.Chai
 // must be restarting after a reorg and this function does nothing. When this
 // method is called for the first time, it processes all nodes that are valid,
 // but have not yet been confirmed and saved into the longterm db
-func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver) {
+func (tr *txTracker) AddedToChain(_ context.Context, nodesToProcess []*structures.Node) {
 	tr.Lock()
 	if tr.initialized {
 		tr.Unlock()
 		return
 	}
 	tr.initialized = true
-	nodesToProcess := chain.PendingCorrectNodes()
 	go func() {
 		defer tr.Unlock()
 		for _, node := range nodesToProcess {
@@ -118,7 +119,7 @@ func (tr *txTracker) AddedToChain(_ context.Context, chain *rollup.ChainObserver
 	}()
 }
 
-func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserver, node *structures.Node) {
+func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *nodegraph.StakedNodeGraph, node *structures.Node) {
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
@@ -126,11 +127,17 @@ func (tr *txTracker) AdvancedKnownNode(_ context.Context, _ *rollup.ChainObserve
 	}()
 }
 
-func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObserver, prepared *rollup.PreparedAssertion) {
+func (tr *txTracker) AssertionPrepared(
+	_ context.Context,
+	chainParams valprotocol.ChainParams,
+	_ *nodegraph.StakedNodeGraph,
+	_ *structures.Node,
+	_ *common.BlockId,
+	prepared *chainlistener.PreparedAssertion) {
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()
-		possibleNode := prepared.PossibleFutureNode(chain.GetChainParams())
+		possibleNode := prepared.PossibleFutureNode(chainParams)
 		if tr.pendingLocation != nil && tr.pendingLocation.NodeHash == possibleNode.Hash().String() {
 			return
 		}
@@ -144,7 +151,7 @@ func (tr *txTracker) AssertionPrepared(_ context.Context, chain *rollup.ChainObs
 	}()
 }
 
-func (tr *txTracker) ConfirmedNode(_ context.Context, _ *rollup.ChainObserver, ev arbbridge.ConfirmedEvent) {
+func (tr *txTracker) ConfirmedNode(_ context.Context, ev arbbridge.ConfirmedEvent) {
 	tr.Lock()
 	go func() {
 		defer tr.Unlock()

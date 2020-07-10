@@ -45,8 +45,9 @@ CMachine* machineCreate(const char* filename) {
 }
 
 void machineDestroy(CMachine* m) {
-    if (m == NULL)
+    if (m == nullptr) {
         return;
+    }
     delete static_cast<Machine*>(m);
 }
 
@@ -92,7 +93,7 @@ CStatus machineCurrentStatus(CMachine* m) {
         case Status::Halted:
             return STATUS_HALT;
         default:
-            throw std::runtime_error("Bad machine status type");
+            return STATE_UNKNOWN;
     }
 }
 
@@ -137,6 +138,13 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return returnCharVector(mach->marshalForProof());
 }
 
+ByteSlice machineMarshallState(CMachine* m) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+    std::vector<unsigned char> buffer;
+    return returnCharVector(mach->marshalState());
+}
+
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* lowerBoundBlockData,
@@ -163,11 +171,11 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        mach->marshal_value(outMsg, outMsgData);
+        marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {
-        mach->marshal_value(log, logData);
+        marshal_value(log, logData);
     }
 
     return {returnCharVector(outMsgData),

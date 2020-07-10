@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,10 +35,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
+
+var ContractName = "contract.mexe"
 
 // ValidateRollupChain creates a validator given the managerCreationFunc.
 // This allows for the abstraction of the manager setup away from command line
@@ -53,8 +55,9 @@ func ValidateRollupChain(
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	walletVars := utils.AddFlags(validateCmd)
+	walletVars := utils.AddWalletFlags(validateCmd)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	rpcVars := utils.AddRPCFlags(validateCmd)
 	blocktime := validateCmd.Int64(
 		"blocktime",
 		2,
@@ -107,7 +110,7 @@ func ValidateRollupChain(
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(
+	validatorListener := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupArgs.Address,
 		rollupActor,
@@ -117,7 +120,7 @@ func ValidateRollupChain(
 		return err
 	}
 
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.ao")
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, ContractName)
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	manager, err := managerCreationFunc(
@@ -130,7 +133,7 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(&chainlistener.AnnouncerListener{})
 	manager.AddListener(validatorListener)
 
 	if *rpcEnable {
@@ -139,35 +142,25 @@ func ValidateRollupChain(
 			log.Fatal(err)
 		}
 
-		if err := launchRPC(
-			validatorServer,
-			"Validator",
-			"1235",
-		); err != nil {
-			log.Fatal(err)
+		// Run server
+		s := rpc.NewServer()
+		s.RegisterCodec(
+			json.NewCodec(),
+			"application/json",
+		)
+		s.RegisterCodec(
+			json.NewCodec(),
+			"application/json;charset=UTF-8",
+		)
+
+		if err := s.RegisterService(validatorServer, "Validator"); err != nil {
+			return err
 		}
+
+		return utils.LaunchRPC(s, "1235", rpcVars)
 	} else {
 		wait := make(chan bool)
 		<-wait
 	}
 	return nil
-}
-
-func launchRPC(receiver interface{}, name string, port string) error {
-	// Run server
-	s := rpc.NewServer()
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json",
-	)
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json;charset=UTF-8",
-	)
-
-	if err := s.RegisterService(receiver, name); err != nil {
-		return err
-	}
-
-	return utils.LaunchRPC(s, port)
 }

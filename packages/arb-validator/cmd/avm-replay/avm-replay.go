@@ -46,7 +46,7 @@ func main() {
 	//	panic(err)
 	//}
 
-	if err := testMessages(filename, "contract.ao"); err != nil {
+	if err := testMessages(filename, "contract.mexe"); err != nil {
 		panic(err)
 	}
 }

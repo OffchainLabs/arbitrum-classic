@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,13 +16,11 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import "./interfaces/IERC20.sol";
 
 contract GlobalFTWallet {
-
     struct FTWallet {
         address contractAddress;
         uint256 balance;
@@ -31,9 +31,13 @@ contract GlobalFTWallet {
         FTWallet[] ftList;
     }
 
-    mapping(address => UserFTWallet) ftWallets;
+    mapping(address => UserFTWallet) private ftWallets;
 
-    function ownedERC20s(address _owner) external view returns (address[] memory) {
+    function ownedERC20s(address _owner)
+        external
+        view
+        returns (address[] memory)
+    {
         UserFTWallet storage wallet = ftWallets[_owner];
         address[] memory addresses = new address[](wallet.ftList.length);
         uint256 addressCount = addresses.length;
@@ -52,7 +56,11 @@ contract GlobalFTWallet {
         IERC20(_tokenContract).transfer(msg.sender, value);
     }
 
-    function getERC20Balance(address _tokenContract, address _owner) public view returns (uint256) {
+    function getERC20Balance(address _tokenContract, address _owner)
+        public
+        view
+        returns (uint256)
+    {
         UserFTWallet storage wallet = ftWallets[_owner];
         uint256 index = wallet.ftIndex[_tokenContract];
         if (index == 0) {
@@ -61,7 +69,11 @@ contract GlobalFTWallet {
         return wallet.ftList[index - 1].balance;
     }
 
-    function depositERC20(address _tokenContract, address _destination, uint256 _value) internal {
+    function depositERC20(
+        address _tokenContract,
+        address _destination,
+        uint256 _value
+    ) internal {
         IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
         addToken(_destination, _tokenContract, _value);
     }
@@ -71,10 +83,7 @@ contract GlobalFTWallet {
         address _to,
         address _tokenContract,
         uint256 _value
-    )
-        internal
-        returns (bool)
-    {
+    ) internal returns (bool) {
         if (!removeToken(_from, _tokenContract, _value)) {
             return false;
         }
@@ -82,7 +91,11 @@ contract GlobalFTWallet {
         return true;
     }
 
-    function addToken(address _user, address _tokenContract, uint256 _value) private {
+    function addToken(
+        address _user,
+        address _tokenContract,
+        uint256 _value
+    ) private {
         if (_value == 0) {
             return;
         }
@@ -95,7 +108,11 @@ contract GlobalFTWallet {
         wallet.ftList[index - 1].balance += _value;
     }
 
-    function removeToken(address _user, address _tokenContract, uint256 _value) private returns (bool) {
+    function removeToken(
+        address _user,
+        address _tokenContract,
+        uint256 _value
+    ) private returns (bool) {
         if (_value == 0) {
             return true;
         }
@@ -112,8 +129,11 @@ contract GlobalFTWallet {
         }
         tokenWallet.balance -= _value;
         if (tokenWallet.balance == 0) {
-            wallet.ftIndex[wallet.ftList[wallet.ftList.length - 1].contractAddress] = walletIndex;
-            wallet.ftList[walletIndex - 1] = wallet.ftList[wallet.ftList.length - 1];
+            wallet.ftIndex[wallet.ftList[wallet.ftList.length - 1]
+                .contractAddress] = walletIndex;
+            wallet.ftList[walletIndex - 1] = wallet.ftList[wallet
+                .ftList
+                .length - 1];
             delete wallet.ftIndex[_tokenContract];
             wallet.ftList.pop();
         }

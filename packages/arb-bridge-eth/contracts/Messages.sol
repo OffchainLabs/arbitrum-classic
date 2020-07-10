@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -14,12 +16,11 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./arch/Value.sol";
 import "./libraries/SigUtils.sol";
 import "./arch/Protocol.sol";
-
 
 library Messages {
     uint8 internal constant TRANSACTION_MSG = 0;
@@ -33,13 +34,12 @@ library Messages {
     using Value for Value.Data;
     using BytesLib for bytes;
 
-    function addDeliveredMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                inbox,
-                message
-            )
-        );
+    function addDeliveredMessageToInbox(bytes32 inbox, bytes32 message)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(inbox, message));
     }
 
     function addMessageToInbox(
@@ -49,17 +49,18 @@ library Messages {
         uint256 timestamp,
         uint256 messageNum
     ) internal pure returns (bytes32) {
-        return addDeliveredMessageToInbox(
-            inbox,
-            keccak256(
-                abi.encodePacked(
-                    messageHash,
-                    blockNumber,
-                    timestamp,
-                    messageNum
+        return
+            addDeliveredMessageToInbox(
+                inbox,
+                keccak256(
+                    abi.encodePacked(
+                        messageHash,
+                        blockNumber,
+                        timestamp,
+                        messageNum
+                    )
                 )
-            )
-        );
+            );
     }
 
     function addMessageToVMInboxHash(
@@ -68,20 +69,16 @@ library Messages {
         uint256 timestamp,
         uint256 txId,
         Value.Data memory message
-    )
-        internal
-        pure
-        returns (Value.Data memory)
-    {
-        Value.Data[] memory tup_data = new Value.Data[](4);
-        tup_data[0] = Value.newInt(blockNumber);
-        tup_data[1] = Value.newInt(timestamp);
-        tup_data[2] = Value.newInt(txId);
-        tup_data[3] = message;
+    ) internal pure returns (Value.Data memory) {
+        Value.Data[] memory tupData = new Value.Data[](4);
+        tupData[0] = Value.newInt(blockNumber);
+        tupData[1] = Value.newInt(timestamp);
+        tupData[2] = Value.newInt(txId);
+        tupData[3] = message;
 
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = vmInboxHashValue;
-        vals[1] = Value.newTuple(tup_data);
+        vals[1] = Value.newTuple(tupData);
         return Value.newTuple(vals);
     }
 
@@ -92,22 +89,19 @@ library Messages {
         uint256 seqNumber,
         uint256 value,
         bytes32 dataHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                TRANSACTION_MSG,
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                dataHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    TRANSACTION_MSG,
+                    chain,
+                    to,
+                    from,
+                    seqNumber,
+                    value,
+                    dataHash
+                )
+            );
     }
 
     function transactionReceiptHash(
@@ -117,22 +111,19 @@ library Messages {
         uint256 seqNumber,
         uint256 value,
         bytes32 dataHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                TRANSACTION_MSG,
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                dataHash
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    TRANSACTION_MSG,
+                    chain,
+                    to,
+                    from,
+                    seqNumber,
+                    value,
+                    dataHash
+                )
+            );
     }
 
     function transactionMessageValue(
@@ -143,18 +134,18 @@ library Messages {
         uint256 value,
         bytes32 dataHash,
         Value.Data memory dataTuple
-    )
-        internal
-        pure
-        returns(Value.Data memory, bytes32)
-    {
+    ) internal pure returns (Value.Data memory, bytes32) {
         Value.Data[] memory msgValues = new Value.Data[](4);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(seqNumber);
         msgValues[2] = Value.newInt(value);
         msgValues[3] = dataTuple;
 
-        Value.Data memory message = messageOuterLayer(TRANSACTION_MSG, from, Value.newTuple(msgValues));
+        Value.Data memory message = messageOuterLayer(
+            TRANSACTION_MSG,
+            from,
+            Value.newTuple(msgValues)
+        );
         bytes32 txHash = transactionReceiptHash(
             chain,
             to,
@@ -167,19 +158,12 @@ library Messages {
         return (message, txHash);
     }
 
-    function transactionBatchHash(
-        bytes memory transactions
-    )
+    function transactionBatchHash(bytes memory transactions)
         internal
         pure
-        returns(bytes32)
+        returns (bytes32)
     {
-        return keccak256(
-            abi.encodePacked(
-                TRANSACTION_BATCH_MSG,
-                transactions
-            )
-        );
+        return keccak256(abi.encodePacked(TRANSACTION_BATCH_MSG, transactions));
     }
 
     uint256 internal constant TO_OFFSET = 2;
@@ -195,12 +179,11 @@ library Messages {
         bytes memory transactions,
         uint256 blockNum,
         uint256 blockTimestamp
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        Value.Data memory prevVal = Value.newTuplePreImage(prevHashImage, prevHashSize);
+    ) internal pure returns (bytes32) {
+        Value.Data memory prevVal = Value.newTuplePreImage(
+            prevHashImage,
+            prevHashSize
+        );
         uint256 transactionsLength = transactions.length;
         uint256 start = 0x00;
         // Continue until we run out of enough data for a tx with no data
@@ -211,11 +194,11 @@ library Messages {
                 return Value.hash(prevVal);
             }
 
-            (Value.Data memory message, bytes32 receiptHash, bool valid) = transactionMessageBatchHashSingle(
-                start,
-                chain,
-                transactions
-            );
+            (
+                Value.Data memory message,
+                bytes32 receiptHash,
+                bool valid
+            ) = transactionMessageBatchHashSingle(start, chain, transactions);
 
             if (valid) {
                 prevVal = addMessageToVMInboxHash(
@@ -238,7 +221,11 @@ library Messages {
     )
         internal
         pure
-        returns(Value.Data memory message, bytes32 receiptHash, bool valid)
+        returns (
+            Value.Data memory message,
+            bytes32 receiptHash,
+            bool valid
+        )
     {
         bytes32 dataHash = keccak256Subset(
             transactions,
@@ -257,7 +244,6 @@ library Messages {
             // Signature was invalid so we'll ignore this message and keep processing
             return (message, receiptHash, valid);
         }
-
 
         Value.Data memory dataVal = Value.bytesToBytestackHash(
             transactions,
@@ -282,54 +268,36 @@ library Messages {
         address chain,
         bytes32 dataHash,
         bytes memory transactions
-    )
-        internal
-        pure
-        returns(address)
-    {
-        return SigUtils.recoverAddressFromData(
-            keccak256(
-                abi.encodePacked(
-                    chain,
-                    transactions.toAddress(start + TO_OFFSET),
-                    transactions.toUint(start + SEQ_OFFSET),
-                    transactions.toUint(start + VALUE_OFFSET),
-                    dataHash
-                )
-            ),
-            transactions,
-            start + SIG_OFFSET
-        );
+    ) internal pure returns (address) {
+        return
+            SigUtils.recoverAddressFromData(
+                keccak256(
+                    abi.encodePacked(
+                        chain,
+                        transactions.toAddress(start + TO_OFFSET),
+                        transactions.toUint(start + SEQ_OFFSET),
+                        transactions.toUint(start + VALUE_OFFSET),
+                        dataHash
+                    )
+                ),
+                transactions,
+                start + SIG_OFFSET
+            );
     }
 
     function ethHash(
         address to,
         address from,
         uint256 value
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                ETH_DEPOSIT,
-                to,
-                from,
-                value
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(ETH_DEPOSIT, to, from, value));
     }
 
     function ethMessageValue(
         address to,
         address from,
         uint256 value
-    )
-        internal
-        pure
-        returns(Value.Data memory)
-    {
+    ) internal pure returns (Value.Data memory) {
         Value.Data[] memory msgValues = new Value.Data[](2);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[1] = Value.newInt(value);
@@ -342,18 +310,8 @@ library Messages {
         address from,
         address erc20,
         uint256 value
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return tokenHash(
-            ERC20_DEPOSIT,
-            to,
-            from,
-            erc20,
-            value
-        );
+    ) internal pure returns (bytes32) {
+        return tokenHash(ERC20_DEPOSIT, to, from, erc20, value);
     }
 
     function erc20MessageValue(
@@ -361,18 +319,8 @@ library Messages {
         address from,
         address erc20,
         uint256 value
-    )
-        internal
-        pure
-        returns(Value.Data memory)
-    {
-        return tokenMessageValue(
-            ERC20_DEPOSIT,
-            to,
-            from,
-            erc20,
-            value
-        );
+    ) internal pure returns (Value.Data memory) {
+        return tokenMessageValue(ERC20_DEPOSIT, to, from, erc20, value);
     }
 
     function erc721Hash(
@@ -380,18 +328,8 @@ library Messages {
         address from,
         address erc721,
         uint256 id
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return tokenHash(
-            ERC721_DEPOSIT,
-            to,
-            from,
-            erc721,
-            id
-        );
+    ) internal pure returns (bytes32) {
+        return tokenHash(ERC721_DEPOSIT, to, from, erc721, id);
     }
 
     function erc721MessageValue(
@@ -399,18 +337,8 @@ library Messages {
         address from,
         address erc721,
         uint256 id
-    )
-        internal
-        pure
-        returns(Value.Data memory)
-    {
-        return tokenMessageValue(
-            ERC721_DEPOSIT,
-            to,
-            from,
-            erc721,
-            id
-        );
+    ) internal pure returns (Value.Data memory) {
+        return tokenMessageValue(ERC721_DEPOSIT, to, from, erc721, id);
     }
 
     function contractTransactionHash(
@@ -418,20 +346,17 @@ library Messages {
         address from,
         uint256 value,
         bytes memory data
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                CONTRACT_TRANSACTION_MSG,
-                to,
-                from,
-                value,
-                data
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    CONTRACT_TRANSACTION_MSG,
+                    to,
+                    from,
+                    value,
+                    data
+                )
+            );
     }
 
     function contractTransactionMessageValue(
@@ -439,17 +364,18 @@ library Messages {
         address from,
         uint256 value,
         bytes memory data
-    )
-        internal
-        pure
-        returns(Value.Data memory)
-    {
+    ) internal pure returns (Value.Data memory) {
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(to));
         msgValues[2] = Value.newInt(value);
         msgValues[3] = Value.bytesToBytestackHash(data);
 
-        return messageOuterLayer(CONTRACT_TRANSACTION_MSG, from, Value.newTuple(msgValues));
+        return
+            messageOuterLayer(
+                CONTRACT_TRANSACTION_MSG,
+                from,
+                Value.newTuple(msgValues)
+            );
     }
 
     function tokenHash(
@@ -458,20 +384,11 @@ library Messages {
         address from,
         address tokenContract,
         uint256 value
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                messageType,
-                to,
-                from,
-                tokenContract,
-                value
-            )
-        );
+    ) private pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(messageType, to, from, tokenContract, value)
+            );
     }
 
     function tokenMessageValue(
@@ -480,11 +397,7 @@ library Messages {
         address from,
         address tokenContract,
         uint256 value
-    )
-        private
-        pure
-        returns(Value.Data memory)
-    {
+    ) private pure returns (Value.Data memory) {
         Value.Data[] memory msgValues = new Value.Data[](3);
         msgValues[0] = Value.newInt(uint256(tokenContract));
         msgValues[1] = Value.newInt(uint256(to));
@@ -497,11 +410,7 @@ library Messages {
         uint256 messageType,
         address from,
         Value.Data memory dataTuple
-    )
-        private
-        pure
-        returns(Value.Data memory)
-    {
+    ) private pure returns (Value.Data memory) {
         Value.Data[] memory msgType = new Value.Data[](3);
         msgType[0] = Value.newInt(messageType);
         msgType[1] = Value.newInt(uint256(from));
@@ -510,7 +419,12 @@ library Messages {
         return Value.newTuple(msgType);
     }
 
-    function keccak256Subset(bytes memory data, uint256 start, uint256 length) private pure returns(bytes32 dataHash) {
+    function keccak256Subset(
+        bytes memory data,
+        uint256 start,
+        uint256 length
+    ) private pure returns (bytes32 dataHash) {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             dataHash := keccak256(add(add(data, 0x20), start), length)
         }

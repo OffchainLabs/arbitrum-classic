@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,34 +16,29 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Value.sol";
 
 contract ValueTester {
-    function deserializeHash(
-        bytes memory data,
-        uint256 startOffset
-    )
+    function deserializeHash(bytes memory data, uint256 startOffset)
         public
         pure
-        returns(
+        returns (
             bool, // valid
             uint256, // offset
             bytes32 // valHash
         )
     {
-        (bool valid, uint256 offset, Value.Data memory value) = Value.deserialize(data, startOffset);
+        (bool valid, uint256 offset, Value.Data memory value) = Value
+            .deserialize(data, startOffset);
         return (valid, offset, Value.hash(value));
     }
 
-    function deserializeMessageData(
-        bytes memory data,
-        uint256 startOffset
-    )
+    function deserializeMessageData(bytes memory data, uint256 startOffset)
         public
         pure
-        returns(
+        returns (
             bool, // valid
             uint256, // offset
             uint256, // msgType
@@ -51,13 +48,10 @@ contract ValueTester {
         return Value.deserializeMessageData(data, startOffset);
     }
 
-    function getERCTokenMsgData(
-        bytes memory data,
-        uint256 startOffset
-    )
+    function getERCTokenMsgData(bytes memory data, uint256 startOffset)
         public
         pure
-        returns(
+        returns (
             bool, // valid
             uint256, // offset
             address, // tokenAddress
@@ -68,13 +62,10 @@ contract ValueTester {
         return Value.getERCTokenMsgData(data, startOffset);
     }
 
-    function getEthMsgData(
-        bytes memory data,
-        uint256 startOffset
-    )
+    function getEthMsgData(bytes memory data, uint256 startOffset)
         public
         pure
-        returns(
+        returns (
             bool, // valid
             uint256, // offset
             address, // destination
@@ -84,16 +75,51 @@ contract ValueTester {
         return Value.getEthMsgData(data, startOffset);
     }
 
+    function bytesToBytestackHash(bytes memory data)
+        public
+        pure
+        returns (bytes32)
+    {
+        return Value.hash(Value.bytesToBytestackHash(data, 0, data.length));
+    }
+
     function bytesToBytestackHash(
         bytes memory data,
         uint256 startOffset,
         uint256 dataLength
-    )
-        public
-        pure
-        returns(bytes32)
-    {
-        return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
+    ) public pure returns (bytes32) {
+        return
+            Value.hash(
+                Value.bytesToBytestackHash(data, startOffset, dataLength)
+            );
     }
 
+    function bytestackToBytes(bytes memory data)
+        public
+        pure
+        returns (bytes memory)
+    {
+        return Value.bytestackToBytes(data);
+    }
+
+    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize)
+        public
+        pure
+        returns (bytes32)
+    {
+        return Value.hashTuplePreImage(innerHash, valueSize);
+    }
+
+    function hashEmptyTuple() public pure returns (bytes32) {
+        return Value.hashEmptyTuple();
+    }
+
+    function hashTestTuple() public pure returns (bytes32) {
+        Value.Data[] memory tupVals = new Value.Data[](2);
+        tupVals[0] = Value.newInt(uint256(111));
+        tupVals[1] = Value.newTuple(new Value.Data[](0));
+        Value.Data memory tuple = Value.newTuple(tupVals);
+
+        return Value.hash(tuple);
+    }
 }

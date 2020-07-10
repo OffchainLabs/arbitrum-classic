@@ -18,10 +18,14 @@
 #define value_hpp
 
 #include <avm_values/bigint.hpp>
+#include <avm_values/opcodes.hpp>
 
 #include <nonstd/variant.hpp>
 
-enum ValueTypes { NUM, CODEPT, HASH_PRE_IMAGE, TUPLE };
+// Proof values will only include values types up to TUPLE + 8 (11)
+// All types declared with types creater than 11 are used for the internal
+// marshalling format Used to pass values between the AVM and the validator
+enum ValueTypes { NUM, CODEPT, HASH_PRE_IMAGE, TUPLE, CODE_POINT_STUB = 12 };
 
 class TuplePool;
 class Tuple;
@@ -30,6 +34,7 @@ struct CodePoint;
 class HashPreImage;
 class Code;
 struct CodePointStub;
+struct CodePointRef;
 
 // Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
@@ -37,31 +42,19 @@ using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash_value(const value& value);
 
+CodePointRef deserializeCodePointRef(const char*& bufptr);
+CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256t(const char*& srccode);
-Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
 value deserialize_value(const char*& srccode, TuplePool& pool);
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
 
-void marshal_value(const value& val,
-                   std::vector<unsigned char>& buf,
-                   const Code& code);
-
-void marshalForProof(const CodePoint& cp,
-                     std::vector<unsigned char>& buf,
-                     const Code& code);
+void marshal_value(const value& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,
+                     MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code);
-void marshalStub(const value& val,
-                 std::vector<unsigned char>& buf,
-                 const Code& code);
-
-template <typename T>
-static T shrink(uint256_t i) {
-    return static_cast<T>(i & std::numeric_limits<T>::max());
-}
 
 uint256_t getSize(const value& val);
 

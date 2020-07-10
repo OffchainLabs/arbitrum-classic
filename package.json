@@ -24,7 +24,8 @@
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "prepare": "yarn workspace arb-provider-ethers prepare"
+    "prepare": "yarn workspace arb-provider-ethers prepare",
+    "go:vet": "./scripts/go-vet"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
@@ -45,13 +46,14 @@
       "workspace/*"
     ]
   },
-  "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.29.0",
-    "@typescript-eslint/parser": "^2.29.0",
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.10.1",
-    "eslint-plugin-prettier": "^3.1.3",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
+    "eslint": "^7.3.1",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-mocha": "^7.0.1",
+    "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
-    "typescript": "^3.8.3"
+    "prettier-plugin-solidity": "^1.0.0-alpha.54"
   }
 }

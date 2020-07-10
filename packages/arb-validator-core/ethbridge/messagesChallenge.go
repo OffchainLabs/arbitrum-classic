@@ -57,6 +57,7 @@ func (c *messagesChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+
 	hashes := common.HashSliceToRaw(segmentHashes)
 	tx, err := c.contract.Bisect(
 		c.auth.getAuth(ctx),
@@ -89,8 +90,8 @@ func (c *messagesChallenge) OneStepProofTransactionMessage(
 	tx, err := c.contract.OneStepProofTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		[3]ethcommon.Address{
 			msg.Chain.ToEthAddress(),
 			msg.To.ToEthAddress(),
@@ -120,8 +121,8 @@ func (c *messagesChallenge) OneStepProofTransactionBatchMessage(
 	tx, err := c.contract.OneStepProofTransactionBatchMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.Chain.ToEthAddress(),
 		msg.TxData,
 		deliveryInfo.BlockNum.AsInt(),
@@ -146,8 +147,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 	tx, err := c.contract.OneStepProofEthMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,
@@ -163,8 +164,8 @@ func (c *messagesChallenge) OneStepProofEthMessage(
 			c.auth.auth.From,
 			c.contractAddress,
 			lowerHashA,
-			lowerHashB.HashImage,
-			big.NewInt(lowerHashB.Size),
+			lowerHashB.GetInnerHash(),
+			big.NewInt(lowerHashB.Size()),
 			msg.To.ToEthAddress(),
 			msg.From.ToEthAddress(),
 			msg.Value,
@@ -188,8 +189,8 @@ func (c *messagesChallenge) OneStepProofERC20Message(
 	tx, err := c.contract.OneStepProofERC20Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -216,8 +217,8 @@ func (c *messagesChallenge) OneStepProofERC721Message(
 	tx, err := c.contract.OneStepProofERC721Message(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.TokenAddress.ToEthAddress(),
@@ -244,8 +245,8 @@ func (c *messagesChallenge) OneStepProofContractTransactionMessage(
 	tx, err := c.contract.OneStepProofContractTransactionMessage(
 		c.auth.getAuth(ctx),
 		lowerHashA,
-		lowerHashB.HashImage,
-		big.NewInt(lowerHashB.Size),
+		lowerHashB.GetInnerHash(),
+		big.NewInt(lowerHashB.Size()),
 		msg.To.ToEthAddress(),
 		msg.From.ToEthAddress(),
 		msg.Value,

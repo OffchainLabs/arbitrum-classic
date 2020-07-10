@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,64 +16,59 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
 import "../libraries/RollupTime.sol";
 
 import "../challenge/ChallengeUtils.sol";
-import "../challenge/ChallengeType.sol";
 import "../challenge/IChallengeFactory.sol";
 
 import "../arch/Protocol.sol";
 
-
-contract Staking is ChallengeType {
-
+contract Staking {
     // VM already initialized"
-    string constant INIT_TWICE = "INIT_TWICE";
+    string private constant INIT_TWICE = "INIT_TWICE";
     // Challenge factory must be nonzero
-    string constant INIT_NONZERO = "INIT_NONZERO";
+    string private constant INIT_NONZERO = "INIT_NONZERO";
 
     // Invalid staker
-    string constant INV_STAKER = "INV_STAKER";
+    string private constant INV_STAKER = "INV_STAKER";
 
     // must supply stake value
-    string constant STK_AMT = "STK_AMT";
+    string private constant STK_AMT = "STK_AMT";
     // Staker already exists
-    string constant ALRDY_STAKED = "ALRDY_STAKED";
+    string private constant ALRDY_STAKED = "ALRDY_STAKED";
 
     // Challenge can only be resolved by spawned contract
-    string constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
+    string private constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
 
     // staker1 staked after deadline
-    string constant STK1_DEADLINE = "STK1_DEADLINE";
+    string private constant STK1_DEADLINE = "STK1_DEADLINE";
     // staker2 staked after deadline
-    string constant STK2_DEADLINE = "STK2_DEADLINE";
+    string private constant STK2_DEADLINE = "STK2_DEADLINE";
     // staker1 already in a challenge
-    string constant STK1_IN_CHAL = "STK1_IN_CHAL";
+    string private constant STK1_IN_CHAL = "STK1_IN_CHAL";
     // staker2 already in a challenge
-    string constant STK2_IN_CHAL = "STK1_IN_CHAL";
+    string private constant STK2_IN_CHAL = "STK1_IN_CHAL";
     // Child types must be ordered
-    string constant TYPE_ORDER = "TYPE_ORDER";
+    string private constant TYPE_ORDER = "TYPE_ORDER";
     // Invalid child type
-    string constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
+    string private constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
     // Challenge asserter proof
-    string constant ASSERT_PROOF = "ASSERT_PROOF";
+    string private constant ASSERT_PROOF = "ASSERT_PROOF";
     // Challenge challenger proof
-    string constant CHAL_PROOF = "CHAL_PROOF";
+    string private constant CHAL_PROOF = "CHAL_PROOF";
 
     // must include proof for all stakers
-    string constant CHCK_COUNT = "CHCK_COUNT";
+    string private constant CHCK_COUNT = "CHCK_COUNT";
     // Stakers must be ordered
-    string constant CHCK_ORDER = "CHCK_ORDER";
+    string private constant CHCK_ORDER = "CHCK_ORDER";
     // at least one active staker disagrees
-    string constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
-    string constant CHCK_OFFSETS = "CHCK_OFFSETS";
+    string private constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
+    string private constant CHCK_OFFSETS = "CHCK_OFFSETS";
 
-
-    uint256 internal constant VALID_CHILD_TYPE = 3;
-    uint256 internal constant MAX_CHILD_TYPE = 3;
+    uint256 private constant MAX_CHILD_TYPE = 3;
 
     IChallengeFactory public challengeFactory;
 
@@ -84,19 +81,13 @@ contract Staking is ChallengeType {
     uint128 private stakeRequirement;
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
-    mapping (address => bool) challenges;
+    mapping(address => bool) private challenges;
 
-    event RollupStakeCreated(
-        address staker,
-        bytes32 nodeHash
-    );
+    event RollupStakeCreated(address staker, bytes32 nodeHash);
 
     event RollupStakeRefunded(address staker);
 
-    event RollupStakeMoved(
-        address staker,
-        bytes32 toNodeHash
-    );
+    event RollupStakeMoved(address staker, bytes32 toNodeHash);
 
     event RollupChallengeStarted(
         address asserter,
@@ -111,7 +102,7 @@ contract Staking is ChallengeType {
         address loser
     );
 
-    function getStakeRequired() external view returns(uint128) {
+    function getStakeRequired() external view returns (uint128) {
         return stakeRequirement;
     }
 
@@ -119,7 +110,11 @@ contract Staking is ChallengeType {
         return stakers[_stakerAddress].location != 0x00;
     }
 
-    function resolveChallenge(address payable winner, address loser, uint256) external {
+    function resolveChallenge(
+        address payable winner,
+        address loser,
+        uint256
+    ) external {
         require(challenges[msg.sender], RES_CHAL_SENDER);
         delete challenges[msg.sender];
 
@@ -143,19 +138,25 @@ contract Staking is ChallengeType {
         bytes32 asserterNodeHash,
         bytes32 challengerDataHash,
         uint128 challengerPeriodTicks
-    )
-        public
-    {
+    ) public {
         Staker storage asserter = getValidStaker(asserterAddress);
         Staker storage challenger = getValidStaker(challengerAddress);
 
-        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < deadlineTicks, STK1_DEADLINE);
-        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < deadlineTicks, STK2_DEADLINE);
+        require(
+            RollupTime.blocksToTicks(asserter.creationTimeBlocks) <
+                deadlineTicks,
+            STK1_DEADLINE
+        );
+        require(
+            RollupTime.blocksToTicks(challenger.creationTimeBlocks) <
+                deadlineTicks,
+            STK2_DEADLINE
+        );
         require(!asserter.inChallenge, STK1_IN_CHAL);
         require(!challenger.inChallenge, STK2_IN_CHAL);
         require(stakerNodeTypes[0] > stakerNodeTypes[1], TYPE_ORDER);
         require(
-            RollupUtils.calculatePath(
+            RollupUtils.calculateLeafFromPath(
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
@@ -168,7 +169,7 @@ contract Staking is ChallengeType {
             ASSERT_PROOF
         );
         require(
-            RollupUtils.calculatePath(
+            RollupUtils.calculateLeafFromPath(
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
@@ -192,7 +193,8 @@ contract Staking is ChallengeType {
             challengerAddress,
             challengerPeriodTicks,
             challengerDataHash,
-            stakerNodeTypes[1]);
+            stakerNodeTypes[1]
+        );
     }
 
     function createChallenge(
@@ -201,9 +203,7 @@ contract Staking is ChallengeType {
         uint128 challengerPeriodTicks,
         bytes32 challengerDataHash,
         uint256 stakerNodeType
-    ) 
-        internal
-    { 
+    ) internal {
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
@@ -222,10 +222,7 @@ contract Staking is ChallengeType {
         );
     }
 
-    function init(
-        uint128 _stakeRequirement,
-        address _challengeFactoryAddress
-    )
+    function init(uint128 _stakeRequirement, address _challengeFactoryAddress)
         internal
     {
         require(address(challengeFactory) == address(0), INIT_TWICE);
@@ -237,30 +234,28 @@ contract Staking is ChallengeType {
         stakeRequirement = _stakeRequirement;
     }
 
-    function getStakerLocation(address _stakerAddress) internal view returns (bytes32) {
+    function getStakerLocation(address _stakerAddress)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 location = stakers[_stakerAddress].location;
         require(location != 0x00, INV_STAKER);
         return location;
     }
 
-    function createStake(
-        bytes32 location
-    )
-        internal
-    {
+    function createStake(bytes32 location) internal {
         require(msg.value == stakeRequirement, STK_AMT);
         require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
-        stakers[msg.sender] = Staker(
-            location,
-            uint128(block.number),
-            false
-        );
+        stakers[msg.sender] = Staker(location, uint128(block.number), false);
         stakerCount++;
 
         emit RollupStakeCreated(msg.sender, location);
     }
 
-    function updateStakerLocation(address _stakerAddress, bytes32 _location) internal {
+    function updateStakerLocation(address _stakerAddress, bytes32 _location)
+        internal
+    {
         stakers[_stakerAddress].location = _location;
         emit RollupStakeMoved(_stakerAddress, _location);
     }
@@ -272,44 +267,11 @@ contract Staking is ChallengeType {
         emit RollupStakeRefunded(address(_stakerAddress));
     }
 
-    function checkAlignedStakers(
-        bytes32 node,
-        uint256 deadlineTicks,
-        address[] memory stakerAddresses,
-        bytes32[] memory stakerProofs,
-        uint256[] memory stakerProofOffsets
-    )
-        internal
+    function getValidStaker(address _stakerAddress)
+        private
         view
-        returns(uint)
+        returns (Staker storage)
     {
-        uint256 _stakerCount = stakerAddresses.length;
-        require(_stakerCount == stakerCount, CHCK_COUNT);
-        require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
-        bytes20 prevStaker = 0x00;
-        uint activeCount = 0;
-        for (uint256 i = 0; i < _stakerCount; i++) {
-            address stakerAddress = stakerAddresses[i];
-            require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
-            Staker storage staker = getValidStaker(stakerAddress);
-            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks) {
-                require(
-                    RollupUtils.calculatePathOffset(
-                        node,
-                        stakerProofs,
-                        stakerProofOffsets[i],
-                        stakerProofOffsets[i+1]
-                    ) == staker.location,
-                    CHCK_STAKER_PROOF
-                );
-                activeCount++;
-            }
-            prevStaker = bytes20(stakerAddress);
-        }
-        return activeCount;
-    }
-
-    function getValidStaker(address _stakerAddress) private view returns (Staker storage) {
         Staker storage staker = stakers[_stakerAddress];
         require(staker.location != 0x00, INV_STAKER);
         return staker;
@@ -318,5 +280,71 @@ contract Staking is ChallengeType {
     function deleteStaker(address _stakerAddress) private {
         delete stakers[_stakerAddress];
         stakerCount--;
+    }
+
+    function checkAlignedStakers(
+        bytes32 node,
+        uint256 deadlineTicks,
+        address[] memory stakerAddresses,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    ) internal view returns (uint256) {
+        uint256 _stakerCount = stakerAddresses.length;
+        require(_stakerCount == stakerCount, CHCK_COUNT);
+        require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
+
+        bytes20 prevStaker = 0x00;
+        uint256 activeCount = 0;
+        bool isActive = false;
+
+        for (uint256 index = 0; index < _stakerCount; index++) {
+            address currentStaker = stakerAddresses[index];
+
+            isActive = _verifyAlignedStaker(
+                node,
+                stakerProofs,
+                deadlineTicks,
+                currentStaker,
+                prevStaker,
+                stakerProofOffsets[index],
+                stakerProofOffsets[index + 1]
+            );
+
+            if (isActive) {
+                activeCount++;
+            }
+
+            prevStaker = bytes20(currentStaker);
+        }
+        return activeCount;
+    }
+
+    function _verifyAlignedStaker(
+        bytes32 node,
+        bytes32[] memory stakerProofs,
+        uint256 deadlineTicks,
+        address stakerAddress,
+        bytes20 prevStaker,
+        uint256 proofStart,
+        uint256 proofEnd
+    ) private view returns (bool) {
+        require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
+        Staker storage staker = getValidStaker(stakerAddress);
+        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) <
+            deadlineTicks;
+
+        if (isActive) {
+            require(
+                RollupUtils.calculateLeafFromPath(
+                    node,
+                    stakerProofs,
+                    proofStart,
+                    proofEnd
+                ) == staker.location,
+                CHCK_STAKER_PROOF
+            );
+        }
+
+        return isActive;
     }
 }
