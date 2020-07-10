@@ -200,7 +200,7 @@ export class TupleValue {
     } else {
       const hashes = this.contents.map((value): string => value.hash())
       const types = ['uint8'].concat(Array(contents.length).fill('bytes32'))
-      const values: any[] = [contents.length]
+      const values: (number | string)[] = [contents.length]
 
       const firstHash = ethers.utils.solidityKeccak256(
         types,
@@ -442,9 +442,7 @@ export function marshal(someValue: Value): Uint8Array {
 }
 
 function unmarshalContract(array: Uint8Array): [Operation[], Value] {
-  let offset = 0
-  let versionBytes
-  ;[versionBytes, offset] = extractBytes(array, offset, 4)
+  let offset = extractBytes(array, 0, 4)[1]
   let extensionVersion = ethers.utils.bigNumberify(1)
   while (!extensionVersion.eq(0)) {
     let extensionVersionBytes
@@ -553,7 +551,6 @@ function unmarshalTuple(
   offset: number
 ): [Value[], number] {
   const contents = new Array(size)
-  const tail = array
   for (let i = 0; i < size; i++) {
     let value
     ;[value, offset] = _unmarshalValue(array, offset)
@@ -579,11 +576,6 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
     const nextHash = ethers.utils.hexlify(head)
     return [new CodePointValue(pc, op, nextHash), offset]
   } else if (ty === ValueType.HashOnly) {
-    ;[head, offset] = extractBytes(array, offset, 8)
-    const size = ethers.utils.bigNumberify(head)
-    ;[head, offset] = extractBytes(array, offset, 32)
-    const hash = '0x' + head
-    // return [new HashOnlyValue(hash, size), tail];
     throw Error('Error unmarshaling: HashOnlyValue was not expected')
   } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {
     const size = ty - ValueType.Tuple
