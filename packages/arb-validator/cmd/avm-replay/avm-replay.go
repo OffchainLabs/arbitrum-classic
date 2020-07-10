@@ -120,7 +120,7 @@ func testMessages(filename string, contract string) error {
 		log.Println("tx result", txReturn)
 
 		tokenSupplyResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-			message.L2Message{Msg: totalSupplyCall},
+			totalSupplyCall,
 			common.Address{},
 			big.NewInt(0),
 			message.ChainTime{},
@@ -139,7 +139,7 @@ func testMessages(filename string, contract string) error {
 				getTokenBalanceData,
 			)
 			tokenBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				message.L2Message{Msg: getTokenBalanceCall},
+				getTokenBalanceCall,
 				common.Address{},
 				big.NewInt(0),
 				message.ChainTime{},
@@ -150,7 +150,7 @@ func testMessages(filename string, contract string) error {
 				getEthBalanceData,
 			)
 			ethBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				message.L2Message{Msg: call},
+				call,
 				common.Address{},
 				big.NewInt(0),
 				message.ChainTime{},

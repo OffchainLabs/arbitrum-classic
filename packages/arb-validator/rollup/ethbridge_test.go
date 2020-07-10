@@ -149,7 +149,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 
 		if balance.Cmp(amount) != 0 {
-			t.Fatal("failed to deposit balance")
+			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
 		}
 	}
 
@@ -203,12 +203,12 @@ func TestConfirmAssertion(t *testing.T) {
 		messages,
 		message.NewInboxMessage(
 			message.Eth{
-				DestAddress: dest,
-				Value:       big.NewInt(75),
+				Dest:  dest,
+				Value: big.NewInt(75),
 			},
 			common.NewAddressFromEth(auth.From),
 			big.NewInt(0),
-			message.ChainTime{},
+			message.NewRandomChainTime(),
 		).AsValue(),
 	)
 	for i := int32(0); i < 5; i++ {

@@ -162,7 +162,7 @@ func (m *Server) sendBatch(ctx context.Context) {
 func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *SendTransactionReply) error {
 	destBytes, err := hexutil.Decode(args.DestAddress)
 	if err != nil {
-		return errors2.Wrap(err, "error decoding DestAddress")
+		return errors2.Wrap(err, "error decoding Dest")
 	}
 	var dest common.Address
 	copy(dest[:], destBytes)

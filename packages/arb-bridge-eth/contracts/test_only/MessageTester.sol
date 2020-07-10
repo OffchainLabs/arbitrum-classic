@@ -94,10 +94,17 @@ contract MessageTester {
         returns (
             bool, // valid
             uint256, // offset
-            Messages.OutgoingMessage memory message
+            uint8, // kind
+            address, // sender
+            bytes memory // data
         )
     {
-        return Messages.unmarshalOutgoingMessage(data, startOffset);
+        (
+            bool valid,
+            uint256 offset,
+            Messages.OutgoingMessage memory message
+        ) = Messages.unmarshalOutgoingMessage(data, startOffset);
+        return (valid, offset, message.kind, message.sender, message.data);
     }
 
     function parseEthMessage(bytes memory data)

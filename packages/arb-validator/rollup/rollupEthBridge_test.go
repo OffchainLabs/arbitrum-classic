@@ -267,8 +267,8 @@ func randomAssertion() *protocol.ExecutionAssertion {
 	messages := make([]value.Value, 0)
 	messages = append(messages, message.NewInboxMessage(
 		message.Eth{
-			DestAddress: common.Address{},
-			Value:       big.NewInt(75),
+			Dest:  common.Address{},
+			Value: big.NewInt(75),
 		},
 		common.NewAddressFromEth(auth.From),
 		big.NewInt(0),

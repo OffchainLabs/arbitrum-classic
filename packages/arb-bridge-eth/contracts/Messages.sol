@@ -141,8 +141,12 @@ library Messages {
         if (!valid) {
             return (false, startOffset, message);
         }
+
         message.sender = address(uint160((senderRaw)));
-        message.data = Value.bytestackToBytes(data, offset);
+        (valid, offset, message.data) = Value.bytestackToBytes(data, offset);
+        if (!valid) {
+            return (false, startOffset, message);
+        }
 
         return (true, offset, message);
     }

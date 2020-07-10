@@ -196,7 +196,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
 	callMsg := message.NewInboxMessage(
-		message.L2Message{Msg: message.NewSimpleCall(contractAddress, dataBytes)},
+		message.NewSimpleCall(contractAddress, dataBytes),
 		sender,
 		seq,
 		message.ChainTime{

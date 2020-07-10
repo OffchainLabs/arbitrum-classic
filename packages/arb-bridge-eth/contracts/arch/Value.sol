@@ -673,21 +673,32 @@ library Value {
     function bytestackToBytes(bytes memory data, uint256 startOffset)
         internal
         pure
-        returns (bytes memory)
+        returns (
+            bool valid,
+            uint256 offset,
+            bytes memory byteData
+        )
     {
-        uint256 offset = startOffset;
-        offset += 2;
-        uint256 byteCount = data.toUint(offset);
-        offset += 32;
+        offset = startOffset;
+        offset += 1;
+        uint256 byteCount;
+        (valid, offset, byteCount) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, offset, byteData);
+        }
         uint256 chunkCount = (byteCount + 31) / 32;
 
         bytes32[] memory chunks = new bytes32[](chunkCount);
 
-        offset += 2;
         for (uint256 i = 0; i < chunkCount; i++) {
-            chunks[i] = data.toBytes32(offset + 2);
-            offset += 34;
+            offset += 1;
+            uint256 nextChunk;
+            (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
+            if (!valid) {
+                return (false, offset, byteData);
+            }
+            chunks[i] = bytes32(nextChunk);
         }
-        return abi.encodePacked(chunks).slice(0, byteCount);
+        return (true, offset, abi.encodePacked(chunks).slice(0, byteCount));
     }
 }

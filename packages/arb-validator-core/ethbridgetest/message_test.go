@@ -17,6 +17,7 @@
 package ethbridgetest
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"math/rand"
@@ -115,5 +116,92 @@ func TestDeliveredMessage(t *testing.T) {
 		hashing.Bytes32(msgHash),
 	) {
 		t.Error("incorrect AddMessageToInbox")
+	}
+}
+
+func TestUnmamrshalOutgoing(t *testing.T) {
+	msg := message.NewRandomOutMessage(message.NewRandomEth())
+	var valData bytes.Buffer
+	if err := value.MarshalValue(msg.AsValue(), &valData); err != nil {
+		t.Fatal(err)
+	}
+	valid, offset, kind, sender, data, err := tester.UnmarshalOutgoingMessage(nil, valData.Bytes(), big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !valid {
+		t.Error("invalid message")
+	}
+	if offset.Uint64() != uint64(len(valData.Bytes())) {
+		t.Error("incorrect offset")
+	}
+	if message.Type(kind) != msg.Kind {
+		t.Error("incorrect message type")
+	}
+	if sender != msg.Sender.ToEthAddress() {
+		t.Error("incorrect sender")
+	}
+	if !bytes.Equal(data, msg.Data) {
+		t.Error("incorrect data")
+	}
+}
+
+func TestParseEthMessage(t *testing.T) {
+	msg := message.NewRandomEth()
+	ret, err := tester.ParseEthMessage(nil, msg.AsData())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ret.Valid {
+		t.Error("invalid message")
+	}
+	parsedMsg := ret.Message
+	if parsedMsg.Value.Cmp(msg.Value) != 0 {
+		t.Error("incorrect value")
+	}
+	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+		t.Error("incorrect address")
+	}
+}
+
+func TestParseERC20Message(t *testing.T) {
+	msg := message.NewRandomERC20()
+	ret, err := tester.ParseERC20Message(nil, msg.AsData())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ret.Valid {
+		t.Error("invalid message")
+	}
+	parsedMsg := ret.Message
+	if parsedMsg.Token != msg.Token.ToEthAddress() {
+		t.Error("incorrect token")
+	}
+	if parsedMsg.Value.Cmp(msg.Value) != 0 {
+		t.Error("incorrect value")
+	}
+	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+		t.Error("incorrect address")
+	}
+}
+
+func TestParseERC721Message(t *testing.T) {
+	msg := message.NewRandomERC721()
+	ret, err := tester.ParseERC721Message(nil, msg.AsData())
+	if err != nil {
+		t.Error(err)
+	}
+	if !ret.Valid {
+		t.Error("invalid message")
+	}
+	parsedMsg := ret.Message
+	if parsedMsg.Token != msg.Token.ToEthAddress() {
+		t.Error("incorrect token")
+	}
+	if parsedMsg.Id.Cmp(msg.ID) != 0 {
+		t.Error("incorrect value")
+	}
+	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+		t.Error("incorrect address")
 	}
 }

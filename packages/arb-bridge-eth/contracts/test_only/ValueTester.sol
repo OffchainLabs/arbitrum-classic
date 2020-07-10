@@ -57,7 +57,11 @@ contract ValueTester {
     function bytestackToBytes(bytes memory data, uint256 offset)
         public
         pure
-        returns (bytes memory)
+        returns (
+            bool,
+            uint256,
+            bytes memory
+        )
     {
         return Value.bytestackToBytes(data, offset);
     }

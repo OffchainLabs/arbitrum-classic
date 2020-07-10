@@ -51,6 +51,9 @@ func marshaledBytesHash(data []byte) common.Hash {
 			hashing.Bytes32(ret),
 			hashing.Bytes32(nextVal),
 		)
+		if len(data) <= 32 {
+			break
+		}
 		data = data[32:]
 	}
 	return ret
@@ -81,13 +84,13 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 	data = data[1:]
 	switch l2Type {
 	case TransactionType:
-		return NewTransactionFromData(data), nil
+		return newTransactionFromData(data), nil
 	case ContractTransactionType:
-		return NewContractTransactionFromData(data), nil
+		return newContractTransactionFromData(data), nil
 	case CallType:
-		return NewCallFromData(data), nil
+		return newCallFromData(data), nil
 	case TransactionBatchType:
-		return NewTransactionBatchFromData(data), nil
+		return newTransactionBatchFromData(data), nil
 	default:
 		return nil, errors.New("invalid l2 message type")
 	}
@@ -102,7 +105,7 @@ type Transaction struct {
 	Data        []byte
 }
 
-func NewTransactionFromData(data []byte) Transaction {
+func newTransactionFromData(data []byte) Transaction {
 	maxGas := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	gasPriceBid := new(big.Int).SetBytes(data[:32])
@@ -111,7 +114,7 @@ func NewTransactionFromData(data []byte) Transaction {
 	data = data[32:]
 	var destAddress common.Address
 	copy(destAddress[:], data[:])
-	data = data[:20]
+	data = data[20:]
 	payment := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	return Transaction{
@@ -181,14 +184,14 @@ type ContractTransaction struct {
 	Data        []byte
 }
 
-func NewContractTransactionFromData(data []byte) ContractTransaction {
+func newContractTransactionFromData(data []byte) ContractTransaction {
 	maxGas := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	gasPriceBid := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	var destAddress common.Address
 	copy(destAddress[:], data[:])
-	data = data[:20]
+	data = data[20:]
 	payment := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	return ContractTransaction{
@@ -197,6 +200,16 @@ func NewContractTransactionFromData(data []byte) ContractTransaction {
 		DestAddress: destAddress,
 		Payment:     payment,
 		Data:        data,
+	}
+}
+
+func NewRandomContractTransaction() ContractTransaction {
+	return ContractTransaction{
+		MaxGas:      common.RandBigInt(),
+		GasPriceBid: common.RandBigInt(),
+		DestAddress: common.RandAddress(),
+		Payment:     common.RandBigInt(),
+		Data:        common.RandBytes(200),
 	}
 }
 
@@ -221,28 +234,37 @@ type Call struct {
 	Data        []byte
 }
 
-func NewSimpleCall(dest common.Address, data []byte) Call {
-	return Call{
+func NewSimpleCall(dest common.Address, data []byte) L2Message {
+	return L2Message{Msg: Call{
 		MaxGas:      big.NewInt(0),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: dest,
 		Data:        data,
-	}
+	}}
 }
 
-func NewCallFromData(data []byte) Call {
+func newCallFromData(data []byte) Call {
 	maxGas := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	gasPriceBid := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 	var destAddress common.Address
 	copy(destAddress[:], data[:])
-	data = data[:20]
+	data = data[20:]
 	return Call{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
 		DestAddress: destAddress,
 		Data:        data,
+	}
+}
+
+func NewRandomCall() Call {
+	return Call{
+		MaxGas:      common.RandBigInt(),
+		GasPriceBid: common.RandBigInt(),
+		DestAddress: common.RandAddress(),
+		Data:        common.RandBytes(200),
 	}
 }
 
@@ -266,10 +288,7 @@ type BatchTx struct {
 
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
 	tx := NewRandomTransaction()
-	data := make([]byte, 0)
-	data = append(data, chain[:]...)
-	data = append(data, tx.asData()...)
-	hash := marshaledBytesHash(data)
+	hash := tx.BatchTxHash(chain)
 	messageHash := hashing.SoliditySHA3WithPrefix(hash[:])
 	sigBytes, _ := crypto.Sign(messageHash.Bytes(), privKey)
 
@@ -308,7 +327,7 @@ type TransactionBatch struct {
 	Transactions []BatchTx
 }
 
-func NewTransactionBatchFromData(data []byte) TransactionBatch {
+func newTransactionBatchFromData(data []byte) TransactionBatch {
 	txes := make([]BatchTx, 0)
 	for len(data) >= 8 {
 		calldataLength := binary.BigEndian.Uint64(data[:])
@@ -318,7 +337,7 @@ func NewTransactionBatchFromData(data []byte) TransactionBatch {
 			// Not enough data remaining
 			break
 		}
-		tx := NewTransactionFromData(data[:beginningSize])
+		tx := newTransactionFromData(data[:beginningSize])
 		data = data[beginningSize:]
 		var sig [SignatureSize]byte
 		copy(sig[:], data[:])
@@ -327,6 +346,14 @@ func NewTransactionBatchFromData(data []byte) TransactionBatch {
 			Transaction: tx,
 			Signature:   sig,
 		})
+	}
+	return TransactionBatch{Transactions: txes}
+}
+
+func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey) TransactionBatch {
+	txes := make([]BatchTx, 0, txCount)
+	for i := 0; i < txCount; i++ {
+		txes = append(txes, NewRandomBatchTx(chain, privKey))
 	}
 	return TransactionBatch{Transactions: txes}
 }

@@ -187,29 +187,6 @@ func (im InboxMessage) MessageID() common.Hash {
 	return ret
 }
 
-type Eth struct {
-	DestAddress common.Address
-	Value       *big.Int
-}
-
-func NewRandomEth() Eth {
-	return Eth{
-		DestAddress: common.RandAddress(),
-		Value:       common.RandBigInt(),
-	}
-}
-
-func (e Eth) AsData() []byte {
-	data := make([]byte, 0)
-	data = append(data, e.DestAddress[:]...)
-	data = append(data, math.U256Bytes(e.Value)...)
-	return data
-}
-
-func (e Eth) Type() Type {
-	return EthType
-}
-
 func addressToIntValue(address common.Address) value.IntValue {
 	addressBytes := [32]byte{}
 	copy(addressBytes[12:], address[:])
