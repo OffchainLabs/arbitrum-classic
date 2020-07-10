@@ -189,7 +189,7 @@ uint64_t getNextSegmentID(const Transaction& transaction) {
 }
 
 template <typename Func>
-std::unordered_map<uint64_t, uint64_t> breathFirstSearch(
+std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
     std::map<uint64_t, uint64_t>& segment_counts,
     Func&& func) {
     std::unordered_map<uint64_t, uint64_t> total_segment_counts;
@@ -218,7 +218,7 @@ void deleteCode(Transaction& transaction,
     std::unordered_map<uint64_t, GetResults> current_values;
     auto current_segment_counts = segment_counts;
 
-    auto total_deleted_segment_references = breathFirstSearch(
+    auto total_deleted_segment_references = breadthFirstSearch(
         segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,
                             std::map<uint64_t, uint64_t>& next_segment_counts) {
             auto current_value_it = current_values.find(segment_id);
@@ -267,7 +267,7 @@ void saveCode(Transaction& transaction,
     std::unordered_map<uint64_t, std::vector<unsigned char>>
         code_segments_to_save;
 
-    auto total_segment_counts = breathFirstSearch(
+    auto total_segment_counts = breadthFirstSearch(
         segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,
                             std::map<uint64_t, uint64_t>& next_segment_counts) {
             if (total_reference_count == 0) {
