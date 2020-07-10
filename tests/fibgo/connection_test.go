@@ -99,7 +99,6 @@ func setupValidators(
 		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       250000,
 		MaxBlockBoundsWidth:     20,
-		MaxTimestampBoundsWidth: 600,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
