@@ -72,27 +72,19 @@ contract GlobalInbox is
     ) external {
         bool valid;
         uint256 offset = 0;
-        uint256 messageType;
-        address sender;
+        Messages.OutgoingMessage memory message;
 
         uint256 nodeCount = nodeHashes.length;
         for (uint256 i = 0; i < nodeCount; i++) {
             for (uint256 j = 0; j < messageCounts[i]; j++) {
-                (valid, offset, messageType, sender) = Value
-                    .deserializeMessageData(_messages, offset);
-                if (!valid) {
-                    return;
-                }
-                (valid, offset) = sendDeserializedMsg(
-                    nodeHashes[i],
-                    j,
+                (valid, offset, message) = Messages.unmarshalOutgoingMessage(
                     _messages,
-                    offset,
-                    messageType
+                    offset
                 );
                 if (!valid) {
                     return;
                 }
+                sendDeserializedMsg(nodeHashes[i], j, message);
             }
         }
     }
@@ -100,65 +92,49 @@ contract GlobalInbox is
     function sendDeserializedMsg(
         bytes32 nodeHash,
         uint256 messageIndex,
-        bytes memory _messages,
-        uint256 startOffset,
-        uint256 messageType
-    )
-        private
-        returns (
-            bool, // valid
-            uint256 // offset
-        )
-    {
-        if (messageType == ETH_DEPOSIT) {
-            (bool valid, uint256 offset, address to, uint256 value) = Value
-                .getEthMsgData(_messages, startOffset);
-
-            if (!valid) {
-                return (false, startOffset);
+        Messages.OutgoingMessage memory message
+    ) private {
+        if (message.kind == ETH_DEPOSIT) {
+            (bool valid, Messages.EthMessage memory eth) = Messages
+                .parseEthMessage(message.data);
+            if (valid) {
+                address paymentOwner = getPaymentOwner(
+                    eth.dest,
+                    nodeHash,
+                    messageIndex
+                );
+                transferEth(msg.sender, paymentOwner, eth.value);
+                deletePayment(eth.dest, nodeHash, messageIndex);
             }
-
-            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
-            transferEth(msg.sender, paymentOwner, value);
-            deletePayment(to, nodeHash, messageIndex);
-
-            return (true, offset);
-        } else if (messageType == ERC20_DEPOSIT) {
-            (
-                bool valid,
-                uint256 offset,
-                address erc20,
-                address to,
-                uint256 value
-            ) = Value.getERCTokenMsgData(_messages, startOffset);
-            if (!valid) {
-                return (false, startOffset);
+        } else if (message.kind == ERC20_DEPOSIT) {
+            (bool valid, Messages.ERC20Message memory erc20) = Messages
+                .parseERC20Message(message.data);
+            if (valid) {
+                address paymentOwner = getPaymentOwner(
+                    erc20.dest,
+                    nodeHash,
+                    messageIndex
+                );
+                transferERC20(
+                    msg.sender,
+                    paymentOwner,
+                    erc20.token,
+                    erc20.value
+                );
+                deletePayment(erc20.dest, nodeHash, messageIndex);
             }
-
-            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
-            transferERC20(msg.sender, paymentOwner, erc20, value);
-            deletePayment(to, nodeHash, messageIndex);
-
-            return (true, offset);
-        } else if (messageType == ERC721_DEPOSIT) {
-            (
-                bool valid,
-                uint256 offset,
-                address erc721,
-                address to,
-                uint256 value
-            ) = Value.getERCTokenMsgData(_messages, startOffset);
-            if (!valid) {
-                return (false, startOffset);
+        } else if (message.kind == ERC721_DEPOSIT) {
+            (bool valid, Messages.ERC721Message memory erc721) = Messages
+                .parseERC721Message(message.data);
+            if (valid) {
+                address paymentOwner = getPaymentOwner(
+                    erc721.dest,
+                    nodeHash,
+                    messageIndex
+                );
+                transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
+                deletePayment(erc721.dest, nodeHash, messageIndex);
             }
-
-            address paymentOwner = getPaymentOwner(to, nodeHash, messageIndex);
-            transferNFT(msg.sender, paymentOwner, erc721, value);
-            deletePayment(to, nodeHash, messageIndex);
-
-            return (true, offset);
-        } else {
-            return (false, startOffset);
         }
     }
 

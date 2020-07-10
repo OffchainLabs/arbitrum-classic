@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.5.11;
+pragma experimental ABIEncoderV2;
 
 import "../Messages.sol";
 
@@ -85,5 +86,41 @@ contract MessageTester {
                     )
                 )
             );
+    }
+
+    function unmarshalOutgoingMessage(bytes memory data, uint256 startOffset)
+        public
+        pure
+        returns (
+            bool, // valid
+            uint256, // offset
+            Messages.OutgoingMessage memory message
+        )
+    {
+        return Messages.unmarshalOutgoingMessage(data, startOffset);
+    }
+
+    function parseEthMessage(bytes memory data)
+        public
+        pure
+        returns (bool valid, Messages.EthMessage memory message)
+    {
+        return Messages.parseEthMessage(data);
+    }
+
+    function parseERC20Message(bytes memory data)
+        public
+        pure
+        returns (bool valid, Messages.ERC20Message memory message)
+    {
+        return Messages.parseERC20Message(data);
+    }
+
+    function parseERC721Message(bytes memory data)
+        public
+        pure
+        returns (bool valid, Messages.ERC721Message memory message)
+    {
+        return Messages.parseERC721Message(data);
     }
 }

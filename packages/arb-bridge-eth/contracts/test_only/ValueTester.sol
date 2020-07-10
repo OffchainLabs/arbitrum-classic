@@ -35,46 +35,6 @@ contract ValueTester {
         return (valid, offset, Value.hash(value));
     }
 
-    function deserializeMessageData(bytes memory data, uint256 startOffset)
-        public
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            uint256, // msgType
-            address // sender
-        )
-    {
-        return Value.deserializeMessageData(data, startOffset);
-    }
-
-    function getERCTokenMsgData(bytes memory data, uint256 startOffset)
-        public
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            address, // tokenAddress
-            address, // destination
-            uint256 // value
-        )
-    {
-        return Value.getERCTokenMsgData(data, startOffset);
-    }
-
-    function getEthMsgData(bytes memory data, uint256 startOffset)
-        public
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            address, // destination
-            uint256 // value
-        )
-    {
-        return Value.getEthMsgData(data, startOffset);
-    }
-
     function bytesToBytestackHash(bytes memory data)
         public
         pure
@@ -94,12 +54,12 @@ contract ValueTester {
             );
     }
 
-    function bytestackToBytes(bytes memory data)
+    function bytestackToBytes(bytes memory data, uint256 offset)
         public
         pure
         returns (bytes memory)
     {
-        return Value.bytestackToBytes(data);
+        return Value.bytestackToBytes(data, offset);
     }
 
     function hashTuplePreImage(bytes32 innerHash, uint256 valueSize)

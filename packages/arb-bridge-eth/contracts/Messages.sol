@@ -19,8 +19,11 @@
 pragma solidity ^0.5.11;
 
 import "./arch/Value.sol";
+import "./libraries/BytesLib.sol";
 
 library Messages {
+    using BytesLib for bytes;
+
     function messageHash(
         uint8 kind,
         address sender,
@@ -80,5 +83,116 @@ library Messages {
         vals[0] = vmInboxHashValue;
         vals[1] = message;
         return Value.newTuple(vals);
+    }
+
+    struct OutgoingMessage {
+        uint8 kind;
+        address sender;
+        bytes data;
+    }
+
+    struct EthMessage {
+        address dest;
+        uint256 value;
+    }
+
+    struct ERC20Message {
+        address token;
+        address dest;
+        uint256 value;
+    }
+
+    struct ERC721Message {
+        address token;
+        address dest;
+        uint256 id;
+    }
+
+    uint256 private constant ETH_MESSAGE_LENGTH = 20 + 32;
+    uint256 private constant ERC20_MESSAGE_LENGTH = 20 + 20 + 32;
+    uint256 private constant ERC721_MESSAGE_LENGTH = 20 + 20 + 32;
+
+    function unmarshalOutgoingMessage(bytes memory data, uint256 startOffset)
+        internal
+        pure
+        returns (
+            bool valid,
+            uint256 offset,
+            OutgoingMessage memory message
+        )
+    {
+        offset = startOffset;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+
+        if (valType != Value.tupleTypeCode() + 3) {
+            return (false, startOffset, message);
+        }
+
+        uint256 rawKind;
+        (valid, offset, rawKind) = Value.deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, message);
+        }
+        message.kind = uint8(rawKind);
+
+        uint256 senderRaw;
+        (valid, offset, senderRaw) = Value.deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, startOffset, message);
+        }
+        message.sender = address(uint160((senderRaw)));
+        message.data = Value.bytestackToBytes(data, offset);
+
+        return (true, offset, message);
+    }
+
+    function parseEthMessage(bytes memory data)
+        internal
+        pure
+        returns (bool valid, Messages.EthMessage memory message)
+    {
+        if (data.length < ETH_MESSAGE_LENGTH) {
+            return (false, message);
+        }
+        uint256 offset = 0;
+        message.dest = data.toAddress(offset);
+        offset += 20;
+        message.value = data.toUint(offset);
+        return (true, message);
+    }
+
+    function parseERC20Message(bytes memory data)
+        internal
+        pure
+        returns (bool valid, Messages.ERC20Message memory message)
+    {
+        if (data.length < ERC20_MESSAGE_LENGTH) {
+            return (false, message);
+        }
+        uint256 offset = 0;
+        message.token = data.toAddress(offset);
+        offset += 20;
+        message.dest = data.toAddress(offset);
+        offset += 20;
+        message.value = data.toUint(offset);
+        return (true, message);
+    }
+
+    function parseERC721Message(bytes memory data)
+        internal
+        pure
+        returns (bool valid, Messages.ERC721Message memory message)
+    {
+        if (data.length < ERC721_MESSAGE_LENGTH) {
+            return (false, message);
+        }
+        uint256 offset = 0;
+        message.token = data.toAddress(offset);
+        offset += 20;
+        message.dest = data.toAddress(offset);
+        offset += 20;
+        message.id = data.toUint(offset);
+        return (true, message);
     }
 }
