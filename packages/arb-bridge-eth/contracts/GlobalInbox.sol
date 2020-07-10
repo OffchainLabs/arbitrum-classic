@@ -207,27 +207,6 @@ contract GlobalInbox is
         _deliverERC721TokenMessage(_chain, _to, msg.sender, _erc721, _id);
     }
 
-    function forwardContractTransactionMessage(
-        address _to,
-        address _from,
-        uint256 _value,
-        bytes calldata _data
-    ) external {
-        _deliverContractTransactionMessage(
-            msg.sender,
-            _to,
-            _from,
-            _value,
-            _data
-        );
-    }
-
-    function forwardEthMessage(address _to, address _from) external payable {
-        depositEth(msg.sender);
-
-        _deliverEthMessage(msg.sender, _to, _from, msg.value);
-    }
-
     // // Transaction format
     // //   tx length bytes(32 bytes)
     // //   to (20 bytes)

@@ -96,15 +96,4 @@ interface IGlobalInbox {
         address _erc721,
         uint256 _value
     ) external;
-
-    // msg.sender is the chain receiving the message
-    function forwardContractTransactionMessage(
-        address _to,
-        address _from,
-        uint256 _value,
-        bytes calldata _data
-    ) external;
-
-    // msg.sender is the chain receiving the message
-    function forwardEthMessage(address _to, address _from) external payable;
 }
