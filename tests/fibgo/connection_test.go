@@ -4,6 +4,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
@@ -33,17 +34,18 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
-var db1 = "testman1db"
-var db2 = "testman2db"
+var db = "testman"
 
 /********************************************/
 /*    Validators                            */
 /********************************************/
 func setupValidators(
-	coordinatorKey string,
-	followerKey string,
+	hexKeys []string,
 	t *testing.T,
-) error {
+) ([]arbbridge.ArbAuthClient, error) {
+	if len(hexKeys) == 0 {
+		panic("must supply at least one key")
+	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
@@ -54,64 +56,55 @@ func setupValidators(
 
 	if err != nil {
 		t.Errorf("setupValidators Open error %v", err)
-		return err
+		return nil, err
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	if err := jsonFile.Close(); err != nil {
 		t.Errorf("setupValidators ReadAll error %v", err)
-		return err
+		return nil, err
 	}
 	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Errorf("setupValidators Unmarshal error %v", err)
-		return err
+		return nil, err
 	}
 
-	key1, err := crypto.HexToECDSA(coordinatorKey)
-	if err != nil {
-		t.Errorf("setupValidators HexToECDSA error %v", err)
-		return err
-	}
-	key2, err := crypto.HexToECDSA(followerKey)
-	if err != nil {
-		t.Errorf("setupValidators HexToECDSA error %v", err)
-		return err
-	}
+	clients := make([]arbbridge.ArbAuthClient, 0, len(hexKeys))
+	for _, hexKey := range hexKeys {
+		key, err := crypto.HexToECDSA(hexKey)
+		if err != nil {
+			t.Errorf("setupValidators HexToECDSA error %v", err)
+			return nil, err
+		}
 
-	auth1 := bind.NewKeyedTransactor(key1)
-	auth2 := bind.NewKeyedTransactor(key2)
+		auth := bind.NewKeyedTransactor(key)
+		ethclint, err := ethclient.Dial(ethURL)
+		if err != nil {
+			return nil, err
+		}
 
-	ethclint1, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
+		client := ethbridge.NewEthAuthClient(ethclint, auth)
+		clients = append(clients, client)
 	}
-
-	ethclint2, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return err
-	}
-
-	client1 := ethbridge.NewEthAuthClient(ethclint1, auth1)
-	client2 := ethbridge.NewEthAuthClient(ethclint2, auth2)
 
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
+		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       250000,
 		MaxBlockBoundsWidth:     20,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factory, err := client1.NewArbFactory(connectionInfo.ArbFactoryAddress())
+	factory, err := clients[0].NewArbFactory(connectionInfo.ArbFactoryAddress())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	contract := "contract.mexe"
 
 	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx := context.Background()
@@ -120,75 +113,51 @@ func setupValidators(
 		ctx,
 		mach.Hash(),
 		config,
-		client1.Address(),
+		clients[0].Address(),
 	)
 
-	rollupActor1, err := client1.NewRollup(rollupAddress)
-	if err != nil {
-		return err
-	}
-	rollupActor2, err := client2.NewRollup(rollupAddress)
-	if err != nil {
-		return err
-	}
+	managers := make([]*rollupmanager.Manager, 0, len(clients))
+	for _, client := range clients {
+		rollupActor, err := client.NewRollup(rollupAddress)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := os.RemoveAll(db1); err != nil {
-		log.Fatal(err)
-	}
+		dbName := db + client.Address().String()
 
-	if err := os.RemoveAll(db2); err != nil {
-		log.Fatal(err)
-	}
+		if err := os.RemoveAll(dbName); err != nil {
+			log.Fatal(err)
+		}
 
-	manager1, err := rollupmanager.CreateManager(
-		ctx,
-		rollupAddress,
-		rollupmanager.NewStressTestClient(client1, time.Second*10),
-		contract,
-		db1,
-	)
-	if err != nil {
-		return err
-	}
-	manager1.AddListener(&chainlistener.AnnouncerListener{"chainObserver1: "})
+		manager, err := rollupmanager.CreateManager(
+			ctx,
+			rollupAddress,
+			rollupmanager.NewStressTestClient(client, time.Second*10),
+			contract,
+			dbName,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	validatorListener1 := chainlistener.NewValidatorChainListener(
-		context.Background(),
-		rollupAddress,
-		rollupActor1,
-	)
-	err = validatorListener1.AddStaker(client1)
-	if err != nil {
-		return err
-	}
-	manager1.AddListener(validatorListener1)
+		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
 
-	manager2, err := rollupmanager.CreateManager(
-		ctx,
-		rollupAddress,
-		rollupmanager.NewStressTestClient(client2, time.Second*10),
-		contract,
-		db2,
-	)
-	if err != nil {
-		return err
+		validatorListener := chainlistener.NewValidatorChainListener(
+			context.Background(),
+			rollupAddress,
+			rollupActor,
+		)
+		err = validatorListener.AddStaker(client)
+		if err != nil {
+			return nil, err
+		}
+		manager.AddListener(validatorListener)
+		managers = append(managers, manager)
 	}
-	manager2.AddListener(&chainlistener.AnnouncerListener{"chainObserver2: "})
-
-	validatorListener2 := chainlistener.NewValidatorChainListener(
-		context.Background(),
-		rollupAddress,
-		rollupActor2,
-	)
-	err = validatorListener2.AddStaker(client2)
-	if err != nil {
-		return err
-	}
-	manager2.AddListener(validatorListener2)
 
 	go func() {
 		server, err := rollupvalidator.NewRPCServer(
-			manager2,
+			managers[0],
 			time.Second*60,
 		)
 		if err != nil {
@@ -237,24 +206,16 @@ waitloop:
 		}
 	}
 
-	return nil
+	return clients, nil
 
 }
 
-func RunValidators(
+func SetupProvider(
 	t *testing.T,
 ) (*FibonacciSession, *goarbitrum.ArbConnection, error) {
 	ethURL := test.GetEthUrl()
-	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
 	key3 := "d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e"
 	fibAddrHex := "0x895521964D724c8362A36608AAf09A3D7d0A0445"
-
-	err := setupValidators(key1, key2, t)
-	if err != nil {
-		t.Errorf("Validator setup error %v", err)
-		return nil, nil, err
-	}
 
 	userKey, err := crypto.HexToECDSA(key3)
 	if err != nil {
@@ -364,7 +325,7 @@ func waitForReceipt(
 	for {
 		select {
 		case <-ticker.C:
-			return nil, errors.New("Timed out waiting for receipt")
+			return nil, errors.New("timed out waiting for receipt")
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
@@ -383,7 +344,14 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
-	session, client, err := RunValidators(t)
+	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
+	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	clients, err := setupValidators([]string{key1, key2}, t)
+	if err != nil {
+		t.Fatalf("Validator setup error %v", err)
+	}
+
+	session, client, err := SetupProvider(t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
 		t.FailNow()
@@ -454,11 +422,9 @@ func TestFib(t *testing.T) {
 		}
 	})
 
-	if err := os.RemoveAll(db1); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := os.RemoveAll(db2); err != nil {
-		log.Fatal(err)
+	for _, client := range clients {
+		if err := os.RemoveAll(db + client.Address().String()); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
