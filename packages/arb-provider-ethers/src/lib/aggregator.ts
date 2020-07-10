@@ -21,6 +21,7 @@ import * as ethers from 'ethers'
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
+/* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
 function _aggregatorClient(managerAddress: string): any {
   const callServer = (request: any, callback: any): void => {
     const options = {
@@ -32,6 +33,7 @@ function _aggregatorClient(managerAddress: string): any {
     }
 
     fetch(managerAddress, options)
+      /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
       .then((res: any) => {
         return res.text()
       })
@@ -47,6 +49,7 @@ function _aggregatorClient(managerAddress: string): any {
 }
 
 export class AggregatorClient {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public client: any
 
   constructor(managerUrl: string) {

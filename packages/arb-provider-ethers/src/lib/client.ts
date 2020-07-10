@@ -27,7 +27,9 @@ import { validatorserver } from './abi/validatorserver.server.d'
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
+/* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
 function _arbClient(managerAddress: string): any {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   const callServer = (request: any, callback: any): void => {
     const options = {
       body: request, // request is a string
@@ -38,6 +40,7 @@ function _arbClient(managerAddress: string): any {
     }
 
     fetch(managerAddress, options)
+      /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
       .then((res: any) => {
         return res.text()
       })
@@ -136,6 +139,7 @@ function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
 }
 
 export class ArbClient {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public client: any
 
   constructor(managerUrl: string) {

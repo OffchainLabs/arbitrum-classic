@@ -174,7 +174,6 @@ describe('BigTuple', function () {
 // Marshaled sizes as hexstrings
 const M_INT_VALUE_SIZE = 1 + 32
 const M_CODE_POINT_SIZE = 1 + 8 + 1 + 1 + 0 + 32 // Without val
-const M_HASH_ONLY_SIZE = 1 + 8 + 32
 const M_TUPLE_SIZE = 1 + 0 // Without other vals
 
 describe('Marshaling', function () {
