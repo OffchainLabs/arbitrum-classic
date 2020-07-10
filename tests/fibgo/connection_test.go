@@ -91,7 +91,6 @@ func setupValidators(
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       250000,
-		MaxBlockBoundsWidth:     20,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 

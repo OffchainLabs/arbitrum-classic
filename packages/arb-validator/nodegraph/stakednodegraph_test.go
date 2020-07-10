@@ -312,16 +312,11 @@ func TestHasReferenceWithStakers(t *testing.T) {
 
 func getDispNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock: common.NewTimeBlocks(big.NewInt(0)),
-		UpperBoundBlock: common.NewTimeBlocks(big.NewInt(1000)),
-	}
 	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,
-		TimeBounds:           timeBounds,
 		ImportedMessageCount: big.NewInt(0),
 	}
 	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
@@ -371,7 +366,6 @@ func getStakedNodeGraph(t *testing.T) (machine.Machine, valprotocol.ChainParams,
 		StakeRequirement:        big.NewInt(1),
 		GracePeriod:             common.TicksFromSeconds(60 * 60),
 		MaxExecutionSteps:       1000000,
-		MaxBlockBoundsWidth:     20,
 		ArbGasSpeedLimitPerTick: 1000,
 	}
 	txHash := common.Hash{}

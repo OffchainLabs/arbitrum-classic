@@ -90,7 +90,6 @@ func TestConfirmAssertion(t *testing.T) {
 		StakeRequirement:        big.NewInt(0),
 		GracePeriod:             common.TicksFromSeconds(1),
 		MaxExecutionSteps:       100000,
-		MaxBlockBoundsWidth:     10000,
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 

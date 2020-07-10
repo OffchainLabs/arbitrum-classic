@@ -58,14 +58,12 @@ interface ArbRollupInterface extends Interface {
         _gracePeriodTicks,
         _arbGasSpeedLimitPerTick,
         _maxExecutionSteps,
-        _maxBlockBoundsWidth,
         _stakeRequirement,
         _owner,
         _challengeFactoryAddress,
         _globalInboxAddress,
       ]: [
         Arrayish,
-        BigNumberish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
@@ -93,7 +91,6 @@ interface ArbRollupInterface extends Interface {
         _prevDeadlineTicks,
         _prevChildType,
         _numSteps,
-        _timeBounds,
         _importedMessageCount,
         _didInboxInsn,
         _numArbGas,
@@ -104,7 +101,6 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        BigNumberish[],
         BigNumberish,
         boolean,
         BigNumberish,
@@ -232,11 +228,10 @@ interface ArbRollupInterface extends Interface {
         fields,
         inboxCount,
         importedMessageCount,
-        timeBounds,
         numArbGas,
         numSteps,
         didInboxInsn,
-      ]: [null, null, null, null, null, null, null]): string[]
+      ]: [null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -330,7 +325,6 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxBlockBoundsWidth: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -350,7 +344,6 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,
@@ -447,13 +440,9 @@ export class ArbRollup extends Contract {
       gracePeriodTicks: BigNumber
       arbGasSpeedLimitPerTick: BigNumber
       maxExecutionSteps: BigNumber
-      maxBlockBoundsWidth: BigNumber
-      maxTimestampBoundsWidth: BigNumber
       0: BigNumber
       1: BigNumber
       2: BigNumber
-      3: BigNumber
-      4: BigNumber
     }>
   }
 
@@ -491,7 +480,6 @@ export class ArbRollup extends Contract {
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
-    _maxBlockBoundsWidth: BigNumberish,
     _stakeRequirement: BigNumberish,
     _owner: string,
     _challengeFactoryAddress: string,
@@ -511,7 +499,6 @@ export class ArbRollup extends Contract {
     _prevDeadlineTicks: BigNumberish,
     _prevChildType: BigNumberish,
     _numSteps: BigNumberish,
-    _timeBounds: BigNumberish[],
     _importedMessageCount: BigNumberish,
     _didInboxInsn: boolean,
     _numArbGas: BigNumberish,
@@ -606,13 +593,9 @@ export class ArbRollup extends Contract {
     gracePeriodTicks: BigNumber
     arbGasSpeedLimitPerTick: BigNumber
     maxExecutionSteps: BigNumber
-    maxBlockBoundsWidth: BigNumber
-    maxTimestampBoundsWidth: BigNumber
     0: BigNumber
     1: BigNumber
     2: BigNumber
-    3: BigNumber
-    4: BigNumber
   }>
 
   filters: {
@@ -624,7 +607,6 @@ export class ArbRollup extends Contract {
       fields: null,
       inboxCount: null,
       importedMessageCount: null,
-      timeBounds: null,
       numArbGas: null,
       numSteps: null,
       didInboxInsn: null
@@ -686,7 +668,6 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxBlockBoundsWidth: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -705,7 +686,6 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,

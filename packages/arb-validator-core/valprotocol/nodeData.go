@@ -23,7 +23,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ChildType uint
@@ -106,38 +105,32 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 
 type AssertionParams struct {
 	NumSteps             uint64
-	TimeBounds           *protocol.TimeBounds
 	ImportedMessageCount *big.Int
 }
 
 func NewRandomAssertionParams() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             rand.Uint64(),
-		TimeBounds:           protocol.NewRandomTimeBounds(),
 		ImportedMessageCount: common.RandBigInt(),
 	}
 }
 
 func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
-		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
+		"AssertionParams(NumSteps: %v, ImportedCount: %v)",
 		ap.NumSteps,
-		ap.TimeBounds.LowerBoundBlock.AsInt(),
-		ap.TimeBounds.UpperBoundBlock.AsInt(),
 		ap.ImportedMessageCount,
 	)
 }
 
 func (ap *AssertionParams) Equals(o *AssertionParams) bool {
 	return ap.NumSteps == o.NumSteps &&
-		ap.TimeBounds.Equals(o.TimeBounds) &&
 		ap.ImportedMessageCount.Cmp(o.ImportedMessageCount) == 0
 }
 
 func (ap *AssertionParams) Clone() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             ap.NumSteps,
-		TimeBounds:           ap.TimeBounds.Clone(),
 		ImportedMessageCount: new(big.Int).Set(ap.ImportedMessageCount),
 	}
 }
@@ -145,7 +138,6 @@ func (ap *AssertionParams) Clone() *AssertionParams {
 func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
 		NumSteps:             ap.NumSteps,
-		TimeBounds:           ap.TimeBounds.MarshalToBuf(),
 		ImportedMessageCount: common.MarshalBigInt(ap.ImportedMessageCount),
 	}
 }
@@ -153,7 +145,6 @@ func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
-		TimeBounds:           m.TimeBounds.Unmarshal(),
 		ImportedMessageCount: m.ImportedMessageCount.Unmarshal(),
 	}
 }

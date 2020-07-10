@@ -22,12 +22,10 @@ interface ArbFactoryInterface extends Interface {
         _gracePeriodTicks,
         _arbGasSpeedLimitPerTick,
         _maxExecutionSteps,
-        _maxBlockBoundsWidth,
         _stakeRequirement,
         _owner,
       ]: [
         Arrayish,
-        BigNumberish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
@@ -69,7 +67,6 @@ export class ArbFactory extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxBlockBoundsWidth: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string,
       overrides?: TransactionOverrides
@@ -87,7 +84,6 @@ export class ArbFactory extends Contract {
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
-    _maxBlockBoundsWidth: BigNumberish,
     _stakeRequirement: BigNumberish,
     _owner: string,
     overrides?: TransactionOverrides
@@ -109,7 +105,6 @@ export class ArbFactory extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxBlockBoundsWidth: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string
     ): Promise<BigNumber>

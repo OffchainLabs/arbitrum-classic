@@ -32,8 +32,6 @@ library VM {
         uint256 gracePeriodTicks;
         uint256 arbGasSpeedLimitPerTick;
         uint64 maxExecutionSteps;
-        uint64 maxBlockBoundsWidth;
-        uint64 maxTimestampBoundsWidth;
     }
 
     function isErrored(bytes32 vmStateHash) internal pure returns (bool) {
@@ -42,15 +40,5 @@ library VM {
 
     function isHalted(bytes32 vmStateHash) internal pure returns (bool) {
         return vmStateHash == MACHINE_HALT_HASH;
-    }
-
-    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks)
-        internal
-        view
-        returns (bool)
-    {
-        return
-            block.number >= _timeBoundsBlocks[0] &&
-            block.number <= _timeBoundsBlocks[1];
     }
 }
