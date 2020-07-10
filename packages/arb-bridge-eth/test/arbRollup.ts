@@ -133,12 +133,10 @@ async function makeEmptyAssertion(
   vmState: string,
   numSteps: number,
   startBlock: utils.BigNumberish,
-  startTime: utils.BigNumberish,
   importedMessageCount: utils.BigNumberish,
   readInbox: boolean
 ): Promise<ContractTransaction> {
   const startBlockInt = ethers.utils.bigNumberify(startBlock)
-  const startTimeInt = ethers.utils.bigNumberify(startTime)
   return arbRollup.makeAssertion(
     [
       vmState,
@@ -155,7 +153,7 @@ async function makeEmptyAssertion(
     0,
     0,
     numSteps,
-    [startBlockInt, startBlockInt.add(10), startTimeInt, startTimeInt.add(100)],
+    [startBlockInt, startBlockInt.add(10)],
     importedMessageCount,
     readInbox,
     0,
@@ -448,7 +446,7 @@ describe('ArbRollup', function () {
       gracePeriodTicks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
       maxExecutionSteps, // maxExecutionSteps
-      [20, 1000], // maxTimeBoundsWidth
+      20, // maxTimeBoundsWidth
       stakeRequirement, // stakeRequirement
       await accounts[0].getAddress() // owner
     )
@@ -483,7 +481,6 @@ describe('ArbRollup', function () {
         '0x3400000000000000000000000000000000000000000000000000000000000000',
         0,
         currentBlock.number,
-        currentBlock.timestamp,
         0,
         false
       )
@@ -502,7 +499,6 @@ describe('ArbRollup', function () {
         initialVmState,
         maxExecutionSteps + 1,
         currentBlock.number,
-        currentBlock.timestamp,
         0,
         false
       )
@@ -517,7 +513,6 @@ describe('ArbRollup', function () {
         initialVmState,
         0,
         currentBlock.number,
-        currentBlock.timestamp,
         0,
         false
       )
@@ -526,7 +521,7 @@ describe('ArbRollup', function () {
 
   it('should fail to assert outside time bounds', async () => {
     await expect(
-      makeEmptyAssertion(arbRollup, initialVmState, 0, 10000, 10000, 0, false)
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 10000, 0, false)
     ).to.be.revertedWith('MAKE_TIME')
   })
 
@@ -538,7 +533,6 @@ describe('ArbRollup', function () {
         initialVmState,
         0,
         currentBlock.number,
-        currentBlock.timestamp,
         10,
         false
       )
@@ -553,7 +547,6 @@ describe('ArbRollup', function () {
         initialVmState,
         0,
         currentBlock.number,
-        currentBlock.timestamp,
         10,
         true
       )
@@ -593,12 +586,7 @@ describe('ArbRollup', function () {
     )
     const params = new AssertionParams(
       0,
-      [
-        currentBlock.number,
-        currentBlock.number + 10,
-        currentBlock.timestamp,
-        currentBlock.timestamp + 100,
-      ],
+      [currentBlock.number, currentBlock.number + 10],
       ethers.utils.bigNumberify(0)
     )
     const claims = new AssertionClaim(
@@ -759,12 +747,7 @@ describe('ArbRollup', function () {
     const currentBlock = await ethers.provider.getBlock('latest')
     const params = new AssertionParams(
       0,
-      [
-        currentBlock.number,
-        currentBlock.number + 10,
-        currentBlock.timestamp,
-        currentBlock.timestamp + 100,
-      ],
+      [currentBlock.number, currentBlock.number + 10],
       ethers.utils.bigNumberify(0)
     )
     const claims = new AssertionClaim(
