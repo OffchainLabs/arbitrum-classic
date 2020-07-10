@@ -605,22 +605,6 @@ library Value {
         return (false, 0, newInt(0));
     }
 
-    function getNextValid(bytes memory data, uint256 startOffset)
-        internal
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset,
-            bytes memory // dataSlice
-        )
-    {
-        (bool valid, uint256 offset, ) = deserialize(data, startOffset);
-        if (!valid) {
-            return (false, startOffset, new bytes(0));
-        }
-        return (true, offset, data.slice(startOffset, offset - startOffset));
-    }
-
     function bytesToBytestackHash(
         bytes memory data,
         uint256 startOffset,
@@ -693,11 +677,17 @@ library Value {
             require(false, "fail2");
             return (false, offset, byteData);
         }
-        uint256 chunkCount = (byteCount + 31) / 32;
+        uint256 fullChunkCount = byteCount / 32;
+        uint256 partialChunkSize = byteCount % 32;
+        uint256 totalChunkCount = fullChunkCount +
+            (partialChunkSize > 0 ? 1 : 0);
 
-        bytes32[] memory chunks = new bytes32[](chunkCount);
+        bytes32[] memory fullChunks = new bytes32[](fullChunkCount);
+        bytes memory partialChunk = new bytes(partialChunkSize);
 
-        for (uint256 i = 0; i < chunkCount; i++) {
+        uint256 fullChunkIndex = 0;
+
+        for (uint256 i = 0; i < totalChunkCount; i++) {
             valType = uint8(data[offset]);
             offset++;
             if (valType != TUPLE_TYPECODE + 2) {
@@ -711,7 +701,18 @@ library Value {
                 require(false, "fail4");
                 return (false, offset, byteData);
             }
-            chunks[chunkCount - 1 - i] = bytes32(nextChunk);
+
+            if (i == 0 && partialChunkSize > 0) {
+                bytes32 chunkBytes = bytes32(nextChunk);
+                for (uint256 j = 0; j < partialChunkSize; j++) {
+                    partialChunk[j] = chunkBytes[j];
+                }
+            } else {
+                fullChunks[fullChunkCount - 1 - fullChunkIndex] = bytes32(
+                    nextChunk
+                );
+                fullChunkIndex++;
+            }
         }
 
         valType = uint8(data[offset]);
@@ -720,6 +721,6 @@ library Value {
             require(false, "fail5");
             return (false, offset, byteData);
         }
-        return (true, offset, abi.encodePacked(chunks).slice(0, byteCount));
+        return (true, offset, abi.encodePacked(fullChunks, partialChunk));
     }
 }
