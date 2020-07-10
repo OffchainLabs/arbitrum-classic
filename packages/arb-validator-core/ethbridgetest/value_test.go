@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -90,19 +89,36 @@ func TestTupleHashing(t *testing.T) {
 	}
 }
 
-func TestBytesStackHash(t *testing.T) {
-	data := []byte{65, 23, 68, 87, 12}
-	stackHash := message.BytesToByteStack(data).Hash().ToEthHash()
+func TestBytesStack(t *testing.T) {
+	data := common.RandBytes(200)
+	bytestack := message.BytesToByteStack(data)
+	t.Log("bytestack", bytestack)
 
 	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if stackHash != bridgeStackHash {
-		t.Error(errors.New("calculated wrong byte stack hash: "))
-		fmt.Println(stackHash)
-		fmt.Println(bridgeStackHash)
+	if bytestack.Hash().ToEthHash() != bridgeStackHash {
+		t.Error("calculated wrong byte stack hash")
+	}
+
+	var bytestackValBytes bytes.Buffer
+	if err := value.MarshalValue(bytestack, &bytestackValBytes); err != nil {
+		t.Fatal(err)
+	}
+	valid, offset, parsedData, err := valueTester.BytestackToBytes(nil, bytestackValBytes.Bytes(), big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !valid {
+		t.Fatal("failed to parse bytestack")
+	}
+	if offset.Cmp(big.NewInt(int64(len(bytestackValBytes.Bytes())))) != 0 {
+		t.Error("incorrect offset")
+	}
+	if !bytes.Equal(parsedData, data) {
+		t.Error("incorrect data")
 	}
 }
 

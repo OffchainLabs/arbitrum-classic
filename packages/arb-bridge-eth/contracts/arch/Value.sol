@@ -634,8 +634,8 @@ library Value {
         bytes32[] memory vals = new bytes32[](2);
 
         for (uint256 i = 0; i < wholeChunkCount; i++) {
-            vals[0] = stackHash;
-            vals[1] = newInt(data.toUint(startOffset + i * 32)).hash();
+            vals[0] = newInt(data.toUint(startOffset + i * 32)).hash();
+            vals[1] = stackHash;
             size += 2;
 
             stackHash = hashTuple(vals, size);
@@ -645,8 +645,8 @@ library Value {
             uint256 lastVal = data.toUint(startOffset + dataLength - 32);
             lastVal <<= (32 - (dataLength % 32)) * 8;
 
-            vals[0] = stackHash;
-            vals[1] = newInt(lastVal).hash();
+            vals[0] = newInt(lastVal).hash();
+            vals[1] = stackHash;
             size += 2;
 
             stackHash = hashTuple(vals, size);
@@ -680,10 +680,17 @@ library Value {
         )
     {
         offset = startOffset;
-        offset += 1;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+        if (valType != TUPLE_TYPECODE + 2) {
+            require(false, "fail1");
+            return (false, offset, byteData);
+        }
+
         uint256 byteCount;
         (valid, offset, byteCount) = deserializeCheckedInt(data, offset);
         if (!valid) {
+            require(false, "fail2");
             return (false, offset, byteData);
         }
         uint256 chunkCount = (byteCount + 31) / 32;
@@ -691,13 +698,27 @@ library Value {
         bytes32[] memory chunks = new bytes32[](chunkCount);
 
         for (uint256 i = 0; i < chunkCount; i++) {
-            offset += 1;
+            valType = uint8(data[offset]);
+            offset++;
+            if (valType != TUPLE_TYPECODE + 2) {
+                require(false, "fail3");
+                return (false, offset, byteData);
+            }
+
             uint256 nextChunk;
             (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
             if (!valid) {
+                require(false, "fail4");
                 return (false, offset, byteData);
             }
-            chunks[i] = bytes32(nextChunk);
+            chunks[chunkCount - 1 - i] = bytes32(nextChunk);
+        }
+
+        valType = uint8(data[offset]);
+        offset++;
+        if (valType != TUPLE_TYPECODE) {
+            require(false, "fail5");
+            return (false, offset, byteData);
         }
         return (true, offset, abi.encodePacked(chunks).slice(0, byteCount));
     }

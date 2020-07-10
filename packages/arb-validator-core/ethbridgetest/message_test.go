@@ -119,7 +119,7 @@ func TestDeliveredMessage(t *testing.T) {
 	}
 }
 
-func TestUnmamrshalOutgoing(t *testing.T) {
+func TestUnmarshalOutgoing(t *testing.T) {
 	msg := message.NewRandomOutMessage(message.NewRandomEth())
 	var valData bytes.Buffer
 	if err := value.MarshalValue(msg.AsValue(), &valData); err != nil {
@@ -130,7 +130,7 @@ func TestUnmamrshalOutgoing(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !valid {
-		t.Error("invalid message")
+		t.Fatal("invalid message")
 	}
 	if offset.Uint64() != uint64(len(valData.Bytes())) {
 		t.Error("incorrect offset")

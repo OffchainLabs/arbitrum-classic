@@ -65,9 +65,9 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 		if tupVal.Len() != 2 {
 			return nil, errTupleSize2
 		}
-		// Can't fail since size has been checked
-		val, _ = tupVal.GetByInt64(0)
-		member, _ := tupVal.GetByInt64(1)
+
+		member, _ := tupVal.GetByInt64(0)
+		val, _ = tupVal.GetByInt64(1)
 
 		values = append(values, member)
 	}
@@ -82,7 +82,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 func ListToStackValue(vals []value.Value) value.TupleValue {
 	ret := value.NewEmptyTuple()
 	for _, val := range vals {
-		ret = value.NewTuple2(ret, val)
+		ret = value.NewTuple2(val, ret)
 	}
 	return ret
 }
