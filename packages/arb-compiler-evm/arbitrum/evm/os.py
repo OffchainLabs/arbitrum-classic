@@ -102,9 +102,6 @@ def update_execution_state(vm):
     vm.swap1()
     vm.swap2()
     std.arith.max(vm)
-    vm.gettime()
-    vm.tgetn(0)
-    std.arith.max(vm)
 
     # block_nunmber msg old_timestamp
     vm.swap1()
@@ -113,9 +110,6 @@ def update_execution_state(vm):
     vm.dup2()
     ethbridge_message.get("block_timestamp")(vm)
     # timestamp old_timestamp block msg
-    std.arith.max(vm)
-    vm.gettime()
-    vm.tgetn(2)
     std.arith.max(vm)
     vm.swap2()
     # msg block_number timestamp

@@ -19,11 +19,9 @@ package challenges
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"math/big"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -72,15 +70,9 @@ func testExecutionChallenge(t *testing.T) {
 }
 
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
-	}
 	afterMachine := mach.Clone()
-	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple(), 0)
+	precondition := valprotocol.NewPrecondition(mach.Hash(), value.NewEmptyTuple())
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, value.NewEmptyTuple(), 0)
 
 	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,

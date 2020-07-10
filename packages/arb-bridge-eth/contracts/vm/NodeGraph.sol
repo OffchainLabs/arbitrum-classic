@@ -37,8 +37,6 @@ contract NodeGraph {
     string private constant MAKE_RUN = "MAKE_RUN";
     // Tried to execute too many steps
     string private constant MAKE_STEP = "MAKE_STEP";
-    // Precondition: not within time bounds
-    string private constant MAKE_TIME = "MAKE_TIME";
     // Imported messages without reading them
     string private constant MAKE_MESSAGES = "MAKE_MESSAGES";
     // Tried to import more messages than exist in ethe inbox
@@ -65,7 +63,6 @@ contract NodeGraph {
         bytes32[8] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
-        uint128[4] timeBounds,
         uint64 numArbGas,
         uint64 numSteps,
         bool didInboxInsn
@@ -87,7 +84,6 @@ contract NodeGraph {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64[2] memory _maxTimeBoundsWidth,
         address _globalInboxAddress
     ) internal {
         globalInbox = IGlobalInbox(_globalInboxAddress);
@@ -112,8 +108,6 @@ contract NodeGraph {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.maxBlockBoundsWidth = _maxTimeBoundsWidth[0];
-        vmParams.maxTimestampBoundsWidth = _maxTimeBoundsWidth[1];
 
         emit RollupCreated(_vmState);
     }
@@ -212,7 +206,6 @@ contract NodeGraph {
             ],
             inboxCount,
             data.importedMessageCount,
-            data.timeBounds,
             data.numArbGas,
             data.numSteps,
             data.didInboxInsn
@@ -272,15 +265,6 @@ contract NodeGraph {
             MAKE_RUN
         );
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
-        require(
-            data.timeBounds[1] <=
-                data.timeBounds[0] + vmParams.maxBlockBoundsWidth
-        );
-        require(
-            data.timeBounds[2] <=
-                data.timeBounds[3] + vmParams.maxTimestampBoundsWidth
-        );
-        require(VM.withinTimeBounds(data.timeBounds), MAKE_TIME);
         require(
             data.importedMessageCount == 0 || data.didInboxInsn,
             MAKE_MESSAGES

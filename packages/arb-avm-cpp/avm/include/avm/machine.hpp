@@ -53,7 +53,6 @@ class Machine {
     }
 
     Assertion run(uint64_t stepCount,
-                  const TimeBounds& timeBounds,
                   Tuple messages,
                   std::chrono::seconds wallLimit);
 

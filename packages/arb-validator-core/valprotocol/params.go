@@ -27,8 +27,6 @@ type ChainParams struct {
 	StakeRequirement        *big.Int         // in Wei
 	GracePeriod             common.TimeTicks // in Ticks
 	MaxExecutionSteps       uint64
-	MaxBlockBoundsWidth     uint64 // in blocks
-	MaxTimestampBoundsWidth uint64 // in seconds
 	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
 }
 
@@ -37,8 +35,6 @@ func NewRandomChainParams() ChainParams {
 		StakeRequirement:        common.RandBigInt(),
 		GracePeriod:             common.TimeTicks{Val: common.RandBigInt()},
 		MaxExecutionSteps:       rand.Uint64(),
-		MaxBlockBoundsWidth:     rand.Uint64(),
-		MaxTimestampBoundsWidth: rand.Uint64(),
 		ArbGasSpeedLimitPerTick: rand.Uint64(),
 	}
 }
@@ -65,18 +61,6 @@ func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 	return ret
 }
 
-func (cp ChainParams) WithMaxBlocksBoundsWidth(width uint64) ChainParams {
-	ret := cp
-	ret.MaxBlockBoundsWidth = width
-	return ret
-}
-
-func (cp ChainParams) WithMaxTimestampBoundsWidth(width uint64) ChainParams {
-	ret := cp
-	ret.MaxTimestampBoundsWidth = width
-	return ret
-}
-
 func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
 	ret := cp
 	ret.ArbGasSpeedLimitPerTick = limit
@@ -88,8 +72,6 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
 		GracePeriod:             params.GracePeriod.MarshalToBuf(),
 		MaxExecutionSteps:       params.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     params.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: params.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
 	}
 }
@@ -99,8 +81,6 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 		StakeRequirement:        m.StakeRequirement.Unmarshal(),
 		GracePeriod:             m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps:       m.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     m.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: m.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }
@@ -109,7 +89,5 @@ func (cp ChainParams) Equals(cp2 ChainParams) bool {
 	return cp.StakeRequirement.Cmp(cp2.StakeRequirement) == 0 &&
 		cp.GracePeriod == cp2.GracePeriod &&
 		cp.MaxExecutionSteps == cp2.MaxExecutionSteps &&
-		cp.MaxBlockBoundsWidth == cp2.MaxBlockBoundsWidth &&
-		cp.MaxTimestampBoundsWidth == cp2.MaxTimestampBoundsWidth &&
 		cp.ArbGasSpeedLimitPerTick == cp2.ArbGasSpeedLimitPerTick
 }

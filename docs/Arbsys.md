@@ -28,18 +28,6 @@ Here is the interface offered by ArbSys:
         // Send given amount of Eth to dest with from sender.
         function withdrawEth(address dest, uint256 amount) external;
 
-        // Return lower bound on the on-chain block number
-        function blockLowerBound() external view returns(uint);
-
-        // Return lower bound on the on-chain timestamp
-        function timestampLowerBound() external view returns(uint);
-
-        // Return upper bound on the on-chain block number
-        function blockUpperBound() external view returns(uint);
-
-        // Return upper bound on the on-chain timestamp
-        function timestampUpperBound() external view returns(uint);
-
         // Return the number of transactions issued by the given external account
         // or the account sequence number of the given contract
         function getTransactionCount(address account) external view returns(uint256);

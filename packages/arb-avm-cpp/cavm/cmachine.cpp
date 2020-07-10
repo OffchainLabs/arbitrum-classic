@@ -144,27 +144,16 @@ ByteSlice machineMarshallState(CMachine* m) {
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto lowerBoundBlock = receiveUint256(lowerBoundBlockData);
-    auto upperBoundBlock = receiveUint256(upperBoundBlockData);
-    auto lowerBoundTimestamp = receiveUint256(lowerBoundTimestampData);
-    auto upperBoundTimestamp = receiveUint256(upperBoundTimestampData);
 
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
 
-    TimeBounds timeBounds{lowerBoundBlock, upperBoundBlock, lowerBoundTimestamp,
-                          upperBoundTimestamp};
-
     Assertion assertion =
-        mach->run(maxSteps, timeBounds, nonstd::get<Tuple>(std::move(messages)),
+        mach->run(maxSteps, nonstd::get<Tuple>(std::move(messages)),
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {

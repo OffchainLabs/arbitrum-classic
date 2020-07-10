@@ -84,8 +84,7 @@ enum class OpCode : uint8_t {
     LOG,
 
     SEND = 0x70,
-    GETTIME,
-    INBOX,
+    INBOX = 0x72,
     ERROR,
     HALT,
     SET_GAS,
@@ -162,7 +161,6 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::LOG, "log"},
 
     {OpCode::SEND, "send"},
-    {OpCode::GETTIME, "gettime"},
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
@@ -244,7 +242,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::LOG, {MarshalLevel::STUB}},
 
         {OpCode::SEND, {MarshalLevel::FULL}},
-        {OpCode::GETTIME, {}},
         {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
@@ -322,7 +319,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::LOG, {}},
 
                                {OpCode::SEND, {}},
-                               {OpCode::GETTIME, {}},
                                {OpCode::INBOX, {}},
                                {OpCode::ERROR, {}},
                                {OpCode::HALT, {}},
@@ -396,7 +392,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::LOG, 100},
 
     {OpCode::SEND, 100},
-    {OpCode::GETTIME, 40},
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},

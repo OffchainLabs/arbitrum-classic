@@ -218,8 +218,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
-			MaxBlockBoundsWidth:     20,
-			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
@@ -251,7 +249,6 @@ func TestComputePrevLeaf(t *testing.T) {
 		assertion.Prev.Deadline().Val,
 		uint32(assertion.Prev.LinkType()),
 		assertion.Params.NumSteps,
-		assertion.Params.TimeBounds.AsIntArray(),
 		assertion.Params.ImportedMessageCount,
 		assertion.Claim.AssertionStub.DidInboxInsn,
 		assertion.Claim.AssertionStub.NumGas)
@@ -299,7 +296,6 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 		prepared.Prev.Deadline().Val,
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.TimeBounds.AsIntArray(),
 		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas)
@@ -361,7 +357,6 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		prepared.Prev.Deadline().Val,
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.TimeBounds.AsIntArray(),
 		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas)
@@ -423,7 +418,6 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		prepared.Prev.Deadline().Val,
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.TimeBounds.AsIntArray(),
 		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas)

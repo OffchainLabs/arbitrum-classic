@@ -901,12 +901,6 @@ TEST_CASE("ecrecover opcode is correct") {
     };
 }
 
-TEST_CASE("GETTIME opcode is correct") {
-    SECTION("time") {
-        // TODO: fill in gettime test
-    }
-}
-
 TEST_CASE("INBOX opcode is correct") {
     SECTION("inbox") {
         // TODO: fill in inbox test

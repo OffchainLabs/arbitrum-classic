@@ -23,8 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
-	"math/big"
-
 	"log"
 	"sync"
 	"time"
@@ -33,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
@@ -500,19 +497,6 @@ func (chain *ChainObserver) ExecutionPrecondition(node *structures.Node) *valpro
 	inbox, _ := chain.Inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
-		TimeBounds:  params.TimeBounds,
 		BeforeInbox: inbox.AsValue(),
-	}
-}
-
-func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBounds {
-	latestBlock := chain.LatestBlockId.Height
-	// Start timestamp slightly in the past to avoid it being invalid
-	latestTimestamp := time.Now().Unix() - 60
-	return &protocol.TimeBounds{
-		LowerBoundBlock:     latestBlock,
-		UpperBoundBlock:     common.NewTimeBlocks(new(big.Int).Add(latestBlock.AsInt(), big.NewInt(int64(chain.NodeGraph.Params().MaxBlockBoundsWidth)))),
-		LowerBoundTimestamp: big.NewInt(latestTimestamp),
-		UpperBoundTimestamp: big.NewInt(latestTimestamp + int64(chain.NodeGraph.Params().MaxTimestampBoundsWidth)),
 	}
 }

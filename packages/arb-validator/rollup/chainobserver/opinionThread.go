@@ -161,41 +161,19 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
-						lowerBoundBlock := prepared.Params.TimeBounds.LowerBoundBlock
-						upperBoundBlock := prepared.Params.TimeBounds.UpperBoundBlock
-						lowerBoundTime := prepared.Params.TimeBounds.LowerBoundTimestamp
-						upperBoundTime := prepared.Params.TimeBounds.UpperBoundTimestamp
-						endCushion := common.NewTimeBlocks(new(big.Int).Add(chain.LatestBlockId.Height.AsInt(), big.NewInt(3)))
-
-						// We're predicting what the timestamp will be when we
-						// submit which is likely to be close to the current
-						// time rather than the time of the previous block. This
-						// doesn't effect correctness since the failure modes
-						// are dropping a valid assertion or submitting an
-						// assertion that will be rejected.
-						if chain.LatestBlockId.Height.Cmp(lowerBoundBlock) >= 0 &&
-							endCushion.Cmp(upperBoundBlock) <= 0 &&
-							time.Now().Unix() >= lowerBoundTime.Int64() &&
-							time.Now().Unix() <= upperBoundTime.Int64() {
-							chain.RUnlock()
-							chain.Lock()
-							chain.pendingState = prepared.Machine
-							chain.Unlock()
-							chain.RLock()
-							for _, lis := range chain.listeners {
-								lis.AssertionPrepared(
-									ctx,
-									chain.GetChainParams(),
-									chain.NodeGraph,
-									chain.KnownValidNode,
-									chain.LatestBlockId,
-									prepared.Clone())
-							}
-						} else {
-							log.Printf("Throwing out out of date assertion with bounds [%v, %v] at time %v\n", lowerBoundBlock.AsInt(), upperBoundBlock.AsInt(), chain.LatestBlockId.Height.AsInt())
-							// Prepared assertion is out of date
-							delete(preparingAssertions, chain.calculatedValidNode.Hash())
-							delete(preparedAssertions, chain.calculatedValidNode.Hash())
+						chain.RUnlock()
+						chain.Lock()
+						chain.pendingState = prepared.Machine
+						chain.Unlock()
+						chain.RLock()
+						for _, lis := range chain.listeners {
+							lis.AssertionPrepared(
+								ctx,
+								chain.GetChainParams(),
+								chain.NodeGraph,
+								chain.KnownValidNode,
+								chain.LatestBlockId,
+								prepared.Clone())
 						}
 					}
 				}
@@ -220,31 +198,23 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
 	mach := currentOpinion.Machine().Clone()
-	timeBounds := chain.currentTimeBounds()
-	log.Println("timeBounds: ", timeBounds.LowerBoundBlock.String(), timeBounds.UpperBoundBlock.String())
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
-	timeBoundsLength := new(big.Int).Sub(timeBounds.UpperBoundBlock.AsInt(), timeBounds.LowerBoundBlock.AsInt())
-	runBlocks := new(big.Int).Div(timeBoundsLength, big.NewInt(10))
-	runDuration := common.NewTimeBlocks(runBlocks).Duration()
-	log.Println("Asserting for up to", runBlocks, " blocks")
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, timeBounds, messagesVal, runDuration)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messagesVal, 0)
 
 	afterHash := mach.Hash()
 
 	blockReason := mach.IsBlocked(false)
 
 	log.Printf(
-		"Prepared assertion of %v steps, from %v to %v with block reason %v and timebounds [%v, %v] on top of leaf %v\n",
+		"Prepared assertion of %v steps, from %v to %v with block reason %v on top of leaf %v\n",
 		stepsRun,
 		beforeHash,
 		afterHash,
 		blockReason,
-		timeBounds.LowerBoundBlock.AsInt(),
-		timeBounds.UpperBoundBlock.AsInt(),
 		currentOpinion.Hash(),
 	)
 
@@ -254,7 +224,6 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 	if assertion.DidInboxInsn {
 		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
-			TimeBounds:           timeBounds,
 			ImportedMessageCount: newMessageCount,
 		}
 		claim = &valprotocol.AssertionClaim{
@@ -265,7 +234,6 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 	} else {
 		params = &valprotocol.AssertionParams{
 			NumSteps:             stepsRun,
-			TimeBounds:           timeBounds,
 			ImportedMessageCount: big.NewInt(0),
 		}
 		claim = &valprotocol.AssertionClaim{
@@ -303,7 +271,6 @@ func getNodeOpinion(
 
 	assertion, stepsRun := mach.ExecuteAssertion(
 		params.NumSteps,
-		params.TimeBounds,
 		messagesVal,
 		0,
 	)

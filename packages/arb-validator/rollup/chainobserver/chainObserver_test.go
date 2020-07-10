@@ -18,6 +18,7 @@ package chainobserver
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -27,7 +28,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -147,18 +147,11 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
-	timeBounds := &protocol.TimeBounds{
-		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(0)),
-		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(1000)),
-		LowerBoundTimestamp: big.NewInt(100),
-		UpperBoundTimestamp: big.NewInt(120),
-	}
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,
-		TimeBounds:           timeBounds,
 		ImportedMessageCount: big.NewInt(0),
 	}
 	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
@@ -213,6 +206,8 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		checkpointer = checkpointing.NewDummyCheckpointer()
 	case "fresh_rocksdb":
 		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
+	default:
+		return nil, errors.New("invalid checkpoint type")
 	}
 	if err := checkpointer.Initialize(contractPath); err != nil {
 		return nil, err
@@ -224,8 +219,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             common.TicksFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
-			MaxBlockBoundsWidth:     20,
-			MaxTimestampBoundsWidth: 900,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,

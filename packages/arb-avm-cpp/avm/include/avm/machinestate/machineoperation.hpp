@@ -77,7 +77,6 @@ BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
 bool send(MachineState& m);
-void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
 void setgas(MachineState& m);
 void pushgas(MachineState& m);

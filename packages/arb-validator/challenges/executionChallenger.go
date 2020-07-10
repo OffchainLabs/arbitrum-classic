@@ -156,7 +156,6 @@ func setPreCondition(
 	}
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
-		startPrecondition.TimeBounds,
 		startPrecondition.BeforeInbox,
 		0,
 	)
@@ -201,7 +200,6 @@ func executionChallengerUpdate(
 					newMachine = cMach.Clone()
 					assertion, _ := cMach.ExecuteAssertion(
 						stepCount,
-						pre.TimeBounds,
 						pre.BeforeInbox,
 						0,
 					)

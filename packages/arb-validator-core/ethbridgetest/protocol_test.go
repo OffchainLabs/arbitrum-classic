@@ -18,31 +18,20 @@ package ethbridgetest
 
 import (
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"math/big"
-
 	"testing"
 )
 
 func TestGeneratePreconditionHash(t *testing.T) {
 	intVal := value.NewInt64Value(1)
 	tuple := value.NewTuple2(intVal, intVal)
-	timeBounds := &protocol.TimeBounds{}
-	timeBounds.LowerBoundBlock = common.NewTimeBlocks(big.NewInt(0))
-	timeBounds.UpperBoundBlock = common.NewTimeBlocks(big.NewInt(1))
-	timeBounds.LowerBoundTimestamp = big.NewInt(0)
-	timeBounds.UpperBoundTimestamp = big.NewInt(1)
-
-	precondition := valprotocol.NewPrecondition(intVal.Hash(), timeBounds, tuple)
+	precondition := valprotocol.NewPrecondition(intVal.Hash(), tuple)
 	expectedHash := precondition.Hash().ToEthHash()
 
 	ethbridgeHash, err := protocolTester.GeneratePreconditionHash(
 		nil,
 		intVal.Hash(),
-		timeBounds.AsIntArray(),
 		tuple.Hash())
 	if err != nil {
 		t.Fatal(err)
