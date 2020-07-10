@@ -512,8 +512,6 @@ def test_tuple(vm):
     vm.push(arb.value.Tuple([1, 2345, 1, 4]))
     vm.send()
     # TODO add nbsend test with valid message
-    # GETTIME
-    vm.gettime()
     # INBOX
     # TODO add inbox test
     # ERROR
