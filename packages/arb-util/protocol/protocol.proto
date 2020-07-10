@@ -3,11 +3,6 @@ package protocol;
 import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
-message TimeBoundsBlocksBuf {
-    common.TimeBlocksBuf lowerBoundBlock = 1;
-    common.TimeBlocksBuf upperBoundBlock = 2;
-}
-
 message ExecutionAssertion {
     common.HashBuf AfterHash = 1;
     bool didInboxInsn = 2;
