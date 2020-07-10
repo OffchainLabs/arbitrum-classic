@@ -30,7 +30,10 @@ interface IArbRollup {
         address _globalInboxAddress
     ) external;
 
-    function forwardContractMessage(address _sender, bytes calldata _data)
-        external
-        payable;
+    function forwardContractMessage(
+        address _sender,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable;
 }

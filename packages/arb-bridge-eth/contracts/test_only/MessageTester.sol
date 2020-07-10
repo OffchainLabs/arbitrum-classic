@@ -21,194 +21,64 @@ pragma solidity ^0.5.11;
 import "../Messages.sol";
 
 contract MessageTester {
-    uint8 internal constant TRANSACTION_BATCH_MSG = 6;
-
-    function transactionHash(
-        address chain,
-        address to,
-        address from,
-        uint256 seqNumber,
-        uint256 value,
-        bytes memory data
+    function messageHash(
+        uint8 messageType,
+        address sender,
+        uint256 blockNumber,
+        uint256 timestamp,
+        uint256 inboxSeqNum,
+        bytes32 messageDataHash
     ) public pure returns (bytes32) {
         return
-            Messages.transactionHash(
-                chain,
-                to,
-                from,
-                seqNumber,
-                value,
-                keccak256(data)
+            Messages.messageHash(
+                messageType,
+                sender,
+                blockNumber,
+                timestamp,
+                inboxSeqNum,
+                messageDataHash
             );
     }
 
-    function transactionMessageHash(
-        address chain,
-        address to,
-        address from,
-        uint256 seqNumber,
-        uint256 value,
-        bytes memory data
-    ) public pure returns (bytes32, bytes32) {
-        (Value.Data memory tuple, bytes32 receiptHash) = Messages
-            .transactionMessageValue(
-            chain,
-            to,
-            from,
-            seqNumber,
-            value,
-            keccak256(data),
-            Value.bytesToBytestackHash(data, 0, data.length)
-        );
-
-        return (Value.hash(tuple), receiptHash);
+    function messageValueHash(
+        uint8 messageType,
+        uint256 blockNumber,
+        uint256 timestamp,
+        address sender,
+        uint256 inboxSeqNum,
+        bytes memory messageData
+    ) public pure returns (bytes32) {
+        return
+            Value.hash(
+                Messages.messageValue(
+                    messageType,
+                    blockNumber,
+                    timestamp,
+                    sender,
+                    inboxSeqNum,
+                    messageData
+                )
+            );
     }
 
-    function transactionBatchHash(bytes memory transactions)
+    function addMessageToInbox(bytes32 inbox, bytes32 message)
         public
         pure
         returns (bytes32)
     {
-        return Messages.transactionBatchHash(transactions);
-    }
-
-    function transactionMessageBatchHashSingle(
-        uint256 start,
-        address chain,
-        bytes memory transactions
-    )
-        public
-        pure
-        returns (
-            bytes32,
-            bytes32,
-            bool
-        )
-    {
-        (Value.Data memory message, bytes32 receiptHash, bool valid) = Messages
-            .transactionMessageBatchHashSingle(start, chain, transactions);
-        return (Value.hash(message), receiptHash, valid);
-    }
-
-    function transactionMessageBatchSingleSender(
-        uint256 start,
-        address chain,
-        bytes32 dataHash,
-        bytes memory transactions
-    ) public pure returns (address) {
-        return
-            Messages.transactionMessageBatchSingleSender(
-                start,
-                chain,
-                dataHash,
-                transactions
-            );
-    }
-
-    function transactionMessageBatchHash(
-        bytes32 prev,
-        uint256 prevSize,
-        address chain,
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp
-    ) public pure returns (bytes32) {
-        return
-            Messages.transactionMessageBatchHash(
-                prev,
-                prevSize,
-                chain,
-                transactions,
-                blockNum,
-                blockTimestamp
-            );
-    }
-
-    function ethHash(
-        address to,
-        address from,
-        uint256 value
-    ) public pure returns (bytes32) {
-        return Messages.ethHash(to, from, value);
-    }
-
-    function ethMessageHash(
-        address to,
-        address from,
-        uint256 value
-    ) public pure returns (bytes32) {
-        return Value.hash(Messages.ethMessageValue(to, from, value));
-    }
-
-    function erc20Hash(
-        address to,
-        address from,
-        address erc20,
-        uint256 value
-    ) public pure returns (bytes32) {
-        return Messages.erc20Hash(to, from, erc20, value);
-    }
-
-    function erc20MessageHash(
-        address to,
-        address from,
-        address erc20,
-        uint256 value
-    ) public pure returns (bytes32) {
-        return Value.hash(Messages.erc20MessageValue(to, from, erc20, value));
-    }
-
-    function erc721Hash(
-        address to,
-        address from,
-        address erc721,
-        uint256 id
-    ) public pure returns (bytes32) {
-        return Messages.erc721Hash(to, from, erc721, id);
-    }
-
-    function erc721MessageHash(
-        address to,
-        address from,
-        address erc721,
-        uint256 id
-    ) public pure returns (bytes32) {
-        return Value.hash(Messages.erc721MessageValue(to, from, erc721, id));
-    }
-
-    function addMessageToInbox(
-        bytes32 inboxHash,
-        bytes32 messageHash,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 messageNum
-    ) public pure returns (bytes32) {
-        return
-            Messages.addMessageToInbox(
-                inboxHash,
-                messageHash,
-                blockNumber,
-                timestamp,
-                messageNum
-            );
+        return Messages.addMessageToInbox(inbox, message);
     }
 
     function addMessageToVMInboxHash(
         bytes32 inboxTuplePreimage,
         uint256 inboxTupleSize,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 txId,
         bytes32 messageTuplePreimage,
         uint256 messageTupleSize
     ) public pure returns (bytes32) {
         return
             Value.hash(
-                Messages.addMessageToVMInboxHash(
+                Messages.addMessageToVMInbox(
                     Value.newTuplePreImage(inboxTuplePreimage, inboxTupleSize),
-                    blockNumber,
-                    timestamp,
-                    txId,
                     Value.newTuplePreImage(
                         messageTuplePreimage,
                         messageTupleSize

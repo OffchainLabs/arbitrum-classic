@@ -38,10 +38,10 @@ contract GlobalInbox is
     IGlobalInbox,
     PaymentRecords // solhint-disable-next-line bracket-align
 {
-    uint8 internal constant TRANSACTION_MSG = 0;
-    uint8 internal constant ETH_DEPOSIT = 1;
-    uint8 internal constant ERC20_DEPOSIT = 2;
-    uint8 internal constant ERC721_DEPOSIT = 3;
+    uint8 internal constant ETH_DEPOSIT = 0;
+    uint8 internal constant ERC20_DEPOSIT = 1;
+    uint8 internal constant ERC721_DEPOSIT = 2;
+    uint8 internal constant L2_MSG = 3;
 
     uint8 internal constant TRANSACTION_BATCH_MSG = 6;
 
@@ -162,202 +162,110 @@ contract GlobalInbox is
         }
     }
 
-    function sendTransactionMessage(
+    function sendL2MessageFromOrigin(
         address _chain,
-        address _to,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes calldata _data
+        bytes calldata _messageData
     ) external {
-        _deliverTransactionMessage(
+        // solhint-disable-next-line avoid-tx-origin
+        require(msg.sender == tx.origin, "origin only");
+        uint256 inboxSeqNum = _deliverMessageImpl(
             _chain,
-            _to,
+            L2_MSG,
             msg.sender,
-            _seqNumber,
-            _value,
-            _data
+            keccak256(_messageData)
         );
+        emit IGlobalInbox.MessageDeliveredFromOrigin(
+            _chain,
+            L2_MSG,
+            msg.sender,
+            inboxSeqNum
+        );
+    }
+
+    function sendL2Message(address _chain, bytes calldata _messageData)
+        external
+    {
+        _deliverMessage(_chain, L2_MSG, msg.sender, _messageData);
     }
 
     function depositEthMessage(address _chain, address _to) external payable {
         depositEth(_chain);
-
-        _deliverEthMessage(_chain, _to, msg.sender, msg.value);
+        _deliverMessage(
+            _chain,
+            ETH_DEPOSIT,
+            msg.sender,
+            abi.encodePacked(_to, msg.value)
+        );
     }
 
     function depositERC20Message(
         address _chain,
-        address _to,
         address _erc20,
+        address _to,
         uint256 _value
     ) external {
         depositERC20(_erc20, _chain, _value);
-
-        _deliverERC20TokenMessage(_chain, _to, msg.sender, _erc20, _value);
+        _deliverMessage(
+            _chain,
+            ERC20_DEPOSIT,
+            msg.sender,
+            abi.encodePacked(_erc20, _to, _value)
+        );
     }
 
     function depositERC721Message(
         address _chain,
-        address _to,
         address _erc721,
+        address _to,
         uint256 _id
     ) external {
         depositERC721(_erc721, _chain, _id);
-
-        _deliverERC721TokenMessage(_chain, _to, msg.sender, _erc721, _id);
-    }
-
-    // // Transaction format
-    // //   tx length bytes(32 bytes)
-    // //   to (20 bytes)
-    // //   seqNumber (32 bytes)
-    // //   value (32 bytes)
-    // //   signature (65 bytes)
-    // //   data (arbitrary length)
-
-    function deliverTransactionBatch(address chain, bytes calldata transactions)
-        external
-    {
-        // solhint-disable-next-line avoid-tx-origin
-        require(msg.sender == tx.origin, "origin only");
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(TRANSACTION_BATCH_MSG, transactions)
-        );
-
-        _deliverMessage(chain, messageHash);
-
-        emit TransactionMessageBatchDelivered(chain);
-    }
-
-    function _deliverTransactionMessage(
-        address _chain,
-        address _to,
-        address _from,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes memory _data
-    ) private {
-        bytes32 messageHash = Messages.transactionHash(
+        _deliverMessage(
             _chain,
-            _to,
-            _from,
-            _seqNumber,
-            _value,
-            keccak256(_data)
-        );
-
-        _deliverMessage(_chain, messageHash);
-
-        emit IGlobalInbox.TransactionMessageDelivered(
-            _chain,
-            _to,
-            _from,
-            _seqNumber,
-            _value,
-            _data
-        );
-    }
-
-    function _deliverEthMessage(
-        address _chain,
-        address _to,
-        address _from,
-        uint256 _value
-    ) private {
-        bytes32 messageHash = Messages.ethHash(_to, _from, _value);
-
-        uint256 messageNum = _deliverMessage(_chain, messageHash);
-
-        emit IGlobalInbox.EthDepositMessageDelivered(
-            _chain,
-            _to,
+            ERC721_DEPOSIT,
             msg.sender,
-            msg.value,
-            messageNum
+            abi.encodePacked(_erc721, _to, _id)
         );
     }
 
-    function _deliverERC20TokenMessage(
+    function _deliverMessage(
         address _chain,
-        address _to,
-        address _from,
-        address _erc20,
-        uint256 _value
+        uint8 _kind,
+        address _sender,
+        bytes memory _messageData
     ) private {
-        bytes32 messageHash = Messages.erc20Hash(_to, _from, _erc20, _value);
-
-        uint256 messageNum = _deliverMessage(_chain, messageHash);
-
-        emit IGlobalInbox.ERC20DepositMessageDelivered(
+        uint256 inboxSeqNum = _deliverMessageImpl(
             _chain,
-            _to,
-            _from,
-            _erc20,
-            _value,
-            messageNum
+            _kind,
+            _sender,
+            keccak256(_messageData)
+        );
+        emit IGlobalInbox.MessageDelivered(
+            _chain,
+            _kind,
+            _sender,
+            inboxSeqNum,
+            _messageData
         );
     }
 
-    function _deliverERC721TokenMessage(
+    function _deliverMessageImpl(
         address _chain,
-        address _to,
-        address _from,
-        address _erc721,
-        uint256 _id
-    ) private {
-        bytes32 messageHash = Messages.erc721Hash(_to, _from, _erc721, _id);
-
-        uint256 messageNum = _deliverMessage(_chain, messageHash);
-
-        emit IGlobalInbox.ERC721DepositMessageDelivered(
-            _chain,
-            _to,
-            _from,
-            _erc721,
-            _id,
-            messageNum
-        );
-    }
-
-    function _deliverContractTransactionMessage(
-        address _chain,
-        address _to,
-        address _from,
-        uint256 _value,
-        bytes memory _data
-    ) private {
-        bytes32 messageHash = Messages.contractTransactionHash(
-            _to,
-            _from,
-            _value,
-            _data
-        );
-
-        uint256 messageNum = _deliverMessage(_chain, messageHash);
-
-        emit IGlobalInbox.ContractTransactionMessageDelivered(
-            _chain,
-            _to,
-            _from,
-            _value,
-            _data,
-            messageNum
-        );
-    }
-
-    function _deliverMessage(address _chain, bytes32 _messageHash)
-        private
-        returns (uint256)
-    {
+        uint8 _kind,
+        address _sender,
+        bytes32 _messageDataHash
+    ) private returns (uint256) {
         Inbox storage inbox = inboxes[_chain];
         uint256 updatedCount = inbox.count + 1;
-        inbox.value = Messages.addMessageToInbox(
-            inbox.value,
-            _messageHash,
+        bytes32 messageHash = Messages.messageHash(
+            _kind,
+            _sender,
             block.number,
             block.timestamp, // solhint-disable-line not-rely-on-time
-            updatedCount
+            updatedCount,
+            _messageDataHash
         );
+        inbox.value = Messages.addMessageToInbox(inbox.value, messageHash);
         inbox.count = updatedCount;
         return updatedCount;
     }

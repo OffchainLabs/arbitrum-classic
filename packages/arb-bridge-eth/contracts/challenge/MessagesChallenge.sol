@@ -26,6 +26,8 @@ import "../arch/Value.sol";
 import "../Messages.sol";
 
 contract MessagesChallenge is BisectionChallenge {
+    using Value for Value.Data;
+
     event Bisected(
         bytes32[] chainHashes,
         bytes32[] segmentHashes,
@@ -84,284 +86,49 @@ contract MessagesChallenge is BisectionChallenge {
         );
     }
 
-    // addresses
-    //  chain
-    //  to
-    //  from
-
-    function oneStepProofTransactionMessage(
-        bytes32 _lowerHashA,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
-        address[3] memory _addresses,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes memory _data,
-        uint256 _blockNumber,
-        uint256 _timestamp
-    ) public asserterAction {
-        bytes32 messageHash = Messages.transactionHash(
-            _addresses[0],
-            _addresses[1],
-            _addresses[2],
-            _seqNumber,
-            _value,
-            keccak256(_data)
-        );
-        Value.Data memory dataValue = Value.bytesToBytestackHash(
-            _data,
-            0,
-            _data.length
-        );
-        (Value.Data memory arbMessage, bytes32 receiptHash) = Messages
-            .transactionMessageValue(
-            _addresses[0],
-            _addresses[1],
-            _addresses[2],
-            _seqNumber,
-            _value,
-            keccak256(_data),
-            dataValue
-        );
-
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
-        );
-
-        oneStepProof(
-            _lowerHashA,
-            _lowerHashBValue,
-            messageHash,
-            arbMessage,
-            _blockNumber,
-            _timestamp,
-            uint256(receiptHash)
-        );
-    }
-
-    function oneStepProofEthMessage(
-        bytes32 _lowerHashA,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
-        address _to,
-        address _from,
-        uint256 _value,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        uint256 _messageNum
-    ) public asserterAction {
-        bytes32 messageHash = Messages.ethHash(_to, _from, _value);
-        Value.Data memory arbMessage = Messages.ethMessageValue(
-            _to,
-            _from,
-            _value
-        );
-
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
-        );
-
-        oneStepProof(
-            _lowerHashA,
-            _lowerHashBValue,
-            messageHash,
-            arbMessage,
-            _blockNumber,
-            _timestamp,
-            _messageNum
-        );
-    }
-
-    function oneStepProofERC20Message(
-        bytes32 _lowerHashA,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
-        address _to,
-        address _from,
-        address _erc20,
-        uint256 _value,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        uint256 _messageNum
-    ) public asserterAction {
-        bytes32 messageHash = Messages.erc20Hash(_to, _from, _erc20, _value);
-        Value.Data memory arbMessage = Messages.erc20MessageValue(
-            _to,
-            _from,
-            _erc20,
-            _value
-        );
-
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
-        );
-
-        oneStepProof(
-            _lowerHashA,
-            _lowerHashBValue,
-            messageHash,
-            arbMessage,
-            _blockNumber,
-            _timestamp,
-            _messageNum
-        );
-    }
-
-    function oneStepProofERC721Message(
-        bytes32 _lowerHashA,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
-        address _to,
-        address _from,
-        address _erc721,
-        uint256 _value,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        uint256 _messageNum
-    ) public asserterAction {
-        bytes32 messageHash = Messages.erc721Hash(_to, _from, _erc721, _value);
-        Value.Data memory arbMessage = Messages.erc721MessageValue(
-            _to,
-            _from,
-            _erc721,
-            _value
-        );
-
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
-        );
-
-        oneStepProof(
-            _lowerHashA,
-            _lowerHashBValue,
-            messageHash,
-            arbMessage,
-            _blockNumber,
-            _timestamp,
-            _messageNum
-        );
-    }
-
-    function oneStepProofContractTransactionMessage(
-        bytes32 _lowerHashA,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
-        address _to,
-        address _from,
-        uint256 _value,
-        bytes memory _data,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        uint256 _messageNum
-    ) public asserterAction {
-        bytes32 messageHash = Messages.contractTransactionHash(
-            _to,
-            _from,
-            _value,
-            _data
-        );
-
-        Value.Data memory arbMessage = Messages.contractTransactionMessageValue(
-            _to,
-            _from,
-            _value,
-            _data
-        );
-
-        Value.Data memory _lowerHashBValue = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
-        );
-
-        oneStepProof(
-            _lowerHashA,
-            _lowerHashBValue,
-            messageHash,
-            arbMessage,
-            _blockNumber,
-            _timestamp,
-            _messageNum
-        );
-    }
-
-    function oneStepProofTransactionBatchMessage(
-        bytes32 lowerHashA,
-        bytes32 preImageBHash,
-        uint256 preImageBSize,
-        address chain,
-        bytes memory transactions,
-        uint256 blockNum,
-        uint256 blockTimestamp,
-        uint256 messageNum
-    ) public asserterAction {
-        bytes32 messageHash = Messages.transactionBatchHash(transactions);
-        bytes32 afterInboxHash = Messages.transactionMessageBatchHash(
-            preImageBHash,
-            preImageBSize,
-            chain,
-            transactions,
-            blockNum,
-            blockTimestamp
-        );
-
-        requireMatchesPrevState(
-            ChallengeUtils.messagesHash(
-                lowerHashA,
-                Messages.addMessageToInbox(
-                    lowerHashA,
-                    messageHash,
-                    blockNum,
-                    blockTimestamp,
-                    messageNum
-                ),
-                preImageBHash,
-                afterInboxHash,
-                1
-            )
-        );
-        finishOneStepProof();
-    }
-
     function oneStepProof(
-        bytes32 _lowerHashA,
-        Value.Data memory _lowerHashBValue,
-        bytes32 _messageHashA,
-        Value.Data memory _messageB,
-        uint256 _blockNum,
-        uint256 _blockTimestamp,
-        uint256 _messageNum
-    ) private {
-        Value.Data memory inbox = Messages.addMessageToVMInboxHash(
-            _lowerHashBValue,
-            _blockNum,
-            _blockTimestamp,
-            _messageNum,
-            _messageB
+        bytes32 _beforeInbox,
+        bytes32 _preImageBHash,
+        uint256 _preImageBSize,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes memory _msgData
+    ) public asserterAction {
+        bytes32 messageHash = Messages.messageHash(
+            _kind,
+            _sender,
+            _blockNumber,
+            _timestamp,
+            _inboxSeqNum,
+            keccak256(_msgData)
+        );
+        Value.Data memory messageValue = Messages.messageValue(
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
+        );
+        Value.Data memory beforeVMInbox = Value.newTuplePreImage(
+            _preImageBHash,
+            _preImageBSize
         );
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
-                _lowerHashA,
-                Messages.addMessageToInbox(
-                    _lowerHashA,
-                    _messageHashA,
-                    _blockNum,
-                    _blockTimestamp,
-                    _messageNum
-                ),
-                Value.hash(_lowerHashBValue),
-                Value.hash(inbox),
+                _beforeInbox,
+                Messages.addMessageToInbox(_beforeInbox, messageHash),
+                beforeVMInbox.hash(),
+                Messages
+                    .addMessageToVMInbox(beforeVMInbox, messageValue)
+                    .hash(),
                 1
             )
         );
 
-        finishOneStepProof();
-    }
-
-    function finishOneStepProof() private {
         emit OneStepProofCompleted();
         _asserterWin();
     }
