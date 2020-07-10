@@ -105,18 +105,33 @@ type Transaction struct {
 	Data        []byte
 }
 
-func newTransactionFromData(data []byte) Transaction {
-	maxGas := new(big.Int).SetBytes(data[:32])
+func extractUInt256(data []byte) (*big.Int, []byte) {
+	val := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
-	gasPriceBid := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	sequenceNum := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	var destAddress common.Address
-	copy(destAddress[:], data[:])
+	return val, data
+}
+
+func extractAddress(data []byte) (common.Address, []byte) {
+	data = data[12:] // Skip first 12 bytes of 32 byte address data
+	var addr common.Address
+	copy(addr[:], data[:])
 	data = data[20:]
-	payment := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
+	return addr, data
+}
+
+func addressData(addr common.Address) []byte {
+	ret := make([]byte, 0, 32)
+	ret = append(ret, make([]byte, 12)...)
+	ret = append(ret, addr[:]...)
+	return ret
+}
+
+func newTransactionFromData(data []byte) Transaction {
+	maxGas, data := extractUInt256(data)
+	gasPriceBid, data := extractUInt256(data)
+	sequenceNum, data := extractUInt256(data)
+	destAddress, data := extractAddress(data)
+	payment, data := extractUInt256(data)
 	return Transaction{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
@@ -156,7 +171,7 @@ func (t Transaction) asData() []byte {
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
 	ret = append(ret, math.U256Bytes(t.SequenceNum)...)
-	ret = append(ret, t.DestAddress[:]...)
+	ret = append(ret, addressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
@@ -185,15 +200,10 @@ type ContractTransaction struct {
 }
 
 func newContractTransactionFromData(data []byte) ContractTransaction {
-	maxGas := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	gasPriceBid := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	var destAddress common.Address
-	copy(destAddress[:], data[:])
-	data = data[20:]
-	payment := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
+	maxGas, data := extractUInt256(data)
+	gasPriceBid, data := extractUInt256(data)
+	destAddress, data := extractAddress(data)
+	payment, data := extractUInt256(data)
 	return ContractTransaction{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
@@ -221,7 +231,7 @@ func (t ContractTransaction) asData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
-	ret = append(ret, t.DestAddress[:]...)
+	ret = append(ret, addressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
@@ -244,13 +254,9 @@ func NewSimpleCall(dest common.Address, data []byte) L2Message {
 }
 
 func newCallFromData(data []byte) Call {
-	maxGas := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	gasPriceBid := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	var destAddress common.Address
-	copy(destAddress[:], data[:])
-	data = data[20:]
+	maxGas, data := extractUInt256(data)
+	gasPriceBid, data := extractUInt256(data)
+	destAddress, data := extractAddress(data)
 	return Call{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
@@ -276,7 +282,7 @@ func (c Call) asData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(c.MaxGas)...)
 	ret = append(ret, math.U256Bytes(c.GasPriceBid)...)
-	ret = append(ret, c.DestAddress[:]...)
+	ret = append(ret, addressData(c.DestAddress)...)
 	ret = append(ret, c.Data...)
 	return ret
 }

@@ -190,8 +190,8 @@ func (gi *globalInboxWatcher) processLog(
 		}
 
 		type TransactionBatchTxCallArgs struct {
-			Chain ethcommon.Address
-			Data  []byte
+			Chain       ethcommon.Address
+			MessageData []byte
 		}
 
 		var args TransactionBatchTxCallArgs
@@ -210,7 +210,7 @@ func (gi *globalInboxWatcher) processLog(
 				Kind:        message.Type(val.Kind),
 				Sender:      common.NewAddressFromEth(val.Sender),
 				InboxSeqNum: val.InboxSeqNum,
-				Data:        args.Data,
+				Data:        args.MessageData,
 				ChainTime:   chainTime,
 			},
 		}, nil

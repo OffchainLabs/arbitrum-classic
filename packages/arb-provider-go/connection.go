@@ -348,11 +348,15 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction) message.Transaction {
+	var to common.Address
+	if tx.To() != nil {
+		to = common.NewAddressFromEth(*tx.To())
+	}
 	return message.Transaction{
 		MaxGas:      new(big.Int).SetUint64(tx.Gas()),
 		GasPriceBid: tx.GasPrice(),
 		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
-		DestAddress: common.NewAddressFromEth(*tx.To()),
+		DestAddress: to,
 		Payment:     tx.Value(),
 		Data:        tx.Data(),
 	}

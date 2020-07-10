@@ -4,6 +4,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -90,7 +91,7 @@ func setupValidators(
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-		MaxExecutionSteps:       250000,
+		MaxExecutionSteps:       1000000000,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
@@ -99,7 +100,7 @@ func setupValidators(
 		return nil, err
 	}
 
-	contract := "contract.mexe"
+	contract := gotest.TestMachinePath()
 
 	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 	if err != nil {
@@ -211,10 +212,9 @@ waitloop:
 
 func SetupProvider(
 	t *testing.T,
-) (*FibonacciSession, *goarbitrum.ArbConnection, error) {
+) (*goarbitrum.ArbConnection, *bind.TransactOpts, error) {
 	ethURL := test.GetEthUrl()
 	key3 := "d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e"
-	fibAddrHex := "0x895521964D724c8362A36608AAf09A3D7d0A0445"
 
 	userKey, err := crypto.HexToECDSA(key3)
 	if err != nil {
@@ -237,26 +237,7 @@ func SetupProvider(
 		t.Errorf("Dial error %v", dialerr)
 		return nil, nil, err
 	}
-
-	var fibAddr common.Address
-	fibAddr = common.HexToAddress(fibAddrHex)
-	fib, err := NewFibonacci(fibAddr.ToEthAddress(), conn)
-	if err != nil {
-		t.Errorf("NewFibonacci error %v", err)
-		return nil, nil, err
-	}
-
-	//Wrap the Token contract instance into a session
-	fibonacciSession := &FibonacciSession{
-		Contract: fib,
-		CallOpts: bind.CallOpts{
-			From:    auth.From,
-			Pending: true,
-		},
-		TransactOpts: *auth,
-	}
-
-	return fibonacciSession, conn, nil
+	return conn, auth, nil
 }
 
 type ListenerError struct {
@@ -344,17 +325,48 @@ func waitForReceipt(
 
 func TestFib(t *testing.T) {
 	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	clients, err := setupValidators([]string{key1, key2}, t)
+	//key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	validatorClients, err := setupValidators([]string{key1}, t)
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
-	session, client, err := SetupProvider(t)
+	client, auth, err := SetupProvider(t)
 	if err != nil {
-		t.Errorf("Validator setup error %v", err)
-		t.FailNow()
+		t.Fatalf("Validator setup error %v", err)
 	}
+
+	_, tx, fib, err := DeployFibonacci(auth, client)
+	if err != nil {
+		t.Fatal("DeployFibonacci failed", err)
+	}
+
+	_, err = waitForReceipt(
+		client,
+		tx,
+		common.NewAddressFromEth(auth.From),
+		time.Second*60,
+	)
+	if err != nil {
+		t.Errorf("DeployFibonacci receipt error %v", err)
+		return
+	}
+
+	//Wrap the Token contract instance into a session
+	session := &FibonacciSession{
+		Contract: fib,
+		CallOpts: bind.CallOpts{
+			From:    auth.From,
+			Pending: true,
+		},
+		TransactOpts: *auth,
+	}
+
+	//t.Run("DeployFib", func(t *testing.T) {
+	//	FibonacciBin
+	//
+	//
+	//})
 
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
@@ -421,7 +433,7 @@ func TestFib(t *testing.T) {
 		}
 	})
 
-	for _, client := range clients {
+	for _, client := range validatorClients {
 		if err := os.RemoveAll(db + client.Address().String()); err != nil {
 			log.Fatal(err)
 		}
