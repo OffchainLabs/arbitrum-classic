@@ -197,17 +197,24 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
+	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    dest,
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.Eth{
+				DestAddress: dest,
+				Value:       big.NewInt(75),
+			},
+			common.NewAddressFromEth(auth.From),
+			big.NewInt(0),
+			message.ChainTime{},
+		).AsValue(),
+	)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
+		messages = append(messages, message.NewRandomInboxMessage(message.NewRandomEth()).AsValue())
 	}
 
 	assertion := evm.NewRandomEVMAssertion(results, messages)

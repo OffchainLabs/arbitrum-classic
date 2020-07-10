@@ -30,15 +30,15 @@ import (
 )
 
 type messageStackItem struct {
-	message message.Delivered
+	message message.InboxMessage
 	prev    *messageStackItem
 	next    *messageStackItem
 	hash    common.Hash
 	count   *big.Int
 }
 
-func (pii *messageStackItem) skipNext(n uint64) *messageStackItem {
-	ret := pii
+func (msi *messageStackItem) skipNext(n uint64) *messageStackItem {
+	ret := msi
 	for i := uint64(0); i < n && ret != nil; i++ {
 		ret = ret.next
 	}
@@ -102,21 +102,14 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 	}
 }
 
-func (ms *MessageStack) DeliverMessage(msg message.Received) {
+func (ms *MessageStack) DeliverMessage(msg message.InboxMessage) {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
-	delivered := message.Delivered{
-		Message: msg.Message,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: msg.ChainTime,
-			TxId:      newTopCount,
-		},
-	}
 	if ms.newest == nil {
 		item := &messageStackItem{
-			message: delivered,
+			message: msg,
 			prev:    nil,
 			next:    nil,
-			hash:    hash2(ms.hashOfRest, delivered.CommitmentHash()),
+			hash:    hash2(ms.hashOfRest, msg.CommitmentHash()),
 			count:   newTopCount,
 		}
 		ms.newest = item
@@ -124,10 +117,10 @@ func (ms *MessageStack) DeliverMessage(msg message.Received) {
 		ms.index[item.hash] = item
 	} else {
 		item := &messageStackItem{
-			message: delivered,
+			message: msg,
 			prev:    ms.newest,
 			next:    nil,
-			hash:    hash2(ms.newest.hash, delivered.CommitmentHash()),
+			hash:    hash2(ms.newest.hash, msg.CommitmentHash()),
 			count:   newTopCount,
 		}
 		ms.newest = item
@@ -141,10 +134,10 @@ func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 		return value.NewEmptyTuple().Hash(), nil
 	}
 	if height.Cmp(ms.bottomIndex()) < 0 {
-		return common.Hash{}, errors.New("Height is below bottom of message stack")
+		return common.Hash{}, errors.New("height is below bottom of message stack")
 	}
 	if height.Cmp(ms.TopCount()) > 0 {
-		return common.Hash{}, errors.New("Height is above top of message stack")
+		return common.Hash{}, errors.New("height is above top of message stack")
 	}
 	offset := new(big.Int).Sub(height, ms.bottomIndex())
 	return ms.oldest.skipNext(offset.Uint64()).hash, nil
@@ -157,7 +150,7 @@ func hash2(h1, h2 common.Hash) common.Hash {
 func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext) *InboxBuf {
 	var items []*common.HashBuf
 	for item := ms.newest; item != nil; item = item.prev {
-		checkpointVal := item.message.CheckpointValue()
+		checkpointVal := item.message.AsValue()
 		ctx.AddValue(checkpointVal)
 		items = append(items, checkpointVal.Hash().MarshalToBuf())
 	}
@@ -174,19 +167,16 @@ func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext)
 	}
 }
 
-func (buf *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*MessageStack, error) {
+func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*MessageStack, error) {
 	ret := NewMessageStack()
-	ret.hashOfRest = buf.HashOfRest.Unmarshal()
-	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(buf.Items[i].Unmarshal())
-		msg, err := message.UnmarshalDeliveredFromCheckpoint(val)
+	ret.hashOfRest = x.HashOfRest.Unmarshal()
+	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
+		val := ctx.GetValue(x.Items[i].Unmarshal())
+		msg, err := message.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
-		ret.DeliverMessage(message.Received{
-			Message:   msg.Message,
-			ChainTime: msg.ChainTime,
-		})
+		ret.DeliverMessage(msg)
 	}
 	return ret, nil
 }
@@ -244,10 +234,10 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	return cuts, nil
 }
 
-func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.Delivered, error) {
+func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.InboxMessage, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return message.Delivered{}, errors.New("one step proof startItemHash not found")
+		return message.InboxMessage{}, errors.New("one step proof startItemHash not found")
 	}
 	return item.message, nil
 }
@@ -265,7 +255,7 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 	inbox := NewVMInbox()
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
-			return nil, errors.New("Not enough Messages in inbox")
+			return nil, errors.New("not enough Messages in inbox")
 		}
 		inbox.DeliverMessage(item.message)
 		item = item.next
@@ -273,7 +263,7 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 	return inbox, nil
 }
 
-func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]message.Delivered, error) {
+func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]message.InboxMessage, error) {
 	if count == 0 {
 		return nil, nil
 	}
@@ -283,10 +273,10 @@ func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]messa
 	}
 
 	item := oldItem
-	msgs := make([]message.Delivered, 0)
+	msgs := make([]message.InboxMessage, 0)
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
-			return nil, errors.New("Not enough Messages in inbox")
+			return nil, errors.New("not enough Messages in inbox")
 		}
 		msgs = append(msgs, item.message)
 		item = item.next
@@ -294,8 +284,8 @@ func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]messa
 	return msgs, nil
 }
 
-func (ms *MessageStack) GetAllMessages() []message.Delivered {
-	msgs := make([]message.Delivered, 0)
+func (ms *MessageStack) GetAllMessages() []message.InboxMessage {
+	msgs := make([]message.InboxMessage, 0)
 	for item := ms.oldest; item != nil; item = item.next {
 		msgs = append(msgs, item.message)
 	}

@@ -19,10 +19,10 @@ package arbbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type MessagesChallenge interface {
@@ -35,44 +35,11 @@ type MessagesChallenge interface {
 		chainLength *big.Int,
 	) error
 
-	OneStepProofTransactionMessage(
+	OneStepProof(
 		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.Transaction,
-	) error
-
-	OneStepProofEthMessage(
-		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.Eth,
-	) error
-
-	OneStepProofERC20Message(
-		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.ERC20,
-	) error
-
-	OneStepProofERC721Message(
-		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.ERC721,
-	) error
-
-	OneStepProofContractTransactionMessage(
-		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.ContractTransaction,
+		beforeInbox common.Hash,
+		beforeVmInbox value.HashPreImage,
+		msg message.InboxMessage,
 	) error
 
 	ChooseSegment(
@@ -81,14 +48,6 @@ type MessagesChallenge interface {
 		chainHashes []common.Hash,
 		segmentHashes []common.Hash,
 		chainLength *big.Int,
-	) error
-
-	OneStepProofTransactionBatchMessage(
-		ctx context.Context,
-		lowerHashA common.Hash,
-		lowerHashB value.HashPreImage,
-		deliveryInfo message.DeliveryInfo,
-		msg message.TransactionBatch,
 	) error
 }
 

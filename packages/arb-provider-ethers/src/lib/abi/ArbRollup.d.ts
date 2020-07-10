@@ -44,10 +44,6 @@ interface ArbRollupInterface extends Interface {
       ]): string
     }>
 
-    forwardContractMessage: TypedFunctionDescription<{
-      encode([_sender, _data]: [string, Arrayish]): string
-    }>
-
     getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>
 
     globalInbox: TypedFunctionDescription<{ encode([]: []): string }>
@@ -173,10 +169,6 @@ interface ArbRollupInterface extends Interface {
 
     resolveChallenge: TypedFunctionDescription<{
       encode([winner, loser]: [string, string, BigNumberish]): string
-    }>
-
-    spawnCallProxy: TypedFunctionDescription<{
-      encode([_arbContract]: [string]): string
     }>
 
     startChallenge: TypedFunctionDescription<{
@@ -310,12 +302,6 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    forwardContractMessage(
-      _sender: string,
-      _data: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<string>
@@ -414,11 +400,6 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    spawnCallProxy(
-      _arbContract: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
     startChallenge(
       asserterAddress: string,
       challengerAddress: string,
@@ -462,12 +443,6 @@ export class ArbRollup extends Contract {
     stakerAddresses: string[],
     stakerProofs: Arrayish[],
     stakerProofOffsets: BigNumberish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  forwardContractMessage(
-    _sender: string,
-    _data: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -567,11 +542,6 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  spawnCallProxy(
-    _arbContract: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
   startChallenge(
     asserterAddress: string,
     challengerAddress: string,
@@ -657,8 +627,6 @@ export class ArbRollup extends Contract {
       stakerProofOffsets: BigNumberish[]
     ): Promise<BigNumber>
 
-    forwardContractMessage(_sender: string, _data: Arrayish): Promise<BigNumber>
-
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<BigNumber>
@@ -736,8 +704,6 @@ export class ArbRollup extends Contract {
       loser: string,
       arg2: BigNumberish
     ): Promise<BigNumber>
-
-    spawnCallProxy(_arbContract: string): Promise<BigNumber>
 
     startChallenge(
       asserterAddress: string,

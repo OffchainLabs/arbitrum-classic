@@ -12,12 +12,8 @@ import {
 
 interface GlobalInboxInterface extends Interface {
   functions: {
-    deliverTransactionBatch: TypedFunctionDescription<{
-      encode([chain, transactions]: [string, Arrayish]): string
-    }>
-
     depositERC20Message: TypedFunctionDescription<{
-      encode([_chain, _to, _erc20, _value]: [
+      encode([_chain, _erc20, _to, _value]: [
         string,
         string,
         string,
@@ -26,7 +22,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     depositERC721Message: TypedFunctionDescription<{
-      encode([_chain, _to, _erc721, _id]: [
+      encode([_chain, _erc721, _to, _id]: [
         string,
         string,
         string,
@@ -36,19 +32,6 @@ interface GlobalInboxInterface extends Interface {
 
     depositEthMessage: TypedFunctionDescription<{
       encode([_chain, _to]: [string, string]): string
-    }>
-
-    forwardContractTransactionMessage: TypedFunctionDescription<{
-      encode([_to, _from, _value, _data]: [
-        string,
-        string,
-        BigNumberish,
-        Arrayish
-      ]): string
-    }>
-
-    forwardEthMessage: TypedFunctionDescription<{
-      encode([_to, _from]: [string, string]): string
     }>
 
     getERC20Balance: TypedFunctionDescription<{
@@ -89,21 +72,19 @@ interface GlobalInboxInterface extends Interface {
       encode([_owner]: [string]): string
     }>
 
+    sendL2Message: TypedFunctionDescription<{
+      encode([_chain, _messageData]: [string, Arrayish]): string
+    }>
+
+    sendL2MessageFromOrigin: TypedFunctionDescription<{
+      encode([_chain, _messageData]: [string, Arrayish]): string
+    }>
+
     sendMessages: TypedFunctionDescription<{
       encode([_messages, messageCounts, nodeHashes]: [
         Arrayish,
         BigNumberish[],
         Arrayish[]
-      ]): string
-    }>
-
-    sendTransactionMessage: TypedFunctionDescription<{
-      encode([_chain, _to, _seqNumber, _value, _data]: [
-        string,
-        string,
-        BigNumberish,
-        BigNumberish,
-        Arrayish
       ]): string
     }>
 
@@ -128,45 +109,21 @@ interface GlobalInboxInterface extends Interface {
   }
 
   events: {
-    ContractTransactionMessageDelivered: TypedEventDescription<{
-      encodeTopics([chain, to, from, value, data, messageNum]: [
+    MessageDelivered: TypedEventDescription<{
+      encodeTopics([chain, kind, sender, inboxSeqNum, data]: [
         string | null,
+        BigNumberish | null,
         string | null,
-        string | null,
-        null,
         null,
         null
       ]): string[]
     }>
 
-    ERC20DepositMessageDelivered: TypedEventDescription<{
-      encodeTopics([chain, to, from, erc20, value, messageNum]: [
+    MessageDeliveredFromOrigin: TypedEventDescription<{
+      encodeTopics([chain, kind, sender, inboxSeqNum]: [
         string | null,
+        BigNumberish | null,
         string | null,
-        string | null,
-        null,
-        null,
-        null
-      ]): string[]
-    }>
-
-    ERC721DepositMessageDelivered: TypedEventDescription<{
-      encodeTopics([chain, to, from, erc721, id, messageNum]: [
-        string | null,
-        string | null,
-        string | null,
-        null,
-        null,
-        null
-      ]): string[]
-    }>
-
-    EthDepositMessageDelivered: TypedEventDescription<{
-      encodeTopics([chain, to, from, value, messageNum]: [
-        string | null,
-        string | null,
-        string | null,
-        null,
         null
       ]): string[]
     }>
@@ -179,21 +136,6 @@ interface GlobalInboxInterface extends Interface {
         prevOwner,
         newOwner,
       ]: [null, null, null, null, null]): string[]
-    }>
-
-    TransactionMessageBatchDelivered: TypedEventDescription<{
-      encodeTopics([chain]: [string | null]): string[]
-    }>
-
-    TransactionMessageDelivered: TypedEventDescription<{
-      encodeTopics([chain, to, from, seqNumber, value, data]: [
-        string | null,
-        string | null,
-        string | null,
-        null,
-        null,
-        null
-      ]): string[]
     }>
   }
 }
@@ -212,24 +154,18 @@ export class GlobalInbox extends Contract {
   interface: GlobalInboxInterface
 
   functions: {
-    deliverTransactionBatch(
-      chain: string,
-      transactions: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
     depositERC20Message(
       _chain: string,
-      _to: string,
       _erc20: string,
+      _to: string,
       _value: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     depositERC721Message(
       _chain: string,
-      _to: string,
       _erc721: string,
+      _to: string,
       _id: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -237,20 +173,6 @@ export class GlobalInbox extends Contract {
     depositEthMessage(
       _chain: string,
       _to: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    forwardContractTransactionMessage(
-      _to: string,
-      _from: string,
-      _value: BigNumberish,
-      _data: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    forwardEthMessage(
-      _to: string,
-      _from: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -283,19 +205,22 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<string[]>
 
+    sendL2Message(
+      _chain: string,
+      _messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    sendL2MessageFromOrigin(
+      _chain: string,
+      _messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     sendMessages(
       _messages: Arrayish,
       messageCounts: BigNumberish[],
       nodeHashes: Arrayish[],
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    sendTransactionMessage(
-      _chain: string,
-      _to: string,
-      _seqNumber: BigNumberish,
-      _value: BigNumberish,
-      _data: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -321,24 +246,18 @@ export class GlobalInbox extends Contract {
     withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
   }
 
-  deliverTransactionBatch(
-    chain: string,
-    transactions: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
   depositERC20Message(
     _chain: string,
-    _to: string,
     _erc20: string,
+    _to: string,
     _value: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   depositERC721Message(
     _chain: string,
-    _to: string,
     _erc721: string,
+    _to: string,
     _id: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -346,20 +265,6 @@ export class GlobalInbox extends Contract {
   depositEthMessage(
     _chain: string,
     _to: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  forwardContractTransactionMessage(
-    _to: string,
-    _from: string,
-    _value: BigNumberish,
-    _data: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  forwardEthMessage(
-    _to: string,
-    _from: string,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -392,19 +297,22 @@ export class GlobalInbox extends Contract {
 
   ownedERC721s(_owner: string): Promise<string[]>
 
+  sendL2Message(
+    _chain: string,
+    _messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  sendL2MessageFromOrigin(
+    _chain: string,
+    _messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   sendMessages(
     _messages: Arrayish,
     messageCounts: BigNumberish[],
     nodeHashes: Arrayish[],
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  sendTransactionMessage(
-    _chain: string,
-    _to: string,
-    _seqNumber: BigNumberish,
-    _value: BigNumberish,
-    _data: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -430,39 +338,19 @@ export class GlobalInbox extends Contract {
   withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
 
   filters: {
-    ContractTransactionMessageDelivered(
+    MessageDelivered(
       chain: string | null,
-      to: string | null,
-      from: string | null,
-      value: null,
-      data: null,
-      messageNum: null
+      kind: BigNumberish | null,
+      sender: string | null,
+      inboxSeqNum: null,
+      data: null
     ): EventFilter
 
-    ERC20DepositMessageDelivered(
+    MessageDeliveredFromOrigin(
       chain: string | null,
-      to: string | null,
-      from: string | null,
-      erc20: null,
-      value: null,
-      messageNum: null
-    ): EventFilter
-
-    ERC721DepositMessageDelivered(
-      chain: string | null,
-      to: string | null,
-      from: string | null,
-      erc721: null,
-      id: null,
-      messageNum: null
-    ): EventFilter
-
-    EthDepositMessageDelivered(
-      chain: string | null,
-      to: string | null,
-      from: string | null,
-      value: null,
-      messageNum: null
+      kind: BigNumberish | null,
+      sender: string | null,
+      inboxSeqNum: null
     ): EventFilter
 
     PaymentTransfer(
@@ -472,49 +360,24 @@ export class GlobalInbox extends Contract {
       prevOwner: null,
       newOwner: null
     ): EventFilter
-
-    TransactionMessageBatchDelivered(chain: string | null): EventFilter
-
-    TransactionMessageDelivered(
-      chain: string | null,
-      to: string | null,
-      from: string | null,
-      seqNumber: null,
-      value: null,
-      data: null
-    ): EventFilter
   }
 
   estimate: {
-    deliverTransactionBatch(
-      chain: string,
-      transactions: Arrayish
-    ): Promise<BigNumber>
-
     depositERC20Message(
       _chain: string,
-      _to: string,
       _erc20: string,
+      _to: string,
       _value: BigNumberish
     ): Promise<BigNumber>
 
     depositERC721Message(
       _chain: string,
-      _to: string,
       _erc721: string,
+      _to: string,
       _id: BigNumberish
     ): Promise<BigNumber>
 
     depositEthMessage(_chain: string, _to: string): Promise<BigNumber>
-
-    forwardContractTransactionMessage(
-      _to: string,
-      _from: string,
-      _value: BigNumberish,
-      _data: Arrayish
-    ): Promise<BigNumber>
-
-    forwardEthMessage(_to: string, _from: string): Promise<BigNumber>
 
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
 
@@ -540,18 +403,17 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<BigNumber>
 
+    sendL2Message(_chain: string, _messageData: Arrayish): Promise<BigNumber>
+
+    sendL2MessageFromOrigin(
+      _chain: string,
+      _messageData: Arrayish
+    ): Promise<BigNumber>
+
     sendMessages(
       _messages: Arrayish,
       messageCounts: BigNumberish[],
       nodeHashes: Arrayish[]
-    ): Promise<BigNumber>
-
-    sendTransactionMessage(
-      _chain: string,
-      _to: string,
-      _seqNumber: BigNumberish,
-      _value: BigNumberish,
-      _data: Arrayish
     ): Promise<BigNumber>
 
     transferPayment(

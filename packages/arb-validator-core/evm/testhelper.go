@@ -24,10 +24,10 @@ import (
 	"testing"
 )
 
-func NewRandomEVMAssertion(results []Result, messages []value.Value) *protocol.ExecutionAssertion {
+func NewRandomEVMAssertion(results []*Result, messages []value.Value) *protocol.ExecutionAssertion {
 	logs := make([]value.Value, 0, len(results))
 	for _, result := range results {
-		logs = append(logs, ResultAsValue(result))
+		logs = append(logs, result.AsValue())
 	}
 	return protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),

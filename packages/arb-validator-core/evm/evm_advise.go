@@ -19,291 +19,107 @@ package evm
 import (
 	"errors"
 	"fmt"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"math/big"
 )
 
 type ResultType int
 
 const (
-	RevertCode      ResultType = 0
-	InvalidCode                = 1
-	ReturnCode                 = 2
-	StopCode                   = 3
-	BadSequenceCode            = 4
+	ReturnCode               ResultType = 0
+	RevertCode                          = 1
+	CongestionCode                      = 2
+	InsufficientGasFundsCode            = 3
+	InsufficientTxFundsCode             = 4
+	BadSequenceCode                     = 5
+	InvalidMessageFormatCode            = 6
+	UnknownErrorCode                    = 255
 )
 
-type Result interface {
-	IsResult()
-	GetReturnData() []byte
-	GetLogs() []Log
-	Valid() bool
-
-	GetDeliveredMessage() value.Value
-	Type() ResultType
+type Result struct {
+	L1Message  message.InboxMessage
+	ResultCode ResultType
+	ReturnData []byte
+	EVMLogs    []Log
+	GasUsed    *big.Int
+	GasPrice   *big.Int
 }
 
-func ResultAsValue(result Result) value.TupleValue {
+func (r *Result) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
-		result.GetDeliveredMessage(),
-		LogsToLogStack(result.GetLogs()),
-		message.BytesToByteStack(result.GetReturnData()),
-		value.NewInt64Value(int64(result.Type())),
+		r.L1Message.AsValue(),
+		value.NewInt64Value(int64(r.ResultCode)),
+		message.BytesToByteStack(r.ReturnData),
+		LogsToLogStack(r.EVMLogs),
+		value.NewIntValue(r.GasUsed),
+		value.NewIntValue(r.GasPrice),
 	})
 	return tup
 }
 
-type Return struct {
-	Delivered value.Value
-	ReturnVal []byte
-	Logs      []Log
-}
-
-func (e Return) Type() ResultType {
-	return ReturnCode
-}
-
-func (e Return) GetDeliveredMessage() value.Value {
-	return e.Delivered
-}
-
-func (e Return) IsResult() {}
-
-func (e Return) GetReturnData() []byte {
-	return e.ReturnVal
-}
-
-func (e Return) GetLogs() []Log {
-	return e.Logs
-}
-
-func (e Return) Valid() bool {
-	return true
-}
-
-func (e Return) String() string {
-	var sb strings.Builder
-	sb.WriteString("EVMReturn(returnVal: ")
-	sb.WriteString(hexutil.Encode(e.ReturnVal))
-	sb.WriteString(", logs: [")
-	for i, log := range e.Logs {
-		sb.WriteString(log.String())
-		if i != len(e.Logs)-1 {
-			sb.WriteString(", ")
-		}
-	}
-	sb.WriteString("])")
-	return sb.String()
-}
-
-type Revert struct {
-	Delivered value.Value
-	ReturnVal []byte
-}
-
-func (e Revert) Type() ResultType {
-	return RevertCode
-}
-
-func (e Revert) GetDeliveredMessage() value.Value {
-	return e.Delivered
-}
-
-func (e Revert) IsResult() {}
-
-func (e Revert) GetReturnData() []byte {
-	return e.ReturnVal
-}
-
-func (e Revert) GetLogs() []Log {
-	return nil
-}
-
-func (e Revert) Valid() bool {
-	return false
-}
-
-func (e Revert) String() string {
-	var sb strings.Builder
-	sb.WriteString("EVMRevert(returnVal: ")
-	sb.WriteString(hexutil.Encode(e.ReturnVal))
-	sb.WriteString(")")
-	return sb.String()
-}
-
-type Stop struct {
-	Delivered value.Value
-	Logs      []Log
-}
-
-func NewRandomStop(msg message.ExecutionMessage, logCount int32) Stop {
-	logs := make([]Log, 0, logCount)
-	for i := int32(0); i < logCount; i++ {
-		logs = append(logs, NewRandomLog(3))
-	}
-	single := message.NewRandomSingleDelivered(msg)
-	return Stop{
-		Delivered: single.AsInboxValue(),
-		Logs:      logs,
-	}
-}
-
-func (e Stop) Type() ResultType {
-	return StopCode
-}
-
-func (e Stop) GetDeliveredMessage() value.Value {
-	return e.Delivered
-}
-
-func (e Stop) IsResult() {}
-
-func (e Stop) GetReturnData() []byte {
-	return nil
-}
-
-func (e Stop) GetLogs() []Log {
-	return e.Logs
-}
-
-func (e Stop) Valid() bool {
-	return true
-}
-
-func (e Stop) String() string {
-	var sb strings.Builder
-	sb.WriteString("EVMStop(logs: [")
-	for i, log := range e.Logs {
-		sb.WriteString(log.String())
-		if i != len(e.Logs)-1 {
-			sb.WriteString(", ")
-		}
-	}
-	sb.WriteString("])")
-	return sb.String()
-}
-
-type BadSequenceNum struct {
-	Delivered value.Value
-}
-
-func (e BadSequenceNum) Type() ResultType {
-	return BadSequenceCode
-}
-
-func (e BadSequenceNum) GetDeliveredMessage() value.Value {
-	return e.Delivered
-}
-
-func (e BadSequenceNum) IsResult() {}
-
-func (e BadSequenceNum) GetReturnData() []byte {
-	return nil
-}
-
-func (e BadSequenceNum) GetLogs() []Log {
-	return nil
-}
-
-func (e BadSequenceNum) Valid() bool {
-	return false
-}
-
-func (e BadSequenceNum) String() string {
-	return "BadSequenceNum()"
-}
-
-type Invalid struct {
-	Delivered value.Value
-}
-
-func (e Invalid) Type() ResultType {
-	return InvalidCode
-}
-
-func (e Invalid) GetDeliveredMessage() value.Value {
-	return e.Delivered
-}
-
-func (e Invalid) IsResult() {}
-
-func (e Invalid) GetReturnData() []byte {
-	return nil
-}
-
-func (e Invalid) GetLogs() []Log {
-	return nil
-}
-
-func (e Invalid) Valid() bool {
-	return false
-}
-
-func (e Invalid) String() string {
-	return "Invalid()"
-}
-
-type FuncCall struct {
-	funcID [4]byte
-	logs   value.Value
-}
-
-func ProcessLog(val value.Value) (Result, error) {
+func NewResultFromValue(val value.Value) (*Result, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
 		return nil, errors.New("advise expected tuple value")
 	}
-	if tup.Len() != 4 {
-		return nil, fmt.Errorf("advise expected tuple of length 4, but recieved %v", tup)
+	if tup.Len() != 6 {
+		return nil, fmt.Errorf("advise expected tuple of length 6, but recieved %v", tup)
 	}
-	origMsgVal, _ := tup.GetByInt64(0)
+	l1MsgVal, _ := tup.GetByInt64(0)
+	resultCode, _ := tup.GetByInt64(1)
+	returnData, _ := tup.GetByInt64(2)
+	evmLogs, _ := tup.GetByInt64(3)
+	gasUsed, _ := tup.GetByInt64(4)
+	gasPrice, _ := tup.GetByInt64(5)
 
-	returnCodeVal, _ := tup.GetByInt64(3)
-	returnCode, ok := returnCodeVal.(value.IntValue)
+	l1Msg, err := message.NewInboxMessageFromValue(l1MsgVal)
+	if err != nil {
+		return nil, err
+	}
+	returnBytes, err := message.ByteStackToHex(returnData)
+	if err != nil {
+		return nil, err
+	}
+	logs, err := LogStackToLogs(evmLogs)
+	if err != nil {
+		return nil, err
+	}
+	resultCodeInt, ok := resultCode.(value.IntValue)
 	if !ok {
-		return nil, errors.New("return code must be an int")
+		return nil, errors.New("resultCode must be an int")
+	}
+	gasUsedInt, ok := gasUsed.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gasUsed must be an int")
+	}
+	gasPriceInt, ok := gasPrice.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gasPrice must be an int")
 	}
 
-	switch ResultType(returnCode.BigInt().Uint64()) {
-	case ReturnCode:
-		// EVM Return
-		logVal, _ := tup.GetByInt64(1)
-		logs, err := LogStackToLogs(logVal)
-		if err != nil {
-			return nil, err
-		}
-		returnVal, err := tup.GetByInt64(2)
-		returnBytes, err := message.ByteStackToHex(returnVal)
-		if err != nil {
-			return nil, err
-		}
-		return Return{origMsgVal, returnBytes, logs}, nil
-	case RevertCode:
-		// EVM Revert
-		returnVal, _ := tup.GetByInt64(2)
-		returnBytes, err := message.ByteStackToHex(returnVal)
-		if err != nil {
-			return nil, err
-		}
-		return Revert{origMsgVal, returnBytes}, nil
-	case StopCode:
-		// EVM Stop
-		logVal, _ := tup.GetByInt64(1)
-		logs, err := LogStackToLogs(logVal)
-		if err != nil {
-			return nil, err
-		}
-		return Stop{origMsgVal, logs}, nil
-	case BadSequenceCode:
-		return BadSequenceNum{origMsgVal}, nil
-	case InvalidCode:
-		return Invalid{origMsgVal}, nil
-	default:
-		// Unknown type
-		return nil, fmt.Errorf("unknown return code %v for message %v", returnCode.BigInt(), val)
+	return &Result{
+		L1Message:  l1Msg,
+		ResultCode: ResultType(resultCodeInt.BigInt().Uint64()),
+		ReturnData: returnBytes,
+		EVMLogs:    logs,
+		GasUsed:    gasUsedInt.BigInt(),
+		GasPrice:   gasPriceInt.BigInt(),
+	}, nil
+}
+
+func NewRandomResult(msg message.Message, logCount int32) *Result {
+	logs := make([]Log, 0, logCount)
+	for i := int32(0); i < logCount; i++ {
+		logs = append(logs, NewRandomLog(3))
+	}
+	return &Result{
+		L1Message:  message.NewRandomInboxMessage(msg),
+		ResultCode: ReturnCode,
+		ReturnData: common.RandBytes(200),
+		EVMLogs:    logs,
+		GasUsed:    common.RandBigInt(),
+		GasPrice:   common.RandBigInt(),
 	}
 }

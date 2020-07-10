@@ -174,37 +174,37 @@ func TestDeserialize(t *testing.T) {
 	}
 }
 
-func TestDeserializeMessageData(t *testing.T) {
-	msg := message.NewRandomEth()
-	var data bytes.Buffer
-	if err := value.MarshalValue(msg.AsInboxValue(), &data); err != nil {
-		t.Fatal(err)
-	}
-	valid, offset, messageType, sender, err := valueTester.DeserializeMessageData(nil, data.Bytes(), big.NewInt(0))
-	if err != nil {
-		t.Error(err)
-	}
-	if !valid {
-		t.Error("invalid message")
-	}
-	if message.Type(messageType.Uint64()) != msg.Type() {
-		t.Error("incorrect message type")
-	}
-	if sender != msg.From.ToEthAddress() {
-		t.Error("incorrect sender")
-	}
-
-	valid, _, to, val, err := valueTester.GetEthMsgData(nil, data.Bytes(), offset)
-	if err != nil {
-		t.Error(err)
-	}
-	if !valid {
-		t.Error("invalid message")
-	}
-	if msg.To.ToEthAddress() != to {
-		t.Error("incorect to")
-	}
-	if msg.Value.Cmp(val) != 0 {
-		t.Error("incorrect val")
-	}
-}
+//func TestDeserializeMessageData(t *testing.T) {
+//	msg := message.NewRandomEth()
+//	var data bytes.Buffer
+//	if err := value.MarshalValue(msg.AsInboxValue(), &data); err != nil {
+//		t.Fatal(err)
+//	}
+//	valid, offset, messageType, sender, err := valueTester.DeserializeMessageData(nil, data.Bytes(), big.NewInt(0))
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if !valid {
+//		t.Error("invalid message")
+//	}
+//	if message.Type(messageType.Uint64()) != msg.Type() {
+//		t.Error("incorrect message type")
+//	}
+//	if sender != msg.From.ToEthAddress() {
+//		t.Error("incorrect sender")
+//	}
+//
+//	valid, _, to, val, err := valueTester.GetEthMsgData(nil, data.Bytes(), offset)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if !valid {
+//		t.Error("invalid message")
+//	}
+//	if msg.To.ToEthAddress() != to {
+//		t.Error("incorect to")
+//	}
+//	if msg.Value.Cmp(val) != 0 {
+//		t.Error("incorrect val")
+//	}
+//}

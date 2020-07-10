@@ -23,11 +23,11 @@ import (
 	"testing"
 )
 
-func newRandomTxInfo(r Result) *TxInfo {
+func newRandomTxInfo(r *Result) *TxInfo {
 	return &TxInfo{
 		TransactionIndex: rand.Uint64(),
 		TransactionHash:  common.RandHash(),
-		RawVal:           ResultAsValue(r),
+		RawVal:           r.AsValue(),
 		StartLogIndex:    rand.Uint64(),
 		Location:         NewRandomNodeLocation(),
 		Proof: &AVMLogProof{
@@ -40,7 +40,7 @@ func newRandomTxInfo(r Result) *TxInfo {
 
 func TestTxInfoMarshal(t *testing.T) {
 	rand.Seed(43242)
-	tx := newRandomTxInfo(NewRandomStop(message.NewRandomEth(), rand.Int31n(5)))
+	tx := newRandomTxInfo(NewRandomResult(message.NewRandomEth(), rand.Int31n(5)))
 
 	txBuf := tx.Marshal()
 
@@ -56,7 +56,7 @@ func TestTxInfoMarshal(t *testing.T) {
 
 func TestTxInfoToEthReceipt(t *testing.T) {
 	rand.Seed(43242)
-	l := newRandomTxInfo(NewRandomStop(message.NewRandomEth(), rand.Int31n(5)))
+	l := newRandomTxInfo(NewRandomResult(message.NewRandomEth(), rand.Int31n(5)))
 	_, err := l.ToEthReceipt()
 	if err != nil {
 		t.Fatal(err)

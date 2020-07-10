@@ -131,25 +131,20 @@ func (x *TxInfoBuf) Unmarshal() (*TxInfo, error) {
 }
 
 func (tx *TxInfo) ToEthReceipt() (*types.Receipt, error) {
-	processed, err := ProcessLog(tx.RawVal)
+	result, err := NewResultFromValue(tx.RawVal)
 	if err != nil {
-		log.Println("TransactionReceipt ProcessLog error:", err)
+		log.Println("TransactionReceipt NewResultFromValue error:", err)
 		return nil, err
 	}
 
 	status := uint64(0)
-	switch processed.(type) {
-	case Return:
+	if result.ResultCode == ReturnCode {
 		status = 1
-	case Stop:
-		status = 1
-	default:
-		// Transaction unsuccessful
 	}
 
 	var evmLogs []*types.Log
 	logIndex := tx.StartLogIndex
-	for _, l := range processed.GetLogs() {
+	for _, l := range result.EVMLogs {
 		evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
 		for j, t := range l.Topics {
 			evmParsedTopics[j] = ethcommon.BytesToHash(t[:])

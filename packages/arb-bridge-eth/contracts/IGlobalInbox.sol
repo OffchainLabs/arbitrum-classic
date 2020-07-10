@@ -21,7 +21,7 @@ pragma solidity ^0.5.11;
 interface IGlobalInbox {
     event MessageDelivered(
         address indexed chain,
-        uint256 indexed kind,
+        uint8 indexed kind,
         address indexed sender,
         uint256 inboxSeqNum,
         bytes data
@@ -29,7 +29,7 @@ interface IGlobalInbox {
 
     event MessageDeliveredFromOrigin(
         address indexed chain,
-        uint256 indexed kind,
+        uint8 indexed kind,
         address indexed sender,
         uint256 inboxSeqNum
     );

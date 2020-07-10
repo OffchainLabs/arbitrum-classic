@@ -2,9 +2,11 @@
 
 declare namespace txaggregator {
   export interface SendTransactionArgs {
-    to?: string
+    maxGas?: string
+    gasPriceBid?: string
     sequenceNum?: string
-    value?: string
+    destAddress?: string
+    payment?: string
     data?: string
     pubkey?: string
     signature?: string

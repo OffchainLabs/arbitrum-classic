@@ -17,8 +17,11 @@
 package message
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -28,40 +31,183 @@ import (
 type Type uint8
 
 const (
-	TransactionType Type = iota
-	EthType
+	EthType Type = iota
 	ERC20Type
 	ERC721Type
-	ContractTransactionType
-	CallType
-	TransactionBatchType
+	L2Type Type = iota
 )
 
-type SingleMessage interface {
-	Message
-	AsInboxValue() value.TupleValue
-	DestAddress() common.Address
-	SenderAddress() common.Address
+type ChainTime struct {
+	BlockNum  *common.TimeBlocks
+	Timestamp *big.Int
 }
 
-type ReceiptMessage interface {
-	ReceiptHash() common.Hash
+func NewRandomChainTime() ChainTime {
+	return ChainTime{
+		BlockNum:  common.NewTimeBlocks(common.RandBigInt()),
+		Timestamp: common.RandBigInt(),
+	}
 }
 
 type Message interface {
-	fmt.Stringer
 	Type() Type
-	Equals(o Message) bool
-
-	CommitmentHash() common.Hash
-	CheckpointValue() value.Value
-
-	VMInboxMessages() []SingleMessage
+	AsData() []byte
 }
 
-type ExecutionMessage interface {
-	SingleMessage
-	GetFuncName() string
+type InboxMessage struct {
+	Kind        Type
+	Sender      common.Address
+	InboxSeqNum *big.Int
+	Data        []byte
+	ChainTime   ChainTime
+}
+
+func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time ChainTime) InboxMessage {
+	return InboxMessage{
+		Kind:        msg.Type(),
+		Sender:      sender,
+		InboxSeqNum: inboxSeqNum,
+		Data:        msg.AsData(),
+		ChainTime:   time,
+	}
+}
+
+func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
+	failRet := InboxMessage{}
+	tup, ok := val.(value.TupleValue)
+	if !ok {
+		return failRet, errors.New("val must be a tuple")
+	}
+	if tup.Len() != 6 {
+		return failRet, fmt.Errorf("expected tuple of length 6, but recieved %v", tup)
+	}
+	kind, _ := tup.GetByInt64(0)
+	blockNumber, _ := tup.GetByInt64(1)
+	timestamp, _ := tup.GetByInt64(2)
+	sender, _ := tup.GetByInt64(3)
+	inboxSeqNum, _ := tup.GetByInt64(4)
+	messageData, _ := tup.GetByInt64(5)
+
+	kindInt, ok := kind.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("kind must be an int")
+	}
+
+	blockNumberInt, ok := blockNumber.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("blockNumber must be an int")
+	}
+
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be an int")
+	}
+
+	senderInt, ok := sender.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("sender must be an int")
+	}
+
+	inboxSeqNumInt, ok := inboxSeqNum.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("inboxSeqNum must be an int")
+	}
+
+	data, err := ByteStackToHex(messageData)
+	if err != nil {
+		return failRet, err
+	}
+
+	return InboxMessage{
+		Kind:        Type(kindInt.BigInt().Uint64()),
+		Sender:      intValueToAddress(senderInt),
+		InboxSeqNum: inboxSeqNumInt.BigInt(),
+		Data:        data,
+		ChainTime: ChainTime{
+			BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
+			Timestamp: timestampInt.BigInt(),
+		},
+	}, nil
+}
+
+func NewRandomInboxMessage(msg Message) InboxMessage {
+	return NewInboxMessage(
+		msg,
+		common.RandAddress(),
+		common.RandBigInt(),
+		NewRandomChainTime(),
+	)
+}
+
+func (im InboxMessage) AsValue() value.Value {
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(int64(im.Kind)),
+		value.NewIntValue(im.ChainTime.BlockNum.AsInt()),
+		value.NewIntValue(im.ChainTime.Timestamp),
+		addressToIntValue(im.Sender),
+		value.NewIntValue(im.InboxSeqNum),
+		BytesToByteStack(im.Data),
+	})
+	return tup
+}
+
+func (im InboxMessage) CommitmentHash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Uint8(uint8(im.Kind)),
+		hashing.Address(im.Sender),
+		hashing.Uint256(im.ChainTime.BlockNum.AsInt()),
+		hashing.Uint256(im.ChainTime.Timestamp),
+		hashing.Uint256(im.InboxSeqNum),
+		hashing.Bytes32(hashing.SoliditySHA3(im.Data)),
+	)
+}
+
+func (im InboxMessage) Equals(o InboxMessage) bool {
+	return im.Kind == o.Kind &&
+		im.Sender == o.Sender &&
+		im.InboxSeqNum.Cmp(o.InboxSeqNum) == 0 &&
+		bytes.Equal(im.Data, o.Data) &&
+		im.ChainTime.BlockNum.AsInt().Cmp(o.ChainTime.BlockNum.AsInt()) == 0 &&
+		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
+}
+
+func (im InboxMessage) MessageID() common.Hash {
+	if im.Kind == L2Type {
+		msg, err := NewL2MessageFromData(im.Data)
+		if err == nil {
+			// msg must be one of the officially supported types
+			if msg, ok := msg.(Transaction); ok {
+				return msg.MessageID(im.Sender)
+			}
+		}
+	}
+	// by default just use the InboxSeqNum
+	var ret common.Hash
+	copy(ret[:], math.U256Bytes(im.InboxSeqNum))
+	return ret
+}
+
+type Eth struct {
+	DestAddress common.Address
+	Value       *big.Int
+}
+
+func NewRandomEth() Eth {
+	return Eth{
+		DestAddress: common.RandAddress(),
+		Value:       common.RandBigInt(),
+	}
+}
+
+func (e Eth) AsData() []byte {
+	data := make([]byte, 0)
+	data = append(data, e.DestAddress[:]...)
+	data = append(data, math.U256Bytes(e.Value)...)
+	return data
+}
+
+func (e Eth) Type() Type {
+	return EthType
 }
 
 func addressToIntValue(address common.Address) value.IntValue {
@@ -77,118 +223,4 @@ func intValueToAddress(val value.IntValue) common.Address {
 	valBytes := val.ToBytes()
 	copy(address[:], valBytes[12:])
 	return address
-}
-
-// UnmarshalExecuted converts the given Arbitrum message value which is the
-// encoding of one of our value types for a VM, back into the original message
-// type
-func UnmarshalExecuted(typecode Type, messageVal value.Value, chain common.Address) (ExecutionMessage, error) {
-	switch typecode {
-	case TransactionType:
-		return UnmarshalTransaction(messageVal, chain)
-	case EthType:
-		return UnmarshalEth(messageVal)
-	case ERC20Type:
-		return UnmarshalERC20(messageVal)
-	case ERC721Type:
-		return UnmarshalERC721(messageVal)
-	case ContractTransactionType:
-		return UnmarshalContractTransaction(messageVal)
-	case CallType:
-		return UnmarshalCall(messageVal)
-	default:
-		return nil, errors.New("invalid message type")
-	}
-}
-
-func UnmarshalFromCheckpoint(msgType Type, v value.Value) (Message, error) {
-	switch msgType {
-	case TransactionType:
-		return UnmarshalTransactionFromCheckpoint(v)
-	case EthType:
-		return UnmarshalEthFromCheckpoint(v)
-	case ERC20Type:
-		return UnmarshalERC20FromCheckpoint(v)
-	case ERC721Type:
-		return UnmarshalERC721FromCheckpoint(v)
-	case ContractTransactionType:
-		return UnmarshalContractTransactionFromCheckpoint(v)
-	case TransactionBatchType:
-		return UnmarshalTransactionBatchFromCheckpoint(v)
-	case CallType:
-		return UnmarshalCallFromCheckpoint(v)
-	default:
-		return nil, errors.New("bad message type")
-	}
-}
-
-func AddToPrev(prev value.TupleValue, delivered Delivered) value.TupleValue {
-	ret := prev
-	for _, msg := range delivered.VMInboxMessages() {
-		ret = value.NewTuple2(ret, msg.AsInboxValue())
-	}
-	return ret
-}
-
-func unmarshalTxWrapped(val value.Value, msgType Type) (common.Address, value.TupleValue, error) {
-	tup, ok := val.(value.TupleValue)
-	if !ok {
-		return common.Address{}, value.TupleValue{}, errors.New("msg must be tuple value")
-	}
-	if tup.Len() != 3 {
-		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
-	}
-	msgTypeVal, _ := tup.GetByInt64(0)
-	msgTypeInt, ok := msgTypeVal.(value.IntValue)
-	if !ok {
-		return common.Address{}, value.TupleValue{}, errors.New("msg type must be an int")
-	}
-
-	if Type(msgTypeInt.BigInt().Uint64()) != msgType {
-		return common.Address{}, value.TupleValue{}, errors.New("wrong msg type")
-	}
-
-	fromVal, _ := tup.GetByInt64(1)
-	fromInt, ok := fromVal.(value.IntValue)
-	if !ok {
-		return common.Address{}, value.TupleValue{}, errors.New("from must be an int")
-	}
-	val2, _ := tup.GetByInt64(2)
-
-	tup2, ok := val2.(value.TupleValue)
-	if !ok {
-		return common.Address{}, value.TupleValue{}, fmt.Errorf("expected tuple, but recieved %v", tup2)
-	}
-	return intValueToAddress(fromInt), tup2, nil
-}
-
-func unmarshalToken(val value.Value, msgType Type) (common.Address, common.Address, common.Address, *big.Int, error) {
-	from, tup, err := unmarshalTxWrapped(val, msgType)
-	if err != nil {
-		return common.Address{}, common.Address{}, common.Address{}, nil, err
-	}
-
-	if tup.Len() != 3 {
-		return common.Address{}, common.Address{}, common.Address{}, nil, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
-	}
-	tokenVal, _ := tup.GetByInt64(0)
-	destVal, _ := tup.GetByInt64(1)
-	amountVal, _ := tup.GetByInt64(2)
-
-	tokenInt, ok := tokenVal.(value.IntValue)
-	if !ok {
-		return common.Address{}, common.Address{}, common.Address{}, nil, errors.New("token must be an int")
-	}
-
-	destInt, ok := destVal.(value.IntValue)
-	if !ok {
-		return common.Address{}, common.Address{}, common.Address{}, nil, errors.New("dest must be an int")
-	}
-
-	amountInt, ok := amountVal.(value.IntValue)
-	if !ok {
-		return common.Address{}, common.Address{}, common.Address{}, nil, errors.New("amount must be an int")
-	}
-
-	return from, intValueToAddress(tokenInt), intValueToAddress(destInt), amountInt.BigInt(), nil
 }

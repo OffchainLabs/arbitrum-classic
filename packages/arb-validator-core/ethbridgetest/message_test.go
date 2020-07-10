@@ -17,17 +17,11 @@
 package ethbridgetest
 
 import (
-	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -40,386 +34,86 @@ func setupRand(t *testing.T) {
 	rand.Seed(currentTime)
 }
 
-func TestTransactionMessage(t *testing.T) {
+func TestMessage(t *testing.T) {
 	setupRand(t)
-	msg := message.Transaction{
-		Chain:       addr3,
-		To:          addr1,
-		From:        addr2,
-		SequenceNum: big.NewInt(74563),
-		Value:       big.NewInt(89735406),
-		Data:        []byte{65, 23, 68, 87, 12},
+
+	msg := message.InboxMessage{
+		Kind:        message.L2Type,
+		Sender:      common.RandAddress(),
+		InboxSeqNum: common.RandBigInt(),
+		Data:        common.RandBytes(200),
+		ChainTime:   message.NewRandomChainTime(),
 	}
-	bridgeHash, err := tester.TransactionHash(
+
+	bridgeHash, err := tester.MessageHash(
 		nil,
-		msg.Chain.ToEthAddress(),
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.SequenceNum,
-		msg.Value,
+		uint8(msg.Kind),
+		msg.Sender.ToEthAddress(),
+		msg.ChainTime.BlockNum.AsInt(),
+		msg.ChainTime.Timestamp,
+		msg.InboxSeqNum,
+		hashing.SoliditySHA3(msg.Data),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bridgeHash != msg.CommitmentHash().ToEthHash() {
+		t.Error(errHash)
+	}
+
+	messageBridgeHash, err := tester.MessageValueHash(
+		nil,
+		uint8(msg.Kind),
+		msg.ChainTime.BlockNum.AsInt(),
+		msg.ChainTime.Timestamp,
+		msg.Sender.ToEthAddress(),
+		msg.InboxSeqNum,
 		msg.Data,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
 
-	messageBridgeHash, txReceiptHash, err := tester.TransactionMessageHash(
-		nil,
-		msg.Chain.ToEthAddress(),
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.SequenceNum,
-		msg.Value,
-		msg.Data,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
-		t.Error(errMsgHash)
-	}
-
-	if msg.ReceiptHash() != txReceiptHash {
-		t.Error(errMsgHash)
-	}
-}
-
-func TestTransactionBatchSingleSender(t *testing.T) {
-	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
-	chain := addr3
-	batchTx := message.NewRandomBatchTx(chain, privateKey)
-	calculatedSender, err := tester.TransactionMessageBatchSingleSender(
-		nil,
-		big.NewInt(0),
-		chain.ToEthAddress(),
-		hashing.SoliditySHA3(batchTx.Data),
-		batchTx.ToBytes(),
-	)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if calculatedSender != sender.ToEthAddress() {
-		t.Error("Transaction sender not calculated correctly: got", hexutil.Encode(calculatedSender[:]), "instead of", hexutil.Encode(sender[:]))
-	}
-}
-
-func TestTransactionBatchSingleValid(t *testing.T) {
-	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
-	chain := addr3
-	batchTx := message.NewRandomBatchTx(chain, privateKey)
-
-	txMessageHash, txReceiptHash, valid, err := tester.TransactionMessageBatchHashSingle(
-		nil,
-		big.NewInt(0),
-		chain.ToEthAddress(),
-		batchTx.ToBytes(),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !valid {
-		t.Fatal("message should have been valid")
-	}
-
-	tx := message.Transaction{
-		Chain:       chain,
-		To:          batchTx.To,
-		From:        sender,
-		SequenceNum: batchTx.SeqNum,
-		Value:       batchTx.Value,
-		Data:        batchTx.Data,
-	}
-
-	txValueHash := tx.AsInboxValue().Hash()
-
-	t.Log("tx was", tx)
-
-	t.Log("txMessageHash", hexutil.Encode(txMessageHash[:]))
-	t.Log("txValueHash", hexutil.Encode(txValueHash[:]))
-
-	if txMessageHash != tx.AsInboxValue().Hash() {
-		t.Error("TransactionMessageBatchHashSingle result didn't match")
-	}
-	if txReceiptHash != tx.ReceiptHash() {
-		t.Error("TransactionMessageBatchHashSingle tx receipt hash didn't match")
-	}
-}
-
-func TestTransactionBatchSingleInvalid(t *testing.T) {
-	setupRand(t)
-	currentTime := time.Now().Unix()
-	t.Log("seed:", currentTime)
-	rand.Seed(currentTime)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	chain := addr3
-	batchTx := message.NewRandomBatchTx(chain, privateKey)
-
-	batchTx.Sig = [65]byte{1, 2, 3}
-
-	_, _, valid, err := tester.TransactionMessageBatchHashSingle(
-		nil,
-		big.NewInt(0),
-		chain.ToEthAddress(),
-		batchTx.ToBytes(),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if valid {
-		t.Fatal("message should have been valid")
-	}
-}
-
-func TestTransactionBatchMessage(t *testing.T) {
-	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	chain := addr3
-	batchTxData := make([]byte, 0)
-	for i := 0; i < 10; i++ {
-		batchTx := message.NewRandomBatchTx(chain, privateKey)
-		if i%3 == 0 {
-			batchTx.Sig[0]++
-		}
-		batchTxData = append(batchTxData, batchTx.ToBytes()...)
-	}
-
-	// Append some random junk
-	batchTxData = append(batchTxData, []byte{54, 76, 23, 87, 34, 32, 87, 32}...)
-
-	deliveryInfo := message.DeliveryInfo{
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-			Timestamp: big.NewInt(35463245),
-		},
-		TxId: big.NewInt(0),
-	}
-
-	msg := message.TransactionBatch{
-		Chain:  addr3,
-		TxData: batchTxData,
-	}
-
-	deliveredBatchMsg := message.Delivered{
-		Message:      msg,
-		DeliveryInfo: deliveryInfo,
-	}
-
-	bridgeHash, err := tester.TransactionBatchHash(
-		nil,
-		batchTxData,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
-	tup := value.NewEmptyTuple()
-	preImage := tup.GetPreImage()
-
-	bridgeInboxHash, err := tester.TransactionMessageBatchHash(
-		nil,
-		preImage.GetInnerHash(),
-		big.NewInt(preImage.Size()),
-		msg.Chain.ToEthAddress(),
-		batchTxData,
-		deliveryInfo.BlockNum.AsInt(),
-		deliveryInfo.Timestamp,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	valInboxHash := message.AddToPrev(value.NewEmptyTuple(), deliveredBatchMsg).Hash()
-	if bridgeInboxHash != valInboxHash.ToEthHash() {
-		t.Error("TransactionMessageBatchHash result didn't match")
-	}
-}
-
-func TestEthMessage(t *testing.T) {
-	setupRand(t)
-	msg := message.Eth{
-		To:    addr1,
-		From:  addr2,
-		Value: big.NewInt(89735406),
-	}
-	bridgeHash, err := tester.EthHash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.Value,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
-	messageBridgeHash, err := tester.EthMessageHash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.Value,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
-		t.Error(errMsgHash)
-	}
-}
-
-func TestERC20Message(t *testing.T) {
-	setupRand(t)
-	msg := message.ERC20{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
-		Value:        big.NewInt(89735406),
-	}
-	bridgeHash, err := tester.Erc20Hash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.TokenAddress.ToEthAddress(),
-		msg.Value,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
-	messageBridgeHash, err := tester.Erc20MessageHash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.TokenAddress.ToEthAddress(),
-		msg.Value,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
-		t.Error(errMsgHash)
-	}
-}
-
-func TestERC721Message(t *testing.T) {
-	setupRand(t)
-	msg := message.ERC721{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
-		Id:           big.NewInt(89735406),
-	}
-	bridgeHash, err := tester.Erc721Hash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.TokenAddress.ToEthAddress(),
-		msg.Id,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
-	messageBridgeHash, err := tester.Erc721MessageHash(
-		nil,
-		msg.To.ToEthAddress(),
-		msg.From.ToEthAddress(),
-		msg.TokenAddress.ToEthAddress(),
-		msg.Id,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if messageBridgeHash != msg.AsInboxValue().Hash().ToEthHash() {
+	if messageBridgeHash != msg.AsValue().Hash().ToEthHash() {
 		t.Error(errMsgHash)
 	}
 }
 
 func TestDeliveredMessage(t *testing.T) {
 	setupRand(t)
-	msg := message.ERC721{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
-		Id:           big.NewInt(89735406),
-	}
-	deliveryInfo := message.DeliveryInfo{
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(87962345)),
-			Timestamp: big.NewInt(35463245),
-		},
-		TxId: big.NewInt(98742),
-	}
-	deliveredMsg := message.Delivered{
-		Message:      msg,
-		DeliveryInfo: deliveryInfo,
-	}
-	inboxHash, err := tester.AddMessageToInbox(
+
+	startInbox := value.NewEmptyTuple()
+	startInboxPre := startInbox.GetPreImage()
+	msg := value.NewTuple2(value.NewInt64Value(2), value.NewInt64Value(6))
+	msgPre := msg.GetPreImage()
+	bridgeVMInboxHash, err := tester.AddMessageToVMInboxHash(
 		nil,
-		common.Hash{},
-		msg.CommitmentHash().ToEthHash(),
-		deliveryInfo.BlockNum.AsInt(),
-		deliveryInfo.Timestamp,
-		deliveryInfo.TxId,
+		startInboxPre.GetInnerHash(),
+		big.NewInt(startInboxPre.Size()),
+		msgPre.GetInnerHash(),
+		big.NewInt(msgPre.Size()),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	inboxHash2 := hashing.SoliditySHA3(hashing.Bytes32(common.Hash{}), hashing.Bytes32(deliveredMsg.CommitmentHash()))
-	if inboxHash != inboxHash2 {
-		t.Error(errHash)
+	if bridgeVMInboxHash != value.NewTuple2(startInbox, msg).Hash() {
+		t.Error("incorrect AddMessageToVMInboxHash")
 	}
 
-	var msgDataBuf bytes.Buffer
-	if err := msg.AsInboxValue().Marshal(&msgDataBuf); err != nil {
-		t.Fatal(err)
-	}
-
-	inbox := value.NewEmptyTuple()
-	inboxPreImage := inbox.GetPreImage()
-	valPreimage := msg.AsInboxValue().GetPreImage()
-
-	messageBridgeHash, err := tester.AddMessageToVMInboxHash(
+	beforeInbox := common.RandHash()
+	msgHash := common.RandHash()
+	bridgeInboxHash, err := tester.AddMessageToInbox(
 		nil,
-		inboxPreImage.GetInnerHash(),
-		big.NewInt(inboxPreImage.Size()),
-		deliveryInfo.BlockNum.AsInt(),
-		deliveryInfo.Timestamp,
-		deliveryInfo.TxId,
-		valPreimage.GetInnerHash(),
-		big.NewInt(valPreimage.Size()),
+		beforeInbox,
+		msgHash,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if messageBridgeHash != message.AddToPrev(inbox, deliveredMsg).Hash().ToEthHash() {
-		t.Error(errMsgHash)
+	if bridgeInboxHash != hashing.SoliditySHA3(
+		hashing.Bytes32(beforeInbox),
+		hashing.Bytes32(msgHash),
+	) {
+		t.Error("incorrect AddMessageToInbox")
 	}
 }
