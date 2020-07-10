@@ -44,21 +44,46 @@ std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
     std::copy(big_id_ptr, big_id_ptr + sizeof(big_id), it);
     return key;
 }
-}  // namespace
 
-void deleteCodeSegmentReferences(Transaction& transaction,
-                                 const std::vector<unsigned char>& stored_value,
-                                 std::map<uint64_t, uint64_t>& segment_counts) {
+struct RawCodePoint {
+    OpCode opcode;
+    nonstd::optional<uint256_t> immediateHash;
+    uint256_t next_hash;
+};
+
+RawCodePoint extractRawCodePoint(const char*& ptr) {
+    bool is_immediate = static_cast<bool>(*ptr);
+    ++ptr;
+    OpCode opcode = static_cast<OpCode>(*ptr);
+    ++ptr;
+    uint256_t next_hash = deserializeUint256t(ptr);
+    if (!is_immediate) {
+        return {opcode, nonstd::nullopt, next_hash};
+    }
+    uint256_t value_hash = deserializeUint256t(ptr);
+    return {opcode, value_hash, next_hash};
+}
+
+std::vector<RawCodePoint> extractRawCodeSegment(
+    const std::vector<unsigned char> stored_value) {
     auto iter = stored_value.begin();
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
+    std::vector<RawCodePoint> cps;
     for (uint64_t i = 0; i < cp_count; i++) {
-        bool is_immediate = static_cast<bool>(*ptr);
-        ptr += 34;
-        if (is_immediate) {
-            uint256_t value_hash = deserializeUint256t(ptr);
-            deleteValueImpl(transaction, value_hash, segment_counts);
-        }
+        cps.push_back(extractRawCodePoint(ptr));
+    }
+    return cps;
+}
+
+void serializeCodePoint(const CodePoint& cp,
+                        std::vector<unsigned char>& serialized_code) {
+    // Ignore referemces to other code segments
+    serialized_code.push_back(cp.op.immediate ? 1 : 0);
+    serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
+    marshal_uint256_t(cp.nextHash, serialized_code);
+    if (cp.op.immediate) {
+        marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
     }
 }
 
@@ -66,16 +91,8 @@ std::vector<unsigned char> serializeCodeSegment(
     const CodeSegmentSnapshot& snapshot) {
     std::vector<unsigned char> serialized_code;
     marshal_uint64_t(snapshot.op_count, serialized_code);
-
     for (uint64_t i = 0; i < snapshot.op_count; ++i) {
-        const auto& cp = (*snapshot.segment)[i];
-        // Ignore referemces to other code segments
-        serialized_code.push_back(cp.op.immediate ? 1 : 0);
-        serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
-        marshal_uint256_t(cp.nextHash, serialized_code);
-        if (cp.op.immediate) {
-            marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
-        }
+        serializeCodePoint((*snapshot.segment)[i], serialized_code);
     }
     return serialized_code;
 }
@@ -101,17 +118,16 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
         }
     }
 
-    uint64_t current_segment_count = segment_counts[segment_id];
     // Save the immediate values, that weren't already saved for this code
     // segment
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
         saveValueImpl(transaction, *cp.op.immediate, segment_counts);
     }
-    // Ignore internal references to this segment
-    segment_counts[segment_id] = current_segment_count;
+
     return serializeCodeSegment(snapshot);
 }
+}  // namespace
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
@@ -125,77 +141,33 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
         throw std::runtime_error("failed to load segment");
     }
 
-    auto iter = results.stored_value.begin();
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
+    auto raw_cps = extractRawCodeSegment(results.stored_value);
     std::vector<CodePoint> cps;
-    cps.reserve(cp_count);
-    for (uint64_t i = 0; i < cp_count; i++) {
-        bool is_immediate = static_cast<bool>(*ptr);
-        ++ptr;
-        OpCode opcode = static_cast<OpCode>(*ptr);
-        ++ptr;
-        uint256_t next_hash = deserializeUint256t(ptr);
-        if (is_immediate) {
-            uint256_t value_hash = deserializeUint256t(ptr);
-            auto imm = getValueImpl(transaction, value_hash, pool, segment_ids);
+    cps.reserve(raw_cps.size());
+    for (const auto& raw_cp : raw_cps) {
+        if (!raw_cp.immediateHash) {
+            cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
+        } else {
+            auto imm = getValueImpl(transaction, *raw_cp.immediateHash, pool,
+                                    segment_ids);
             if (!imm.status.ok()) {
                 throw std::runtime_error("failed to load immediate value");
             }
-            cps.push_back({{opcode, imm.data}, next_hash});
-        } else {
-            cps.push_back({{opcode}, next_hash});
+            cps.emplace_back(Operation{raw_cp.opcode, imm.data},
+                             raw_cp.next_hash);
         }
     }
     return std::make_shared<CodeSegment>(segment_id, std::move(cps));
 }
 
-void deleteCode(Transaction& transaction,
-                std::map<uint64_t, uint64_t>& segment_counts) {
-    std::unordered_map<uint64_t, GetResults> current_values;
-    std::unordered_map<uint64_t, uint64_t> total_deleted_segment_references;
-    auto current_segment_counts = segment_counts;
-    bool deleted_segment = true;
-
-    while (deleted_segment) {
-        deleted_segment = false;
-        std::map<uint64_t, uint64_t> next_segment_counts;
-        for (auto it = current_segment_counts.rbegin();
-             it != current_segment_counts.rend(); ++it) {
-            uint64_t segment_id = it->first;
-            auto current_value_it = current_values.find(segment_id);
-            // Load the segment if it isn't already loaded
-            if (current_value_it == current_values.end()) {
-                auto key_vec = segment_key(segment_id);
-                auto key = vecToSlice(key_vec);
-                auto inserted = current_values.insert(std::make_pair(
-                    segment_id,
-                    getRefCountedData(*transaction.transaction, key)));
-                current_value_it = inserted.first;
-            }
-            total_deleted_segment_references[segment_id] += it->second;
-            uint64_t total_reference_count =
-                total_deleted_segment_references[segment_id];
-            if (total_reference_count <
-                current_value_it->second.reference_count) {
-                // There are still other references to this section, so we won't
-                // delete it
-                continue;
-            }
-            deleteCodeSegmentReferences(transaction,
-                                        current_value_it->second.stored_value,
-                                        next_segment_counts);
-            deleted_segment = true;
-        }
-        current_segment_counts = std::move(next_segment_counts);
-    }
-
-    // Now that we've handled all reference of removed segments, decrement all
-    // reference counts
-    for (const auto& item : total_deleted_segment_references) {
-        auto key_vec = segment_key(item.first);
-        auto key = vecToSlice(key_vec);
-        deleteRefCountedData(*transaction.transaction, key, item.second);
+void saveNextSegmentID(Transaction& transaction, uint64_t next_segment_id) {
+    std::vector<unsigned char> value_data;
+    marshal_uint64_t(next_segment_id, value_data);
+    auto value_slice = vecToSlice(value_data);
+    auto status = transaction.transaction->Put(
+        rocksdb::Slice(max_code_segment_key), value_slice);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to size mac code segment");
     }
 }
 
@@ -214,19 +186,74 @@ uint64_t getNextSegmentID(const Transaction& transaction) {
     return checkpoint::utils::deserialize_uint64(ptr);
 }
 
+bool delete_segment(Transaction& transaction,
+                    uint64_t segment_id,
+                    uint64_t total_reference_count,
+                    std::map<uint64_t, uint64_t>& segment_counts,
+                    std::unordered_map<uint64_t, GetResults>& current_values) {
+    auto current_value_it = current_values.find(segment_id);
+    // Load the segment if it isn't already loaded
+    if (current_value_it == current_values.end()) {
+        auto key_vec = segment_key(segment_id);
+        auto key = vecToSlice(key_vec);
+        auto inserted = current_values.insert(std::make_pair(
+            segment_id, getRefCountedData(*transaction.transaction, key)));
+        current_value_it = inserted.first;
+    }
+
+    if (total_reference_count < current_value_it->second.reference_count) {
+        // There are still other references to this section, so we won't
+        // delete it
+        return false;
+    }
+    auto cps = extractRawCodeSegment(current_value_it->second.stored_value);
+    for (const auto& cp : cps) {
+        if (cp.immediateHash) {
+            deleteValueImpl(transaction, *cp.immediateHash, segment_counts);
+        }
+    }
+    return true;
+}
+
+void deleteCode(Transaction& transaction,
+                std::map<uint64_t, uint64_t>& segment_counts) {
+    std::unordered_map<uint64_t, GetResults> current_values;
+    std::unordered_map<uint64_t, uint64_t> total_deleted_segment_references;
+    auto current_segment_counts = segment_counts;
+    bool deleted_segment = true;
+
+    while (deleted_segment) {
+        deleted_segment = deleted_segment = false;
+        std::map<uint64_t, uint64_t> next_segment_counts;
+        for (auto it = current_segment_counts.rbegin();
+             it != current_segment_counts.rend(); ++it) {
+            uint64_t segment_id = it->first;
+            total_deleted_segment_references[segment_id] += it->second;
+            uint64_t total_reference_count =
+                total_deleted_segment_references[segment_id];
+            if (delete_segment(transaction, segment_id, total_reference_count,
+                               next_segment_counts, current_values)) {
+                deleted_segment = true;
+            }
+        }
+        current_segment_counts = std::move(next_segment_counts);
+    }
+
+    // Now that we've handled all reference of removed segments, decrement all
+    // reference counts
+    for (const auto& item : total_deleted_segment_references) {
+        auto key_vec = segment_key(item.first);
+        auto key = vecToSlice(key_vec);
+        deleteRefCountedData(*transaction.transaction, key, item.second);
+    }
+}
+
 void saveCode(Transaction& transaction,
               const Code& code,
               std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
 
-    std::vector<unsigned char> value_data;
-    marshal_uint64_t(snapshots.op_count, value_data);
-    auto value_slice = vecToSlice(value_data);
-    auto status = transaction.transaction->Put(
-        rocksdb::Slice(max_code_segment_key), value_slice);
-    if (!status.ok()) {
-        throw std::runtime_error("failed to size mac code segment");
-    }
+    saveNextSegmentID(transaction, snapshots.op_count);
 
     std::unordered_map<uint64_t, uint64_t> total_segment_counts;
     auto current_segment_counts = segment_counts;
@@ -240,10 +267,10 @@ void saveCode(Transaction& transaction,
         for (auto it = current_segment_counts.rbegin();
              it != current_segment_counts.rend(); ++it) {
             uint64_t segment_id = it->first;
-            uint64_t reference_count = it->second;
-            total_segment_counts[segment_id] += reference_count;
+            total_segment_counts[segment_id] += it->second;
+            uint64_t total_reference_count = total_segment_counts[segment_id];
 
-            if (reference_count == 0) {
+            if (total_reference_count == 0) {
                 // If there are no references, don't bother saving
                 continue;
             }
@@ -252,9 +279,12 @@ void saveCode(Transaction& transaction,
                 // If we've already saved this segment, there's nothing to do
                 continue;
             }
+            uint64_t current_segment_count = next_segment_counts[segment_id];
             code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
                 transaction, snapshots.segments[segment_id],
                 next_segment_counts);
+            // Ignore internal references to this segment
+            next_segment_counts[segment_id] = current_segment_count;
             saved_segment = true;
         }
         current_segment_counts = std::move(next_segment_counts);
@@ -263,8 +293,7 @@ void saveCode(Transaction& transaction,
     // Now that we've handled all references, save all the serialized segments
     for (const auto& item : code_segments_to_save) {
         auto key_vec = segment_key(item.first);
-        auto key = vecToSlice(key_vec);
-        saveRefCountedData(*transaction.transaction, key, item.second,
-                           total_segment_counts[item.first], true);
+        saveRefCountedData(*transaction.transaction, vecToSlice(key_vec),
+                           item.second, total_segment_counts[item.first], true);
     }
 }
