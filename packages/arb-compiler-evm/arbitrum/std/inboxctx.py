@@ -39,7 +39,6 @@ def getmsg(vm):
     vm.ifelse(
         lambda vm: [
             # q
-            vm.push((1 << 256) - 1),
             vm.inbox(),
             # inbox q
             _inhale2(vm),

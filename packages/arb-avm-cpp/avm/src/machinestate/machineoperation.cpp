@@ -48,8 +48,9 @@ const uint256_t& assumeInt(const value& val) {
 }
 
 uint64_t assumeInt64(uint256_t& val) {
-    if (val > std::numeric_limits<uint64_t>::max())
+    if (val > std::numeric_limits<uint64_t>::max()) {
         throw int_out_of_bounds{};
+    }
 
     return static_cast<uint64_t>(val);
 }
@@ -391,7 +392,7 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.static_values->staticVal;
+    value copiedStatic = m.static_val;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
@@ -447,7 +448,7 @@ void stackEmpty(MachineState& m) {
 }
 
 void pcPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.pc, m.static_values->code[m.pc]});
+    m.stack.push(CodePointStub{m.pc, m.loadCurrentInstruction()});
     ++m.pc;
 }
 
@@ -475,7 +476,7 @@ void auxStackEmpty(MachineState& m) {
 }
 
 void errPush(MachineState& m) {
-    m.stack.push(CodePointStub{m.errpc, m.static_values->code[m.errpc]});
+    m.stack.push(m.errpc);
     ++m.pc;
 }
 
@@ -485,7 +486,7 @@ void errSet(MachineState& m) {
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
-        m.errpc = codePointVal->pc;
+        m.errpc = *codePointVal;
     }
     m.stack.popClear();
     ++m.pc;
@@ -684,11 +685,8 @@ void getTime(MachineState& m) {
 }
 
 BlockReason inboxOp(MachineState& m) {
-    m.stack.prepForMod(1);
-    auto& aNum = assumeInt(m.stack[0]);
-    if (aNum > m.context.timeBounds.lowerBoundBlock &&
-        m.context.inbox.tuple_size() == 0) {
-        return InboxBlocked(aNum);
+    if (m.context.inbox.tuple_size() == 0) {
+        return InboxBlocked();
     } else {
         m.stack[0] = std::move(m.context.inbox);
         ++m.pc;
@@ -708,6 +706,46 @@ void setgas(MachineState& m) {
 void pushgas(MachineState& m) {
     auto& gas = m.arb_gas_remaining;
     m.stack.push(gas);
+    ++m.pc;
+}
+
+void errcodept(MachineState& m) {
+    m.stack.push(m.code->addSegment());
+    ++m.pc;
+}
+
+void pushinsn(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[1]);
+    if (!target) {
+        m.state = Status::Error;
+        return;
+    }
+    auto& op_int = assumeInt(m.stack[0]);
+    auto op = static_cast<uint8_t>(op_int);
+    m.stack[1] = m.code->addOperation(target->pc, {static_cast<OpCode>(op)});
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void pushinsnimm(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto target = nonstd::get_if<CodePointStub>(&m.stack[2]);
+    if (!target) {
+        m.state = Status::Error;
+        return;
+    }
+    auto& op_int = assumeInt(m.stack[0]);
+    auto op = static_cast<uint8_t>(op_int);
+    m.stack[2] = m.code->addOperation(
+        target->pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void sideload(MachineState& m) {
+    m.stack.push(Tuple{});
     ++m.pc;
 }
 }  // namespace machineoperation

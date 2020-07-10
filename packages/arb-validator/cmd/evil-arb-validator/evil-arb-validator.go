@@ -59,10 +59,10 @@ func createEvilManager(rollupAddress common.Address, client arbbridge.ArbAuthCli
 		client,
 		rolluptest.NewEvilRollupCheckpointer(
 			rollupAddress,
-			contractFile,
 			dbPath,
 			big.NewInt(100),
 			false,
 		),
+		contractFile,
 	)
 }

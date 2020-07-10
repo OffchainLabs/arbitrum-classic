@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"log"
 	"math/big"
 )
 
@@ -32,12 +31,21 @@ type DummyCheckpointer struct {
 	initialMachine machine.Machine
 }
 
-func NewDummyCheckpointer(arbitrumCodefilePath string) *DummyCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "cpp")
+func NewDummyCheckpointer() *DummyCheckpointer {
+	return &DummyCheckpointer{nil}
+}
+
+func (dcp *DummyCheckpointer) Initialize(arbitrumCodefilePath string) error {
+	mach, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "cpp")
 	if err != nil {
-		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
+		return err
 	}
-	return &DummyCheckpointer{theMachine}
+	dcp.initialMachine = mach
+	return nil
+}
+
+func (dcp *DummyCheckpointer) Initialized() bool {
+	return dcp.initialMachine != nil
 }
 
 func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {

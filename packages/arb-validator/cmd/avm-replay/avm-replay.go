@@ -175,7 +175,7 @@ func testMessages(filename string, contract string) error {
 			log.Println("balance", address, toEth(ethBalances[address]), toEth(tokenBalances[address]))
 		}
 
-		blocked := mach.IsBlocked(common.NewTimeBlocksInt(0), true)
+		blocked := mach.IsBlocked(true)
 		if blocked != nil {
 			return fmt.Errorf("machine is blocked: %v", blocked)
 		}

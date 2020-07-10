@@ -73,7 +73,7 @@ def marshall_value_json(val):
     if isinstance(val, value.Tuple):
         return {"Tuple": [marshall_value_json(item) for item in val]}
     if isinstance(val, int):
-        return {"Int": str(val)}
+        return {"Int": hex(val)[2:]}
     if isinstance(val, value.AVMCodePoint):
         return {"CodePoint": {"Internal": val.pc}}
     if isinstance(val, AVMLabeledCodePoint):

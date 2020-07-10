@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/codepoint.hpp>
+
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
@@ -113,9 +114,7 @@ const CodePoint& getErrCodePoint() {
     return errcp;
 }
 
-std::ostream& operator<<(std::ostream& os, const Code& code) {
-    for (const auto& cp : code.code) {
-        os << cp << "\n";
-    }
-    return os;
+const uint256_t& getErrCodePointHash() {
+    uint256_t static errpc_hash = hash(getErrCodePoint());
+    return errpc_hash;
 }

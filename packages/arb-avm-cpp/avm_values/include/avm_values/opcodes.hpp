@@ -90,22 +90,16 @@ enum class OpCode : uint8_t {
     HALT,
     SET_GAS,
     PUSH_GAS,
-    DEBUG_PRINT = 0x7a,
+    ERR_CODE_POINT,
+    PUSH_INSN,
+    PUSH_INSN_IMM,
+    //    OPEN_INSN,
+    SIDELOAD = 0x7B,
 
-    ECRECOVER = 0x80
+    ECRECOVER = 0x80,
+
+    DEBUG_PRINT = 0x90,
 };
-
-inline bool isValidOpcode(OpCode op) {
-    return (op >= OpCode::ADD && op <= OpCode::EXP) ||
-           (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
-           (op >= OpCode::POP && op <= OpCode::ERRSET) ||
-           (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
-           (op >= OpCode::TGET && op <= OpCode::XSET) ||
-           (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::DEBUG_PRINT) ||
-           (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
-}
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
@@ -174,7 +168,10 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::HALT, "halt"},
     {OpCode::SET_GAS, "setgas"},
     {OpCode::PUSH_GAS, "pushgas"},
-    {OpCode::DEBUG_PRINT, "debug"},
+    {OpCode::ERR_CODE_POINT, "errcodepoint"},
+    {OpCode::PUSH_INSN, "pushinsn"},
+    {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
+    {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"}};
 
@@ -248,11 +245,16 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
         {OpCode::SEND, {MarshalLevel::FULL}},
         {OpCode::GETTIME, {}},
-        {OpCode::INBOX, {MarshalLevel::SINGLE}},
+        {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
         {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
         {OpCode::PUSH_GAS, {}},
+        {OpCode::ERR_CODE_POINT, {}},
+        {OpCode::PUSH_INSN, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::PUSH_INSN_IMM,
+         {MarshalLevel::SINGLE, MarshalLevel::STUB, MarshalLevel::SINGLE}},
+        {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 
         {OpCode::ECRECOVER,
@@ -326,6 +328,10 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::HALT, {}},
                                {OpCode::SET_GAS, {}},
                                {OpCode::PUSH_GAS, {}},
+                               {OpCode::ERR_CODE_POINT, {}},
+                               {OpCode::PUSH_INSN, {}},
+                               {OpCode::PUSH_INSN_IMM, {}},
+                               {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
                                {OpCode::ECRECOVER, {}}};
@@ -396,6 +402,10 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::HALT, 10},
     {OpCode::SET_GAS, 0},
     {OpCode::PUSH_GAS, 1},
+    {OpCode::ERR_CODE_POINT, 25},
+    {OpCode::PUSH_INSN, 25},
+    {OpCode::PUSH_INSN_IMM, 25},
+    {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000}};

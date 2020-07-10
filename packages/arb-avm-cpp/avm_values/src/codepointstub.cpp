@@ -19,37 +19,27 @@
 
 #include <bigint_utils.hpp>
 
-namespace {
-void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, sizeof(val)> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+CodePointStub::CodePointStub(const CodePointRef& pc_, const CodePoint& cp_)
+    : pc(pc_), hash(::hash(cp_)) {}
 
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-}  // namespace
-
-CodePointStub::CodePointStub(const CodePointRef& pc, const CodePoint& cp)
-    : pc(pc), hash(::hash(cp)) {}
-
-CodePointStub::CodePointStub(uint64_t pc_, uint256_t hash_)
-    : pc({pc_, hash_ == ::hash(getErrCodePoint())}), hash(hash_) {}
+CodePointStub::CodePointStub(const CodePointRef& pc_, uint256_t hash_)
+    : pc(pc_), hash(hash_) {}
 
 std::ostream& operator<<(std::ostream& os, const CodePointRef& cpr) {
-    if (cpr.is_err) {
-        os << "error";
-    } else {
-        os << cpr.pc;
-    }
+    os << "(" << cpr.segment << ", " << cpr.pc << ")";
     return os;
 }
 
 void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
+    marshal_uint64_t(segment, buf);
     marshal_uint64_t(pc, buf);
-    buf.push_back(is_err);
 }
 
 void CodePointStub::marshal(std::vector<unsigned char>& buf) const {
-    marshal_uint64_t(pc.pc, buf);
+    pc.marshal(buf);
     marshal_uint256_t(hash, buf);
+}
+
+bool CodePointStub::is_error() const {
+    return hash == getErrCodePointHash();
 }

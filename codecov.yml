@@ -22,6 +22,7 @@ ignore:
   - 'packages/arb-validator-core/ethbridge/inboxtopchallenge'
   - 'packages/arb-validator-core/ethbridgetest'
   - 'packages/arb-validator-core/ethbridge/rollup'
+  - 'packages/arb-validator/proofmachine/machinetester'
   - 'packages/arb-provider-go/arbsys.go'
   - 'packages/arb-provider-go/arbinfo.go'
   - 'packages/arb-avm-cpp/external/keccak'

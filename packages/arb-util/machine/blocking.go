@@ -16,15 +16,8 @@
 
 package machine
 
-import (
-	"fmt"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-)
-
 type BlockReason interface {
-	IsBlocked(m Machine, currentTime *common.TimeBlocks, newMessages bool) bool
+	IsBlocked(m Machine, newMessages bool) bool
 	Equals(b BlockReason) bool
 }
 
@@ -35,7 +28,7 @@ func (b HaltBlocked) String() string {
 	return "HaltBlocked"
 }
 
-func (b HaltBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
+func (b HaltBlocked) IsBlocked(Machine, bool) bool {
 	return true
 }
 
@@ -51,7 +44,7 @@ func (b ErrorBlocked) String() string {
 	return "ErrorBlocked"
 }
 
-func (b ErrorBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
+func (b ErrorBlocked) IsBlocked(Machine, bool) bool {
 	return true
 }
 
@@ -67,7 +60,7 @@ func (b BreakpointBlocked) String() string {
 	return "BreakpointBlocked"
 }
 
-func (b BreakpointBlocked) IsBlocked(Machine, *common.TimeBlocks, bool) bool {
+func (b BreakpointBlocked) IsBlocked(Machine, bool) bool {
 	return false
 }
 
@@ -77,21 +70,17 @@ func (b BreakpointBlocked) Equals(a BlockReason) bool {
 }
 
 type InboxBlocked struct {
-	Timeout value.IntValue
 }
 
 func (b InboxBlocked) String() string {
-	return fmt.Sprintf("InboxBlocked(%v)", b.Timeout)
+	return "InboxBlocked"
 }
 
-func (b InboxBlocked) IsBlocked(_ Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
-	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0 && !newMessages
+func (b InboxBlocked) IsBlocked(_ Machine, newMessages bool) bool {
+	return !newMessages
 }
 
 func (b InboxBlocked) Equals(a BlockReason) bool {
-	aBlock, ok := a.(InboxBlocked)
-	if !ok {
-		return false
-	}
-	return value.Eq(aBlock.Timeout, b.Timeout)
+	_, ok := a.(InboxBlocked)
+	return ok
 }

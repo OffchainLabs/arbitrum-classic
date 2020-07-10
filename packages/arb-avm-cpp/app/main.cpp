@@ -46,12 +46,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << filename << std::endl;
 
-    auto ret = Machine::loadFromFile(filename);
-    if (!ret.second) {
-        std::cerr << "Failed to load machine";
-        return -1;
-    }
-    Machine mach = std::move(ret.first);
+    auto mach = Machine::loadFromFile(filename);
 
     auto start = std::chrono::high_resolution_clock::now();
 

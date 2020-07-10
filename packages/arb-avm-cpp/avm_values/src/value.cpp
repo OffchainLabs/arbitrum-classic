@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/code.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
@@ -37,25 +37,26 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 
     return tup;
 }
+
+uint64_t deserialize_uint64_t(const char*& bufptr) {
+    uint64_t val;
+    memcpy(&val, bufptr, sizeof(val));
+    val = boost::endian::big_to_native(val);
+    bufptr += sizeof(val);
+    return val;
+}
 }  // namespace
 
 CodePointRef deserializeCodePointRef(const char*& bufptr) {
-    uint64_t pc;
-    memcpy(&pc, bufptr, sizeof(pc));
-    pc = boost::endian::big_to_native(pc);
-    bufptr += sizeof(pc);
-    bool is_err = static_cast<bool>(*bufptr);
-    ++bufptr;
-    return {pc, is_err};
+    uint64_t segment = deserialize_uint64_t(bufptr);
+    uint64_t pc = deserialize_uint64_t(bufptr);
+    return {segment, pc};
 }
 
 CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    uint64_t pc;
-    memcpy(&pc, bufptr, sizeof(pc));
-    bufptr += sizeof(pc);
-    pc = boost::endian::big_to_native(pc);
+    auto ref = deserializeCodePointRef(bufptr);
     auto hash_val = deserializeUint256t(bufptr);
-    return {pc, hash_val};
+    return {ref, hash_val};
 }
 
 uint256_t deserializeUint256t(const char*& bufptr) {
@@ -83,6 +84,14 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
                 throw std::runtime_error("Tried to deserialize unhandled type");
             }
     }
+}
+
+void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
+    auto big_endian_val = boost::endian::native_to_big(val);
+    std::array<unsigned char, sizeof(val)> tmpbuf;
+    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
@@ -143,7 +152,7 @@ void marshalForProof(const CodePointStub& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    auto& cp = code[val.pc];
+    auto& cp = code.loadCodePoint(val.pc);
     buf.push_back(CODEPT);
     cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
     std::array<unsigned char, 32> hashVal;

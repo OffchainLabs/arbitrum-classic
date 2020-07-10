@@ -18,6 +18,8 @@ package gotest
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
 	"path/filepath"
 	"runtime"
 )
@@ -26,8 +28,27 @@ func TestMachinePath() string {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		err := errors.New("failed to get filename")
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return filepath.Join(filepath.Dir(filename), "../tests/contract.mexe")
+}
+
+func OpCodeTestFiles() []string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		err := errors.New("failed to get filename")
+		panic(err)
+	}
+	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/machine-cases")
+	files, err := ioutil.ReadDir(testCaseDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filenames := make([]string, 0, len(files))
+	for _, file := range files {
+		filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+	}
+
+	return filenames
 }

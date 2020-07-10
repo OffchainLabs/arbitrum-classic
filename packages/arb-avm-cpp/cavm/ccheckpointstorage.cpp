@@ -29,18 +29,29 @@
 
 #include <string>
 
-CCheckpointStorage* createCheckpointStorage(const char* db_path,
-                                            const char* contract_path) {
+CCheckpointStorage* createCheckpointStorage(const char* db_path) {
     auto string_filename = std::string(db_path);
-    auto string_contract_path = std::string(contract_path);
-
     try {
-        auto storage =
-            new CheckpointStorage(string_filename, string_contract_path);
+        auto storage = new CheckpointStorage(string_filename);
         return static_cast<void*>(storage);
     } catch (const std::exception&) {
         return nullptr;
     }
+}
+
+int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
+                                const char* executable_path) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    try {
+        storage->initialize(executable_path);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+int checkpointStorageInitialized(CCheckpointStorage* storage_ptr) {
+    return static_cast<CheckpointStorage*>(storage_ptr)->initialized();
 }
 
 int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
@@ -74,15 +85,8 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-
     auto hash = receiveUint256(machine_hash);
-
-    auto ret = storage->getMachine(hash);
-    if (!ret.second) {
-        return nullptr;
-    }
-    auto machine = new Machine(std::move(ret.first));
-    return machine;
+    return new Machine(storage->getMachine(hash));
 }
 
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,

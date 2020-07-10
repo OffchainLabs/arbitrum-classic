@@ -33,9 +33,12 @@ var nodeHeight2 = uint64(5)
 var nodeHash2 = common.Hash{56}
 
 func TestConfirmedNodeStore(t *testing.T) {
-	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
+		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 

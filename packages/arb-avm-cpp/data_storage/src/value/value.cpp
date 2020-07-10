@@ -26,13 +26,9 @@
 
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
-constexpr int TUP_CODEPT_LENGTH = 41;
+constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
-rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
-    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
-}
-
 std::vector<unsigned char> getHashKey(const value& val) {
     auto hash_key = hash_value(val);
     std::vector<unsigned char> hash_key_vector;
@@ -40,40 +36,6 @@ std::vector<unsigned char> getHashKey(const value& val) {
 
     return hash_key_vector;
 }
-
-struct ValueSerializer {
-    std::vector<unsigned char> operator()(const Tuple& val) const {
-        std::vector<unsigned char> value_vector;
-        value_vector.push_back(TUPLE);
-        auto hash_key = hash_value(val);
-        marshal_uint256_t(hash_key, value_vector);
-
-        return value_vector;
-    }
-
-    std::vector<unsigned char> operator()(const uint256_t& val) const {
-        std::vector<unsigned char> value_vector;
-        value_vector.push_back(NUM);
-        marshal_uint256_t(val, value_vector);
-
-        return value_vector;
-    }
-
-    std::vector<unsigned char> operator()(const CodePointStub& val) const {
-        std::vector<unsigned char> value_vector;
-        value_vector.push_back(CODEPT);
-        val.marshal(value_vector);
-        return value_vector;
-    }
-
-    std::vector<unsigned char> operator()(const HashPreImage& val) const {
-        std::vector<unsigned char> value_vector;
-        value_vector.push_back(HASH_PRE_IMAGE);
-        val.marshal(value_vector);
-
-        return value_vector;
-    }
-};
 
 std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data) {
@@ -94,7 +56,7 @@ std::vector<std::vector<unsigned char>> parseTuple(
                 iter = next_it;
                 break;
             }
-            case CODEPT: {
+            case CODE_POINT_STUB: {
                 auto next_it = iter + TUP_CODEPT_LENGTH;
                 current.insert(current.end(), iter, next_it);
                 iter = next_it;
@@ -122,23 +84,8 @@ std::vector<std::vector<unsigned char>> parseTuple(
 
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
-                         TuplePool* pool);
-
-DbResult<value> getTuple(const Transaction& transaction,
-                         const rocksdb::Slice& key,
-                         TuplePool* pool) {
-    auto results = getRefCountedData(*transaction.transaction, key);
-
-    if (!results.status.ok()) {
-        return DbResult<value>{results.status, results.reference_count,
-                               Tuple()};
-    }
-    return getTuple(transaction, results, pool);
-}
-
-DbResult<value> getTuple(const Transaction& transaction,
-                         const GetResults& results,
-                         TuplePool* pool) {
+                         TuplePool* pool,
+                         std::set<uint64_t>& segment_ids) {
     auto value_vectors = parseTuple(results.stored_value);
 
     if (value_vectors.empty()) {
@@ -157,9 +104,10 @@ DbResult<value> getTuple(const Transaction& transaction,
                 values.push_back(deserializeUint256t(buf));
                 break;
             }
-            case CODEPT: {
+            case CODE_POINT_STUB: {
                 auto code_point = deserializeCodePointStub(buf);
                 values.push_back(code_point);
+                segment_ids.insert(code_point.pc.segment);
                 break;
             }
             case HASH_PRE_IMAGE: {
@@ -173,7 +121,15 @@ DbResult<value> getTuple(const Transaction& transaction,
                         "typecode");
                 }
                 rocksdb::Slice tupKey(buf, 32);
-                auto tuple = getTuple(transaction, tupKey, pool).data;
+                auto results =
+                    getRefCountedData(*transaction.transaction, tupKey);
+
+                if (!results.status.ok()) {
+                    return DbResult<value>{results.status,
+                                           results.reference_count, Tuple()};
+                }
+                auto tuple =
+                    getTuple(transaction, results, pool, segment_ids).data;
                 values.push_back(tuple);
                 break;
             }
@@ -183,7 +139,36 @@ DbResult<value> getTuple(const Transaction& transaction,
     return DbResult<value>{results.status, results.reference_count, tuple};
 }
 
-SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
+struct ValueSerializer {
+    std::vector<unsigned char>& value_vector;
+    std::map<uint64_t, uint64_t>& segment_counts;
+
+    void operator()(const Tuple& val) const {
+        value_vector.push_back(TUPLE);
+        auto hash_key = hash_value(val);
+        marshal_uint256_t(hash_key, value_vector);
+    }
+
+    void operator()(const uint256_t& val) const {
+        value_vector.push_back(NUM);
+        marshal_uint256_t(val, value_vector);
+    }
+
+    void operator()(const CodePointStub& val) const {
+        value_vector.push_back(CODE_POINT_STUB);
+        val.marshal(value_vector);
+        ++segment_counts[val.pc.segment];
+    }
+
+    void operator()(const HashPreImage& val) const {
+        value_vector.push_back(HASH_PRE_IMAGE);
+        val.marshal(value_vector);
+    }
+};
+
+SaveResults saveTuple(Transaction& transaction,
+                      const Tuple& val,
+                      std::map<uint64_t, uint64_t>& segment_counts) {
     auto hash_key = getHashKey(val);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(*transaction.transaction, key);
@@ -192,78 +177,94 @@ SaveResults saveTuple(Transaction& transaction, const Tuple& val) {
 
     if (incr_ref_count) {
         return incrementReference(*transaction.transaction, key);
-    } else {
-        std::vector<unsigned char> value_vector;
-        value_vector.push_back(TUPLE + val.tuple_size());
-
-        for (uint64_t i = 0; i < val.tuple_size(); i++) {
-            auto current_val = val.get_element(i);
-            auto serialized_val = nonstd::visit(ValueSerializer{}, current_val);
-            value_vector.insert(value_vector.end(), serialized_val.begin(),
-                                serialized_val.end());
-
-            auto type = static_cast<ValueTypes>(serialized_val[0]);
-            if (type == TUPLE) {
-                auto tup_val = nonstd::get<Tuple>(current_val);
-                auto tuple_save_results = saveTuple(transaction, tup_val);
-            }
-        }
-        return saveRefCountedData(*transaction.transaction, key, value_vector);
     }
+
+    std::vector<unsigned char> value_vector;
+    value_vector.push_back(TUPLE + val.tuple_size());
+
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        auto current_val = val.get_element(i);
+        nonstd::visit(ValueSerializer{value_vector, segment_counts},
+                      current_val);
+
+        if (nonstd::holds_alternative<Tuple>(current_val)) {
+            auto tup_val = nonstd::get<Tuple>(current_val);
+            auto tuple_save_results =
+                saveTuple(transaction, tup_val, segment_counts);
+        }
+    }
+    return saveRefCountedData(*transaction.transaction, key, value_vector);
 }
 
-DeleteResults deleteTuple(Transaction& transaction,
-                          const rocksdb::Slice& hash_key);
+struct ValueSaver {
+    Transaction& transaction;
+    std::map<uint64_t, uint64_t>& segment_counts;
 
-DeleteResults deleteTuple(Transaction& transaction,
+    template <typename T>
+    SaveResults saveImpl(const T& val, bool allow_replacement) const {
+        std::vector<unsigned char> serialized_value;
+        ValueSerializer{serialized_value, segment_counts}(val);
+        auto hash_key = getHashKey(val);
+        auto key = vecToSlice(hash_key);
+        return saveRefCountedData(*transaction.transaction, key,
+                                  serialized_value, 1, allow_replacement);
+    }
+
+    SaveResults operator()(const Tuple& val) const {
+        return saveTuple(transaction, val, segment_counts);
+    }
+
+    SaveResults operator()(const CodePointStub& val) const {
+        // The same code point can exist in different segments with different
+        // serializations mapping to the same hash. If this occurs, the
+        // different versions are interchangeable
+        return saveImpl(val, true);
+    }
+
+    template <typename T>
+    SaveResults operator()(const T& val) const {
+        return saveImpl(val, false);
+    }
+};
+
+DeleteResults deleteValue(Transaction& transaction,
                           const rocksdb::Slice& hash_key,
-                          GetResults results) {
+                          std::map<uint64_t, uint64_t>& segment_counts) {
+    auto results = getRefCountedData(*transaction.transaction, hash_key);
+
     if (!results.status.ok()) {
         return DeleteResults{0, results.status};
     }
 
-    if (results.reference_count == 1) {
-        auto value_vectors = parseTuple(results.stored_value);
+    if (results.reference_count > 1) {
+        auto buf = reinterpret_cast<const char*>(results.stored_value.data());
+        auto value_type = static_cast<ValueTypes>(*buf);
+        ++buf;
 
-        for (const auto& vec : value_vectors) {
-            if (static_cast<ValueTypes>(vec[0]) == TUPLE) {
+        if (value_type == TUPLE) {
+            auto value_vectors = parseTuple(results.stored_value);
+
+            for (const auto& vec : value_vectors) {
                 rocksdb::Slice tupKey{
                     reinterpret_cast<const char*>(vec.data()) + 1,
                     vec.size() - 1};
-                auto delete_status = deleteTuple(transaction, tupKey);
+                auto delete_status =
+                    deleteValue(transaction, tupKey, segment_counts);
             }
+        } else if (value_type == CODE_POINT_STUB) {
+            auto code_point = deserializeCodePointStub(buf);
+            ++segment_counts[code_point.pc.segment];
         }
     }
+
     return deleteRefCountedData(*transaction.transaction, hash_key);
-}
-
-DeleteResults deleteTuple(Transaction& transaction,
-                          const rocksdb::Slice& hash_key) {
-    auto results = getRefCountedData(*transaction.transaction, hash_key);
-    return deleteTuple(transaction, hash_key, results);
-}
-
-DeleteResults deleteValue(Transaction& transaction,
-                          const rocksdb::Slice& hash_key) {
-    auto results = getRefCountedData(*transaction.transaction, hash_key);
-
-    if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
-    }
-
-    auto type = static_cast<ValueTypes>(results.stored_value[0]);
-
-    if (type == TUPLE) {
-        return deleteTuple(transaction, hash_key, results);
-    } else {
-        return deleteRefCountedData(*transaction.transaction, hash_key);
-    }
 }
 }  // namespace
 
-DbResult<value> getValue(const Transaction& transaction,
-                         uint256_t value_hash,
-                         TuplePool* pool) {
+DbResult<value> getValueImpl(const Transaction& transaction,
+                             uint256_t value_hash,
+                             TuplePool* pool,
+                             std::set<uint64_t>& segment_ids) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
@@ -284,8 +285,9 @@ DbResult<value> getValue(const Transaction& transaction,
             return DbResult<value>{results.status, results.reference_count,
                                    val};
         }
-        case CODEPT: {
+        case CODE_POINT_STUB: {
             auto code_point = deserializeCodePointStub(buf);
+            segment_ids.insert(code_point.pc.segment);
             return DbResult<value>{results.status, results.reference_count,
                                    code_point};
         }
@@ -296,27 +298,39 @@ DbResult<value> getValue(const Transaction& transaction,
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            return getTuple(transaction, results, pool);
+            return getTuple(transaction, results, pool, segment_ids);
         }
     }
 }
 
-SaveResults saveValue(Transaction& transaction, const value& val) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        auto tuple = nonstd::get<Tuple>(val);
-        return saveTuple(transaction, tuple);
-    } else {
-        auto serialized_value = nonstd::visit(ValueSerializer{}, val);
-        auto hash_key = getHashKey(val);
-        auto key = vecToSlice(hash_key);
-        return saveRefCountedData(*transaction.transaction, key,
-                                  serialized_value);
-    }
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         TuplePool* pool) {
+    std::set<uint64_t> segment_ids;
+    return getValueImpl(transaction, value_hash, pool, segment_ids);
 }
 
-DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
+SaveResults saveValueImpl(Transaction& transaction,
+                          const value& val,
+                          std::map<uint64_t, uint64_t>& segment_counts) {
+    return nonstd::visit(ValueSaver{transaction, segment_counts}, val);
+}
+
+SaveResults saveValue(Transaction& transaction, const value& val) {
+    std::map<uint64_t, uint64_t> segment_counts;
+    return saveValueImpl(transaction, val, segment_counts);
+}
+
+DeleteResults deleteValueImpl(Transaction& transaction,
+                              const uint256_t& value_hash,
+                              std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
-    return deleteValue(transaction, key);
+    return deleteValue(transaction, key, segment_counts);
+}
+
+DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
+    std::map<uint64_t, uint64_t> segment_counts;
+    return deleteValueImpl(transaction, value_hash, segment_counts);
 }

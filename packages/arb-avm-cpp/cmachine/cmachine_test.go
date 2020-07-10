@@ -34,8 +34,11 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkpointStorage, err := NewCheckpoint("dbPath", codeFile)
+	checkpointStorage, err := NewCheckpoint("dbPath")
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()

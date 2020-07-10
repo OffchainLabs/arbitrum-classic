@@ -87,11 +87,11 @@ func CreateManager(
 		clnt,
 		checkpointing.NewIndexedCheckpointer(
 			rollupAddr,
-			aoFilePath,
 			dbPath,
 			big.NewInt(defaultMaxReorgDepth),
 			false,
 		),
+		aoFilePath,
 	)
 }
 
@@ -101,7 +101,13 @@ func CreateManagerAdvanced(
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 	checkpointer checkpointing.RollupCheckpointer,
+	aoFilePath string,
 ) (*Manager, error) {
+	if !checkpointer.Initialized() {
+		if err := checkpointer.Initialize(aoFilePath); err != nil {
+			return nil, err
+		}
+	}
 	if err := verifyArbChain(ctx, rollupAddr, clnt, checkpointer); err != nil {
 		return nil, err
 	}

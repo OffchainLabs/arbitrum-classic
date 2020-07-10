@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,13 @@ package proofmachine
 
 import (
 	"context"
-	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
-	"math/rand"
 	"testing"
-	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -34,16 +32,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
-func setupTestValidateProof(t *testing.T) (*Connection, error) {
+func setupTestValidateProof(t *testing.T) (*onestepprooftester.OneStepProofTester, error) {
 	ethURL := test.GetEthUrl()
-
-	seed := time.Now().UnixNano()
-	//seed := int64(1571337692091150000)
-	fmt.Println("seed", seed)
-	rand.Seed(seed)
 
 	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
 	if err != nil {
@@ -66,21 +60,14 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	); err != nil {
 		return nil, err
 	}
-	proofbounds := [2]uint64{0, 10000}
-	return NewEthConnection(osp, proofbounds), nil
+	return osp, nil
 }
 
-func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
+func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester.OneStepProofTester) {
 	t.Log("proof test contact: ", contract)
-	basemach, err := loader.LoadMachineFromFile(contract, true, "cpp")
-
+	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	mach, err := New(basemach, ethCon)
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
 	}
 
 	timeBounds := &protocol.TimeBounds{
@@ -89,44 +76,65 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		LowerBoundTimestamp: big.NewInt(100),
 		UpperBoundTimestamp: big.NewInt(120),
 	}
-	steps := uint64(100000)
-	cont := true
+	maxSteps := uint64(100000)
+	inbox := value.NewEmptyTuple()
 
-	for cont {
-		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple(), 0)
+	for i := uint64(0); i < maxSteps; i++ {
+		proof, err := mach.MarshalForProof()
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeHash := mach.Hash()
+		beforeMach := mach.Clone()
+		a, ranSteps := mach.ExecuteAssertion(1, timeBounds, inbox, 0)
+		if ranSteps == 0 {
+			break
+		}
+		if ranSteps != 1 {
+			t.Fatal("Executed incorrect step count", ranSteps)
+		}
 		if mach.CurrentStatus() == machine.ErrorStop {
-			t.Fatal("Machine in error state")
+			beforeMach.PrintState()
+			mach.PrintState()
+			t.Fatal("machine stopped in error state")
 		}
-		if stepsExecuted == 0 {
-			blocked := mach.IsBlocked(common.NewTimeBlocks(big.NewInt(0)), false)
-			if blocked != nil {
-				cont = false
-			}
+
+		precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
+		stub := valprotocol.NewExecutionAssertionStubFromAssertion(a)
+		hashPreImage := precond.BeforeInbox.GetPreImage()
+		res, err := osp.ValidateProof(
+			&bind.CallOpts{Context: context.Background()},
+			precond.BeforeHash,
+			precond.TimeBounds.AsIntArray(),
+			hashPreImage.GetInnerHash(),
+			big.NewInt(hashPreImage.Size()),
+			stub.AfterHash,
+			stub.DidInboxInsn,
+			stub.FirstMessageHash,
+			stub.LastMessageHash,
+			stub.FirstLogHash,
+			stub.LastLogHash,
+			stub.NumGas,
+			proof,
+		)
+		if err != nil {
+			beforeMach.PrintState()
+			mach.PrintState()
+			t.Fatal("Proof invalid with error", err)
+		} else if res.Cmp(big.NewInt(0)) != 0 {
+			mach.PrintState()
+			t.Fatal("Proof invalid")
 		}
-		if stepsExecuted != 1 {
-			t.Log("Num steps = ", stepsExecuted)
+
+		if a.DidInboxInsn {
+			inbox = value.NewEmptyTuple()
 		}
 	}
-	t.Log("called ValidateProof")
-
-	time.Sleep(5 * time.Second)
-
-	t.Log("done")
 }
 
 func TestValidateProof(t *testing.T) {
-	testMachines := []string{
-		"opcodetesttuple.mexe",
-		"opcodetestlogic.mexe",
-		"opcodetestmath.mexe",
-		"opcodetesthash.mexe",
-		"opcodetestethhash2.mexe",
-		"opcodeteststack.mexe",
-		"opcodetestdup.mexe",
-		"opcodetestarbgas.mexe",
-		"opcodetestecrecover.mexe",
-		gotest.TestMachinePath(),
-	}
+	testMachines := gotest.OpCodeTestFiles()
+	testMachines = append(testMachines, gotest.TestMachinePath())
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {
 		t.Fatal(err)

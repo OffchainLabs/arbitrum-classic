@@ -35,7 +35,7 @@ std::string dbpath =
 void initializeDatastack(const Transaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
-                         int expected_size) {
+                         uint64_t expected_size) {
     TuplePool pool;
 
     auto results = ::getValue(transaction, tuple_hash, &pool);
@@ -50,7 +50,7 @@ void initializeDatastack(const Transaction& transaction,
 
 void saveDataStack(Datastack data_stack) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -64,7 +64,7 @@ void saveDataStack(Datastack data_stack) {
 
 void saveDataStackTwice(Datastack data_stack) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -119,7 +119,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     Datastack data_stack;
 
@@ -140,7 +140,7 @@ TEST_CASE("Initialize datastack") {
                             1);
     }
     SECTION("push num, tuple") {
-        CodePointStub code_point_stub{0, 3452345};
+        CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple(code_point_stub, &pool);
         data_stack.push(num);
@@ -152,7 +152,7 @@ TEST_CASE("Initialize datastack") {
                             2);
     }
     SECTION("push codepoint, tuple") {
-        CodePointStub code_point_stub{0, 3452345};
+        CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
         data_stack.push(code_point_stub);
@@ -199,7 +199,7 @@ TEST_CASE("Save datastack") {
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     Datastack datastack;
 
     SECTION("save datastack and get") {
@@ -232,7 +232,7 @@ TEST_CASE("Initial VM Values") {
     SECTION("parse invalid path") {
         TuplePool pool = TuplePool();
         TuplePool& pool_ref = pool;
-        auto values = parseStaticVmValues("nonexistent/path", pool_ref);
+        CHECK_THROWS(loadExecutable("nonexistent/path", pool_ref));
     }
     boost::filesystem::remove_all(dbpath);
 }

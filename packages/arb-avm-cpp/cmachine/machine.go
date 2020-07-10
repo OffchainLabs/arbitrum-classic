@@ -86,15 +86,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 	}
 }
 
-func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	currentTimeDataC := intToData(currentTime.AsInt())
-
+func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
 	}
-	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
-	C.free(currentTimeDataC)
+	cBlockReason := C.machineIsBlocked(m.c, C.int(newMessagesInt))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -105,12 +102,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := toByteSlice(cBlockReason.val)
-		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
-		if err != nil {
-			panic(err)
-		}
-		return machine.InboxBlocked{Timeout: timeout}
+		return machine.InboxBlocked{}
 	default:
 	}
 	return nil

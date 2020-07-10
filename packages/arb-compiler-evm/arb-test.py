@@ -572,6 +572,25 @@ def test_ecrecover(vm):
     vm.error()
 
 
+def test_code(vm):
+    base_opcode_val = 5
+    imm_opcode_val = 10
+    imm_val = arb.value.Tuple([5, 3, 5])
+    vm.push(arb.ast.AVMLabel("base_error_handler"))
+    vm.errset()
+    vm.errcodepoint()
+    vm.push(base_opcode_val)
+    vm.pushinsn()
+    vm.push(imm_val)
+    vm.push(imm_opcode_val)
+    vm.pushinsnimm()
+    vm.halt()
+    vm.set_label(arb.ast.AVMLabel("base_error_handler"))
+    vm.push(arb.value.ERROR_CODE_POINT)
+    vm.errset()
+    vm.error()
+
+
 tests = [
     ["opcodetestmath", test_arithmetic],
     ["opcodetestlogic", test_logic],
@@ -582,6 +601,7 @@ tests = [
     ["opcodetesttuple", test_tuple],
     ["opcodetestarbgas", test_arbgas],
     ["opcodetestecrecover", test_ecrecover],
+    ["opcodetestcode", test_code],
 ]
 
 for vm_test in tests:
@@ -589,5 +609,5 @@ for vm_test in tests:
     vm = arb.compile_program(arb.ast.BlockStatement([]), code)
     if len(vm_test) > 2:
         vm.static = vm_test[2]
-    with open("../arb-validator/proofmachine/" + vm_test[0] + ".mexe", "w") as f:
+    with open("../arb-avm-cpp/tests/machine-cases/" + vm_test[0] + ".mexe", "w") as f:
         json.dump(arb.marshall.marshall_vm_json(vm), f)

@@ -23,6 +23,8 @@ import (
 
 type CheckpointStorage interface {
 	DeleteCheckpoint(machineHash common.Hash) bool
+	Initialize(contractPath string) error
+	Initialized() bool
 	CloseCheckpointStorage() bool
 	GetInitialMachine() (Machine, error)
 	GetMachine(machineHash common.Hash) (Machine, error)
