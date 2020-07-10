@@ -122,7 +122,9 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     // segment
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
-        saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+        if (cp.op.immediate) {
+            saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+        }
     }
 
     return serializeCodeSegment(snapshot);
@@ -186,58 +188,66 @@ uint64_t getNextSegmentID(const Transaction& transaction) {
     return checkpoint::utils::deserialize_uint64(ptr);
 }
 
-bool delete_segment(Transaction& transaction,
-                    uint64_t segment_id,
-                    uint64_t total_reference_count,
-                    std::map<uint64_t, uint64_t>& segment_counts,
-                    std::unordered_map<uint64_t, GetResults>& current_values) {
-    auto current_value_it = current_values.find(segment_id);
-    // Load the segment if it isn't already loaded
-    if (current_value_it == current_values.end()) {
-        auto key_vec = segment_key(segment_id);
-        auto key = vecToSlice(key_vec);
-        auto inserted = current_values.insert(std::make_pair(
-            segment_id, getRefCountedData(*transaction.transaction, key)));
-        current_value_it = inserted.first;
-    }
+template <typename Func>
+std::unordered_map<uint64_t, uint64_t> breathFirstSearch(
+    std::map<uint64_t, uint64_t>& segment_counts,
+    Func&& func) {
+    std::unordered_map<uint64_t, uint64_t> total_segment_counts;
+    auto current_segment_counts = segment_counts;
 
-    if (total_reference_count < current_value_it->second.reference_count) {
-        // There are still other references to this section, so we won't
-        // delete it
-        return false;
-    }
-    auto cps = extractRawCodeSegment(current_value_it->second.stored_value);
-    for (const auto& cp : cps) {
-        if (cp.immediateHash) {
-            deleteValueImpl(transaction, *cp.immediateHash, segment_counts);
+    bool found = true;
+    while (found) {
+        found = false;
+        std::map<uint64_t, uint64_t> next_segment_counts;
+        for (auto it = current_segment_counts.rbegin();
+             it != current_segment_counts.rend(); ++it) {
+            uint64_t segment_id = it->first;
+            total_segment_counts[segment_id] += it->second;
+            uint64_t total_reference_count = total_segment_counts[segment_id];
+            if (func(segment_id, total_reference_count, next_segment_counts)) {
+                found = true;
+            }
         }
+        current_segment_counts = std::move(next_segment_counts);
     }
-    return true;
+    return total_segment_counts;
 }
 
 void deleteCode(Transaction& transaction,
                 std::map<uint64_t, uint64_t>& segment_counts) {
     std::unordered_map<uint64_t, GetResults> current_values;
-    std::unordered_map<uint64_t, uint64_t> total_deleted_segment_references;
     auto current_segment_counts = segment_counts;
-    bool deleted_segment = true;
 
-    while (deleted_segment) {
-        deleted_segment = deleted_segment = false;
-        std::map<uint64_t, uint64_t> next_segment_counts;
-        for (auto it = current_segment_counts.rbegin();
-             it != current_segment_counts.rend(); ++it) {
-            uint64_t segment_id = it->first;
-            total_deleted_segment_references[segment_id] += it->second;
-            uint64_t total_reference_count =
-                total_deleted_segment_references[segment_id];
-            if (delete_segment(transaction, segment_id, total_reference_count,
-                               next_segment_counts, current_values)) {
-                deleted_segment = true;
+    auto total_deleted_segment_references = breathFirstSearch(
+        segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,
+                            std::map<uint64_t, uint64_t>& next_segment_counts) {
+            auto current_value_it = current_values.find(segment_id);
+            // Load the segment if it isn't already loaded
+            if (current_value_it == current_values.end()) {
+                auto key_vec = segment_key(segment_id);
+                auto key = vecToSlice(key_vec);
+                auto inserted = current_values.insert(std::make_pair(
+                    segment_id,
+                    getRefCountedData(*transaction.transaction, key)));
+                current_value_it = inserted.first;
             }
-        }
-        current_segment_counts = std::move(next_segment_counts);
-    }
+
+            if (total_reference_count <
+                current_value_it->second.reference_count) {
+                // There are still other references to this section, so we won't
+                // delete it
+                return false;
+            }
+            auto cps =
+                extractRawCodeSegment(current_value_it->second.stored_value);
+            for (const auto& cp : cps) {
+                if (cp.immediateHash) {
+                    deleteValueImpl(transaction, *cp.immediateHash,
+                                    next_segment_counts);
+                }
+            }
+            return true;
+        });
 
     // Now that we've handled all reference of removed segments, decrement all
     // reference counts
@@ -252,32 +262,22 @@ void saveCode(Transaction& transaction,
               const Code& code,
               std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
-
     saveNextSegmentID(transaction, snapshots.op_count);
 
-    std::unordered_map<uint64_t, uint64_t> total_segment_counts;
-    auto current_segment_counts = segment_counts;
     std::unordered_map<uint64_t, std::vector<unsigned char>>
         code_segments_to_save;
-    bool saved_segment = true;
 
-    while (saved_segment) {
-        saved_segment = false;
-        std::map<uint64_t, uint64_t> next_segment_counts;
-        for (auto it = current_segment_counts.rbegin();
-             it != current_segment_counts.rend(); ++it) {
-            uint64_t segment_id = it->first;
-            total_segment_counts[segment_id] += it->second;
-            uint64_t total_reference_count = total_segment_counts[segment_id];
-
+    auto total_segment_counts = breathFirstSearch(
+        segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,
+                            std::map<uint64_t, uint64_t>& next_segment_counts) {
             if (total_reference_count == 0) {
                 // If there are no references, don't bother saving
-                continue;
+                return false;
             }
             if (code_segments_to_save.find(segment_id) !=
                 code_segments_to_save.end()) {
                 // If we've already saved this segment, there's nothing to do
-                continue;
+                return false;
             }
             uint64_t current_segment_count = next_segment_counts[segment_id];
             code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
@@ -285,10 +285,8 @@ void saveCode(Transaction& transaction,
                 next_segment_counts);
             // Ignore internal references to this segment
             next_segment_counts[segment_id] = current_segment_count;
-            saved_segment = true;
-        }
-        current_segment_counts = std::move(next_segment_counts);
-    }
+            return true;
+        });
 
     // Now that we've handled all references, save all the serialized segments
     for (const auto& item : code_segments_to_save) {
