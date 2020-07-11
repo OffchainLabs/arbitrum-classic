@@ -59,14 +59,6 @@ library Value {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
 
-    function typeLength(uint8 typeCode) private pure returns (uint8) {
-        if (isTupleType(typeCode)) {
-            return typeCode - TUPLE_TYPECODE;
-        } else {
-            return 1;
-        }
-    }
-
     function hashInt(uint256 val) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
     }
@@ -91,33 +83,6 @@ library Value {
         return
             keccak256(
                 abi.encodePacked(CODE_POINT_TYPECODE, opcode, nextCodePoint)
-            );
-    }
-
-    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return
-            keccak256(
-                abi.encodePacked(CODE_POINT_TYPECODE, opcode, nextCodePoint)
-            );
-    }
-
-    function hashCodePointImmediate(
-        uint8 opcode,
-        bytes32 immediateHash,
-        bytes32 nextCodePoint
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    CODE_POINT_TYPECODE,
-                    opcode,
-                    immediateHash,
-                    nextCodePoint
-                )
             );
     }
 
@@ -207,7 +172,11 @@ library Value {
     }
 
     function valLength(Data memory val) internal pure returns (uint8) {
-        return typeLength(val.typeCode);
+        if (isTupleType(val.typeCode)) {
+            return val.typeCode - TUPLE_TYPECODE;
+        } else {
+            return 1;
+        }
     }
 
     function isInt(Data memory val) internal pure returns (bool) {
@@ -300,14 +269,6 @@ library Value {
             );
     }
 
-    function newCodePoint(CodePoint memory _val)
-        internal
-        pure
-        returns (Data memory)
-    {
-        return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE, uint256(1));
-    }
-
     function newCodePoint(uint8 opCode, bytes32 nextHash)
         internal
         pure
@@ -368,18 +329,6 @@ library Value {
                 uint8(TUPLE_TYPECODE + _val.length),
                 size
             );
-    }
-
-    function newRepeatedTuple(Data memory _val, uint8 _count)
-        internal
-        pure
-        returns (Data memory)
-    {
-        Data[] memory values = new Data[](_count);
-        for (uint256 i = 0; i < _count; i++) {
-            values[i] = _val;
-        }
-        return newTuple(values);
     }
 
     function getTuplePreImage(Data memory tuple)
@@ -509,7 +458,7 @@ library Value {
         returns (
             bool, // valid
             uint256, // offset
-            CodePoint memory // val
+            Data memory // val
         )
     {
         uint256 offset = startOffset;
@@ -517,28 +466,20 @@ library Value {
         offset++;
         uint8 opCode = uint8(data[offset]);
         offset++;
-        bytes32 immediateHash;
-        uint256 immediateSize;
+        Data memory immediate;
         if (immediateType == 1) {
             bool valid;
-            Data memory value;
-            (valid, offset, value) = deserialize(data, offset);
+            (valid, offset, immediate) = deserialize(data, offset);
             if (!valid) {
-                return (false, startOffset, CodePoint(0, 0, false, 0, 0));
+                return (false, startOffset, newNone());
             }
-            immediateHash = value.hash();
-            immediateSize = value.size;
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
-            return (
-                true,
-                offset,
-                CodePoint(opCode, nextHash, true, immediateHash, immediateSize)
-            );
+            return (true, offset, newCodePoint(opCode, nextHash, immediate));
         }
-        return (true, offset, CodePoint(opCode, nextHash, false, 0, 0));
+        return (true, offset, newCodePoint(opCode, nextHash));
     }
 
     function deserializeTuple(
@@ -583,13 +524,11 @@ library Value {
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
-        CodePoint memory cpVal;
         if (valType == INT_TYPECODE) {
             (valid, offset, intVal) = deserializeInt(data, offset);
             return (valid, offset, newInt(intVal));
         } else if (valType == CODE_POINT_TYPECODE) {
-            (valid, offset, cpVal) = deserializeCodePoint(data, offset);
-            return (valid, offset, newCodePoint(cpVal));
+            return deserializeCodePoint(data, offset);
         } else if (valType == HASH_PRE_IMAGE_TYPECODE) {
             return deserializeHashPreImage(data, offset);
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
@@ -706,5 +645,13 @@ library Value {
             return (false, offset, byteData);
         }
         return (true, offset, abi.encodePacked(fullChunks, partialChunk));
+    }
+
+    function newCodePoint(CodePoint memory _val)
+        private
+        pure
+        returns (Data memory)
+    {
+        return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE, uint256(1));
     }
 }

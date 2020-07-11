@@ -54,24 +54,27 @@ describe('Value', () => {
     })
   }
 
-  it('should properly calculate bytestack hash', async () => {
-    const cases = [
-      ['16', testVal.slice(0, 34)],
-      ['19', testVal.slice(0, 40)],
-      ['32', testVal],
-      ['64', testVal + testVal.slice(2)],
-    ]
-    for (const [label, bytes] of cases) {
-      it('should handle length ' + label, async () => {
+  const cases = [
+    ['16', testVal.slice(0, 34)],
+    ['19', testVal.slice(0, 40)],
+    ['32', testVal],
+    ['64', testVal + testVal.slice(2)],
+  ]
+
+  cases.forEach(([label, data]) => {
+    const dataLength = ethers.utils.hexDataLength(data)
+    it(
+      'should properly calculate bytestack hash of length ' + dataLength,
+      async () => {
         const ethVal = await valueTester.bytesToBytestackHash(
-          bytes,
+          data,
           0,
-          bytes.length
+          dataLength
         )
-        const jsVal = ArbValue.hexToBytestack(bytes).hash()
+        const jsVal = ArbValue.hexToBytestack(data).hash()
         assert.equal(ethVal, jsVal)
-      })
-    }
+      }
+    )
   })
 
   it('should properly convert bytestack to bytes', async () => {
