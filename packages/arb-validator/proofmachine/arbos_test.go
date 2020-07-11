@@ -86,7 +86,7 @@ func TestFib(t *testing.T) {
 	constructorTx := message.Transaction{
 		MaxGas:      big.NewInt(0),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
+		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
 		Payment:     big.NewInt(0),
 		Data:        constructorData,
@@ -116,7 +116,7 @@ func TestFib(t *testing.T) {
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(0),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(2),
+		SequenceNum: big.NewInt(1),
 		DestAddress: fibAddress,
 		Payment:     big.NewInt(0),
 		Data:        append(generateSignature, generateFibData...),
