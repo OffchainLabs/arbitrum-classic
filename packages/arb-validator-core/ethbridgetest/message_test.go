@@ -18,6 +18,8 @@ package ethbridgetest
 
 import (
 	"bytes"
+
+	"errors"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -34,6 +36,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
+var errHash = errors.New("ethbridge calculated wrong hash")
+var errMsgHash = errors.New("ethbridge calculated wrong message hash")
+
 func setupRand(t *testing.T) {
 	currentTime := time.Now().Unix()
 	t.Log("seed:", currentTime)
@@ -43,9 +48,9 @@ func setupRand(t *testing.T) {
 func TestTransactionMessage(t *testing.T) {
 	setupRand(t)
 	msg := message.Transaction{
-		Chain:       addr3,
-		To:          addr1,
-		From:        addr2,
+		Chain:       common.RandAddress(),
+		To:          common.RandAddress(),
+		From:        common.RandAddress(),
 		SequenceNum: big.NewInt(74563),
 		Value:       big.NewInt(89735406),
 		Data:        []byte{65, 23, 68, 87, 12},
@@ -90,9 +95,12 @@ func TestTransactionMessage(t *testing.T) {
 
 func TestTransactionBatchSingleSender(t *testing.T) {
 	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
 	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
-	chain := addr3
+	chain := common.RandAddress()
 	batchTx := message.NewRandomBatchTx(chain, privateKey)
 	calculatedSender, err := tester.TransactionMessageBatchSingleSender(
 		nil,
@@ -116,9 +124,12 @@ func TestTransactionBatchSingleSender(t *testing.T) {
 
 func TestTransactionBatchSingleValid(t *testing.T) {
 	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
 	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(privateKey.PublicKey))
-	chain := addr3
+	chain := common.RandAddress()
 	batchTx := message.NewRandomBatchTx(chain, privateKey)
 
 	txMessageHash, txReceiptHash, valid, err := tester.TransactionMessageBatchHashSingle(
@@ -164,8 +175,11 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 	currentTime := time.Now().Unix()
 	t.Log("seed:", currentTime)
 	rand.Seed(currentTime)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	chain := addr3
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	chain := common.RandAddress()
 	batchTx := message.NewRandomBatchTx(chain, privateKey)
 
 	batchTx.Sig = [65]byte{1, 2, 3}
@@ -186,8 +200,11 @@ func TestTransactionBatchSingleInvalid(t *testing.T) {
 
 func TestTransactionBatchMessage(t *testing.T) {
 	setupRand(t)
-	privateKey, _ := crypto.HexToECDSA(privHex)
-	chain := addr3
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	chain := common.RandAddress()
 	batchTxData := make([]byte, 0)
 	for i := 0; i < 10; i++ {
 		batchTx := message.NewRandomBatchTx(chain, privateKey)
@@ -209,7 +226,7 @@ func TestTransactionBatchMessage(t *testing.T) {
 	}
 
 	msg := message.TransactionBatch{
-		Chain:  addr3,
+		Chain:  common.RandAddress(),
 		TxData: batchTxData,
 	}
 
@@ -253,8 +270,8 @@ func TestTransactionBatchMessage(t *testing.T) {
 func TestEthMessage(t *testing.T) {
 	setupRand(t)
 	msg := message.Eth{
-		To:    addr1,
-		From:  addr2,
+		To:    common.RandAddress(),
+		From:  common.RandAddress(),
 		Value: big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.EthHash(
@@ -288,9 +305,9 @@ func TestEthMessage(t *testing.T) {
 func TestERC20Message(t *testing.T) {
 	setupRand(t)
 	msg := message.ERC20{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
+		To:           common.RandAddress(),
+		From:         common.RandAddress(),
+		TokenAddress: common.RandAddress(),
 		Value:        big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.Erc20Hash(
@@ -326,9 +343,9 @@ func TestERC20Message(t *testing.T) {
 func TestERC721Message(t *testing.T) {
 	setupRand(t)
 	msg := message.ERC721{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
+		To:           common.RandAddress(),
+		From:         common.RandAddress(),
+		TokenAddress: common.RandAddress(),
 		Id:           big.NewInt(89735406),
 	}
 	bridgeHash, err := tester.Erc721Hash(
@@ -364,9 +381,9 @@ func TestERC721Message(t *testing.T) {
 func TestDeliveredMessage(t *testing.T) {
 	setupRand(t)
 	msg := message.ERC721{
-		To:           addr1,
-		From:         addr2,
-		TokenAddress: addr3,
+		To:           common.RandAddress(),
+		From:         common.RandAddress(),
+		TokenAddress: common.RandAddress(),
 		Id:           big.NewInt(89735406),
 	}
 	deliveryInfo := message.DeliveryInfo{

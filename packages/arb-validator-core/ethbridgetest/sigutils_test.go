@@ -37,7 +37,7 @@ func TestSigParse(t *testing.T) {
 
 	ethMessageHash := hashing.SoliditySHA3WithPrefix(messageHash[:])
 
-	privateKey, err := crypto.HexToECDSA(privHex)
+	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestSigRecover(t *testing.T) {
 
 	ethMessageHash := hashing.SoliditySHA3WithPrefix(messageHash[:])
 
-	privateKey, err := crypto.HexToECDSA(privHex)
+	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,8 @@ func TestSigRecover(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if signer != auth.From {
-		t.Fatal("Message signer not calculated correctly: got", hexutil.Encode(signer[:]), "instead of", hexutil.Encode(auth.From[:]))
+	addr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	if signer != addr {
+		t.Fatal("Message signer not calculated correctly: got", hexutil.Encode(signer[:]), "instead of", hexutil.Encode(addr[:]))
 	}
 }

@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -64,13 +64,13 @@ type globalInboxWatcher struct {
 
 	rollupAddress ethcommon.Address
 	inboxAddress  ethcommon.Address
-	client        *ethclient.Client
+	client        ethutils.EthClient
 }
 
 func newGlobalInboxWatcher(
 	globalInboxAddress ethcommon.Address,
 	rollupAddress ethcommon.Address,
-	client *ethclient.Client,
+	client ethutils.EthClient,
 ) (*globalInboxWatcher, error) {
 	globalInboxContract, err := globalinbox.NewGlobalInbox(
 		globalInboxAddress,

@@ -18,12 +18,11 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -34,7 +33,7 @@ type executionChallenge struct {
 	challenge *executionchallenge.ExecutionChallenge
 }
 
-func newExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*executionChallenge, error) {
+func newExecutionChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*executionChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
