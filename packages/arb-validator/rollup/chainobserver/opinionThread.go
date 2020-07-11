@@ -97,6 +97,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
+			log.Println("Resetting prepped assertions")
 			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertionsMut.Lock()
 			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
@@ -158,18 +159,19 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
 							prepped := chain.PrepareAssertion()
-							log.Println("prepped assertion", prepped)
+							log.Println("prepped assertion", prepped.Prev.Hash().ShortString())
 							preparedAssertionsMut.Lock()
 							preparedAssertions[prepped.Prev.Hash()] = prepped
 							preparedAssertionsMut.Unlock()
-							log.Println("sent prepped assertion")
+							log.Println("saved prepped assertion", prepped.Prev.Hash().ShortString())
 						}()
 					}
 				} else {
+					log.Println("Checking for prepped assertion on", chain.calculatedValidNode.Hash().ShortString())
 					preparedAssertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
 					preparedAssertionsMut.Unlock()
-					log.Println("opinion2", chain.calculatedValidNode.Hash().ShortString(), isPrepared, chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode))
+					log.Println("opinion2", isPrepared, chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode))
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 						chain.RUnlock()
 						chain.Lock()
