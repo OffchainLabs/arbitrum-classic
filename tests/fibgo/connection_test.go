@@ -326,8 +326,8 @@ func waitForReceipt(
 
 func TestFib(t *testing.T) {
 	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	//key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	validatorClients, err := setupValidators([]string{key1}, t)
+	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	validatorClients, err := setupValidators([]string{key1, key2}, t)
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}

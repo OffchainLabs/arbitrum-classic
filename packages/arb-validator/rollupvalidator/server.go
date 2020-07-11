@@ -207,9 +207,6 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		},
 	)
 
-	log.Println("callMsg", callMsg)
-	log.Println("inboxMsg", inboxMsg)
-
 	inbox := structures.NewVMInbox()
 	inbox.DeliverMessage(inboxMsg)
 	assertion, steps := mach.ExecuteAssertion(

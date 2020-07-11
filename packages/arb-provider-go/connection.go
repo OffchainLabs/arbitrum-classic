@@ -100,10 +100,14 @@ func (conn *ArbConnection) CodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context:     ctx,
 		BlockNumber: blockNumber,
 	}, contract)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get code")
+	}
+	return code, nil
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
@@ -143,10 +147,14 @@ func (conn *ArbConnection) PendingCodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context: ctx,
 		Pending: true,
 	}, account)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get pending code")
+	}
+	return code, nil
 }
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
