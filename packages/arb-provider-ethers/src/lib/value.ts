@@ -114,18 +114,10 @@ export class IntValue {
 }
 
 export class CodePointValue {
-  public insnNum: ethers.utils.BigNumber
   public op: Operation
   public nextHash: string
-  // insnNum: 8 byte integer
-  // op: BasicOp or ImmOp
-  // nextHash: 32 byte hash
-  constructor(
-    insnNum: ethers.utils.BigNumberish,
-    op: Operation,
-    nextHash: string
-  ) {
-    this.insnNum = ethers.utils.bigNumberify(insnNum)
+
+  constructor(op: Operation, nextHash: string) {
     this.op = op
     this.nextHash = nextHash
   }
@@ -325,10 +317,9 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
     return ethers.utils.concat([accTy, uBigNumToBytes(val.bignum)])
   } else if (ty === ValueType.CodePoint) {
     const val = v as CodePointValue
-    // 1B type; 8B insnNum; 1B immCount; 1B opcode; Val?; 32B hash
+    // 1B type; 1B immCount; 1B opcode; Val?; 32B hash
     const packed = ethers.utils.concat([
       accTy,
-      intToBytes(val.insnNum, 8),
       intToBytes(val.op.kind, 1),
       intToBytes(val.op.opcode, 1),
     ])
@@ -399,7 +390,7 @@ function unmarshalContract(array: Uint8Array): [Operation[], Value] {
 function opsToCodePoints(ops: Operation[]): CodePointValue[] {
   const cps: CodePointValue[] = []
   for (const op of ops) {
-    cps.push(new CodePointValue(0, op, ethers.utils.hexZeroPad('0x00', 32)))
+    cps.push(new CodePointValue(op, ethers.utils.hexZeroPad('0x00', 32)))
   }
   for (let i = cps.length - 2; i >= 0; i--) {
     cps[i].nextHash = cps[i + 1].hash()
@@ -417,11 +408,7 @@ export function contractMachineHash(array: Uint8Array): string {
     new TupleValue([]),
     new TupleValue([]),
     staticVal,
-    new CodePointValue(
-      '18446744073709551615',
-      new BasicOp(0),
-      ethers.utils.hexZeroPad('0x00', 32)
-    )
+    new CodePointValue(new BasicOp(0), ethers.utils.hexZeroPad('0x00', 32))
   )
 }
 
@@ -495,13 +482,11 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
     const i = ethers.utils.bigNumberify(head)
     return [new IntValue(i), offset]
   } else if (ty === ValueType.CodePoint) {
-    ;[head, offset] = extractBytes(array, offset, 8)
-    const pc = ethers.utils.bigNumberify(head)
     let op
     ;[op, offset] = unmarshalOp(array, offset)
     ;[head, offset] = extractBytes(array, offset, 32)
     const nextHash = ethers.utils.hexlify(head)
-    return [new CodePointValue(pc, op, nextHash), offset]
+    return [new CodePointValue(op, nextHash), offset]
   } else if (ty === ValueType.HashOnly) {
     throw Error('Error unmarshaling: HashOnlyValue was not expected')
   } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {

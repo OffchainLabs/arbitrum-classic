@@ -41,6 +41,10 @@ TEST_CASE("Value hashing") {
     nlohmann::json j;
     i >> j;
     for (auto valtest : j) {
+        // Don't include codepoints in test
+        if (valtest["is_codepoint"]) {
+            continue;
+        }
         DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
@@ -55,24 +59,28 @@ TEST_CASE("Value hashing") {
 }
 
 // Test is disabled since it it incompatible with the new codepoint system
-// TEST_CASE("Value marshaling") {
-//    std::ifstream i(test_cases_path);
-//    nlohmann::json j;
-//    i >> j;
-//    for (auto valtest : j) {
-//        DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
-//            auto valBytes =
-//                hexStringToBytes(valtest["value"].get<std::string>());
-//            auto valRaw = reinterpret_cast<const char*>(valBytes.data());
-//            TuplePool pool;
-//            auto val = deserialize_value(valRaw, pool);
-//            std::vector<unsigned char> buf;
-//            marshal_value(val, buf, Code{});
-//            auto valptr = (const char*)&buf[0];
-//            auto newval = deserialize_value(valptr, pool);
-//            auto valsEqual = val == newval;
-//            REQUIRE(valsEqual);
-//            // REQUIRE(val == newval); junit output broken with map::at error
-//        }
-//    }
-//}
+TEST_CASE("Value marshaling") {
+    std::ifstream i(test_cases_path);
+    nlohmann::json j;
+    i >> j;
+    for (auto valtest : j) {
+        // Don't include codepoints in test
+        if (valtest["is_codepoint"]) {
+            continue;
+        }
+        DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
+            auto valBytes =
+                hexStringToBytes(valtest["value"].get<std::string>());
+            auto valRaw = reinterpret_cast<const char*>(valBytes.data());
+            TuplePool pool;
+            auto val = deserialize_value(valRaw, pool);
+            std::vector<unsigned char> buf;
+            marshal_value(val, buf);
+            auto valptr = (const char*)&buf[0];
+            auto newval = deserialize_value(valptr, pool);
+            auto valsEqual = val == newval;
+            REQUIRE(valsEqual);
+            // REQUIRE(val == newval); junit output broken with map::at error
+        }
+    }
+}

@@ -35,23 +35,13 @@ contract ValueTester {
         return (valid, offset, Value.hash(value));
     }
 
-    function bytesToBytestackHash(bytes memory data)
-        public
-        pure
-        returns (bytes32)
-    {
-        return Value.hash(Value.bytesToBytestackHash(data, 0, data.length));
-    }
-
     function bytesToBytestackHash(
         bytes memory data,
         uint256 startOffset,
         uint256 dataLength
     ) public pure returns (bytes32) {
         return
-            Value.hash(
-                Value.bytesToBytestackHash(data, startOffset, dataLength)
-            );
+            Value.hash(Value.bytesToBytestack(data, startOffset, dataLength));
     }
 
     function bytestackToBytes(bytes memory data, uint256 offset)

@@ -59,11 +59,7 @@ library Messages {
         tupData[2] = Value.newInt(timestamp);
         tupData[3] = Value.newInt(uint256(sender));
         tupData[4] = Value.newInt(inboxSeqNum);
-        tupData[5] = Value.bytesToBytestackHash(
-            messageData,
-            0,
-            messageData.length
-        );
+        tupData[5] = Value.bytesToBytestack(messageData, 0, messageData.length);
         return Value.newTuple(tupData);
     }
 

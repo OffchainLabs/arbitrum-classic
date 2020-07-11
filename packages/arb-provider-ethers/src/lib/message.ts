@@ -302,6 +302,20 @@ export class IncomingMessage {
     ])
   }
 
+  commitmentHash(): string {
+    return ethers.utils.solidityKeccak256(
+      ['uint8', 'address', 'uint256', 'uint256', 'uint256', 'bytes32'],
+      [
+        this.msg.kind,
+        this.sender,
+        this.blockNumber,
+        this.timestamp,
+        this.inboxSeqNum,
+        ethers.utils.keccak256(this.msg.asData()),
+      ]
+    )
+  }
+
   messageID(): string {
     if (this.msg.kind == MessageCode.L2) {
       if (this.msg.message.kind == L2MessageCode.Transaction) {

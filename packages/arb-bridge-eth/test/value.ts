@@ -54,30 +54,24 @@ describe('Value', () => {
     })
   }
 
-  it('should properly calculate bytestack hash 32 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal)
-    const jsVal = ArbValue.hexToBytestack(testVal).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 64 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(
-      testVal + testVal.slice(2)
-    )
-    const jsVal = ArbValue.hexToBytestack(testVal + testVal.slice(2)).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 16 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 34))
-    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 34)).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 19 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 40))
-    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 40)).hash()
-    assert.equal(ethVal, jsVal)
+  it('should properly calculate bytestack hash', async () => {
+    const cases = [
+      ['16', testVal.slice(0, 34)],
+      ['19', testVal.slice(0, 40)],
+      ['32', testVal],
+      ['64', testVal + testVal.slice(2)],
+    ]
+    for (const [label, bytes] of cases) {
+      it('should handle length ' + label, async () => {
+        const ethVal = await valueTester.bytesToBytestackHash(
+          bytes,
+          0,
+          bytes.length
+        )
+        const jsVal = ArbValue.hexToBytestack(bytes).hash()
+        assert.equal(ethVal, jsVal)
+      })
+    }
   })
 
   it('should properly convert bytestack to bytes', async () => {

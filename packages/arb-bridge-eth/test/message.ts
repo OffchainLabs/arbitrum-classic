@@ -44,32 +44,40 @@ describe('Messages', async () => {
     await messageTester.deployed()
   })
 
-  it('can handle eth messages', async () => {
+  it('can hash incoming messages as values', async () => {
     const msg = new Message.EthMessage(dest, value)
-    const outMsg = new Message.OutgoingMessage(msg, sender)
-    const msgData = ArbValue.marshal(outMsg.asValue())
-    const {
-      0: valid,
-      1: offset,
-      2: kind,
-      3: calculatedSender,
-      4: data,
-    } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
+    const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
 
-    assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    expect(offset).to.equal(msgData.length)
-    assert.equal(kind, msg.kind, 'Incorrect message type')
-    assert.equal(calculatedSender, sender, 'Incorrect sender')
-
-    const { valid: valid2, message } = await messageTester.parseEthMessage(data)
-    assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(message.dest, dest, 'Incorrect dest')
-    expect(message.value, 'Incorrect value').to.equal(value)
+    const calcMsgHash = await messageTester.messageValueHash(
+      inMsg.msg.kind,
+      inMsg.blockNumber,
+      inMsg.timestamp,
+      inMsg.sender,
+      inMsg.inboxSeqNum,
+      inMsg.msg.asData()
+    )
+    expect(calcMsgHash).to.equal(inMsg.asValue().hash())
   })
 
-  it('can handle erc20 messages', async () => {
-    const msg = new Message.ERC20Message(token, dest, value)
+  it('can hash incoming messages as commitments', async () => {
+    const msg = new Message.EthMessage(dest, value)
+    const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
+
+    const calcMsgHash = await messageTester.messageHash(
+      inMsg.msg.kind,
+      inMsg.sender,
+      inMsg.blockNumber,
+      inMsg.timestamp,
+      inMsg.inboxSeqNum,
+      ethers.utils.keccak256(inMsg.msg.asData())
+    )
+    expect(calcMsgHash).to.equal(inMsg.commitmentHash())
+  })
+
+  it('can unmarshal outgoing messages', async () => {
+    const msg = new Message.EthMessage(dest, value)
     const outMsg = new Message.OutgoingMessage(msg, sender)
+
     const msgData = ArbValue.marshal(outMsg.asValue())
     const {
       0: valid,
@@ -83,34 +91,33 @@ describe('Messages', async () => {
     expect(offset).to.equal(msgData.length)
     assert.equal(kind, msg.kind, 'Incorrect message type')
     assert.equal(calculatedSender, sender, 'Incorrect sender')
+    expect(data, 'incorrect data').to.equal(ethers.utils.hexlify(msg.asData()))
+  })
 
-    const { valid: valid2, message } = await messageTester.parseERC20Message(
-      data
+  it('can parse eth messages', async () => {
+    const msg = new Message.EthMessage(dest, value)
+    const { valid: valid2, message } = await messageTester.parseEthMessage(
+      msg.asData()
     )
     assert.isTrue(valid2, 'did not parse eth message correctly')
     assert.equal(message.dest, dest, 'Incorrect dest')
     expect(message.value, 'Incorrect value').to.equal(value)
   })
 
-  it('can handle erc721 messages', async () => {
+  it('can parse erc20 messages', async () => {
+    const msg = new Message.ERC20Message(token, dest, value)
+    const { valid: valid2, message } = await messageTester.parseERC20Message(
+      msg.asData()
+    )
+    assert.isTrue(valid2, 'did not parse eth message correctly')
+    assert.equal(message.dest, dest, 'Incorrect dest')
+    expect(message.value, 'Incorrect value').to.equal(value)
+  })
+
+  it('can parse erc721 messages', async () => {
     const msg = new Message.ERC721Message(token, dest, value)
-    const outMsg = new Message.OutgoingMessage(msg, sender)
-    const msgData = ArbValue.marshal(outMsg.asValue())
-    const {
-      0: valid,
-      1: offset,
-      2: kind,
-      3: calculatedSender,
-      4: data,
-    } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
-
-    assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    expect(offset).to.equal(msgData.length)
-    assert.equal(kind, msg.kind, 'Incorrect message type')
-    assert.equal(calculatedSender, sender, 'Incorrect sender')
-
     const { valid: valid2, message } = await messageTester.parseERC721Message(
-      data
+      msg.asData()
     )
     assert.isTrue(valid2, 'did not parse eth message correctly')
     assert.equal(message.dest, dest, 'Incorrect dest')

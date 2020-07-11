@@ -54,24 +54,19 @@ describe('Constructors', function () {
   })
 
   it('CodePointValue', function () {
-    const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash)
-    expect(cpv.insnNum.toNumber()).to.equal(0)
+    const cpv = new arb.CodePointValue(new arb.BasicOp(0x60), nullHash)
     expect(cpv.op.opcode).to.equal(0x60)
     expect(cpv.nextHash).to.equal(nullHash)
 
     // Test BasicOp hash value
-    const bopv = new arb.CodePointValue(
-      99,
-      new arb.BasicOp(0x60),
-      EMPTY_TUPLE_HASH
-    )
+    const bopv = new arb.CodePointValue(new arb.BasicOp(0x60), EMPTY_TUPLE_HASH)
     const preCalc =
       '0xe20558cb3c2dbc788aee4091e5596aa3a86530d82bce979e21365703da522301'
     expect(bopv.hash()).to.equal(preCalc)
 
     // Test ImmOp hash value
     const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)))
-    const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH)
+    const immv = new arb.CodePointValue(immop, EMPTY_TUPLE_HASH)
     const preCalc2 =
       '0x17ae7e9c5b69861db0759631c54ee3a23ecd04bd57d3d3e2b5579c05c5bd0e8b'
     expect(immv.hash()).to.equal(preCalc2)
@@ -153,7 +148,7 @@ describe('TupleValue', function () {
 
 // Marshaled sizes as hexstrings
 const M_INT_VALUE_SIZE = 1 + 32
-const M_CODE_POINT_SIZE = 1 + 8 + 1 + 1 + 0 + 32 // Without val
+const M_CODE_POINT_SIZE = 1 + 1 + 1 + 0 + 32 // Without val
 const M_TUPLE_SIZE = 1 + 0 // Without other vals
 
 describe('Marshaling', function () {
@@ -180,25 +175,22 @@ describe('Marshaling', function () {
   })
 
   it('marshal and unmarshal CodePointValue', function () {
-    const pc = ethers.utils.bigNumberify(0)
     const op = new arb.BasicOp(10)
     const nextHash = '0x' + ZEROS_32B
-    const basicTCV = new arb.CodePointValue(pc, op, nextHash)
+    const basicTCV = new arb.CodePointValue(op, nextHash)
     const marshaledBytes = arb.marshal(basicTCV)
     expect(marshaledBytes.length).to.equal(M_CODE_POINT_SIZE)
     const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue
-    expect(revValue.insnNum.toString()).to.equal(pc.toString())
     expect(revValue.op.opcode).to.equal(op.opcode)
     expect(revValue.nextHash).to.equal(nextHash)
     expect(revValue.toString()).to.equal(basicTCV.toString())
 
     const iv = new arb.IntValue(bn(60))
     expect(arb.marshal(iv).length).to.equal(M_INT_VALUE_SIZE)
-    const immTCV = new arb.CodePointValue(pc, new arb.ImmOp(0x19, iv), nextHash)
+    const immTCV = new arb.CodePointValue(new arb.ImmOp(0x19, iv), nextHash)
     const mb = arb.marshal(immTCV)
     expect(mb.length).to.equal(M_CODE_POINT_SIZE + M_INT_VALUE_SIZE)
     const revImmValue = arb.unmarshal(mb) as arb.CodePointValue
-    assert(revImmValue.insnNum.eq(pc))
     expect(revImmValue.op.opcode).to.equal(0x19)
     expect(
       ((revImmValue.op as arb.ImmOp).value as arb.IntValue).bignum.toNumber()
@@ -241,12 +233,8 @@ describe('Marshaling', function () {
       'Error unmarshaling value no such TYPE: 99'
     )
 
-    const [tyCodePoint, pc, erroneousOpTy] = [
-      '0x01',
-      Array(8).fill('00').join(''),
-      'FF',
-    ]
-    expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).to.throw(
+    const [tyCodePoint, erroneousOpTy] = ['0x01', 'FF']
+    expect(() => arb.unmarshal(tyCodePoint + erroneousOpTy)).to.throw(
       'Error unmarshalOp no such immCount: 255'
     )
 

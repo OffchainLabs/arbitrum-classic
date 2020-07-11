@@ -605,7 +605,7 @@ library Value {
         return (false, 0, newInt(0));
     }
 
-    function bytesToBytestackHash(
+    function bytesToBytestack(
         bytes memory data,
         uint256 startOffset,
         uint256 dataLength
@@ -643,17 +643,6 @@ library Value {
         return newTuplePreImage(vals, size);
     }
 
-    function bytesToBytestackHash(bytes memory data)
-        internal
-        pure
-        returns (Data memory)
-    {
-        uint256 dataLength = data.length;
-        uint256 startOffset = 0;
-
-        return bytesToBytestackHash(data, dataLength, startOffset);
-    }
-
     function bytestackToBytes(bytes memory data, uint256 startOffset)
         internal
         pure
@@ -667,14 +656,12 @@ library Value {
         uint8 valType = uint8(data[offset]);
         offset++;
         if (valType != TUPLE_TYPECODE + 2) {
-            require(false, "fail1");
             return (false, offset, byteData);
         }
 
         uint256 byteCount;
         (valid, offset, byteCount) = deserializeCheckedInt(data, offset);
         if (!valid) {
-            require(false, "fail2");
             return (false, offset, byteData);
         }
         uint256 fullChunkCount = byteCount / 32;
@@ -691,14 +678,12 @@ library Value {
             valType = uint8(data[offset]);
             offset++;
             if (valType != TUPLE_TYPECODE + 2) {
-                require(false, "fail3");
                 return (false, offset, byteData);
             }
 
             uint256 nextChunk;
             (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
             if (!valid) {
-                require(false, "fail4");
                 return (false, offset, byteData);
             }
 
@@ -718,7 +703,6 @@ library Value {
         valType = uint8(data[offset]);
         offset++;
         if (valType != TUPLE_TYPECODE) {
-            require(false, "fail5");
             return (false, offset, byteData);
         }
         return (true, offset, abi.encodePacked(fullChunks, partialChunk));
