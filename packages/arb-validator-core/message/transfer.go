@@ -36,7 +36,7 @@ func NewRandomEth() Eth {
 
 func (e Eth) AsData() []byte {
 	data := make([]byte, 0)
-	data = append(data, e.Dest[:]...)
+	data = append(data, addressData(e.Dest)...)
 	data = append(data, math.U256Bytes(e.Value)...)
 	return data
 }
@@ -61,8 +61,8 @@ func NewRandomERC20() ERC20 {
 
 func (e ERC20) AsData() []byte {
 	data := make([]byte, 0)
-	data = append(data, e.Token[:]...)
-	data = append(data, e.Dest[:]...)
+	data = append(data, addressData(e.Token)...)
+	data = append(data, addressData(e.Dest)...)
 	data = append(data, math.U256Bytes(e.Value)...)
 	return data
 }
@@ -87,8 +87,8 @@ func NewRandomERC721() ERC721 {
 
 func (e ERC721) AsData() []byte {
 	data := make([]byte, 0)
-	data = append(data, e.Token[:]...)
-	data = append(data, e.Dest[:]...)
+	data = append(data, addressData(e.Token)...)
+	data = append(data, addressData(e.Dest)...)
 	data = append(data, math.U256Bytes(e.ID)...)
 	return data
 }
