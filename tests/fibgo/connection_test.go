@@ -335,21 +335,22 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
-
 	_, tx, fib, err := DeployFibonacci(auth, client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
 
-	_, err = waitForReceipt(
+	receipt, err := waitForReceipt(
 		client,
 		tx,
 		common.NewAddressFromEth(auth.From),
 		time.Second*60,
 	)
 	if err != nil {
-		t.Errorf("DeployFibonacci receipt error %v", err)
-		return
+		t.Fatal("DeployFibonacci receipt error", err)
+	}
+	if receipt.Status != 1 {
+		t.Fatal("tx deploying fib failed")
 	}
 
 	//Wrap the Token contract instance into a session
@@ -362,44 +363,37 @@ func TestFib(t *testing.T) {
 		TransactOpts: *auth,
 	}
 
-	//t.Run("DeployFib", func(t *testing.T) {
-	//	FibonacciBin
-	//
-	//
-	//})
+	fibsize := 15
+	fibnum := 11
 
-	t.Run("TestFibResult", func(t *testing.T) {
-		fibsize := 15
-		fibnum := 11
+	tx, err = session.GenerateFib(big.NewInt(int64(fibsize)))
+	if err != nil {
+		t.Fatal("GenerateFib error", err)
+	}
+	receipt, err = waitForReceipt(
+		client,
+		tx,
+		common.NewAddressFromEth(session.TransactOpts.From),
+		time.Second*60,
+	)
+	if err != nil {
+		t.Fatal("GenerateFib receipt error", err)
+	}
+	if receipt.Status != 1 {
+		t.Fatal("tx generating numbers failed")
+	}
 
-		tx, err := session.GenerateFib(big.NewInt(int64(fibsize)))
-		if err != nil {
-			t.Errorf("GenerateFib error %v", err)
-			return
-		}
-		_, err = waitForReceipt(
-			client,
-			tx,
-			common.NewAddressFromEth(session.TransactOpts.From),
-			time.Second*60,
+	fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
+	if err != nil {
+		t.Fatal("GetFib error", err)
+	}
+	if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
+		t.Fatalf(
+			"GetFib error - expected %v got %v",
+			big.NewInt(int64(144)),
+			fibval,
 		)
-		if err != nil {
-			t.Errorf("GenerateFib receipt error %v", err)
-			return
-		}
-		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
-		if err != nil {
-			t.Errorf("GetFib error %v", err)
-			return
-		}
-		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
-			t.Errorf(
-				"GetFib error - expected %v got %v",
-				big.NewInt(int64(144)),
-				fibval,
-			)
-		}
-	})
+	}
 
 	t.Run("TestEvent", func(t *testing.T) {
 		eventChan := make(chan interface{}, 2)

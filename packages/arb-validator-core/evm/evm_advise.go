@@ -19,9 +19,11 @@ package evm
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 )
 
@@ -45,6 +47,18 @@ type Result struct {
 	EVMLogs    []Log
 	GasUsed    *big.Int
 	GasPrice   *big.Int
+}
+
+func (r *Result) String() string {
+	return fmt.Sprintf(
+		"Result(%v, %v, %v, %v, %v, %v)",
+		r.L1Message,
+		r.ResultCode,
+		hexutil.Encode(r.ReturnData),
+		r.EVMLogs,
+		r.GasUsed,
+		r.GasPrice,
+	)
 }
 
 func (r *Result) AsValue() value.Value {
@@ -80,11 +94,11 @@ func NewResultFromValue(val value.Value) (*Result, error) {
 	}
 	returnBytes, err := message.ByteStackToHex(returnData)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "umarshalling return data")
 	}
 	logs, err := LogStackToLogs(evmLogs)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "unmarshaling logs")
 	}
 	resultCodeInt, ok := resultCode.(value.IntValue)
 	if !ok {

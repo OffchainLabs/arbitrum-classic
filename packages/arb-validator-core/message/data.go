@@ -19,6 +19,7 @@ package message
 import (
 	"bytes"
 	"errors"
+	errors2 "github.com/pkg/errors"
 	"math"
 	"math/big"
 
@@ -60,10 +61,10 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 	for !val.Equal(value.NewEmptyTuple()) {
 		tupVal, ok := val.(value.TupleValue)
 		if !ok {
-			return nil, errTupleSize2
+			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
 		if tupVal.Len() != 2 {
-			return nil, errTupleSize2
+			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
 
 		member, _ := tupVal.GetByInt64(0)
@@ -90,10 +91,10 @@ func ListToStackValue(vals []value.Value) value.TupleValue {
 func ByteStackToHex(val value.Value) ([]byte, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
-		return nil, errTupleSize2
+		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
 	if tup.Len() != 2 {
-		return nil, errTupleSize2
+		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
 	lengthVal, _ := tup.GetByInt64(0)
 	lengthIntVal, ok := lengthVal.(value.IntValue)

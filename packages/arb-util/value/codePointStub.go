@@ -18,6 +18,7 @@ package value
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"io"
 )
@@ -40,6 +41,10 @@ func NewCodePointStubFromReader(rd io.Reader) (CodePointStub, error) {
 		PC:   insnNum,
 		hash: hash,
 	}, nil
+}
+
+func (cp CodePointStub) String() string {
+	return fmt.Sprintf("CodePointStub(%v, %v)", cp.PC, cp.hash)
 }
 
 func (cp CodePointStub) Marshal(w io.Writer) error {

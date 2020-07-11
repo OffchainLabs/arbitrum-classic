@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -115,7 +117,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	data, err := ByteStackToHex(messageData)
 	if err != nil {
-		return failRet, err
+		return failRet, errors2.Wrap(err, "unmarshalling input data")
 	}
 
 	return InboxMessage{
@@ -136,6 +138,17 @@ func NewRandomInboxMessage(msg Message) InboxMessage {
 		common.RandAddress(),
 		common.RandBigInt(),
 		NewRandomChainTime(),
+	)
+}
+
+func (im InboxMessage) String() string {
+	return fmt.Sprintf(
+		"InboxMessage(%v, %v, %v, %v, %v)",
+		im.Kind,
+		im.Sender,
+		im.InboxSeqNum,
+		hexutil.Encode(im.Data),
+		im.ChainTime,
 	)
 }
 

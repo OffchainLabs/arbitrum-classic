@@ -37,6 +37,7 @@ type Value interface {
 	Hash() common.Hash
 	Size() int64
 	Marshal(io.Writer) error
+	String() string
 }
 
 func Eq(x, y Value) bool {
