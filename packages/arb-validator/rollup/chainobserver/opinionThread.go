@@ -162,6 +162,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 							log.Println("prepped assertion", prepped.Prev.Hash().ShortString())
 							preparedAssertionsMut.Lock()
 							preparedAssertions[prepped.Prev.Hash()] = prepped
+							log.Println("wrote preparedAssertions", preparedAssertions)
 							preparedAssertionsMut.Unlock()
 							log.Println("saved prepped assertion", prepped.Prev.Hash().ShortString())
 						}()
@@ -170,6 +171,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					log.Println("Checking for prepped assertion on", chain.calculatedValidNode.Hash().ShortString())
 					preparedAssertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
+					log.Println("got preparedAssertions", preparedAssertions)
 					preparedAssertionsMut.Unlock()
 					log.Println("opinion2", isPrepared, chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode))
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
