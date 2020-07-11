@@ -149,6 +149,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
+				log.Println("opinion1", chain.calculatedValidNode.Hash().ShortString(), isPreparing)
 				if !isPreparing {
 					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.Inbox.GetTopHash()
 					if chain.calculatedValidNode.Machine() != nil &&
@@ -160,12 +161,14 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					}
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
+					log.Println("opinion2", chain.calculatedValidNode.Hash().ShortString(), isPrepared, chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode))
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 						chain.RUnlock()
 						chain.Lock()
 						chain.pendingState = prepared.Machine
 						chain.Unlock()
 						chain.RLock()
+						log.Println("opinion3", len(chain.listeners))
 						for _, lis := range chain.listeners {
 							lis.AssertionPrepared(
 								ctx,
