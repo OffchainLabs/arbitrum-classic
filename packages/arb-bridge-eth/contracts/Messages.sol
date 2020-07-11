@@ -160,6 +160,7 @@ library Messages {
             return (false, message);
         }
         uint256 offset = 0;
+        offset += 12;
         message.dest = data.toAddress(offset);
         offset += 20;
         message.value = data.toUint(offset);
@@ -175,8 +176,10 @@ library Messages {
             return (false, message);
         }
         uint256 offset = 0;
+        offset += 12;
         message.token = data.toAddress(offset);
         offset += 20;
+        offset += 12;
         message.dest = data.toAddress(offset);
         offset += 20;
         message.value = data.toUint(offset);
@@ -192,8 +195,10 @@ library Messages {
             return (false, message);
         }
         uint256 offset = 0;
+        offset += 12;
         message.token = data.toAddress(offset);
         offset += 20;
+        offset += 12;
         message.dest = data.toAddress(offset);
         offset += 20;
         message.id = data.toUint(offset);

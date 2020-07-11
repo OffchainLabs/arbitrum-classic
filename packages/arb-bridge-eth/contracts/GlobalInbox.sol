@@ -158,7 +158,7 @@ contract GlobalInbox is
             _chain,
             ETH_DEPOSIT,
             msg.sender,
-            abi.encodePacked(_to, msg.value)
+            abi.encodePacked(bytes32(bytes20(_to)), msg.value)
         );
     }
 
@@ -173,7 +173,11 @@ contract GlobalInbox is
             _chain,
             ERC20_DEPOSIT,
             msg.sender,
-            abi.encodePacked(_erc20, _to, _value)
+            abi.encodePacked(
+                bytes32(bytes20(_erc20)),
+                bytes32(bytes20(_to)),
+                _value
+            )
         );
     }
 
@@ -188,7 +192,11 @@ contract GlobalInbox is
             _chain,
             ERC721_DEPOSIT,
             msg.sender,
-            abi.encodePacked(_erc721, _to, _id)
+            abi.encodePacked(
+                bytes32(bytes20(_erc721)),
+                bytes32(bytes20(_to)),
+                _id
+            )
         );
     }
 

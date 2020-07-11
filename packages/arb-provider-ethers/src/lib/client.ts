@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { EVMCode, processLog } from './message'
+import {} from './message'
 
 import * as ethers from 'ethers'
 
@@ -239,7 +239,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return new Promise((resolve, reject): void => {
       const params: validatorserver.CallMessageArgs = {
         contractAddress,
@@ -263,19 +263,7 @@ export class ArbClient {
               reject('call result empty')
               return
             }
-            const val = ArbValue.unmarshal(result.rawVal)
-            const evmVal = processLog(val as ArbValue.TupleValue)
-            switch (evmVal.returnType) {
-              case EVMCode.Return:
-                resolve(evmVal.data)
-                break
-              case EVMCode.Stop:
-                resolve(new Uint8Array())
-                break
-              default:
-                reject(new Error('Call was reverted'))
-                break
-            }
+            resolve(ArbValue.unmarshal(result.rawVal))
           }
         }
       )
@@ -286,7 +274,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return this._call('Validator.CallMessage', contractAddress, sender, data)
   }
 
@@ -294,7 +282,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return this._call('Validator.PendingCall', contractAddress, sender, data)
   }
 

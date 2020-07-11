@@ -179,7 +179,7 @@ func (t Transaction) asData() []byte {
 
 func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
 	data := make([]byte, 0)
-	data = append(data, chain[:]...)
+	data = append(data, addressData(chain)...)
 	data = append(data, t.asData()...)
 	return marshaledBytesHash(data)
 }
