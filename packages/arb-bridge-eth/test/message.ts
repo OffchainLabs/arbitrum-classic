@@ -57,7 +57,7 @@ describe('Messages', async () => {
     } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
 
     assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    assert.equal(offset, ethers.utils.bigNumberify(msgData.length))
+    expect(offset).to.equal(msgData.length)
     assert.equal(kind, msg.kind, 'Incorrect message type')
     assert.equal(calculatedSender, sender, 'Incorrect sender')
 
@@ -80,7 +80,7 @@ describe('Messages', async () => {
     } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
 
     assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    assert.equal(offset, ethers.utils.bigNumberify(msgData.length))
+    expect(offset).to.equal(msgData.length)
     assert.equal(kind, msg.kind, 'Incorrect message type')
     assert.equal(calculatedSender, sender, 'Incorrect sender')
 
@@ -105,7 +105,7 @@ describe('Messages', async () => {
     } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
 
     assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    assert.equal(offset, ethers.utils.bigNumberify(msgData.length))
+    expect(offset).to.equal(msgData.length)
     assert.equal(kind, msg.kind, 'Incorrect message type')
     assert.equal(calculatedSender, sender, 'Incorrect sender')
 
