@@ -38,7 +38,9 @@ const (
 	TransactionBatchType              = 3
 )
 
-const TransactionHeaderSize = 32*4 + 20
+const AddressSize = 32
+
+const TransactionHeaderSize = 32*4 + AddressSize
 const SignatureSize = 65
 
 func marshaledBytesHash(data []byte) common.Hash {
