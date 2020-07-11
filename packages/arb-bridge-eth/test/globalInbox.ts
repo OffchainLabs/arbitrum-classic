@@ -207,7 +207,7 @@ describe('GlobalInbox', async () => {
 
   it('should make a batch call', async () => {
     const { 1: seqNum } = await globalInbox.getInbox(chainAddress)
-    const messageCount = 5
+    const messageCount = 500
 
     const data = await generateL2TxBatch(accounts, chainAddress, messageCount)
 
