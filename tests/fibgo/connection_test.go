@@ -52,25 +52,6 @@ func setupValidators(
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
-	ethURL := test.GetEthUrl()
-
-	jsonFile, err := os.Open("bridge_eth_addresses.json")
-
-	if err != nil {
-		t.Errorf("setupValidators Open error %v", err)
-		return nil, err
-	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		t.Errorf("setupValidators ReadAll error %v", err)
-		return nil, err
-	}
-	var connectionInfo ethbridge.ArbAddresses
-	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		t.Errorf("setupValidators Unmarshal error %v", err)
-		return nil, err
-	}
-
 	clients := make([]arbbridge.ArbAuthClient, 0, len(hexKeys))
 	for _, hexKey := range hexKeys {
 		key, err := crypto.HexToECDSA(hexKey)
@@ -80,7 +61,7 @@ func setupValidators(
 		}
 
 		auth := bind.NewKeyedTransactor(key)
-		ethclint, err := ethclient.Dial(ethURL)
+		ethclint, err := ethclient.Dial(test.GetEthUrl())
 		if err != nil {
 			return nil, err
 		}
@@ -89,17 +70,26 @@ func setupValidators(
 		clients = append(clients, client)
 	}
 
-	config := valprotocol.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-		MaxExecutionSteps:       1000000000,
-		ArbGasSpeedLimitPerTick: 200000,
-	}
-
 	contract := gotest.TestMachinePath()
 	ctx := context.Background()
 
 	rollupAddress, err := func() (common.Address, error) {
+		jsonFile, err := os.Open("bridge_eth_addresses.json")
+		if err != nil {
+			t.Errorf("setupValidators Open error %v", err)
+			return common.Address{}, err
+		}
+		byteValue, _ := ioutil.ReadAll(jsonFile)
+		if err := jsonFile.Close(); err != nil {
+			t.Errorf("setupValidators ReadAll error %v", err)
+			return common.Address{}, err
+		}
+		var connectionInfo ethbridge.ArbAddresses
+		if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+			t.Errorf("setupValidators Unmarshal error %v", err)
+			return common.Address{}, err
+		}
+
 		factory, err := clients[0].NewArbFactory(connectionInfo.ArbFactoryAddress())
 		if err != nil {
 			return common.Address{}, err
@@ -108,6 +98,13 @@ func setupValidators(
 		mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
 		if err != nil {
 			return common.Address{}, err
+		}
+
+		config := valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(10),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
+			MaxExecutionSteps:       1000000000,
+			ArbGasSpeedLimitPerTick: 200000,
 		}
 
 		rollupAddress, _, err := factory.CreateRollup(
@@ -331,8 +328,8 @@ func waitForReceipt(
 
 func TestFib(t *testing.T) {
 	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	validatorClients, err := setupValidators([]string{key1, key2}, t)
+	//key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	validatorClients, err := setupValidators([]string{key1}, t)
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}

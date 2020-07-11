@@ -98,7 +98,6 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
-			log.Println("Resetting prepped assertions")
 			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertionsMut.Lock()
 			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
@@ -152,7 +151,6 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
-				log.Println("opinion1", chain.calculatedValidNode.Hash().ShortString(), isPreparing)
 				if !isPreparing {
 					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.Inbox.GetTopHash()
 					if chain.calculatedValidNode.Machine() != nil &&
@@ -160,28 +158,21 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
 							prepped := chain.PrepareAssertion()
-							log.Println("prepped assertion", prepped.Prev.Hash().ShortString())
 							preparedAssertionsMut.Lock()
 							preparedAssertions[prepped.Prev.Hash()] = prepped
-							log.Println("wrote preparedAssertions", preparedAssertions)
 							preparedAssertionsMut.Unlock()
-							log.Println("saved prepped assertion", prepped.Prev.Hash().ShortString())
 						}()
 					}
 				} else {
-					log.Println("Checking for prepped assertion on", chain.calculatedValidNode.Hash().ShortString())
 					preparedAssertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
-					log.Println("got preparedAssertions", preparedAssertions)
 					preparedAssertionsMut.Unlock()
-					log.Println("opinion2", isPrepared, chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode))
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 						chain.RUnlock()
 						chain.Lock()
 						chain.pendingState = prepared.Machine
 						chain.Unlock()
 						chain.RLock()
-						log.Println("opinion3", len(chain.listeners))
 						for _, lis := range chain.listeners {
 							lis.AssertionPrepared(
 								ctx,
