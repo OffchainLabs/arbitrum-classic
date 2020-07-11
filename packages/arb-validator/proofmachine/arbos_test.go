@@ -50,28 +50,14 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-
-	chainTime := message.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
-	constructorData, err := hexutil.Decode(FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	constructorTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
-		DestAddress: common.Address{},
-		Payment:     big.NewInt(0),
-		Data:        constructorData,
-	}
-
 	runMessage := func(msg message.AbstractL2Message) *evm.Result {
+		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+
+		chainTime := message.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		}
+
 		inbox := structures.NewVMInbox()
 		inbox.DeliverMessage(message.NewInboxMessage(message.L2Message{Msg: msg}, addr, big.NewInt(0), chainTime))
 		assertion, _ := mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
@@ -90,6 +76,20 @@ func TestFib(t *testing.T) {
 		}
 
 		return res
+	}
+
+	constructorData, err := hexutil.Decode(FibonacciBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	constructorTx := message.Transaction{
+		MaxGas:      big.NewInt(0),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        constructorData,
 	}
 
 	constructorResult := runMessage(constructorTx)

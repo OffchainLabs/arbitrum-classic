@@ -4,6 +4,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
@@ -335,7 +336,7 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
-	_, tx, fib, err := DeployFibonacci(auth, client)
+	_, tx, _, err := DeployFibonacci(auth, client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
@@ -351,6 +352,13 @@ func TestFib(t *testing.T) {
 	}
 	if receipt.Status != 1 {
 		t.Fatal("tx deploying fib failed")
+	}
+
+	t.Log("Fib contract is at", hexutil.Encode(receipt.ContractAddress[:]))
+
+	fib, err := NewFibonacci(receipt.ContractAddress, client)
+	if err != nil {
+		t.Fatal("connect fib failed", err)
 	}
 
 	//Wrap the Token contract instance into a session

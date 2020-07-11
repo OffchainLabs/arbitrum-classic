@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -170,6 +171,19 @@ func (tx *TxInfo) ToEthReceipt() (*types.Receipt, error) {
 		blockNumber = new(big.Int).SetUint64(location.NodeHeight)
 	}
 
+	contractAddress := ethcommon.Address{}
+	if result.L1Message.Kind == message.L2Type {
+		msg, err := message.NewL2MessageFromData(result.L1Message.Data)
+		if err == nil {
+			if msg, ok := msg.(message.Transaction); ok {
+				emptyAddress := common.Address{}
+				if msg.DestAddress == emptyAddress {
+					copy(contractAddress[:], result.ReturnData[12:])
+				}
+			}
+		}
+	}
+
 	return &types.Receipt{
 		PostState:         []byte{0},
 		Status:            status,
@@ -177,7 +191,7 @@ func (tx *TxInfo) ToEthReceipt() (*types.Receipt, error) {
 		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
 		Logs:              evmLogs,
 		TxHash:            tx.TransactionHash.ToEthHash(),
-		ContractAddress:   ethcommon.Address{},
+		ContractAddress:   contractAddress,
 		GasUsed:           1,
 		BlockHash:         blockHash,
 		BlockNumber:       blockNumber,

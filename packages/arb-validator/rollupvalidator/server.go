@@ -23,6 +23,7 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
@@ -195,8 +196,9 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
-	callMsg := message.NewInboxMessage(
-		message.NewSimpleCall(contractAddress, dataBytes),
+	callMsg := message.NewSimpleCall(contractAddress, dataBytes)
+	inboxMsg := message.NewInboxMessage(
+		callMsg,
 		sender,
 		seq,
 		message.ChainTime{
@@ -205,11 +207,15 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		},
 	)
 
-	inbox := value.NewTuple2(value.NewEmptyTuple(), callMsg.AsValue())
+	log.Println("callMsg", callMsg)
+	log.Println("inboxMsg", inboxMsg)
+
+	inbox := structures.NewVMInbox()
+	inbox.DeliverMessage(inboxMsg)
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
-		inbox,
+		inbox.AsValue(),
 		m.maxCallTime,
 	)
 
@@ -232,7 +238,7 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 	if err != nil {
 		return nil, err
 	}
-	if lastLog.L1Message.MessageID() != callMsg.MessageID() {
+	if lastLog.L1Message.MessageID() != inboxMsg.MessageID() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}
