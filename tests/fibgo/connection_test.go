@@ -133,7 +133,7 @@ func setupValidators(
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
-			client,
+			rollupmanager.NewStressTestClient(client, time.Second*10),
 			contract,
 			dbName,
 		)

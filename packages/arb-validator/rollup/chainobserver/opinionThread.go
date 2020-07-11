@@ -35,6 +35,7 @@ import (
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
+		log.Println("Launching opinion thread")
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*chainlistener.PreparedAssertion)
 		preparedAssertionsMut := new(sync.Mutex)
