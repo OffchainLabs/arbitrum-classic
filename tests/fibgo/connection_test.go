@@ -345,7 +345,7 @@ func TestFib(t *testing.T) {
 		client,
 		tx,
 		common.NewAddressFromEth(auth.From),
-		time.Second*60,
+		time.Second*20,
 	)
 	if err != nil {
 		t.Fatal("DeployFibonacci receipt error", err)
@@ -382,7 +382,7 @@ func TestFib(t *testing.T) {
 		client,
 		tx,
 		common.NewAddressFromEth(session.TransactOpts.From),
-		time.Second*60,
+		time.Second*20,
 	)
 	if err != nil {
 		t.Fatal("GenerateFib receipt error", err)

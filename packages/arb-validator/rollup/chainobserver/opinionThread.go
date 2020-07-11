@@ -129,6 +129,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case prepped := <-assertionPreparedChan:
+				log.Println("opinion thread prepared assertion")
 				preparedAssertions[prepped.Prev.Hash()] = prepped
 			case <-ticker.C:
 				chain.RLock()
@@ -156,7 +157,9 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						chain.calculatedValidNode.Machine().IsBlocked(newMessages) == nil {
 						preparingAssertions[chain.calculatedValidNode.Hash()] = true
 						go func() {
-							assertionPreparedChan <- chain.PrepareAssertion()
+							prepped := chain.PrepareAssertion()
+							log.Println("prepped assertion", prepped)
+							assertionPreparedChan <- prepped
 						}()
 					}
 				} else {
