@@ -96,26 +96,31 @@ func setupValidators(
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factory, err := clients[0].NewArbFactory(connectionInfo.ArbFactoryAddress())
-	if err != nil {
-		return nil, err
-	}
-
 	contract := gotest.TestMachinePath()
-
-	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
-	if err != nil {
-		return nil, err
-	}
-
 	ctx := context.Background()
 
-	rollupAddress, _, err := factory.CreateRollup(
-		ctx,
-		mach.Hash(),
-		config,
-		clients[0].Address(),
-	)
+	rollupAddress, err := func() (common.Address, error) {
+		factory, err := clients[0].NewArbFactory(connectionInfo.ArbFactoryAddress())
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		rollupAddress, _, err := factory.CreateRollup(
+			ctx,
+			mach.Hash(),
+			config,
+			clients[0].Address(),
+		)
+		return rollupAddress, err
+	}()
+	if err != nil {
+		return nil, err
+	}
 
 	managers := make([]*rollupmanager.Manager, 0, len(clients))
 	for _, client := range clients {
@@ -326,8 +331,8 @@ func waitForReceipt(
 
 func TestFib(t *testing.T) {
 	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	//key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	validatorClients, err := setupValidators([]string{key1}, t)
+	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	validatorClients, err := setupValidators([]string{key1, key2}, t)
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
