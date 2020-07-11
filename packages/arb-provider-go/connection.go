@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -13,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -32,7 +31,7 @@ type ArbConnection struct {
 	sequenceNum *big.Int
 }
 
-func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
+func Dial(url string, auth *bind.TransactOpts, ethclint ethutils.EthClient) (*ArbConnection, error) {
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo(context.Background())

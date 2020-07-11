@@ -18,11 +18,11 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -50,12 +50,12 @@ func init() {
 type executionChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	challenge *executionchallenge.ExecutionChallenge
-	client    *ethclient.Client
+	client    ethutils.EthClient
 	address   ethcommon.Address
 	topics    [][]ethcommon.Hash
 }
 
-func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*executionChallengeWatcher, error) {
+func newExecutionChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*executionChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

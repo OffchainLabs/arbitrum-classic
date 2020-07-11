@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
@@ -26,8 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
@@ -48,7 +47,7 @@ type bisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*bisectionChallenge, error) {
+func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -99,7 +98,7 @@ type bisectionChallengeWatcher struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*bisectionChallengeWatcher, error) {
+func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*bisectionChallengeWatcher, error) {
 	challenge, err := newChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

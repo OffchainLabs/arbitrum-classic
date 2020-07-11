@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -27,8 +28,6 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -37,7 +36,7 @@ type inboxTopChallenge struct {
 	contract *inboxtopchallenge.InboxTopChallenge
 }
 
-func newInboxTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*inboxTopChallenge, error) {
+func newInboxTopChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*inboxTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err

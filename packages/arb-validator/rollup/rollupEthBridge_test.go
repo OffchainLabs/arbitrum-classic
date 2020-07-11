@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -39,18 +38,11 @@ import (
 	"testing"
 )
 
-var privHex = "27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa"
 var tester *rolluptester.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	auth, err := test.SetupAuth(privHex)
-	if err != nil {
-		log.Fatal(err)
-	}
-	client, err := ethclient.Dial(test.GetEthUrl())
-	if err != nil {
-		log.Fatal(err)
-	}
+	client, auths := test.SimulatedBackend()
+	auth := auths[0]
 
 	_, machineTx, deployedArbRollup, err := rolluptester.DeployRollupTester(
 		auth,
@@ -59,6 +51,7 @@ func TestMainSetup(m *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	client.Commit()
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
 		client,

@@ -18,7 +18,9 @@ package challenges
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -27,17 +29,23 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-func testExecutionChallenge(t *testing.T) {
+func testExecutionChallenge(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
+) {
 	t.Parallel()
 
 	mach := getTestMachine(t)
 	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidExecutionChildType,
 		challengeHash,
-		"9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc",
-		"27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendExecutionClaim(
 				context.Background(),

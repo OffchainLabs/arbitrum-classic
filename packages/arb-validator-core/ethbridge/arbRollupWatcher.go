@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
@@ -29,8 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
@@ -69,12 +68,12 @@ type ethRollupWatcher struct {
 	ArbRollup *rollup.ArbRollup
 
 	rollupAddress ethcommon.Address
-	client        *ethclient.Client
+	client        ethutils.EthClient
 }
 
 func newRollupWatcher(
 	rollupAddress ethcommon.Address,
-	client *ethclient.Client,
+	client ethutils.EthClient,
 ) (*ethRollupWatcher, error) {
 	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
 	if err != nil {

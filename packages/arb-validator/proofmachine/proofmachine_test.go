@@ -22,8 +22,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -35,23 +33,16 @@ import (
 )
 
 func setupTestValidateProof(t *testing.T) (*onestepprooftester.OneStepProofTester, error) {
-	ethURL := test.GetEthUrl()
-
-	auth, err := test.SetupAuth("9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ethclint, err := ethclient.Dial(ethURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, ethclint)
+	client, auths := test.SimulatedBackend()
+	auth := auths[0]
+	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, client)
 	if err != nil {
 		return nil, err
 	}
+	client.Commit()
 	if _, err := ethbridge.WaitForReceiptWithResults(
 		context.Background(),
-		ethclint,
+		client,
 		auth.From,
 		tx,
 		"DeployOneStepProof",

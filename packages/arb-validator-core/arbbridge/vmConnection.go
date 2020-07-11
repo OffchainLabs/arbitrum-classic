@@ -37,12 +37,12 @@ func HandleBlockchainEvents(
 		defer close(eventChan)
 		headersChan, err := client.SubscribeBlockHeaders(ctx, startBlockId)
 		if err != nil {
-			log.Println("error in challenge", err)
+			log.Println("error subscribing to headers", err)
 			return
 		}
 		for maybeBlockId := range headersChan {
 			if maybeBlockId.Err != nil {
-				log.Println("error in challenge", err)
+				log.Println("error getting header", maybeBlockId.Err)
 				return
 			}
 
@@ -50,7 +50,7 @@ func HandleBlockchainEvents(
 
 			events, err := contract.GetEvents(ctx, blockId, maybeBlockId.Timestamp)
 			if err != nil {
-				log.Println("error in challenge", err)
+				log.Println("error getting events", err)
 				return
 			}
 

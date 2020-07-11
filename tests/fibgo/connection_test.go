@@ -2,13 +2,8 @@ package test
 
 import (
 	"context"
-	jsonenc "encoding/json"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
-	"io/ioutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -17,103 +12,84 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
-var db = "testman"
+var db = "./testman"
 
 /********************************************/
 /*    Validators                            */
 /********************************************/
 func setupValidators(
-	hexKeys []string,
 	t *testing.T,
+	client ethutils.EthClient,
+	auths []*bind.TransactOpts,
 ) ([]arbbridge.ArbAuthClient, error) {
-	if len(hexKeys) == 0 {
-		panic("must supply at least one key")
+	if len(auths) == 0 {
+		panic("must have at least 1 validator")
 	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
-	ethURL := test.GetEthUrl()
-
-	jsonFile, err := os.Open("bridge_eth_addresses.json")
-
-	if err != nil {
-		t.Errorf("setupValidators Open error %v", err)
-		return nil, err
-	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		t.Errorf("setupValidators ReadAll error %v", err)
-		return nil, err
-	}
-	var connectionInfo ethbridge.ArbAddresses
-	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		t.Errorf("setupValidators Unmarshal error %v", err)
-		return nil, err
-	}
-
-	clients := make([]arbbridge.ArbAuthClient, 0, len(hexKeys))
-	for _, hexKey := range hexKeys {
-		key, err := crypto.HexToECDSA(hexKey)
-		if err != nil {
-			t.Errorf("setupValidators HexToECDSA error %v", err)
-			return nil, err
-		}
-
-		auth := bind.NewKeyedTransactor(key)
-		ethclint, err := ethclient.Dial(ethURL)
-		if err != nil {
-			return nil, err
-		}
-
-		client := ethbridge.NewEthAuthClient(ethclint, auth)
-		clients = append(clients, client)
-	}
-
-	config := valprotocol.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-		MaxExecutionSteps:       250000,
-		ArbGasSpeedLimitPerTick: 200000,
-	}
-
-	factory, err := clients[0].NewArbFactory(connectionInfo.ArbFactoryAddress())
-	if err != nil {
-		return nil, err
-	}
-
-	contract := "contract.mexe"
-
-	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
-	if err != nil {
-		return nil, err
+	clients := make([]arbbridge.ArbAuthClient, 0, len(auths))
+	for _, auth := range auths {
+		clients = append(clients, ethbridge.NewEthAuthClient(client, auth))
 	}
 
 	ctx := context.Background()
+	contract := "contract.mexe"
 
-	rollupAddress, _, err := factory.CreateRollup(
-		ctx,
-		mach.Hash(),
-		config,
-		clients[0].Address(),
-	)
+	rollupAddress, err := func() (common.Address, error) {
+		config := valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(10),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
+			MaxExecutionSteps:       250000,
+			ArbGasSpeedLimitPerTick: 200000,
+		}
+
+		factoryAddr, err := ethbridge.DeployRollupFactory(auths[0], client)
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		factory, err := clients[0].NewArbFactory(common.NewAddressFromEth(factoryAddr))
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		rollupAddress, _, err := factory.CreateRollup(
+			ctx,
+			mach.Hash(),
+			config,
+			clients[0].Address(),
+		)
+		return rollupAddress, err
+	}()
+	if err != nil {
+		return nil, err
+	}
 
 	managers := make([]*rollupmanager.Manager, 0, len(clients))
 	for _, client := range clients {
@@ -211,30 +187,17 @@ waitloop:
 
 func SetupProvider(
 	t *testing.T,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
 ) (*FibonacciSession, *goarbitrum.ArbConnection, error) {
-	ethURL := test.GetEthUrl()
-	key3 := "d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e"
 	fibAddrHex := "0x895521964D724c8362A36608AAf09A3D7d0A0445"
 
-	userKey, err := crypto.HexToECDSA(key3)
-	if err != nil {
-		t.Errorf("HexToECDSA error %v", err)
-		return nil, nil, err
-	}
-	auth := bind.NewKeyedTransactor(userKey)
-
-	ethclint, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	conn, dialerr := goarbitrum.Dial(
+	conn, err := goarbitrum.Dial(
 		"http://localhost:1235",
 		auth,
-		ethclint,
+		client,
 	)
-	if dialerr != nil {
-		t.Errorf("Dial error %v", dialerr)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -343,14 +306,20 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
-	key1 := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	key2 := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	clients, err := setupValidators([]string{key1, key2}, t)
+	client, auths := test.SimulatedBackend()
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			client.Commit()
+		}
+	}()
+
+	clients, err := setupValidators(t, client, auths[1:3])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
-	session, client, err := SetupProvider(t)
+	session, arbclient, err := SetupProvider(t, client, auths[0])
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
 		t.FailNow()
@@ -366,7 +335,7 @@ func TestFib(t *testing.T) {
 			return
 		}
 		_, err = waitForReceipt(
-			client,
+			arbclient,
 			tx,
 			common.NewAddressFromEth(session.TransactOpts.From),
 			time.Second*60,

@@ -51,12 +51,10 @@ workflows:
           requires:
             - go-deps
             - cpp-avm
-            - ethbridge
       - backend-integration:
           requires:
             - go-deps
             - cpp-avm
-            - ethbridge
 jobs:
   go-deps:
     docker:
@@ -156,34 +154,12 @@ jobs:
           command: npx codechecks
           working_directory: /home/user/project
       - run:
-          command: |
-            echo arbitrum > ~/password.txt
-            mkdir data
-            geth --datadir data init geth/ethbridge.json
-            cp geth/keystore/* data/keystore
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
-          command: geth --datadir data --rpc --rpcaddr "0.0.0.0" --rpccorsdomain "*" --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
-          background: true
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: while ! nc -z localhost 7545; do sleep 2; done
-      - run:
-          name: deploy arb-bridge-eth
-          command: |
-            yarn buidler deploy --network parity
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: cat /home/user/project/packages/arb-bridge-eth/bridge_eth_addresses.json
-      - run: killall geth
-      - run:
           name: Upload Coverage to Codecov
           command: codecovbash -R /home/user/project -c -F unit
           working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
-      - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-bridge-eth
-          paths:
-            - data
+
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.2.5
@@ -231,7 +207,6 @@ jobs:
       - run:
           command: |
             echo arbitrum > ~/password.txt
-            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
@@ -239,12 +214,6 @@ jobs:
             cd packages/arb-validator
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
-      - run:
-          name: start geth
-          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
-          background: true
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test arb-util
           command: |
@@ -306,7 +275,6 @@ jobs:
       - run:
           command: |
             echo arbitrum > ~/password.txt
-            cp -r /home/user/workspace/data /home/user/project/packages/arb-bridge-eth
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
@@ -314,12 +282,6 @@ jobs:
             cd packages/arb-validator
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
-      - run:
-          name: start geth
-          command: geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt --mine
-          background: true
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: while ! nc -z localhost 7545; do sleep 2; done
       - run:
           name: test fibgo
           command: |

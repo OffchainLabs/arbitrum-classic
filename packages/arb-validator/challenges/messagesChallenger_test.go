@@ -18,7 +18,9 @@ package challenges
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
@@ -30,7 +32,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 )
 
-func testMessagesChallenge(t *testing.T) {
+func testMessagesChallenge(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
+) {
 	t.Parallel()
 	messageStack := getMsgStack()
 	messageCount := uint64(4)
@@ -43,10 +50,11 @@ func testMessagesChallenge(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),

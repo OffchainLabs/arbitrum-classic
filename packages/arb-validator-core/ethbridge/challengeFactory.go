@@ -18,29 +18,49 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/inboxtopchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/messageschallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/challengefactory"
 )
 
 type challengeFactory struct {
 	contract *challengefactory.ChallengeFactory
-	client   *ethclient.Client
+	client   ethutils.EthClient
 	auth     *TransactAuth
 }
 
-func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challengeFactory, error) {
+func newChallengeFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challengeFactory, error) {
 	vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &challengeFactory{vmCreatorContract, client, auth}, nil
+}
+
+func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
+	inboxTopAddr, _, _, err := inboxtopchallenge.DeployInboxTopChallenge(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	messagesAddr, _, _, err := messageschallenge.DeployMessagesChallenge(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	executionAddr, _, _, err := executionchallenge.DeployExecutionChallenge(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	factoryAddr, _, _, err := challengefactory.DeployChallengeFactory(auth, client, messagesAddr, inboxTopAddr, executionAddr)
+	return factoryAddr, err
 }
 
 func (con *challengeFactory) CreateChallenge(
