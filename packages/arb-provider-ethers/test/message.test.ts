@@ -17,7 +17,6 @@
 'use strict'
 
 // import * as fs from 'fs'
-import * as chai from 'chai'
 import { expect, use } from 'chai'
 import { solidity } from 'ethereum-waffle'
 
@@ -38,7 +37,9 @@ describe('Serialization', function () {
     )
     const l2Message = new Message.L2Message(tx)
     const data = l2Message.asData()
-    expect(data.length).to.equal(1 + 5 * 32 + tx.calldata.length)
+    expect(data.length).to.equal(
+      1 + 5 * 32 + ethers.utils.hexDataLength(tx.calldata)
+    )
     const parsedL2Message = Message.L2Message.fromData(data)
     expect(parsedL2Message.message.kind).to.equal(
       Message.L2MessageCode.Transaction
@@ -50,6 +51,5 @@ describe('Serialization', function () {
     expect(tx2.destAddress).to.equal(tx.destAddress)
     expect(tx2.payment).to.equal(tx.payment)
     expect(tx2.calldata.toString()).to.equal(tx.calldata.toString())
-    console.log(ethers.utils.hexlify(data))
   })
 })
