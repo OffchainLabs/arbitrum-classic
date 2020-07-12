@@ -23,6 +23,7 @@ import {
   MessageCode,
   L2MessageCode,
   L2Call,
+  L2Message,
 } from './message'
 import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
@@ -47,10 +48,8 @@ import { ArbInfoFactory } from './abi/ArbInfoFactory'
 
 // EthBridge event names
 const EB_EVENT_CDA = 'RollupAsserted'
-const TransactionMessageDelivered = 'TransactionMessageDelivered'
-const EthDepositMessageDelivered = 'EthDepositMessageDelivered'
-const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered'
-const ERC721DepositMessageDelivered = 'ERC721DepositMessageDelivered'
+const MessageDelivered = 'MessageDelivered'
+const MessageDeliveredFromOrigin = 'MessageDeliveredFromOrigin'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
@@ -175,25 +174,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (!log) {
           continue
         }
-        if (log.name == TransactionMessageDelivered) {
-          const vmId = await this.getVmID()
-          return Hashing.calculateTransactionHash(
-            vmId,
-            log.values.to,
-            log.values.from,
-            log.values.seqNumber,
-            log.values.value,
-            log.values.data
-          )
-        } else if (
-          log.name == EthDepositMessageDelivered ||
-          log.name == ERC20DepositMessageDelivered ||
-          log.name == ERC721DepositMessageDelivered
-        ) {
-          return ethers.utils.hexZeroPad(
-            log.values.messageNum.toHexString(),
-            32
-          )
+        if (log.name == MessageDelivered) {
+          if (log.values.kind == MessageCode.L2) {
+            const msg = L2Message.fromData(log.values.data)
+            if (msg.message.kind == L2MessageCode.Transaction) {
+              return msg.message.messageID(log.values.sender)
+            }
+          }
+          return log.values.inboxSeqNum
         }
       }
     }
@@ -291,7 +279,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // object with normalized values passed in, depending on the method
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public async perform(method: string, params: any): Promise<any> {
-    // console.log('perform', method, params)
+    console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -464,8 +452,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     let resultVal: ArbValue.Value
-    if (blockTag) {
-      const tag = await blockTag
+    const tag = await blockTag
+    if (tag) {
       if (tag == 'pending') {
         resultVal = await this.client.pendingCall(tx, from)
       } else if (tag == 'latest') {

@@ -61,7 +61,7 @@ export class AggregatorClient {
     destAddress: string,
     sequenceNum: ethers.utils.BigNumber,
     payment: ethers.utils.BigNumber,
-    data: string,
+    data: ethers.utils.Arrayish,
     pubkey: string,
     signature: string
   ): Promise<txaggregator.SendTransactionReply> {
@@ -71,7 +71,7 @@ export class AggregatorClient {
           destAddress,
           sequenceNum: sequenceNum.toString(),
           payment: payment.toString(),
-          data,
+          data: ethers.utils.hexlify(data),
           pubkey,
           signature,
         }

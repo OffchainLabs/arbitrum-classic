@@ -19,12 +19,12 @@
 import * as ArbValue from './value'
 import * as ethers from 'ethers'
 
-function hex32(val: ethers.utils.BigNumber): string {
-  return ethers.utils.hexZeroPad(val.toHexString(), 32)
+function hex32(val: ethers.utils.BigNumber): Uint8Array {
+  return ethers.utils.padZeros(ethers.utils.arrayify(val), 32)
 }
 
-function encodedAddress(addr: ethers.utils.Arrayish): string {
-  return ethers.utils.hexZeroPad(ethers.utils.hexlify(addr), 32)
+function encodedAddress(addr: ethers.utils.Arrayish): Uint8Array {
+  return ethers.utils.padZeros(ethers.utils.arrayify(addr), 32)
 }
 
 function intValueToAddress(value: ArbValue.IntValue): string {
@@ -49,7 +49,7 @@ export class L2Transaction {
   public sequenceNum: ethers.utils.BigNumber
   public destAddress: string
   public payment: ethers.utils.BigNumber
-  public calldata: string
+  public calldata: Uint8Array
   public kind: L2MessageCode.Transaction
 
   constructor(
@@ -61,7 +61,7 @@ export class L2Transaction {
     calldata: ethers.utils.Arrayish | undefined
   ) {
     if (!destAddress) {
-      destAddress = ethers.utils.hexZeroPad('0x', 20)
+      destAddress = '0x'
     }
     if (!calldata) {
       calldata = '0x'
@@ -72,9 +72,12 @@ export class L2Transaction {
     this.maxGas = ethers.utils.bigNumberify(maxGas)
     this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
     this.sequenceNum = ethers.utils.bigNumberify(sequenceNum)
-    this.destAddress = ethers.utils.hexlify(destAddress)
+    this.destAddress = ethers.utils.hexZeroPad(
+      ethers.utils.hexlify(destAddress),
+      20
+    )
     this.payment = ethers.utils.bigNumberify(payment)
-    this.calldata = ethers.utils.hexlify(calldata)
+    this.calldata = ethers.utils.arrayify(calldata)
     this.kind = L2MessageCode.Transaction
   }
 
@@ -97,7 +100,7 @@ export class L2Transaction {
       hex32(this.sequenceNum),
       encodedAddress(this.destAddress),
       hex32(this.payment),
-      this.calldata,
+      ethers.utils.arrayify(this.calldata),
     ])
   }
 

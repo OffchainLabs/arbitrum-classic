@@ -30,46 +30,13 @@ export class ArbWallet extends ethers.Signer {
   public signer: ethers.Signer
   public provider: ArbProvider
   public globalInboxCache?: GlobalInbox
-  public seqCache?: number
   public pubkey?: string
 
   constructor(signer: ethers.Signer, provider: ArbProvider) {
     super()
     this.signer = signer
     this.provider = provider
-    this.seqCache = undefined
     this.pubkey = undefined
-  }
-
-  public async generateSeq(): Promise<number> {
-    if (!this.seqCache) {
-      const seq = await this.provider.getTransactionCount(
-        await this.getAddress()
-      )
-      this.seqCache = seq
-      return seq
-    }
-    return this.seqCache
-  }
-
-  public async generateAndIncrementSeq(): Promise<number> {
-    if (!this.seqCache) {
-      const seq = await this.provider.getTransactionCount(
-        await this.getAddress()
-      )
-      this.seqCache = seq + 1
-      return seq
-    }
-    const currentSeq = this.seqCache
-    this.seqCache = currentSeq + 1
-    return currentSeq
-  }
-
-  public incrementSeq(): void {
-    if (this.seqCache === undefined) {
-      throw Error('Sequence number must have already been generated')
-    }
-    this.seqCache++
   }
 
   public async globalInboxConn(): Promise<GlobalInbox> {
@@ -178,58 +145,55 @@ export class ArbWallet extends ethers.Signer {
     return tx
   }
   public async sendTransactionMessage(
-    l2tx: L2Transaction
+    l2tx: L2Transaction,
+    from: string
   ): Promise<ethers.providers.TransactionResponse> {
+    console.log('sending tx', l2tx)
+    // throw Error("test123")
     const vmId = await this.provider.getVmID()
-    const from = await this.getAddress()
-    try {
-      if (this.provider.aggregator) {
-        const arbTxHash = l2tx.messageID(from)
-        const batchTxHash = l2tx.batchHash(vmId)
+    const walletAddress = await this.getAddress()
+    if (from.toLowerCase() != walletAddress.toLowerCase()) {
+      throw Error(
+        `Can only send from wallet address ${from}, but tried to send from ${walletAddress}`
+      )
+    }
+    if (this.provider.aggregator) {
+      const batchTxHash = l2tx.batchHash(vmId)
 
-        const messageHashBytes = ethers.utils.arrayify(batchTxHash)
-        const sig = await this.signer.signMessage(messageHashBytes)
+      const messageHashBytes = ethers.utils.arrayify(batchTxHash)
+      const sig = await this.signer.signMessage(messageHashBytes)
 
-        if (!this.pubkey) {
-          this.pubkey = ethers.utils.recoverPublicKey(
-            ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
-            sig
-          )
-        }
-
-        this.provider.aggregator.sendTransaction(
-          l2tx.destAddress,
-          l2tx.sequenceNum,
-          l2tx.payment,
-          l2tx.calldata,
-          this.pubkey,
+      if (!this.pubkey) {
+        this.pubkey = ethers.utils.recoverPublicKey(
+          ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
           sig
         )
+      }
 
-        const tx: ethers.utils.Transaction = {
-          data: l2tx.calldata,
-          from: from,
-          gasLimit: ethers.utils.bigNumberify(1),
-          gasPrice: ethers.utils.bigNumberify(1),
-          hash: arbTxHash,
-          nonce: l2tx.sequenceNum.toNumber(),
-          to: l2tx.destAddress,
-          value: l2tx.payment,
-          chainId: this.provider.chainId,
-        }
-        return this.provider._wrapTransaction(tx, arbTxHash)
-      } else {
-        const globalInbox = await this.globalInboxConn()
-        const tx = await globalInbox.sendL2Message(vmId, l2tx.asData())
-        const tx2 = this.provider._wrapTransaction(tx, tx.hash)
-        return tx2
-      }
-    } catch (err) {
-      if (this.seqCache) {
-        this.seqCache -= 1
-      }
-      throw err
+      this.provider.aggregator.sendTransaction(
+        l2tx.destAddress,
+        l2tx.sequenceNum,
+        l2tx.payment,
+        l2tx.calldata,
+        this.pubkey,
+        sig
+      )
+    } else {
+      const globalInbox = await this.globalInboxConn()
+      await globalInbox.sendL2Message(vmId, l2tx.asData())
     }
+    const tx: ethers.utils.Transaction = {
+      data: ethers.utils.hexlify(l2tx.calldata),
+      from: from,
+      gasLimit: ethers.utils.bigNumberify(1),
+      gasPrice: ethers.utils.bigNumberify(1),
+      hash: l2tx.messageID(from),
+      nonce: l2tx.sequenceNum.toNumber(),
+      to: l2tx.destAddress,
+      value: l2tx.payment,
+      chainId: this.provider.chainId,
+    }
+    return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async sendTransaction(
@@ -241,20 +205,31 @@ export class ArbWallet extends ethers.Signer {
       // default to 90000 based on spec
       gasLimit = 90000
     }
+
     let gasPrice = await transaction.gasPrice
     if (!gasPrice) {
       // What do we want to make the default for this
       gasPrice = 0
     }
-    const seq = await this.generateAndIncrementSeq()
+
+    let from = await transaction.from
+    if (!from) {
+      from = await this.getAddress()
+    }
+
+    let nonce = await transaction.nonce
+    if (!nonce) {
+      nonce = await this.provider.getTransactionCount(from)
+    }
+
     const tx = new L2Transaction(
       gasLimit,
       gasPrice,
-      seq,
+      nonce,
       await transaction.to,
       await transaction.value,
       await transaction.data
     )
-    return this.sendTransactionMessage(tx)
+    return this.sendTransactionMessage(tx, from)
   }
 }
