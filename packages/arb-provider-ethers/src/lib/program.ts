@@ -96,6 +96,8 @@ function loadProgram(
   const codePoints: ArbValue.CodePointValue[] = [
     new ArbValue.CodePointValue(new ArbValue.BasicOp(0), nextHash),
   ]
+  nextHash = codePoints[0].hash()
+
   for (let i = 0; i < prog.code.length; i++) {
     const rawOp = prog.code[prog.code.length - 1 - i]
     const op = loadOperation(rawOp, codePoints, prog.code.length)
@@ -120,7 +122,8 @@ export function programMachineHash(progString: string): string {
     new ArbValue.CodePointValue(
       new ArbValue.BasicOp(0),
       ethers.utils.hexZeroPad('0x00', 32)
-    )
+    ),
+    new ArbValue.IntValue(ethers.constants.MaxUint256)
   )
 }
 
@@ -130,16 +133,26 @@ export function machineHash(
   auxstack: ArbValue.Value,
   registerVal: ArbValue.Value,
   staticVal: ArbValue.Value,
-  errPc: ArbValue.Value
+  errPc: ArbValue.Value,
+  arbGasRemaining: ArbValue.IntValue
 ): string {
   return ethers.utils.solidityKeccak256(
-    ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
+    [
+      'bytes32',
+      'bytes32',
+      'bytes32',
+      'bytes32',
+      'bytes32',
+      'uint256',
+      'bytes32',
+    ],
     [
       pc.hash(),
       stack.hash(),
       auxstack.hash(),
       registerVal.hash(),
       staticVal.hash(),
+      arbGasRemaining.bignum,
       errPc.hash(),
     ]
   )

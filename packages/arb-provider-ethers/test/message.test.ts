@@ -16,7 +16,6 @@
 /* eslint-env node, jest */
 'use strict'
 
-// import * as fs from 'fs'
 import { expect, use } from 'chai'
 import { solidity } from 'ethereum-waffle'
 
