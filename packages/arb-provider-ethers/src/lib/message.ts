@@ -284,8 +284,10 @@ function l2SubMessageFromData(data: ethers.utils.Arrayish): L2SubMessage {
   switch (kind) {
     case L2MessageCode.Transaction:
       return L2Transaction.fromData(bytes.slice(1))
+    case L2MessageCode.Call:
+      return L2Call.fromData(bytes.slice(1))
     default:
-      throw Error('invalid L2 message type')
+      throw Error('invalid L2 message type ' + kind)
   }
 }
 
@@ -426,6 +428,7 @@ export class Log {
   ) {}
 
   static fromValue(val: ArbValue.Value): Log {
+    console.log('raw log', val)
     const tup = val as ArbValue.TupleValue
     const topics = tup.contents
       .slice(2)
@@ -482,7 +485,7 @@ export class Result {
   static fromValue(val: ArbValue.Value): Result {
     const tup = val as ArbValue.TupleValue
     const incoming = IncomingMessage.fromValue(tup.get(0))
-    const logs = stackValueToList(tup.get(2) as ArbValue.TupleValue).map(val =>
+    const logs = stackValueToList(tup.get(3) as ArbValue.TupleValue).map(val =>
       Log.fromValue(val)
     )
     return new Result(
@@ -509,8 +512,8 @@ export class Result {
 function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
   const values = []
   while (value.contents.length !== 0) {
-    values.push(value.get(1))
-    value = value.get(0) as ArbValue.TupleValue
+    values.push(value.get(0))
+    value = value.get(1) as ArbValue.TupleValue
   }
   return values
 }

@@ -188,7 +188,7 @@ func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
 
 func (t Transaction) MessageID(sender common.Address) common.Hash {
 	data := make([]byte, 0)
-	data = append(data, sender[:]...)
+	data = append(data, addressData(sender)...)
 	data = append(data, t.AsData()...)
 	return marshaledBytesHash(data)
 }

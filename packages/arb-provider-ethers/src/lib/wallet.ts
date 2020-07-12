@@ -235,13 +235,16 @@ export class ArbWallet extends ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    const gasLimit = await transaction.gasLimit
+    console.log('sendTransaction', transaction)
+    let gasLimit = await transaction.gasLimit
     if (!gasLimit) {
-      throw Error('must specify gas limit')
+      // default to 90000 based on spec
+      gasLimit = 90000
     }
-    const gasPrice = await transaction.gasPrice
+    let gasPrice = await transaction.gasPrice
     if (!gasPrice) {
-      throw Error('must specify gas price')
+      // What do we want to make the default for this
+      gasPrice = 0
     }
     const seq = await this.generateAndIncrementSeq()
     const tx = new L2Transaction(

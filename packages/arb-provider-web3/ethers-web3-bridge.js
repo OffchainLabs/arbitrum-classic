@@ -328,7 +328,7 @@ utils.defineProperty(ProviderBridge.prototype, '_drainQueue', function () {
   var self = this
   this._queue.forEach(function (operation) {
     setTimeout(function () {
-      self._sendAsync(JSON.parse(operation.payload), operation.callback)
+      self._send(JSON.parse(operation.payload), operation.callback)
     }, 0)
   })
 })
@@ -360,7 +360,7 @@ utils.defineProperty(ProviderBridge.prototype, 'connectEthers', function (
   this._drainQueue()
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'sendAsync', function (
+utils.defineProperty(ProviderBridge.prototype, 'send', function (
   payload,
   callback
 ) {
@@ -371,15 +371,16 @@ utils.defineProperty(ProviderBridge.prototype, 'sendAsync', function (
     })
     return
   }
-  this._sendAsync(payload, callback)
+  this._send(payload, callback)
 })
 
-utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
+utils.defineProperty(ProviderBridge.prototype, '_send', function (
   payload,
   callback
 ) {
+  console.log('web3 bridge send', payload.method)
   if (this._web3) {
-    this._web3.sendAsync(payload, callback)
+    this._web3.send(payload, callback)
     return
   }
 
@@ -390,7 +391,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
     payload.forEach(function (payload) {
       promises.push(
         new Promise(function (resolve, reject) {
-          self.sendAsync(payload, function (error, result) {
+          self.send(payload, function (error, result) {
             resolve(error || result)
           })
         })
@@ -433,7 +434,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
     typeof payload.id !== 'number' ||
     !Array.isArray(payload.params)
   ) {
-    respondError('invalid sendAsync parameters', Errors.InvalidRequest)
+    respondError('invalid send parameters', Errors.InvalidRequest)
     return
   }
 
@@ -484,8 +485,10 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
       break
 
     case 'eth_sendTransaction':
+      console.log('web3 eth_sendTransaction')
       signer.getAddress().then(
         function (address) {
+          console.log('web3 eth_sendTransaction', address, params[0].from)
           if (utils.getAddress(params[0].from) !== address) {
             respondError('invalid from address', Errors.InvalidParams)
           }
@@ -517,7 +520,7 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
     case 'net_version':
     case 'eth_protocolVersion':
       setTimeout(function () {
-        respond(self.send(payload).result)
+        respond(self.sendSync(payload).result)
       }, 0)
       break
 
@@ -791,9 +794,9 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function (
   }
 })
 
-utils.defineProperty(ProviderBridge.prototype, 'send', function (payload) {
+utils.defineProperty(ProviderBridge.prototype, 'sendSync', function (payload) {
   if (this._web3) {
-    return this._web3.send(payload)
+    return this._web3.sendSync(payload)
   }
 
   var provider = this._provider
@@ -839,7 +842,7 @@ utils.defineProperty(ProviderBridge.prototype, 'send', function (payload) {
       break
 
     default:
-      throw new Error('sync unsupported')
+      throw new Error('sync unsupported for ' + payload.method)
   }
 
   return {
