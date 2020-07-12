@@ -32,9 +32,9 @@ contract GlobalInbox is
     IGlobalInbox,
     PaymentRecords // solhint-disable-next-line bracket-align
 {
-    uint8 internal constant ETH_DEPOSIT = 0;
-    uint8 internal constant ERC20_DEPOSIT = 1;
-    uint8 internal constant ERC721_DEPOSIT = 2;
+    uint8 internal constant ETH_TRANSFER = 0;
+    uint8 internal constant ERC20_TRANSFER = 1;
+    uint8 internal constant ERC721_TRANSFER = 2;
     uint8 internal constant L2_MSG = 3;
 
     struct Inbox {
@@ -82,7 +82,7 @@ contract GlobalInbox is
         uint256 messageIndex,
         Messages.OutgoingMessage memory message
     ) private {
-        if (message.kind == ETH_DEPOSIT) {
+        if (message.kind == ETH_TRANSFER) {
             (bool valid, Messages.EthMessage memory eth) = Messages
                 .parseEthMessage(message.data);
             if (valid) {
@@ -94,7 +94,7 @@ contract GlobalInbox is
                 transferEth(msg.sender, paymentOwner, eth.value);
                 deletePayment(eth.dest, nodeHash, messageIndex);
             }
-        } else if (message.kind == ERC20_DEPOSIT) {
+        } else if (message.kind == ERC20_TRANSFER) {
             (bool valid, Messages.ERC20Message memory erc20) = Messages
                 .parseERC20Message(message.data);
             if (valid) {
@@ -111,7 +111,7 @@ contract GlobalInbox is
                 );
                 deletePayment(erc20.dest, nodeHash, messageIndex);
             }
-        } else if (message.kind == ERC721_DEPOSIT) {
+        } else if (message.kind == ERC721_TRANSFER) {
             (bool valid, Messages.ERC721Message memory erc721) = Messages
                 .parseERC721Message(message.data);
             if (valid) {
@@ -156,7 +156,7 @@ contract GlobalInbox is
         depositEth(_chain);
         _deliverMessage(
             _chain,
-            ETH_DEPOSIT,
+            ETH_TRANSFER,
             msg.sender,
             abi.encodePacked(bytes32(bytes20(_to)), msg.value)
         );
@@ -171,7 +171,7 @@ contract GlobalInbox is
         depositERC20(_erc20, _chain, _value);
         _deliverMessage(
             _chain,
-            ERC20_DEPOSIT,
+            ERC20_TRANSFER,
             msg.sender,
             abi.encodePacked(
                 bytes32(bytes20(_erc20)),
@@ -190,7 +190,7 @@ contract GlobalInbox is
         depositERC721(_erc721, _chain, _id);
         _deliverMessage(
             _chain,
-            ERC721_DEPOSIT,
+            ERC721_TRANSFER,
             msg.sender,
             abi.encodePacked(
                 bytes32(bytes20(_erc721)),
