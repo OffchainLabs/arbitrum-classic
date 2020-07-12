@@ -23,30 +23,28 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func (_BisectionChallenge *BisectionChallengeTransactor) ChooseSegmentCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _segmentToChallenge *big.Int, _proof []byte, _bisectionRoot [32]byte, _bisectionHash [32]byte) error {
+func (_BisectionChallenge *BisectionChallengeTransactor) ChooseSegmentCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _segmentToChallenge *big.Int, _proof []byte, _bisectionRoot [32]byte, _bisectionHash [32]byte) error {
 	return callCheck(ctx, client, from, contractAddress, "chooseSegment", _segmentToChallenge, _proof, _bisectionRoot, _bisectionHash)
 }
 
-func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertionCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _beforeInbox [32]byte, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) error {
+func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeInbox [32]byte, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) error {
 	return callCheck(ctx, client, from, contractAddress, "bisectAssertion", _beforeInbox, _machineHashes, _didInboxInsns, _messageAccs, _logAccs, _gases, _totalSteps)
 }
 
-func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, _beforeHash [32]byte, _beforeInbox [32]byte, _beforeInboxValueSize *big.Int, _afterHash [32]byte, _didInboxInsns bool, _firstMessage [32]byte, _lastMessage [32]byte, _firstLog [32]byte, _lastLog [32]byte, _gas uint64, _proof []byte) error {
+func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeHash [32]byte, _beforeInbox [32]byte, _beforeInboxValueSize *big.Int, _afterHash [32]byte, _didInboxInsns bool, _firstMessage [32]byte, _lastMessage [32]byte, _firstLog [32]byte, _lastLog [32]byte, _gas uint64, _proof []byte) error {
 	return callCheck(ctx, client, from, contractAddress, "oneStepProof", _beforeHash, _beforeInbox, _beforeInboxValueSize, _afterHash, _didInboxInsns, _firstMessage, _lastMessage, _firstLog, _lastLog, _gas, _proof)
 }
 
-func (_Challenge *ChallengeTransactor) TimeoutChallengeCall(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address) error {
+func (_Challenge *ChallengeTransactor) TimeoutChallengeCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address) error {
 	return callCheck(ctx, client, from, contractAddress, "timeoutChallenge")
 }
 
-func callCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
+func callCheck(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ExecutionChallengeABI)))
 	if err != nil {
 		return err

@@ -18,6 +18,8 @@ package ethbridge
 
 import (
 	"context"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 
@@ -26,8 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -36,7 +36,7 @@ type globalInbox struct {
 	auth *TransactAuth
 }
 
-func newGlobalInbox(address ethcommon.Address, rollupAddress ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*globalInbox, error) {
+func newGlobalInbox(address ethcommon.Address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
 	watcher, err := newGlobalInboxWatcher(address, rollupAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")

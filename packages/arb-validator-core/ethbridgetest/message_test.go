@@ -19,6 +19,8 @@ package ethbridgetest
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
+	"errors"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -28,6 +30,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
+
+var errHash = errors.New("ethbridge calculated wrong hash")
+var errMsgHash = errors.New("ethbridge calculated wrong message hash")
 
 func setupRand(t *testing.T) {
 	currentTime := time.Now().Unix()

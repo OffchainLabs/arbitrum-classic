@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"sync"
@@ -27,17 +28,15 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type EthArbClient struct {
-	client *ethclient.Client
+	client ethutils.EthClient
 }
 
-func NewEthClient(client *ethclient.Client) *EthArbClient {
+func NewEthClient(client ethutils.EthClient) *EthArbClient {
 	return &EthArbClient{client}
 }
 
@@ -62,8 +61,9 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 			fetchErrorCount := 0
 			for {
 				var err error
-				nextHeader, err = c.client.HeaderByNumber(ctx, new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
-				if err == nil {
+				targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
+				nextHeader, err = c.client.HeaderByNumber(ctx, targetHeight)
+				if err == nil && nextHeader.Number.Cmp(targetHeight) == 0 {
 					// Got next header
 					break
 				}
@@ -168,7 +168,7 @@ type EthArbAuthClient struct {
 	auth *TransactAuth
 }
 
-func NewEthAuthClient(client *ethclient.Client, auth *bind.TransactOpts) *EthArbAuthClient {
+func NewEthAuthClient(client ethutils.EthClient, auth *bind.TransactOpts) *EthArbAuthClient {
 	return &EthArbAuthClient{
 		EthArbClient: NewEthClient(client),
 		auth:         &TransactAuth{auth: auth},

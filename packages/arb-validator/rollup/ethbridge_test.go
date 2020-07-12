@@ -18,9 +18,17 @@ package rollup
 
 import (
 	"context"
+	"log"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -33,31 +41,25 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
-	"log"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 )
 
 var dbPath = "./testdb"
 
 var rollupTester *rolluptester.RollupTester
-var ethclnt *ethclient.Client
+var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
 func TestMain(m *testing.M) {
-	var err error
-	ethclnt, err = ethclient.Dial(test.GetEthUrl())
-	if err != nil {
-		log.Fatal(err)
-	}
+	var auths []*bind.TransactOpts
+	ethclnt, auths = test.SimulatedBackend()
+	auth = auths[0]
 
-	auth, err = test.SetupAuth("8285795ed740b32384e72554128f80714ed6c93d50aeb18aa655547431a7a3cb")
-	if err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			ethclnt.Commit()
+		}
+	}()
 
 	_, tx, deployedTester, err := rolluptester.DeployRollupTester(
 		auth,
@@ -93,12 +95,12 @@ func TestConfirmAssertion(t *testing.T) {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := test.GetFactoryAddress()
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	factory, err := clnt.NewArbFactory(arbFactoryAddress)
+	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}

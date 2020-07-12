@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -34,7 +35,7 @@ import (
 type ChallengeTester struct {
 	Address  ethcommon.Address
 	contract *challengetester.ChallengeTester
-	client   *ethclient.Client
+	client   ethutils.EthClient
 	auth     *bind.TransactOpts
 }
 
@@ -59,7 +60,7 @@ func DeployChallengeTest(ctx context.Context, client *ethclient.Client, auth *bi
 	return tester, nil
 }
 
-func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeTester, error) {
+func NewChallengeTester(address ethcommon.Address, client ethutils.EthClient, auth *bind.TransactOpts) (*ChallengeTester, error) {
 	vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")

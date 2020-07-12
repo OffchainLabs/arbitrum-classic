@@ -18,23 +18,19 @@ package challenges
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"io/ioutil"
 	"log"
 	"math/big"
-	"math/rand"
-	"os"
 	"testing"
 	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
@@ -42,23 +38,32 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
 type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.BlockId) (ChallengeState, error)
 
 func testChallenge(
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
 	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
-	asserterKey string,
-	challengerKey string,
 	asserterFunc ChallengeFunc,
 	challengerFunc ChallengeFunc,
-	testerAddress common.Address,
+	testerAddress ethcommon.Address,
 ) error {
-	asserterClient, challengerClient, challengeAddress, blockId, err := getChallengeInfo(
-		asserterKey,
-		challengerKey,
+	current, err := client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	blockId := &common.BlockId{
+		Height:     common.NewTimeBlocks(current.Number),
+		HeaderHash: common.NewHashFromEth(current.Hash()),
+	}
+	asserterClient, challengerClient, challengeAddress, _, err := getChallengeInfo(
+		client,
+		asserter,
+		challenger,
 		challengeType,
 		challengeHash,
 		testerAddress,
@@ -73,10 +78,9 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		cBlockId := blockId.MarshalToBuf().Unmarshal()
 		tryCount := 0
 		for {
-			endState, err := asserterFunc(challengeAddress, asserterClient, cBlockId)
+			endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
 			if err == nil {
 				asserterEndChan <- endState
 				return
@@ -87,7 +91,7 @@ func testChallenge(
 			}
 			tryCount += 1
 			log.Println("Restarting asserter", err)
-			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
+			_, err = asserterClient.BlockIdForHeight(context.Background(), blockId.Height)
 			if err != nil {
 				asserterErrChan <- err
 				return
@@ -147,82 +151,6 @@ func testChallenge(
 	}
 }
 
-func launchChallengeTester(
-	key string,
-) (common.Address, error) {
-	auth, err := test.SetupAuth(key)
-	if err != nil {
-		return common.Address{}, err
-	}
-	ethclint, err := ethclient.Dial(test.GetEthUrl())
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	connectionInfo, err := getConnectionInfo()
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	factory, err := arbfactory.NewArbFactory(connectionInfo.ArbFactoryAddress().ToEthAddress(), ethclint)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	challengeFactoryAddress, err := factory.ChallengeFactoryAddress(nil)
-	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Error getting challenge factory address")
-	}
-
-	tester, err := ethbridgetest.DeployChallengeTest(context.Background(), ethclint, auth, common.NewAddressFromEth(challengeFactoryAddress))
-	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Error deploying challenge")
-	}
-
-	return common.NewAddressFromEth(tester.Address), nil
-}
-
-func getConnectionInfo() (ethbridge.ArbAddresses, error) {
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
-	var connectionInfo ethbridge.ArbAddresses
-
-	jsonFile, err := os.Open(bridge_eth_addresses)
-	if err != nil {
-		return connectionInfo, err
-	}
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		return connectionInfo, err
-	}
-
-	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
-		return connectionInfo, err
-	}
-
-	return connectionInfo, nil
-}
-
-func getAuth() (*ethclient.Client, *ethclient.Client, error) {
-	ethURL := test.GetEthUrl()
-	seed := time.Now().UnixNano()
-
-	fmt.Println("seed", seed)
-	rand.Seed(seed)
-
-	ethclint1, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ethclint2, err := ethclient.Dial(ethURL)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ethclint1, ethclint2, nil
-}
-
 func getTestMachine(t *testing.T) machine.Machine {
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), true, "cpp")
 	if err != nil {
@@ -233,27 +161,17 @@ func getTestMachine(t *testing.T) machine.Machine {
 }
 
 func getChallengeInfo(
-	asserterKey string,
-	challengerKey string,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
 	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
-	testerAddress common.Address,
+	testerAddress ethcommon.Address,
 ) (*ethbridge.EthArbAuthClient, *ethbridge.EthArbAuthClient, common.Address, *common.BlockId, error) {
-	auth1, err := test.SetupAuth(asserterKey)
-	if err != nil {
-		return nil, nil, common.Address{}, nil, err
-	}
-	auth2, err := test.SetupAuth(challengerKey)
-	if err != nil {
-		return nil, nil, common.Address{}, nil, err
-	}
+	asserterClient := ethbridge.NewEthAuthClient(client, asserter)
+	challengerClient := ethbridge.NewEthAuthClient(client, challenger)
 
-	ethclint1, ethclint2, err := getAuth()
-
-	asserterClient := ethbridge.NewEthAuthClient(ethclint1, auth1)
-	challengerClient := ethbridge.NewEthAuthClient(ethclint2, auth2)
-
-	tester, err := ethbridgetest.NewChallengeTester(testerAddress.ToEthAddress(), ethclint1, auth1)
+	tester, err := ethbridgetest.NewChallengeTester(testerAddress, client, asserter)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
@@ -269,6 +187,8 @@ func getChallengeInfo(
 	if err != nil {
 		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
 	}
+
+	log.Println("Started challenge at block", blockId)
 
 	return asserterClient, challengerClient, challengeAddress, blockId, nil
 }

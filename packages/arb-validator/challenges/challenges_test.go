@@ -17,19 +17,44 @@
 package challenges
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/challengetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"testing"
+	"time"
 )
 
-var testerAddress common.Address
+var testerAddress ethcommon.Address
 
 func TestChallenges(t *testing.T) {
-	var err error
-	testerAddress, err = launchChallengeTester("e4b33c0bb790b88f2463facaf86ae7c17cbdab41187e69ddde8cc1c1fda7c9ab")
+	client, auths := test.SimulatedBackend()
+
+	factorAddr, err := ethbridge.DeployChallengeFactory(auths[0], client)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Run("Inbox Top Challenge", testInboxTopChallenge)
-	t.Run("Messages Challenge", testMessagesChallenge)
-	t.Run("Execution Challenge", testExecutionChallenge)
+
+	testerAddress, _, _, err = challengetester.DeployChallengeTester(auths[0], client, factorAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.Commit()
+
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			client.Commit()
+		}
+	}()
+
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testInboxTopChallenge(t, client, auths[0], auths[1])
+	})
+	t.Run("Messages Challenge", func(t *testing.T) {
+		testMessagesChallenge(t, client, auths[2], auths[3])
+	})
+	t.Run("Execution Challenge", func(t *testing.T) {
+		testExecutionChallenge(t, client, auths[4], auths[5])
+	})
 }
