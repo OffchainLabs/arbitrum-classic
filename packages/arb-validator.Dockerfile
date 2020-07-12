@@ -6,7 +6,7 @@
 
 FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
-RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ \
+RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ libstdc++=9.3.0-r3 libgcc=9.3.0-r3 \
     git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
@@ -20,14 +20,14 @@ COPY --chown=user arb-avm-cpp/ ./
 COPY --from=arb-validator --chown=user /cpp-build build/
 # Build arb-avm-cpp
 RUN mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
     cp lib/lib* ../cmachine
 
 
 FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
-RUN apk add --no-cache build-base git go \
+RUN apk add --no-cache build-base git go libstdc++=9.3.0-r3 libgcc=9.3.0-r3 \
     libc-dev linux-headers && \
     apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
@@ -47,6 +47,7 @@ COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-c
 COPY --from=arb-avm-cpp /home/user/cavm/*.h /home/user/arb-avm-cpp/cavm/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 COPY --chown=user arb-util/ /home/user/arb-util/
+COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
 COPY --chown=user arb-validator-core/ /home/user/arb-validator-core/
 # Copy build cache
@@ -55,9 +56,9 @@ COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 RUN go install -v ./cmd/arb-validator
 
 
-FROM alpine:3.9 as arb-validator
+FROM alpine:edge as arb-validator
 # Export binary
-RUN apk add --no-cache libstdc++=8.3.0-r0 libgcc=8.3.0-r0 && \
+RUN apk add --no-cache libstdc++=9.3.0-r3 libgcc=9.3.0-r3 && \
     apk add rocksdb --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
@@ -66,7 +67,6 @@ USER user
 RUN mkdir -p /home/user/state
 WORKDIR "/home/user/"
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
-COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build

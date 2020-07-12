@@ -43,7 +43,7 @@ VALIDATOR_STATE_DIRNAME = "validator-states/validator"
 ### ----------------------------------------------------------------------------
 
 
-# Compile contracts to `contract.ao` and export to Docker and run validators
+# Compile contracts to `contract.mexe` and export to Docker and run validators
 def deploy(args, sudo_flag=False):
 
     if not args.nobuild:

@@ -70,8 +70,8 @@ def setup_validator_states_folder(contract, n_validators):
     for i in range(n_validators):
         state = os.path.join(VALIDATOR_STATES, VALIDATOR_STATE % i)
         os.mkdir(state)
-        # contract.ao
-        shutil.copyfile(contract, os.path.join(state, "contract.ao"))
+        # contract.mexe
+        shutil.copyfile(contract, os.path.join(state, "contract.mexe"))
 
 
 def setup_validator_configs(config, n_validators):
