@@ -131,9 +131,13 @@ func (conn *ArbConnection) CallContract(
 	if call.To != nil {
 		dest = common.NewAddressFromEth(*call.To)
 	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
 	tx := message.Call{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
-		GasPriceBid: call.GasPrice,
+		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
 		Data:        call.Data,
 	}
@@ -172,9 +176,13 @@ func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereu
 	if call.To != nil {
 		dest = common.NewAddressFromEth(*call.To)
 	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
 	tx := message.Call{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
-		GasPriceBid: call.GasPrice,
+		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
 		Data:        call.Data,
 	}
