@@ -9,6 +9,14 @@ const argv = yargs.options({
   force: {
     description: 'clear any existing state',
   },
+  validatorcount: {
+    description: 'number of validators to deploy',
+    default: 1,
+  },
+  blocktime: {
+    description: 'expected length of time between blocks',
+    default: 2,
+  },
 }).argv
 
 const arbConversion = new ArbConversion()
@@ -116,5 +124,5 @@ async function setupValidatorStates(count: number, blocktime: number) {
 }
 
 if (require.main === module) {
-  setupValidatorStates(3, 2)
+  setupValidatorStates(argv.validatorcount, argv.blocktime)
 }

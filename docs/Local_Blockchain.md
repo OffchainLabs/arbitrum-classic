@@ -22,10 +22,10 @@ Note that stopping and restarting the client will lose all blockchain state.
 
 ## Launching the chain
 
-To set up a local rollup chain using the Arbitrum geth docker image, run the following from the root arbitrum repo.
+To set up a local rollup chain using the Arbitrum geth docker image with 1 or more validators, run the following from the root arbitrum repo.
 
 ```bash
-yarn demo:initialize [validator_count]
+yarn demo:initialize [--validatorcount N]
 ```
 
 Running the `demo:initialize` command will perform two main tasks 1) Launch an Arbitrum Rollup chain on the local testnet 2) Create a `validator-states` folder. This folder contains pre-seeded wallets for the created validators which are prepared for launch. It serves as a lightweight simulation of an enviroment where the validators are running on multiple machines.

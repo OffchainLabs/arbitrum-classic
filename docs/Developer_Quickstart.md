@@ -34,10 +34,10 @@ yarn docker:geth
 
 ## Setup Rollup
 
-To deploy a rollup chain, and initialize a set of validators, run:
+To deploy a rollup chain, and initialize one or more validators, run:
 
 ```bash
-yarn demo:initialize [validator count]
+yarn demo:initialize [--validatorcount N]
 ```
 
 To launch the validators initialized in the previous step, run:
