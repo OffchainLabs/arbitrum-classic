@@ -10,19 +10,23 @@ To deploy your contracts, you need to set your deployment tool to deploy on an A
 
 To port an existing truffle configureation:
 
-1.  First add the `arb-provider-web3` and a modern web3 version `web3@^1.2.6` to your project:
+1.  First add the `arb-ethers-web3-bridge`, `ethers`, and `arb-provider-ethers` to your project:
 
     ```bash
-    yarn add --dev arb-provider-web3 web3@^1.2.6
+    yarn add --dev arb-ethers-web3-bridge ethers@^4.0.44 arb-provider-ethers
     ```
 
 2.  Edit the `truffle-config.js`:
 
-    - Import `arb-provider-web3` and `web3`:
+    - Import `arb-ethers-web3-bridge` and `ethers`, and `arb-provider-ethers`, and set the mnemonic at the top of the file:
 
     ```js
-    const Web3 = require('web3')
-    const ArbProvider = require('arb-provider-web3')
+    const ethers = require('ethers')
+    const ArbEth = require('arb-provider-ethers')
+    const ProviderBridge = require('arb-ethers-web3-bridge')
+
+    const mnemonic =
+      'jar deny prosper gasp flush glass core corn alarm treat leg smart'
     ```
 
     - Add the `arbitrum` network to `module.exports`:
@@ -32,9 +36,20 @@ To port an existing truffle configureation:
         networks: {
             arbitrum: {
                 provider: function () {
-                    return ArbProvider(
-                        'http://localhost:1235', // Url to an Arbitrum validator with an open rpc interface
-                        new Web3.providers.HttpProvider('http://localhost:7545') // Provider to the L1 chain that the rollup is deployed on
+                    // Provider to the L1 chain that the rollup is deployed on
+                    const provider = new ethers.providers.JsonRpcProvider(
+                      'http://localhost:7545'
+                    )
+                    const arbProvider = new ArbEth.ArbProvider(
+                      'http://localhost:1235', // Url to an Arbitrum validator with an open rpc interface
+                      provider
+                    )
+                    const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
+                      provider
+                    )
+                    return new ProviderBridge(
+                      arbProvider,
+                      new ArbEth.ArbWallet(wallet, arbProvider)
                     )
                 }
                 network_id: "*",

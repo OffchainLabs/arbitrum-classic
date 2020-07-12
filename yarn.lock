@@ -1595,16 +1595,6 @@ arb-ethers-web3-bridge@^0.7.0:
     ethers-providers "^2.1.19"
     ethers-utils "^2.1.11"
 
-arb-provider-web3@^0.6.5:
-  version "0.6.5"
-  resolved "https://registry.yarnpkg.com/arb-provider-web3/-/arb-provider-web3-0.6.5.tgz#9ddca7688fc723bff84eb66dca3f5d95e7f0b310"
-  integrity sha512-Ysh4pQkELnldWgnuRvkYBbAgI72GSioAsGRpsfka4ChnyEsfSItkOTo8zk4ZyVuAosHxbm3w1gBydiyEhpv3DA==
-  dependencies:
-    arb-provider-ethers "0.6.5"
-    ethers "^4.0.44"
-    ethers-providers "^2.1.19"
-    ethers-utils "^2.1.11"
-
 archive-type@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/archive-type/-/archive-type-4.0.0.tgz#f92e72233056dfc6969472749c267bdb046b1d70"
@@ -5044,7 +5034,7 @@ ethers@4.0.0-beta.3:
     uuid "2.0.1"
     xmlhttprequest "1.8.0"
 
-ethers@4.0.44, ethers@^4.0.40, ethers@^4.0.44:
+ethers@4.0.44, ethers@^4.0.40:
   version "4.0.44"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-4.0.44.tgz#f2608cbc0b4d099b7e10a01c0efc3a1037013b4e"
   integrity sha512-kCkMPkpYjBkxzqjcuYUfDY7VHDbf5EXnfRPUOazdqdf59SvXaT+w5lgauxLlk1UjxnAiNfeNS87rkIXnsTaM7Q==

@@ -25,6 +25,7 @@
   "dependencies": {
     "arb-provider-ethers": "^0.6.5",
     "bootstrap": "^4.4.1",
+    "ethers": "4.0.44",
     "jquery": "^3.5.0",
     "web3": "~1.2.6"
   },
