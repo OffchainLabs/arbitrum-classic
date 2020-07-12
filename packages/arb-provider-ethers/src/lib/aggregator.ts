@@ -17,6 +17,7 @@
 'use strict'
 
 import * as ethers from 'ethers'
+import txaggregator from './abi/txaggregator.server.d'
 
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
@@ -57,9 +58,9 @@ export class AggregatorClient {
   }
 
   public async sendTransaction(
-    to: string,
+    destAddress: string,
     sequenceNum: ethers.utils.BigNumber,
-    value: ethers.utils.BigNumber,
+    payment: ethers.utils.BigNumber,
     data: string,
     pubkey: string,
     signature: string
@@ -67,9 +68,9 @@ export class AggregatorClient {
     return new Promise<txaggregator.SendTransactionReply>(
       (resolve, reject): void => {
         const params: txaggregator.SendTransactionArgs = {
-          to,
+          destAddress,
           sequenceNum: sequenceNum.toString(),
-          value: value.toString(),
+          payment: payment.toString(),
           data,
           pubkey,
           signature,

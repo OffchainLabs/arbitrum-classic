@@ -3,6 +3,9 @@ package test
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
@@ -54,13 +57,13 @@ func setupValidators(
 	}
 
 	ctx := context.Background()
-	contract := "contract.mexe"
+	contract := gotest.TestMachinePath()
 
 	rollupAddress, err := func() (common.Address, error) {
 		config := valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(10),
 			GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-			MaxExecutionSteps:       250000,
+			MaxExecutionSteps:       10000000000,
 			ArbGasSpeedLimitPerTick: 200000,
 		}
 
@@ -107,7 +110,7 @@ func setupValidators(
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
-			rollupmanager.NewStressTestClient(client, time.Second*10),
+			rollupmanager.NewStressTestClient(client, time.Second*15),
 			contract,
 			dbName,
 		)
@@ -183,43 +186,6 @@ waitloop:
 
 	return clients, nil
 
-}
-
-func SetupProvider(
-	t *testing.T,
-	client ethutils.EthClient,
-	auth *bind.TransactOpts,
-) (*FibonacciSession, *goarbitrum.ArbConnection, error) {
-	fibAddrHex := "0x895521964D724c8362A36608AAf09A3D7d0A0445"
-
-	conn, err := goarbitrum.Dial(
-		"http://localhost:1235",
-		auth,
-		client,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var fibAddr common.Address
-	fibAddr = common.HexToAddress(fibAddrHex)
-	fib, err := NewFibonacci(fibAddr.ToEthAddress(), conn)
-	if err != nil {
-		t.Errorf("NewFibonacci error %v", err)
-		return nil, nil, err
-	}
-
-	//Wrap the Token contract instance into a session
-	fibonacciSession := &FibonacciSession{
-		Contract: fib,
-		CallOpts: bind.CallOpts{
-			From:    auth.From,
-			Pending: true,
-		},
-		TransactOpts: *auth,
-	}
-
-	return fibonacciSession, conn, nil
 }
 
 type ListenerError struct {
@@ -308,55 +274,93 @@ func waitForReceipt(
 func TestFib(t *testing.T) {
 	client, auths := test.SimulatedBackend()
 	go func() {
-		t := time.NewTicker(time.Second * 1)
+		t := time.NewTicker(time.Second * 2)
 		for range t.C {
 			client.Commit()
 		}
 	}()
 
-	clients, err := setupValidators(t, client, auths[1:3])
+	validatorClients, err := setupValidators(t, client, auths[2:3])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
-	session, arbclient, err := SetupProvider(t, client, auths[0])
+	auth := auths[0]
+	arbclient, err := goarbitrum.Dial(
+		"http://localhost:1235",
+		auth,
+		client,
+	)
 	if err != nil {
-		t.Errorf("Validator setup error %v", err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
-	t.Run("TestFibResult", func(t *testing.T) {
-		fibsize := 15
-		fibnum := 11
+	_, tx, _, err := DeployFibonacci(auth, arbclient)
+	if err != nil {
+		t.Fatal("DeployFibonacci failed", err)
+	}
 
-		tx, err := session.GenerateFib(big.NewInt(int64(fibsize)))
-		if err != nil {
-			t.Errorf("GenerateFib error %v", err)
-			return
-		}
-		_, err = waitForReceipt(
-			arbclient,
-			tx,
-			common.NewAddressFromEth(session.TransactOpts.From),
-			time.Second*60,
+	receipt, err := waitForReceipt(
+		arbclient,
+		tx,
+		common.NewAddressFromEth(auth.From),
+		time.Second*20,
+	)
+	if err != nil {
+		t.Fatal("DeployFibonacci receipt error", err)
+	}
+	if receipt.Status != 1 {
+		t.Fatal("tx deploying fib failed")
+	}
+
+	t.Log("Fib contract is at", hexutil.Encode(receipt.ContractAddress[:]))
+
+	fib, err := NewFibonacci(receipt.ContractAddress, arbclient)
+	if err != nil {
+		t.Fatal("connect fib failed", err)
+	}
+
+	//Wrap the Token contract instance into a session
+	session := &FibonacciSession{
+		Contract: fib,
+		CallOpts: bind.CallOpts{
+			From:    auth.From,
+			Pending: true,
+		},
+		TransactOpts: *auth,
+	}
+
+	fibsize := 15
+	fibnum := 11
+
+	tx, err = session.GenerateFib(big.NewInt(int64(fibsize)))
+	if err != nil {
+		t.Fatal("GenerateFib error", err)
+	}
+	receipt, err = waitForReceipt(
+		arbclient,
+		tx,
+		common.NewAddressFromEth(session.TransactOpts.From),
+		time.Second*20,
+	)
+	if err != nil {
+		t.Fatal("GenerateFib receipt error", err)
+	}
+	if receipt.Status != 1 {
+		t.Fatal("tx generating numbers failed")
+	}
+
+	fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
+	if err != nil {
+		t.Fatal("GetFib error", err)
+	}
+	if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
+		t.Fatalf(
+			"GetFib error - expected %v got %v",
+			big.NewInt(int64(144)),
+			fibval,
 		)
-		if err != nil {
-			t.Errorf("GenerateFib receipt error %v", err)
-			return
-		}
-		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
-		if err != nil {
-			t.Errorf("GetFib error %v", err)
-			return
-		}
-		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
-			t.Errorf(
-				"GetFib error - expected %v got %v",
-				big.NewInt(int64(144)),
-				fibval,
-			)
-		}
-	})
+	}
 
 	t.Run("TestEvent", func(t *testing.T) {
 		eventChan := make(chan interface{}, 2)
@@ -390,7 +394,7 @@ func TestFib(t *testing.T) {
 		}
 	})
 
-	for _, client := range clients {
+	for _, client := range validatorClients {
 		if err := os.RemoveAll(db + client.Address().String()); err != nil {
 			log.Fatal(err)
 		}

@@ -124,17 +124,8 @@ func getMsgChallengeData(
 func getMsgStack() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.Eth{
-				To:    common.Address{},
-				From:  common.Address{},
-				Value: big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomEth())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
 }

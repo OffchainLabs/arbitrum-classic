@@ -94,50 +94,10 @@ func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messa
 }
 
 func getInboxMsgStack() *structures.MessageStack {
-	msg1 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg2 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg3 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg4 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
+	msg1 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg2 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg3 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg4 := message.NewRandomInboxMessage(message.NewRandomEth())
 	messageStack := structures.NewMessageStack()
 	messageStack.DeliverMessage(msg1)
 	messageStack.DeliverMessage(msg2)

@@ -19,12 +19,12 @@
 import * as ArbValue from './value'
 import * as ethers from 'ethers'
 
-export enum EVMCode {
-  Revert = 0,
-  Invalid = 1,
-  Return = 2,
-  Stop = 3,
-  BadSequenceCode = 4,
+function hex32(val: ethers.utils.BigNumber): string {
+  return ethers.utils.hexZeroPad(val.toHexString(), 32)
+}
+
+function encodedAddress(addr: ethers.utils.Arrayish): string {
+  return ethers.utils.hexZeroPad(ethers.utils.hexlify(addr), 32)
 }
 
 function intValueToAddress(value: ArbValue.IntValue): string {
@@ -36,32 +36,407 @@ function intValueToAddress(value: ArbValue.IntValue): string {
   )
 }
 
-function logValToLog(
-  val: ArbValue.Value,
-  index: number,
-  orig: EthBridgeMessage
-): ethers.providers.Log {
-  const value = val as ArbValue.TupleValue
-  return {
-    blockNumber: orig.blockNumber.toNumber(),
-    blockHash: orig.txHash,
-    transactionIndex: 0,
-    removed: false,
-    transactionLogIndex: index,
-    address: ethers.utils.hexlify((value.get(0) as ArbValue.IntValue).bignum),
-    data: ethers.utils.hexlify(
-      ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue)
-    ),
-    topics: value.contents
+export enum L2MessageCode {
+  Transaction = 0,
+  ContractTransaction = 1,
+  Call = 2,
+  TransactionBatch = 3,
+}
+
+export class L2Transaction {
+  public maxGas: ethers.utils.BigNumber
+  public gasPriceBid: ethers.utils.BigNumber
+  public sequenceNum: ethers.utils.BigNumber
+  public destAddress: string
+  public payment: ethers.utils.BigNumber
+  public calldata: string
+  public kind: L2MessageCode.Transaction
+
+  constructor(
+    maxGas: ethers.utils.BigNumberish,
+    gasPriceBid: ethers.utils.BigNumberish,
+    sequenceNum: ethers.utils.BigNumberish,
+    destAddress: ethers.utils.Arrayish,
+    payment: ethers.utils.BigNumberish,
+    calldata: ethers.utils.Arrayish
+  ) {
+    this.maxGas = ethers.utils.bigNumberify(maxGas)
+    this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
+    this.sequenceNum = ethers.utils.bigNumberify(sequenceNum)
+    this.destAddress = ethers.utils.hexlify(destAddress)
+    this.payment = ethers.utils.bigNumberify(payment)
+    this.calldata = ethers.utils.hexlify(calldata)
+    this.kind = L2MessageCode.Transaction
+  }
+
+  static fromData(data: ethers.utils.Arrayish): L2Transaction {
+    const bytes = ethers.utils.arrayify(data)
+    return new L2Transaction(
+      bytes.slice(0, 32),
+      bytes.slice(32, 64),
+      bytes.slice(64, 96),
+      bytes.slice(108, 128),
+      bytes.slice(128, 160),
+      bytes.slice(160)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([
+      hex32(this.maxGas),
+      hex32(this.gasPriceBid),
+      hex32(this.sequenceNum),
+      encodedAddress(this.destAddress),
+      hex32(this.payment),
+      this.calldata,
+    ])
+  }
+
+  batchHash(chain: string): string {
+    return new ArbValue.TupleValue([
+      new ArbValue.IntValue(chain),
+      ArbValue.hexToBytestack(this.asData()),
+    ]).hash()
+  }
+
+  batchData(signature: ethers.utils.Arrayish): string {
+    const length = ethers.utils.bigNumberify(this.calldata.length).toHexString()
+    const paddedLength = ethers.utils.hexZeroPad(length, 8)
+    const data = ethers.utils.concat([paddedLength, this.asData(), signature])
+    return ethers.utils.hexlify(data)
+  }
+}
+
+export type L2SubMessage = L2Transaction
+
+export enum MessageCode {
+  Eth = 0,
+  ERC20 = 1,
+  ERC721 = 2,
+  L2 = 3,
+}
+
+export class EthMessage {
+  public kind: MessageCode.Eth
+  public dest: ethers.utils.Arrayish
+  public value: ethers.utils.BigNumber
+
+  constructor(dest: string, value: ethers.utils.BigNumberish) {
+    this.kind = MessageCode.Eth
+    this.dest = dest
+    this.value = ethers.utils.bigNumberify(value)
+  }
+
+  static fromData(data: ethers.utils.Arrayish): EthMessage {
+    const bytes = ethers.utils.arrayify(data)
+    return new EthMessage(
+      ethers.utils.hexlify(bytes.slice(12, 32)),
+      bytes.slice(32, 64)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([encodedAddress(this.dest), hex32(this.value)])
+  }
+}
+
+export class ERC20Message {
+  public kind: MessageCode.ERC20
+  public tokenAddress: string
+  public dest: string
+  public value: ethers.utils.BigNumber
+
+  constructor(
+    tokenAddress: ethers.utils.Arrayish,
+    dest: ethers.utils.Arrayish,
+    value: ethers.utils.BigNumberish
+  ) {
+    this.kind = MessageCode.ERC20
+    this.tokenAddress = ethers.utils.hexlify(tokenAddress)
+    this.dest = ethers.utils.hexlify(dest)
+    this.value = ethers.utils.bigNumberify(value)
+  }
+
+  static fromData(data: ethers.utils.Arrayish): ERC20Message {
+    const bytes = ethers.utils.arrayify(data)
+    return new ERC20Message(
+      bytes.slice(12, 32),
+      bytes.slice(44, 64),
+      bytes.slice(64, 96)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([
+      encodedAddress(this.tokenAddress),
+      encodedAddress(this.dest),
+      hex32(this.value),
+    ])
+  }
+}
+
+export class ERC721Message {
+  public kind: MessageCode.ERC721
+  public tokenAddress: string
+  public dest: string
+  public id: ethers.utils.BigNumber
+
+  constructor(
+    tokenAddress: ethers.utils.Arrayish,
+    dest: ethers.utils.Arrayish,
+    id: ethers.utils.BigNumberish
+  ) {
+    this.kind = MessageCode.ERC721
+    this.tokenAddress = ethers.utils.hexlify(tokenAddress)
+    this.dest = ethers.utils.hexlify(dest)
+    this.id = ethers.utils.bigNumberify(id)
+  }
+
+  static fromData(data: ethers.utils.Arrayish): ERC721Message {
+    const bytes = ethers.utils.arrayify(data)
+    return new ERC721Message(
+      bytes.slice(12, 32),
+      bytes.slice(44, 64),
+      bytes.slice(64, 96)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([
+      encodedAddress(this.tokenAddress),
+      encodedAddress(this.dest),
+      hex32(this.id),
+    ])
+  }
+}
+
+function l2SubMessageFromData(data: ethers.utils.Arrayish): L2SubMessage {
+  const bytes = ethers.utils.arrayify(data)
+  const kind = bytes[0]
+  switch (kind) {
+    case L2MessageCode.Transaction:
+      return L2Transaction.fromData(bytes.slice(1))
+    default:
+      throw Error('invalid L2 message type')
+  }
+}
+
+export class L2Message {
+  public kind: MessageCode.L2
+
+  constructor(public message: L2SubMessage) {
+    this.kind = MessageCode.L2
+  }
+
+  static fromData(data: ethers.utils.Arrayish): L2Message {
+    return new L2Message(l2SubMessageFromData(data))
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([[this.message.kind], this.message.asData()])
+  }
+}
+
+export type Message = EthMessage | ERC20Message | ERC721Message | L2Message
+
+function newMessageFromData(
+  kind: MessageCode,
+  data: ethers.utils.Arrayish
+): Message {
+  switch (kind) {
+    case MessageCode.Eth:
+      return EthMessage.fromData(data)
+    case MessageCode.ERC20:
+      return ERC20Message.fromData(data)
+    case MessageCode.ERC721:
+      return ERC721Message.fromData(data)
+    case MessageCode.L2:
+      return L2Message.fromData(data)
+    default:
+      throw 'Invalid arb message type'
+  }
+}
+
+export class IncomingMessage {
+  public msg: Message
+  public blockNumber: ethers.utils.BigNumber
+  public timestamp: ethers.utils.BigNumber
+  public sender: string
+  public inboxSeqNum: ethers.utils.BigNumber
+  constructor(
+    msg: Message,
+    blockNumber: ethers.utils.BigNumberish,
+    timestamp: ethers.utils.BigNumberish,
+    sender: string,
+    inboxSeqNum: ethers.utils.BigNumberish
+  ) {
+    this.msg = msg
+    this.blockNumber = ethers.utils.bigNumberify(blockNumber)
+    this.timestamp = ethers.utils.bigNumberify(timestamp)
+    this.sender = sender
+    this.inboxSeqNum = ethers.utils.bigNumberify(inboxSeqNum)
+  }
+
+  static fromValue(val: ArbValue.Value): IncomingMessage {
+    const tup = val as ArbValue.TupleValue
+    const kind = (tup.get(0) as ArbValue.IntValue).bignum.toNumber()
+    const data = ArbValue.bytestackToBytes(tup.get(5) as ArbValue.TupleValue)
+
+    return new IncomingMessage(
+      newMessageFromData(kind, data),
+      (tup.get(1) as ArbValue.IntValue).bignum,
+      (tup.get(2) as ArbValue.IntValue).bignum,
+      intValueToAddress(tup.get(3) as ArbValue.IntValue),
+      (tup.get(4) as ArbValue.IntValue).bignum
+    )
+  }
+
+  asValue(): ArbValue.Value {
+    return new ArbValue.TupleValue([
+      new ArbValue.IntValue(this.msg.kind),
+      new ArbValue.IntValue(this.blockNumber),
+      new ArbValue.IntValue(this.timestamp),
+      new ArbValue.IntValue(this.sender),
+      new ArbValue.IntValue(this.inboxSeqNum),
+      ArbValue.hexToBytestack(this.msg.asData()),
+    ])
+  }
+
+  commitmentHash(): string {
+    return ethers.utils.solidityKeccak256(
+      ['uint8', 'address', 'uint256', 'uint256', 'uint256', 'bytes32'],
+      [
+        this.msg.kind,
+        this.sender,
+        this.blockNumber,
+        this.timestamp,
+        this.inboxSeqNum,
+        ethers.utils.keccak256(this.msg.asData()),
+      ]
+    )
+  }
+
+  messageID(): string {
+    if (this.msg.kind == MessageCode.L2) {
+      if (this.msg.message.kind == L2MessageCode.Transaction) {
+        return ethers.utils.solidityKeccak256(
+          ['bytes', 'address'],
+          [this.msg.asData(), this.sender]
+        )
+      }
+    }
+    return this.inboxSeqNum.toHexString()
+  }
+}
+
+export class OutgoingMessage {
+  constructor(public msg: Message, public sender: string) {}
+
+  asValue(): ArbValue.Value {
+    return new ArbValue.TupleValue([
+      new ArbValue.IntValue(this.msg.kind),
+      new ArbValue.IntValue(this.sender),
+      ArbValue.hexToBytestack(this.msg.asData()),
+    ])
+  }
+}
+
+export enum ResultCode {
+  Return = 0,
+  Revert = 1,
+  Congestion = 2,
+  InsufficientGasFunds = 3,
+  InsufficientTxFunds = 4,
+  BadSequenceCode = 5,
+  InvalidMessageFormatCode = 6,
+  UnknownErrorCode = 255,
+}
+
+export class Log {
+  constructor(
+    public address: string,
+    public topics: string[],
+    public data: string
+  ) {}
+
+  static fromValue(val: ArbValue.Value): Log {
+    const tup = val as ArbValue.TupleValue
+    const topics = tup.contents
       .slice(2)
       .map(rawTopic =>
         ethers.utils.hexZeroPad(
           ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum),
           32
         )
-      ),
-    transactionHash: orig.txHash,
-    logIndex: index,
+      )
+    return new Log(
+      intValueToAddress(tup.get(0) as ArbValue.IntValue),
+      topics,
+      ethers.utils.hexlify(
+        ArbValue.bytestackToBytes(tup.get(1) as ArbValue.TupleValue)
+      )
+    )
+  }
+
+  asValue(): ArbValue.Value {
+    const values: ArbValue.Value[] = []
+    values.push(new ArbValue.IntValue(this.address))
+    values.push(ArbValue.hexToBytestack(this.data))
+    for (const topic of this.topics) {
+      values.push(new ArbValue.IntValue(topic))
+    }
+    return new ArbValue.TupleValue(values)
+  }
+}
+
+export class Result {
+  public incoming: IncomingMessage
+  public resultCode: ResultCode
+  public returnData: Uint8Array
+  public logs: Log[]
+  public gasUsed: ethers.utils.BigNumber
+  public gasPrice: ethers.utils.BigNumber
+
+  constructor(
+    incoming: IncomingMessage,
+    resultCode: ResultCode,
+    returnData: Uint8Array,
+    logs: Log[],
+    gasUsed: ethers.utils.BigNumberish,
+    gasPrice: ethers.utils.BigNumberish
+  ) {
+    this.incoming = incoming
+    this.resultCode = resultCode
+    this.returnData = returnData
+    this.logs = logs
+    this.gasUsed = ethers.utils.bigNumberify(gasUsed)
+    this.gasPrice = ethers.utils.bigNumberify(gasPrice)
+  }
+
+  static fromValue(val: ArbValue.Value): Result {
+    const tup = val as ArbValue.TupleValue
+    const incoming = IncomingMessage.fromValue(tup.get(0))
+    const logs = stackValueToList(tup.get(2) as ArbValue.TupleValue).map(val =>
+      Log.fromValue(val)
+    )
+    return new Result(
+      incoming,
+      (tup.get(1) as ArbValue.IntValue).bignum.toNumber(),
+      ArbValue.bytestackToBytes(tup.get(2) as ArbValue.TupleValue),
+      logs,
+      (tup.get(4) as ArbValue.IntValue).bignum.toNumber(),
+      (tup.get(5) as ArbValue.IntValue).bignum.toNumber()
+    )
+  }
+
+  asValue(): ArbValue.Value {
+    return new ArbValue.TupleValue([
+      this.incoming.asValue(),
+      new ArbValue.IntValue(this.resultCode),
+      ArbValue.hexToBytestack(this.returnData),
+      new ArbValue.IntValue(this.gasUsed),
+      new ArbValue.IntValue(this.gasPrice),
+    ])
   }
 }
 
@@ -72,228 +447,4 @@ function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
     value = value.get(0) as ArbValue.TupleValue
   }
   return values
-}
-
-export class TxCall {
-  public to: string
-  public data: Uint8Array
-
-  constructor(value: ArbValue.TupleValue) {
-    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
-    this.data = ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue)
-  }
-
-  getDest(): string {
-    return this.to
-  }
-}
-
-export class TxMessage {
-  public to: string
-  public sequenceNum: ethers.utils.BigNumber
-  public amount: ethers.utils.BigNumber
-  public data: Uint8Array
-
-  constructor(value: ArbValue.TupleValue) {
-    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
-    this.sequenceNum = (value.get(1) as ArbValue.IntValue).bignum
-    this.amount = (value.get(2) as ArbValue.IntValue).bignum
-    this.data = ArbValue.bytestackToBytes(value.get(3) as ArbValue.TupleValue)
-  }
-
-  getDest(): string {
-    return this.to
-  }
-}
-
-export class ContractTxMessage {
-  public to: string
-  public amount: ethers.utils.BigNumber
-  public data: Uint8Array
-
-  constructor(value: ArbValue.TupleValue) {
-    this.to = intValueToAddress(value.get(0) as ArbValue.IntValue)
-    this.amount = (value.get(1) as ArbValue.IntValue).bignum
-    this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue)
-  }
-
-  getDest(): string {
-    return this.to
-  }
-}
-
-class EthTransferMessage {
-  public dest: string
-  public amount: ethers.utils.BigNumber
-
-  constructor(value: ArbValue.TupleValue) {
-    this.dest = intValueToAddress(value.get(0) as ArbValue.IntValue)
-    this.amount = (value.get(1) as ArbValue.IntValue).bignum
-  }
-
-  getDest(): string {
-    return this.dest
-  }
-}
-class TokenTransferMessage {
-  public tokenAddress: string
-  public dest: string
-  public amount: ethers.utils.BigNumber
-
-  constructor(value: ArbValue.TupleValue) {
-    this.tokenAddress = intValueToAddress(value.get(0) as ArbValue.IntValue)
-    this.dest = intValueToAddress(value.get(1) as ArbValue.IntValue)
-    this.amount = (value.get(2) as ArbValue.IntValue).bignum
-  }
-
-  getDest(): string {
-    return this.dest
-  }
-}
-
-function unmarshalExecutedMessage(
-  typecode: number,
-  message: ArbValue.TupleValue
-): ArbMessage {
-  switch (typecode) {
-    case 0:
-      return new TxMessage(message)
-    case 1:
-      return new EthTransferMessage(message)
-    case 2:
-      return new TokenTransferMessage(message)
-    case 3:
-      return new TokenTransferMessage(message)
-    case 4:
-      return new ContractTxMessage(message)
-    case 5:
-      return new TxCall(message)
-    default:
-      throw 'Invalid arb message type'
-  }
-}
-
-export type ArbMessage =
-  | TxCall
-  | TxMessage
-  | EthTransferMessage
-  | TokenTransferMessage
-  | TxCall
-
-class EthBridgeMessage {
-  public blockNumber: ethers.utils.BigNumber
-  public timestamp: ethers.utils.BigNumber
-  public txHash: string
-  public sender: string
-  public message: ArbMessage
-  public calldataHash: string
-
-  constructor(value: ArbValue.TupleValue) {
-    this.blockNumber = (value.get(0) as ArbValue.IntValue).bignum
-    this.timestamp = (value.get(1) as ArbValue.IntValue).bignum
-    this.txHash = ethers.utils.hexZeroPad(
-      (value.get(2) as ArbValue.IntValue).bignum.toHexString(),
-      32
-    )
-    const restVal = value.get(3) as ArbValue.TupleValue
-    const typecode = (restVal.get(0) as ArbValue.IntValue).bignum.toNumber()
-    this.sender = intValueToAddress(restVal.get(1) as ArbValue.IntValue)
-
-    this.message = unmarshalExecutedMessage(
-      typecode,
-      restVal.get(2) as ArbValue.TupleValue
-    )
-    this.calldataHash = restVal.hash()
-  }
-}
-
-export type EVMResult =
-  | EVMReturn
-  | EVMRevert
-  | EVMStop
-  | EVMBadSequenceCode
-  | EVMInvalid
-
-export class EVMReturn {
-  public message: EthBridgeMessage
-  public data: Uint8Array
-  public logs: ethers.providers.Log[]
-  public returnType: EVMCode.Return
-
-  constructor(value: ArbValue.TupleValue) {
-    this.message = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue)
-    this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue)
-    this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(
-      (val, index) => {
-        return logValToLog(val, index, this.message)
-      }
-    )
-    this.returnType = EVMCode.Return
-  }
-}
-
-export class EVMRevert {
-  public message: EthBridgeMessage
-  public data: Uint8Array
-  public returnType: EVMCode.Revert
-
-  constructor(value: ArbValue.TupleValue) {
-    this.message = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue)
-    this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue)
-    this.returnType = EVMCode.Revert
-  }
-}
-
-export class EVMStop {
-  public message: EthBridgeMessage
-  public logs: ethers.providers.Log[]
-  public returnType: EVMCode.Stop
-
-  constructor(value: ArbValue.TupleValue) {
-    this.message = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue)
-    this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(
-      (val, index) => {
-        return logValToLog(val, index, this.message)
-      }
-    )
-    this.returnType = EVMCode.Stop
-  }
-}
-
-export class EVMBadSequenceCode {
-  public message: EthBridgeMessage
-  public returnType: EVMCode.BadSequenceCode
-
-  constructor(value: ArbValue.TupleValue) {
-    this.message = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue)
-    this.returnType = EVMCode.BadSequenceCode
-  }
-}
-
-export class EVMInvalid {
-  public message: EthBridgeMessage
-  public returnType: EVMCode.Invalid
-
-  constructor(value: ArbValue.TupleValue) {
-    this.message = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue)
-    this.returnType = EVMCode.Invalid
-  }
-}
-
-export function processLog(value: ArbValue.TupleValue): EVMResult {
-  const returnCode = value.get(3) as ArbValue.IntValue
-  switch (returnCode.bignum.toNumber()) {
-    case EVMCode.Return:
-      return new EVMReturn(value)
-    case EVMCode.Revert:
-      return new EVMRevert(value)
-    case EVMCode.Stop:
-      return new EVMStop(value)
-    case EVMCode.BadSequenceCode:
-      return new EVMBadSequenceCode(value)
-    case EVMCode.Invalid:
-      return new EVMInvalid(value)
-    default:
-      throw Error('processLogs Invalid EVM return code')
-  }
 }

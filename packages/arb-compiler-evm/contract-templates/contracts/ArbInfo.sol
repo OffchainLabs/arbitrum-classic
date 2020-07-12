@@ -17,23 +17,19 @@
 pragma solidity ^0.5.0;
 
 contract ArbInfo {
-    function getBalance(address account) external view returns(uint256) {
+    function getBalance(address account) external view returns (uint256) {
         return account.balance;
     }
 
-    function getCode(address account) external view returns(bytes memory o_code) {
+    function getCode(address account) external view returns (bytes memory) {
+        uint256 size;
         assembly {
-            // retrieve the size of the code, this needs assembly
-            let size := extcodesize(account)
-            // allocate output byte array - this could also be done without assembly
-            // by using o_code = new bytes(size)
-            o_code := mload(0x40)
-            // new "memory end" including padding
-            mstore(0x40, add(o_code, and(add(add(size, 0x20), 0x1f), not(0x1f))))
-            // store length in memory
-            mstore(o_code, size)
-            // actually retrieve the code, this needs assembly
-            extcodecopy(account, add(o_code, 0x20), 0, size)
+            size := extcodesize(account)
         }
+        bytes memory code = new bytes(size);
+        assembly {
+            extcodecopy(account, add(code, 0x20), 0, size)
+        }
+        return code;
     }
 }

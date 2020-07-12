@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -228,55 +227,11 @@ func runMsgsOneStepProof(
 ) (ChallengeState, error) {
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		deliveredMsg, err := inbox.GenerateOneStepProof(startInbox)
+		msg, err := inbox.GenerateOneStepProof(startInbox)
 		if err != nil {
 			return 0, err
 		}
-		switch msg := deliveredMsg.Message.(type) {
-		case message.Transaction:
-			err = contract.OneStepProofTransactionMessage(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		case message.Eth:
-			err = contract.OneStepProofEthMessage(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		case message.ERC20:
-			err = contract.OneStepProofERC20Message(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		case message.ERC721:
-			err = contract.OneStepProofERC721Message(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		case message.ContractTransaction:
-			err = contract.OneStepProofContractTransactionMessage(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		case message.TransactionBatch:
-			err = contract.OneStepProofTransactionBatchMessage(
-				ctx,
-				startInbox,
-				hashPreImage,
-				deliveredMsg.DeliveryInfo,
-				msg)
-		}
-		if err != nil {
+		if err := contract.OneStepProof(ctx, startInbox, hashPreImage, msg); err != nil {
 			return 0, errors2.Wrap(err, "failing making one step proof")
 		}
 		event, state, err = getNextEvent(eventChan)

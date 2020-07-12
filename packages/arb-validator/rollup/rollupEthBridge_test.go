@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/rolluptester"
@@ -76,9 +77,9 @@ func TestGenerateLastMessageHash(t *testing.T) {
 
 	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
-	results := make([]evm.Result, 0, 10)
+	results := make([]*evm.Result, 0, 10)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
 	}
 
@@ -110,9 +111,9 @@ func TestCalculateLeafFromPath(t *testing.T) {
 
 	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
-	results := make([]evm.Result, 0, 10)
+	results := make([]*evm.Result, 0, 10)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
 	}
 
@@ -135,9 +136,9 @@ func TestChildNodeHash(t *testing.T) {
 
 	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
-	results := make([]evm.Result, 0, 10)
+	results := make([]*evm.Result, 0, 10)
 	for i := int32(0); i < 7; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
 	}
 
@@ -166,9 +167,9 @@ func TestProtoStateHash(t *testing.T) {
 
 	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
 
-	results := make([]evm.Result, 0, 10)
+	results := make([]*evm.Result, 0, 10)
 	for i := int32(0); i < 8; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
 	}
 
@@ -254,6 +255,27 @@ func TestComputePrevLeaf(t *testing.T) {
 	}
 }
 
+func randomAssertion() *protocol.ExecutionAssertion {
+	results := make([]*evm.Result, 0, 5)
+	messages := make([]value.Value, 0)
+	messages = append(messages, message.NewInboxMessage(
+		message.Eth{
+			Dest:  common.Address{},
+			Value: big.NewInt(75),
+		},
+		common.NewAddressFromEth(auth.From),
+		big.NewInt(0),
+		message.NewRandomChainTime(),
+	).AsValue())
+	for i := int32(0); i < 5; i++ {
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
+		results = append(results, stop)
+		messages = append(messages, message.NewRandomInboxMessage(message.NewRandomEth()).AsValue())
+	}
+
+	return evm.NewRandomEVMAssertion(results, messages)
+}
+
 func TestGenerateInvalidMsgLeaf(t *testing.T) {
 	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
 	if err != nil {
@@ -261,21 +283,8 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	//dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
-	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    common.Address{},
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
-		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
-	}
+	assertion := randomAssertion()
 
-	assertion := evm.NewRandomEVMAssertion(results, messages)
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
 
 	prepared := chain.PrepareAssertion()
@@ -322,21 +331,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
-	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    dest,
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
-		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
-	}
-
-	assertion := evm.NewRandomEVMAssertion(results, messages)
+	assertion := randomAssertion()
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
 	prepared := chain.PrepareAssertion()
@@ -383,21 +378,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
-	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    dest,
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
-		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
-	}
-
-	assertion := evm.NewRandomEVMAssertion(results, messages)
+	assertion := randomAssertion()
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
 	prepared := chain.PrepareAssertion()

@@ -31,7 +31,7 @@ func TestMachinePath() string {
 		log.Fatal(err)
 	}
 
-	return filepath.Join(filepath.Dir(filename), "../tests/contract.mexe")
+	return filepath.Join(filepath.Dir(filename), "../tests/arbos.mexe")
 }
 
 func OpCodeTestFiles() []string {

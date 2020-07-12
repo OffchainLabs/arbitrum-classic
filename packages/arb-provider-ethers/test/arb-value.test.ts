@@ -17,7 +17,7 @@
 'use strict'
 
 // import * as fs from 'fs'
-import { assert, expect } from 'chai'
+import { expect } from 'chai'
 import * as ethers from 'ethers'
 
 const utils = ethers.utils
@@ -54,24 +54,19 @@ describe('Constructors', function () {
   })
 
   it('CodePointValue', function () {
-    const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash)
-    expect(cpv.insnNum.toNumber()).to.equal(0)
+    const cpv = new arb.CodePointValue(new arb.BasicOp(0x60), nullHash)
     expect(cpv.op.opcode).to.equal(0x60)
     expect(cpv.nextHash).to.equal(nullHash)
 
     // Test BasicOp hash value
-    const bopv = new arb.CodePointValue(
-      99,
-      new arb.BasicOp(0x60),
-      EMPTY_TUPLE_HASH
-    )
+    const bopv = new arb.CodePointValue(new arb.BasicOp(0x60), EMPTY_TUPLE_HASH)
     const preCalc =
       '0xe20558cb3c2dbc788aee4091e5596aa3a86530d82bce979e21365703da522301'
     expect(bopv.hash()).to.equal(preCalc)
 
     // Test ImmOp hash value
     const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)))
-    const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH)
+    const immv = new arb.CodePointValue(immop, EMPTY_TUPLE_HASH)
     const preCalc2 =
       '0x17ae7e9c5b69861db0759631c54ee3a23ecd04bd57d3d3e2b5579c05c5bd0e8b'
     expect(immv.hash()).to.equal(preCalc2)
@@ -151,29 +146,9 @@ describe('TupleValue', function () {
   })
 })
 
-describe('BigTuple', function () {
-  it('getBigTuple and setBigTuple', function () {
-    const emptyBigTup = new arb.TupleValue([])
-    expect(
-      (arb.getBigTuple(emptyBigTup, 93) as arb.IntValue).bignum.toNumber()
-    ).to.equal(0)
-    expect(
-      (arb.getBigTuple(emptyBigTup, 1234567890) as arb.IntValue).bignum.eq(0)
-    ).to.equal(true)
-
-    let t = emptyBigTup
-    for (let i = 0; i < 100; i++) {
-      t = arb.setBigTuple(t, i, new arb.IntValue(i))
-      expect(
-        (arb.getBigTuple(t, i) as arb.IntValue).bignum.toNumber()
-      ).to.equal(i)
-    }
-  })
-})
-
 // Marshaled sizes as hexstrings
 const M_INT_VALUE_SIZE = 1 + 32
-const M_CODE_POINT_SIZE = 1 + 8 + 1 + 1 + 0 + 32 // Without val
+const M_CODE_POINT_SIZE = 1 + 1 + 1 + 0 + 32 // Without val
 const M_TUPLE_SIZE = 1 + 0 // Without other vals
 
 describe('Marshaling', function () {
@@ -200,25 +175,22 @@ describe('Marshaling', function () {
   })
 
   it('marshal and unmarshal CodePointValue', function () {
-    const pc = ethers.utils.bigNumberify(0)
     const op = new arb.BasicOp(10)
     const nextHash = '0x' + ZEROS_32B
-    const basicTCV = new arb.CodePointValue(pc, op, nextHash)
+    const basicTCV = new arb.CodePointValue(op, nextHash)
     const marshaledBytes = arb.marshal(basicTCV)
     expect(marshaledBytes.length).to.equal(M_CODE_POINT_SIZE)
     const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue
-    expect(revValue.insnNum.toString()).to.equal(pc.toString())
     expect(revValue.op.opcode).to.equal(op.opcode)
     expect(revValue.nextHash).to.equal(nextHash)
     expect(revValue.toString()).to.equal(basicTCV.toString())
 
     const iv = new arb.IntValue(bn(60))
     expect(arb.marshal(iv).length).to.equal(M_INT_VALUE_SIZE)
-    const immTCV = new arb.CodePointValue(pc, new arb.ImmOp(0x19, iv), nextHash)
+    const immTCV = new arb.CodePointValue(new arb.ImmOp(0x19, iv), nextHash)
     const mb = arb.marshal(immTCV)
     expect(mb.length).to.equal(M_CODE_POINT_SIZE + M_INT_VALUE_SIZE)
     const revImmValue = arb.unmarshal(mb) as arb.CodePointValue
-    assert(revImmValue.insnNum.eq(pc))
     expect(revImmValue.op.opcode).to.equal(0x19)
     expect(
       ((revImmValue.op as arb.ImmOp).value as arb.IntValue).bignum.toNumber()
@@ -261,12 +233,8 @@ describe('Marshaling', function () {
       'Error unmarshaling value no such TYPE: 99'
     )
 
-    const [tyCodePoint, pc, erroneousOpTy] = [
-      '0x01',
-      Array(8).fill('00').join(''),
-      'FF',
-    ]
-    expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).to.throw(
+    const [tyCodePoint, erroneousOpTy] = ['0x01', 'FF']
+    expect(() => arb.unmarshal(tyCodePoint + erroneousOpTy)).to.throw(
       'Error unmarshalOp no such immCount: 255'
     )
 
@@ -277,80 +245,6 @@ describe('Marshaling', function () {
 })
 
 describe('Integration', function () {
-  it('sizedByteRangeToBytes and hexToSizedByteRange', function () {
-    // Create test value
-    const myValue = new arb.TupleValue([
-      new arb.TupleValue([]),
-      new arb.TupleValue([
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.IntValue(
-          bn(
-            '0x5ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b'
-          )
-        ),
-      ]),
-      new arb.TupleValue([
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.IntValue(
-          bn(
-            '0x781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c1'
-          )
-        ),
-      ]),
-      new arb.TupleValue([
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.TupleValue([]),
-        new arb.IntValue(
-          bn(
-            '0x32edc9a100000000000000000000000000000000000000000000000000000000'
-          )
-        ),
-      ]),
-      new arb.TupleValue([]),
-      new arb.TupleValue([]),
-      new arb.TupleValue([]),
-      new arb.IntValue(
-        bn('0x90e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180')
-      ),
-    ])
-    const marshaledBytes = arb.marshal(myValue)
-    const expectedMessageBytes =
-      '0x0b030b03030303030303005ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b0b0303030303030300781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c10b030303030303030032edc9a1000000000000000000000000000000000000000000000000000000000303030090e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e60180'
-    expect(ethers.utils.hexlify(marshaledBytes)).to.equal(expectedMessageBytes)
-    const val = arb.unmarshal(expectedMessageBytes)
-    expect(val.toString()).to.equal(
-      'Tuple([Tuple([]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 42009942682379378059947058450083587892049528549641310042571988458584210932843]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 54311897307976383387700091809425625413681576808311458615378223571158439396033]), Tuple([Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), Tuple([]), 23035776775082914819351730844503175383119388692051102633761137171302117801984]), Tuple([]), Tuple([]), Tuple([]), 65530928266225785593959077233184075030766656784123302077071474652886342173056])'
-    )
-    const sizedByteRange = new arb.TupleValue([val, new arb.IntValue(bn(100))])
-    const hex = arb.sizedByteRangeToBytes(sizedByteRange)
-    expect(ethers.utils.hexlify(hex)).to.equal(
-      '0x90e130e5da79003b67479a3ed2caf5585e93ae6771de6cdec6d7641bd2e601805ce0c8f1e004fe36aa260ecd02c68ca0c6dea5a4acdfe0b8b10d7b526360046b781371cb80a394c637cebf3e3d48a268a44ad21cd68239afb3c3a37196d582c132edc9a1'
-    )
-    const sizedByteRangeReverse = arb.hexToSizedByteRange(hex)
-    const sizeReverse = sizedByteRangeReverse.get(1)
-    expect((sizeReverse as arb.IntValue).bignum.toNumber()).to.equal(100)
-    const valReverse = sizedByteRangeReverse.get(0)
-    const messageReverse = arb.marshal(valReverse)
-    expect(ethers.utils.hexlify(messageReverse)).to.equal(expectedMessageBytes)
-  })
-
   it('hexToBytestack and bytestackToBytes', function () {
     // Create test value
     const messageBytes =

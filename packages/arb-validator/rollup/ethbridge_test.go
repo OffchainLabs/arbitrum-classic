@@ -151,7 +151,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 
 		if balance.Cmp(amount) != 0 {
-			t.Fatal("failed to deposit balance")
+			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
 		}
 	}
 
@@ -199,17 +199,22 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
+	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    dest,
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
+	messages = append(
+		messages,
+		message.NewOutMessage(
+			message.Eth{
+				Dest:  dest,
+				Value: big.NewInt(75),
+			},
+			common.NewAddressFromEth(auth.From),
+		).AsValue(),
+	)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
+		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
 	}
 
 	assertion := evm.NewRandomEVMAssertion(results, messages)

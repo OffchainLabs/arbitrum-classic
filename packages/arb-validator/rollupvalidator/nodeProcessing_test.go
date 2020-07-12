@@ -57,9 +57,9 @@ func TestFindLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	results := make([]evm.Result, 0, 5)
+	results := make([]*evm.Result, 0, 5)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
 	}
 

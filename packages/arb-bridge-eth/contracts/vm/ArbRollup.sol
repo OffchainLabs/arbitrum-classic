@@ -20,7 +20,6 @@ pragma solidity ^0.5.11;
 
 import "./NodeGraph.sol";
 import "./Staking.sol";
-import "./ArbContractProxy.sol";
 
 contract ArbRollup is NodeGraph, Staking {
     // invalid path proof
@@ -83,34 +82,6 @@ contract ArbRollup is NodeGraph, Staking {
         );
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
         owner = _owner;
-    }
-
-    function forwardContractMessage(address _sender, bytes calldata _data)
-        external
-        payable
-    {
-        address arbContractAddress = incomingCallProxies[msg.sender];
-        require(
-            arbContractAddress != address(0),
-            "Non interface contract can't send message"
-        );
-
-        globalInbox.forwardEthMessage.value(msg.value)(
-            arbContractAddress,
-            _sender
-        );
-        globalInbox.forwardContractTransactionMessage(
-            arbContractAddress,
-            _sender,
-            msg.value,
-            _data
-        );
-    }
-
-    function spawnCallProxy(address _arbContract) external {
-        ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
-        incomingCallProxies[address(proxy)] = _arbContract;
-        supportedContracts[_arbContract] = address(proxy);
     }
 
     function placeStake(bytes32[] calldata proof1, bytes32[] calldata proof2)

@@ -23,13 +23,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/messagetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/protocoltester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/sigutilstester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/valuetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
 var tester *messagetester.MessageTester
-var sigTester *sigutilstester.SigUtilsTester
 var valueTester *valuetester.ValueTester
 var protocolTester *protocoltester.ProtocolTester
 
@@ -52,14 +50,6 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	_, _, deployedSigTester, err := sigutilstester.DeploySigUtilsTester(
-		auth,
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	_, _, deployedProtocolTester, err := protocoltester.DeployProtocolTester(
 		auth,
 		client,
@@ -70,7 +60,6 @@ func TestMain(m *testing.M) {
 
 	client.Commit()
 
-	sigTester = deployedSigTester
 	tester = deployedMessageTester
 	valueTester = deployedValueTester
 	protocolTester = deployedProtocolTester

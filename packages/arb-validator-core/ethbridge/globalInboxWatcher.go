@@ -37,26 +37,18 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
-var transactionID ethcommon.Hash
-var transactionBatchID ethcommon.Hash
-var ethDepositID ethcommon.Hash
-var depositERC20ID ethcommon.Hash
-var depositERC721ID ethcommon.Hash
-var contractTxID ethcommon.Hash
-var transactionBatchTxCallABI abi.Method
+var messageDeliveredID ethcommon.Hash
+var messageDeliveredFromOriginID ethcommon.Hash
+var l2MessageFromOriginCallABI abi.Method
 
 func init() {
 	inbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
-	transactionID = inbox.Events["TransactionMessageDelivered"].ID
-	transactionBatchID = inbox.Events["TransactionMessageBatchDelivered"].ID
-	ethDepositID = inbox.Events["EthDepositMessageDelivered"].ID
-	depositERC20ID = inbox.Events["ERC20DepositMessageDelivered"].ID
-	depositERC721ID = inbox.Events["ERC721DepositMessageDelivered"].ID
-	contractTxID = inbox.Events["ContractTransactionMessageDelivered"].ID
-	transactionBatchTxCallABI = inbox.Methods["deliverTransactionBatch"]
+	messageDeliveredID = inbox.Events["MessageDelivered"].ID
+	messageDeliveredFromOriginID = inbox.Events["MessageDeliveredFromOrigin"].ID
+	l2MessageFromOriginCallABI = inbox.Methods["sendL2MessageFromOrigin"]
 }
 
 type globalInboxWatcher struct {
@@ -88,7 +80,7 @@ func newGlobalInboxWatcher(
 	}, nil
 }
 
-func (vm *globalInboxWatcher) getLogs(
+func (gi *globalInboxWatcher) getLogs(
 	ctx context.Context,
 	fromBlock, toBlock *big.Int,
 	blockHash *ethcommon.Hash,
@@ -96,20 +88,17 @@ func (vm *globalInboxWatcher) getLogs(
 	addressIndex := ethcommon.Hash{}
 	copy(
 		addressIndex[:],
-		ethcommon.LeftPadBytes(vm.rollupAddress.Bytes(), 32),
+		ethcommon.LeftPadBytes(gi.rollupAddress.Bytes(), 32),
 	)
-	return vm.client.FilterLogs(ctx, ethereum.FilterQuery{
+	return gi.client.FilterLogs(ctx, ethereum.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
 		BlockHash: blockHash,
-		Addresses: []ethcommon.Address{vm.inboxAddress},
+		Addresses: []ethcommon.Address{gi.inboxAddress},
 		Topics: [][]ethcommon.Hash{
 			{
-				transactionID,
-				transactionBatchID,
-				ethDepositID,
-				depositERC20ID,
-				depositERC721ID,
+				messageDeliveredID,
+				messageDeliveredFromOriginID,
 			}, {
 				addressIndex,
 			},
@@ -117,211 +106,136 @@ func (vm *globalInboxWatcher) getLogs(
 	})
 }
 
-func (vm *globalInboxWatcher) GetDeliveredEvents(
+func (gi *globalInboxWatcher) GetDeliveredEvents(
 	ctx context.Context,
 	fromBlock *big.Int,
 	toBlock *big.Int,
 ) ([]arbbridge.MessageDeliveredEvent, error) {
-	inboxLogs, err := vm.getLogs(ctx, fromBlock, toBlock, nil)
+	inboxLogs, err := gi.getLogs(ctx, fromBlock, toBlock, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	events := make([]arbbridge.MessageDeliveredEvent, 0, len(inboxLogs))
 	for _, evmLog := range inboxLogs {
-		blockHeader, err := vm.client.HeaderByHash(ctx, evmLog.BlockHash)
+		blockHeader, err := gi.client.HeaderByHash(ctx, evmLog.BlockHash)
 		if err != nil {
 			return nil, err
 		}
 		timestamp := new(big.Int).SetUint64(blockHeader.Time)
-		msg, err := vm.processLog(ctx, evmLog, timestamp)
+		ev, err := gi.processLog(ctx, evmLog, timestamp)
 		if err != nil {
 			return nil, err
 		}
-		events = append(events, arbbridge.MessageDeliveredEvent{
-			ChainInfo: getLogChainInfo(evmLog),
-			Message:   msg,
-		})
+		events = append(events, ev)
 	}
 	return events, nil
 }
 
-func (vm *globalInboxWatcher) GetEvents(
+func (gi *globalInboxWatcher) GetEvents(
 	ctx context.Context,
 	blockId *common.BlockId,
 	timestamp *big.Int,
 ) ([]arbbridge.Event, error) {
 	bh := blockId.HeaderHash.ToEthHash()
-	inboxLogs, err := vm.getLogs(ctx, nil, nil, &bh)
+	inboxLogs, err := gi.getLogs(ctx, nil, nil, &bh)
 	if err != nil {
 		return nil, err
 	}
 
 	events := make([]arbbridge.Event, 0, len(inboxLogs))
 	for _, evmLog := range inboxLogs {
-		msg, err := vm.processLog(ctx, evmLog, timestamp)
+		ev, err := gi.processLog(ctx, evmLog, timestamp)
 		if err != nil {
 			return nil, err
 		}
-		events = append(events, arbbridge.MessageDeliveredEvent{
-			ChainInfo: getLogChainInfo(evmLog),
-			Message:   msg,
-		})
+		events = append(events, ev)
 	}
 	return events, nil
 }
 
-func (vm *globalInboxWatcher) GetAllReceived(
-	ctx context.Context,
-	fromBlock *big.Int,
-	toBlock *big.Int,
-) ([]message.Received, error) {
-	deliveredEvents, err := vm.GetDeliveredEvents(ctx, fromBlock, toBlock)
-	if err != nil {
-		return nil, err
-	}
-	events := make([]message.Received, 0, len(deliveredEvents))
-	for _, ev := range deliveredEvents {
-		events = append(events, ev.Message)
-	}
-	return events, nil
-}
-
-func (vm *globalInboxWatcher) processLog(
+func (gi *globalInboxWatcher) processLog(
 	ctx context.Context,
 	evmLog types.Log,
 	timestamp *big.Int,
-) (message.Received, error) {
-	msg, err := vm.processMessageDeliveredEvents(ctx, evmLog)
-	if err != nil {
-		return message.Received{}, err
+) (arbbridge.MessageDeliveredEvent, error) {
+	chainInfo := getLogChainInfo(evmLog)
+	chainTime := message.ChainTime{
+		BlockNum: common.NewTimeBlocks(
+			new(big.Int).SetUint64(evmLog.BlockNumber),
+		),
+		Timestamp: timestamp,
 	}
-
-	return message.Received{
-		Message: msg,
-		ChainTime: message.ChainTime{
-			BlockNum: common.NewTimeBlocks(
-				new(big.Int).SetUint64(evmLog.BlockNumber),
-			),
-			Timestamp: timestamp,
-		},
-	}, nil
-}
-
-func (vm *globalInboxWatcher) processMessageDeliveredEvents(
-	ctx context.Context,
-	ethLog types.Log,
-) (message.Message, error) {
-	switch ethLog.Topics[0] {
-	case transactionID:
-		val, err := vm.GlobalInbox.ParseTransactionMessageDelivered(ethLog)
+	switch evmLog.Topics[0] {
+	case messageDeliveredID:
+		val, err := gi.GlobalInbox.ParseMessageDelivered(evmLog)
 		if err != nil {
-			return nil, err
+			return arbbridge.MessageDeliveredEvent{}, err
 		}
-
-		return message.Transaction{
-			Chain:       common.NewAddressFromEth(vm.rollupAddress),
-			To:          common.NewAddressFromEth(val.To),
-			From:        common.NewAddressFromEth(val.From),
-			SequenceNum: val.SeqNumber,
-			Value:       val.Value,
-			Data:        val.Data,
+		return arbbridge.MessageDeliveredEvent{
+			ChainInfo: chainInfo,
+			Message: message.InboxMessage{
+				Kind:        message.Type(val.Kind),
+				Sender:      common.NewAddressFromEth(val.Sender),
+				InboxSeqNum: val.InboxSeqNum,
+				Data:        val.Data,
+				ChainTime:   chainTime,
+			},
 		}, nil
 
-	case transactionBatchID:
-		tx, _, err := vm.client.TransactionByHash(ctx, ethLog.TxHash)
+	case messageDeliveredFromOriginID:
+		tx, _, err := gi.client.TransactionByHash(ctx, evmLog.TxHash)
 		if err != nil {
-			return nil, err
+			return arbbridge.MessageDeliveredEvent{}, err
 		}
 
 		type TransactionBatchTxCallArgs struct {
-			Chain        ethcommon.Address
-			Transactions []byte
+			Chain       ethcommon.Address
+			MessageData []byte
 		}
 
 		var args TransactionBatchTxCallArgs
-		err = transactionBatchTxCallABI.Inputs.Unpack(&args, tx.Data()[4:])
+		err = l2MessageFromOriginCallABI.Inputs.Unpack(&args, tx.Data()[4:])
 		if err != nil {
-			return nil, err
+			return arbbridge.MessageDeliveredEvent{}, err
 		}
 
-		return message.TransactionBatch{
-			Chain:  common.NewAddressFromEth(vm.rollupAddress),
-			TxData: args.Transactions,
-		}, nil
-	case ethDepositID:
-		val, err := vm.GlobalInbox.ParseEthDepositMessageDelivered(ethLog)
+		val, err := gi.GlobalInbox.ParseMessageDeliveredFromOrigin(evmLog)
 		if err != nil {
-			return nil, err
+			return arbbridge.MessageDeliveredEvent{}, err
 		}
-
-		return message.Eth{
-			To:    common.NewAddressFromEth(val.To),
-			From:  common.NewAddressFromEth(val.From),
-			Value: val.Value,
-		}, nil
-
-	case depositERC20ID:
-		val, err := vm.GlobalInbox.ParseERC20DepositMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		return message.ERC20{
-			To:           common.NewAddressFromEth(val.To),
-			From:         common.NewAddressFromEth(val.From),
-			TokenAddress: common.NewAddressFromEth(val.Erc20),
-			Value:        val.Value,
-		}, nil
-
-	case depositERC721ID:
-		val, err := vm.GlobalInbox.ParseERC721DepositMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-
-		return message.ERC721{
-			To:           common.NewAddressFromEth(val.To),
-			From:         common.NewAddressFromEth(val.From),
-			TokenAddress: common.NewAddressFromEth(val.Erc721),
-			Id:           val.Id,
-		}, nil
-	case contractTxID:
-		val, err := vm.GlobalInbox.ParseContractTransactionMessageDelivered(
-			ethLog,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return message.ContractTransaction{
-			To:    common.NewAddressFromEth(val.To),
-			From:  common.NewAddressFromEth(val.From),
-			Value: val.Value,
-			Data:  val.Data,
+		return arbbridge.MessageDeliveredEvent{
+			ChainInfo: chainInfo,
+			Message: message.InboxMessage{
+				Kind:        message.Type(val.Kind),
+				Sender:      common.NewAddressFromEth(val.Sender),
+				InboxSeqNum: val.InboxSeqNum,
+				Data:        args.MessageData,
+				ChainTime:   chainTime,
+			},
 		}, nil
 	default:
-		return nil, errors2.New("unknown arbitrum event type")
+		return arbbridge.MessageDeliveredEvent{}, errors2.New("unknown arbitrum event type")
 	}
 }
 
-func (con *globalInboxWatcher) GetERC20Balance(
+func (gi *globalInboxWatcher) GetERC20Balance(
 	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
-	return con.GlobalInbox.GetERC20Balance(
+	return gi.GlobalInbox.GetERC20Balance(
 		&bind.CallOpts{Context: ctx},
 		tokenContract.ToEthAddress(),
 		user.ToEthAddress(),
 	)
 }
 
-func (con *globalInboxWatcher) GetEthBalance(
+func (gi *globalInboxWatcher) GetEthBalance(
 	ctx context.Context,
 	user common.Address,
 ) (*big.Int, error) {
-	return con.GlobalInbox.GetEthBalance(
+	return gi.GlobalInbox.GetEthBalance(
 		&bind.CallOpts{Context: ctx},
 		user.ToEthAddress(),
 	)

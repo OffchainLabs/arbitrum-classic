@@ -16,14 +16,16 @@ import io
 import json
 import random
 
-from arbitrum import value, marshall
+from arbitrum import value, marshall, ast
 
 if __name__ == "__main__":
     cases = []
 
     random.seed(143235)
 
-    def add_case(val, name):
+    def add_case(val, name, is_codepoint=None):
+        if is_codepoint is None:
+            is_codepoint = False
         data = io.BytesIO()
         marshall.marshall_value(val, data)
         proof_data = io.BytesIO()
@@ -34,6 +36,7 @@ if __name__ == "__main__":
                 "proof_value": proof_data.getvalue().hex(),
                 "hash": value.value_hash(val).hex(),
                 "name": name,
+                "is_codepoint": is_codepoint,
             }
         )
 
@@ -41,12 +44,12 @@ if __name__ == "__main__":
     nest1_tup = value.Tuple([5, simple_tup, 6, simple_tup])
     add_case(10, "int")
     next_hash = bytearray(random.getrandbits(8) for _ in range(32))
-    # basic = value.AVMCodePoint(0, ast.BasicOp(8), next_hash)
-    # immediate = value.AVMCodePoint(
-    #     0, ast.ImmediateOp(ast.BasicOp(8), simple_tup), next_hash
-    # )
-    # add_case(basic, "simple codepoint")
-    # add_case(immediate, "immediate codepoint")
+    basic = value.AVMCodePoint(0, ast.BasicOp(8), next_hash)
+    immediate = value.AVMCodePoint(
+        0, ast.ImmediateOp(ast.BasicOp(8), simple_tup), next_hash
+    )
+    add_case(basic, "simple codepoint", True)
+    add_case(immediate, "immediate codepoint", True)
     for i in range(9):
         add_case(value.Tuple([0] * i), "tup" + str(i))
     add_case(simple_tup, "simple_tup")
@@ -61,6 +64,7 @@ if __name__ == "__main__":
         "../arb-bridge-eth/test/test_cases.json",
         "../arb-avm-cpp/tests/test_cases.json",
         "../arb-util/value/test_cases.json",
+        "../arb-provider-ethers/test/test_cases.json",
     ]
     for loc in locations:
         with open(loc, "w") as f:

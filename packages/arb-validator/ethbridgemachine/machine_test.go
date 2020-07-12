@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package proofmachine
+package ethbridgemachine
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridgemachine/machinetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine/machinetester"
 	"testing"
 )
 

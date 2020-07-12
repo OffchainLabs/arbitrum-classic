@@ -23,6 +23,7 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"strconv"
@@ -188,32 +189,30 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		copy(sender[:], senderBytes)
 	}
 
-	callMsg := message.Call{
-		To:   contractAddress,
-		From: sender,
-		Data: dataBytes,
-	}
-
 	latestBlock, err := m.man.CurrentBlockId()
 	if err != nil {
 		return nil, err
 	}
 
-	deliveredMsg := message.SingleDelivered{
-		Message: callMsg,
-		DeliveryInfo: message.DeliveryInfo{
-			ChainTime: message.ChainTime{
-				BlockNum:  latestBlock.Height,
-				Timestamp: big.NewInt(time.Now().Unix()),
-			},
-			TxId: big.NewInt(0),
+	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
+
+	callMsg := message.NewSimpleCall(contractAddress, dataBytes)
+	inboxMsg := message.NewInboxMessage(
+		callMsg,
+		sender,
+		seq,
+		message.ChainTime{
+			BlockNum:  latestBlock.Height,
+			Timestamp: big.NewInt(time.Now().Unix()),
 		},
-	}
-	inbox := value.NewTuple2(value.NewEmptyTuple(), deliveredMsg.AsInboxValue())
+	)
+
+	inbox := structures.NewVMInbox()
+	inbox.DeliverMessage(inboxMsg)
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
-		inbox,
+		inbox.AsValue(),
 		m.maxCallTime,
 	)
 
@@ -232,15 +231,11 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.ProcessLog(lastLogVal)
+	lastLog, err := evm.NewResultFromValue(lastLogVal)
 	if err != nil {
 		return nil, err
 	}
-	delivered, err := message.UnmarshalRawDelivered(lastLog.GetDeliveredMessage())
-	if err != nil {
-		return nil, err
-	}
-	if delivered.TxHash() != deliveredMsg.ReceiptHash() {
+	if lastLog.L1Message.MessageID() != inboxMsg.MessageID() {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

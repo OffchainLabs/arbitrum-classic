@@ -640,19 +640,9 @@ void log(MachineState& m) {
 }
 
 void debug(MachineState& m) {
-    Datastack tmpstk;
-    std::cout << std::endl;
-    std::cout << "full stack - size=" << m.stack.stacksize() << std::endl;
-    while (m.stack.stacksize() > 0) {
-        std::cout << m.stack[0] << std::endl;
-        tmpstk.push(std::move(m.stack[0]));
-        m.stack.popClear();
-    }
-    while (tmpstk.stacksize() > 0) {
-        m.stack.push(std::move(tmpstk[0]));
-        tmpstk.popClear();
-    }
-    std::cout << "register val=" << m.registerVal << std::endl << std::endl;
+    m.stack.prepForMod(1);
+    auto val = m.stack.pop();
+    std::cout << "debugprint " << val << std::endl;
     ++m.pc;
 }
 

@@ -114,18 +114,10 @@ export class IntValue {
 }
 
 export class CodePointValue {
-  public insnNum: ethers.utils.BigNumber
   public op: Operation
   public nextHash: string
-  // insnNum: 8 byte integer
-  // op: BasicOp or ImmOp
-  // nextHash: 32 byte hash
-  constructor(
-    insnNum: ethers.utils.BigNumberish,
-    op: Operation,
-    nextHash: string
-  ) {
-    this.insnNum = ethers.utils.bigNumberify(insnNum)
+
+  constructor(op: Operation, nextHash: string) {
     this.op = op
     this.nextHash = nextHash
   }
@@ -261,53 +253,6 @@ export class TupleValue {
   }
 }
 
-// Useful for BigTuple operations
-const LAST_INDEX = MAX_TUPLE_SIZE - 1
-const LAST_INDEX_BIG_NUM = LAST_INDEX
-
-// tuple: TupleValue
-// index: BigNumber
-// returns: *Value
-export function getBigTuple(tuple: TupleValue, index: number): Value {
-  if (tuple.contents.length === 0) {
-    return new IntValue(ethers.utils.bigNumberify(0))
-  } else if (index === 0) {
-    return tuple.get(LAST_INDEX)
-  } else {
-    const path = index % LAST_INDEX_BIG_NUM
-    const subTup = tuple.get(path) as TupleValue
-    return getBigTuple(subTup, Math.floor(index / LAST_INDEX_BIG_NUM))
-  }
-}
-
-// tuple: TupleValue
-// index: BigNumber
-// value: *Value
-// Non-Mutating returns TupleValue
-export function setBigTuple(
-  tupleValue: TupleValue,
-  index: number,
-  value: Value
-): TupleValue {
-  let tuple = tupleValue
-  if (tuple.contents.length === 0) {
-    tuple = new TupleValue(Array(MAX_TUPLE_SIZE).fill(new TupleValue([])))
-  }
-
-  if (index === 0) {
-    return tuple.set(LAST_INDEX, value)
-  } else {
-    const path = index % LAST_INDEX_BIG_NUM
-    const subTup = tuple.get(path) as TupleValue
-    const newSubTup = setBigTuple(
-      subTup,
-      Math.floor(index / LAST_INDEX_BIG_NUM),
-      value
-    )
-    return tuple.set(path, newSubTup)
-  }
-}
-
 function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
   const bignums: ethers.utils.BigNumber[] = []
   const sizeBytes = bytearray.length
@@ -323,36 +268,6 @@ function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
 }
 
 // twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
-export function sizedByteRangeToBytes(twoTupleValue: TupleValue): Uint8Array {
-  const byterange = twoTupleValue.get(0) as TupleValue
-  const sizeInt = twoTupleValue.get(1) as IntValue
-  const sizeBytes = sizeInt.bignum.toNumber()
-  const chunkCount = Math.ceil(sizeBytes / 32)
-  const result = new Uint8Array(chunkCount * 32)
-  for (let i = 0; i < chunkCount; i++) {
-    const value = getBigTuple(byterange, i) as IntValue
-    result.set(
-      ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32),
-      i * 32
-    )
-  }
-  return result.slice(0, sizeBytes)
-}
-
-// hexString: must be a byte string (hexString.length % 2 === 0)
-export function hexToSizedByteRange(hex: ethers.utils.Arrayish): TupleValue {
-  const bytearray = ethers.utils.arrayify(hex)
-  const sizeBytes = bytearray.length
-  const bignums = bytesToIntValues(bytearray)
-  // Empty tuple
-  let t = new TupleValue([])
-  for (let i = 0; i < bignums.length; i++) {
-    t = setBigTuple(t, i, new IntValue(bignums[i]))
-  }
-  return new TupleValue([t, new IntValue(sizeBytes)])
-}
-
-// twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
 export function bytestackToBytes(twoTupleValue: TupleValue): Uint8Array {
   const sizeInt = twoTupleValue.get(0) as IntValue
   let stack = twoTupleValue.get(1) as TupleValue
@@ -363,8 +278,8 @@ export function bytestackToBytes(twoTupleValue: TupleValue): Uint8Array {
 
   let i = 0
   while (stack.contents.length == 2) {
-    const value = stack.get(1) as IntValue
-    stack = stack.get(0) as TupleValue
+    const value = stack.get(0) as IntValue
+    stack = stack.get(1) as TupleValue
     const chunk = ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32)
     const offset = (chunkCount - 1 - i) * 32
     result.set(chunk, offset)
@@ -381,7 +296,7 @@ export function hexToBytestack(hex: ethers.utils.Arrayish): TupleValue {
   // Empty tuple
   let t = new TupleValue([])
   for (let i = 0; i < bignums.length; i++) {
-    t = new TupleValue([t, new IntValue(bignums[i])])
+    t = new TupleValue([new IntValue(bignums[i]), t])
   }
   return new TupleValue([new IntValue(sizeBytes), t])
 }
@@ -398,10 +313,9 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
     return ethers.utils.concat([accTy, uBigNumToBytes(val.bignum)])
   } else if (ty === ValueType.CodePoint) {
     const val = v as CodePointValue
-    // 1B type; 8B insnNum; 1B immCount; 1B opcode; Val?; 32B hash
+    // 1B type; 1B immCount; 1B opcode; Val?; 32B hash
     const packed = ethers.utils.concat([
       accTy,
-      intToBytes(val.insnNum, 8),
       intToBytes(val.op.kind, 1),
       intToBytes(val.op.opcode, 1),
     ])
@@ -472,7 +386,7 @@ function unmarshalContract(array: Uint8Array): [Operation[], Value] {
 function opsToCodePoints(ops: Operation[]): CodePointValue[] {
   const cps: CodePointValue[] = []
   for (const op of ops) {
-    cps.push(new CodePointValue(0, op, ethers.utils.hexZeroPad('0x00', 32)))
+    cps.push(new CodePointValue(op, ethers.utils.hexZeroPad('0x00', 32)))
   }
   for (let i = cps.length - 2; i >= 0; i--) {
     cps[i].nextHash = cps[i + 1].hash()
@@ -490,11 +404,7 @@ export function contractMachineHash(array: Uint8Array): string {
     new TupleValue([]),
     new TupleValue([]),
     staticVal,
-    new CodePointValue(
-      '18446744073709551615',
-      new BasicOp(0),
-      ethers.utils.hexZeroPad('0x00', 32)
-    )
+    new CodePointValue(new BasicOp(0), ethers.utils.hexZeroPad('0x00', 32))
   )
 }
 
@@ -568,13 +478,11 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
     const i = ethers.utils.bigNumberify(head)
     return [new IntValue(i), offset]
   } else if (ty === ValueType.CodePoint) {
-    ;[head, offset] = extractBytes(array, offset, 8)
-    const pc = ethers.utils.bigNumberify(head)
     let op
     ;[op, offset] = unmarshalOp(array, offset)
     ;[head, offset] = extractBytes(array, offset, 32)
     const nextHash = ethers.utils.hexlify(head)
-    return [new CodePointValue(pc, op, nextHash), offset]
+    return [new CodePointValue(op, nextHash), offset]
   } else if (ty === ValueType.HashOnly) {
     throw Error('Error unmarshaling: HashOnlyValue was not expected')
   } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {

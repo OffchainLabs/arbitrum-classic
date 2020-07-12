@@ -19,50 +19,19 @@
 pragma solidity ^0.5.11;
 
 interface IGlobalInbox {
-    event TransactionMessageDelivered(
+    event MessageDelivered(
         address indexed chain,
-        address indexed to,
-        address indexed from,
-        uint256 seqNumber,
-        uint256 value,
+        uint8 indexed kind,
+        address indexed sender,
+        uint256 inboxSeqNum,
         bytes data
     );
 
-    event TransactionMessageBatchDelivered(address indexed chain);
-
-    event EthDepositMessageDelivered(
+    event MessageDeliveredFromOrigin(
         address indexed chain,
-        address indexed to,
-        address indexed from,
-        uint256 value,
-        uint256 messageNum
-    );
-
-    event ERC20DepositMessageDelivered(
-        address indexed chain,
-        address indexed to,
-        address indexed from,
-        address erc20,
-        uint256 value,
-        uint256 messageNum
-    );
-
-    event ERC721DepositMessageDelivered(
-        address indexed chain,
-        address indexed to,
-        address indexed from,
-        address erc721,
-        uint256 id,
-        uint256 messageNum
-    );
-
-    event ContractTransactionMessageDelivered(
-        address indexed chain,
-        address indexed to,
-        address indexed from,
-        uint256 value,
-        bytes data,
-        uint256 messageNum
+        uint8 indexed kind,
+        address indexed sender,
+        uint256 inboxSeqNum
     );
 
     function getInbox(address account) external view returns (bytes32, uint256);
@@ -72,39 +41,4 @@ interface IGlobalInbox {
         uint256[] calldata messageCounts,
         bytes32[] calldata nodeHashes
     ) external;
-
-    function depositEthMessage(address _chain, address _to) external payable;
-
-    function sendTransactionMessage(
-        address _chain,
-        address _to,
-        uint256 _seqNumber,
-        uint256 _value,
-        bytes calldata _data
-    ) external;
-
-    function depositERC20Message(
-        address _chain,
-        address _to,
-        address _erc20,
-        uint256 _value
-    ) external;
-
-    function depositERC721Message(
-        address _chain,
-        address _to,
-        address _erc721,
-        uint256 _value
-    ) external;
-
-    // msg.sender is the chain receiving the message
-    function forwardContractTransactionMessage(
-        address _to,
-        address _from,
-        uint256 _value,
-        bytes calldata _data
-    ) external;
-
-    // msg.sender is the chain receiving the message
-    function forwardEthMessage(address _to, address _from) external payable;
 }

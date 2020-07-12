@@ -76,7 +76,7 @@ contract InboxTopChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.inboxTopHash(
                 _lowerHash,
-                Messages.addDeliveredMessageToInbox(_lowerHash, _value),
+                Messages.addMessageToInbox(_lowerHash, _value),
                 1
             )
         );

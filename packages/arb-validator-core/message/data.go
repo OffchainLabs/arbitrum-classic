@@ -19,6 +19,7 @@ package message
 import (
 	"bytes"
 	"errors"
+	errors2 "github.com/pkg/errors"
 	"math"
 	"math/big"
 
@@ -60,14 +61,14 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 	for !val.Equal(value.NewEmptyTuple()) {
 		tupVal, ok := val.(value.TupleValue)
 		if !ok {
-			return nil, errTupleSize2
+			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
 		if tupVal.Len() != 2 {
-			return nil, errTupleSize2
+			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
-		// Can't fail since size has been checked
-		val, _ = tupVal.GetByInt64(0)
-		member, _ := tupVal.GetByInt64(1)
+
+		member, _ := tupVal.GetByInt64(0)
+		val, _ = tupVal.GetByInt64(1)
 
 		values = append(values, member)
 	}
@@ -82,7 +83,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 func ListToStackValue(vals []value.Value) value.TupleValue {
 	ret := value.NewEmptyTuple()
 	for _, val := range vals {
-		ret = value.NewTuple2(ret, val)
+		ret = value.NewTuple2(val, ret)
 	}
 	return ret
 }
@@ -90,10 +91,10 @@ func ListToStackValue(vals []value.Value) value.TupleValue {
 func ByteStackToHex(val value.Value) ([]byte, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
-		return nil, errTupleSize2
+		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
 	if tup.Len() != 2 {
-		return nil, errTupleSize2
+		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
 	lengthVal, _ := tup.GetByInt64(0)
 	lengthIntVal, ok := lengthVal.(value.IntValue)

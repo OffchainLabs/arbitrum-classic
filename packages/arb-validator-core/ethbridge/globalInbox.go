@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -45,69 +44,37 @@ func newGlobalInbox(address ethcommon.Address, rollupAddress ethcommon.Address, 
 	return &globalInbox{watcher, auth}, nil
 }
 
-func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
+func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, msg message.L2Message) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.SendTransactionMessage(
-		con.auth.getAuth(ctx),
-		vmAddress.ToEthAddress(),
-		contactAddress.ToEthAddress(),
-		seqNumber,
-		amount,
-		data,
-	)
-	if err != nil {
-		return err
-	}
-	return con.waitForReceipt(ctx, tx, "SendTransactionMessage")
-}
-
-func (con *globalInbox) deliverTransactionBatch(
-	ctx context.Context,
-	chain common.Address,
-	transactions []message.BatchTx,
-) (*types.Transaction, error) {
-	data := make([]byte, 0)
-	for _, tx := range transactions {
-		if len(tx.Data) > math.MaxUint16 {
-			continue
-		}
-		data = append(data, tx.ToBytes()...)
-	}
-	con.auth.Lock()
-	return con.GlobalInbox.DeliverTransactionBatch(
+	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
-		data,
+		msg.AsData(),
 	)
-}
-
-func (con *globalInbox) DeliverTransactionBatch(
-	ctx context.Context,
-	chain common.Address,
-	transactions []message.BatchTx,
-) error {
-	tx, err := con.deliverTransactionBatch(ctx, chain, transactions)
 	if err != nil {
 		return err
 	}
+	return con.waitForReceipt(ctx, tx, "SendL2MessageFromOrigin")
+}
+
+func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {
+	con.auth.Lock()
 	defer con.auth.Unlock()
-
-	return con.waitForReceipt(ctx, tx, "DeliverTransactionBatch")
-}
-
-func (con *globalInbox) DeliverTransactionBatchNoWait(
-	ctx context.Context,
-	chain common.Address,
-	transactions []message.BatchTx,
-) error {
-	_, err := con.deliverTransactionBatch(ctx, chain, transactions)
+	_, err := con.GlobalInbox.SendL2MessageFromOrigin(
+		con.auth.getAuth(ctx),
+		chain.ToEthAddress(),
+		msg.AsData(),
+	)
 	if err != nil {
 		return err
 	}
-	con.auth.Unlock()
 	return err
 }
+
+//func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
+//
+//}
 
 func (con *globalInbox) DepositEthMessage(
 	ctx context.Context,

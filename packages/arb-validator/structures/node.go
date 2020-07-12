@@ -96,7 +96,7 @@ func NewValidNodeFromPrev(
 	)
 }
 
-func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
+func NewRandomNodeFromValidPrev(prev *Node, results []*evm.Result) *Node {
 	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package proofmachine
+package ethbridgemachine
 
 import (
 	"context"
@@ -116,7 +116,6 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 
 func TestValidateProof(t *testing.T) {
 	testMachines := gotest.OpCodeTestFiles()
-	testMachines = append(testMachines, gotest.TestMachinePath())
 	ethCon, err := setupTestValidateProof(t)
 	if err != nil {
 		t.Fatal(err)
