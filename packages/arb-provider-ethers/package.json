@@ -35,9 +35,11 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.0",
+    "@types/node-fetch": "^2.5.7",
     "install-peers-cli": "^2.2.0",
     "jest": "^25.1.0",
     "jest-junit": "^10.0.0",
+    "node-fetch": "^2.6.0",
     "ts-jest": "^25.2.0",
     "typechain": "^1.0.4",
     "typechain-target-ethers": "^1.0.3"
