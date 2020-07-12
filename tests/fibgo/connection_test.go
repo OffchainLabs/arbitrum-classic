@@ -280,7 +280,7 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	validatorClients, err := setupValidators(t, client, auths[2:4])
+	validatorClients, err := setupValidators(t, client, auths[2:3])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}

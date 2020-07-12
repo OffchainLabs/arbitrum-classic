@@ -17,7 +17,7 @@
 'use strict'
 
 // import * as fs from 'fs'
-import { assert, expect } from 'chai'
+import { expect } from 'chai'
 import * as ethers from 'ethers'
 
 const utils = ethers.utils

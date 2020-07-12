@@ -253,10 +253,6 @@ export class TupleValue {
   }
 }
 
-// Useful for BigTuple operations
-const LAST_INDEX = MAX_TUPLE_SIZE - 1
-const LAST_INDEX_BIG_NUM = LAST_INDEX
-
 function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
   const bignums: ethers.utils.BigNumber[] = []
   const sizeBytes = bytearray.length
