@@ -431,7 +431,6 @@ export class Log {
   ) {}
 
   static fromValue(val: ArbValue.Value): Log {
-    console.log('raw log', val)
     const tup = val as ArbValue.TupleValue
     const topics = tup.contents
       .slice(2)

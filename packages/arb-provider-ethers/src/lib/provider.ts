@@ -29,7 +29,6 @@ import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
-import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
@@ -95,8 +94,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   constructor(
     validatorUrl: string,
     provider: ethers.providers.JsonRpcProvider,
-    aggregatorUrl?: string,
-    deterministicAssertions?: boolean
+    aggregatorUrl?: string
   ) {
     super(123456789)
     this.chainId = 123456789
@@ -296,16 +294,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           return null
         }
 
-        let status = 0
-        let logs: Log[] = []
-        if (result.result.resultCode === ResultCode.Return) {
-          status = 1
-          logs = result.result.logs
-        }
-
         const currentBlockNum = await this.ethProvider.getBlockNumber()
         const messageBlockNum = result.result.incoming.blockNumber.toNumber()
         const confirmations = currentBlockNum - messageBlockNum + 1
+        const block = await this.ethProvider.getBlock(messageBlockNum)
 
         const incoming = result.result.incoming
         if (
@@ -325,7 +317,25 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           )
         }
 
-        const block = await this.ethProvider.getBlock(messageBlockNum)
+        let status = 0
+        const logs: ethers.providers.Log[] = []
+        if (result.result.resultCode === ResultCode.Return) {
+          status = 1
+          let logIndex = 0
+          for (const log of result.result.logs) {
+            logs.push({
+              ...log,
+              transactionLogIndex: 0,
+              transactionIndex: 0,
+              blockNumber: messageBlockNum,
+              transactionHash: result.txHash,
+              logIndex,
+              blockHash: block.hash,
+            })
+            logIndex++
+          }
+        }
+
         const txReceipt: ethers.providers.TransactionReceipt = {
           blockHash: block.hash,
           blockNumber: messageBlockNum,
