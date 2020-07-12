@@ -103,8 +103,8 @@ export class L2Transaction {
 
   messageID(sender: string): string {
     return ethers.utils.solidityKeccak256(
-      ['bytes', 'address'],
-      [this.asData(), sender]
+      ['address', 'bytes'],
+      [sender, this.asData()]
     )
   }
 

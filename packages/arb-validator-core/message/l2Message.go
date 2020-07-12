@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
@@ -155,6 +157,18 @@ func NewRandomTransaction() Transaction {
 	}
 }
 
+func (b Transaction) String() string {
+	return fmt.Sprintf(
+		"Transaction(%v, %v, %v, %v, %v, %v)",
+		b.MaxGas,
+		b.GasPriceBid,
+		b.SequenceNum,
+		b.DestAddress,
+		b.Payment,
+		hexutil.Encode(b.Data),
+	)
+}
+
 func (b Transaction) Equals(o Transaction) bool {
 	return b.MaxGas.Cmp(o.MaxGas) == 0 &&
 		b.GasPriceBid.Cmp(o.GasPriceBid) == 0 &&
@@ -187,10 +201,7 @@ func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
 }
 
 func (t Transaction) MessageID(sender common.Address) common.Hash {
-	data := make([]byte, 0)
-	data = append(data, addressData(sender)...)
-	data = append(data, t.AsData()...)
-	return marshaledBytesHash(data)
+	return hashing.SoliditySHA3(hashing.Address(sender), t.AsData())
 }
 
 type ContractTransaction struct {
