@@ -274,7 +274,7 @@ func waitForReceipt(
 func TestFib(t *testing.T) {
 	client, auths := test.SimulatedBackend()
 	go func() {
-		t := time.NewTicker(time.Second * 1)
+		t := time.NewTicker(time.Second * 2)
 		for range t.C {
 			client.Commit()
 		}
