@@ -378,7 +378,6 @@ utils.defineProperty(ProviderBridge.prototype, '_send', function (
   payload,
   callback
 ) {
-  console.log('web3 bridge send', payload.method)
   if (this._web3) {
     this._web3.send(payload, callback)
     return
@@ -485,10 +484,8 @@ utils.defineProperty(ProviderBridge.prototype, '_send', function (
       break
 
     case 'eth_sendTransaction':
-      console.log('web3 eth_sendTransaction')
       signer.getAddress().then(
         function (address) {
-          console.log('web3 eth_sendTransaction', address, params[0].from)
           if (utils.getAddress(params[0].from) !== address) {
             respondError('invalid from address', Errors.InvalidParams)
           }

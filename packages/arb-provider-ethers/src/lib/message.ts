@@ -49,7 +49,7 @@ export class L2Transaction {
   public sequenceNum: ethers.utils.BigNumber
   public destAddress: string
   public payment: ethers.utils.BigNumber
-  public calldata: Uint8Array
+  public calldata: string
   public kind: L2MessageCode.Transaction
 
   constructor(
@@ -77,7 +77,7 @@ export class L2Transaction {
       20
     )
     this.payment = ethers.utils.bigNumberify(payment)
-    this.calldata = ethers.utils.arrayify(calldata)
+    this.calldata = ethers.utils.hexlify(calldata)
     this.kind = L2MessageCode.Transaction
   }
 

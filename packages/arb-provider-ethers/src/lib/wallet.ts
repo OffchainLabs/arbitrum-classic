@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { L2Transaction } from './message'
+import { L2Transaction, L2Message } from './message'
 import { ArbProvider } from './provider'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
@@ -148,8 +148,6 @@ export class ArbWallet extends ethers.Signer {
     l2tx: L2Transaction,
     from: string
   ): Promise<ethers.providers.TransactionResponse> {
-    console.log('sending tx', l2tx)
-    // throw Error("test123")
     const vmId = await this.provider.getVmID()
     const walletAddress = await this.getAddress()
     if (from.toLowerCase() != walletAddress.toLowerCase()) {
@@ -180,7 +178,7 @@ export class ArbWallet extends ethers.Signer {
       )
     } else {
       const globalInbox = await this.globalInboxConn()
-      await globalInbox.sendL2Message(vmId, l2tx.asData())
+      await globalInbox.sendL2Message(vmId, new L2Message(l2tx).asData())
     }
     const tx: ethers.utils.Transaction = {
       data: ethers.utils.hexlify(l2tx.calldata),
@@ -199,7 +197,6 @@ export class ArbWallet extends ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    console.log('sendTransaction', transaction)
     let gasLimit = await transaction.gasLimit
     if (!gasLimit) {
       // default to 90000 based on spec

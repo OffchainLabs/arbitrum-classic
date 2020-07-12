@@ -8,7 +8,7 @@
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on afn "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -86,7 +86,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public client: ArbClient
   public aggregator?: AggregatorClient
 
-  private deterministicAssertions: boolean
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
@@ -103,11 +102,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     this.chainId = 123456789
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
-    if (deterministicAssertions) {
-      this.deterministicAssertions = deterministicAssertions
-    } else {
-      this.deterministicAssertions = false
-    }
 
     if (aggregatorUrl) {
       this.aggregator = new AggregatorClient(aggregatorUrl)
@@ -279,7 +273,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // object with normalized values passed in, depending on the method
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public async perform(method: string, params: any): Promise<any> {
-    console.log('perform', method, params)
+    // console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -309,15 +303,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           logs = result.result.logs
         }
 
-        let confirmations = 0
-        const l1Confs = result.nodeInfo?.l1Confirmations
-        if (this.deterministicAssertions) {
-          const currentBlockNum = await this.ethProvider.getBlockNumber()
-          const messageBlockNum = result.result.incoming.blockNumber.toNumber()
-          confirmations = currentBlockNum - messageBlockNum + 1
-        } else if (l1Confs !== undefined) {
-          confirmations = l1Confs
-        }
+        const currentBlockNum = await this.ethProvider.getBlockNumber()
+        const messageBlockNum = result.result.incoming.blockNumber.toNumber()
+        const confirmations = currentBlockNum - messageBlockNum + 1
 
         const incoming = result.result.incoming
         if (
@@ -330,13 +318,22 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         const l2tx = incoming.msg.message
 
+        let contractAddress = undefined
+        if (ethers.utils.hexStripZeros(l2tx.destAddress) == '0x0') {
+          contractAddress = ethers.utils.hexlify(
+            result.result.returnData.slice(12)
+          )
+        }
+
+        const block = await this.ethProvider.getBlock(messageBlockNum)
         const txReceipt: ethers.providers.TransactionReceipt = {
-          blockHash: result.nodeInfo.nodeHash,
-          blockNumber: result.nodeInfo.nodeHeight,
+          blockHash: block.hash,
+          blockNumber: messageBlockNum,
+          contractAddress: contractAddress,
           confirmations: confirmations,
-          cumulativeGasUsed: ethers.utils.bigNumberify(1),
+          cumulativeGasUsed: result.result.gasUsed,
           from: result.result.incoming.sender,
-          gasUsed: ethers.utils.bigNumberify(1),
+          gasUsed: result.result.gasUsed,
           logs,
           status,
           to: l2tx.destAddress,
@@ -407,12 +404,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return arbInfo.getBalance(params.address)
       }
       case 'getBlockNumber': {
-        let location: NodeInfo | undefined
-        if (this.deterministicAssertions) {
-          location = await this.client.getLatestPendingNodeLocation()
-        } else {
-          location = await this.client.getLatestNodeLocation()
-        }
+        const location = await this.client.getLatestPendingNodeLocation()
         if (location) {
           if (
             this.latestLocation &&
@@ -426,9 +418,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.ethProvider.getBlockNumber()
       }
     }
-    const forwardResponse = this.ethProvider.perform(method, params)
-    // console.log('Forwarding query to provider', method, forwardResponse);
-    return forwardResponse
+    // console.log('Forwarding query to provider', method, params);
+    return await this.ethProvider.perform(method, params)
   }
 
   public async call(
@@ -444,11 +435,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     )
 
     const callLatest = (): Promise<ArbValue.Value> => {
-      if (this.deterministicAssertions) {
-        return this.client.pendingCall(tx, from)
-      } else {
-        return this.client.call(tx, from)
-      }
+      return this.client.pendingCall(tx, from)
     }
 
     let resultVal: ArbValue.Value

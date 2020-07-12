@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,14 +36,20 @@ describe('Serialization', function () {
       74567468457564,
       '0x648576998870892435'
     )
-    const data = tx.asData()
-    expect(data.length).to.equal(5 * 32 + tx.calldata.length)
-    const tx2 = Message.L2Transaction.fromData(data)
+    const l2Message = new Message.L2Message(tx)
+    const data = l2Message.asData()
+    expect(data.length).to.equal(1 + 5 * 32 + tx.calldata.length)
+    const parsedL2Message = Message.L2Message.fromData(data)
+    expect(parsedL2Message.message.kind).to.equal(
+      Message.L2MessageCode.Transaction
+    )
+    const tx2 = parsedL2Message.message as Message.L2Transaction
     expect(tx2.maxGas).to.equal(tx.maxGas)
     expect(tx2.gasPriceBid).to.equal(tx.gasPriceBid)
     expect(tx2.sequenceNum).to.equal(tx.sequenceNum)
     expect(tx2.destAddress).to.equal(tx.destAddress)
     expect(tx2.payment).to.equal(tx.payment)
     expect(tx2.calldata.toString()).to.equal(tx.calldata.toString())
+    console.log(ethers.utils.hexlify(data))
   })
 })
