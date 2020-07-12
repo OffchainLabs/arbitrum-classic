@@ -91,6 +91,41 @@ func NewChain(
 	return ret, nil
 }
 
+func InitializeChainObserver(
+	ctx context.Context,
+	rollupAddr common.Address,
+	updateOpinion bool,
+	clnt arbbridge.ChainTimeGetter,
+	watcher arbbridge.ArbRollupWatcher,
+	checkpointer checkpointing.RollupCheckpointer,
+) (*ChainObserver, error) {
+	if checkpointer.HasCheckpointedState() {
+		var chain *ChainObserver
+		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+			chainObserverBuf := &ChainObserverBuf{}
+			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+				return err
+			}
+			var err error
+			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
+			return err
+		}); err == nil && chain != nil {
+			return chain, nil
+		}
+	}
+
+	log.Println("No valid checkpoints so starting from fresh state")
+	params, err := watcher.GetParams(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
+}
+
 func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())

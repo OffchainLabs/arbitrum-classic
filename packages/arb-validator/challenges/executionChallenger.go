@@ -36,6 +36,7 @@ func ChallengeExecutionClaim(
 	startPrecondition *valprotocol.Precondition,
 	startMachine machine.Machine,
 	challengeEverything bool,
+	challengeType ExecutionChallengeInfo,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewExecutionChallengeWatcher(address)
 	if err != nil {
@@ -57,6 +58,7 @@ func ChallengeExecutionClaim(
 		startMachine,
 		startPrecondition,
 		challengeEverything,
+		challengeType,
 	)
 }
 
@@ -68,6 +70,7 @@ func challengeExecution(
 	startMachine machine.Machine,
 	startPrecondition *valprotocol.Precondition,
 	challengeEverything bool,
+	challengeType ExecutionChallengeInfo,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
@@ -82,6 +85,16 @@ func challengeExecution(
 	precondition := startPrecondition
 	deadline := ev.Deadline
 	for {
+		cont := ContinueChallenge(challengeType)
+
+		if cont {
+			if challengeType.isDiscontinueType {
+				challengeType.currentRound += 1
+			}
+		} else {
+			return ChallengerDiscontinued, nil
+		}
+
 		// get defender update
 		event, state, err := getNextEventWithTimeout(
 			ctx,
@@ -129,24 +142,21 @@ func challengeExecution(
 			precondition = preconditions[continueEvent.SegmentIndex.Uint64()]
 		} else {
 			// Replayed from existing event
+			totalSteps := computeSteps(continueEvent, bisectionEvent)
 			precondition = setPreCondition(
-				continueEvent,
-				bisectionEvent,
 				mach,
 				startPrecondition,
-				precondition)
+				precondition,
+				totalSteps)
 		}
 		deadline = continueEvent.Deadline
 	}
 }
 
-func setPreCondition(
+func computeSteps(
 	continueEvent arbbridge.ContinueChallengeEvent,
 	bisectionEvent arbbridge.ExecutionBisectionEvent,
-	mach machine.Machine,
-	startPrecondition *valprotocol.Precondition,
-	precondition *valprotocol.Precondition,
-) *valprotocol.Precondition {
+) uint64 {
 	totalSteps := uint64(0)
 	for i := uint64(0); i < continueEvent.SegmentIndex.Uint64(); i++ {
 		totalSteps += valprotocol.CalculateBisectionStepCount(
@@ -154,6 +164,15 @@ func setPreCondition(
 			uint64(len(bisectionEvent.Assertions)),
 			bisectionEvent.TotalSteps)
 	}
+	return totalSteps
+}
+
+func setPreCondition(
+	mach machine.Machine,
+	startPrecondition *valprotocol.Precondition,
+	precondition *valprotocol.Precondition,
+	totalSteps uint64,
+) *valprotocol.Precondition {
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
 		startPrecondition.TimeBounds,

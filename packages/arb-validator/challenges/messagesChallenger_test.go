@@ -30,9 +30,201 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 )
 
-func testMessagesChallenge(t *testing.T) {
+func testMessagesChallengeEth(t *testing.T) {
 	t.Parallel()
-	messageStack := getMsgStack()
+	messageStack := getMsgStackEth()
+	messageCount := uint64(4)
+	startIndex := big.NewInt(2)
+
+	beforeInbox, challengeHash := getMsgChallengeData(
+		t,
+		messageStack,
+		startIndex,
+		messageCount)
+
+	if err := testChallenge(
+		valprotocol.InvalidMessagesChildType,
+		challengeHash,
+		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
+		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return DefendMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				2,
+			)
+		},
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return ChallengeMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				true,
+			)
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testMessagesChallengeERC20(t *testing.T) {
+	//t.Parallel()
+	messageStack := getMsgStackERC20()
+	messageCount := uint64(4)
+	startIndex := big.NewInt(2)
+
+	beforeInbox, challengeHash := getMsgChallengeData(
+		t,
+		messageStack,
+		startIndex,
+		messageCount)
+
+	if err := testChallenge(
+		valprotocol.InvalidMessagesChildType,
+		challengeHash,
+		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
+		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return DefendMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				2,
+			)
+		},
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return ChallengeMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				true,
+			)
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testMessagesChallengeERC721(t *testing.T) {
+	//t.Parallel()
+	messageStack := getMsgStackER721()
+	messageCount := uint64(4)
+	startIndex := big.NewInt(2)
+
+	beforeInbox, challengeHash := getMsgChallengeData(
+		t,
+		messageStack,
+		startIndex,
+		messageCount)
+
+	if err := testChallenge(
+		valprotocol.InvalidMessagesChildType,
+		challengeHash,
+		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
+		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return DefendMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				2,
+			)
+		},
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return ChallengeMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				true,
+			)
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testMessagesChallengeTrnx(t *testing.T) {
+	//t.Parallel()
+	messageStack := getMsgStackTrxn()
+	messageCount := uint64(4)
+	startIndex := big.NewInt(2)
+
+	beforeInbox, challengeHash := getMsgChallengeData(
+		t,
+		messageStack,
+		startIndex,
+		messageCount)
+
+	if err := testChallenge(
+		valprotocol.InvalidMessagesChildType,
+		challengeHash,
+		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
+		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return DefendMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				2,
+			)
+		},
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+			return ChallengeMessagesClaim(
+				context.Background(),
+				client,
+				challengeAddress,
+				blockId,
+				0,
+				messageStack,
+				beforeInbox,
+				new(big.Int).SetUint64(messageCount),
+				true,
+			)
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testMessagesChallengeContractTrnx(t *testing.T) {
+	//t.Parallel()
+	messageStack := getMsgStackContractTrxn()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 
@@ -112,7 +304,7 @@ func getMsgChallengeData(
 	return beforeInbox, challengeHash
 }
 
-func getMsgStack() *structures.MessageStack {
+func getMsgStackEth() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
 		messageStack.DeliverMessage(message.Received{
@@ -128,4 +320,90 @@ func getMsgStack() *structures.MessageStack {
 		})
 	}
 	return messageStack
+}
+
+func getMsgStackERC20() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: message.ERC20{
+				To:           common.Address{},
+				From:         common.Address{},
+				TokenAddress: common.Address{},
+				Value:        big.NewInt(6745),
+			},
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
+}
+
+func getMsgStackER721() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: message.ERC721{
+				To:           common.Address{},
+				From:         common.Address{},
+				TokenAddress: common.Address{},
+				Id:           big.NewInt(6745),
+			},
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
+}
+
+func getMsgStackContractTrxn() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: message.ContractTransaction{
+				To:    common.Address{},
+				From:  common.Address{},
+				Value: big.NewInt(6745),
+				Data:  []byte{43, 65, 68, 98, 43, 46},
+			},
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
+}
+
+func getMsgStackTrxn() *structures.MessageStack {
+	messageStack := structures.NewMessageStack()
+
+	for i := int64(0); i < 8; i++ {
+		messageStack.DeliverMessage(message.Received{
+			Message: generateTestTransaction(),
+			ChainTime: message.ChainTime{
+				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
+				Timestamp: big.NewInt(5435254),
+			},
+		})
+	}
+	return messageStack
+}
+
+func generateTestTransaction() message.Transaction {
+	return message.Transaction{
+		Chain:       common.Address{},
+		To:          common.Address{},
+		From:        common.Address{},
+		SequenceNum: big.NewInt(6435),
+		Value:       big.NewInt(89735406),
+		Data:        []byte{43, 65, 68, 98, 43, 46},
+	}
 }

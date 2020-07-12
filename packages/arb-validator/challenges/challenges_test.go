@@ -21,7 +21,13 @@ import (
 )
 
 func TestChallenges(t *testing.T) {
-	t.Run("Inbox Top Challenge", testInboxTopChallenge)
-	t.Run("Messages Challenge", testMessagesChallenge)
-	t.Run("Execution Challenge", testExecutionChallenge)
+	//t.Run("Messages Challenge", testMessagesChallengeEth)
+	//t.Run("Messages Challenge", testMessagesChallengeERC20)
+	//t.Run("Messages Challenge", testMessagesChallengeERC721)
+
+	//t.Run("Messages Challenge", testMessagesChallengeTrnx)
+	//t.Run("Messages Challenge", testMessagesChallengeContractTrnx)
+
+	//t.Run("Inbox Top Challenge", testInboxTopChallenge)
+	//t.Run("Execution Challenge", testExecutionChallenge)
 }

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 	errors2 "github.com/pkg/errors"
@@ -29,8 +28,6 @@ import (
 	"math/big"
 	"sync"
 	"time"
-
-	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -129,7 +126,7 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
-			chain, err := initializeChainObserver(
+			chain, err := chainobserver.InitializeChainObserver(
 				runCtx,
 				rollupAddr,
 				updateOpinion,
@@ -402,39 +399,4 @@ func verifyArbChain(
 		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, initialMachineHash)
 	}
 	return nil
-}
-
-func initializeChainObserver(
-	ctx context.Context,
-	rollupAddr common.Address,
-	updateOpinion bool,
-	clnt arbbridge.ChainTimeGetter,
-	watcher arbbridge.ArbRollupWatcher,
-	checkpointer checkpointing.RollupCheckpointer,
-) (*chainobserver.ChainObserver, error) {
-	if checkpointer.HasCheckpointedState() {
-		var chain *chainobserver.ChainObserver
-		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
-			chainObserverBuf := &chainobserver.ChainObserverBuf{}
-			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
-				return err
-			}
-			var err error
-			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
-			return err
-		}); err == nil && chain != nil {
-			return chain, nil
-		}
-	}
-
-	log.Println("No valid checkpoints so starting from fresh state")
-	params, err := watcher.GetParams(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return chainobserver.NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
 }

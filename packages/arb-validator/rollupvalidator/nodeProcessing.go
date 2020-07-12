@@ -87,66 +87,6 @@ func (ni *nodeInfo) calculateBloomFilter() types.Bloom {
 	return types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 }
 
-func valueSlicesEqual(a []value.Value, b []value.Value) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, t := range a {
-		if !value.Eq(t, b[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func stringSlicesEqual(a []string, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, t := range a {
-		if t != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func logSlicesEqual(a []evm.Log, b []evm.Log) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, t := range a {
-		if !t.Equals(b[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func nestedLogSlicesEqual(a [][]evm.Log, b [][]evm.Log) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, t := range a {
-		if !logSlicesEqual(t, b[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func hashSlicesEqual(a []common.Hash, b []common.Hash) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, t := range a {
-		if t != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (ni *nodeInfo) Equals(o *nodeInfo) bool {
 	return nestedLogSlicesEqual(ni.EVMLogs, o.EVMLogs) &&
 		hashSlicesEqual(ni.EVMTransactionHashes, o.EVMTransactionHashes) &&

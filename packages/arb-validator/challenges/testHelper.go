@@ -46,6 +46,113 @@ import (
 
 type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.BlockId) (ChallengeState, error)
 
+func testChallengerCatchUp(
+	challengeType valprotocol.ChildType,
+	challengeHash [32]byte,
+	asserterKey string,
+	challengerKey string,
+	asserterFunc ChallengeFunc,
+	asserterFuncStop ChallengeFunc,
+	challengerFunc ChallengeFunc,
+	challengerFuncStop ChallengeFunc,
+) error {
+	asserterClient, challengerClient, challengeAddress, blockId, err := getChallengeInfo(
+		asserterKey,
+		challengerKey,
+		challengeType,
+		challengeHash)
+	if err != nil {
+		return errors2.Wrap(err, "Error starting challenge")
+	}
+
+	asserterEndChan := make(chan ChallengeState)
+	asserterErrChan := make(chan error)
+	challengerEndChan := make(chan ChallengeState)
+	challengerErrChan := make(chan error)
+
+	go func() {
+		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		tryCount := 0
+		for {
+			endState, err := asserterFuncStop(challengeAddress, asserterClient, cBlockId)
+			if endState == DefenderDiscontinued {
+				break
+			}
+			if tryCount > 20 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting asserter", err)
+			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
+		}
+		for {
+			endState, err := asserterFunc(challengeAddress, asserterClient, cBlockId)
+			if err == nil {
+				asserterEndChan <- endState
+				return
+			}
+			if tryCount > 20 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting asserter", err)
+			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
+		}
+	}()
+
+	go func() {
+		cBlockId := blockId.MarshalToBuf().Unmarshal()
+		tryCount := 0
+		for {
+			endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
+			if endState == ChallengerDiscontinued {
+				break
+			}
+			if tryCount > 20 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting challenger", err)
+			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
+		}
+		for {
+			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
+			if err == nil {
+				asserterEndChan <- endState
+				return
+			}
+			if tryCount > 20 {
+				asserterErrChan <- err
+				return
+			}
+			tryCount += 1
+			log.Println("Restarting challenger", err)
+			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
+			if err != nil {
+				asserterErrChan <- err
+				return
+			}
+		}
+	}()
+
+	return resolveChallenge(asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
+}
+
 func testChallenge(
 	challengeType valprotocol.ChildType,
 	challengeHash [32]byte,
@@ -114,6 +221,14 @@ func testChallenge(
 		}
 	}()
 
+	return resolveChallenge(asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
+}
+
+func resolveChallenge(
+	asserterEndChan chan ChallengeState,
+	asserterErrChan chan error,
+	challengerEndChan chan ChallengeState,
+	challengerErrChan chan error) error {
 	doneCount := 0
 	for {
 		select {

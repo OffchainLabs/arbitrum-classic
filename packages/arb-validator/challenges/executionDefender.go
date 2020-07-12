@@ -37,6 +37,7 @@ func DefendExecutionClaim(
 	startMachine machine.Machine,
 	numSteps uint64,
 	bisectionCount uint32,
+	challengeType ExecutionChallengeInfo,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewExecutionChallengeWatcher(address)
 	if err != nil {
@@ -64,6 +65,7 @@ func DefendExecutionClaim(
 			startMachine,
 		),
 		bisectionCount,
+		challengeType,
 	)
 }
 
@@ -74,6 +76,7 @@ func defendExecution(
 	client arbbridge.ArbClient,
 	startDefender AssertionDefender,
 	bisectionCount uint32,
+	challengeType ExecutionChallengeInfo,
 ) (ChallengeState, error) {
 	event, ok := <-eventChan
 	if !ok {
@@ -87,6 +90,16 @@ func defendExecution(
 	defender := startDefender
 
 	for {
+		cont := ContinueChallenge(challengeType)
+
+		if cont {
+			if challengeType.isDiscontinueType {
+				challengeType.currentRound += 1
+			}
+		} else {
+			return DefenderDiscontinued, nil
+		}
+
 		if defender.NumSteps() == 1 {
 			return runExecutionOneStepProof(ctx, eventChan, defender, contract)
 		}
