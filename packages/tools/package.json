@@ -1,0 +1,26 @@
+{
+  "name": "tools",
+  "version": "0.6.5",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "initialize-local-validators": "ts-node ./scripts/setup_validators.ts"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.1",
+    "@types/yargs": "^15.0.5",
+    "arb-provider-ethers": "^0.6.5",
+    "ethers": "^4.0.27",
+    "fs-extra": "^9.0.1",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.8.3",
+    "yargs": "^15.4.1"
+  },
+  "workspaces": {
+    "nohoist": [
+      "@types/fs-extra",
+      "fs-extra"
+    ]
+  }
+}
