@@ -51,11 +51,11 @@ func TestChallenges(t *testing.T) {
 	t.Run("Inbox Top Challenge", func(t *testing.T) {
 		testInboxTopChallenge(t, client, auths[0], auths[1])
 	})
-	t.Run("Messages Challenge", func(t *testing.T) {
-		testMessagesChallenge(t, client, auths[2], auths[3])
-	})
 	t.Run("Execution Challenge", func(t *testing.T) {
 		testExecutionChallenge(t, client, auths[4], auths[5])
+	})
+	t.Run("Messages Challenge", func(t *testing.T) {
+		testMessagesChallenge(t, client, auths[2], auths[3])
 	})
 	t.Run("ERC20 Messages Challenge", func(t *testing.T) {
 		testMessagesChallengeERC20(t, client, auths[6], auths[7])
@@ -66,7 +66,7 @@ func TestChallenges(t *testing.T) {
 	t.Run("Transaction Messages Challenge", func(t *testing.T) {
 		testMessagesChallengeTrnx(t, client, auths[10], auths[11])
 	})
-	t.Run("Contract Trans Messages Challenge", func(t *testing.T) {
-		testMessagesChallengeContractTrnx(t, client, auths[12], auths[13])
-	})
+	//t.Run("Contract Trans Messages Challenge", func(t *testing.T) {
+	//	testMessagesChallengeContractTrnx(t, client, auths[12], auths[13])
+	//})
 }
