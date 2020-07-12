@@ -24,14 +24,16 @@ interface IArbRollup {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress
     ) external;
 
-    function forwardContractMessage(address _sender, bytes calldata _data)
-        external
-        payable;
+    function forwardContractMessage(
+        address _sender,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable;
 }

@@ -168,7 +168,6 @@ func updateExecutionData(
 	// Update mach, precondition, deadline
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
-		pre.TimeBounds,
 		pre.BeforeInbox,
 		0,
 	)
@@ -224,7 +223,6 @@ func runExecutionOneStepProof(
 		pre := defender.GetPrecondition()
 		assertion, _ := defender.GetMachineState().ExecuteAssertion(
 			1,
-			pre.TimeBounds,
 			pre.BeforeInbox,
 			0,
 		)

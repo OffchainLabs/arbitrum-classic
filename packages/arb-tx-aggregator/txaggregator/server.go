@@ -107,7 +107,7 @@ func NewServer(
 // prepareTransactions reorders the transactions such that the position of each
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
-func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
+func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 	transactionsBySender := make(map[string][]DecodedBatchTx)
 	for _, tx := range txes {
 		senderPubkey := hexutil.Encode(tx.pubkey)
@@ -116,7 +116,7 @@ func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
 
 	for _, txes := range transactionsBySender {
 		sort.SliceStable(txes, func(i, j int) bool {
-			return txes[i].tx.SeqNum.Cmp(txes[j].tx.SeqNum) < 0
+			return txes[i].tx.Transaction.SequenceNum.Cmp(txes[j].tx.Transaction.SequenceNum) < 0
 		})
 	}
 
@@ -127,7 +127,7 @@ func prepareTransactions(txes []DecodedBatchTx) []message.BatchTx {
 		transactionsBySender[senderPubkey] = transactionsBySender[senderPubkey][1:]
 		batchTxes = append(batchTxes, nextTx.tx)
 	}
-	return batchTxes
+	return message.TransactionBatch{Transactions: batchTxes}
 }
 
 func (m *Server) sendBatch(ctx context.Context) {
@@ -144,42 +144,61 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	err := m.globalInbox.DeliverTransactionBatchNoWait(
+	err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
-		prepareTransactions(txes),
+		message.L2Message{Msg: prepareTransactions(txes)},
 	)
 
 	m.Lock()
 	if err != nil {
-		log.Println("Transaction aggregator failed: ", err)
+		log.Println("transaction aggregator failed: ", err)
 		m.valid = false
 	}
 }
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(r *http.Request, args *SendTransactionArgs, reply *SendTransactionReply) error {
-	toBytes, err := hexutil.Decode(args.To)
+func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *SendTransactionReply) error {
+	destBytes, err := hexutil.Decode(args.DestAddress)
 	if err != nil {
-		return errors2.Wrap(err, "error decoding to")
+		return errors2.Wrap(err, "error decoding Dest")
 	}
-	var to common.Address
-	copy(to[:], toBytes)
+	var dest common.Address
+	copy(dest[:], destBytes)
+
+	maxGas, valid := new(big.Int).SetString(args.MaxGas, 10)
+	if !valid {
+		return errors.New("invalid MaxGas")
+	}
+
+	gasPriceBid, valid := new(big.Int).SetString(args.GasPriceBid, 10)
+	if !valid {
+		return errors.New("invalid GasPriceBid")
+	}
 
 	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
 	if !valid {
-		return errors.New("Invalid sequence num")
+		return errors.New("invalid sequence num")
 	}
 
-	valueInt, valid := new(big.Int).SetString(args.Value, 10)
+	paymentInt, valid := new(big.Int).SetString(args.Payment, 10)
 	if !valid {
-		return errors.New("Invalid value")
+		return errors.New("invalid Payment")
 	}
 
 	data, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return errors2.Wrap(err, "error decoding data")
+	}
+
+	tx := message.Transaction{
+		MaxGas:      maxGas,
+		GasPriceBid: gasPriceBid,
+		SequenceNum: sequenceNum,
+		DestAddress: dest,
+		Payment:     paymentInt,
+		Data:        data,
 	}
 
 	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
@@ -203,42 +222,23 @@ func (m *Server) SendTransaction(r *http.Request, args *SendTransactionArgs, rep
 		signature[recoverBitPos] = 1
 	}
 
-	txDataHash := message.BatchTxHash(
-		m.rollupAddress,
-		to,
-		sequenceNum,
-		valueInt,
-		data,
-	)
-
+	txDataHash := tx.BatchTxHash(m.rollupAddress)
 	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
-
 	if !crypto.VerifySignature(
 		pubkeyBytes,
 		messageHash[:],
 		signature[:len(signature)-1],
 	) {
-		return errors.New("Invalid signature")
+		return errors.New("invalid signature")
 	}
 
 	var sigData [signatureLength]byte
 	copy(sigData[:], signature)
 
-	tx := message.BatchTx{
-		To:     to,
-		SeqNum: sequenceNum,
-		Value:  valueInt,
-		Data:   data,
-		Sig:    sigData,
+	batchTx := message.BatchTx{
+		Transaction: tx,
+		Signature:   sigData,
 	}
-
-	txHash := message.BatchTxHash(
-		m.rollupAddress,
-		tx.To,
-		tx.SeqNum,
-		tx.Value,
-		tx.Data,
-	)
 
 	var pubkey *ecdsa.PublicKey
 	var pubkeyErr error
@@ -249,22 +249,21 @@ func (m *Server) SendTransaction(r *http.Request, args *SendTransactionArgs, rep
 		pubkey = &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}
 	}
 
-	if pubkeyErr != nil || pubkey.X == nil || pubkey.Y == nil {
-		log.Println("Got tx: ", tx, "with hash", txHash, "from pubkey", hexutil.Encode(pubkeyBytes))
-	} else {
-		sender := crypto.PubkeyToAddress(*pubkey)
-		log.Println("Got tx: ", tx, "with hash", txHash, "from", hexutil.Encode(sender[:]))
+	if pubkeyErr != nil {
+		return err
 	}
+	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
+	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)
 
 	m.Lock()
 	defer m.Unlock()
 
 	if !m.valid {
-		return errors.New("Tx aggregator is not running")
+		return errors.New("tx aggregator is not running")
 	}
 
 	m.transactions = append(m.transactions, DecodedBatchTx{
-		tx:     tx,
+		tx:     batchTx,
 		pubkey: pubkeyBytes,
 	})
 	return nil

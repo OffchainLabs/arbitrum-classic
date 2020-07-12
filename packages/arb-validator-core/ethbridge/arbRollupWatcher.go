@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
@@ -29,10 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -70,12 +68,12 @@ type ethRollupWatcher struct {
 	ArbRollup *rollup.ArbRollup
 
 	rollupAddress ethcommon.Address
-	client        *ethclient.Client
+	client        ethutils.EthClient
 }
 
 func newRollupWatcher(
 	rollupAddress ethcommon.Address,
-	client *ethclient.Client,
+	client ethutils.EthClient,
 ) (*ethRollupWatcher, error) {
 	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
 	if err != nil {
@@ -243,13 +241,7 @@ func (vm *ethRollupWatcher) processEvents(
 			return nil, err
 		}
 		params := &valprotocol.AssertionParams{
-			NumSteps: eventVal.NumSteps,
-			TimeBounds: &protocol.TimeBounds{
-				LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
-				UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
-				LowerBoundTimestamp: eventVal.TimeBounds[2],
-				UpperBoundTimestamp: eventVal.TimeBounds[3],
-			},
+			NumSteps:             eventVal.NumSteps,
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
 		claim := &valprotocol.AssertionClaim{
@@ -316,8 +308,6 @@ func (vm *ethRollupWatcher) GetParams(
 			Val: rawParams.GracePeriodTicks,
 		},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     rawParams.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: rawParams.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }

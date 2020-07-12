@@ -17,10 +17,12 @@
 'use strict'
 
 import * as ethers from 'ethers'
+import txaggregator from './abi/txaggregator.server.d'
 
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
+/* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
 function _aggregatorClient(managerAddress: string): any {
   const callServer = (request: any, callback: any): void => {
     const options = {
@@ -32,6 +34,7 @@ function _aggregatorClient(managerAddress: string): any {
     }
 
     fetch(managerAddress, options)
+      /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
       .then((res: any) => {
         return res.text()
       })
@@ -47,6 +50,7 @@ function _aggregatorClient(managerAddress: string): any {
 }
 
 export class AggregatorClient {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public client: any
 
   constructor(managerUrl: string) {
@@ -54,9 +58,9 @@ export class AggregatorClient {
   }
 
   public async sendTransaction(
-    to: string,
+    destAddress: string,
     sequenceNum: ethers.utils.BigNumber,
-    value: ethers.utils.BigNumber,
+    payment: ethers.utils.BigNumber,
     data: string,
     pubkey: string,
     signature: string
@@ -64,9 +68,9 @@ export class AggregatorClient {
     return new Promise<txaggregator.SendTransactionReply>(
       (resolve, reject): void => {
         const params: txaggregator.SendTransactionArgs = {
-          to,
+          destAddress,
           sequenceNum: sequenceNum.toString(),
-          value: value.toString(),
+          payment: payment.toString(),
           data,
           pubkey,
           signature,

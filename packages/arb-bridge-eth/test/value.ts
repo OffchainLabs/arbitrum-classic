@@ -54,113 +54,36 @@ describe('Value', () => {
     })
   }
 
-  it('should parse erc20 message', async () => {
-    const val = new ArbValue.TupleValue([
-      new ArbValue.IntValue(2),
-      new ArbValue.IntValue(
-        '1454660323771124265538360532739934987166685588469'
-      ),
-      new ArbValue.TupleValue([
-        new ArbValue.IntValue(
-          '641988807973089174688456409219473706566398216120'
-        ),
-        new ArbValue.IntValue(
-          '1454660323771124265538360532739934987166685588469'
-        ),
-        new ArbValue.IntValue(1543),
-      ]),
-    ])
+  const cases = [
+    ['16', testVal.slice(0, 34)],
+    ['19', testVal.slice(0, 40)],
+    ['32', testVal],
+    ['64', testVal + testVal.slice(2)],
+  ]
 
-    const valData = ArbValue.marshal(val)
-    const res = await valueTester.deserializeMessageData(valData, 0)
-    const offset = res['1'].toNumber()
-    assert.isTrue(res['0'], "value didn't deserialize correctly")
-    assert.equal(res['2'].toNumber(), 2, 'Incorrect message type')
-    assert.equal(
-      res['3'],
-      '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5',
-      'Incorrect sender'
+  cases.forEach(([label, data]) => {
+    const dataLength = ethers.utils.hexDataLength(data)
+    it(
+      'should properly calculate bytestack hash of length ' + dataLength,
+      async () => {
+        const ethVal = await valueTester.bytesToBytestackHash(
+          data,
+          0,
+          dataLength
+        )
+        const jsVal = ArbValue.hexToBytestack(data).hash()
+        assert.equal(ethVal, jsVal)
+      }
     )
-
-    const res2 = await valueTester.getERCTokenMsgData(valData, offset)
-    assert.isTrue(res2['0'], "value didn't deserialize correctly")
-    assert.equal(
-      res2['2'],
-      '0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8',
-      'Incorrect token contract'
-    )
-    assert.equal(
-      res2['3'],
-      '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5',
-      'Incorrect dest'
-    )
-    assert.equal(res2['4'].toNumber(), 1543, 'Incorrect value')
-  })
-  it('should parse eth message', async () => {
-    const val = new ArbValue.TupleValue([
-      new ArbValue.IntValue(2),
-      new ArbValue.IntValue(
-        '1454660323771124265538360532739934987166685588469'
-      ),
-      new ArbValue.TupleValue([
-        new ArbValue.IntValue(
-          '1454660323771124265538360532739934987166685588469'
-        ),
-        new ArbValue.IntValue(1543),
-      ]),
-    ])
-
-    const valData = ArbValue.marshal(val)
-    const res = await valueTester.deserializeMessageData(valData, 0)
-    const offset = res['1'].toNumber()
-    assert.isTrue(res['0'], "value didn't deserialize correctly")
-    assert.equal(res['2'].toNumber(), 2, 'Incorrect message type')
-    assert.equal(
-      res['3'],
-      '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5',
-      'Incorrect sender'
-    )
-
-    const res2 = await valueTester.getEthMsgData(valData, offset)
-    assert.isTrue(res2['0'], "value didn't deserialize correctly")
-    assert.equal(
-      res2['2'],
-      '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5',
-      'Incorrect dest'
-    )
-    assert.equal(res2['3'].toNumber(), 1543, 'Incorrect value')
-  })
-
-  it('should properly calculate bytestack hash 32 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal)
-    const jsVal = ArbValue.hexToBytestack(testVal).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 64 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(
-      testVal + testVal.slice(2)
-    )
-    const jsVal = ArbValue.hexToBytestack(testVal + testVal.slice(2)).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 16 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 34))
-    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 34)).hash()
-    assert.equal(ethVal, jsVal)
-  })
-
-  it('should properly calculate bytestack hash 19 bytes', async () => {
-    const ethVal = await valueTester.bytesToBytestackHash(testVal.slice(0, 40))
-    const jsVal = ArbValue.hexToBytestack(testVal.slice(0, 40)).hash()
-    assert.equal(ethVal, jsVal)
   })
 
   it('should properly convert bytestack to bytes', async () => {
     const bytestack = ArbValue.hexToBytestack(testVal.slice(0, 40))
     const bytestackData = ethers.utils.hexlify(ArbValue.marshal(bytestack))
-    const ethVal = await valueTester.bytestackToBytes(bytestackData)
-    assert.equal(ethVal, testVal.slice(0, 40))
+    const { 0: valid, 1: offset, 2: data } = await valueTester.bytestackToBytes(
+      bytestackData,
+      0
+    )
+    assert.equal(data, testVal.slice(0, 40))
   })
 })

@@ -23,25 +23,55 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+namespace {
+uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }
 
-std::pair<MachineState, bool> MachineState::loadFromFile(
-    const std::string& contract_filename) {
+MachineState::MachineState()
+    : pool(std::make_unique<TuplePool>()),
+      arb_gas_remaining(max_arb_gas_remaining),
+      pc(0, 0),
+      errpc({0, 0}, getErrCodePoint()) {}
+
+MachineState::MachineState(std::shared_ptr<Code> code_,
+                           value static_val_,
+                           std::shared_ptr<TuplePool> pool_)
+    : pool(std::move(pool_)),
+      code(std::move(code_)),
+      static_val(std::move(static_val_)),
+      arb_gas_remaining(max_arb_gas_remaining),
+      pc(code->initialCodePointRef()),
+      errpc({0, 0}, code->loadCodePoint({0, 0})) {}
+
+MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
+                           std::shared_ptr<Code> code_,
+                           value register_val_,
+                           value static_val_,
+                           Datastack stack_,
+                           Datastack auxstack_,
+                           uint256_t arb_gas_remaining_,
+                           Status state_,
+                           CodePointRef pc_,
+                           CodePointStub errpc_)
+    : pool(std::move(pool_)),
+      code(std::move(code_)),
+      registerVal(std::move(register_val_)),
+      static_val(static_val_),
+      stack(std::move(stack_)),
+      auxstack(std::move(auxstack_)),
+      arb_gas_remaining(arb_gas_remaining_),
+      state(state_),
+      pc(pc_),
+      errpc(errpc_) {}
+
+MachineState MachineState::loadFromFile(
+    const std::string& executable_filename) {
     auto pool = std::make_shared<TuplePool>();
-    auto ret = parseStaticVmValues(contract_filename, *pool.get());
-
-    if (!ret.second) {
-        return std::make_pair(MachineState{}, false);
-    }
-
-    return std::make_pair(MachineState{std::make_shared<const StaticVmValues>(
-                                           std::move(ret.first)),
-                                       std::move(pool)},
-                          true);
+    auto executable = loadExecutable(executable_filename, *pool);
+    auto code = std::make_shared<Code>(0);
+    code->addSegment(std::move(executable.code));
+    return MachineState{std::move(code), std::move(executable.static_val),
+                        std::move(pool)};
 }
 
 uint256_t MachineState::hash() const {
@@ -50,10 +80,10 @@ uint256_t MachineState::hash() const {
     if (state == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 6> data;
+    std::array<unsigned char, 32 * 7> data;
     auto oit = data.begin();
     {
-        auto val = ::hash(static_values->code[pc]);
+        auto val = ::hash(loadCurrentInstruction());
         oit = to_big_endian(val, oit);
     }
     {
@@ -69,11 +99,12 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        auto val = ::hash_value(static_values->staticVal);
+        auto val = ::hash_value(static_val);
         oit = to_big_endian(val, oit);
     }
+    { oit = to_big_endian(arb_gas_remaining, oit); }
     {
-        auto val = ::hash(static_values->code[errpc]);
+        auto val = ::hash_value(errpc);
         to_big_endian(val, oit);
     }
 
@@ -85,7 +116,7 @@ uint256_t MachineState::hash() const {
 uint256_t MachineState::getMachineSize() {
     uint256_t machine_size = 0;
 
-    machine_size += getSize(static_values->staticVal);
+    machine_size += getSize(static_val);
     machine_size += getSize(registerVal);
     machine_size += stack.getTotalValueSize();
     machine_size += auxstack.getTotalValueSize();
@@ -100,6 +131,7 @@ std::vector<unsigned char> marshalState(const Code& code,
                                         HashPreImage auxStackPreImage,
                                         value registerVal,
                                         value staticVal,
+                                        uint256_t arb_gas_remaining,
                                         CodePointStub errpc) {
     auto buf = std::vector<unsigned char>();
     marshal_uint256_t(next_codepoint_hash, buf);
@@ -109,6 +141,7 @@ std::vector<unsigned char> marshalState(const Code& code,
 
     ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
+    marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
 
     return buf;
@@ -119,33 +152,30 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
 
-    return ::marshalState(static_values->code, ::hash(static_values->code[pc]),
+    return ::marshalState(*code, ::hash(loadCurrentInstruction()),
                           stackPreImage, auxStackPreImage, registerVal,
-                          static_values->staticVal,
-                          CodePointStub{errpc, static_values->code[errpc]});
+                          static_val, arb_gas_remaining, errpc);
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
-    auto opcode = static_values->code[pc].op.opcode;
+    auto currentInstruction = loadCurrentInstruction();
+    auto opcode = currentInstruction.op.opcode;
     std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (static_values->code[pc].op.immediate && !stackPops.empty()) {
+    if (currentInstruction.op.immediate && !stackPops.empty()) {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.begin());
     }
-    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
 
-    auto stackProof = stack.marshalForProof(stackPops, static_values->code);
-    auto auxStackProof =
-        auxstack.marshalForProof(auxStackPops, static_values->code);
+    auto stackProof = stack.marshalForProof(stackPops, *code);
+    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
     auto buf = ::marshalState(
-        static_values->code, static_values->code[pc].nextHash, stackProof.first,
-        auxStackProof.first, registerVal, static_values->staticVal,
-        CodePointStub{errpc, static_values->code[errpc]});
+        *code, currentInstruction.nextHash, stackProof.first,
+        auxStackProof.first, registerVal, static_val, arb_gas_remaining, errpc);
 
-    static_values->code[pc].op.marshalForProof(buf, immediateMarshalLevel,
-                                               static_values->code);
+    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
@@ -153,38 +183,28 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     return buf;
 }
 
-BlockReason MachineState::isBlocked(uint256_t currentTime,
-                                    bool newMessages) const {
+BlockReason MachineState::isBlocked(bool newMessages) const {
     if (state == Status::Error) {
         return ErrorBlocked();
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = static_values->code[pc];
+    auto& instruction = loadCurrentInstruction();
     if (instruction.op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
         }
-
-        auto& immediate = instruction.op.immediate;
-        value param;
-        if (immediate) {
-            param = *immediate;
-        } else {
-            param = stack[0];
-        }
-        auto paramNum = nonstd::get_if<uint256_t>(&param);
-        if (!paramNum) {
-            return NotBlocked();
-        }
-        if (currentTime < *paramNum) {
-            return InboxBlocked(*paramNum);
-        } else {
-            return NotBlocked();
-        }
+        return InboxBlocked();
     } else {
         return NotBlocked();
     }
+}
+
+const CodePoint& MachineState::loadCurrentInstruction() const {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
+        loaded_segment = code->loadCodeSegment(pc.segment);
+    }
+    return (*loaded_segment)[pc.pc];
 }
 
 BlockReason MachineState::runOne() {
@@ -196,60 +216,83 @@ BlockReason MachineState::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = static_values->code[pc];
+    auto& instruction = loadCurrentInstruction();
 
-    // if opcode is invalid, increment step count and return error or
-    // errorCodePoint
-    if (!isValidOpcode(instruction.op.opcode)) {
-        state = Status::Error;
-        context.numSteps++;
-        if (!errpc.is_err) {
-            pc = errpc;
-            state = Status::Extensive;
-        }
-        return NotBlocked();
-    } else {
+    // We're only blocked if we can't execute at all
+    BlockReason blockReason = [&]() -> BlockReason {
+        // Always push the immediate to the stack if we're not blocked
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
             stack.push(std::move(imm));
         }
+
+        uint64_t gas_cost;
+        try {
+            gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
+        } catch (const std::exception& e) {
+            // The opcode is invalid, execute by transitioning to the error
+            // state
+            state = Status::Error;
+            return NotBlocked();
+        }
+
+        if (arb_gas_remaining < gas_cost) {
+            // If there's insufficient gas remaining, execute by transitioning
+            // to the error state with remaining gas set to max
+            arb_gas_remaining = max_arb_gas_remaining;
+            state = Status::Error;
+            return NotBlocked();
+        }
+        arb_gas_remaining -= gas_cost;
+
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = stack.stacksize();
         BlockReason blockReason = NotBlocked();
         try {
             blockReason = runOp(instruction.op.opcode);
-        } catch (const bad_pop_type&) {
-            state = Status::Error;
-        } catch (const bad_tuple_index&) {
+        } catch (const std::exception&) {
             state = Status::Error;
         }
-        // if not blocked, increment step count and gas count
-        if (nonstd::get_if<NotBlocked>(&blockReason)) {
-            context.numSteps++;
-            context.numGas += InstructionArbGasCost.at(instruction.op.opcode);
-        } else {
+
+        if (!nonstd::holds_alternative<NotBlocked>(blockReason)) {
+            // Get rid of the immediate and reset the gas if the machine was
+            // actually blocked
+            arb_gas_remaining += gas_cost;
             if (instruction.op.immediate) {
+                stack.popClear();
+            }
+            return blockReason;
+        }
+
+        // adjust for the gas used
+        auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
+        context.numGas += gasUsed;
+
+        if (state == Status::Error) {
+            // if state is Error, clean up stack
+            // Clear stack to base for instruction
+            auto stackItems =
+                InstructionStackPops.at(instruction.op.opcode).size();
+            while (stack.stacksize() > 0 &&
+                   startStackSize - stack.stacksize() < stackItems) {
                 stack.popClear();
             }
         }
 
-        if (state != Status::Error) {
-            return blockReason;
-        }
-        // if state is Error, clean up stack
-        // Clear stack to base for instruction
-        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-        while (stack.stacksize() > 0 &&
-               startStackSize - stack.stacksize() < stackItems) {
-            stack.popClear();
-        }
+        return NotBlocked();
+    }();
 
-        if (!errpc.is_err) {
-            pc = errpc;
-            state = Status::Extensive;
-        }
-        return blockReason;
+    if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
+        context.numSteps++;
     }
+
+    // If we're in the error state, jump to the error handler if one is set
+    if (state == Status::Error && !errpc.is_error()) {
+        pc = errpc.pc;
+        state = Status::Extensive;
+    }
+
+    return blockReason;
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
@@ -415,6 +458,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::TLEN:
             machineoperation::tlen(*this);
             break;
+        case OpCode::XGET:
+            machineoperation::xget(*this);
+            break;
+        case OpCode::XSET:
+            machineoperation::xset(*this);
+            break;
             /***********************/
             /*  Logging Operations */
             /***********************/
@@ -423,7 +472,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::LOG:
             machineoperation::log(*this);
             break;
-        case OpCode::DEBUG:
+        case OpCode::DEBUG_PRINT:
             machineoperation::debug(*this);
             break;
             /**********************/
@@ -438,9 +487,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
 
             break;
         }
-        case OpCode::GETTIME:
-            machineoperation::getTime(*this);
-            break;
         case OpCode::INBOX:
             return machineoperation::inboxOp(*this);
         case OpCode::ERROR:
@@ -448,6 +494,24 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::HALT:
             state = Status::Halted;
+            break;
+        case OpCode::SET_GAS:
+            machineoperation::setgas(*this);
+            break;
+        case OpCode::PUSH_GAS:
+            machineoperation::pushgas(*this);
+            break;
+        case OpCode::ERR_CODE_POINT:
+            machineoperation::errcodept(*this);
+            break;
+        case OpCode::PUSH_INSN:
+            machineoperation::pushinsn(*this);
+            break;
+        case OpCode::PUSH_INSN_IMM:
+            machineoperation::pushinsnimm(*this);
+            break;
+        case OpCode::SIDELOAD:
+            machineoperation::sideload(*this);
             break;
             /*****************/
             /*  Precompiles  */
@@ -466,14 +530,18 @@ BlockReason MachineState::runOp(OpCode opcode) {
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
-    os << "codePointHash " << to_hex_str(hash(val.static_values->code[val.pc]))
-       << "\n";
+    os << "pc " << val.pc << "\n";
+    os << "data stack: " << val.stack << "\n";
+    auto& current_code_point = val.code->loadCodePoint(val.pc);
+    os << "operation " << current_code_point.op << "\n";
+    os << "codePointHash " << to_hex_str(hash(current_code_point)) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
     os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash_value(val.static_values->staticVal))
-       << "\n";
-    os << "errHandlerHash "
-       << to_hex_str(hash(val.static_values->code[val.errpc])) << "\n";
+    os << "staticHash " << to_hex_str(hash_value(val.static_val)) << "\n";
+    os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
+    os << "err handler " << val.errpc.pc << "\n";
+    auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
+    os << "errHandlerHash " << to_hex_str(hash(err_code_point)) << "\n";
     return os;
 }

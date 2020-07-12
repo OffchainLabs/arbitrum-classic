@@ -27,7 +27,7 @@ var (
 )
 
 // ArbInfoABI is the input ABI used to generate the binding from.
-const ArbInfoABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getCode\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"o_code\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbInfoABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getCode\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbInfoFuncSigs maps the 4-byte function signature to its string representation.
 var ArbInfoFuncSigs = map[string]string{
@@ -36,7 +36,7 @@ var ArbInfoFuncSigs = map[string]string{
 }
 
 // ArbInfoBin is the compiled bytecode used for deploying new contracts.
-var ArbInfoBin = "0x608060405234801561001057600080fd5b50610177806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f146100d6575b600080fd5b6100616004803603602081101561005157600080fd5b50356001600160a01b031661010e565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561009b578181015183820152602001610083565b50505050905090810190601f1680156100c85780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6100fc600480360360208110156100ec57600080fd5b50356001600160a01b0316610135565b60408051918252519081900360200190f35b60408051603f833b908101601f191682019092528181529080600060208401853c50919050565b6001600160a01b0316319056fea265627a7a723158205fc15796bddab8ba8a716b48704fed1fd165fa1ce6812eeddfc10c4f4b54f03664736f6c634300050f0032"
+var ArbInfoBin = "0x608060405234801561001057600080fd5b50610198806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f146100d6575b600080fd5b6100616004803603602081101561005157600080fd5b50356001600160a01b031661010e565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561009b578181015183820152602001610083565b50505050905090810190601f1680156100c85780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6100fc600480360360208110156100ec57600080fd5b50356001600160a01b0316610156565b60408051918252519081900360200190f35b60606000823b90506060816040519080825280601f01601f191660200182016040528015610143576020820181803883390190505b50905081600060208301863c9392505050565b6001600160a01b0316319056fea265627a7a723158202baa7684c81c244373908891472cadcf1ee1b2b273e2dfca9e05300f37c5c9dd64736f6c634300050f0032"
 
 // DeployArbInfo deploys a new Ethereum contract, binding an instance of ArbInfo to it.
 func DeployArbInfo(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ArbInfo, error) {
@@ -222,7 +222,7 @@ func (_ArbInfo *ArbInfoCallerSession) GetBalance(account common.Address) (*big.I
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) view returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes)
 func (_ArbInfo *ArbInfoCaller) GetCode(opts *bind.CallOpts, account common.Address) ([]byte, error) {
 	var (
 		ret0 = new([]byte)
@@ -234,14 +234,14 @@ func (_ArbInfo *ArbInfoCaller) GetCode(opts *bind.CallOpts, account common.Addre
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) view returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes)
 func (_ArbInfo *ArbInfoSession) GetCode(account common.Address) ([]byte, error) {
 	return _ArbInfo.Contract.GetCode(&_ArbInfo.CallOpts, account)
 }
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.
 //
-// Solidity: function getCode(address account) view returns(bytes o_code)
+// Solidity: function getCode(address account) view returns(bytes)
 func (_ArbInfo *ArbInfoCallerSession) GetCode(account common.Address) ([]byte, error) {
 	return _ArbInfo.Contract.GetCode(&_ArbInfo.CallOpts, account)
 }

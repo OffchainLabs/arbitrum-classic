@@ -83,8 +83,8 @@ class BasicVM:
         self.aux_stack = Stack()
         self.register = value.Tuple([])
         self.static = value.Tuple([])
+        self.arb_gas_remaining = (1 << 256) - 1
         self.err_handler = None
-        self.atomic_count = 0
 
         self.env = VMEnv()
         self.halted = False
@@ -109,13 +109,9 @@ class BasicVM:
             self.stack.push(val)
 
     def inbox(self):
-        if (
-            self.env.messages == value.Tuple([])
-            and self.stack.peak() > self.env.time_bounds[0]
-        ):
+        if self.env.messages == value.Tuple([]):
             raise VMBlocked()
 
-        self.stack.pop()
         self.stack.push(self.env.messages)
         self.env.messages = value.Tuple([])
 
@@ -196,6 +192,20 @@ class BasicVM:
 
     def tget(self):
         instructions.tget(self.stack)
+
+    def xset(self):
+        index = self.stack.pop(value.IntType())
+        val = self.stack.pop(value.ValueType())
+        tup = self.aux_stack.pop(value.TupleType())
+        self.aux_stack.push(tup.set_tup_val(index, val))
+
+    def xget(self):
+        index = self.stack.pop(value.IntType())
+        tup = self.aux_stack.pop(value.TupleType())
+        if not tup.has_member_at_index(index):
+            raise Exception("Tried to get index {} from tuple {}".format(index, tup))
+        self.aux_stack.push(tup)
+        self.stack.push(tup.get_tup(index))
 
     def type(self):
         item = self.stack.pop()
@@ -363,9 +373,6 @@ class BasicVM:
         print("ecrecover does not yet support native python execution")
         exit()
 
-    def gettime(self):
-        self.stack.push(self.env.time_bounds)
-
     def bitwise_and(self):
         op1 = self.stack.pop()
         op2 = self.stack.pop()
@@ -393,11 +400,24 @@ class BasicVM:
         else:
             self.stack.push((op2 // 256 ** (31 - op1)) % 256)
 
-    def incatomic(self):
-        self.atomic_count += 1
+    def setgas(self):
+        gas = self.stack.pop()
+        self.arb_gas_remaining = gas
 
-    def decatomic(self):
-        self.atomic_count -= 1
+    def pushgas(self):
+        self.stack.push(self.arb_gas_remaining)
+
+    def errcodepoint(self):
+        raise Exception("not implemented")
+
+    def pushinsn(self):
+        raise Exception("not implemented")
+
+    def pushinsnimm(self):
+        raise Exception("not implemented")
+
+    def sideload(self):
+        raise Exception("not implemented")
 
     def cast(self, typ):
         pass

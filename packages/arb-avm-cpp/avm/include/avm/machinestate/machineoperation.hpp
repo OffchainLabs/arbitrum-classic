@@ -70,13 +70,20 @@ void swap2(MachineState& m);
 void tget(MachineState& m);
 void tset(MachineState& m);
 void tlen(MachineState& m);
+void xget(MachineState& m);
+void xset(MachineState& m);
 void ec_recover(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
 bool send(MachineState& m);
-void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
+void setgas(MachineState& m);
+void pushgas(MachineState& m);
+void errcodept(MachineState& m);
+void pushinsn(MachineState& m);
+void pushinsnimm(MachineState& m);
+void sideload(MachineState& m);
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

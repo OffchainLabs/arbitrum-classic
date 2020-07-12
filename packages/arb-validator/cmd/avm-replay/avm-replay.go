@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
@@ -57,13 +56,11 @@ func toEth(val *big.Int) *big.Float {
 	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 }
 
-func runMessage(mach machine.Machine, msg message.Delivered) (evm.Result, error) {
-	tb := protocol.NewRandomTimeBounds()
+func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
 	vmInbox := structures.NewVMInbox()
 	vmInbox.DeliverMessage(msg)
 	assertion, _ := mach.ExecuteAssertion(
 		100000,
-		tb,
 		vmInbox.AsValue(),
 		1000,
 	)
@@ -72,7 +69,7 @@ func runMessage(mach machine.Machine, msg message.Delivered) (evm.Result, error)
 	if len(logs) != 1 {
 		log.Fatal("returned incorrect log count")
 	}
-	evmResult, err := evm.ProcessLog(logs[0])
+	evmResult, err := evm.NewResultFromValue(logs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -93,28 +90,16 @@ func testMessages(filename string, contract string) error {
 	//tb := protocol.NewRandomTimeBounds()
 
 	addressesMap := make(map[common.Address]bool)
-	singleMessages := make([]message.Delivered, 0)
-	for _, msg := range messages {
-		for _, del := range msg.VMInboxMessages() {
-			singleMessages = append(singleMessages, message.Delivered{
-				Message:      del.Message,
-				DeliveryInfo: del.DeliveryInfo,
-			})
-			addressesMap[del.Message.DestAddress()] = true
-			addressesMap[del.Message.SenderAddress()] = true
-		}
-	}
 	addresses := make([]common.Address, 0, len(addressesMap))
 	for address := range addressesMap {
 		addresses = append(addresses, address)
 	}
 
 	totalSupplyData, _ := hexutil.Decode("0x18160ddd")
-	totalSupplyCall := message.Call{
-		To:   common.HexToAddress("0x3c1be20be169df0d99cca3730aae70580c3edf9a"),
-		From: common.Address{},
-		Data: totalSupplyData,
-	}
+	totalSupplyCall := message.NewSimpleCall(
+		common.HexToAddress("0x3c1be20be169df0d99cca3730aae70580c3edf9a"),
+		totalSupplyData,
+	)
 
 	prevEthBalances := make(map[common.Address]*big.Int)
 	prevTokenBalances := make(map[common.Address]*big.Int)
@@ -124,9 +109,9 @@ func testMessages(filename string, contract string) error {
 	}
 	prevTotalSupply := big.NewInt(0)
 
-	runMsg := func(msg message.Delivered) error {
+	runMsg := func(msg message.InboxMessage) error {
 		log.Println()
-		log.Println(msg.Message)
+		log.Println(msg)
 
 		txReturn, err := runMessage(mach, msg)
 		if err != nil {
@@ -134,52 +119,56 @@ func testMessages(filename string, contract string) error {
 		}
 		log.Println("tx result", txReturn)
 
-		tokenSupplyResult, err := runMessage(mach.Clone(), message.Delivered{
-			Message:      totalSupplyCall,
-			DeliveryInfo: msg.DeliveryInfo,
-		})
+		tokenSupplyResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
+			totalSupplyCall,
+			common.Address{},
+			big.NewInt(0),
+			message.ChainTime{},
+		))
 		if err != nil {
 			log.Fatal(err)
 		}
-		totalBalance := new(big.Int).SetBytes(tokenSupplyResult.GetReturnData())
+		totalBalance := new(big.Int).SetBytes(tokenSupplyResult.ReturnData)
 		log.Println("total supply", toEth(totalBalance))
 		ethBalances := make(map[common.Address]*big.Int)
 		tokenBalances := make(map[common.Address]*big.Int)
 		for _, address := range addresses {
 			getTokenBalanceData, _ := hexutil.Decode("0x70a08231000000000000000000000000" + address.String()[2:])
-			getTokenBalanceCall := message.Call{
-				To:   common.HexToAddress("0x716f0d674efeeca329f141d0ca0d97a98057bdbf"),
-				From: common.Address{},
-				Data: getTokenBalanceData,
-			}
-			tokenBalanceResult, err := runMessage(mach.Clone(), message.Delivered{
-				Message:      getTokenBalanceCall,
-				DeliveryInfo: msg.DeliveryInfo,
-			})
+			getTokenBalanceCall := message.NewSimpleCall(
+				common.HexToAddress("0x716f0d674efeeca329f141d0ca0d97a98057bdbf"),
+				getTokenBalanceData,
+			)
+			tokenBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
+				getTokenBalanceCall,
+				common.Address{},
+				big.NewInt(0),
+				message.ChainTime{},
+			))
 			getEthBalanceData, _ := hexutil.Decode("0xf8b2cb4f000000000000000000000000" + address.String()[2:])
-			call := message.Call{
-				To:   common.HexToAddress("0x0000000000000000000000000000000000000065"),
-				From: common.Address{},
-				Data: getEthBalanceData,
-			}
-			ethBalanceResult, err := runMessage(mach.Clone(), message.Delivered{
-				Message:      call,
-				DeliveryInfo: msg.DeliveryInfo,
-			})
+			call := message.NewSimpleCall(
+				common.HexToAddress("0x0000000000000000000000000000000000000065"),
+				getEthBalanceData,
+			)
+			ethBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
+				call,
+				common.Address{},
+				big.NewInt(0),
+				message.ChainTime{},
+			))
 			if err != nil {
 				log.Fatal(err)
 			}
-			ethBalances[address] = new(big.Int).SetBytes(ethBalanceResult.GetReturnData())
-			tokenBalances[address] = new(big.Int).SetBytes(tokenBalanceResult.GetReturnData())
+			ethBalances[address] = new(big.Int).SetBytes(ethBalanceResult.ReturnData)
+			tokenBalances[address] = new(big.Int).SetBytes(tokenBalanceResult.ReturnData)
 
 			log.Println("balance", address, toEth(ethBalances[address]), toEth(tokenBalances[address]))
 		}
 
-		blocked := mach.IsBlocked(common.NewTimeBlocksInt(0), true)
+		blocked := mach.IsBlocked(true)
 		if blocked != nil {
 			return fmt.Errorf("machine is blocked: %v", blocked)
 		}
-		if txReturn.Type() == evm.RevertCode {
+		if txReturn.ResultCode == evm.RevertCode {
 			for _, address := range addresses {
 				if ethBalances[address].Cmp(prevEthBalances[address]) != 0 {
 					log.Fatal("eth balance changed after revert")
@@ -198,7 +187,7 @@ func testMessages(filename string, contract string) error {
 		return nil
 	}
 
-	for i, msg := range singleMessages {
+	for i, msg := range messages {
 		//if i == 35 {
 		//	break
 		//}
@@ -259,7 +248,7 @@ func testMessages(filename string, contract string) error {
 	return nil
 }
 
-func loadMessages(filename string) ([]message.Delivered, error) {
+func loadMessages(filename string) ([]message.InboxMessage, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -274,23 +263,17 @@ func loadMessages(filename string) ([]message.Delivered, error) {
 		return nil, err
 	}
 
-	received := make([]message.Received, 0, len(messageVals))
+	messages := make([]message.InboxMessage, 0, len(messageVals))
 	for _, val := range messageVals {
-		msg, err := message.UnmarshalReceivedFromCheckpoint(val)
+		msg, err := message.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
-		received = append(received, msg)
+		messages = append(messages, msg)
 	}
 
-	log.Println("Got", len(received), "messages")
-
-	inbox := structures.NewInbox()
-	for _, msg := range received {
-		inbox.DeliverMessage(msg)
-	}
-
-	return inbox.GetAllMessages(), nil
+	log.Println("Got", len(messages), "messages")
+	return messages, nil
 }
 
 func getMessages(ethURL string, rollupAddress common.Address, filename string) error {
@@ -322,16 +305,16 @@ func getMessages(ethURL string, rollupAddress common.Address, filename string) e
 		return err
 	}
 
-	received, err := inboxWatcher.GetAllReceived(ctx, blockId.Height.AsInt(), nil)
+	events, err := inboxWatcher.GetDeliveredEvents(ctx, blockId.Height.AsInt(), nil)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Got", len(received), "messages")
+	log.Println("Got", len(events), "messages")
 
-	values := make([]value.Value, 0, len(received))
-	for _, msg := range received {
-		values = append(values, msg.CheckpointValue())
+	values := make([]value.Value, 0, len(events))
+	for _, ev := range events {
+		values = append(values, ev.Message.AsValue())
 	}
 
 	messagesStackVal := message.ListToStackValue(values)

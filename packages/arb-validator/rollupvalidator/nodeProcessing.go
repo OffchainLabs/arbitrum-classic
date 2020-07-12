@@ -23,7 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -175,22 +174,17 @@ func processNode(node *structures.Node) (*nodeInfo, error) {
 	nodeInfo.EVMTransactionHashes = make([]common.Hash, 0, len(nodeInfo.AVMLogs))
 
 	for _, logVal := range nodeInfo.AVMLogs {
-		evmVal, err := evm.ProcessLog(logVal)
+		result, err := evm.NewResultFromValue(logVal)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
 			continue
 		}
-		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, evmVal.GetLogs())
+		nodeInfo.EVMLogs = append(nodeInfo.EVMLogs, result.EVMLogs)
 
-		if evmVal, ok := evmVal.(evm.Revert); ok {
-			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(evmVal.ReturnVal))
+		if result.ResultCode == evm.RevertCode {
+			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(result.ReturnData))
 		}
-
-		delivered, err := message.UnmarshalRawDelivered(evmVal.GetDeliveredMessage())
-		if err != nil {
-			return nil, err
-		}
-		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, delivered.TxHash())
+		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, result.L1Message.MessageID())
 	}
 	return nodeInfo, nil
 }

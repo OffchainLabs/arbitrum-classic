@@ -32,7 +32,7 @@
 
 void saveValue(Transaction& transaction,
                const value& val,
-               int expected_ref_count,
+               uint32_t expected_ref_count,
                bool expected_status) {
     auto results = saveValue(transaction, val);
     transaction.commit();
@@ -42,7 +42,7 @@ void saveValue(Transaction& transaction,
 
 void getValue(const Transaction& transaction,
               const value& value,
-              int expected_ref_count,
+              uint32_t expected_ref_count,
               bool expected_status) {
     TuplePool pool;
     auto results = getValue(transaction, hash_value(value), &pool);
@@ -54,7 +54,7 @@ void getValue(const Transaction& transaction,
 
 void getTuple(const Transaction& transaction,
               const Tuple& tuple,
-              int expected_ref_count,
+              uint32_t expected_ref_count,
               bool expected_status) {
     TuplePool pool;
     auto results = getValue(transaction, hash(tuple), &pool);
@@ -85,7 +85,7 @@ void getTupleValues(const Transaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -99,14 +99,14 @@ TEST_CASE("Save value") {
         saveValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        auto code_point = CodePointStub(1, 654546);
-        saveValue(*transaction, code_point, 1, true);
+        CodePointStub code_point_stub({0, 1}, 654546);
+        saveValue(*transaction, code_point_stub, 1, true);
     }
 }
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     TuplePool pool;
 
@@ -132,7 +132,7 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save empty tuple") {
@@ -153,12 +153,12 @@ TEST_CASE("Save and get value") {
         getValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true);
     }
     SECTION("save err codepoint") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true);
     }
@@ -166,7 +166,7 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     TuplePool pool;
 
@@ -178,14 +178,14 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
@@ -199,7 +199,7 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
         auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
@@ -209,7 +209,7 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save multiple valued tuple, saveValue()") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
         auto tuple = Tuple(inner_tuple, num, code_point_stub, &pool);
@@ -223,7 +223,7 @@ TEST_CASE("Save and get tuple values") {
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -233,7 +233,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true);
     }
     SECTION("save codepoint in tuple") {
-        CodePointStub code_point_stub(1, 654546);
+        CodePointStub code_point_stub({0, 1}, 654546);
         auto tuple = Tuple(code_point_stub, &pool);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true);
@@ -286,16 +286,18 @@ TEST_CASE("Save And Get Tuple") {
     }
 }
 
-void saveState(Transaction& transaction, const Machine& machine) {
+void saveState(Transaction& transaction,
+               const Machine& machine,
+               uint256_t expected_ref_count) {
     auto results = saveMachine(transaction, machine);
-    REQUIRE(results.reference_count == 1);
+    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok());
     REQUIRE(transaction.commit().ok());
 }
 
 void checkSavedState(const Transaction& transaction,
                      const Machine& expected_machine,
-                     int expected_ref_count) {
+                     uint32_t expected_ref_count) {
     TuplePool pool;
     auto results = getMachineState(transaction, expected_machine.hash());
     REQUIRE(results.status.ok());
@@ -345,14 +347,15 @@ void deleteCheckpoint(Transaction& transaction,
 
 Machine getComplexMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code;
-    code.addOperation(Operation(OpCode::ADD));
-    code.addOperation(Operation(OpCode::MUL));
-    code.addOperation(Operation(OpCode::SUB));
+    auto code = std::make_shared<Code>();
+    auto stub = code->addSegment();
+    stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
+    stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
+    stub = code->addOperation(stub.pc, Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), pool.get());
 
-    CodePointStub code_point_stub(1, 654546);
+    CodePointStub code_point_stub({0, 1}, 654546);
     auto tup1 = Tuple(register_val, pool.get());
     auto tup2 = Tuple(code_point_stub, tup1, pool.get());
 
@@ -362,74 +365,64 @@ Machine getComplexMachine() {
     aux_stack.push(register_val);
     aux_stack.push(code_point_stub);
 
-    CodePointStub pc(0, 645357);
-    CodePointStub err_pc(0, 968769876);
+    uint256_t arb_gas_remaining = 534574678365;
+
+    CodePointRef pc{0, 0};
+    CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    auto static_values = std::make_shared<StaticVmValues>(
-        std::move(code), std::move(static_val));
-    return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc.pc,
-                                err_pc.pc));
+    return Machine(MachineState(pool, std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc));
 }
 
 Machine getDefaultMachine() {
     auto pool = std::make_shared<TuplePool>();
-    Code code;
+    auto code = std::make_shared<Code>();
+    code->addSegment();
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
-    CodePointRef pc(0, false);
-    CodePointRef err_pc(0, true);
+    uint256_t arb_gas_remaining = 534574678365;
+    CodePointRef pc(0, 0);
+    CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    auto static_values = std::make_shared<StaticVmValues>(
-        std::move(code), std::move(static_val));
-    return Machine(MachineState(pool, std::move(static_values), register_val,
-                                data_stack, aux_stack, state, pc, err_pc));
-}
-
-std::vector<uint256_t> getHashKeys(MachineStateKeys data) {
-    std::vector<uint256_t> hash_keys;
-
-    hash_keys.push_back(data.auxstack_hash);
-    hash_keys.push_back(data.datastack_hash);
-    hash_keys.push_back(data.register_hash);
-
-    return hash_keys;
+    return Machine(MachineState(pool, std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc));
 }
 
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
     }
     SECTION("with values") {
         auto machine = getComplexMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
     }
 }
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         checkSavedState(*transaction, machine, 1);
     }
     SECTION("with values") {
         auto machine = getComplexMachine();
-        saveState(*transaction, machine);
+        saveState(*transaction, machine, 1);
         checkSavedState(*transaction, machine, 1);
     }
 }
@@ -437,40 +430,38 @@ TEST_CASE("Get Machinestate data") {
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
     TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         deleteCheckpoint(*transaction, machine);
     }
     SECTION("with actual state values") {
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
+        saveState(*transaction, machine, 1);
         deleteCheckpoint(*transaction, machine);
     }
     SECTION("delete checkpoint saved twice") {
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        saveMachine(*transaction, machine);
-        transaction->commit();
-
-        auto res = deleteMachine(*transaction, machine.hash());
+        saveState(*transaction, machine, 1);
+        {
+            auto transaction2 = storage.makeTransaction();
+            saveState(*transaction2, machine, 2);
+        }
+        auto transaction3 = storage.makeTransaction();
+        auto res = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction, machine.hash());
+        auto res2 = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res2.status.ok());
-        checkDeletedCheckpoint(*transaction, machine);
+        checkDeletedCheckpoint(*transaction3, machine);
     }
     SECTION("delete checkpoint saved twice, reordered") {
         auto transaction2 = storage.makeTransaction();
         auto machine = getComplexMachine();
-        saveMachine(*transaction, machine);
-        transaction->commit();
-        saveMachine(*transaction2, machine);
-        transaction2->commit();
+        saveState(*transaction, machine, 1);
+        saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
         auto res = deleteMachine(*transaction, machine.hash());

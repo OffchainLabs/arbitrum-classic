@@ -54,10 +54,6 @@ def perform_precompile_call(vm):
         "withdrawEth": withdraw_eth_interrupt,
         "withdrawERC20": withdraw_erc20_interrupt,
         "withdrawERC721": withdraw_erc721_interrupt,
-        "blockLowerBound": arbsys_block_lower_bound,
-        "timestampLowerBound": arbsys_timestamp_lower_bound,
-        "blockUpperBound": arbsys_block_upper_bound,
-        "timestampUpperBound": arbsys_timestamp_upper_bound,
         "getTransactionCount": transaction_count_interrupt,
         "cloneContract": clone_contract_interrupt,
     }
@@ -188,40 +184,6 @@ def return_one_uint_to_solidity_caller(vm):
     vm.push(32)
     vm.push(0)
     call_finish.ret_impl(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_block_lower_bound(vm):
-    vm.pop()
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("block_number")(vm)
-    return_one_uint_to_solidity_caller(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_timestamp_lower_bound(vm):
-    vm.pop()
-    os.get_chain_state(vm)
-    os.chain_state.get("global_exec_state")(vm)
-    os.global_exec_state.get("block_timestamp")(vm)
-    return_one_uint_to_solidity_caller(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_block_upper_bound(vm):
-    vm.pop()
-    vm.gettime()
-    vm.tgetn(1)
-    return_one_uint_to_solidity_caller(vm)
-
-
-@modifies_stack([local_exec_state.typ], [value.IntType()])
-def arbsys_timestamp_upper_bound(vm):
-    vm.pop()
-    vm.gettime()
-    vm.tgetn(3)
-    return_one_uint_to_solidity_caller(vm)
 
 
 @modifies_stack([local_exec_state.typ], [value.IntType()])

@@ -20,7 +20,6 @@ pragma solidity ^0.5.11;
 
 import "./NodeGraph.sol";
 import "./Staking.sol";
-import "./ArbContractProxy.sol";
 
 contract ArbRollup is NodeGraph, Staking {
     // invalid path proof
@@ -69,7 +68,6 @@ contract ArbRollup is NodeGraph, Staking {
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
-        uint64[2] calldata _maxTimeBoundsWidth,
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
@@ -80,39 +78,10 @@ contract ArbRollup is NodeGraph, Staking {
             _gracePeriodTicks,
             _arbGasSpeedLimitPerTick,
             _maxExecutionSteps,
-            _maxTimeBoundsWidth,
             _globalInboxAddress
         );
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
         owner = _owner;
-    }
-
-    function forwardContractMessage(address _sender, bytes calldata _data)
-        external
-        payable
-    {
-        address arbContractAddress = incomingCallProxies[msg.sender];
-        require(
-            arbContractAddress != address(0),
-            "Non interface contract can't send message"
-        );
-
-        globalInbox.forwardEthMessage.value(msg.value)(
-            arbContractAddress,
-            _sender
-        );
-        globalInbox.forwardContractTransactionMessage(
-            arbContractAddress,
-            _sender,
-            msg.value,
-            _data
-        );
-    }
-
-    function spawnCallProxy(address _arbContract) external {
-        ArbVMContractProxy proxy = new ArbVMContractProxy(address(this));
-        incomingCallProxies[address(proxy)] = _arbContract;
-        supportedContracts[_arbContract] = address(proxy);
     }
 
     function placeStake(bytes32[] calldata proof1, bytes32[] calldata proof2)
@@ -215,7 +184,6 @@ contract ArbRollup is NodeGraph, Staking {
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
         uint64 _numSteps,
-        uint128[4] calldata _timeBounds,
         uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas,
@@ -231,7 +199,6 @@ contract ArbRollup is NodeGraph, Staking {
             _fields[3],
             _prevChildType,
             _numSteps,
-            _timeBounds,
             _importedMessageCount,
             _fields[4],
             _fields[5],

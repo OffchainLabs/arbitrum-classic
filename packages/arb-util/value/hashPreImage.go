@@ -17,6 +17,7 @@
 package value
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"io"
@@ -46,6 +47,10 @@ func NewHashPreImageFromReader(rd io.Reader) (HashPreImage, error) {
 
 	size := intVal.BigInt().Int64()
 	return NewPreImage(h, size), nil
+}
+
+func (hp HashPreImage) String() string {
+	return fmt.Sprintf("HashPreImage(%v, %v)", hp.hashImage, hp.size)
 }
 
 func (hp HashPreImage) GetInnerHash() common.Hash {

@@ -18,21 +18,14 @@ package arbbridge
 
 import (
 	"context"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type GlobalInboxWatcher interface {
 	ContractWatcher
-
-	GetAllReceived(
-		ctx context.Context,
-		fromBlock *big.Int,
-		toBlock *big.Int,
-	) ([]message.Received, error)
 
 	GetDeliveredEvents(
 		ctx context.Context,
@@ -55,30 +48,30 @@ type GlobalInboxWatcher interface {
 type GlobalInbox interface {
 	GlobalInboxWatcher
 
-	SendTransactionMessage(
-		ctx context.Context,
-		data []byte,
-		vmAddress common.Address,
-		contactAddress common.Address,
-		amount *big.Int,
-		seqNumber *big.Int,
-	) error
+	//SendTransactionMessage(
+	//	ctx context.Context,
+	//	data []byte,
+	//	vmAddress common.Address,
+	//	contactAddress common.Address,
+	//	amount *big.Int,
+	//	seqNumber *big.Int,
+	//) error
 
-	DeliverTransactionBatch(
+	SendL2Message(
 		ctx context.Context,
 		chain common.Address,
-		transactions []message.BatchTx,
+		data message.L2Message,
 	) error
 
-	// DeliverTransactionBatchNoWait calls DeliverTransactionBatch without
+	// SendL2MessageNoWait calls SendL2Message without
 	// blocking while waiting for the receipt. This behavior is different from
 	// the other ArbBridge methods. At some point other methods should be
 	// updated to behave this way once we can be confident that it will not
 	// create any security problems
-	DeliverTransactionBatchNoWait(
+	SendL2MessageNoWait(
 		ctx context.Context,
 		chain common.Address,
-		transactions []message.BatchTx,
+		data message.L2Message,
 	) error
 
 	DepositEthMessage(

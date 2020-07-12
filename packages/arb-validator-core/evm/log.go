@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -162,7 +163,7 @@ func (l Log) AsValue() value.TupleValue {
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := message.StackValueToList(val)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "log stack was not a stack")
 	}
 	logs := make([]Log, 0, len(logValues))
 	for _, logVal := range logValues {

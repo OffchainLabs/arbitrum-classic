@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
@@ -27,8 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/inboxtopchallenge"
@@ -49,12 +48,12 @@ func init() {
 type inboxTopChallengeWatcher struct {
 	*bisectionChallengeWatcher
 	contract *inboxtopchallenge.InboxTopChallenge
-	client   *ethclient.Client
+	client   ethutils.EthClient
 	address  ethcommon.Address
 	topics   [][]ethcommon.Hash
 }
 
-func newInboxTopChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*inboxTopChallengeWatcher, error) {
+func newInboxTopChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*inboxTopChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err

@@ -47,6 +47,7 @@ func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 
 	cMachine := C.machineCreate(cFilename)
+
 	if cMachine == nil {
 		return nil, fmt.Errorf("error loading machine %v", codeFile)
 	}
@@ -86,15 +87,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 	}
 }
 
-func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	currentTimeDataC := intToData(currentTime.AsInt())
-
+func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
 	}
-	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
-	C.free(currentTimeDataC)
+	cBlockReason := C.machineIsBlocked(m.c, C.int(newMessagesInt))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -105,12 +103,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := toByteSlice(cBlockReason.val)
-		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
-		if err != nil {
-			panic(err)
-		}
-		return machine.InboxBlocked{Timeout: timeout}
+		return machine.InboxBlocked{}
 	default:
 	}
 	return nil
@@ -122,19 +115,9 @@ func (m *Machine) PrintState() {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	lowerBoundBlockDataC := intToData(timeBounds.LowerBoundBlock.AsInt())
-	defer C.free(lowerBoundBlockDataC)
-	upperBoundBlockDataC := intToData(timeBounds.UpperBoundBlock.AsInt())
-	defer C.free(upperBoundBlockDataC)
-	lowerBoundTimestampDataC := intToData(timeBounds.LowerBoundTimestamp)
-	defer C.free(lowerBoundTimestampDataC)
-	upperBoundTimestampDataC := intToData(timeBounds.UpperBoundTimestamp)
-	defer C.free(upperBoundTimestampDataC)
-
 	var buf bytes.Buffer
 	_ = value.MarshalValue(inbox, &buf)
 
@@ -145,10 +128,6 @@ func (m *Machine) ExecuteAssertion(
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		lowerBoundBlockDataC,
-		upperBoundBlockDataC,
-		lowerBoundTimestampDataC,
-		upperBoundTimestampDataC,
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)

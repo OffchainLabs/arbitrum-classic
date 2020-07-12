@@ -66,14 +66,10 @@ CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 CStatus machineCurrentStatus(CMachine* m);
-CBlockReason machineIsBlocked(CMachine* m, void* currentTime, int newMessages);
+CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit);
 

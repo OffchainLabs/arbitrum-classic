@@ -34,4 +34,9 @@ class int_out_of_bounds : public std::exception {
     virtual const char* what() const noexcept override;
 };
 
+class stack_too_small : public std::exception {
+   public:
+    virtual const char* what() const noexcept override;
+};
+
 #endif /* exceptions_hpp */

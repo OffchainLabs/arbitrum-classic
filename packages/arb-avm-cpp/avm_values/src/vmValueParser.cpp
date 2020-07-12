@@ -20,23 +20,28 @@
 
 #include <fstream>
 
-const char* INT_VAL_LABEL = "Int";
-const char* TUP_VAL_LABEL = "Tuple";
-const char* CP_VAL_LABEL = "CodePoint";
-const char* CP_INTERNAL_LABEL = "Internal";
-const char* OPCODE_LABEL = "opcode";
-const char* IMMEDIATE_LABEL = "immediate";
-const char* CODE_LABEL = "code";
-const char* STATIC_LABEL = "static_val";
+const std::string INT_VAL_LABEL = "Int";
+const std::string TUP_VAL_LABEL = "Tuple";
+const std::string CP_VAL_LABEL = "CodePoint";
+const std::string CP_INTERNAL_LABEL = "Internal";
+const std::string OPCODE_LABEL = "opcode";
+const std::string OPCODE_SUB_LABEL = "AVMOpcode";
+const std::string IMMEDIATE_LABEL = "immediate";
+const std::string CODE_LABEL = "code";
+const std::string STATIC_LABEL = "static_val";
 
 namespace {
 
+uint256_t int_value_from_json(const nlohmann::json& value_json) {
+    return uint256_t{"0x" + value_json[INT_VAL_LABEL].get<std::string>()};
+}
+
 value value_from_json(const nlohmann::json& value_json,
                       size_t op_count,
-                      const Code& code,
+                      const CodeSegment& code,
                       TuplePool& pool) {
     if (value_json.contains(INT_VAL_LABEL)) {
-        return uint256_t{value_json[INT_VAL_LABEL].get<std::string>()};
+        return int_value_from_json(value_json);
     } else if (value_json.contains(TUP_VAL_LABEL)) {
         auto& json_tup = value_json[TUP_VAL_LABEL];
         if (!json_tup.is_array()) {
@@ -50,13 +55,12 @@ value value_from_json(const nlohmann::json& value_json,
     } else if (value_json.contains(CP_VAL_LABEL)) {
         auto& cp_json = value_json[CP_VAL_LABEL];
         auto internal_offset = cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
-        CodePointRef ref;
-        if (internal_offset == std::numeric_limits<uint64_t>::max()) {
-            ref = {0, true};
-        } else {
-            ref = {op_count - internal_offset, false};
+        uint64_t pc = 0;
+        // Special handle python compiler's marker for error code point
+        if (internal_offset != std::numeric_limits<uint64_t>::max()) {
+            pc = op_count - internal_offset;
         }
-        return CodePointStub(ref, code.at(ref));
+        return CodePointStub({code.segmentID(), pc}, code[pc]);
     } else {
         throw std::runtime_error("invalid value type");
     }
@@ -64,9 +68,16 @@ value value_from_json(const nlohmann::json& value_json,
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const Code& code,
+                              const CodeSegment& code,
                               TuplePool& pool) {
-    auto opcode = op_json.at(OPCODE_LABEL).get<OpCode>();
+    auto opcode_json = op_json.at(OPCODE_LABEL);
+    if (opcode_json.contains(OPCODE_SUB_LABEL)) {
+        opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
+    }
+    if (!opcode_json.is_number_integer()) {
+        std::cerr << "Invalid opcode " << opcode_json << "\n";
+    }
+    auto opcode = opcode_json.get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
     if (imm.is_null()) {
         return {opcode};
@@ -75,32 +86,44 @@ Operation operation_from_json(const nlohmann::json& op_json,
 }
 }  // namespace
 
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool) {
-    try {
-        std::ifstream contract_input_stream(contract_filename);
-        if (!contract_input_stream.is_open()) {
-            throw std::runtime_error("doesn't exist");
+value simple_value_from_json(const nlohmann::json& value_json,
+                             TuplePool& pool) {
+    if (value_json.contains(INT_VAL_LABEL)) {
+        return int_value_from_json(value_json);
+    } else if (value_json.contains(TUP_VAL_LABEL)) {
+        auto& json_tup = value_json[TUP_VAL_LABEL];
+        if (!json_tup.is_array()) {
+            throw std::runtime_error("tuple must contain array");
         }
-        nlohmann::json contract_json;
-        contract_input_stream >> contract_json;
-        auto& json_code = contract_json.at(CODE_LABEL);
-        if (!json_code.is_array()) {
-            throw std::runtime_error("expected code to be array");
+        std::vector<value> values;
+        for (auto& json_val : json_tup) {
+            values.push_back(simple_value_from_json(json_val, pool));
         }
-        auto op_count = json_code.size();
-        Code code;
-        for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-            code.addOperation(operation_from_json(*it, op_count, code, pool));
-        }
-        value static_val = value_from_json(contract_json.at(STATIC_LABEL),
-                                           op_count, code, pool);
-        return std::make_pair(
-            StaticVmValues{std::move(code), std::move(static_val)}, true);
-    } catch (std::exception& e) {
-        std::cerr << "Failed to load code file " << contract_filename << ": "
-                  << e.what() << "\n";
-        return std::make_pair(StaticVmValues{}, false);
+        return Tuple(std::move(values), &pool);
+    } else {
+        throw std::runtime_error("invalid value type");
     }
+}
+
+LoadedExecutable loadExecutable(const std::string& executable_filename,
+                                TuplePool& pool) {
+    std::ifstream executable_input_stream(executable_filename);
+    if (!executable_input_stream.is_open()) {
+        throw std::runtime_error("doesn't exist");
+    }
+    nlohmann::json executable_json;
+    executable_input_stream >> executable_json;
+    auto& json_code = executable_json.at(CODE_LABEL);
+    if (!json_code.is_array()) {
+        throw std::runtime_error("expected code to be array");
+    }
+    auto op_count = json_code.size();
+    auto segment = std::make_shared<CodeSegment>(0);
+    for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
+        segment->addOperation(
+            operation_from_json(*it, op_count, *segment, pool));
+    }
+    value static_val = value_from_json(executable_json.at(STATIC_LABEL),
+                                       op_count, *segment, pool);
+    return {std::move(segment), std::move(static_val)};
 }

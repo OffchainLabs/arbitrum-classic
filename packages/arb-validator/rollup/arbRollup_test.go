@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"math/big"
@@ -123,21 +122,20 @@ func TestRecoverStake(t *testing.T) {
 
 func getRollup(t *testing.T) arbbridge.ArbRollup {
 	clnt := ethbridge.NewEthAuthClient(ethclnt, auth)
+
 	chainParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(0),
 		GracePeriod:             common.TicksFromSeconds(1),
 		MaxExecutionSteps:       100000,
-		MaxBlockBoundsWidth:     10000,
-		MaxTimestampBoundsWidth: 100000,
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := test.GetFactoryAddress()
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	factory, err := clnt.NewArbFactory(arbFactoryAddress)
+	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}

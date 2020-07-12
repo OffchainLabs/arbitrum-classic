@@ -78,17 +78,24 @@ OP_CODES = [
     ("tget", 0x50, [IntType(), TupleType()], [ValueType()]),
     ("tset", 0x51, [IntType(), TupleType(), ValueType()], [TupleType()]),
     ("tlen", 0x52, [TupleType()], [IntType()]),
+    ("xget", 0x53, [IntType()], [ValueType()]),
+    ("xset", 0x54, [IntType(), ValueType()], []),
     # Logging Operations
     ("breakpoint", 0x60, [ValueType()], []),
     ("log", 0x61, [ValueType()], []),
     # System operations
     ("send", 0x70, [TupleType()], []),
-    ("gettime", 0x71, [], [TupleType([IntType(), IntType(), IntType(), IntType()])]),
-    ("inbox", 0x72, [IntType()], [TupleType()]),
+    ("inbox", 0x72, [], [TupleType()]),
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
-    ("debug", 0x75, [], []),
-    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()],),
+    ("setgas", 0x75, [IntType()], []),
+    ("pushgas", 0x76, [], [IntType()]),
+    ("errcodepoint", 0x77, [], [CodePointType()]),
+    ("pushinsn", 0x78, [IntType(), CodePointType()], [CodePointType()]),
+    ("pushinsnimm", 0x79, [IntType(), ValueType(), CodePointType()], [CodePointType()]),
+    ("sideload", 0x7B, [], [TupleType()]),
+    ("debug", 0x7C, [], []),
+    ("ecrecover", 0x80, [IntType(), IntType(), IntType(), IntType()], [IntType()]),
 ]
 
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,10 @@ library OneStepProof {
 
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
+    uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+
     struct ValidateProofData {
         bytes32 beforeHash;
-        uint128[4] timeBounds;
         Value.Data beforeInbox;
         bytes32 afterHash;
         bool didInboxInsn;
@@ -45,7 +46,6 @@ library OneStepProof {
 
     function validateProof(
         bytes32 beforeHash,
-        uint128[4] memory timeBounds,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
         bytes32 afterHash,
@@ -61,7 +61,6 @@ library OneStepProof {
             checkProof(
                 ValidateProofData(
                     beforeHash,
-                    timeBounds,
                     Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
                     afterHash,
                     didInboxInsn,
@@ -604,7 +603,7 @@ library OneStepProof {
         Machine.Data memory machine,
         bytes32 codepointHash
     ) internal pure returns (bool) {
-        machine.addDataStackValue(Value.newCodepointHash(codepointHash));
+        machine.addDataStackValue(Value.newHashedValue(codepointHash, 1));
         return true;
     }
 
@@ -635,7 +634,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newCodepointHash(machine.errHandlerHash)
+            Value.newHashedValue(machine.errHandlerHash, 1)
         );
         return true;
     }
@@ -760,6 +759,44 @@ library OneStepProof {
         return true;
     }
 
+    function executeXgetInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory auxVal
+    ) internal pure returns (bool) {
+        if (!val1.isInt() || !auxVal.isTuple()) {
+            return false;
+        }
+
+        if (val1.intVal >= auxVal.valLength()) {
+            return false;
+        }
+
+        machine.addAuxStackValue(auxVal);
+        machine.addDataStackValue(auxVal.tupleVal[val1.intVal]);
+        return true;
+    }
+
+    function executeXsetInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory auxVal
+    ) internal pure returns (bool) {
+        if (!auxVal.isTuple() || !val1.isInt()) {
+            return false;
+        }
+
+        if (val1.intVal >= auxVal.valLength()) {
+            return false;
+        }
+        Value.Data[] memory tupleVals = auxVal.tupleVal;
+        tupleVals[val1.intVal] = val2;
+
+        machine.addAuxStackValue(Value.newTuple(tupleVals));
+        return true;
+    }
+
     // Logging
 
     function executeBreakpointInsn(Machine.Data memory)
@@ -796,19 +833,87 @@ library OneStepProof {
 
     function executeInboxInsn(
         Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory beforeInbox,
-        uint256 lowerTimeBound
+        Value.Data memory beforeInbox
+    ) internal pure returns (bool) {
+        require(
+            Value.hash(beforeInbox) != Value.hashEmptyTuple(),
+            "Inbox instruction was blocked"
+        );
+        machine.addDataStackValue(beforeInbox);
+        return true;
+    }
+
+    function executeSetGasInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
     ) internal pure returns (bool) {
         if (!val1.isInt()) {
             return false;
         }
-        require(
-            val1.intVal >= lowerTimeBound ||
-                Value.hash(beforeInbox) != Value.hashEmptyTuple(),
-            "Inbox instruction was blocked"
+        machine.arbGasRemaining = val1.intVal;
+        return true;
+    }
+
+    function executePushGasInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackInt(machine.arbGasRemaining);
+        return true;
+    }
+
+    function executeErrCodePointInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        machine.addDataStackValue(Value.newHashedValue(CODE_POINT_ERROR, 1));
+        return true;
+    }
+
+    function executePushInsnInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
+    ) internal pure returns (bool) {
+        if (!val1.isInt()) {
+            return false;
+        }
+        if (!val2.isCodePoint()) {
+            return false;
+        }
+        machine.addDataStackValue(
+            Value.newCodePoint(uint8(val1.intVal), val2.hash())
         );
-        machine.addDataStackValue(beforeInbox);
+        return true;
+    }
+
+    function executePushInsnImmInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
+    ) internal pure returns (bool) {
+        if (!val1.isInt()) {
+            return false;
+        }
+        if (!val3.isCodePoint()) {
+            return false;
+        }
+        machine.addDataStackValue(
+            Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2)
+        );
+        return true;
+    }
+
+    function executeSideloadInsn(Machine.Data memory machine)
+        internal
+        pure
+        returns (bool)
+    {
+        Value.Data[] memory values = new Value.Data[](0);
+        machine.addDataStackValue(Value.newTuple(values));
         return true;
     }
 
@@ -893,6 +998,8 @@ library OneStepProof {
     uint8 internal constant OP_TGET = 0x50;
     uint8 internal constant OP_TSET = 0x51;
     uint8 internal constant OP_TLEN = 0x52;
+    uint8 internal constant OP_XGET = 0x53;
+    uint8 internal constant OP_XSET = 0x54;
 
     // Logging opertations
     uint8 internal constant OP_BREAKPOINT = 0x60;
@@ -900,249 +1007,147 @@ library OneStepProof {
 
     // System operations
     uint8 internal constant OP_SEND = 0x70;
-    uint8 internal constant OP_GETTIME = 0x71;
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
+    uint8 internal constant OP_SETGAS = 0x75;
+    uint8 internal constant OP_PUSHGAS = 0x76;
+    uint8 internal constant OP_ERR_CODE_POINT = 0x77;
+    uint8 internal constant OP_PUSH_INSN = 0x78;
+    uint8 internal constant OP_PUSH_INSN_IMM = 0x79;
+    // uint8 internal constant OP_OPEN_INSN = 0x7a;
+    uint8 internal constant OP_SIDELOAD = 0x7b;
 
     uint8 internal constant OP_ECRECOVER = 0x80;
 
+    // opInfo returns data stack pop count and gas used
     function opInfo(uint256 opCode) internal pure returns (uint256, uint256) {
         if (opCode == OP_ADD) {
-            return (2, 1);
+            return (2, 3);
         } else if (opCode == OP_MUL) {
-            return (2, 1);
+            return (2, 3);
         } else if (opCode == OP_SUB) {
-            return (2, 1);
+            return (2, 3);
         } else if (opCode == OP_DIV) {
-            return (2, 1);
+            return (2, 4);
         } else if (opCode == OP_SDIV) {
-            return (2, 1);
+            return (2, 7);
         } else if (opCode == OP_MOD) {
-            return (2, 1);
+            return (2, 4);
         } else if (opCode == OP_SMOD) {
-            return (2, 1);
+            return (2, 7);
         } else if (opCode == OP_ADDMOD) {
-            return (3, 1);
+            return (3, 4);
         } else if (opCode == OP_MULMOD) {
-            return (3, 1);
+            return (3, 4);
         } else if (opCode == OP_EXP) {
-            return (2, 1);
+            return (2, 25);
         } else if (opCode == OP_LT) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_GT) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_SLT) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_SGT) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_EQ) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_ISZERO) {
             return (1, 1);
         } else if (opCode == OP_AND) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_OR) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_XOR) {
-            return (2, 1);
+            return (2, 2);
         } else if (opCode == OP_NOT) {
             return (1, 1);
         } else if (opCode == OP_BYTE) {
-            return (2, 1);
+            return (2, 4);
         } else if (opCode == OP_SIGNEXTEND) {
-            return (2, 1);
+            return (2, 7);
         } else if (opCode == OP_SHA3) {
-            return (1, 1);
+            return (1, 7);
         } else if (opCode == OP_TYPE) {
-            return (1, 1);
+            return (1, 3);
         } else if (opCode == OP_ETHHASH2) {
-            return (2, 1);
+            return (2, 8);
         } else if (opCode == OP_POP) {
-            return (1, 0);
+            return (1, 1);
         } else if (opCode == OP_SPUSH) {
             return (0, 1);
         } else if (opCode == OP_RPUSH) {
             return (0, 1);
         } else if (opCode == OP_RSET) {
-            return (1, 0);
+            return (1, 2);
         } else if (opCode == OP_JUMP) {
-            return (1, 0);
+            return (1, 4);
         } else if (opCode == OP_CJUMP) {
-            return (2, 0);
+            return (2, 4);
         } else if (opCode == OP_STACKEMPTY) {
-            return (0, 1);
+            return (0, 2);
         } else if (opCode == OP_PCPUSH) {
             return (0, 1);
         } else if (opCode == OP_AUXPUSH) {
-            return (1, 0);
+            return (1, 1);
         } else if (opCode == OP_AUXPOP) {
             return (0, 1);
         } else if (opCode == OP_AUXSTACKEMPTY) {
-            return (0, 1);
+            return (0, 2);
         } else if (opCode == OP_NOP) {
-            return (0, 0);
+            return (0, 1);
         } else if (opCode == OP_ERRPUSH) {
             return (0, 1);
         } else if (opCode == OP_ERRSET) {
-            return (1, 0);
+            return (1, 1);
         } else if (opCode == OP_DUP0) {
-            return (1, 2);
+            return (1, 1);
         } else if (opCode == OP_DUP1) {
-            return (2, 3);
-        } else if (opCode == OP_DUP2) {
-            return (3, 4);
-        } else if (opCode == OP_SWAP1) {
-            return (2, 2);
-        } else if (opCode == OP_SWAP2) {
-            return (3, 3);
-        } else if (opCode == OP_TGET) {
             return (2, 1);
-        } else if (opCode == OP_TSET) {
+        } else if (opCode == OP_DUP2) {
             return (3, 1);
+        } else if (opCode == OP_SWAP1) {
+            return (2, 1);
+        } else if (opCode == OP_SWAP2) {
+            return (3, 1);
+        } else if (opCode == OP_TGET) {
+            return (2, 2);
+        } else if (opCode == OP_TSET) {
+            return (3, 40);
         } else if (opCode == OP_TLEN) {
-            return (1, 1);
+            return (1, 2);
+        } else if (opCode == OP_XGET) {
+            return (1, 3);
+        } else if (opCode == OP_XSET) {
+            return (2, 41);
         } else if (opCode == OP_BREAKPOINT) {
-            return (0, 0);
+            return (0, 100);
         } else if (opCode == OP_LOG) {
-            return (1, 0);
+            return (1, 100);
         } else if (opCode == OP_SEND) {
-            return (1, 0);
-        } else if (opCode == OP_GETTIME) {
-            return (0, 1);
+            return (1, 100);
         } else if (opCode == OP_INBOX) {
-            return (1, 1);
+            return (0, 40);
         } else if (opCode == OP_ERROR) {
-            return (0, 0);
+            return (0, 5);
         } else if (opCode == OP_STOP) {
-            return (0, 0);
+            return (0, 10);
+        } else if (opCode == OP_SETGAS) {
+            return (1, 0);
+        } else if (opCode == OP_PUSHGAS) {
+            return (0, 1);
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            return (0, 25);
+        } else if (opCode == OP_PUSH_INSN) {
+            return (2, 25);
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            return (3, 25);
+        } else if (opCode == OP_SIDELOAD) {
+            return (0, 10);
         } else if (opCode == OP_ECRECOVER) {
-            return (4, 1);
+            return (4, 20000);
         } else {
             require(false, "Invalid opcode: opInfo()");
-        }
-    }
-
-    function opPopCount(uint8 opCode) internal pure returns (uint256) {
-        uint256 popCount;
-        uint256 pushCount;
-        (popCount, pushCount) = opInfo(opCode);
-        return popCount;
-    }
-
-    function opGasCost(uint8 opCode) internal pure returns (uint64) {
-        if (opCode == OP_ADD) {
-            return 3;
-        } else if (opCode == OP_MUL) {
-            return 3;
-        } else if (opCode == OP_SUB) {
-            return 3;
-        } else if (opCode == OP_DIV) {
-            return 4;
-        } else if (opCode == OP_SDIV) {
-            return 7;
-        } else if (opCode == OP_MOD) {
-            return 4;
-        } else if (opCode == OP_SMOD) {
-            return 7;
-        } else if (opCode == OP_ADDMOD) {
-            return 4;
-        } else if (opCode == OP_MULMOD) {
-            return 4;
-        } else if (opCode == OP_EXP) {
-            return 25;
-        } else if (opCode == OP_LT) {
-            return 2;
-        } else if (opCode == OP_GT) {
-            return 2;
-        } else if (opCode == OP_SLT) {
-            return 2;
-        } else if (opCode == OP_SGT) {
-            return 2;
-        } else if (opCode == OP_EQ) {
-            return 2;
-        } else if (opCode == OP_ISZERO) {
-            return 1;
-        } else if (opCode == OP_AND) {
-            return 2;
-        } else if (opCode == OP_OR) {
-            return 2;
-        } else if (opCode == OP_XOR) {
-            return 2;
-        } else if (opCode == OP_NOT) {
-            return 1;
-        } else if (opCode == OP_BYTE) {
-            return 4;
-        } else if (opCode == OP_SIGNEXTEND) {
-            return 7;
-        } else if (opCode == OP_SHA3) {
-            return 7;
-        } else if (opCode == OP_TYPE) {
-            return 3;
-        } else if (opCode == OP_ETHHASH2) {
-            return 8;
-        } else if (opCode == OP_POP) {
-            return 1;
-        } else if (opCode == OP_SPUSH) {
-            return 1;
-        } else if (opCode == OP_RPUSH) {
-            return 1;
-        } else if (opCode == OP_RSET) {
-            return 2;
-        } else if (opCode == OP_JUMP) {
-            return 4;
-        } else if (opCode == OP_CJUMP) {
-            return 4;
-        } else if (opCode == OP_STACKEMPTY) {
-            return 2;
-        } else if (opCode == OP_PCPUSH) {
-            return 1;
-        } else if (opCode == OP_AUXPUSH) {
-            return 1;
-        } else if (opCode == OP_AUXPOP) {
-            return 1;
-        } else if (opCode == OP_AUXSTACKEMPTY) {
-            return 2;
-        } else if (opCode == OP_NOP) {
-            return 1;
-        } else if (opCode == OP_ERRPUSH) {
-            return 1;
-        } else if (opCode == OP_ERRSET) {
-            return 1;
-        } else if (opCode == OP_DUP0) {
-            return 1;
-        } else if (opCode == OP_DUP1) {
-            return 1;
-        } else if (opCode == OP_DUP2) {
-            return 1;
-        } else if (opCode == OP_SWAP1) {
-            return 1;
-        } else if (opCode == OP_SWAP2) {
-            return 1;
-        } else if (opCode == OP_TGET) {
-            return 2;
-        } else if (opCode == OP_TSET) {
-            return 40;
-        } else if (opCode == OP_TLEN) {
-            return 2;
-        } else if (opCode == OP_BREAKPOINT) {
-            return 100;
-        } else if (opCode == OP_LOG) {
-            return 100;
-        } else if (opCode == OP_SEND) {
-            return 100;
-        } else if (opCode == OP_GETTIME) {
-            return 40;
-        } else if (opCode == OP_INBOX) {
-            return 40;
-        } else if (opCode == OP_ERROR) {
-            return 5;
-        } else if (opCode == OP_STOP) {
-            return 10;
-        } else if (opCode == OP_ECRECOVER) {
-            return 20000;
-        } else {
-            require(false, "Invalid opcode: opGasCost()");
         }
     }
 
@@ -1150,16 +1155,15 @@ library OneStepProof {
         internal
         pure
         returns (
-            uint8,
-            Value.Data[] memory,
-            Machine.Data memory,
-            Machine.Data memory,
-            uint256
+            uint8 opCode,
+            uint256 gasCost,
+            Value.Data[] memory stackVals,
+            Machine.Data memory startMachine,
+            Machine.Data memory endMachine,
+            uint256 offset
         )
     {
-        uint256 offset = 0;
         bool valid;
-        Machine.Data memory startMachine;
         startMachine.setExtensive();
         (valid, offset, startMachine) = Machine.deserializeMachine(
             _data.proof,
@@ -1168,11 +1172,12 @@ library OneStepProof {
 
         require(valid, "loadMachine(): invalid machine");
 
-        Machine.Data memory endMachine = startMachine.clone();
+        endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
-        uint8 opCode = uint8(_data.proof[offset + 1]);
-        uint256 popCount = opPopCount(opCode);
-        Value.Data[] memory stackVals = new Value.Data[](popCount);
+        opCode = uint8(_data.proof[offset + 1]);
+        uint256 popCount;
+        (popCount, gasCost) = opInfo(opCode);
+        stackVals = new Value.Data[](popCount);
         offset += 2;
 
         require(
@@ -1202,7 +1207,7 @@ library OneStepProof {
                 uint8(opCode),
                 startMachine
                     .instructionStackHash,
-                Value.hash(immediateVal)
+                immediateVal
             )
                 .hash();
         }
@@ -1222,7 +1227,7 @@ library OneStepProof {
                 );
             }
         }
-        return (opCode, stackVals, startMachine, endMachine, offset);
+        return (opCode, gasCost, stackVals, startMachine, endMachine, offset);
     }
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
@@ -1236,24 +1241,38 @@ library OneStepProof {
         returns (uint256)
     {
         uint8 opCode;
+        uint256 gasCost;
         bool valid;
         uint256 offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
         Machine.Data memory endMachine;
-        (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(
-            _data
-        );
+        (
+            opCode,
+            gasCost,
+            stackVals,
+            startMachine,
+            endMachine,
+            offset
+        ) = loadMachine(_data);
 
         bool correct = true;
         bytes32 messageHash;
-        require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
+        require(_data.gas == gasCost, "Invalid gas in proof");
         require(
             (_data.didInboxInsn && opCode == OP_INBOX) ||
                 (!_data.didInboxInsn && opCode != OP_INBOX),
             "Invalid didInboxInsn claim"
         );
-        if (opCode == OP_ADD) {
+        // Update end machine gas remaining before running opcode
+        // No need to overflow check since the check for whether we
+        // have sufficient gas fixes the overflow case
+        endMachine.arbGasRemaining = endMachine.arbGasRemaining - gasCost;
+
+        if (startMachine.arbGasRemaining < gasCost) {
+            endMachine.arbGasRemaining = MAX_UINT256;
+            correct = false;
+        } else if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_MUL) {
             correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
@@ -1387,6 +1406,23 @@ library OneStepProof {
             );
         } else if (opCode == OP_TLEN) {
             correct = executeTlenInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_XGET) {
+            Value.Data memory auxVal;
+            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
+            require(valid, "Proof of auxpop had bad aux value");
+            startMachine.addAuxStackValue(auxVal);
+            correct = executeXgetInsn(endMachine, stackVals[0], auxVal);
+        } else if (opCode == OP_XSET) {
+            Value.Data memory auxVal;
+            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
+            require(valid, "Proof of auxpop had bad aux value");
+            startMachine.addAuxStackValue(auxVal);
+            correct = executeXsetInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1],
+                auxVal
+            );
         } else if (opCode == OP_BREAKPOINT) {
             correct = executeBreakpointInsn(endMachine);
         } else if (opCode == OP_LOG) {
@@ -1428,24 +1464,33 @@ library OneStepProof {
             } else {
                 messageHash = 0;
             }
-        } else if (opCode == OP_GETTIME) {
-            Value.Data[] memory contents = new Value.Data[](4);
-            contents[0] = Value.newInt(_data.timeBounds[0]);
-            contents[1] = Value.newInt(_data.timeBounds[1]);
-            contents[2] = Value.newInt(_data.timeBounds[2]);
-            contents[3] = Value.newInt(_data.timeBounds[3]);
-            endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(
-                endMachine,
-                stackVals[0],
-                _data.beforeInbox,
-                _data.timeBounds[0]
-            );
+            correct = executeInboxInsn(endMachine, _data.beforeInbox);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {
             endMachine.setHalt();
+        } else if (opCode == OP_SETGAS) {
+            correct = executeSetGasInsn(endMachine, stackVals[0]);
+        } else if (opCode == OP_PUSHGAS) {
+            correct = executePushGasInsn(endMachine);
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            correct = executeErrCodePointInsn(endMachine);
+        } else if (opCode == OP_PUSH_INSN) {
+            correct = executePushInsnInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1]
+            );
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            correct = executePushInsnImmInsn(
+                endMachine,
+                stackVals[0],
+                stackVals[1],
+                stackVals[2]
+            );
+        } else if (opCode == OP_SIDELOAD) {
+            correct = executeSideloadInsn(endMachine);
         } else if (opCode == OP_ECRECOVER) {
             correct = executeECRecoverInsn(
                 endMachine,

@@ -27,18 +27,18 @@ var (
 )
 
 // ArbFactoryABI is the input ABI used to generate the binding from.
-const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactoryAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64[2]\",\"name\":\"_maxTimeBoundsWidth\",\"type\":\"uint64[2]\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInboxAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"rollupTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactoryAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInboxAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"rollupTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ArbFactoryFuncSigs = map[string]string{
 	"62e3c0b1": "challengeFactoryAddress()",
-	"b10c5f84": "createRollup(bytes32,uint128,uint128,uint64,uint64[2],uint128,address)",
+	"f67e0439": "createRollup(bytes32,uint128,uint128,uint64,uint128,address)",
 	"582923c7": "globalInboxAddress()",
 	"8689d996": "rollupTemplate()",
 }
 
 // ArbFactoryBin is the compiled bytecode used for deploying new contracts.
-var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516103b73803806103b78339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556103288061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063b10c5f8414610085575b600080fd5b6100596100e9565b604080516001600160a01b039092168252519081900360200190f35b6100596100f8565b610059610107565b6100e7600480360361010081101561009c57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff1691608081019160c0820135169060e001356001600160a01b0316610116565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b6000805461012c906001600160a01b03166102a1565b60025460015460408051638e0f716760e01b8152600481018d81526001600160801b03808e1660248401528c16604483015267ffffffffffffffff8b1660648301529495506001600160a01b0380871695638e0f7167958f958f958f958f958f958f958f95908316949216929091608490910190879080828437600081840152601f19601f820116905080830192505050856001600160801b03166001600160801b03168152602001846001600160a01b03166001600160a01b03168152602001836001600160a01b03166001600160a01b03168152602001826001600160a01b03166001600160a01b031681526020019950505050505050505050600060405180830381600087803b15801561024257600080fd5b505af1158015610256573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a15050505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820af8aeba5d8e4d526debce227b5333dbbf402faaaa10e16fb7b0e079cc60e30ad64736f6c634300050f0032"
+var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516103363803806103368339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102a78061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063f67e043914610085575b600080fd5b6100596100e5565b604080516001600160a01b039092168252519081900360200190f35b6100596100f4565b610059610103565b6100e3600480360360c081101561009b57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff169160808101359091169060a001356001600160a01b0316610112565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b60008054610128906001600160a01b0316610220565b600254600154604080516319f4c3a760e01b8152600481018c90526001600160801b03808c166024830152808b16604483015267ffffffffffffffff8a166064830152881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916319f4c3a7916101048082019260009290919082900301818387803b1580156101c257600080fd5b505af11580156101d6573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a150505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a723158207c424282fb65299ce4d2d9fff017addc1c15b70e86109ff6bdee5c3a82edb35064736f6c634300050f0032"
 
 // DeployArbFactory deploys a new Ethereum contract, binding an instance of ArbFactory to it.
 func DeployArbFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _rollupTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ArbFactory, error) {
@@ -274,25 +274,25 @@ func (_ArbFactory *ArbFactoryCallerSession) RollupTemplate() (common.Address, er
 	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
 
-// CreateRollup is a paid mutator transaction binding the contract method 0xb10c5f84.
+// CreateRollup is a paid mutator transaction binding the contract method 0xf67e0439.
 //
-// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner) returns()
-func (_ArbFactory *ArbFactoryTransactor) CreateRollup(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ArbFactory.contract.Transact(opts, "createRollup", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner)
+// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner) returns()
+func (_ArbFactory *ArbFactoryTransactor) CreateRollup(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ArbFactory.contract.Transact(opts, "createRollup", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner)
 }
 
-// CreateRollup is a paid mutator transaction binding the contract method 0xb10c5f84.
+// CreateRollup is a paid mutator transaction binding the contract method 0xf67e0439.
 //
-// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner) returns()
-func (_ArbFactory *ArbFactorySession) CreateRollup(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ArbFactory.Contract.CreateRollup(&_ArbFactory.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner)
+// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner) returns()
+func (_ArbFactory *ArbFactorySession) CreateRollup(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ArbFactory.Contract.CreateRollup(&_ArbFactory.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner)
 }
 
-// CreateRollup is a paid mutator transaction binding the contract method 0xb10c5f84.
+// CreateRollup is a paid mutator transaction binding the contract method 0xf67e0439.
 //
-// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner) returns()
-func (_ArbFactory *ArbFactoryTransactorSession) CreateRollup(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ArbFactory.Contract.CreateRollup(&_ArbFactory.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner)
+// Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner) returns()
+func (_ArbFactory *ArbFactoryTransactorSession) CreateRollup(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ArbFactory.Contract.CreateRollup(&_ArbFactory.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner)
 }
 
 // ArbFactoryRollupCreatedIterator is returned from FilterRollupCreated and is used to iterate over the raw logs and unpacked data for RollupCreated events raised by the ArbFactory contract.
@@ -591,12 +591,12 @@ func (_CloneFactory *CloneFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 }
 
 // IArbRollupABI is the input ABI used to generate the binding from.
-const IArbRollupABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"forwardContractMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint64[2]\",\"name\":\"_maxTimeBoundsWidth\",\"type\":\"uint64[2]\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IArbRollupABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_maxGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasPriceBid\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"forwardContractMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IArbRollupFuncSigs maps the 4-byte function signature to its string representation.
 var IArbRollupFuncSigs = map[string]string{
-	"c5818317": "forwardContractMessage(address,bytes)",
-	"8e0f7167": "init(bytes32,uint128,uint128,uint64,uint64[2],uint128,address,address,address)",
+	"64ebfd03": "forwardContractMessage(address,uint256,uint256,bytes)",
+	"19f4c3a7": "init(bytes32,uint128,uint128,uint64,uint128,address,address,address)",
 }
 
 // IArbRollup is an auto generated Go binding around an Ethereum contract.
@@ -741,44 +741,44 @@ func (_IArbRollup *IArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _IArbRollup.Contract.contract.Transact(opts, method, params...)
 }
 
-// ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
+// ForwardContractMessage is a paid mutator transaction binding the contract method 0x64ebfd03.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
-func (_IArbRollup *IArbRollupTransactor) ForwardContractMessage(opts *bind.TransactOpts, _sender common.Address, _data []byte) (*types.Transaction, error) {
-	return _IArbRollup.contract.Transact(opts, "forwardContractMessage", _sender, _data)
+// Solidity: function forwardContractMessage(address _sender, uint256 _maxGas, uint256 _gasPriceBid, bytes _data) payable returns()
+func (_IArbRollup *IArbRollupTransactor) ForwardContractMessage(opts *bind.TransactOpts, _sender common.Address, _maxGas *big.Int, _gasPriceBid *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IArbRollup.contract.Transact(opts, "forwardContractMessage", _sender, _maxGas, _gasPriceBid, _data)
 }
 
-// ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
+// ForwardContractMessage is a paid mutator transaction binding the contract method 0x64ebfd03.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
-func (_IArbRollup *IArbRollupSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
-	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
+// Solidity: function forwardContractMessage(address _sender, uint256 _maxGas, uint256 _gasPriceBid, bytes _data) payable returns()
+func (_IArbRollup *IArbRollupSession) ForwardContractMessage(_sender common.Address, _maxGas *big.Int, _gasPriceBid *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _maxGas, _gasPriceBid, _data)
 }
 
-// ForwardContractMessage is a paid mutator transaction binding the contract method 0xc5818317.
+// ForwardContractMessage is a paid mutator transaction binding the contract method 0x64ebfd03.
 //
-// Solidity: function forwardContractMessage(address _sender, bytes _data) payable returns()
-func (_IArbRollup *IArbRollupTransactorSession) ForwardContractMessage(_sender common.Address, _data []byte) (*types.Transaction, error) {
-	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _data)
+// Solidity: function forwardContractMessage(address _sender, uint256 _maxGas, uint256 _gasPriceBid, bytes _data) payable returns()
+func (_IArbRollup *IArbRollupTransactorSession) ForwardContractMessage(_sender common.Address, _maxGas *big.Int, _gasPriceBid *big.Int, _data []byte) (*types.Transaction, error) {
+	return _IArbRollup.Contract.ForwardContractMessage(&_IArbRollup.TransactOpts, _sender, _maxGas, _gasPriceBid, _data)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8e0f7167.
+// Init is a paid mutator transaction binding the contract method 0x19f4c3a7.
 //
-// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
-func (_IArbRollup *IArbRollupTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbRollup.contract.Transact(opts, "init", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.contract.Transact(opts, "init", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8e0f7167.
+// Init is a paid mutator transaction binding the contract method 0x19f4c3a7.
 //
-// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
-func (_IArbRollup *IArbRollupSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8e0f7167.
+// Init is a paid mutator transaction binding the contract method 0x19f4c3a7.
 //
-// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint64[2] _maxTimeBoundsWidth, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
-func (_IArbRollup *IArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _maxTimeBoundsWidth [2]uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _maxTimeBoundsWidth, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }

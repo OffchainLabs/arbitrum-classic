@@ -48,7 +48,7 @@ func TestPrepareTransactions(t *testing.T) {
 		sortedTxes := make([]message.BatchTx, 0)
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[0])
-			batchTx.SeqNum = big.NewInt(int64(i))
+			batchTx.Transaction.SequenceNum = big.NewInt(int64(i))
 			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
 			decodedTxes = append(decodedTxes, decoded)
 			sortedTxes = append(sortedTxes, decoded.tx)
@@ -64,7 +64,7 @@ func TestPrepareTransactions(t *testing.T) {
 		sortedTxes := make([]message.BatchTx, 0)
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[0])
-			batchTx.SeqNum = big.NewInt(9 - int64(i))
+			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
 			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
 			decodedTxes = append(decodedTxes, decoded)
 		}
@@ -83,7 +83,7 @@ func TestPrepareTransactions(t *testing.T) {
 		sortedTxes := make([]message.BatchTx, 0)
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[i])
-			batchTx.SeqNum = big.NewInt(9 - int64(i))
+			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
 			decoded := NewDecodedBatchTx(batchTx, keys[i].PublicKey)
 			decodedTxes = append(decodedTxes, decoded)
 			sortedTxes = append(sortedTxes, decoded.tx)
@@ -100,11 +100,11 @@ func TestPrepareTransactions(t *testing.T) {
 			sortedTxesCal := prepareTransactions(tc.raw)
 			t.Log("correct:", tc.sorted)
 			t.Log("calculated:", sortedTxesCal)
-			if len(sortedTxesCal) != len(tc.sorted) {
+			if len(sortedTxesCal.Transactions) != len(tc.sorted) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				if !tx.Equals(sortedTxesCal[i]) {
+				if !tx.Equals(sortedTxesCal.Transactions[i]) {
 					t.Error("tx in wrong order")
 					break
 				}

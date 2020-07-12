@@ -77,31 +77,28 @@ enum class OpCode : uint8_t {
     TGET = 0x50,
     TSET,
     TLEN,
+    XGET,
+    XSET,
 
     BREAKPOINT = 0x60,
     LOG,
 
     SEND = 0x70,
-    GETTIME,
-    INBOX,
+    INBOX = 0x72,
     ERROR,
     HALT,
-    DEBUG,
+    SET_GAS,
+    PUSH_GAS,
+    ERR_CODE_POINT,
+    PUSH_INSN,
+    PUSH_INSN_IMM,
+    //    OPEN_INSN,
+    SIDELOAD = 0x7B,
 
-    ECRECOVER = 0x80
+    ECRECOVER = 0x80,
+
+    DEBUG_PRINT = 0x90,
 };
-
-inline bool isValidOpcode(OpCode op) {
-    return (op >= OpCode::ADD && op <= OpCode::EXP) ||
-           (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
-           (op >= OpCode::POP && op <= OpCode::ERRSET) ||
-           (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
-           (op >= OpCode::TGET && op <= OpCode::TLEN) ||
-           (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::HALT) ||
-           (op >= OpCode::ECRECOVER && op <= OpCode::ECRECOVER);
-}
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
@@ -157,16 +154,22 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::TGET, "tget"},
     {OpCode::TSET, "tset"},
     {OpCode::TLEN, "tlen"},
+    {OpCode::XGET, "xget"},
+    {OpCode::XSET, "xset"},
 
     {OpCode::BREAKPOINT, "breakpoint"},
     {OpCode::LOG, "log"},
 
     {OpCode::SEND, "send"},
-    {OpCode::GETTIME, "gettime"},
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
-    {OpCode::DEBUG, "debug"},
+    {OpCode::SET_GAS, "setgas"},
+    {OpCode::PUSH_GAS, "pushgas"},
+    {OpCode::ERR_CODE_POINT, "errcodepoint"},
+    {OpCode::PUSH_INSN, "pushinsn"},
+    {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
+    {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"}};
 
@@ -232,16 +235,24 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::TSET,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::STUB}},
         {OpCode::TLEN, {MarshalLevel::SINGLE}},
+        {OpCode::XGET, {MarshalLevel::SINGLE}},
+        {OpCode::XSET, {MarshalLevel::SINGLE, MarshalLevel::STUB}},
 
         {OpCode::BREAKPOINT, {}},
         {OpCode::LOG, {MarshalLevel::STUB}},
 
         {OpCode::SEND, {MarshalLevel::FULL}},
-        {OpCode::GETTIME, {}},
-        {OpCode::INBOX, {MarshalLevel::SINGLE}},
+        {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
-        {OpCode::DEBUG, {}},
+        {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
+        {OpCode::PUSH_GAS, {}},
+        {OpCode::ERR_CODE_POINT, {}},
+        {OpCode::PUSH_INSN, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::PUSH_INSN_IMM,
+         {MarshalLevel::SINGLE, MarshalLevel::STUB, MarshalLevel::SINGLE}},
+        {OpCode::SIDELOAD, {}},
+        {OpCode::DEBUG_PRINT, {}},
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
@@ -301,16 +312,23 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::TGET, {}},
                                {OpCode::TSET, {}},
                                {OpCode::TLEN, {}},
+                               {OpCode::XGET, {MarshalLevel::SINGLE}},
+                               {OpCode::XSET, {MarshalLevel::SINGLE}},
 
                                {OpCode::BREAKPOINT, {}},
                                {OpCode::LOG, {}},
 
                                {OpCode::SEND, {}},
-                               {OpCode::GETTIME, {}},
                                {OpCode::INBOX, {}},
                                {OpCode::ERROR, {}},
                                {OpCode::HALT, {}},
-                               {OpCode::DEBUG, {}},
+                               {OpCode::SET_GAS, {}},
+                               {OpCode::PUSH_GAS, {}},
+                               {OpCode::ERR_CODE_POINT, {}},
+                               {OpCode::PUSH_INSN, {}},
+                               {OpCode::PUSH_INSN_IMM, {}},
+                               {OpCode::SIDELOAD, {}},
+                               {OpCode::DEBUG_PRINT, {}},
 
                                {OpCode::ECRECOVER, {}}};
 
@@ -367,16 +385,23 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::TGET, 2},
     {OpCode::TSET, 40},
     {OpCode::TLEN, 2},
+    {OpCode::XGET, 3},
+    {OpCode::XSET, 41},
 
     {OpCode::BREAKPOINT, 100},
     {OpCode::LOG, 100},
 
     {OpCode::SEND, 100},
-    {OpCode::GETTIME, 40},
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},
-    {OpCode::DEBUG, 1},
+    {OpCode::SET_GAS, 0},
+    {OpCode::PUSH_GAS, 1},
+    {OpCode::ERR_CODE_POINT, 25},
+    {OpCode::PUSH_INSN, 25},
+    {OpCode::PUSH_INSN_IMM, 25},
+    {OpCode::SIDELOAD, 10},
+    {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000}};
 

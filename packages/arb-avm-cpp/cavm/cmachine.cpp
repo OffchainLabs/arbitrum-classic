@@ -31,11 +31,13 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto ret = Machine::loadFromFile(filename);
-    if (!ret.second) {
+    try {
+        return new Machine(Machine::loadFromFile(filename));
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading machine " << filename << ": " << e.what()
+                  << "\n";
         return nullptr;
     }
-    return new Machine(std::move(ret.first));
 }
 
 // cmachine_t *machine_create(char *data)
@@ -114,20 +116,15 @@ struct ReasonConverter {
         return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const InboxBlocked& val) const {
-        std::vector<unsigned char> inboxDataVec;
-        marshal_uint256_t(val.timout, inboxDataVec);
-        return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
+    CBlockReason operator()(const InboxBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_INBOX, ByteSlice{nullptr, 0}};
     }
 };
 
-CBlockReason machineIsBlocked(CMachine* m,
-                              void* currentTimeData,
-                              int newMessages) {
+CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto currentTime = receiveUint256(currentTimeData);
-    auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
+    auto blockReason = mach->isBlocked(newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
@@ -147,27 +144,16 @@ ByteSlice machineMarshallState(CMachine* m) {
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
                                      void* inbox,
                                      uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto lowerBoundBlock = receiveUint256(lowerBoundBlockData);
-    auto upperBoundBlock = receiveUint256(upperBoundBlockData);
-    auto lowerBoundTimestamp = receiveUint256(lowerBoundTimestampData);
-    auto upperBoundTimestamp = receiveUint256(upperBoundTimestampData);
 
     auto inboxData = reinterpret_cast<const char*>(inbox);
     auto messages = deserialize_value(inboxData, mach->getPool());
 
-    TimeBounds timeBounds{lowerBoundBlock, upperBoundBlock, lowerBoundTimestamp,
-                          upperBoundTimestamp};
-
     Assertion assertion =
-        mach->run(maxSteps, timeBounds, nonstd::get<Tuple>(std::move(messages)),
+        mach->run(maxSteps, nonstd::get<Tuple>(std::move(messages)),
                   std::chrono::seconds{wallLimit});
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {

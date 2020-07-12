@@ -132,13 +132,9 @@ async function makeEmptyAssertion(
   arbRollup: ArbRollup,
   vmState: string,
   numSteps: number,
-  startBlock: utils.BigNumberish,
-  startTime: utils.BigNumberish,
   importedMessageCount: utils.BigNumberish,
   readInbox: boolean
 ): Promise<ContractTransaction> {
-  const startBlockInt = ethers.utils.bigNumberify(startBlock)
-  const startTimeInt = ethers.utils.bigNumberify(startTime)
   return arbRollup.makeAssertion(
     [
       vmState,
@@ -155,7 +151,6 @@ async function makeEmptyAssertion(
     0,
     0,
     numSteps,
-    [startBlockInt, startBlockInt.add(10), startTimeInt, startTimeInt.add(100)],
     importedMessageCount,
     readInbox,
     0,
@@ -184,7 +179,6 @@ class VMProtoData {
 class AssertionParams {
   constructor(
     public numSteps: number,
-    public timeBounds: utils.BigNumberish[],
     public importedMessageCount: utils.BigNumberish
   ) {}
 }
@@ -396,7 +390,6 @@ async function makeAssertion(
     prevDeadline,
     prevChildType,
     params.numSteps,
-    params.timeBounds,
     params.importedMessageCount,
     claims.executionAssertion.didReadInbox,
     claims.executionAssertion.numGas,
@@ -448,7 +441,6 @@ describe('ArbRollup', function () {
       gracePeriodTicks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
       maxExecutionSteps, // maxExecutionSteps
-      [20, 1000], // maxTimeBoundsWidth
       stakeRequirement, // stakeRequirement
       await accounts[0].getAddress() // owner
     )
@@ -476,14 +468,11 @@ describe('ArbRollup', function () {
   })
 
   it('should fail to assert on invalid leaf', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
         arbRollup,
         '0x3400000000000000000000000000000000000000000000000000000000000000',
         0,
-        currentBlock.number,
-        currentBlock.timestamp,
         0,
         false
       )
@@ -495,14 +484,11 @@ describe('ArbRollup', function () {
   // })
 
   it('should fail to assert over step limit', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
       makeEmptyAssertion(
         arbRollup,
         initialVmState,
         maxExecutionSteps + 1,
-        currentBlock.number,
-        currentBlock.timestamp,
         0,
         false
       )
@@ -510,53 +496,20 @@ describe('ArbRollup', function () {
   })
 
   it('should fail to assert without stake', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
-      makeEmptyAssertion(
-        arbRollup,
-        initialVmState,
-        0,
-        currentBlock.number,
-        currentBlock.timestamp,
-        0,
-        false
-      )
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 0, false)
     ).to.be.revertedWith('INV_STAKER')
   })
 
-  it('should fail to assert outside time bounds', async () => {
-    await expect(
-      makeEmptyAssertion(arbRollup, initialVmState, 0, 10000, 10000, 0, false)
-    ).to.be.revertedWith('MAKE_TIME')
-  })
-
   it('should fail if consuming messages but not reading inbox', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
-      makeEmptyAssertion(
-        arbRollup,
-        initialVmState,
-        0,
-        currentBlock.number,
-        currentBlock.timestamp,
-        10,
-        false
-      )
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 10, false)
     ).to.be.revertedWith('MAKE_MESSAGES')
   })
 
   it('should fail if reading past lastest inbox message', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
     await expect(
-      makeEmptyAssertion(
-        arbRollup,
-        initialVmState,
-        0,
-        currentBlock.number,
-        currentBlock.timestamp,
-        10,
-        true
-      )
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 10, true)
     ).to.be.revertedWith('MAKE_MESSAGE_CNT')
   })
 
@@ -585,22 +538,12 @@ describe('ArbRollup', function () {
       await arbRollup.isValidLeaf(originalNode),
       'latest confirmed should be leaf before asserting'
     )
-    const currentBlock = await ethers.provider.getBlock('latest')
     const prevProtoData = new VMProtoData(
       initialVmState,
       emptyTupleHash,
       ethers.utils.bigNumberify(0)
     )
-    const params = new AssertionParams(
-      0,
-      [
-        currentBlock.number,
-        currentBlock.number + 10,
-        currentBlock.timestamp,
-        currentBlock.timestamp + 100,
-      ],
-      ethers.utils.bigNumberify(0)
-    )
+    const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
     const claims = new AssertionClaim(
       zerobytes32,
       emptyTupleHash,
@@ -756,17 +699,7 @@ describe('ArbRollup', function () {
   })
 
   it('should assert again', async () => {
-    const currentBlock = await ethers.provider.getBlock('latest')
-    const params = new AssertionParams(
-      0,
-      [
-        currentBlock.number,
-        currentBlock.number + 10,
-        currentBlock.timestamp,
-        currentBlock.timestamp + 100,
-      ],
-      ethers.utils.bigNumberify(0)
-    )
+    const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
     const claims = new AssertionClaim(
       zerobytes32,
       emptyTupleHash,

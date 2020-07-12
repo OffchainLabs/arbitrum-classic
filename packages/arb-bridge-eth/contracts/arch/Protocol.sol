@@ -25,20 +25,9 @@ library Protocol {
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
-        uint128[4] memory _timeBounds,
         bytes32 _beforeInboxHash
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    _beforeHash,
-                    _timeBounds[0],
-                    _timeBounds[1],
-                    _timeBounds[2],
-                    _timeBounds[3],
-                    _beforeInboxHash
-                )
-            );
+        return keccak256(abi.encodePacked(_beforeHash, _beforeInboxHash));
     }
 
     function generateAssertionHash(

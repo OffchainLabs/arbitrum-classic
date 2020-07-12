@@ -18,7 +18,9 @@ package challenges
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
@@ -30,7 +32,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 )
 
-func testMessagesChallengeEth(t *testing.T) {
+func testMessagesChallenge(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
+) {
 	t.Parallel()
 	messageStack := getMsgStackEth()
 	messageCount := uint64(4)
@@ -43,10 +50,11 @@ func testMessagesChallengeEth(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
@@ -73,13 +81,19 @@ func testMessagesChallengeEth(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func testMessagesChallengeERC20(t *testing.T) {
-	//t.Parallel()
+func testMessagesChallengeERC20(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
+) {
+	t.Parallel()
 	messageStack := getMsgStackERC20()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
@@ -91,10 +105,11 @@ func testMessagesChallengeERC20(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
@@ -121,13 +136,18 @@ func testMessagesChallengeERC20(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func testMessagesChallengeERC721(t *testing.T) {
-	//t.Parallel()
+func testMessagesChallengeERC721(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts) {
+	t.Parallel()
 	messageStack := getMsgStackER721()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
@@ -139,10 +159,11 @@ func testMessagesChallengeERC721(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
@@ -169,13 +190,18 @@ func testMessagesChallengeERC721(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func testMessagesChallengeTrnx(t *testing.T) {
-	//t.Parallel()
+func testMessagesChallengeTrnx(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts) {
+	t.Parallel()
 	messageStack := getMsgStackTrxn()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
@@ -187,10 +213,11 @@ func testMessagesChallengeTrnx(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
@@ -217,13 +244,18 @@ func testMessagesChallengeTrnx(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func testMessagesChallengeContractTrnx(t *testing.T) {
-	//t.Parallel()
+func testMessagesChallengeContractTrnx(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts) {
+	t.Parallel()
 	messageStack := getMsgStackContractTrxn()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
@@ -235,10 +267,11 @@ func testMessagesChallengeContractTrnx(t *testing.T) {
 		messageCount)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidMessagesChildType,
 		challengeHash,
-		"d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e",
-		"af5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				context.Background(),
@@ -265,6 +298,7 @@ func testMessagesChallengeContractTrnx(t *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -307,17 +341,8 @@ func getMsgChallengeData(
 func getMsgStackEth() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.Eth{
-				To:    common.Address{},
-				From:  common.Address{},
-				Value: big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomEth())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
 }
@@ -326,18 +351,8 @@ func getMsgStackERC20() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.ERC20{
-				To:           common.Address{},
-				From:         common.Address{},
-				TokenAddress: common.Address{},
-				Value:        big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomERC20())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
 }
@@ -346,18 +361,8 @@ func getMsgStackER721() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.ERC721{
-				To:           common.Address{},
-				From:         common.Address{},
-				TokenAddress: common.Address{},
-				Id:           big.NewInt(6745),
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomERC721())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
 }
@@ -366,18 +371,8 @@ func getMsgStackContractTrxn() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: message.ContractTransaction{
-				To:    common.Address{},
-				From:  common.Address{},
-				Value: big.NewInt(6745),
-				Data:  []byte{43, 65, 68, 98, 43, 46},
-			},
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomContractTransaction())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
 }
@@ -386,24 +381,8 @@ func getMsgStackTrxn() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 
 	for i := int64(0); i < 8; i++ {
-		messageStack.DeliverMessage(message.Received{
-			Message: generateTestTransaction(),
-			ChainTime: message.ChainTime{
-				BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-				Timestamp: big.NewInt(5435254),
-			},
-		})
+		msg := message.NewRandomInboxMessage(message.NewRandomTransaction())
+		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
-}
-
-func generateTestTransaction() message.Transaction {
-	return message.Transaction{
-		Chain:       common.Address{},
-		To:          common.Address{},
-		From:        common.Address{},
-		SequenceNum: big.NewInt(6435),
-		Value:       big.NewInt(89735406),
-		Data:        []byte{43, 65, 68, 98, 43, 46},
-	}
 }

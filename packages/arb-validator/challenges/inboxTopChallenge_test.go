@@ -18,6 +18,8 @@ package challenges
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 	"testing"
@@ -29,18 +31,24 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func testInboxTopChallenge(tester *testing.T) {
-	tester.Parallel()
+func testInboxTopChallenge(
+	t *testing.T,
+	client ethutils.EthClient,
+	asserter *bind.TransactOpts,
+	challenger *bind.TransactOpts,
+) {
+	t.Parallel()
 
 	messageStack := getInboxMsgStack()
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
-	bottomHash, challengeHash := getChallengeData(tester, messageStack, count)
+	bottomHash, challengeHash := getChallengeData(t, messageStack, count)
 
 	if err := testChallenge(
+		client,
+		asserter,
+		challenger,
 		valprotocol.InvalidInboxTopChildType,
 		challengeHash,
-		"ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39",
-		"979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76",
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 			return DefendInboxTopClaim(
 				context.Background(),
@@ -65,8 +73,9 @@ func testInboxTopChallenge(tester *testing.T) {
 				true,
 			)
 		},
+		testerAddress,
 	); err != nil {
-		tester.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
@@ -85,50 +94,10 @@ func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messa
 }
 
 func getInboxMsgStack() *structures.MessageStack {
-	msg1 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg2 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg3 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-	msg4 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(6745),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(532)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
+	msg1 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg2 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg3 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg4 := message.NewRandomInboxMessage(message.NewRandomEth())
 	messageStack := structures.NewMessageStack()
 	messageStack.DeliverMessage(msg1)
 	messageStack.DeliverMessage(msg2)

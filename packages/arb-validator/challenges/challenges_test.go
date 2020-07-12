@@ -17,17 +17,56 @@
 package challenges
 
 import (
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/challengetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"testing"
+	"time"
 )
 
+var testerAddress ethcommon.Address
+
 func TestChallenges(t *testing.T) {
-	//t.Run("Messages Challenge", testMessagesChallengeEth)
-	//t.Run("Messages Challenge", testMessagesChallengeERC20)
-	//t.Run("Messages Challenge", testMessagesChallengeERC721)
+	client, auths := test.SimulatedBackend()
 
-	//t.Run("Messages Challenge", testMessagesChallengeTrnx)
-	//t.Run("Messages Challenge", testMessagesChallengeContractTrnx)
+	factorAddr, err := ethbridge.DeployChallengeFactory(auths[0], client)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	//t.Run("Inbox Top Challenge", testInboxTopChallenge)
-	//t.Run("Execution Challenge", testExecutionChallenge)
+	testerAddress, _, _, err = challengetester.DeployChallengeTester(auths[0], client, factorAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.Commit()
+
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			client.Commit()
+		}
+	}()
+
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testInboxTopChallenge(t, client, auths[0], auths[1])
+	})
+	t.Run("Messages Challenge", func(t *testing.T) {
+		testMessagesChallenge(t, client, auths[2], auths[3])
+	})
+	t.Run("Execution Challenge", func(t *testing.T) {
+		testExecutionChallenge(t, client, auths[4], auths[5])
+	})
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testMessagesChallengeERC20(t, client, auths[6], auths[7])
+	})
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testMessagesChallengeERC721(t, client, auths[8], auths[9])
+	})
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testMessagesChallengeTrnx(t, client, auths[10], auths[11])
+	})
+	t.Run("Inbox Top Challenge", func(t *testing.T) {
+		testMessagesChallengeContractTrnx(t, client, auths[12], auths[13])
+	})
 }

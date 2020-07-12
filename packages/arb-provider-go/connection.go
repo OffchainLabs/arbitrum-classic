@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -13,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -32,7 +31,7 @@ type ArbConnection struct {
 	sequenceNum *big.Int
 }
 
-func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
+func Dial(url string, auth *bind.TransactOpts, ethclint ethutils.EthClient) (*ArbConnection, error) {
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo(context.Background())
@@ -100,21 +99,25 @@ func (conn *ArbConnection) CodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context:     ctx,
 		BlockNumber: blockNumber,
 	}, contract)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get code")
+	}
+	return code, nil
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
-	logVal, err := evm.ProcessLog(retValue)
+	logVal, err := evm.NewResultFromValue(retValue)
 	if err != nil {
 		return nil, err
 	}
-	if !logVal.Valid() {
+	if logVal.ResultCode != evm.ReturnCode {
 		return nil, fmt.Errorf("call reverted %v", logVal)
 	}
-	return logVal.GetReturnData(), nil
+	return logVal.ReturnData, nil
 }
 
 // CallContract executes an Ethereum contract call with the specified data as the
@@ -143,10 +146,14 @@ func (conn *ArbConnection) PendingCodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context: ctx,
 		Pending: true,
 	}, account)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get pending code")
+	}
+	return code, nil
 }
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
@@ -200,7 +207,8 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return conn.globalInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
+	arbTx := conn.TxToMessage(tx)
+	return conn.globalInbox.SendL2Message(ctx, conn.vmId, message.L2Message{Msg: arbTx})
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -346,17 +354,21 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	return txInfo.ToEthReceipt()
 }
 
-func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
+func (conn *ArbConnection) TxToMessage(tx *types.Transaction) message.Transaction {
+	var to common.Address
+	if tx.To() != nil {
+		to = common.NewAddressFromEth(*tx.To())
+	}
 	return message.Transaction{
-		Chain:       conn.vmId,
-		To:          common.NewAddressFromEth(*tx.To()),
-		From:        from,
+		MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+		GasPriceBid: tx.GasPrice(),
 		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
-		Value:       tx.Value(),
+		DestAddress: to,
+		Payment:     tx.Value(),
 		Data:        tx.Data(),
 	}
 }
 
 func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) common.Hash {
-	return conn.TxToMessage(tx, from).ReceiptHash()
+	return conn.TxToMessage(tx).MessageID(from)
 }

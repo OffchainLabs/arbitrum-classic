@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -90,19 +89,36 @@ func TestTupleHashing(t *testing.T) {
 	}
 }
 
-func TestBytesStackHash(t *testing.T) {
-	data := []byte{65, 23, 68, 87, 12}
-	stackHash := message.BytesToByteStack(data).Hash().ToEthHash()
+func TestBytesStack(t *testing.T) {
+	data := common.RandBytes(200)
+	bytestack := message.BytesToByteStack(data)
+	t.Log("bytestack", bytestack)
 
-	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data)
+	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if stackHash != bridgeStackHash {
-		t.Error(errors.New("calculated wrong byte stack hash: "))
-		fmt.Println(stackHash)
-		fmt.Println(bridgeStackHash)
+	if bytestack.Hash().ToEthHash() != bridgeStackHash {
+		t.Error("calculated wrong byte stack hash")
+	}
+
+	var bytestackValBytes bytes.Buffer
+	if err := value.MarshalValue(bytestack, &bytestackValBytes); err != nil {
+		t.Fatal(err)
+	}
+	valid, offset, parsedData, err := valueTester.BytestackToBytes(nil, bytestackValBytes.Bytes(), big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !valid {
+		t.Fatal("failed to parse bytestack")
+	}
+	if offset.Cmp(big.NewInt(int64(len(bytestackValBytes.Bytes())))) != 0 {
+		t.Error("incorrect offset")
+	}
+	if !bytes.Equal(parsedData, data) {
+		t.Error("incorrect data")
 	}
 }
 
@@ -115,7 +131,7 @@ func TestBytesToBytestackHash(t *testing.T) {
 		common.RandBytes(200),
 	}
 	for _, data := range datas {
-		valueHash, err := valueTester.BytesToBytestackHash(nil, data)
+		valueHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,40 +187,5 @@ func TestDeserialize(t *testing.T) {
 				t.Error("Incorrect hash")
 			}
 		})
-	}
-}
-
-func TestDeserializeMessageData(t *testing.T) {
-	msg := message.NewRandomEth()
-	var data bytes.Buffer
-	if err := value.MarshalValue(msg.AsInboxValue(), &data); err != nil {
-		t.Fatal(err)
-	}
-	valid, offset, messageType, sender, err := valueTester.DeserializeMessageData(nil, data.Bytes(), big.NewInt(0))
-	if err != nil {
-		t.Error(err)
-	}
-	if !valid {
-		t.Error("invalid message")
-	}
-	if message.Type(messageType.Uint64()) != msg.Type() {
-		t.Error("incorrect message type")
-	}
-	if sender != msg.From.ToEthAddress() {
-		t.Error("incorrect sender")
-	}
-
-	valid, _, to, val, err := valueTester.GetEthMsgData(nil, data.Bytes(), offset)
-	if err != nil {
-		t.Error(err)
-	}
-	if !valid {
-		t.Error("invalid message")
-	}
-	if msg.To.ToEthAddress() != to {
-		t.Error("incorect to")
-	}
-	if msg.Value.Cmp(val) != 0 {
-		t.Error("incorrect val")
 	}
 }

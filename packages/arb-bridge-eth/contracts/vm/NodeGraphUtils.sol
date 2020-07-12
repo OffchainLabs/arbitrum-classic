@@ -34,7 +34,6 @@ library NodeGraphUtils {
         bytes32 prevDataHash;
         uint32 prevChildType;
         uint64 numSteps;
-        uint128[4] timeBounds;
         uint256 importedMessageCount;
         bytes32 afterInboxTop;
         bytes32 importedMessagesSlice;
@@ -148,7 +147,6 @@ library NodeGraphUtils {
     ) internal pure returns (bytes32) {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
             data.beforeVMHash,
-            data.timeBounds,
             data.importedMessagesSlice
         );
 

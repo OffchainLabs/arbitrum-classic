@@ -18,9 +18,17 @@ package rollup
 
 import (
 	"context"
+	"log"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -33,31 +41,25 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
-	"log"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 )
 
 var dbPath = "./testdb"
 
 var rollupTester *rolluptester.RollupTester
-var ethclnt *ethclient.Client
+var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
 func TestMain(m *testing.M) {
-	var err error
-	ethclnt, err = ethclient.Dial(test.GetEthUrl())
-	if err != nil {
-		log.Fatal(err)
-	}
+	var auths []*bind.TransactOpts
+	ethclnt, auths = test.SimulatedBackend()
+	auth = auths[0]
 
-	auth, err = test.SetupAuth("8285795ed740b32384e72554128f80714ed6c93d50aeb18aa655547431a7a3cb")
-	if err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			ethclnt.Commit()
+		}
+	}()
 
 	_, tx, deployedTester, err := rolluptester.DeployRollupTester(
 		auth,
@@ -90,17 +92,15 @@ func TestConfirmAssertion(t *testing.T) {
 		StakeRequirement:        big.NewInt(0),
 		GracePeriod:             common.TicksFromSeconds(1),
 		MaxExecutionSteps:       100000,
-		MaxBlockBoundsWidth:     10000,
-		MaxTimestampBoundsWidth: 100000,
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := test.GetFactoryAddress()
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	factory, err := clnt.NewArbFactory(arbFactoryAddress)
+	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 
 		if balance.Cmp(amount) != 0 {
-			t.Fatal("failed to deposit balance")
+			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
 		}
 	}
 
@@ -159,11 +159,14 @@ func TestConfirmAssertion(t *testing.T) {
 
 	checkpointer := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
-		contractPath,
 		dbPath,
 		big.NewInt(100000),
 		true,
 	)
+
+	if err := checkpointer.Initialize(contractPath); err != nil {
+		t.Fatal(err)
+	}
 
 	chain, err := chainobserver.NewChain(
 		rollupAddress,
@@ -196,17 +199,22 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
-	results := make([]evm.Result, 0, 5)
+	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
-	messages = append(messages, message.Eth{
-		To:    dest,
-		From:  common.NewAddressFromEth(auth.From),
-		Value: big.NewInt(75),
-	}.AsInboxValue())
+	messages = append(
+		messages,
+		message.NewOutMessage(
+			message.Eth{
+				Dest:  dest,
+				Value: big.NewInt(75),
+			},
+			common.NewAddressFromEth(auth.From),
+		).AsValue(),
+	)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
-		messages = append(messages, message.NewRandomEth().AsInboxValue())
+		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
 	}
 
 	assertion := evm.NewRandomEVMAssertion(results, messages)

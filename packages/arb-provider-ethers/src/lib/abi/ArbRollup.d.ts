@@ -44,10 +44,6 @@ interface ArbRollupInterface extends Interface {
       ]): string
     }>
 
-    forwardContractMessage: TypedFunctionDescription<{
-      encode([_sender, _data]: [string, Arrayish]): string
-    }>
-
     getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>
 
     globalInbox: TypedFunctionDescription<{ encode([]: []): string }>
@@ -58,7 +54,6 @@ interface ArbRollupInterface extends Interface {
         _gracePeriodTicks,
         _arbGasSpeedLimitPerTick,
         _maxExecutionSteps,
-        _maxTimeBoundsWidth,
         _stakeRequirement,
         _owner,
         _challengeFactoryAddress,
@@ -68,7 +63,6 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        BigNumberish[],
         BigNumberish,
         string,
         string,
@@ -93,7 +87,6 @@ interface ArbRollupInterface extends Interface {
         _prevDeadlineTicks,
         _prevChildType,
         _numSteps,
-        _timeBounds,
         _importedMessageCount,
         _didInboxInsn,
         _numArbGas,
@@ -104,7 +97,6 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        BigNumberish[],
         BigNumberish,
         boolean,
         BigNumberish,
@@ -179,10 +171,6 @@ interface ArbRollupInterface extends Interface {
       encode([winner, loser]: [string, string, BigNumberish]): string
     }>
 
-    spawnCallProxy: TypedFunctionDescription<{
-      encode([_arbContract]: [string]): string
-    }>
-
     startChallenge: TypedFunctionDescription<{
       encode([
         asserterAddress,
@@ -232,11 +220,10 @@ interface ArbRollupInterface extends Interface {
         fields,
         inboxCount,
         importedMessageCount,
-        timeBounds,
         numArbGas,
         numSteps,
         didInboxInsn,
-      ]: [null, null, null, null, null, null, null]): string[]
+      ]: [null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -315,12 +302,6 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    forwardContractMessage(
-      _sender: string,
-      _data: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<string>
@@ -330,7 +311,6 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -350,7 +330,6 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,
@@ -421,11 +400,6 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    spawnCallProxy(
-      _arbContract: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
     startChallenge(
       asserterAddress: string,
       challengerAddress: string,
@@ -447,13 +421,9 @@ export class ArbRollup extends Contract {
       gracePeriodTicks: BigNumber
       arbGasSpeedLimitPerTick: BigNumber
       maxExecutionSteps: BigNumber
-      maxBlockBoundsWidth: BigNumber
-      maxTimestampBoundsWidth: BigNumber
       0: BigNumber
       1: BigNumber
       2: BigNumber
-      3: BigNumber
-      4: BigNumber
     }>
   }
 
@@ -476,12 +446,6 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  forwardContractMessage(
-    _sender: string,
-    _data: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
   getStakeRequired(): Promise<BigNumber>
 
   globalInbox(): Promise<string>
@@ -491,7 +455,6 @@ export class ArbRollup extends Contract {
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
-    _maxTimeBoundsWidth: BigNumberish[],
     _stakeRequirement: BigNumberish,
     _owner: string,
     _challengeFactoryAddress: string,
@@ -511,7 +474,6 @@ export class ArbRollup extends Contract {
     _prevDeadlineTicks: BigNumberish,
     _prevChildType: BigNumberish,
     _numSteps: BigNumberish,
-    _timeBounds: BigNumberish[],
     _importedMessageCount: BigNumberish,
     _didInboxInsn: boolean,
     _numArbGas: BigNumberish,
@@ -580,11 +542,6 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  spawnCallProxy(
-    _arbContract: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
   startChallenge(
     asserterAddress: string,
     challengerAddress: string,
@@ -606,13 +563,9 @@ export class ArbRollup extends Contract {
     gracePeriodTicks: BigNumber
     arbGasSpeedLimitPerTick: BigNumber
     maxExecutionSteps: BigNumber
-    maxBlockBoundsWidth: BigNumber
-    maxTimestampBoundsWidth: BigNumber
     0: BigNumber
     1: BigNumber
     2: BigNumber
-    3: BigNumber
-    4: BigNumber
   }>
 
   filters: {
@@ -624,7 +577,6 @@ export class ArbRollup extends Contract {
       fields: null,
       inboxCount: null,
       importedMessageCount: null,
-      timeBounds: null,
       numArbGas: null,
       numSteps: null,
       didInboxInsn: null
@@ -675,8 +627,6 @@ export class ArbRollup extends Contract {
       stakerProofOffsets: BigNumberish[]
     ): Promise<BigNumber>
 
-    forwardContractMessage(_sender: string, _data: Arrayish): Promise<BigNumber>
-
     getStakeRequired(): Promise<BigNumber>
 
     globalInbox(): Promise<BigNumber>
@@ -686,7 +636,6 @@ export class ArbRollup extends Contract {
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
-      _maxTimeBoundsWidth: BigNumberish[],
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
@@ -705,7 +654,6 @@ export class ArbRollup extends Contract {
       _prevDeadlineTicks: BigNumberish,
       _prevChildType: BigNumberish,
       _numSteps: BigNumberish,
-      _timeBounds: BigNumberish[],
       _importedMessageCount: BigNumberish,
       _didInboxInsn: boolean,
       _numArbGas: BigNumberish,
@@ -756,8 +704,6 @@ export class ArbRollup extends Contract {
       loser: string,
       arg2: BigNumberish
     ): Promise<BigNumber>
-
-    spawnCallProxy(_arbContract: string): Promise<BigNumber>
 
     startChallenge(
       asserterAddress: string,

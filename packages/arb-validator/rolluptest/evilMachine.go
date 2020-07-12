@@ -63,11 +63,10 @@ func _inverseTweakHash(h common.Hash) common.Hash {
 
 func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
-	timeBounds *protocol.TimeBounds,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, timeBounds, inbox, maxWallTime)
+	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inbox, maxWallTime)
 	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }

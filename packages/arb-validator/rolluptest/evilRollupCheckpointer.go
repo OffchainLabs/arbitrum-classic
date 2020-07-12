@@ -31,7 +31,6 @@ import (
 
 func NewEvilRollupCheckpointer(
 	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
 	databasePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool,
@@ -39,7 +38,6 @@ func NewEvilRollupCheckpointer(
 	return &EvilRollupCheckpointer{
 		checkpointing.NewIndexedCheckpointer(
 			rollupAddr,
-			arbitrumCodeFilePath,
 			databasePath,
 			maxReorgDepth,
 			forceFreshStart,
@@ -49,6 +47,14 @@ func NewEvilRollupCheckpointer(
 
 type EvilRollupCheckpointer struct {
 	cp checkpointing.RollupCheckpointer
+}
+
+func (e *EvilRollupCheckpointer) Initialize(arbitrumCodeFilePath string) error {
+	return e.cp.Initialize(arbitrumCodeFilePath)
+}
+
+func (e *EvilRollupCheckpointer) Initialized() bool {
+	return e.cp.Initialized()
 }
 
 func (e EvilRollupCheckpointer) GetValue(h common.Hash) value.Value {

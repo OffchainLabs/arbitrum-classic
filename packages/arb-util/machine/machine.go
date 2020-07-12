@@ -38,11 +38,10 @@ type Machine interface {
 	PrintState()
 
 	CurrentStatus() Status
-	IsBlocked(currentTime *common.TimeBlocks, newMessages bool) BlockReason
+	IsBlocked(newMessages bool) BlockReason
 
 	ExecuteAssertion(
 		maxSteps uint64,
-		timeBounds *protocol.TimeBounds,
 		inbox value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)

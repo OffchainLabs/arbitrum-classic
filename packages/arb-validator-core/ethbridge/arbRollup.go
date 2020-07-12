@@ -19,12 +19,12 @@ package ethbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -35,7 +35,7 @@ type arbRollup struct {
 	auth *TransactAuth
 }
 
-func newRollup(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*arbRollup, error) {
+func newRollup(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*arbRollup, error) {
 	watcher, err := newRollupWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,6 @@ func (vm *arbRollup) MakeAssertion(
 		prevDeadline.Val,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionParams.TimeBounds.AsIntArray(),
 		assertionParams.ImportedMessageCount,
 		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,
@@ -218,7 +217,6 @@ func (vm *arbRollup) MakeAssertion(
 			prevDeadline.Val,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionParams.TimeBounds.AsIntArray(),
 			assertionParams.ImportedMessageCount,
 			assertionClaim.AssertionStub.DidInboxInsn,
 			assertionClaim.AssertionStub.NumGas,

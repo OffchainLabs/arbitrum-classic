@@ -29,24 +29,15 @@ interface ArbSys {
     // Send given amount of Eth to dest with from sender.
     function withdrawEth(address dest, uint256 amount) external;
 
-    // Return lower bound on the on-chain block number
-    function blockLowerBound() external view returns(uint);
-
-    // Return lower bound on the on-chain timestamp
-    function timestampLowerBound() external view returns(uint);
-
-    // Return upper bound on the on-chain block number
-    function blockUpperBound() external view returns(uint);
-
-    // Return upper bound on the on-chain timestamp
-    function timestampUpperBound() external view returns(uint);
-
     // Return the number of transactions issued by the given external account
     // or the account sequence number of the given contract
-    function getTransactionCount(address account) external view returns(uint256);
+    function getTransactionCount(address account)
+        external
+        view
+        returns (uint256);
 
     // Generate a new contract with the same code as the given contract
     // This function returns the address of the new contract
     // This is currently the only way to create new contracts in a compiled rollup instance
-    function cloneContract(address account) external returns(address);
+    function cloneContract(address account) external returns (address);
 }

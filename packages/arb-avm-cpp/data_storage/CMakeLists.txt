@@ -27,6 +27,7 @@ set(LIB_HEADERS
   include/data_storage/keyvaluestore.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
+  include/data_storage/value/code.hpp
   include/data_storage/value/machine.hpp
   include/data_storage/value/value.hpp
 )
@@ -42,6 +43,7 @@ set(LIB_SOURCES
   src/checkpointstorage.cpp
   src/confirmednodestore.cpp
   src/keyvaluestore.cpp
+  src/value/code.cpp
   src/value/utils.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp

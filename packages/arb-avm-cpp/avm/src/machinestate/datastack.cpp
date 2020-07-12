@@ -40,7 +40,7 @@ HashPreImage Datastack::getHashPreImage() const {
 
 std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<MarshalLevel>& stackInfo,
-    const Code& code) {
+    const Code& code) const {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;

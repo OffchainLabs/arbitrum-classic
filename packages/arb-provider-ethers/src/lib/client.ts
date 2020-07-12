@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { EVMCode, processLog } from './message'
+import {} from './message'
 
 import * as ethers from 'ethers'
 
@@ -27,7 +27,9 @@ import { validatorserver } from './abi/validatorserver.server.d'
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
 
+/* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
 function _arbClient(managerAddress: string): any {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   const callServer = (request: any, callback: any): void => {
     const options = {
       body: request, // request is a string
@@ -38,6 +40,7 @@ function _arbClient(managerAddress: string): any {
     }
 
     fetch(managerAddress, options)
+      /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
       .then((res: any) => {
         return res.text()
       })
@@ -136,6 +139,7 @@ function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
 }
 
 export class ArbClient {
+  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public client: any
 
   constructor(managerUrl: string) {
@@ -235,7 +239,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return new Promise((resolve, reject): void => {
       const params: validatorserver.CallMessageArgs = {
         contractAddress,
@@ -259,19 +263,7 @@ export class ArbClient {
               reject('call result empty')
               return
             }
-            const val = ArbValue.unmarshal(result.rawVal)
-            const evmVal = processLog(val as ArbValue.TupleValue)
-            switch (evmVal.returnType) {
-              case EVMCode.Return:
-                resolve(evmVal.data)
-                break
-              case EVMCode.Stop:
-                resolve(new Uint8Array())
-                break
-              default:
-                reject(new Error('Call was reverted'))
-                break
-            }
+            resolve(ArbValue.unmarshal(result.rawVal))
           }
         }
       )
@@ -282,7 +274,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return this._call('Validator.CallMessage', contractAddress, sender, data)
   }
 
@@ -290,7 +282,7 @@ export class ArbClient {
     contractAddress: string,
     sender: string | undefined,
     data: string
-  ): Promise<Uint8Array> {
+  ): Promise<ArbValue.Value> {
     return this._call('Validator.PendingCall', contractAddress, sender, data)
   }
 
