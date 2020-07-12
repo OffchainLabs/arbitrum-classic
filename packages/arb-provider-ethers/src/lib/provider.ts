@@ -16,7 +16,14 @@
 /* eslint-env node */
 'use strict'
 
-import { Result, ResultCode, Log, MessageCode, L2MessageCode } from './message'
+import {
+  Result,
+  ResultCode,
+  Log,
+  MessageCode,
+  L2MessageCode,
+  L2Call,
+} from './message'
 import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
@@ -440,26 +447,19 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     transaction: ethers.providers.TransactionRequest,
     blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
   ): Promise<string> {
-    if (!transaction.to) {
-      throw Error('Cannot create call without a destination')
-    }
-    const to = await transaction.to
     const from = await transaction.from
-    const rawData = await transaction.data
-    let data = '0x'
-    if (rawData) {
-      data = ethers.utils.hexlify(rawData)
-    }
+    const tx = new L2Call(
+      await transaction.gasLimit,
+      await transaction.gasPrice,
+      await transaction.to,
+      await transaction.data
+    )
 
-    const callLatest = (
-      to: string,
-      from: string | undefined,
-      data: string
-    ): Promise<ArbValue.Value> => {
+    const callLatest = (): Promise<ArbValue.Value> => {
       if (this.deterministicAssertions) {
-        return this.client.pendingCall(to, from, data)
+        return this.client.pendingCall(tx, from)
       } else {
-        return this.client.call(to, from, data)
+        return this.client.call(tx, from)
       }
     }
 
@@ -467,14 +467,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (blockTag) {
       const tag = await blockTag
       if (tag == 'pending') {
-        resultVal = await this.client.pendingCall(to, from, data)
+        resultVal = await this.client.pendingCall(tx, from)
       } else if (tag == 'latest') {
-        resultVal = await callLatest(to, from, data)
+        resultVal = await callLatest()
       } else {
         throw Error('Invalid block tag')
       }
     } else {
-      resultVal = await callLatest(to, from, data)
+      resultVal = await callLatest()
     }
     const result = Result.fromValue(resultVal)
     if (result.resultCode != ResultCode.Return) {

@@ -56,10 +56,19 @@ export class L2Transaction {
     maxGas: ethers.utils.BigNumberish,
     gasPriceBid: ethers.utils.BigNumberish,
     sequenceNum: ethers.utils.BigNumberish,
-    destAddress: ethers.utils.Arrayish,
-    payment: ethers.utils.BigNumberish,
-    calldata: ethers.utils.Arrayish
+    destAddress: ethers.utils.Arrayish | undefined,
+    payment: ethers.utils.BigNumberish | undefined,
+    calldata: ethers.utils.Arrayish | undefined
   ) {
+    if (!destAddress) {
+      destAddress = ethers.utils.hexZeroPad('0x', 20)
+    }
+    if (!calldata) {
+      calldata = '0x'
+    }
+    if (!payment) {
+      payment = 0
+    }
     this.maxGas = ethers.utils.bigNumberify(maxGas)
     this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
     this.sequenceNum = ethers.utils.bigNumberify(sequenceNum)
@@ -92,6 +101,13 @@ export class L2Transaction {
     ])
   }
 
+  messageID(sender: string): string {
+    return ethers.utils.solidityKeccak256(
+      ['bytes', 'address'],
+      [this.asData(), sender]
+    )
+  }
+
   batchHash(chain: string): string {
     return new ArbValue.TupleValue([
       new ArbValue.IntValue(chain),
@@ -107,7 +123,59 @@ export class L2Transaction {
   }
 }
 
-export type L2SubMessage = L2Transaction
+export class L2Call {
+  public maxGas: ethers.utils.BigNumber
+  public gasPriceBid: ethers.utils.BigNumber
+  public destAddress: string
+  public calldata: string
+  public kind: L2MessageCode.Call
+
+  constructor(
+    maxGas: ethers.utils.BigNumberish | undefined,
+    gasPriceBid: ethers.utils.BigNumberish | undefined,
+    destAddress: ethers.utils.Arrayish | undefined,
+    calldata: ethers.utils.Arrayish | undefined
+  ) {
+    if (!maxGas) {
+      maxGas = 0
+    }
+    if (!gasPriceBid) {
+      gasPriceBid = 0
+    }
+    if (!destAddress) {
+      destAddress = ethers.utils.hexZeroPad('0x', 20)
+    }
+    if (!calldata) {
+      calldata = '0x'
+    }
+    this.maxGas = ethers.utils.bigNumberify(maxGas)
+    this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
+    this.destAddress = ethers.utils.hexlify(destAddress)
+    this.calldata = ethers.utils.hexlify(calldata)
+    this.kind = L2MessageCode.Call
+  }
+
+  static fromData(data: ethers.utils.Arrayish): L2Call {
+    const bytes = ethers.utils.arrayify(data)
+    return new L2Call(
+      bytes.slice(0, 32),
+      bytes.slice(32, 64),
+      bytes.slice(64, 96),
+      bytes.slice(96)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([
+      hex32(this.maxGas),
+      hex32(this.gasPriceBid),
+      encodedAddress(this.destAddress),
+      this.calldata,
+    ])
+  }
+}
+
+export type L2SubMessage = L2Transaction | L2Call
 
 export enum MessageCode {
   Eth = 0,
@@ -318,11 +386,9 @@ export class IncomingMessage {
 
   messageID(): string {
     if (this.msg.kind == MessageCode.L2) {
-      if (this.msg.message.kind == L2MessageCode.Transaction) {
-        return ethers.utils.solidityKeccak256(
-          ['bytes', 'address'],
-          [this.msg.asData(), this.sender]
-        )
+      const l2message = this.msg
+      if (l2message.message.kind == L2MessageCode.Transaction) {
+        return l2message.message.messageID(this.sender)
       }
     }
     return this.inboxSeqNum.toHexString()

@@ -16,6 +16,7 @@
 /* eslint-env node */
 'use strict'
 
+import { L2Transaction } from './message'
 import { ArbProvider } from './provider'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
@@ -127,8 +128,8 @@ export class ArbWallet extends ethers.Signer {
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC20Message(
       chain,
-      to,
       erc20,
+      to,
       sendValue
     )
     return this.provider._wrapTransaction(tx, tx.hash)
@@ -143,8 +144,8 @@ export class ArbWallet extends ethers.Signer {
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
       chain,
-      to,
       erc721,
+      to,
       tokenId
     )
     return this.provider._wrapTransaction(tx, tx.hash)
@@ -176,36 +177,15 @@ export class ArbWallet extends ethers.Signer {
     )
     return tx
   }
-
   public async sendTransactionMessage(
-    to: string,
-    value: ethers.utils.BigNumberish,
-    data: string
+    l2tx: L2Transaction
   ): Promise<ethers.providers.TransactionResponse> {
     const vmId = await this.provider.getVmID()
-    const valueNum = ethers.utils.bigNumberify(value)
-    const globalInbox = await this.globalInboxConn()
-    const seq = await this.generateAndIncrementSeq()
     const from = await this.getAddress()
-
     try {
       if (this.provider.aggregator) {
-        const arbTxHash = Hashing.calculateTransactionHash(
-          vmId,
-          to,
-          from,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data
-        )
-
-        const batchTxHash = Hashing.calculateBatchTransactionHash(
-          vmId,
-          to,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data
-        )
+        const arbTxHash = l2tx.messageID(from)
+        const batchTxHash = l2tx.batchHash(vmId)
 
         const messageHashBytes = ethers.utils.arrayify(batchTxHash)
         const sig = await this.signer.signMessage(messageHashBytes)
@@ -218,35 +198,29 @@ export class ArbWallet extends ethers.Signer {
         }
 
         this.provider.aggregator.sendTransaction(
-          to,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data,
+          l2tx.destAddress,
+          l2tx.sequenceNum,
+          l2tx.payment,
+          l2tx.calldata,
           this.pubkey,
           sig
         )
 
         const tx: ethers.utils.Transaction = {
-          data: data,
+          data: l2tx.calldata,
           from: from,
           gasLimit: ethers.utils.bigNumberify(1),
           gasPrice: ethers.utils.bigNumberify(1),
           hash: arbTxHash,
-          nonce: seq,
-          to: to,
-          value: valueNum,
+          nonce: l2tx.sequenceNum.toNumber(),
+          to: l2tx.destAddress,
+          value: l2tx.payment,
           chainId: this.provider.chainId,
         }
-
         return this.provider._wrapTransaction(tx, arbTxHash)
       } else {
-        const tx = await globalInbox.sendTransactionMessage(
-          vmId,
-          to,
-          seq,
-          valueNum,
-          data
-        )
+        const globalInbox = await this.globalInboxConn()
+        const tx = await globalInbox.sendL2Message(vmId, l2tx.asData())
         const tx2 = this.provider._wrapTransaction(tx, tx.hash)
         return tx2
       }
@@ -261,19 +235,23 @@ export class ArbWallet extends ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    if (!transaction.to) {
-      throw Error("Can't send transaction without destination")
+    const gasLimit = await transaction.gasLimit
+    if (!gasLimit) {
+      throw Error('must specify gas limit')
     }
-    const to = await transaction.to
-    let data = '0x'
-    if (transaction.data) {
-      data = ethers.utils.hexlify(await transaction.data)
+    const gasPrice = await transaction.gasPrice
+    if (!gasPrice) {
+      throw Error('must specify gas price')
     }
-
-    let value = ethers.utils.bigNumberify(0)
-    if (transaction.value) {
-      value = ethers.utils.bigNumberify(await transaction.value) // eslint-disable-line require-atomic-updates
-    }
-    return this.sendTransactionMessage(to, value, data)
+    const seq = await this.generateAndIncrementSeq()
+    const tx = new L2Transaction(
+      gasLimit,
+      gasPrice,
+      seq,
+      await transaction.to,
+      await transaction.value,
+      await transaction.data
+    )
+    return this.sendTransactionMessage(tx)
   }
 }

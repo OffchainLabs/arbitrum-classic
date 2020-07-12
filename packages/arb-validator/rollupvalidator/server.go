@@ -173,13 +173,6 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 		return nil, err
 	}
 
-	contractAddressBytes, err := hexutil.Decode(args.ContractAddress)
-	if err != nil {
-		return nil, err
-	}
-	var contractAddress common.Address
-	copy(contractAddress[:], contractAddressBytes)
-
 	var sender common.Address
 	if len(args.Sender) > 0 {
 		senderBytes, err := hexutil.Decode(args.Sender)
@@ -196,9 +189,9 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
-	callMsg := message.NewSimpleCall(contractAddress, dataBytes)
+	callMsg := message.NewCallFromData(dataBytes)
 	inboxMsg := message.NewInboxMessage(
-		callMsg,
+		message.L2Message{Msg: callMsg},
 		sender,
 		seq,
 		message.ChainTime{

@@ -32,7 +32,7 @@ func TestL2MessageSerialization(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx := NewRandomTransaction()
-	txData := tx.asData()
+	txData := tx.AsData()
 	if len(txData) != TransactionHeaderSize+len(tx.Data) {
 		t.Error("serialized tx has incorrect size")
 	}
@@ -52,7 +52,7 @@ func TestL2MessageSerialization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if bytes.Equal(decoded.asData(), data) {
+			if bytes.Equal(decoded.AsData(), data) {
 				t.Fatal("decoded l2 message not equal")
 			}
 		})
