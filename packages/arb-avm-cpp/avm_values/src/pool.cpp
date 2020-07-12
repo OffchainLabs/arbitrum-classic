@@ -40,6 +40,7 @@ std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     }
     resource->data.clear();
     resource->data.reserve(s);
+    resource->deferredHashing = true;
     return resource;
 }
 
