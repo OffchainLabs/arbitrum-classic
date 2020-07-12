@@ -113,27 +113,6 @@ func testExecutionChallenge(
 	}
 }
 
-//<<<<<<< HEAD
-//func getExecutionStopData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
-//	timeBounds := &protocol.TimeBounds{
-//		LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
-//		UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
-//		LowerBoundTimestamp: big.NewInt(80),
-//		UpperBoundTimestamp: big.NewInt(120),
-//	}
-//	afterMachine := mach.Clone()
-//	tup := value.NewEmptyTuple()
-//	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, tup)
-//	assertion, numSteps := afterMachine.ExecuteAssertion(500, timeBounds, tup, 0)
-//	challengeHash := valprotocol.ExecutionDataHash(
-//		numSteps,
-//		precondition.Hash(),
-//		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
-//	)
-//
-//	return challengeHash, precondition, numSteps
-//}
-
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), value.NewEmptyTuple())
