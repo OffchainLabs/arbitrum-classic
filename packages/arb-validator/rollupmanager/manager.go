@@ -189,6 +189,9 @@ func CreateManagerAdvanced(
 					}
 
 					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, currentLocalHeight)
+					if fetchSize.Cmp(big.NewInt(1)) <= 0 {
+						break
+					}
 					if fetchSize.Cmp(maxReorg) >= 0 {
 						fetchSize = maxReorg
 					}
