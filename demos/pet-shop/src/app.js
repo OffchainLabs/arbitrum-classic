@@ -2,12 +2,14 @@
 'use strict'
 
 var $ = require('jquery')
+const ethers = require('ethers')
 const Web3 = require('web3')
-const ArbProvider = require('arb-provider-web3')
+const ArbEth = require('arb-provider-ethers')
+const ProviderBridge = require('arb-ethers-web3-bridge')
 
 require('bootstrap/dist/css/bootstrap.min.css')
 
-let App = {
+const App = {
   web3: null,
   contracts: {},
 
@@ -36,7 +38,7 @@ let App = {
     // Modern dapp browsers...
     let web3Provider = null
     if (window.ethereum) {
-      web3Provider = window.ethereum
+      web3Provider = new ethers.providers.Web3Provider(window.ethereum)
       try {
         // Request account access
         await window.ethereum.enable()
@@ -47,21 +49,34 @@ let App = {
     }
     // Legacy dapp browsers...
     else if (window.web3) {
-      web3Provider = window.web3.currentProvider
+      web3Provider = new ethers.providers.Web3Provider(
+        window.web3.currentProvider
+      )
     }
     // If no injected web3 instance is detected, fall back to Ganache
     else {
-      web3Provider = new Web3.providers.HttpProvider('http://localhost:7545')
+      web3Provider = new ethers.providers.JsonRpcProvider(
+        'http://localhost:7545'
+      )
     }
 
-    let provider = ArbProvider('http://localhost:1235', web3Provider)
+    const arbProvider = new ArbEth.ArbProvider(
+      'http://localhost:1235',
+      web3Provider
+    )
+    const wallet = web3Provider.getSigner(0)
+    const provider = new ProviderBridge(
+      arbProvider,
+      new ArbEth.ArbWallet(wallet, arbProvider)
+    )
+
     App.web3 = new Web3(provider) // eslint-disable-line require-atomic-updates
 
     return App.initContract()
   },
 
   initContract: function () {
-    let adoption = require('../build/contracts/Adoption.json')
+    const adoption = require('../build/contracts/Adoption.json')
     App.contracts.Adoption = new App.web3.eth.Contract(
       adoption.abi,
       adoption.networks['123456789'].address
@@ -79,7 +94,7 @@ let App = {
 
   markAdopted: async function () {
     try {
-      let adopters = await App.contracts.Adoption.methods.getAdopters().call()
+      const adopters = await App.contracts.Adoption.methods.getAdopters().call()
       for (let i = 0; i < adopters.length; i++) {
         if (adopters[i] !== '0x0000000000000000000000000000000000000000') {
           $('.panel-pet')
@@ -99,7 +114,7 @@ let App = {
     var petId = parseInt($(event.target).data('id'))
 
     try {
-      let accounts = await App.web3.eth.getAccounts()
+      const accounts = await App.web3.eth.getAccounts()
       await App.contracts.Adoption.methods
         .adopt(petId)
         .send({ from: accounts[0] })

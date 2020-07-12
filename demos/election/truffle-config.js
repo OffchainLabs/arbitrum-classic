@@ -1,8 +1,11 @@
 const fetch = require('node-fetch')
 global.fetch = fetch
 
-const Web3 = require('web3')
-const ArbProvider = require('arb-provider-web3')
+const ethers = require('ethers')
+const ArbEth = require('arb-provider-ethers')
+const ProviderBridge = require('arb-ethers-web3-bridge')
+const mnemonic =
+  'jar deny prosper gasp flush glass core corn alarm treat leg smart'
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -15,9 +18,19 @@ module.exports = {
     },
     arbitrum: {
       provider: function () {
-        return ArbProvider(
+        const provider = new ethers.providers.JsonRpcProvider(
+          'http://localhost:7545'
+        )
+        const arbProvider = new ArbEth.ArbProvider(
           'http://localhost:1235',
-          new Web3.providers.HttpProvider('http://localhost:7545')
+          provider
+        )
+        const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
+          provider
+        )
+        return new ProviderBridge(
+          arbProvider,
+          new ArbEth.ArbWallet(wallet, arbProvider)
         )
       },
       network_id: '*',

@@ -20,7 +20,6 @@ import { L2Transaction, L2Message } from './message'
 import { ArbProvider } from './provider'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
-import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
