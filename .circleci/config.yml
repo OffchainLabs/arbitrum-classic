@@ -104,12 +104,6 @@ jobs:
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
-          name: test arb-provider-truffle
-          command: |
-            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-truffle.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
-          working_directory: /home/user/project/packages/arb-provider-truffle
-      - run:
           name: Upload Coverage to Codecov
           command: codecovbash
           working_directory: /home/user/project/packages
