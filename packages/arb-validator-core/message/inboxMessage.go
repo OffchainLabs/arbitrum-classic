@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	errors2 "github.com/pkg/errors"
@@ -142,12 +141,17 @@ func NewRandomInboxMessage(msg Message) InboxMessage {
 }
 
 func (im InboxMessage) String() string {
+	nested, err := im.nestedMessage()
+	nestedStr := "invalid"
+	if err == nil {
+		nestedStr = fmt.Sprintf("%v", nested)
+	}
 	return fmt.Sprintf(
 		"InboxMessage(%v, %v, %v, %v, %v)",
 		im.Kind,
 		im.Sender,
 		im.InboxSeqNum,
-		hexutil.Encode(im.Data),
+		nestedStr,
 		im.ChainTime,
 	)
 }
@@ -182,6 +186,25 @@ func (im InboxMessage) Equals(o InboxMessage) bool {
 		bytes.Equal(im.Data, o.Data) &&
 		im.ChainTime.BlockNum.AsInt().Cmp(o.ChainTime.BlockNum.AsInt()) == 0 &&
 		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
+}
+
+func (im InboxMessage) nestedMessage() (Message, error) {
+	switch im.Kind {
+	case EthType:
+		return NewEthFromData(im.Data), nil
+	case ERC20Type:
+		return NewERC20FromData(im.Data), nil
+	case ERC721Type:
+		return NewERC721FromData(im.Data), nil
+	case L2Type:
+		l2, err := NewL2MessageFromData(im.Data)
+		if err != nil {
+			return nil, err
+		}
+		return L2Message{Msg: l2}, nil
+	default:
+		return nil, errors.New("unknown inbox message type")
+	}
 }
 
 func (im InboxMessage) MessageID() common.Hash {
