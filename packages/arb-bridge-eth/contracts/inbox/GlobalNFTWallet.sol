@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.11;
 
-import "./interfaces/IERC721.sol";
+import "../interfaces/IERC721.sol";
 
 contract GlobalNFTWallet {
     struct NFTWallet {

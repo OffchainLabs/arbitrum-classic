@@ -23,7 +23,7 @@ import "./ChallengeUtils.sol";
 
 import "../arch/Protocol.sol";
 import "../arch/Value.sol";
-import "../Messages.sol";
+import "../inbox/Messages.sol";
 
 contract MessagesChallenge is BisectionChallenge {
     using Hashing for Value.Data;

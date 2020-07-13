@@ -18,9 +18,9 @@
 
 pragma solidity ^0.5.11;
 
-import "./arch/Value.sol";
-import "./arch/Marshaling.sol";
-import "./libraries/BytesLib.sol";
+import "../arch/Value.sol";
+import "../arch/Marshaling.sol";
+import "../libraries/BytesLib.sol";
 
 library Messages {
     using BytesLib for bytes;

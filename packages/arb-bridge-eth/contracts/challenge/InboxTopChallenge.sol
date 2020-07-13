@@ -21,7 +21,7 @@ pragma solidity ^0.5.11;
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../Messages.sol";
+import "../inbox/Messages.sol";
 
 contract InboxTopChallenge is BisectionChallenge {
     event Bisected(

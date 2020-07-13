@@ -21,7 +21,7 @@ pragma solidity ^0.5.11;
 import "./RollupUtils.sol";
 import "./NodeGraphUtils.sol";
 import "./VM.sol";
-import "../IGlobalInbox.sol";
+import "../inbox/IGlobalInbox.sol";
 
 import "../arch/Value.sol";
 import "../arch/Protocol.sol";

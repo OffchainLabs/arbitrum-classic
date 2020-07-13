@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 pragma experimental ABIEncoderV2;
 
-import "../Messages.sol";
+import "../inbox/Messages.sol";
 
 contract MessageTester {
     using Hashing for Value.Data;
