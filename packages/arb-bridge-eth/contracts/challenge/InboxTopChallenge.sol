@@ -35,8 +35,8 @@ contract InboxTopChallenge is BisectionChallenge {
     // Proof was incorrect
     string private constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
-    function bisect(bytes32[] memory _chainHashes, uint256 _chainLength)
-        public
+    function bisect(bytes32[] calldata _chainHashes, uint256 _chainLength)
+        external
         asserterAction
     {
         uint256 bisectionCount = _chainHashes.length - 1;
@@ -70,7 +70,7 @@ contract InboxTopChallenge is BisectionChallenge {
     }
 
     function oneStepProof(bytes32 _lowerHash, bytes32 _value)
-        public
+        external
         asserterAction
     {
         requireMatchesPrevState(

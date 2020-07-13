@@ -40,10 +40,10 @@ contract MessagesChallenge is BisectionChallenge {
     string private constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
 
     function bisect(
-        bytes32[] memory _chainHashes,
-        bytes32[] memory _segmentHashes,
+        bytes32[] calldata _chainHashes,
+        bytes32[] calldata _segmentHashes,
         uint256 _chainLength
-    ) public asserterAction {
+    ) external asserterAction {
         uint256 bisectionCount = _chainHashes.length - 1;
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
 
@@ -94,15 +94,18 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _timestamp,
         address _sender,
         uint256 _inboxSeqNum,
-        bytes memory _msgData
-    ) public asserterAction {
-        bytes32 messageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            _blockNumber,
-            _timestamp,
-            _inboxSeqNum,
-            keccak256(_msgData)
+        bytes calldata _msgData
+    ) external asserterAction {
+        bytes32 afterInbox = Messages.addMessageToInbox(
+            _beforeInbox,
+            Messages.messageHash(
+                _kind,
+                _sender,
+                _blockNumber,
+                _timestamp,
+                _inboxSeqNum,
+                keccak256(_msgData)
+            )
         );
         Value.Data memory messageValue = Messages.messageValue(
             _kind,
@@ -119,7 +122,7 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _beforeInbox,
-                Messages.addMessageToInbox(_beforeInbox, messageHash),
+                afterInbox,
                 beforeVMInbox.hash(),
                 Messages
                     .addMessageToVMInbox(beforeVMInbox, messageValue)

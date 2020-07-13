@@ -77,6 +77,49 @@ contract NodeGraph {
     mapping(bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
 
+    /**
+     * @notice Prune an arbitrary number of leaves from the node graph
+     * @dev Pruning leaves frees up blockchain storage, but is otherwise unnecessary
+     * @notice See _pruneLeaf for parameter documentation
+     */
+    function pruneLeaves(
+        bytes32[] calldata fromNodes,
+        bytes32[] calldata leafProofs,
+        uint256[] calldata leafProofLengths,
+        bytes32[] calldata latestConfProofs,
+        uint256[] calldata latestConfirmedProofLengths
+    ) external {
+        uint256 pruneCount = fromNodes.length;
+
+        require(
+            leafProofLengths.length == pruneCount &&
+                latestConfirmedProofLengths.length == pruneCount,
+            "input length mistmatch"
+        );
+        uint256 prevLeafOffset = 0;
+        uint256 prevConfOffset = 0;
+
+        for (uint256 i = 0; i < pruneCount; i++) {
+            (prevLeafOffset, prevConfOffset) = _pruneLeaf(
+                fromNodes[i],
+                latestConfirmedProofLengths[i],
+                leafProofLengths[i],
+                leafProofs,
+                latestConfProofs,
+                prevLeafOffset,
+                prevConfOffset
+            );
+        }
+    }
+
+    function latestConfirmed() public view returns (bytes32) {
+        return latestConfirmedPriv;
+    }
+
+    function isValidLeaf(bytes32 leaf) public view returns (bool) {
+        return leaves[leaf];
+    }
+
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
@@ -136,44 +179,6 @@ contract NodeGraph {
         return (prevLeaf, validLeaf);
     }
 
-    function pruneLeaves(
-        bytes32[] memory fromNodes,
-        bytes32[] memory leafProofs,
-        uint256[] memory leafProofLengths,
-        bytes32[] memory latestConfProofs,
-        uint256[] memory latestConfirmedProofLengths
-    ) public {
-        uint256 pruneCount = fromNodes.length;
-
-        require(
-            leafProofLengths.length == pruneCount &&
-                latestConfirmedProofLengths.length == pruneCount,
-            "input length mistmatch"
-        );
-        uint256 prevLeafOffset = 0;
-        uint256 prevConfOffset = 0;
-
-        for (uint256 i = 0; i < pruneCount; i++) {
-            (prevLeafOffset, prevConfOffset) = _pruneLeaf(
-                fromNodes[i],
-                latestConfirmedProofLengths[i],
-                leafProofLengths[i],
-                leafProofs,
-                latestConfProofs,
-                prevLeafOffset,
-                prevConfOffset
-            );
-        }
-    }
-
-    function latestConfirmed() public view returns (bytes32) {
-        return latestConfirmedPriv;
-    }
-
-    function isValidLeaf(bytes32 leaf) public view returns (bool) {
-        return leaves[leaf];
-    }
-
     function confirmNode(bytes32 to) internal {
         latestConfirmedPriv = to;
         emit RollupConfirmed(to);
@@ -205,6 +210,17 @@ contract NodeGraph {
         );
     }
 
+    /**
+     * @notice Prune a leaf from the node graph if it conflicts with the latest confirmed node
+     * @dev Pruning leaves frees up blockchain storage, but is otherwise unnecessary
+     * @param from The node where the leaf we want to prune diverged from the correct path
+     * @param latestConfirmedProofLength Length of the proof showing the from is an ancestor of latest confirmed
+     * @param leafProofLength Length of the proof showing the the pruned leaf conflicts with the from node
+     * @param leafProofs Array containing the leaf conflict proof
+     * @param latestConfProofs Array containing the leaf confirmed proof
+     * @param prevLeafOffset Index into the leaf proof
+     * @param prevConfOffset Index into the confirm proof
+     */
     function _pruneLeaf(
         bytes32 from,
         uint256 latestConfirmedProofLength,

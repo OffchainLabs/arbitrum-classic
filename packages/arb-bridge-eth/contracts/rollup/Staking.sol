@@ -108,6 +108,14 @@ contract Staking {
         return stakers[_stakerAddress].location != 0x00;
     }
 
+    /**
+     * @notice Update stakers with the result of a challenge that has ended. The winner received half of the losers deposit and the rest is burned
+     * @dev Currently the rollup contract keeps the burned funds. These are frozen since the rollup contract has no way to withdraw them
+     * @dev This function can only be called by a challenge contract launched by this contract. Because of this we don't require any other input validator
+     * @dev Consider using CREATE2 to eliminate the need to remember what challenges we've launched
+     * @param winner The address of the staker who won the challenge
+     * @param loser The address of the staker who lost the challenge
+     */
     function resolveChallenge(address payable winner, address loser) external {
         require(challenges[msg.sender], RES_CHAL_SENDER);
         delete challenges[msg.sender];
@@ -120,6 +128,22 @@ contract Staking {
         emit RollupChallengeCompleted(msg.sender, address(winner), loser);
     }
 
+    /**
+     * @notice Initiate a challenge between two validators staked on this rollup chain.
+     * @dev Anyone can force two conflicted validators to engage in a challenge
+     * @dev The challenge will occur on the oldest node that the two validators disagree about
+     * @param asserterAddress The staker who claimed a given node was valid
+     * @param challengerAddress The address who claimed that the same node was invalid
+     * @param prevNode The node which is the parent of the two conflicting nodes the asserter and challenger are on
+     * @param deadlineTicks The deadline to challenge the asserter's node
+     * @param stakerNodeTypes The type of nodes that the asserter and challenger are staked on
+     * @param vmProtoHashes The protocol states claimed by each validator
+     * @param asserterProof A proof that the asserter actually staked that the claimed node was correct
+     * @param challengerProof A proof that the challenger actually staked that hte claimed node was invalid
+     * @param asserterNodeHash Type specific data in the asserter's node
+     * @param challengerDataHash Information from the challenger's node about the claim the asserter is disputing
+     * @param challengerPeriodTicks Amount of time dedicated to rounds of the challenge created
+     */
     function startChallenge(
         address payable asserterAddress,
         address payable challengerAddress,

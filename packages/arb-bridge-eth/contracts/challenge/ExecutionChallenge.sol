@@ -57,13 +57,13 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function bisectAssertion(
         bytes32 _beforeInbox,
-        bytes32[] memory _machineHashes,
-        bool[] memory _didInboxInsns,
-        bytes32[] memory _messageAccs,
-        bytes32[] memory _logAccs,
-        uint64[] memory _gases,
+        bytes32[] calldata _machineHashes,
+        bool[] calldata _didInboxInsns,
+        bytes32[] calldata _messageAccs,
+        bytes32[] calldata _logAccs,
+        uint64[] calldata _gases,
         uint64 _totalSteps
-    ) public asserterAction {
+    ) external asserterAction {
         _bisectAssertion(
             BisectAssertionData(
                 _beforeInbox,

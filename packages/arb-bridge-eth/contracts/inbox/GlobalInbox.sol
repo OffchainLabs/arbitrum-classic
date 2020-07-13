@@ -53,8 +53,15 @@ contract GlobalInbox is
         return (inbox.value, inbox.count);
     }
 
+    /**
+     * @notice Process a set of marshalled messages confirmed by a rollup chain
+     * @dev messageCounts and nodeHashes are used to uniquely identify messages in conjunction with PaymentRecords
+     * @param messages Contiguously marshaled messages from a set of assertions
+     * @param messageCounts Number of messages in each assertion confirmed
+     * @param nodeHashes Hash of each node that has been confirmed
+     */
     function sendMessages(
-        bytes calldata _messages,
+        bytes calldata messages,
         uint256[] calldata messageCounts,
         bytes32[] calldata nodeHashes
     ) external {
@@ -66,7 +73,7 @@ contract GlobalInbox is
         for (uint256 i = 0; i < nodeCount; i++) {
             for (uint256 j = 0; j < messageCounts[i]; j++) {
                 (valid, offset, message) = Messages.unmarshalOutgoingMessage(
-                    _messages,
+                    messages,
                     offset
                 );
                 if (!valid) {
@@ -75,6 +82,149 @@ contract GlobalInbox is
                 sendDeserializedMsg(nodeHashes[i], j, message);
             }
         }
+    }
+
+    /**
+     * @notice Send a generic L2 message to a given Arbitrum Rollup chain
+     * @dev This method is an optimization to avoid having to emit the entirety of the messageData in a log. Instead validators are expected to be able to parse the data from the transaction's input
+     * @param chain Address of the rollup chain that the ETH is deposited into
+     * @param messageData Data of the message being sent
+     */
+    function sendL2MessageFromOrigin(address chain, bytes calldata messageData)
+        external
+    {
+        // solhint-disable-next-line avoid-tx-origin
+        require(msg.sender == tx.origin, "origin only");
+        uint256 inboxSeqNum = _deliverMessageImpl(
+            chain,
+            L2_MSG,
+            msg.sender,
+            keccak256(messageData)
+        );
+        emit IGlobalInbox.MessageDeliveredFromOrigin(
+            chain,
+            L2_MSG,
+            msg.sender,
+            inboxSeqNum
+        );
+    }
+
+    /**
+     * @notice Send a generic L2 message to a given Arbitrum Rollup chain
+     * @dev This method can be used to send any type of message that doesn't require L1 validation
+     * @param chain Address of the rollup chain that the ETH is deposited into
+     * @param messageData Data of the message being sent
+     */
+    function sendL2Message(address chain, bytes calldata messageData) external {
+        _deliverMessage(chain, L2_MSG, msg.sender, messageData);
+    }
+
+    /**
+     * @notice Deposits ETH into a given Arbitrum Rollup chain
+     * @dev This method is payable and will deposit all value it is called with
+     * @param chain Address of the rollup chain that the ETH is deposited into
+     * @param to Address on the rollup chain that will receive the ETH
+     */
+    function depositEthMessage(address chain, address to) external payable {
+        depositEth(chain);
+        _deliverMessage(
+            chain,
+            ETH_TRANSFER,
+            msg.sender,
+            abi.encodePacked(bytes32(bytes20(to)), msg.value)
+        );
+    }
+
+    /**
+     * @notice Deposits an ERC20 token into a given Arbitrum Rollup chain
+     * @dev This method requires approving this contract for transfers
+     * @param chain Address of the rollup chain that the token is deposited into
+     * @param erc20 L1 address of the token being deposited
+     * @param to Address on the rollup chain that will receive the tokens
+     * @param value Quantity of tokens being deposited
+     */
+    function depositERC20Message(
+        address chain,
+        address erc20,
+        address to,
+        uint256 value
+    ) external {
+        depositERC20(erc20, chain, value);
+        _deliverMessage(
+            chain,
+            ERC20_TRANSFER,
+            msg.sender,
+            abi.encodePacked(
+                bytes32(bytes20(erc20)),
+                bytes32(bytes20(to)),
+                value
+            )
+        );
+    }
+
+    /**
+     * @notice Deposits an ERC721 token into a given Arbitrum Rollup chain
+     * @dev This method requires approving this contract for transfers
+     * @param chain Address of the rollup chain that the token is deposited into
+     * @param erc721 L1 address of the token being deposited
+     * @param to Address on the rollup chain that will receive the token
+     * @param id ID of the token being deposited
+     */
+    function depositERC721Message(
+        address chain,
+        address erc721,
+        address to,
+        uint256 id
+    ) external {
+        depositERC721(erc721, chain, id);
+        _deliverMessage(
+            chain,
+            ERC721_TRANSFER,
+            msg.sender,
+            abi.encodePacked(bytes32(bytes20(erc721)), bytes32(bytes20(to)), id)
+        );
+    }
+
+    function _deliverMessage(
+        address _chain,
+        uint8 _kind,
+        address _sender,
+        bytes memory _messageData
+    ) private {
+        uint256 inboxSeqNum = _deliverMessageImpl(
+            _chain,
+            _kind,
+            _sender,
+            keccak256(_messageData)
+        );
+        emit IGlobalInbox.MessageDelivered(
+            _chain,
+            _kind,
+            _sender,
+            inboxSeqNum,
+            _messageData
+        );
+    }
+
+    function _deliverMessageImpl(
+        address _chain,
+        uint8 _kind,
+        address _sender,
+        bytes32 _messageDataHash
+    ) private returns (uint256) {
+        Inbox storage inbox = inboxes[_chain];
+        uint256 updatedCount = inbox.count + 1;
+        bytes32 messageHash = Messages.messageHash(
+            _kind,
+            _sender,
+            block.number,
+            block.timestamp, // solhint-disable-line not-rely-on-time
+            updatedCount,
+            _messageDataHash
+        );
+        inbox.value = Messages.addMessageToInbox(inbox.value, messageHash);
+        inbox.count = updatedCount;
+        return updatedCount;
     }
 
     function sendDeserializedMsg(
@@ -124,121 +274,5 @@ contract GlobalInbox is
                 deletePayment(erc721.dest, nodeHash, messageIndex);
             }
         }
-    }
-
-    function sendL2MessageFromOrigin(
-        address _chain,
-        bytes calldata _messageData
-    ) external {
-        // solhint-disable-next-line avoid-tx-origin
-        require(msg.sender == tx.origin, "origin only");
-        uint256 inboxSeqNum = _deliverMessageImpl(
-            _chain,
-            L2_MSG,
-            msg.sender,
-            keccak256(_messageData)
-        );
-        emit IGlobalInbox.MessageDeliveredFromOrigin(
-            _chain,
-            L2_MSG,
-            msg.sender,
-            inboxSeqNum
-        );
-    }
-
-    function sendL2Message(address _chain, bytes calldata _messageData)
-        external
-    {
-        _deliverMessage(_chain, L2_MSG, msg.sender, _messageData);
-    }
-
-    function depositEthMessage(address _chain, address _to) external payable {
-        depositEth(_chain);
-        _deliverMessage(
-            _chain,
-            ETH_TRANSFER,
-            msg.sender,
-            abi.encodePacked(bytes32(bytes20(_to)), msg.value)
-        );
-    }
-
-    function depositERC20Message(
-        address _chain,
-        address _erc20,
-        address _to,
-        uint256 _value
-    ) external {
-        depositERC20(_erc20, _chain, _value);
-        _deliverMessage(
-            _chain,
-            ERC20_TRANSFER,
-            msg.sender,
-            abi.encodePacked(
-                bytes32(bytes20(_erc20)),
-                bytes32(bytes20(_to)),
-                _value
-            )
-        );
-    }
-
-    function depositERC721Message(
-        address _chain,
-        address _erc721,
-        address _to,
-        uint256 _id
-    ) external {
-        depositERC721(_erc721, _chain, _id);
-        _deliverMessage(
-            _chain,
-            ERC721_TRANSFER,
-            msg.sender,
-            abi.encodePacked(
-                bytes32(bytes20(_erc721)),
-                bytes32(bytes20(_to)),
-                _id
-            )
-        );
-    }
-
-    function _deliverMessage(
-        address _chain,
-        uint8 _kind,
-        address _sender,
-        bytes memory _messageData
-    ) private {
-        uint256 inboxSeqNum = _deliverMessageImpl(
-            _chain,
-            _kind,
-            _sender,
-            keccak256(_messageData)
-        );
-        emit IGlobalInbox.MessageDelivered(
-            _chain,
-            _kind,
-            _sender,
-            inboxSeqNum,
-            _messageData
-        );
-    }
-
-    function _deliverMessageImpl(
-        address _chain,
-        uint8 _kind,
-        address _sender,
-        bytes32 _messageDataHash
-    ) private returns (uint256) {
-        Inbox storage inbox = inboxes[_chain];
-        uint256 updatedCount = inbox.count + 1;
-        bytes32 messageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            block.number,
-            block.timestamp, // solhint-disable-line not-rely-on-time
-            updatedCount,
-            _messageDataHash
-        );
-        inbox.value = Messages.addMessageToInbox(inbox.value, messageHash);
-        inbox.count = updatedCount;
-        return updatedCount;
     }
 }
