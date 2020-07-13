@@ -107,7 +107,7 @@ func defendMessages(
 				hashPreImage)
 		}
 
-		event, state, preImages, err := msgsDefenderUpdate(
+		event, state, preImages, _, err := msgsDefenderUpdate(
 			ctx,
 			eventChan,
 			contract,
@@ -189,32 +189,32 @@ func msgsDefenderUpdate(
 	bisectionCount uint64,
 	inboxStartCount uint64,
 	vmInbox *structures.VMInbox,
-) (arbbridge.Event, ChallengeState, []value.HashPreImage, error) {
+) (arbbridge.Event, ChallengeState, []value.HashPreImage, bool, error) {
+	chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
+	preImages, err := vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
+	if err != nil {
+		return nil, 0, nil, false, err
+	}
+
 	makeBisection, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if makeBisection {
-		chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
-		preImages, err := vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
-		if err != nil {
-			return nil, 0, nil, err
-		}
 
 		simpleHashes := make([]common.Hash, 0, len(preImages))
-
 		for _, h := range preImages {
 			simpleHashes = append(simpleHashes, h.Hash())
 		}
 
 		err = contract.Bisect(ctx, chainHashes, simpleHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
-			return nil, 0, nil, errors2.Wrap(err, "failing making bisection")
+			return nil, 0, nil, makeBisection, errors2.Wrap(err, "failing making bisection")
 		}
 
 		event, state, err = getNextEvent(eventChan)
 
-		return event, state, preImages, err
+		return event, state, preImages, makeBisection, err
+	} else {
+		return event, state, preImages, makeBisection, err
 	}
-
-	return event, state, make([]value.HashPreImage, 0), err
 }
 
 func runMsgsOneStepProof(

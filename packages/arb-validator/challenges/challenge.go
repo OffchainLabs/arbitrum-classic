@@ -32,6 +32,8 @@ const (
 	ChallengeAsserterWon
 	ChallengeAsserterTimedOut
 	ChallengeChallengerTimedOut
+	ChallengerDiscontinued
+	DefenderDiscontinued
 )
 
 var replayTimeout = time.Second

@@ -368,6 +368,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					chal.ConflictNode().Prev().Machine(),
 					chal.ConflictNode().Disputable().AssertionParams.NumSteps,
 					50,
+					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
 					log.Println("Failed defending execution claim", err)
@@ -430,6 +431,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					precondition,
 					chal.ConflictNode().Prev().Machine(),
 					false,
+					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
 					log.Println("Failed challenging execution claim", err)

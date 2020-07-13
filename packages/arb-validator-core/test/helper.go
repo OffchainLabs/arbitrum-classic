@@ -30,7 +30,7 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*bind.TransactOpts) {
 	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)
 	auths := make([]*bind.TransactOpts, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
 			log.Fatal(err)

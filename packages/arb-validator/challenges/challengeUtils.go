@@ -23,6 +23,32 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
+type ExecutionChallengeInfo struct {
+	isDiscontinueType bool
+	challengeRounds   int
+	currentRound      int
+}
+
+func StandardExecutionChallenge() ExecutionChallengeInfo {
+	return ExecutionChallengeInfo{
+		false,
+		0,
+		0,
+	}
+}
+
+func ContinueChallenge(typeReq ExecutionChallengeInfo) bool {
+	if !typeReq.isDiscontinueType {
+		return true
+	} else {
+		if typeReq.challengeRounds == typeReq.currentRound {
+			return false
+		} else {
+			return true
+		}
+	}
+}
+
 func challengeEnded(state ChallengeState, err error) bool {
 	if err != nil || state != ChallengeContinuing {
 		return true

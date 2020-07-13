@@ -178,11 +178,19 @@ func (b Transaction) Equals(o Transaction) bool {
 		bytes.Equal(b.Data, o.Data)
 }
 
+func (t Transaction) Type() Type {
+	return L2Type
+}
+
 func (t Transaction) l2Type() L2SubType {
 	return TransactionType
 }
 
 func (t Transaction) AsData() []byte {
+	return t.asData()
+}
+
+func (t Transaction) asData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
@@ -236,11 +244,19 @@ func NewRandomContractTransaction() ContractTransaction {
 	}
 }
 
+func (t ContractTransaction) Type() Type {
+	return L2Type
+}
+
 func (t ContractTransaction) l2Type() L2SubType {
 	return ContractTransactionType
 }
 
 func (t ContractTransaction) AsData() []byte {
+	return t.asData()
+}
+
+func (t ContractTransaction) asData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
