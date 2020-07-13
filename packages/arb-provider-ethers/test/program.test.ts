@@ -41,5 +41,5 @@ describe('Contract Parsing', function () {
     const data = fs.readFileSync('../../arbos.mexe', 'utf8')
     const machineHash = program.programMachineHash(data)
     console.log(machineHash)
-  })
+  }).timeout(5000)
 })
