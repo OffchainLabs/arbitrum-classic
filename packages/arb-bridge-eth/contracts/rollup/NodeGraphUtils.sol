@@ -147,11 +147,6 @@ library NodeGraphUtils {
         uint256 gracePeriodTicks,
         uint256 checkTimeTicks
     ) internal pure returns (bytes32) {
-        bytes32 preconditionHash = Protocol.generatePreconditionHash(
-            data.beforeVMHash,
-            data.importedMessagesSlice
-        );
-
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -164,7 +159,8 @@ library NodeGraphUtils {
 
         bytes32 executionHash = ChallengeUtils.executionHash(
             data.numSteps,
-            preconditionHash,
+            data.beforeVMHash,
+            data.importedMessagesSlice,
             assertionHash
         );
 

@@ -92,10 +92,6 @@ contract ExecutionChallenge is BisectionChallenge {
             everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
 
-        bytes32 preconditionHash = Protocol.generatePreconditionHash(
-            _data.machineHashes[0],
-            _data.beforeInbox
-        );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             _data.machineHashes[bisectionCount],
             everDidInboxInsn,
@@ -109,7 +105,8 @@ contract ExecutionChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
                 _data.totalSteps,
-                preconditionHash,
+                _data.machineHashes[0],
+                _data.beforeInbox,
                 assertionHash
             )
         );
@@ -126,10 +123,8 @@ contract ExecutionChallenge is BisectionChallenge {
         );
         hashes[0] = ChallengeUtils.executionHash(
             uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
-            Protocol.generatePreconditionHash(
-                _data.machineHashes[0],
-                _data.beforeInbox
-            ),
+            _data.machineHashes[0],
+            _data.beforeInbox,
             assertionHash
         );
 
@@ -150,10 +145,8 @@ contract ExecutionChallenge is BisectionChallenge {
                 uint32(
                     otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
                 ),
-                Protocol.generatePreconditionHash(
-                    _data.machineHashes[i],
-                    _data.beforeInbox
-                ),
+                _data.machineHashes[i],
+                _data.beforeInbox,
                 assertionHash
             );
         }
@@ -241,14 +234,11 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 beforeInbox = Value
             .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
             .hash();
-        bytes32 precondition = Protocol.generatePreconditionHash(
-            _beforeHash,
-            beforeInbox
-        );
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
                 1,
-                precondition,
+                _beforeHash,
+                beforeInbox,
                 Protocol.generateAssertionHash(
                     _afterHash,
                     _didInboxInsns,

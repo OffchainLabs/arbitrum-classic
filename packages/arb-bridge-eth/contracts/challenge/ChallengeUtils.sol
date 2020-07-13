@@ -69,12 +69,18 @@ library ChallengeUtils {
 
     function executionHash(
         uint64 _numSteps,
-        bytes32 _preconditionHash,
+        bytes32 _beforeHash,
+        bytes32 _beforeInboxHash,
         bytes32 _assertionHash
     ) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(_numSteps, _preconditionHash, _assertionHash)
+                abi.encodePacked(
+                    _numSteps,
+                    _beforeHash,
+                    _beforeInboxHash,
+                    _assertionHash
+                )
             );
     }
 }

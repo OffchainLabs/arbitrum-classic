@@ -5,15 +5,15 @@
 
 cd packages/arb-bridge-eth/contracts
 
-abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
-abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
+abigen --sol=rollup/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
+abigen --sol=rollup/ArbRollup.sol --pkg=rollup --out=arbrollup.go
 
 abigen --sol=challenge/ChallengeFactory.sol --pkg=challengefactory --out=challengefactory.go
 abigen --sol=challenge/InboxTopChallenge.sol --pkg=inboxtopchallenge --out=inboxtopchallenge.go
 abigen --sol=challenge/MessagesChallenge.sol --pkg=messageschallenge --out=messageschallenge.go
 abigen --sol=challenge/ExecutionChallenge.sol --pkg=executionchallenge --out=executionchallenge.go
 
-abigen --sol=GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
+abigen --sol=inbox/GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go

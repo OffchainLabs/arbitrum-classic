@@ -41,11 +41,4 @@ contract ProtocolTester {
                 _lastLogHash
             );
     }
-
-    function generatePreconditionHash(
-        bytes32 _beforeHash,
-        bytes32 _beforeInboxHash
-    ) public pure returns (bytes32) {
-        return Protocol.generatePreconditionHash(_beforeHash, _beforeInboxHash);
-    }
 }

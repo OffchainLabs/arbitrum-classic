@@ -23,25 +23,6 @@ import (
 	"testing"
 )
 
-func TestGeneratePreconditionHash(t *testing.T) {
-	intVal := value.NewInt64Value(1)
-	tuple := value.NewTuple2(intVal, intVal)
-	precondition := valprotocol.NewPrecondition(intVal.Hash(), tuple)
-	expectedHash := precondition.Hash().ToEthHash()
-
-	ethbridgeHash, err := protocolTester.GeneratePreconditionHash(
-		nil,
-		intVal.Hash(),
-		tuple.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if expectedHash != ethbridgeHash {
-		t.Error(errors.New("calculated wrong precondition hash"))
-	}
-}
-
 func TestGenerateAssertionHash(t *testing.T) {
 	intVal := value.NewInt64Value(1)
 	intVal2 := value.NewInt64Value(2)

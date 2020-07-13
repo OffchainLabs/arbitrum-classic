@@ -296,13 +296,6 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
-func (node *Node) executionPreconditionHash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(node.prev.vmProtoData.MachineHash),
-		hashing.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
-	)
-}
-
 func (node *Node) calculateNodeDataHash(params valprotocol.ChainParams) common.Hash {
 	if node.disputable == nil {
 		return common.Hash{}
@@ -347,7 +340,8 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 	case valprotocol.InvalidExecutionChildType:
 		ret := valprotocol.ExecutionDataHash(
 			node.disputable.AssertionParams.NumSteps,
-			node.executionPreconditionHash(),
+			node.prev.vmProtoData.MachineHash,
+			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionClaim.AssertionStub.Hash(),
 		)
 		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))

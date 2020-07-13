@@ -23,13 +23,6 @@ import "./Value.sol";
 library Protocol {
     using Value for Value.Data;
 
-    function generatePreconditionHash(
-        bytes32 _beforeHash,
-        bytes32 _beforeInboxHash
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_beforeHash, _beforeInboxHash));
-    }
-
     function generateAssertionHash(
         bytes32 _afterHash,
         bool _didInboxInsn,
