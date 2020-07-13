@@ -84,6 +84,11 @@ contract ArbRollup is NodeGraph, Staking {
         owner = _owner;
     }
 
+    /**
+     * @notice Place a stake on an existing node at or after the latest confirmed node
+     * @param proof1 Node graph proof that the stake location is a decendent of latest confirmed
+     * @param proof2 Node graph proof that the stake location is an ancestor of a current leaf
+     */
     function placeStake(bytes32[] calldata proof1, bytes32[] calldata proof2)
         external
         payable
@@ -97,6 +102,11 @@ contract ArbRollup is NodeGraph, Staking {
         createStake(location);
     }
 
+    /**
+     * @notice Move an existing stake to an existing leaf that is a decendent of the node the stake exists on
+     * @param proof1 Node graph proof that the destination location is a decendent of the current location
+     * @param proof2 Node graph proof that the stake location is an ancestor of a current leaf
+     */
     function moveStake(bytes32[] calldata proof1, bytes32[] calldata proof2)
         external
     {
@@ -110,10 +120,19 @@ contract ArbRollup is NodeGraph, Staking {
         updateStakerLocation(msg.sender, newLocation);
     }
 
+    /**
+     * @notice Redeem your stake if it is on or before the current latest confirmed node
+     * @param proof Node graph proof your stake is on or before the latest confirmed node
+     */
     function recoverStakeConfirmed(bytes32[] calldata proof) external {
         _recoverStakeConfirmed(msg.sender, proof);
     }
 
+    /**
+     * @notice Force a stake to be redeemed if it is before the current latest confirmed node
+     * @param stakerAddress Address of the staker whose stake will be removed
+     * @param proof Node graph proof your stake is before the latest confirmed node
+     */
     function recoverStakeOld(
         address payable stakerAddress,
         bytes32[] calldata proof
@@ -122,6 +141,14 @@ contract ArbRollup is NodeGraph, Staking {
         _recoverStakeConfirmed(stakerAddress, proof);
     }
 
+    /**
+     * @notice Force a stake to be redeemed if it is place on a node which can never be confirmed
+     * @dev This method works by showing that the staker's position conflicts with the latest confirmed node
+     * @param stakerAddress Address of the staker whose stake will be removed
+     * @param node Identifier of a node which is a common ancestor of the latest confirmed node and the staker's location
+     * @param latestConfirmedProof Node graph proof that the latest confirmed node is a decendent of the supplied node
+     * @param stakerProof Node graph proof that the staker's node is a decendent of the supplied node
+     */
     function recoverStakeMooted(
         address payable stakerAddress,
         bytes32 node,
@@ -141,6 +168,7 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     // Kick off if successor node whose deadline has passed
+    // TODO: Add full documentation
     function recoverStakePassedDeadline(
         address payable stakerAddress,
         uint256 deadlineTicks,
@@ -167,46 +195,57 @@ contract ArbRollup is NodeGraph, Staking {
         refundStaker(stakerAddress);
     }
 
-    // fields
-    // beforeVMHash
-    // beforeInboxTop
-    // prevPrevLeafHash
-    // prevDataHash
-    // afterInboxTop
-    // importedMessagesSlice
-    // afterVMHash
-    // messagesAccHash
-    // logsAccHash
-
+    /**
+     * @notice Submit a new assertion to be built on top of the specified leaf if it is validly constructed
+     * @dev This method selects an existing leaf to build an assertion on top of. If it succeeds that leaf is eliminated and four new leaves are created. The asserter is automatically moved to stake on the new valid leaf.
+     * @param fields Packed data for the following fields
+     *   beforeVMHash The hash of the machine at the end of the previous assertion
+     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
+     *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
+     *   prevDataHash Type specific data of the node we're on
+     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
+     *   importedMessagesSlice Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
+     *   afterVMHash Claimed machine hash after this assertion is completed
+     *   messagesAccHash Claimed commitment to a set of messages output in the assertion
+     *   logsAccHash Claimed commitment to a set of logs output in the assertion
+     * @param beforeInboxCount The total number of messages read after the previous assertion executed
+     * @param prevDeadlineTicks The challenge deadline of the node this assertion builds on
+     * @param prevChildType The type of node that this assertion builds on top of
+     * @param numSteps Argument specifying the number of steps execuited
+     * @param importedMessageCount Argument specifying the number of messages read
+     * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
+     * @param numArbGas Claimed amount of ArbGas used in the assertion
+     * @param stakerProof Node graph proof that the asserter is on or can move to the leaf this assertion builds on
+     */
     function makeAssertion(
-        bytes32[9] calldata _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas,
-        bytes32[] calldata _stakerProof
+        bytes32[9] calldata fields,
+        uint256 beforeInboxCount,
+        uint256 prevDeadlineTicks,
+        uint32 prevChildType,
+        uint64 numSteps,
+        uint256 importedMessageCount,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        bytes32[] calldata stakerProof
     ) external {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
             .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            fields[0],
+            fields[1],
+            beforeInboxCount,
+            fields[2],
+            prevDeadlineTicks,
+            fields[3],
+            prevChildType,
+            numSteps,
+            importedMessageCount,
+            fields[4],
+            fields[5],
+            fields[6],
+            didInboxInsn,
+            numArbGas,
+            fields[7],
+            fields[8]
         );
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(
@@ -221,7 +260,7 @@ contract ArbRollup is NodeGraph, Staking {
 
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(
-            RollupUtils.calculateLeafFromPath(stakerLocation, _stakerProof) ==
+            RollupUtils.calculateLeafFromPath(stakerLocation, stakerProof) ==
                 prevLeaf,
             MAKE_STAKER_PROOF
         );
@@ -250,6 +289,22 @@ contract ArbRollup is NodeGraph, Staking {
         refundStaker(stakerAddress);
     }
 
+    /**
+     * @notice Confirm an arbitrary number of pending assertions
+     * @dev Confirming multiple assertions at once has the advantage that we can skip most checks for all nodes but the final one
+     * @dev TODO: An adversary could potentially make this method too expensive to call by creating a large number of validators. This issue could be avoided by providing an interactive confirmation challenge along with this synchronous one.\
+     * @param initalProtoStateHash Hash of the protocol state of the predecessor to the first node confirmed
+     * @param branches For each node being confirmed, this is the type of node it was
+     * @param deadlineTicks For each node being confirmed, this is the deadline for validators challenging it
+     * @param challengeNodeData For the invalid nodes being confirmed, this is the hash of the challenge specific data in that node
+     * @param logsAcc For the valid nodes being confirmed, this is the claim about what logs were emitted
+     * @param vmProtoStateHashes For the valid nodes being confirmed, this is the state after that node is confirmed
+     * @param messageCounts The number of messages in each valid assertion confirmed
+     * @param messages All the messages output by the confirmed assertions marshaled in order from oldest to newest
+     * @param stakerAddresses The list of all currently staked validators
+     * @param stakerProofs A concatenated list of proofs for each validator showing that they agree with the given node
+     * @param stakerProofOffsets A list of indexes into stakerProofs to break it into pieces for each validator
+     */
     function confirm(
         bytes32 initalProtoStateHash,
         uint256[] memory branches,
