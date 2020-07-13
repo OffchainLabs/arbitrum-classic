@@ -249,7 +249,7 @@ func TestBatch(t *testing.T) {
 	dest := deployFib(t, mach, common.RandAddress())
 	chain := common.RandAddress()
 
-	batchSize := 1
+	batchSize := 20
 	txes := make([]message.BatchTx, 0, batchSize)
 	senders := make([]common.Address, 0, batchSize)
 	for i := 0; i < batchSize; i++ {

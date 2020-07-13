@@ -48,17 +48,22 @@ const SignatureSize = 65
 func marshaledBytesHash(data []byte) common.Hash {
 	var ret common.Hash
 	copy(ret[:], math.U256Bytes(big.NewInt(int64(len(data)))))
+	chunks := make([]common.Hash, 0)
 	for len(data) > 0 {
 		var nextVal common.Hash
 		copy(nextVal[:], data[:])
-		ret = hashing.SoliditySHA3(
-			hashing.Bytes32(ret),
-			hashing.Bytes32(nextVal),
-		)
+		chunks = append(chunks, nextVal)
 		if len(data) <= 32 {
 			break
 		}
 		data = data[32:]
+	}
+
+	for i := range chunks {
+		ret = hashing.SoliditySHA3(
+			hashing.Bytes32(ret),
+			hashing.Bytes32(chunks[len(chunks)-1-i]),
+		)
 	}
 	return ret
 }

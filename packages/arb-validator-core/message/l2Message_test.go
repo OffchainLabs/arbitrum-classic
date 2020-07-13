@@ -19,6 +19,7 @@ package message
 import (
 	"bytes"
 	"fmt"
+	common2 "github.com/ethereum/go-ethereum/common"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -58,4 +59,16 @@ func TestL2MessageSerialization(t *testing.T) {
 		})
 	}
 
+}
+
+func TestMarshaledBytesHash(t *testing.T) {
+	data := make([]byte, 0)
+	for i := 0; i < 67; i++ {
+		data = append(data, byte(i))
+	}
+	hash := marshaledBytesHash(data)
+	correct := common.NewHashFromEth(common2.HexToHash("0x4fc384a19926e9ff7ec8f2376a0d146dc273031df1db4d133236d209700e4780"))
+	if hash != correct {
+		t.Fatal("incorrect result", hash, correct)
+	}
 }
