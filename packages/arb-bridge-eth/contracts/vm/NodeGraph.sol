@@ -30,6 +30,7 @@ import "../libraries/RollupTime.sol";
 
 contract NodeGraph {
     using SafeMath for uint256;
+    using Hashing for Value.Data;
 
     // invalid leaf
     string private constant MAKE_LEAF = "MAKE_LEAF";
@@ -91,7 +92,7 @@ contract NodeGraph {
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
-            Value.hashEmptyTuple(),
+            Value.newNone().hash(),
             0
         );
         bytes32 initialNode = RollupUtils.childNodeHash(

@@ -22,6 +22,8 @@ pragma experimental ABIEncoderV2;
 import "../Messages.sol";
 
 contract MessageTester {
+    using Hashing for Value.Data;
+
     function messageHash(
         uint8 messageType,
         address sender,
@@ -50,16 +52,16 @@ contract MessageTester {
         bytes memory messageData
     ) public pure returns (bytes32) {
         return
-            Value.hash(
-                Messages.messageValue(
-                    messageType,
-                    blockNumber,
-                    timestamp,
-                    sender,
-                    inboxSeqNum,
-                    messageData
-                )
-            );
+            Messages
+                .messageValue(
+                messageType,
+                blockNumber,
+                timestamp,
+                sender,
+                inboxSeqNum,
+                messageData
+            )
+                .hash();
     }
 
     function addMessageToInbox(bytes32 inbox, bytes32 message)
@@ -77,15 +79,12 @@ contract MessageTester {
         uint256 messageTupleSize
     ) public pure returns (bytes32) {
         return
-            Value.hash(
-                Messages.addMessageToVMInbox(
-                    Value.newTuplePreImage(inboxTuplePreimage, inboxTupleSize),
-                    Value.newTuplePreImage(
-                        messageTuplePreimage,
-                        messageTupleSize
-                    )
-                )
-            );
+            Messages
+                .addMessageToVMInbox(
+                Value.newTuplePreImage(inboxTuplePreimage, inboxTupleSize),
+                Value.newTuplePreImage(messageTuplePreimage, messageTupleSize)
+            )
+                .hash();
     }
 
     function unmarshalOutgoingMessage(bytes memory data, uint256 startOffset)

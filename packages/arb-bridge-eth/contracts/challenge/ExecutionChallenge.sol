@@ -27,6 +27,8 @@ import "../arch/Protocol.sol";
 import "../libraries/MerkleLib.sol";
 
 contract ExecutionChallenge is BisectionChallenge {
+    using Hashing for Value.Data;
+
     event BisectedAssertion(
         bytes32[] machineHashes,
         bool[] didInboxInsns,
@@ -133,7 +135,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
         for (uint256 i = 1; i < bisectionCount; i++) {
             if (_data.didInboxInsns[i - 1]) {
-                _data.beforeInbox = Value.hashEmptyTuple();
+                _data.beforeInbox = Value.newNone().hash();
             }
             assertionHash = Protocol.generateAssertionHash(
                 _data.machineHashes[i + 1],
@@ -236,10 +238,9 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstLog,
         bytes32 _lastLog
     ) internal view {
-        bytes32 beforeInbox = Value.hashTuplePreImage(
-            _beforeInbox,
-            _beforeInboxValueSize
-        );
+        bytes32 beforeInbox = Value
+            .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
+            .hash();
         bytes32 precondition = Protocol.generatePreconditionHash(
             _beforeHash,
             beforeInbox

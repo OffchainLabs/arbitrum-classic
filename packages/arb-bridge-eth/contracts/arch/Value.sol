@@ -19,9 +19,6 @@
 pragma solidity ^0.5.11;
 
 library Value {
-    using Value for Data;
-    using Value for CodePoint;
-
     uint8 internal constant INT_TYPECODE = 0;
     uint8 internal constant CODE_POINT_TYPECODE = 1;
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
@@ -67,8 +64,8 @@ library Value {
         return VALUE_TYPE_COUNT;
     }
 
-    function isTupleType(uint8 typeCode) private pure returns (bool) {
-        return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
+    function hashOnlyTypeCode() internal pure returns (uint8) {
+        return HASH_ONLY;
     }
 
     function isValidTupleSize(uint256 size) internal pure returns (bool) {
@@ -77,18 +74,12 @@ library Value {
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
         require(val.typeCode != 2, "Value must have a valid type code");
-        if (val.typeCode == 0) {
-            return newInt(0);
-        } else if (val.typeCode == 1) {
-            return newInt(1);
-        } else {
-            return newInt(3);
-        }
+        return newInt(val.typeCode);
     }
 
     function valLength(Data memory val) internal pure returns (uint8) {
-        if (isTupleType(val.typeCode)) {
-            return val.typeCode - TUPLE_TYPECODE;
+        if (val.typeCode == TUPLE_TYPECODE) {
+            return uint8(val.tupleVal.length);
         } else {
             return 1;
         }
@@ -103,72 +94,7 @@ library Value {
     }
 
     function isTuple(Data memory val) internal pure returns (bool) {
-        return isTupleType(val.typeCode);
-    }
-
-    function hashInt(uint256 val) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(val));
-    }
-
-    function hashCodePoint(CodePoint memory cp)
-        internal
-        pure
-        returns (bytes32)
-    {
-        assert(cp.immediate.length < 2);
-        if (cp.immediate.length == 0) {
-            return
-                keccak256(
-                    abi.encodePacked(
-                        CODE_POINT_TYPECODE,
-                        cp.opcode,
-                        cp.nextCodePoint
-                    )
-                );
-        }
-        return
-            keccak256(
-                abi.encodePacked(
-                    CODE_POINT_TYPECODE,
-                    cp.opcode,
-                    cp.immediate[0].hash(),
-                    cp.nextCodePoint
-                )
-            );
-    }
-
-    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return
-            keccak256(
-                abi.encodePacked(uint8(TUPLE_TYPECODE), innerHash, valueSize)
-            );
-    }
-
-    function hashEmptyTuple() internal pure returns (bytes32) {
-        return newNone().hash();
-    }
-
-    function hash(Data memory val) internal pure returns (bytes32) {
-        if (val.typeCode == INT_TYPECODE) {
-            return hashInt(val.intVal);
-        } else if (val.typeCode == CODE_POINT_TYPECODE) {
-            return hashCodePoint(val.cpVal);
-        } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
-            return hashTuplePreImage(bytes32(val.intVal), val.size);
-        } else if (
-            val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
-        ) {
-            Data memory preImage = getTuplePreImage(val.tupleVal);
-            return preImage.hash();
-        } else if (val.typeCode == HASH_ONLY) {
-            return bytes32(val.intVal);
-        } else {
-            require(false, "Invalid type code");
-        }
+        return val.typeCode == TUPLE_TYPECODE;
     }
 
     function isValidTypeForSend(Data memory val) internal pure returns (bool) {
@@ -178,9 +104,7 @@ library Value {
             return false;
         } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
             require(false, "must have full value");
-        } else if (
-            val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
-        ) {
+        } else if (val.typeCode == TUPLE_TYPECODE) {
             uint256 valueCount = val.tupleVal.length;
             for (uint256 i = 0; i < valueCount; i++) {
                 if (!isValidTypeForSend(val.tupleVal[i])) {
@@ -193,25 +117,6 @@ library Value {
         } else {
             require(false, "Invalid type code");
         }
-    }
-
-    function getTuplePreImage(Data[] memory vals)
-        internal
-        pure
-        returns (Data memory)
-    {
-        require(vals.length <= 8, "Invalid tuple length");
-        bytes32[] memory hashes = new bytes32[](vals.length);
-        uint256 hashCount = hashes.length;
-        uint256 size = 1;
-        for (uint256 i = 0; i < hashCount; i++) {
-            hashes[i] = vals[i].hash();
-            size += vals[i].size;
-        }
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(uint8(hashes.length), hashes)
-        );
-        return newTuplePreImage(firstHash, size);
     }
 
     function newNone() internal pure returns (Data memory) {
@@ -261,13 +166,7 @@ library Value {
         }
 
         return
-            Data(
-                0,
-                CodePoint(0, 0, new Data[](0)),
-                _val,
-                uint8(TUPLE_TYPECODE + _val.length),
-                size
-            );
+            Data(0, CodePoint(0, 0, new Data[](0)), _val, TUPLE_TYPECODE, size);
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size)

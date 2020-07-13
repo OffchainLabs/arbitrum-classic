@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "./Value.sol";
+import "./Hashing.sol";
 
 import "../libraries/BytesLib.sol";
 
@@ -170,7 +171,7 @@ library Marshaling {
         for (uint256 i = 0; i < wholeChunkCount; i++) {
             vals[0] = Value.newInt(data.toUint(startOffset + i * 32));
             vals[1] = stack;
-            stack = Value.getTuplePreImage(vals);
+            stack = Hashing.getTuplePreImage(vals);
         }
 
         if (dataLength % 32 != 0) {
@@ -178,13 +179,13 @@ library Marshaling {
             lastVal <<= (32 - (dataLength % 32)) * 8;
             vals[0] = Value.newInt(lastVal);
             vals[1] = stack;
-            stack = Value.getTuplePreImage(vals);
+            stack = Hashing.getTuplePreImage(vals);
         }
 
         vals[0] = Value.newInt(dataLength);
         vals[1] = stack;
 
-        return Value.getTuplePreImage(vals);
+        return Hashing.getTuplePreImage(vals);
     }
 
     function bytestackToBytes(bytes memory data, uint256 startOffset)

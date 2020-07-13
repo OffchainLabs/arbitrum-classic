@@ -22,6 +22,8 @@ import "../arch/Value.sol";
 import "../arch/Marshaling.sol";
 
 contract ValueTester {
+    using Hashing for Value.Data;
+
     function deserializeHash(bytes memory data, uint256 startOffset)
         public
         pure
@@ -34,7 +36,7 @@ contract ValueTester {
             data,
             startOffset
         );
-        return (offset, Value.hash(value));
+        return (offset, value.hash());
     }
 
     function bytesToBytestackHash(
@@ -43,9 +45,7 @@ contract ValueTester {
         uint256 dataLength
     ) public pure returns (bytes32) {
         return
-            Value.hash(
-                Marshaling.bytesToBytestack(data, startOffset, dataLength)
-            );
+            Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
     }
 
     function bytestackToBytes(bytes memory data, uint256 offset)
@@ -65,19 +65,13 @@ contract ValueTester {
         pure
         returns (bytes32)
     {
-        return Value.hashTuplePreImage(innerHash, valueSize);
-    }
-
-    function hashEmptyTuple() public pure returns (bytes32) {
-        return Value.hashEmptyTuple();
+        return Hashing.hashTuplePreImage(innerHash, valueSize);
     }
 
     function hashTestTuple() public pure returns (bytes32) {
         Value.Data[] memory tupVals = new Value.Data[](2);
         tupVals[0] = Value.newInt(uint256(111));
         tupVals[1] = Value.newTuple(new Value.Data[](0));
-        Value.Data memory tuple = Value.newTuple(tupVals);
-
-        return Value.hash(tuple);
+        return Value.newTuple(tupVals).hash();
     }
 }

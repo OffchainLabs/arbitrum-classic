@@ -23,6 +23,8 @@ import "../arch/Marshaling.sol";
 import "../libraries/RollupTime.sol";
 
 library RollupUtils {
+    using Hashing for Value.Data;
+
     uint256 private constant VALID_CHILD_TYPE = 3;
 
     struct ConfirmData {
@@ -155,9 +157,7 @@ library RollupUtils {
         uint256 offset = startOffset;
         for (uint256 i = 0; i < count; i++) {
             (offset, messageVal) = Marshaling.deserialize(messages, offset);
-            hashVal = keccak256(
-                abi.encodePacked(hashVal, Value.hash(messageVal))
-            );
+            hashVal = keccak256(abi.encodePacked(hashVal, messageVal.hash()));
         }
         return (hashVal, offset);
     }

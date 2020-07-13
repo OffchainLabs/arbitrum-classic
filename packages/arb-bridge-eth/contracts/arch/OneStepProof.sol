@@ -25,6 +25,7 @@ import "./Machine.sol";
 
 library OneStepProof {
     using Machine for Machine.Data;
+    using Hashing for Value.Data;
     using Value for Value.Data;
 
     uint256 private constant SEND_SIZE_LIMIT = 10000;
@@ -589,9 +590,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(
-                Value.hash(machine.dataStack) == Value.hashEmptyTuple()
-            )
+            Value.newBoolean(machine.dataStack.hash() == Value.newNone().hash())
         );
         return true;
     }
@@ -618,9 +617,7 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(
-                Value.hash(machine.auxStack) == Value.hashEmptyTuple()
-            )
+            Value.newBoolean(machine.auxStack.hash() == Value.newNone().hash())
         );
         return true;
     }
@@ -833,7 +830,7 @@ library OneStepProof {
         Value.Data memory beforeInbox
     ) internal pure returns (bool) {
         require(
-            Value.hash(beforeInbox) != Value.hashEmptyTuple(),
+            beforeInbox.hash() != Value.newNone().hash(),
             "Inbox instruction was blocked"
         );
         machine.addDataStackValue(beforeInbox);

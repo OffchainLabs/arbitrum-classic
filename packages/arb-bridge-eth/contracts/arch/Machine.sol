@@ -18,13 +18,12 @@
 
 pragma solidity ^0.5.11;
 
-import "./Value.sol";
 import "./Marshaling.sol";
 
 import "../libraries/DebugPrint.sol";
 
 library Machine {
-    using Value for Value.Data;
+    using Hashing for Value.Data;
 
     uint256 internal constant MACHINE_EXTENSIVE = 0;
     uint256 internal constant MACHINE_ERRORSTOP = 1;
@@ -38,7 +37,7 @@ library Machine {
         vals[0] = valHash;
         vals[1] = stackValHash;
 
-        return Value.getTuplePreImage(vals);
+        return Hashing.getTuplePreImage(vals);
     }
 
     struct Data {
@@ -63,13 +62,13 @@ library Machine {
                     "Machine(",
                     DebugPrint.bytes32string(machine.instructionStackHash),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.dataStack)),
+                    DebugPrint.bytes32string(machine.dataStack.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.auxStack)),
+                    DebugPrint.bytes32string(machine.auxStack.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.registerVal)),
+                    DebugPrint.bytes32string(machine.registerVal.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.staticVal)),
+                    DebugPrint.bytes32string(machine.staticVal.hash()),
                     ", \n",
                     DebugPrint.uint2str(machine.arbGasRemaining),
                     ", \n",
@@ -143,10 +142,10 @@ library Machine {
                 keccak256(
                     abi.encodePacked(
                         machine.instructionStackHash,
-                        Value.hash(machine.dataStack),
-                        Value.hash(machine.auxStack),
-                        Value.hash(machine.registerVal),
-                        Value.hash(machine.staticVal),
+                        machine.dataStack.hash(),
+                        machine.auxStack.hash(),
+                        machine.registerVal.hash(),
+                        machine.staticVal.hash(),
                         machine.arbGasRemaining,
                         machine.errHandlerHash
                     )

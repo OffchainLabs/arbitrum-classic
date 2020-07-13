@@ -25,6 +25,8 @@ import "../challenge/ChallengeUtils.sol";
 import "./VM.sol";
 
 library NodeGraphUtils {
+    using Hashing for Value.Data;
+
     struct AssertionData {
         bytes32 beforeVMHash;
         bytes32 beforeInboxTop;
@@ -119,7 +121,7 @@ library NodeGraphUtils {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
             data.beforeInboxTop,
             data.afterInboxTop,
-            Value.hashEmptyTuple(),
+            Value.newNone().hash(),
             data.importedMessagesSlice,
             data.importedMessageCount
         );

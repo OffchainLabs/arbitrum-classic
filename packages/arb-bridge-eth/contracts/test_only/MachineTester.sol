@@ -23,17 +23,18 @@ import "../arch/Marshaling.sol";
 import "../arch/Value.sol";
 
 contract MachineTester {
+    using Hashing for Value.Data;
     using Machine for Machine.Data;
 
     function deserializeMachine(bytes memory data)
         public
         pure
-        returns (bytes32)
+        returns (uint256, bytes32)
     {
         uint256 offset;
         Machine.Data memory machine;
         (offset, machine) = Machine.deserializeMachine(data, 0);
-        return Machine.hash(machine);
+        return (offset, machine.hash());
     }
 
     function addStackVal(bytes memory data1, bytes memory data2)
@@ -49,6 +50,6 @@ contract MachineTester {
 
         (offset, val2) = Marshaling.deserialize(data2, 0);
 
-        return Value.hash(Machine.addStackVal(val1, val2));
+        return Machine.addStackVal(val1, val2).hash();
     }
 }

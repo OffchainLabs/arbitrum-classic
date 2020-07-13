@@ -30,34 +30,6 @@ import (
 	"testing"
 )
 
-func TestEmptyTupleHashing(t *testing.T) {
-
-	tup := value.NewEmptyTuple()
-	preImage := tup.GetPreImage()
-
-	emptyBridgeHash, err := valueTester.HashEmptyTuple(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if preImage.Hash().ToEthHash() != preImageBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-
-	if tup.Hash().ToEthHash() != emptyBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-
-	if preImage.Hash().ToEthHash() != emptyBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-}
-
 func TestTupleHashing(t *testing.T) {
 
 	intVal := value.NewInt64Value(111)

@@ -26,7 +26,7 @@ import "../arch/Value.sol";
 import "../Messages.sol";
 
 contract MessagesChallenge is BisectionChallenge {
-    using Value for Value.Data;
+    using Hashing for Value.Data;
 
     event Bisected(
         bytes32[] chainHashes,
