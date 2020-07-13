@@ -18,8 +18,6 @@ const wallet = provider.getSigner(0)
 const root = '../../'
 const rollupsPath = root + 'rollups/'
 
-const optionDefinitions = [{ name: 'force', alias: 'f', type: Boolean }]
-
 async function setupRollup(arbOSData: string) {
   const arbOSHash = Program.programMachineHash(arbOSData)
 
@@ -70,7 +68,11 @@ async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
   return wallets
 }
 
-async function setupValidators(count: number, blocktime: number, force): void {
+async function setupValidators(
+  count: number,
+  blocktime: number,
+  force: boolean
+): Promise<void> {
   const arbOSData = fs.readFileSync('../../arbos.mexe', 'utf8')
   const rollup = await setupRollup(arbOSData)
   console.log('Created rollup', rollup)
@@ -124,6 +126,8 @@ if (require.main === module) {
       yargsBuilder.options({
         force: {
           description: 'clear any existing state',
+          type: 'boolean',
+          default: false,
         },
         validatorcount: {
           description: 'number of validators to deploy',

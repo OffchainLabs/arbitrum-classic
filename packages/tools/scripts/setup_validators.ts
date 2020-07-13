@@ -15,7 +15,7 @@ export async function setupValidatorStates(
   count: number,
   folder: string,
   config: Config
-): void {
+): Promise<void> {
   if (count < 1) {
     throw Error('must create at least 1 validator')
   }
