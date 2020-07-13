@@ -4,11 +4,11 @@ title: Executable Creation
 sidebar_label: Executable Creation
 ---
 
-Arbitrum support standard EVM contract deployment. This allows standard solidity smart to be deployed on Arbitrum Chains.
+Arbitrum supports standard EVM contract deployment. This allows standard solidity smart to be deployed on Arbitrum Chains.
 
 To deploy your contracts, you need to set your deployment tool to deploy on an Arbitrum rollup chain instead of Ethereum.
 
-To port an existing truffle configureation:
+To port an existing truffle configuration:
 
 1.  First add the `arb-ethers-web3-bridge`, `ethers`, and `arb-provider-ethers` to your project:
 
@@ -59,7 +59,7 @@ To port an existing truffle configureation:
     };
     ```
 
-Now that the truffle project is setup correctly, just run migrate to deploy your contracts
+Now that the truffle project is set up correctly, just run migrate to deploy your contracts
 
 ```bash
 truffle migrate --reset --network arbitrum
