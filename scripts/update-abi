@@ -34,7 +34,7 @@ abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=one
 \mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
 \mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
 \mv protocoltester.go ../../arb-validator-core/ethbridgetest/protocoltester/
-\mv machinetester.go ../../arb-validator/proofmachine/machinetester/
+\mv machinetester.go ../../arb-validator-core/ethbridgetest/machinetester/
 \mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
 \mv onestepprooftester.go ../../arb-validator-core/ethbridgetest/onestepprooftester/
 
