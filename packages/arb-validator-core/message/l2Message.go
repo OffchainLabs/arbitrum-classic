@@ -203,7 +203,8 @@ func (t Transaction) asData() []byte {
 
 func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
 	data := make([]byte, 0)
-	data = append(data, addressData(chain)...)
+	//data = append(data, addressData(chain)...)
+	data = append(data, byte(TransactionType))
 	data = append(data, t.AsData()...)
 	return marshaledBytesHash(data)
 }
@@ -346,6 +347,7 @@ func (b BatchTx) AsData() []byte {
 	encodedLength := make([]byte, 8)
 	binary.BigEndian.PutUint64(encodedLength[:], uint64(len(b.Transaction.Data)))
 	ret = append(ret, encodedLength[:]...)
+	ret = append(ret, byte(TransactionType))
 	ret = append(ret, b.Transaction.AsData()...)
 	ret = append(ret, b.Signature[:]...)
 	return ret
