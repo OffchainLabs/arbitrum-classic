@@ -164,10 +164,6 @@ func updateMsgChallengeData(
 	inboxStartCount uint64,
 ) (common.Hash, value.HashPreImage, uint64, uint64) {
 	startInbox := bisectionEvent.ChainHashes[continueEvent.SegmentIndex.Uint64()]
-	fmt.Println("ChainHashes ", bisectionEvent.ChainHashes)
-	fmt.Println("segmetHashes ", bisectionEvent.SegmentHashes)
-	//log.Fatal("inside updateMsgChallengeData" )
-
 	hashPreImage := preImages[continueEvent.SegmentIndex.Uint64()]
 
 	inboxStartCount += getSegmentStart(
