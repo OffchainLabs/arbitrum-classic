@@ -61,7 +61,7 @@ export class ArbWallet extends ethers.Signer {
   ): Promise<ethers.providers.TransactionResponse> {
     const valueNum = ethers.utils.bigNumberify(value)
     const arbsys = ArbSysFactory.connect(ARB_SYS_ADDRESS, this)
-    return arbsys.withdrawEth(await this.getAddress(), valueNum)
+    return arbsys.withdrawEth(await this.getAddress(), { value: valueNum })
   }
 
   public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
