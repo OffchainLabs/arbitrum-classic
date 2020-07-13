@@ -171,59 +171,25 @@ library Machine {
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data memory // machine
         )
     {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
-        bool valid;
-        (valid, offset, m.instructionStackHash) = Value.deserializeHashed(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
+        uint256 instructionStack;
+        uint256 errHandler;
+        (offset, instructionStack) = Value.deserializeInt(data, offset);
 
-        (valid, offset, m.dataStack) = Value.deserializeHashPreImage(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-        (valid, offset, m.auxStack) = Value.deserializeHashPreImage(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-        (valid, offset, m.registerVal) = Value.deserialize(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
+        (offset, m.dataStack) = Value.deserializeHashPreImage(data, offset);
+        (offset, m.auxStack) = Value.deserializeHashPreImage(data, offset);
+        (offset, m.registerVal) = Value.deserialize(data, offset);
+        (offset, m.staticVal) = Value.deserialize(data, offset);
+        (offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
+        (offset, errHandler) = Value.deserializeInt(data, offset);
 
-        (valid, offset, m.staticVal) = Value.deserialize(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        (valid, offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        (valid, offset, m.errHandlerHash) = Value.deserializeHashed(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        return (true, offset, m);
+        m.instructionStackHash = bytes32(instructionStack);
+        m.errHandlerHash = bytes32(errHandler);
+        return (offset, m);
     }
 }

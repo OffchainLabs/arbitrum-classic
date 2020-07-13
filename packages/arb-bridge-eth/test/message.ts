@@ -17,7 +17,6 @@
 /* eslint-env node, mocha */
 
 import { ethers } from '@nomiclabs/buidler'
-import { Signer } from 'ethers'
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { MessageTester } from '../build/types/MessageTester'
@@ -27,7 +26,6 @@ chai.use(chaiAsPromised)
 
 const { assert, expect } = chai
 
-let accounts: Signer[]
 let messageTester: MessageTester
 
 const token = '0xc7711f36b2C13E00821fFD9EC54B04A60AEfbd1b'
@@ -37,8 +35,6 @@ const value = ethers.utils.bigNumberify(563356543)
 
 describe('Messages', async () => {
   before(async () => {
-    accounts = await ethers.getSigners()
-
     const MessageTester = await ethers.getContractFactory('MessageTester')
     messageTester = (await MessageTester.deploy()) as MessageTester
     await messageTester.deployed()

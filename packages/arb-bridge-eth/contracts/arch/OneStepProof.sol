@@ -1160,14 +1160,11 @@ library OneStepProof {
             uint256 offset
         )
     {
-        bool valid;
         startMachine.setExtensive();
-        (valid, offset, startMachine) = Machine.deserializeMachine(
+        (offset, startMachine) = Machine.deserializeMachine(
             _data.proof,
             offset
         );
-
-        require(valid, "loadMachine(): invalid machine");
 
         endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
@@ -1187,12 +1184,7 @@ library OneStepProof {
                 .hash();
         } else {
             Value.Data memory immediateVal;
-            (valid, offset, immediateVal) = Value.deserialize(
-                _data.proof,
-                offset
-            );
-            // string(abi.encodePacked("Proof had bad immediate value ", uint2str(valid)))
-            require(valid, "Proof had bad immediate value");
+            (offset, immediateVal) = Value.deserialize(_data.proof, offset);
             if (popCount > 0) {
                 stackVals[0] = immediateVal;
             } else {
@@ -1211,11 +1203,7 @@ library OneStepProof {
 
         uint256 i = 0;
         for (i = immediate; i < popCount; i++) {
-            (valid, offset, stackVals[i]) = Value.deserialize(
-                _data.proof,
-                offset
-            );
-            require(valid, "Proof had bad stack value");
+            (offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
         }
         if (stackVals.length > 0) {
             for (i = 0; i < stackVals.length - immediate; i++) {
@@ -1239,7 +1227,6 @@ library OneStepProof {
     {
         uint8 opCode;
         uint256 gasCost;
-        bool valid;
         uint256 offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
@@ -1360,8 +1347,7 @@ library OneStepProof {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
             Value.Data memory auxVal;
-            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof of auxpop had bad aux value");
+            (offset, auxVal) = Value.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
         } else if (opCode == OP_AUXSTACKEMPTY) {
@@ -1405,14 +1391,12 @@ library OneStepProof {
             correct = executeTlenInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_XGET) {
             Value.Data memory auxVal;
-            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof of auxpop had bad aux value");
+            (offset, auxVal) = Value.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             correct = executeXgetInsn(endMachine, stackVals[0], auxVal);
         } else if (opCode == OP_XSET) {
             Value.Data memory auxVal;
-            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof of auxpop had bad aux value");
+            (offset, auxVal) = Value.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             correct = executeXsetInsn(
                 endMachine,

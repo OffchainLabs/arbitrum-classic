@@ -25,14 +25,15 @@ contract ValueTester {
         public
         pure
         returns (
-            bool, // valid
             uint256, // offset
             bytes32 // valHash
         )
     {
-        (bool valid, uint256 offset, Value.Data memory value) = Value
-            .deserialize(data, startOffset);
-        return (valid, offset, Value.hash(value));
+        (uint256 offset, Value.Data memory value) = Value.deserialize(
+            data,
+            startOffset
+        );
+        return (offset, Value.hash(value));
     }
 
     function bytesToBytestackHash(

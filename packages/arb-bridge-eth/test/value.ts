@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 
 import { ethers } from '@nomiclabs/buidler'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 import { ValueTester } from '../build/types/ValueTester'
 import { ArbValue } from 'arb-provider-ethers'
 
@@ -38,8 +38,7 @@ describe('Value', () => {
   it('should initialize', async () => {
     const val = new ArbValue.IntValue(100)
     const res = await valueTester.deserializeHash(ArbValue.marshal(val), 0)
-    assert.isTrue(res['0'], "value didn't deserialize correctly")
-    assert.equal(val.hash(), res['2'], 'value hashes incorrectly')
+    assert.equal(val.hash(), res['1'], 'value hashes incorrectly')
   })
 
   for (let i = 0; i < testCases.length; i++) {
@@ -49,19 +48,18 @@ describe('Value', () => {
         '0x' + testCases[i].proof_value,
         0
       )
-      assert.isTrue(res['0'], "value didn't deserialize correctly")
-      assert.equal('0x' + expectedHash, res['2'], 'value hashes incorrectly')
+      assert.equal('0x' + expectedHash, res['1'], 'value hashes incorrectly')
     })
   }
 
   const cases = [
-    ['16', testVal.slice(0, 34)],
-    ['19', testVal.slice(0, 40)],
-    ['32', testVal],
-    ['64', testVal + testVal.slice(2)],
+    testVal.slice(0, 34),
+    testVal.slice(0, 40),
+    testVal,
+    testVal + testVal.slice(2),
   ]
 
-  cases.forEach(([label, data]) => {
+  cases.forEach(data => {
     const dataLength = ethers.utils.hexDataLength(data)
     it(
       'should properly calculate bytestack hash of length ' + dataLength,
@@ -79,11 +77,14 @@ describe('Value', () => {
 
   it('should properly convert bytestack to bytes', async () => {
     const bytestack = ArbValue.hexToBytestack(testVal.slice(0, 40))
-    const bytestackData = ethers.utils.hexlify(ArbValue.marshal(bytestack))
+    const marshalled = ArbValue.marshal(bytestack)
+    const bytestackData = ethers.utils.hexlify(marshalled)
     const { 0: valid, 1: offset, 2: data } = await valueTester.bytestackToBytes(
       bytestackData,
       0
     )
+    assert.isTrue(valid)
+    expect(offset).to.equal(marshalled.length)
     assert.equal(data, testVal.slice(0, 40))
   })
 })

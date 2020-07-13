@@ -173,12 +173,9 @@ func TestDeserialize(t *testing.T) {
 				t.Error(err)
 			}
 
-			valid, offset, valHash, err := valueTester.DeserializeHash(nil, valBytes, big.NewInt(0))
+			offset, valHash, err := valueTester.DeserializeHash(nil, valBytes, big.NewInt(0))
 			if err != nil {
 				t.Error(err)
-			}
-			if !valid {
-				t.Error("value was invalid")
 			}
 			if offset.Cmp(big.NewInt(int64(len(valBytes)))) != 0 {
 				t.Errorf("offset was incorrect, was %v, should have been %v", offset, len(valBytes))

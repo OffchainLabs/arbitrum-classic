@@ -149,13 +149,11 @@ library RollupUtils {
         uint256 startOffset,
         uint256 count
     ) internal pure returns (bytes32, uint256) {
-        bool valid;
         bytes32 hashVal = 0x00;
         Value.Data memory messageVal;
         uint256 offset = startOffset;
         for (uint256 i = 0; i < count; i++) {
-            (valid, offset, messageVal) = Value.deserialize(messages, offset);
-            require(valid, "Invalid output message");
+            (offset, messageVal) = Value.deserialize(messages, offset);
             hashVal = keccak256(
                 abi.encodePacked(hashVal, Value.hash(messageVal))
             );

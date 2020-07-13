@@ -58,6 +58,37 @@ library Value {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
 
+    function typeCodeVal(Data memory val) internal pure returns (Data memory) {
+        require(val.typeCode != 2, "Value must have a valid type code");
+        if (val.typeCode == 0) {
+            return newInt(0);
+        } else if (val.typeCode == 1) {
+            return newInt(1);
+        } else {
+            return newInt(3);
+        }
+    }
+
+    function valLength(Data memory val) internal pure returns (uint8) {
+        if (isTupleType(val.typeCode)) {
+            return val.typeCode - TUPLE_TYPECODE;
+        } else {
+            return 1;
+        }
+    }
+
+    function isInt(Data memory val) internal pure returns (bool) {
+        return val.typeCode == INT_TYPECODE;
+    }
+
+    function isCodePoint(Data memory val) internal pure returns (bool) {
+        return val.typeCode == CODE_POINT_TYPECODE;
+    }
+
+    function isTuple(Data memory val) internal pure returns (bool) {
+        return isTupleType(val.typeCode);
+    }
+
     function hashInt(uint256 val) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
     }
@@ -102,37 +133,6 @@ library Value {
 
     function hashEmptyTuple() internal pure returns (bytes32) {
         return newNone().hash();
-    }
-
-    function typeCodeVal(Data memory val) internal pure returns (Data memory) {
-        require(val.typeCode != 2, "Value must have a valid type code");
-        if (val.typeCode == 0) {
-            return newInt(0);
-        } else if (val.typeCode == 1) {
-            return newInt(1);
-        } else {
-            return newInt(3);
-        }
-    }
-
-    function valLength(Data memory val) internal pure returns (uint8) {
-        if (isTupleType(val.typeCode)) {
-            return val.typeCode - TUPLE_TYPECODE;
-        } else {
-            return 1;
-        }
-    }
-
-    function isInt(Data memory val) internal pure returns (bool) {
-        return val.typeCode == INT_TYPECODE;
-    }
-
-    function isCodePoint(Data memory val) internal pure returns (bool) {
-        return val.typeCode == CODE_POINT_TYPECODE;
-    }
-
-    function isTuple(Data memory val) internal pure returns (bool) {
-        return isTupleType(val.typeCode);
     }
 
     function hash(Data memory val) internal pure returns (bytes32) {
@@ -297,71 +297,39 @@ library Value {
             );
     }
 
-    function deserializeHashed(bytes memory data, uint256 startOffset)
-        internal
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            bytes32
-        )
-    {
-        bytes32 hashData;
-        uint256 totalLength = data.length;
-
-        if (totalLength < startOffset || totalLength - startOffset < 32) {
-            return (false, startOffset, hashData);
-        } else {
-            hashData = data.toBytes32(startOffset);
-            return (true, startOffset + 32, hashData);
-        }
-    }
-
     function deserializeHashPreImage(bytes memory data, uint256 startOffset)
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data memory
         )
     {
-        Data memory hashValue;
         uint256 size;
-        bool valid;
-
-        uint256 totalLength = data.length;
-        if (totalLength < startOffset || totalLength - startOffset < 64) {
-            return (false, startOffset, hashValue);
-        }
-
+        require(
+            data.length >= startOffset && data.length - startOffset >= 64,
+            "to short"
+        );
         bytes32 hashData = data.toBytes32(startOffset);
         startOffset += 32;
-        (valid, startOffset, size) = deserializeInt(data, startOffset);
-
-        if (valid) {
-            hashValue = newTuplePreImage(hashData, size);
-
-            return (true, startOffset, hashValue);
-        } else {
-            return (false, startOffset, hashValue);
-        }
+        (startOffset, size) = deserializeInt(data, startOffset);
+        Data memory hashValue = newTuplePreImage(hashData, size);
+        return (startOffset, hashValue);
     }
 
     function deserializeInt(bytes memory data, uint256 startOffset)
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             uint256 // val
         )
     {
-        uint256 totalLength = data.length;
-        if (totalLength < startOffset || totalLength - startOffset < 32) {
-            return (false, startOffset, 0);
-        }
-        return (true, startOffset + 32, data.toUint(startOffset));
+        require(
+            data.length >= startOffset && data.length - startOffset >= 32,
+            "too short"
+        );
+        return (startOffset + 32, data.toUint(startOffset));
     }
 
     function deserializeCheckedInt(bytes memory data, uint256 startOffset)
@@ -388,7 +356,6 @@ library Value {
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data memory // val
         )
@@ -400,18 +367,14 @@ library Value {
         offset++;
         Data memory immediate;
         if (immediateType == 1) {
-            bool valid;
-            (valid, offset, immediate) = deserialize(data, offset);
-            if (!valid) {
-                return (false, startOffset, newNone());
-            }
+            (offset, immediate) = deserialize(data, offset);
         }
         bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
-            return (true, offset, newCodePoint(opCode, nextHash, immediate));
+            return (offset, newCodePoint(opCode, nextHash, immediate));
         }
-        return (true, offset, newCodePoint(opCode, nextHash));
+        return (offset, newCodePoint(opCode, nextHash));
     }
 
     function deserializeTuple(
@@ -422,43 +385,34 @@ library Value {
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data[] memory // val
         )
     {
         uint256 offset = startOffset;
-        bool valid;
         Data[] memory members = new Data[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (valid, offset, members[i]) = deserialize(data, offset);
-            if (!valid) {
-                return (false, startOffset, members);
-            }
+            (offset, members[i]) = deserialize(data, offset);
         }
-        return (true, offset, members);
+        return (offset, members);
     }
 
     function deserialize(bytes memory data, uint256 startOffset)
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data memory // val
         )
     {
-        if (startOffset >= data.length) {
-            return (false, startOffset, newInt(0));
-        }
-        bool valid;
+        require(startOffset < data.length, "invalid offset");
         uint256 offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
         if (valType == INT_TYPECODE) {
-            (valid, offset, intVal) = deserializeInt(data, offset);
-            return (valid, offset, newInt(intVal));
+            (offset, intVal) = deserializeInt(data, offset);
+            return (offset, newInt(intVal));
         } else if (valType == CODE_POINT_TYPECODE) {
             return deserializeCodePoint(data, offset);
         } else if (valType == HASH_PRE_IMAGE_TYPECODE) {
@@ -466,14 +420,10 @@ library Value {
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Data[] memory tupleVal;
-            (valid, offset, tupleVal) = deserializeTuple(
-                tupLength,
-                data,
-                offset
-            );
-            return (valid, offset, newTuple(tupleVal));
+            (offset, tupleVal) = deserializeTuple(tupLength, data, offset);
+            return (offset, newTuple(tupleVal));
         }
-        return (false, 0, newInt(0));
+        require(false, "invalid typecode");
     }
 
     function bytesToBytestack(

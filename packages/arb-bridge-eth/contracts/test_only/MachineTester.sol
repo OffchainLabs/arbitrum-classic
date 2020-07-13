@@ -29,11 +29,9 @@ contract MachineTester {
         pure
         returns (bytes32)
     {
-        bool valid;
         uint256 offset;
         Machine.Data memory machine;
-        (valid, offset, machine) = Machine.deserializeMachine(data, 0);
-
+        (offset, machine) = Machine.deserializeMachine(data, 0);
         return Machine.hash(machine);
     }
 
@@ -42,16 +40,13 @@ contract MachineTester {
         pure
         returns (bytes32)
     {
-        bool valid;
         uint256 offset;
         Value.Data memory val1;
         Value.Data memory val2;
 
-        (valid, offset, val1) = Value.deserialize(data1, 0);
-        require(valid, "value1 incorrect");
+        (offset, val1) = Value.deserialize(data1, 0);
 
-        (valid, offset, val2) = Value.deserialize(data2, 0);
-        require(valid, "value2 incorrect");
+        (offset, val2) = Value.deserialize(data2, 0);
 
         return Value.hash(Machine.addStackVal(val1, val2));
     }
