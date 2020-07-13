@@ -37,7 +37,7 @@ library Machine {
         vals[0] = valHash;
         vals[1] = stackValHash;
 
-        return Value.getTuplePreImage(Value.newTuple(vals));
+        return Value.getTuplePreImage(vals);
     }
 
     struct Data {

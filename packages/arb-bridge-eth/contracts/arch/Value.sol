@@ -100,31 +100,8 @@ library Value {
             );
     }
 
-    function tuplePreImage(bytes32[] memory hashes)
-        private
-        pure
-        returns (bytes32)
-    {
-        require(hashes.length <= 8, "Invalid tuple length");
-
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(uint8(hashes.length), hashes)
-        );
-
-        return (firstHash);
-    }
-
-    function hashTuple(bytes32[] memory hashes, uint256 size)
-        private
-        pure
-        returns (bytes32)
-    {
-        return calculateTuplePreImage(hashes, size).hash();
-    }
-
     function hashEmptyTuple() internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](0);
-        return hashTuple(hashes, uint256(1));
+        return newNone().hash();
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
@@ -168,7 +145,7 @@ library Value {
         } else if (
             val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT
         ) {
-            Data memory preImage = getTuplePreImage(val);
+            Data memory preImage = getTuplePreImage(val.tupleVal);
             return preImage.hash();
         } else if (val.typeCode == HASH_ONLY) {
             return bytes32(val.intVal);
@@ -286,27 +263,22 @@ library Value {
             );
     }
 
-    function getTuplePreImage(Data memory tuple)
+    function getTuplePreImage(Data[] memory vals)
         internal
         pure
         returns (Data memory)
     {
-        require(isTuple(tuple), "Must be Tuple type");
-        require(tuple.tupleVal.length <= 8, "Invalid tuple length");
-        bytes32[] memory hashes = new bytes32[](tuple.tupleVal.length);
+        require(vals.length <= 8, "Invalid tuple length");
+        bytes32[] memory hashes = new bytes32[](vals.length);
         uint256 hashCount = hashes.length;
+        uint256 size = 1;
         for (uint256 i = 0; i < hashCount; i++) {
-            bytes32 hashVal = tuple.tupleVal[i].hash();
-            hashes[i] = hashVal;
+            hashes[i] = vals[i].hash();
+            size += vals[i].size;
         }
-        return calculateTuplePreImage(hashes, tuple.size);
-    }
-
-    function calculateTuplePreImage(
-        bytes32[] memory preImageHashes,
-        uint256 size
-    ) private pure returns (Data memory) {
-        bytes32 firstHash = tuplePreImage(preImageHashes);
+        bytes32 firstHash = keccak256(
+            abi.encodePacked(uint8(hashes.length), hashes)
+        );
         return newTuplePreImage(firstHash, size);
     }
 
@@ -512,34 +484,27 @@ library Value {
         uint256 wholeChunkCount = dataLength / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
-        bytes32 stackHash = hashEmptyTuple();
-        uint256 size = 1;
-        bytes32[] memory vals = new bytes32[](2);
+        Value.Data memory stack = newNone();
+        Value.Data[] memory vals = new Value.Data[](2);
 
         for (uint256 i = 0; i < wholeChunkCount; i++) {
-            vals[0] = newInt(data.toUint(startOffset + i * 32)).hash();
-            vals[1] = stackHash;
-            size += 2;
-
-            stackHash = hashTuple(vals, size);
+            vals[0] = newInt(data.toUint(startOffset + i * 32));
+            vals[1] = stack;
+            stack = getTuplePreImage(vals);
         }
 
         if (dataLength % 32 != 0) {
             uint256 lastVal = data.toUint(startOffset + dataLength - 32);
             lastVal <<= (32 - (dataLength % 32)) * 8;
-
-            vals[0] = newInt(lastVal).hash();
-            vals[1] = stackHash;
-            size += 2;
-
-            stackHash = hashTuple(vals, size);
+            vals[0] = newInt(lastVal);
+            vals[1] = stack;
+            stack = getTuplePreImage(vals);
         }
 
-        vals[0] = newInt(dataLength).hash();
-        vals[1] = stackHash;
-        size += 2;
+        vals[0] = newInt(dataLength);
+        vals[1] = stack;
 
-        return calculateTuplePreImage(vals, size);
+        return getTuplePreImage(vals);
     }
 
     function bytestackToBytes(bytes memory data, uint256 startOffset)
