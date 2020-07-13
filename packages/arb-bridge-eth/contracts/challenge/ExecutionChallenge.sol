@@ -196,11 +196,10 @@ contract ExecutionChallenge is BisectionChallenge {
             _lastLog
         );
 
-        uint256 correctProof = OneStepProof.validateProof(
+        Machine.Data memory endMachine = OneStepProof.validateProof(
             _beforeHash,
             _beforeInbox,
             _beforeInboxValueSize,
-            _afterHash,
             _didInboxInsns,
             _firstMessage,
             _lastMessage,
@@ -210,7 +209,17 @@ contract ExecutionChallenge is BisectionChallenge {
             _proof
         );
 
-        require(correctProof == 0, OSP_PROOF);
+        require(
+            Machine.hash(endMachine) == _afterHash,
+            "Proof had non matching end state"
+        );
+
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        // );
+
         emit OneStepProofCompleted();
         _asserterWin();
     }

@@ -34,7 +34,6 @@ library OneStepProof {
     struct ValidateProofData {
         bytes32 beforeHash;
         Value.Data beforeInbox;
-        bytes32 afterHash;
         bool didInboxInsn;
         bytes32 firstMessage;
         bytes32 lastMessage;
@@ -48,7 +47,6 @@ library OneStepProof {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
-        bytes32 afterHash,
         bool didInboxInsn,
         bytes32 firstMessage,
         bytes32 lastMessage,
@@ -56,13 +54,12 @@ library OneStepProof {
         bytes32 lastLog,
         uint64 gas,
         bytes memory proof
-    ) internal pure returns (uint256) {
+    ) internal pure returns (Machine.Data memory) {
         return
             checkProof(
                 ValidateProofData(
                     beforeHash,
                     Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
-                    afterHash,
                     didInboxInsn,
                     firstMessage,
                     lastMessage,
@@ -1238,7 +1235,7 @@ library OneStepProof {
     function checkProof(ValidateProofData memory _data)
         internal
         pure
-        returns (uint256)
+        returns (Machine.Data memory)
     {
         uint8 opCode;
         uint256 gasCost;
@@ -1526,22 +1523,12 @@ library OneStepProof {
             _data.beforeHash == startMachine.hash(),
             "Proof had non matching start state"
         );
-        require(
-            _data.afterHash == endMachine.hash(),
-            "Proof had non matching end state"
-        );
-
         // require(
         //     _data.beforeHash == startMachine.hash(),
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
         //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
         // );
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
 
-        return 0;
+        return endMachine;
     }
 }

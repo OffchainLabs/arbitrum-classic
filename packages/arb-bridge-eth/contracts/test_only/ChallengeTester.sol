@@ -28,11 +28,7 @@ contract ChallengeTester is IStaking {
         challengeFactory = IChallengeFactory(challengeFactory_);
     }
 
-    function resolveChallenge(
-        address payable,
-        address,
-        uint256
-    ) external {
+    function resolveChallenge(address payable, address) external {
         return;
     }
 

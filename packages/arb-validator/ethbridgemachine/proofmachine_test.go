@@ -85,12 +85,11 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 		//precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(a)
 		hashPreImage := inbox.GetPreImage()
-		res, err := osp.ValidateProof(
+		afterHash, err := osp.ValidateProof(
 			&bind.CallOpts{Context: context.Background()},
 			beforeHash,
 			hashPreImage.GetInnerHash(),
 			big.NewInt(hashPreImage.Size()),
-			stub.AfterHash,
 			stub.DidInboxInsn,
 			stub.FirstMessageHash,
 			stub.LastMessageHash,
@@ -103,7 +102,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester
 			beforeMach.PrintState()
 			mach.PrintState()
 			t.Fatal("Proof invalid with error", err)
-		} else if res.Cmp(big.NewInt(0)) != 0 {
+		} else if stub.AfterHash != afterHash {
 			mach.PrintState()
 			t.Fatal("Proof invalid")
 		}

@@ -168,7 +168,7 @@ interface ArbRollupInterface extends Interface {
     }>
 
     resolveChallenge: TypedFunctionDescription<{
-      encode([winner, loser]: [string, string, BigNumberish]): string
+      encode([winner, loser]: [string, string]): string
     }>
 
     startChallenge: TypedFunctionDescription<{
@@ -396,7 +396,6 @@ export class ArbRollup extends Contract {
     resolveChallenge(
       winner: string,
       loser: string,
-      arg2: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -538,7 +537,6 @@ export class ArbRollup extends Contract {
   resolveChallenge(
     winner: string,
     loser: string,
-    arg2: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -699,11 +697,7 @@ export class ArbRollup extends Contract {
       proof: Arrayish[]
     ): Promise<BigNumber>
 
-    resolveChallenge(
-      winner: string,
-      loser: string,
-      arg2: BigNumberish
-    ): Promise<BigNumber>
+    resolveChallenge(winner: string, loser: string): Promise<BigNumber>
 
     startChallenge(
       asserterAddress: string,
