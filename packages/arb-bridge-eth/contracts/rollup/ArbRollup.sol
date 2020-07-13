@@ -20,6 +20,7 @@ pragma solidity ^0.5.11;
 
 import "./NodeGraph.sol";
 import "./Staking.sol";
+import "../inbox/IGlobalInbox.sol";
 
 contract ArbRollup is NodeGraph, Staking {
     // invalid path proof
@@ -56,8 +57,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     address payable public owner;
 
-    mapping(address => address) private incomingCallProxies;
-    mapping(address => address) public supportedContracts;
+    IGlobalInbox public globalInbox;
 
     event ConfirmedAssertion(bytes32[] logsAccHash);
 
@@ -77,10 +77,10 @@ contract ArbRollup is NodeGraph, Staking {
             _vmState,
             _gracePeriodTicks,
             _arbGasSpeedLimitPerTick,
-            _maxExecutionSteps,
-            _globalInboxAddress
+            _maxExecutionSteps
         );
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
+        globalInbox = IGlobalInbox(_globalInboxAddress);
         owner = _owner;
     }
 
@@ -209,7 +209,15 @@ contract ArbRollup is NodeGraph, Staking {
             _fields[8]
         );
 
-        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(assertData);
+        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(
+            address(this)
+        );
+
+        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(
+            assertData,
+            inboxValue,
+            inboxCount
+        );
 
         bytes32 stakerLocation = getStakerLocation(msg.sender);
         require(

@@ -21,7 +21,6 @@ pragma solidity ^0.5.11;
 import "./RollupUtils.sol";
 import "./NodeGraphUtils.sol";
 import "./VM.sol";
-import "../inbox/IGlobalInbox.sol";
 
 import "../arch/Value.sol";
 
@@ -74,7 +73,6 @@ contract NodeGraph {
 
     event RollupCreated(bytes32 initVMHash);
 
-    IGlobalInbox public globalInbox;
     VM.Params public vmParams;
     mapping(bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
@@ -83,11 +81,8 @@ contract NodeGraph {
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
         uint128 _arbGasSpeedLimitPerTick,
-        uint64 _maxExecutionSteps,
-        address _globalInboxAddress
+        uint64 _maxExecutionSteps
     ) internal {
-        globalInbox = IGlobalInbox(_globalInboxAddress);
-
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
@@ -112,18 +107,16 @@ contract NodeGraph {
         emit RollupCreated(_vmState);
     }
 
-    function makeAssertion(NodeGraphUtils.AssertionData memory data)
-        internal
-        returns (bytes32, bytes32)
-    {
+    function makeAssertion(
+        NodeGraphUtils.AssertionData memory data,
+        bytes32 inboxValue,
+        uint256 inboxCount
+    ) internal returns (bytes32, bytes32) {
         (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
             .computePrevLeaf(data);
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         _verifyAssertionData(data);
 
-        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(
-            address(this)
-        );
         require(
             data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount),
             MAKE_MESSAGE_CNT
