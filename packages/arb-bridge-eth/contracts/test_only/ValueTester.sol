@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../arch/Value.sol";
+import "../arch/Marshaling.sol";
 
 contract ValueTester {
     function deserializeHash(bytes memory data, uint256 startOffset)
@@ -29,7 +30,7 @@ contract ValueTester {
             bytes32 // valHash
         )
     {
-        (uint256 offset, Value.Data memory value) = Value.deserialize(
+        (uint256 offset, Value.Data memory value) = Marshaling.deserialize(
             data,
             startOffset
         );
@@ -42,7 +43,9 @@ contract ValueTester {
         uint256 dataLength
     ) public pure returns (bytes32) {
         return
-            Value.hash(Value.bytesToBytestack(data, startOffset, dataLength));
+            Value.hash(
+                Marshaling.bytesToBytestack(data, startOffset, dataLength)
+            );
     }
 
     function bytestackToBytes(bytes memory data, uint256 offset)
@@ -54,7 +57,7 @@ contract ValueTester {
             bytes memory
         )
     {
-        return Value.bytestackToBytes(data, offset);
+        return Marshaling.bytestackToBytes(data, offset);
     }
 
     function hashTuplePreImage(bytes32 innerHash, uint256 valueSize)

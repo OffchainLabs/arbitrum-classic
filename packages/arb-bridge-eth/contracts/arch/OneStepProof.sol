@@ -1184,7 +1184,10 @@ library OneStepProof {
                 .hash();
         } else {
             Value.Data memory immediateVal;
-            (offset, immediateVal) = Value.deserialize(_data.proof, offset);
+            (offset, immediateVal) = Marshaling.deserialize(
+                _data.proof,
+                offset
+            );
             if (popCount > 0) {
                 stackVals[0] = immediateVal;
             } else {
@@ -1203,7 +1206,10 @@ library OneStepProof {
 
         uint256 i = 0;
         for (i = immediate; i < popCount; i++) {
-            (offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
+            (offset, stackVals[i]) = Marshaling.deserialize(
+                _data.proof,
+                offset
+            );
         }
         if (stackVals.length > 0) {
             for (i = 0; i < stackVals.length - immediate; i++) {
@@ -1347,7 +1353,7 @@ library OneStepProof {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
             Value.Data memory auxVal;
-            (offset, auxVal) = Value.deserialize(_data.proof, offset);
+            (offset, auxVal) = Marshaling.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
         } else if (opCode == OP_AUXSTACKEMPTY) {
@@ -1391,12 +1397,12 @@ library OneStepProof {
             correct = executeTlenInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_XGET) {
             Value.Data memory auxVal;
-            (offset, auxVal) = Value.deserialize(_data.proof, offset);
+            (offset, auxVal) = Marshaling.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             correct = executeXgetInsn(endMachine, stackVals[0], auxVal);
         } else if (opCode == OP_XSET) {
             Value.Data memory auxVal;
-            (offset, auxVal) = Value.deserialize(_data.proof, offset);
+            (offset, auxVal) = Marshaling.deserialize(_data.proof, offset);
             startMachine.addAuxStackValue(auxVal);
             correct = executeXsetInsn(
                 endMachine,

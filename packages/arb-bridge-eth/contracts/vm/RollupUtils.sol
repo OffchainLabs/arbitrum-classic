@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../arch/Protocol.sol";
+import "../arch/Marshaling.sol";
 import "../libraries/RollupTime.sol";
 
 library RollupUtils {
@@ -153,7 +154,7 @@ library RollupUtils {
         Value.Data memory messageVal;
         uint256 offset = startOffset;
         for (uint256 i = 0; i < count; i++) {
-            (offset, messageVal) = Value.deserialize(messages, offset);
+            (offset, messageVal) = Marshaling.deserialize(messages, offset);
             hashVal = keccak256(
                 abi.encodePacked(hashVal, Value.hash(messageVal))
             );

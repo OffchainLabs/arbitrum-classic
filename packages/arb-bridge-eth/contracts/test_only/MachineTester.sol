@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../arch/Machine.sol";
+import "../arch/Marshaling.sol";
 import "../arch/Value.sol";
 
 contract MachineTester {
@@ -44,9 +45,9 @@ contract MachineTester {
         Value.Data memory val1;
         Value.Data memory val2;
 
-        (offset, val1) = Value.deserialize(data1, 0);
+        (offset, val1) = Marshaling.deserialize(data1, 0);
 
-        (offset, val2) = Value.deserialize(data2, 0);
+        (offset, val2) = Marshaling.deserialize(data2, 0);
 
         return Value.hash(Machine.addStackVal(val1, val2));
     }

@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "./Value.sol";
+import "./Marshaling.sol";
 
 import "../libraries/DebugPrint.sol";
 
@@ -179,14 +180,17 @@ library Machine {
         m.status = MACHINE_EXTENSIVE;
         uint256 instructionStack;
         uint256 errHandler;
-        (offset, instructionStack) = Value.deserializeInt(data, offset);
+        (offset, instructionStack) = Marshaling.deserializeInt(data, offset);
 
-        (offset, m.dataStack) = Value.deserializeHashPreImage(data, offset);
-        (offset, m.auxStack) = Value.deserializeHashPreImage(data, offset);
-        (offset, m.registerVal) = Value.deserialize(data, offset);
-        (offset, m.staticVal) = Value.deserialize(data, offset);
-        (offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
-        (offset, errHandler) = Value.deserializeInt(data, offset);
+        (offset, m.dataStack) = Marshaling.deserializeHashPreImage(
+            data,
+            offset
+        );
+        (offset, m.auxStack) = Marshaling.deserializeHashPreImage(data, offset);
+        (offset, m.registerVal) = Marshaling.deserialize(data, offset);
+        (offset, m.staticVal) = Marshaling.deserialize(data, offset);
+        (offset, m.arbGasRemaining) = Marshaling.deserializeInt(data, offset);
+        (offset, errHandler) = Marshaling.deserializeInt(data, offset);
 
         m.instructionStackHash = bytes32(instructionStack);
         m.errHandlerHash = bytes32(errHandler);
