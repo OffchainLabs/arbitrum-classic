@@ -23,6 +23,7 @@ import "../libraries/BytesLib.sol";
 library Value {
     using BytesLib for bytes;
     using Value for Data;
+    using Value for CodePoint;
 
     uint8 internal constant INT_TYPECODE = 0;
     uint8 internal constant CODE_POINT_TYPECODE = 1;
@@ -38,9 +39,7 @@ library Value {
     struct CodePoint {
         uint8 opcode;
         bytes32 nextCodePoint;
-        bool immediate;
-        bytes32 immediateHash;
-        uint256 immediateSize;
+        Data[] immediate;
     }
 
     struct Data {
@@ -63,26 +62,30 @@ library Value {
         return keccak256(abi.encodePacked(val));
     }
 
-    function hashCodePoint(
-        uint8 opcode,
-        bool immediate,
-        bytes32 immediateHash,
-        bytes32 nextCodePoint
-    ) internal pure returns (bytes32) {
-        if (immediate) {
+    function hashCodePoint(CodePoint memory cp)
+        internal
+        pure
+        returns (bytes32)
+    {
+        assert(cp.immediate.length < 2);
+        if (cp.immediate.length == 0) {
             return
                 keccak256(
                     abi.encodePacked(
                         CODE_POINT_TYPECODE,
-                        opcode,
-                        immediateHash,
-                        nextCodePoint
+                        cp.opcode,
+                        cp.nextCodePoint
                     )
                 );
         }
         return
             keccak256(
-                abi.encodePacked(CODE_POINT_TYPECODE, opcode, nextCodePoint)
+                abi.encodePacked(
+                    CODE_POINT_TYPECODE,
+                    cp.opcode,
+                    cp.immediate[0].hash(),
+                    cp.nextCodePoint
+                )
             );
     }
 
@@ -195,13 +198,7 @@ library Value {
         if (val.typeCode == INT_TYPECODE) {
             return hashInt(val.intVal);
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
-            return
-                hashCodePoint(
-                    val.cpVal.opcode,
-                    val.cpVal.immediate,
-                    val.cpVal.immediateHash,
-                    val.cpVal.nextCodePoint
-                );
+            return hashCodePoint(val.cpVal);
         } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
             return hashTuplePreImage(val);
         } else if (
@@ -243,7 +240,7 @@ library Value {
         return
             Data(
                 0,
-                CodePoint(0, 0, false, 0, 0),
+                CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 TUPLE_TYPECODE,
                 uint256(1)
@@ -262,7 +259,7 @@ library Value {
         return
             Data(
                 _val,
-                CodePoint(0, 0, false, 0, 0),
+                CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 INT_TYPECODE,
                 uint256(1)
@@ -274,7 +271,7 @@ library Value {
         pure
         returns (Data memory)
     {
-        return newCodePoint(CodePoint(opCode, nextHash, false, 0, 0));
+        return newCodePoint(CodePoint(opCode, nextHash, new Data[](0)));
     }
 
     function newCodePoint(
@@ -282,16 +279,9 @@ library Value {
         bytes32 nextHash,
         Data memory immediate
     ) internal pure returns (Data memory) {
-        return
-            newCodePoint(
-                CodePoint(
-                    opCode,
-                    nextHash,
-                    true,
-                    immediate.hash(),
-                    immediate.size
-                )
-            );
+        Data[] memory imm = new Data[](1);
+        imm[0] = immediate;
+        return newCodePoint(CodePoint(opCode, nextHash, imm));
     }
 
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
@@ -302,7 +292,7 @@ library Value {
         return
             Data(
                 uint256(valueHash),
-                CodePoint(0, 0, false, 0, 0),
+                CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 HASH_ONLY,
                 valueSize
@@ -324,7 +314,7 @@ library Value {
         return
             Data(
                 0,
-                CodePoint(0, 0, false, 0, 0),
+                CodePoint(0, 0, new Data[](0)),
                 _val,
                 uint8(TUPLE_TYPECODE + _val.length),
                 size
@@ -358,7 +348,7 @@ library Value {
         return
             Data(
                 uint256(preImageHash),
-                CodePoint(0, 0, false, 0, 0),
+                CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 HASH_PRE_IMAGE_TYPECODE,
                 size
