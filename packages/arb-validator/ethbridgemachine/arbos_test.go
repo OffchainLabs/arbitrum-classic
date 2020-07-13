@@ -18,7 +18,6 @@ package ethbridgemachine
 
 import (
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -107,6 +106,30 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	return val
 }
 
+func deployFib(t *testing.T, mach machine.Machine, sender common.Address) common.Address {
+	constructorData, err := hexutil.Decode(FibonacciBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	constructorTx := message.Transaction{
+		MaxGas:      big.NewInt(0),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        constructorData,
+	}
+
+	constructorResult := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, sender)
+	if len(constructorResult.ReturnData) != 32 {
+		t.Fatal("unexpected constructor result length")
+	}
+	var fibAddress common.Address
+	copy(fibAddress[:], constructorResult.ReturnData[12:])
+	return fibAddress
+}
+
 func TestFib(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
 	if err != nil {
@@ -125,26 +148,7 @@ func TestFib(t *testing.T) {
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	constructorTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: common.Address{},
-		Payment:     big.NewInt(0),
-		Data:        constructorData,
-	}
-
-	constructorResult := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, addr)
-	if len(constructorResult.ReturnData) != 32 {
-		t.Fatal("unexpected constructor result length")
-	}
-	var fibAddress common.Address
-	copy(fibAddress[:], constructorResult.ReturnData[12:])
+	fibAddress := deployFib(t, mach, addr)
 
 	generateFibABI := fib.Methods["generateFib"]
 	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
@@ -162,7 +166,7 @@ func TestFib(t *testing.T) {
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: fibAddress,
-		Payment:     big.NewInt(0),
+		Payment:     big.NewInt(300),
 		Data:        append(generateSignature, generateFibData...),
 	}
 
@@ -241,17 +245,20 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dest := common.RandAddress()
+	//dest := common.RandAddress()
+	dest := deployFib(t, mach, common.RandAddress())
 	chain := common.RandAddress()
 
-	batchSize := 20
+	batchSize := 1
 	txes := make([]message.BatchTx, 0, batchSize)
+	senders := make([]common.Address, 0, batchSize)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
 		if err != nil {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+		senders = append(senders, addr)
 		depositResults := runMessage(
 			t,
 			mach,
@@ -285,5 +292,12 @@ func TestBatch(t *testing.T) {
 
 	msg := message.TransactionBatch{Transactions: txes}
 	results := runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
-	log.Println(results)
+	if len(results) != len(txes) {
+		t.Fatal("incorrect result count")
+	}
+	for i, result := range results {
+		if result.L1Message.Sender != senders[i] {
+			t.Fatal("message had incorrect sender", result.L1Message.Sender, senders[i])
+		}
+	}
 }
