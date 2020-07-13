@@ -71,6 +71,10 @@ library Value {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
 
+    function isValidTupleSize(uint256 size) internal pure returns (bool) {
+        return size <= 8;
+    }
+
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
         require(val.typeCode != 2, "Value must have a valid type code");
         if (val.typeCode == 0) {
@@ -191,15 +195,27 @@ library Value {
         }
     }
 
+    function getTuplePreImage(Data[] memory vals)
+        internal
+        pure
+        returns (Data memory)
+    {
+        require(vals.length <= 8, "Invalid tuple length");
+        bytes32[] memory hashes = new bytes32[](vals.length);
+        uint256 hashCount = hashes.length;
+        uint256 size = 1;
+        for (uint256 i = 0; i < hashCount; i++) {
+            hashes[i] = vals[i].hash();
+            size += vals[i].size;
+        }
+        bytes32 firstHash = keccak256(
+            abi.encodePacked(uint8(hashes.length), hashes)
+        );
+        return newTuplePreImage(firstHash, size);
+    }
+
     function newNone() internal pure returns (Data memory) {
-        return
-            Data(
-                0,
-                CodePoint(0, 0, new Data[](0)),
-                new Data[](0),
-                TUPLE_TYPECODE,
-                uint256(1)
-            );
+        return newTuple(new Data[](0));
     }
 
     function newBoolean(bool val) internal pure returns (Data memory) {
@@ -221,24 +237,6 @@ library Value {
             );
     }
 
-    function newCodePoint(uint8 opCode, bytes32 nextHash)
-        internal
-        pure
-        returns (Data memory)
-    {
-        return newCodePoint(CodePoint(opCode, nextHash, new Data[](0)));
-    }
-
-    function newCodePoint(
-        uint8 opCode,
-        bytes32 nextHash,
-        Data memory immediate
-    ) internal pure returns (Data memory) {
-        Data[] memory imm = new Data[](1);
-        imm[0] = immediate;
-        return newCodePoint(CodePoint(opCode, nextHash, imm));
-    }
-
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
         internal
         pure
@@ -252,10 +250,6 @@ library Value {
                 HASH_ONLY,
                 valueSize
             );
-    }
-
-    function isValidTupleSize(uint256 size) internal pure returns (bool) {
-        return size <= 8;
     }
 
     function newTuple(Data[] memory _val) internal pure returns (Data memory) {
@@ -276,25 +270,6 @@ library Value {
             );
     }
 
-    function getTuplePreImage(Data[] memory vals)
-        internal
-        pure
-        returns (Data memory)
-    {
-        require(vals.length <= 8, "Invalid tuple length");
-        bytes32[] memory hashes = new bytes32[](vals.length);
-        uint256 hashCount = hashes.length;
-        uint256 size = 1;
-        for (uint256 i = 0; i < hashCount; i++) {
-            hashes[i] = vals[i].hash();
-            size += vals[i].size;
-        }
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(uint8(hashes.length), hashes)
-        );
-        return newTuplePreImage(firstHash, size);
-    }
-
     function newTuplePreImage(bytes32 preImageHash, uint256 size)
         internal
         pure
@@ -308,6 +283,24 @@ library Value {
                 HASH_PRE_IMAGE_TYPECODE,
                 size
             );
+    }
+
+    function newCodePoint(uint8 opCode, bytes32 nextHash)
+        internal
+        pure
+        returns (Data memory)
+    {
+        return newCodePoint(CodePoint(opCode, nextHash, new Data[](0)));
+    }
+
+    function newCodePoint(
+        uint8 opCode,
+        bytes32 nextHash,
+        Data memory immediate
+    ) internal pure returns (Data memory) {
+        Data[] memory imm = new Data[](1);
+        imm[0] = immediate;
+        return newCodePoint(CodePoint(opCode, nextHash, imm));
     }
 
     function newCodePoint(CodePoint memory _val)
