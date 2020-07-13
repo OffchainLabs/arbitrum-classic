@@ -48,15 +48,6 @@ type GlobalInboxWatcher interface {
 type GlobalInbox interface {
 	GlobalInboxWatcher
 
-	//SendTransactionMessage(
-	//	ctx context.Context,
-	//	data []byte,
-	//	vmAddress common.Address,
-	//	contactAddress common.Address,
-	//	amount *big.Int,
-	//	seqNumber *big.Int,
-	//) error
-
 	SendL2Message(
 		ctx context.Context,
 		chain common.Address,
@@ -76,20 +67,20 @@ type GlobalInbox interface {
 
 	DepositEthMessage(
 		ctx context.Context,
-		vmAddress common.Address,
+		chain common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC20Message(
 		ctx context.Context,
-		vmAddress common.Address,
+		chain common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC721Message(
 		ctx context.Context,
-		vmAddress common.Address,
+		chain common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,

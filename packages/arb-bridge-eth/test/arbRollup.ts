@@ -456,7 +456,7 @@ describe('ArbRollup', function () {
     )
     const ev = logs[1]
     expect(ev.name).to.equal('RollupCreated')
-    const chainAddress = ev.values.vmAddress
+    const chainAddress = ev.values.rollupAddress
     const ArbRollup = await ethers.getContractFactory('ArbRollup')
     arbRollup = ArbRollup.attach(chainAddress) as ArbRollup
 
