@@ -91,8 +91,7 @@ void saveAndGetDataStack(Transaction& transaction,
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 1);
-    REQUIRE(nonstd::get<Tuple>(get_results.data).calculateHash() ==
-            expected_hash);
+    REQUIRE(hash_value(get_results.data) == expected_hash);
 }
 
 void saveTwiceAndGetDataStack(Transaction& transaction,
@@ -112,8 +111,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 2);
-    REQUIRE(nonstd::get<Tuple>(get_results.data).calculateHash() ==
-            expected_hash);
+    REQUIRE(hash_value(get_results.data) == expected_hash);
 }
 
 TEST_CASE("Initialize datastack") {

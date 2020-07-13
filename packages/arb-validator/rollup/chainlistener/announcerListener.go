@@ -89,8 +89,8 @@ func (al *AnnouncerListener) PrunedLeaf(ctx context.Context, ev arbbridge.Pruned
 	log.Println(al.Prefix, "PrunedLeaf", ev.Leaf)
 }
 
-func (al *AnnouncerListener) MessageDelivered(context.Context, arbbridge.MessageDeliveredEvent) {
-	log.Println(al.Prefix, "MessageDelivered")
+func (al *AnnouncerListener) MessageDelivered(_ context.Context, ev arbbridge.MessageDeliveredEvent) {
+	log.Println(al.Prefix, "MessageDelivered", ev.Message)
 }
 
 func (al *AnnouncerListener) AssertionPrepared(

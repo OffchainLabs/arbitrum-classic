@@ -94,7 +94,7 @@ func TestBytesStack(t *testing.T) {
 	bytestack := message.BytesToByteStack(data)
 	t.Log("bytestack", bytestack)
 
-	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data)
+	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestBytesToBytestackHash(t *testing.T) {
 		common.RandBytes(200),
 	}
 	for _, data := range datas {
-		valueHash, err := valueTester.BytesToBytestackHash(nil, data)
+		valueHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
 		if err != nil {
 			t.Fatal(err)
 		}

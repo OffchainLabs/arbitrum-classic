@@ -19,7 +19,7 @@ project (avm_tests)
 
 set(TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test_cases.json)
 set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/contract.mexe)
-set(ARB_OS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arbos.mexe)
+set(ARB_OS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../arbos.mexe)
 set(ARB_OS_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arbos-cases)
 set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
 

@@ -63,7 +63,7 @@ export enum OperationType {
   Immediate = 1,
 }
 
-type Operation = BasicOp | ImmOp
+export type Operation = BasicOp | ImmOp
 
 export class BasicOp {
   public opcode: number
@@ -355,80 +355,6 @@ export function marshal(someValue: Value): Uint8Array {
   return _marshalValue(new Uint8Array(), someValue)
 }
 
-function unmarshalContract(array: Uint8Array): [Operation[], Value] {
-  let offset = extractBytes(array, 0, 4)[1]
-  let extensionVersion = ethers.utils.bigNumberify(1)
-  while (!extensionVersion.eq(0)) {
-    let extensionVersionBytes
-    ;[extensionVersionBytes, offset] = extractBytes(array, offset, 4)
-    extensionVersion = ethers.utils.bigNumberify(extensionVersionBytes)
-    if (!extensionVersion.eq(0)) {
-      let extensionLengthBytes
-      ;[extensionLengthBytes, offset] = extractBytes(array, offset, 4)
-      const extensionLength = ethers.utils.bigNumberify(extensionLengthBytes)
-      offset += extensionLength.toNumber()
-    }
-  }
-
-  let codeCountBytes
-  ;[codeCountBytes, offset] = extractBytes(array, offset, 8)
-  const codeCount = ethers.utils.bigNumberify(codeCountBytes).toNumber()
-  const ops: Operation[] = []
-  for (let i = 0; i < codeCount; ++i) {
-    let op
-    ;[op, offset] = unmarshalOp(array, offset)
-    ops.push(op)
-  }
-  const [staticVal] = _unmarshalValue(array, offset)
-  return [ops, staticVal]
-}
-
-function opsToCodePoints(ops: Operation[]): CodePointValue[] {
-  const cps: CodePointValue[] = []
-  for (const op of ops) {
-    cps.push(new CodePointValue(op, ethers.utils.hexZeroPad('0x00', 32)))
-  }
-  for (let i = cps.length - 2; i >= 0; i--) {
-    cps[i].nextHash = cps[i + 1].hash()
-  }
-  return cps
-}
-
-export function contractMachineHash(array: Uint8Array): string {
-  const [ops, staticVal] = unmarshalContract(array)
-  const codePoints = opsToCodePoints(ops)
-
-  return machineHash(
-    codePoints[0],
-    new TupleValue([]),
-    new TupleValue([]),
-    new TupleValue([]),
-    staticVal,
-    new CodePointValue(new BasicOp(0), ethers.utils.hexZeroPad('0x00', 32))
-  )
-}
-
-export function machineHash(
-  pc: Value,
-  stack: Value,
-  auxstack: Value,
-  registerVal: Value,
-  staticVal: Value,
-  errPc: Value
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
-    [
-      pc.hash(),
-      stack.hash(),
-      auxstack.hash(),
-      registerVal.hash(),
-      staticVal.hash(),
-      errPc.hash(),
-    ]
-  )
-}
-
 function unmarshalOpCode(array: Uint8Array, offset: number): [number, number] {
   let head
   ;[head, offset] = extractBytes(array, offset, 1)
@@ -495,6 +421,12 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
   }
 }
 
-export function unmarshal(array: ethers.utils.Arrayish): Value {
-  return _unmarshalValue(ethers.utils.arrayify(array), 0)[0]
+export function unmarshal(
+  array: ethers.utils.Arrayish,
+  offset?: number
+): Value {
+  if (!offset) {
+    offset = 0
+  }
+  return _unmarshalValue(ethers.utils.arrayify(array), offset)[0]
 }

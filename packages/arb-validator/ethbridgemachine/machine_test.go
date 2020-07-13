@@ -25,8 +25,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/machinetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridgemachine/machinetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"testing"
 )

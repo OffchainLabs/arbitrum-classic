@@ -20,15 +20,9 @@ interface ArbSysInterface extends Interface {
       encode([dest, id]: [string, BigNumberish]): string
     }>
 
-    withdrawEth: TypedFunctionDescription<{
-      encode([dest, amount]: [string, BigNumberish]): string
-    }>
+    withdrawEth: TypedFunctionDescription<{ encode([dest]: [string]): string }>
 
     getTransactionCount: TypedFunctionDescription<{
-      encode([account]: [string]): string
-    }>
-
-    cloneContract: TypedFunctionDescription<{
       encode([account]: [string]): string
     }>
   }
@@ -64,16 +58,10 @@ export class ArbSys extends Contract {
 
     withdrawEth(
       dest: string,
-      amount: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     getTransactionCount(account: string): Promise<BigNumber>
-
-    cloneContract(
-      account: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
   }
 
   withdrawERC20(
@@ -90,16 +78,10 @@ export class ArbSys extends Contract {
 
   withdrawEth(
     dest: string,
-    amount: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   getTransactionCount(account: string): Promise<BigNumber>
-
-  cloneContract(
-    account: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
 
   filters: {}
 
@@ -108,10 +90,8 @@ export class ArbSys extends Contract {
 
     withdrawERC721(dest: string, id: BigNumberish): Promise<BigNumber>
 
-    withdrawEth(dest: string, amount: BigNumberish): Promise<BigNumber>
+    withdrawEth(dest: string): Promise<BigNumber>
 
     getTransactionCount(account: string): Promise<BigNumber>
-
-    cloneContract(account: string): Promise<BigNumber>
   }
 }

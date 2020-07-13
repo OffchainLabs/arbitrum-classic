@@ -25,7 +25,11 @@
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
     "prepare": "yarn workspace arb-provider-ethers prepare",
-    "go:vet": "./scripts/go-vet"
+    "go:vet": "./scripts/go-vet",
+    "demo:initialize": "yarn workspace tools demo:initialize",
+    "demo:deploy": "./scripts/arb_deploy.py local",
+    "prod:initialize": "yarn workspace tools prod:initialize",
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
@@ -38,10 +42,9 @@
     "packages": [
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
-      "packages/arb-provider-truffle",
-      "packages/arb-provider-web3",
       "packages/arb-compiler-evm/contract-templates",
       "packages/arb-compiler-evm/tests/sol-syscall",
+      "packages/tools",
       "demos/*",
       "workspace/*"
     ]

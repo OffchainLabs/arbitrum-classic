@@ -18,6 +18,8 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (arb-avm-cpp)
 
+include(CTest)
+
 set(AVM_VERSION_MAJOR 0)
 set(AVM_VERSION_MINOR 6)
 set(AVM_VERSION_PATCH 5)
@@ -25,6 +27,8 @@ set(AVM_VERSION_PATCH 5)
 set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
+
+option(AVM_BUILD_TESTING "Build SelfTest project" ON)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
@@ -69,5 +73,7 @@ add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)
 
-add_subdirectory(tests)
+if (BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 

@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
@@ -63,7 +65,7 @@ func marshaledBytesHash(data []byte) common.Hash {
 
 type AbstractL2Message interface {
 	l2Type() L2SubType
-	asData() []byte
+	AsData() []byte
 }
 
 type L2Message struct {
@@ -77,7 +79,7 @@ func (l L2Message) Type() Type {
 func (l L2Message) AsData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, byte(l.Msg.l2Type()))
-	ret = append(ret, l.Msg.asData()...)
+	ret = append(ret, l.Msg.AsData()...)
 	return ret
 }
 
@@ -90,7 +92,7 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 	case ContractTransactionType:
 		return newContractTransactionFromData(data), nil
 	case CallType:
-		return newCallFromData(data), nil
+		return NewCallFromData(data), nil
 	case TransactionBatchType:
 		return newTransactionBatchFromData(data), nil
 	default:
@@ -155,6 +157,18 @@ func NewRandomTransaction() Transaction {
 	}
 }
 
+func (b Transaction) String() string {
+	return fmt.Sprintf(
+		"Transaction(%v, %v, %v, %v, %v, %v)",
+		b.MaxGas,
+		b.GasPriceBid,
+		b.SequenceNum,
+		b.DestAddress,
+		b.Payment,
+		hexutil.Encode(b.Data),
+	)
+}
+
 func (b Transaction) Equals(o Transaction) bool {
 	return b.MaxGas.Cmp(o.MaxGas) == 0 &&
 		b.GasPriceBid.Cmp(o.GasPriceBid) == 0 &&
@@ -168,7 +182,7 @@ func (t Transaction) l2Type() L2SubType {
 	return TransactionType
 }
 
-func (t Transaction) asData() []byte {
+func (t Transaction) AsData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
@@ -182,15 +196,12 @@ func (t Transaction) asData() []byte {
 func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
 	data := make([]byte, 0)
 	data = append(data, addressData(chain)...)
-	data = append(data, t.asData()...)
+	data = append(data, t.AsData()...)
 	return marshaledBytesHash(data)
 }
 
 func (t Transaction) MessageID(sender common.Address) common.Hash {
-	data := make([]byte, 0)
-	data = append(data, sender[:]...)
-	data = append(data, t.asData()...)
-	return marshaledBytesHash(data)
+	return hashing.SoliditySHA3(hashing.Address(sender), t.AsData())
 }
 
 type ContractTransaction struct {
@@ -229,7 +240,7 @@ func (t ContractTransaction) l2Type() L2SubType {
 	return ContractTransactionType
 }
 
-func (t ContractTransaction) asData() []byte {
+func (t ContractTransaction) AsData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
@@ -255,7 +266,7 @@ func NewSimpleCall(dest common.Address, data []byte) L2Message {
 	}}
 }
 
-func newCallFromData(data []byte) Call {
+func NewCallFromData(data []byte) Call {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
 	destAddress, data := extractAddress(data)
@@ -280,7 +291,7 @@ func (t Call) l2Type() L2SubType {
 	return CallType
 }
 
-func (c Call) asData() []byte {
+func (c Call) AsData() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(c.MaxGas)...)
 	ret = append(ret, math.U256Bytes(c.GasPriceBid)...)
@@ -319,14 +330,14 @@ func (b BatchTx) AsData() []byte {
 	encodedLength := make([]byte, 8)
 	binary.BigEndian.PutUint64(encodedLength[:], uint64(len(b.Transaction.Data)))
 	ret = append(ret, encodedLength[:]...)
-	ret = append(ret, b.Transaction.asData()...)
+	ret = append(ret, b.Transaction.AsData()...)
 	ret = append(ret, b.Signature[:]...)
 	return ret
 }
 
 func (b BatchTx) Hash() common.Hash {
 	data := make([]byte, 0)
-	data = append(data, b.Transaction.asData()...)
+	data = append(data, b.Transaction.AsData()...)
 	data = append(data, b.Signature[:]...)
 	return marshaledBytesHash(data)
 }
@@ -370,7 +381,7 @@ func (t TransactionBatch) l2Type() L2SubType {
 	return TransactionBatchType
 }
 
-func (t TransactionBatch) asData() []byte {
+func (t TransactionBatch) AsData() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
 		ret = append(ret, tx.AsData()...)

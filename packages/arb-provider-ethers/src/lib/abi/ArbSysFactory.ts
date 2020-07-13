@@ -56,15 +56,11 @@ const _abi = [
         name: 'dest',
         type: 'address',
       },
-      {
-        name: 'amount',
-        type: 'uint256',
-      },
     ],
     name: 'withdrawEth',
     outputs: [],
-    payable: false,
-    stateMutability: 'nonpayable',
+    payable: true,
+    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -84,25 +80,6 @@ const _abi = [
     ],
     payable: false,
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: 'account',
-        type: 'address',
-      },
-    ],
-    name: 'cloneContract',
-    outputs: [
-      {
-        name: '',
-        type: 'address',
-      },
-    ],
-    payable: false,
-    stateMutability: 'nonpayable',
     type: 'function',
   },
 ]

@@ -27,15 +27,14 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"cloneContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
-	"474ed9c0": "cloneContract(address)",
 	"23ca0cd2": "getTransactionCount(address)",
 	"a1db9782": "withdrawERC20(address,uint256)",
 	"f3e414f8": "withdrawERC721(address,uint256)",
-	"1b9a91a4": "withdrawEth(address,uint256)",
+	"25e16063": "withdrawEth(address)",
 }
 
 // ArbSys is an auto generated Go binding around an Ethereum contract.
@@ -206,27 +205,6 @@ func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) 
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
-// CloneContract is a paid mutator transaction binding the contract method 0x474ed9c0.
-//
-// Solidity: function cloneContract(address account) returns(address)
-func (_ArbSys *ArbSysTransactor) CloneContract(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "cloneContract", account)
-}
-
-// CloneContract is a paid mutator transaction binding the contract method 0x474ed9c0.
-//
-// Solidity: function cloneContract(address account) returns(address)
-func (_ArbSys *ArbSysSession) CloneContract(account common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.CloneContract(&_ArbSys.TransactOpts, account)
-}
-
-// CloneContract is a paid mutator transaction binding the contract method 0x474ed9c0.
-//
-// Solidity: function cloneContract(address account) returns(address)
-func (_ArbSys *ArbSysTransactorSession) CloneContract(account common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.CloneContract(&_ArbSys.TransactOpts, account)
-}
-
 // WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.
 //
 // Solidity: function withdrawERC20(address dest, uint256 amount) returns()
@@ -269,23 +247,23 @@ func (_ArbSys *ArbSysTransactorSession) WithdrawERC721(dest common.Address, id *
 	return _ArbSys.Contract.WithdrawERC721(&_ArbSys.TransactOpts, dest, id)
 }
 
-// WithdrawEth is a paid mutator transaction binding the contract method 0x1b9a91a4.
+// WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysTransactor) WithdrawEth(opts *bind.TransactOpts, dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "withdrawEth", dest, amount)
+// Solidity: function withdrawEth(address dest) payable returns()
+func (_ArbSys *ArbSysTransactor) WithdrawEth(opts *bind.TransactOpts, dest common.Address) (*types.Transaction, error) {
+	return _ArbSys.contract.Transact(opts, "withdrawEth", dest)
 }
 
-// WithdrawEth is a paid mutator transaction binding the contract method 0x1b9a91a4.
+// WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysSession) WithdrawEth(dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest, amount)
+// Solidity: function withdrawEth(address dest) payable returns()
+func (_ArbSys *ArbSysSession) WithdrawEth(dest common.Address) (*types.Transaction, error) {
+	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest)
 }
 
-// WithdrawEth is a paid mutator transaction binding the contract method 0x1b9a91a4.
+// WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysTransactorSession) WithdrawEth(dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest, amount)
+// Solidity: function withdrawEth(address dest) payable returns()
+func (_ArbSys *ArbSysTransactorSession) WithdrawEth(dest common.Address) (*types.Transaction, error) {
+	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest)
 }

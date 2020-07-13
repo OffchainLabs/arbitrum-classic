@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import {} from './message'
+import { L2Call } from './message'
 
 import * as ethers from 'ethers'
 
@@ -236,14 +236,12 @@ export class ArbClient {
 
   private _call(
     callFunc: string,
-    contractAddress: string,
-    sender: string | undefined,
-    data: string
+    l2Call: L2Call,
+    sender: string | undefined
   ): Promise<ArbValue.Value> {
     return new Promise((resolve, reject): void => {
       const params: validatorserver.CallMessageArgs = {
-        contractAddress,
-        data,
+        data: ethers.utils.hexlify(l2Call.asData()),
         sender,
       }
       this.client.request(
@@ -270,20 +268,15 @@ export class ArbClient {
     })
   }
 
-  public call(
-    contractAddress: string,
-    sender: string | undefined,
-    data: string
-  ): Promise<ArbValue.Value> {
-    return this._call('Validator.CallMessage', contractAddress, sender, data)
+  public call(tx: L2Call, sender: string | undefined): Promise<ArbValue.Value> {
+    return this._call('Validator.CallMessage', tx, sender)
   }
 
   public pendingCall(
-    contractAddress: string,
-    sender: string | undefined,
-    data: string
+    tx: L2Call,
+    sender: string | undefined
   ): Promise<ArbValue.Value> {
-    return this._call('Validator.PendingCall', contractAddress, sender, data)
+    return this._call('Validator.PendingCall', tx, sender)
   }
 
   public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {

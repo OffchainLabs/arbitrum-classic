@@ -22,7 +22,9 @@ project (avm_values LANGUAGES CXX)
 set(LIB_HEADERS
   include/avm_values/exceptions.hpp
   include/avm_values/tuple.hpp
+  include/avm_values/tuplestub.hpp
   include/avm_values/value.hpp
+  include/avm_values/valuetype.hpp
   include/avm_values/bigint.hpp
   include/avm_values/code.hpp
   include/avm_values/codepoint.hpp
@@ -42,6 +44,7 @@ set(LIB_SOURCES
   src/exceptions.cpp
   src/pool.cpp
   src/tuple.cpp
+  src/tuplestub.cpp
   src/value.cpp
   src/vmValueParser.cpp
   src/keccak.cpp

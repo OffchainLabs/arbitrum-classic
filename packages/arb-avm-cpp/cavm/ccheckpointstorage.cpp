@@ -78,15 +78,22 @@ CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto machine = new Machine(storage->getInitialMachine());
-    return static_cast<void*>(machine);
+    try {
+        return new Machine(storage->getInitialMachine());
+    } catch (const std::exception&) {
+        return nullptr;
+    }
 }
 
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
-    return new Machine(storage->getMachine(hash));
+    try {
+        return new Machine(storage->getMachine(hash));
+    } catch (const std::exception&) {
+        return nullptr;
+    }
 }
 
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
