@@ -23,7 +23,7 @@ import "../libraries/CloneFactory.sol";
 import "./IArbRollup.sol";
 
 contract ArbFactory is CloneFactory {
-    event RollupCreated(address vmAddress);
+    event RollupCreated(address rollupAddress);
 
     address public rollupTemplate;
     address public globalInboxAddress;

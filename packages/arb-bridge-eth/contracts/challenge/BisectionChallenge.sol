@@ -40,14 +40,14 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
     bytes32 private challengeState;
 
     function initializeBisection(
-        address _vmAddress,
+        address _rollupAddress,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks,
         bytes32 _challengeState
     ) external {
         Challenge.initializeChallenge(
-            _vmAddress,
+            _rollupAddress,
             _asserter,
             _challenger,
             _challengePeriodTicks

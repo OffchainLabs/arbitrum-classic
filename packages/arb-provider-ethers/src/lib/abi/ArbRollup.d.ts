@@ -82,15 +82,15 @@ interface ArbRollupInterface extends Interface {
 
     makeAssertion: TypedFunctionDescription<{
       encode([
-        _fields,
-        _beforeInboxCount,
-        _prevDeadlineTicks,
-        _prevChildType,
-        _numSteps,
-        _importedMessageCount,
-        _didInboxInsn,
-        _numArbGas,
-        _stakerProof,
+        fields,
+        beforeInboxCount,
+        prevDeadlineTicks,
+        prevChildType,
+        numSteps,
+        importedMessageCount,
+        didInboxInsn,
+        numArbGas,
+        stakerProof,
       ]: [
         Arrayish[],
         BigNumberish,
@@ -197,10 +197,6 @@ interface ArbRollupInterface extends Interface {
         Arrayish,
         BigNumberish
       ]): string
-    }>
-
-    supportedContracts: TypedFunctionDescription<{
-      encode([]: [string]): string
     }>
 
     vmParams: TypedFunctionDescription<{ encode([]: []): string }>
@@ -325,15 +321,15 @@ export class ArbRollup extends Contract {
     latestConfirmed(): Promise<string>
 
     makeAssertion(
-      _fields: Arrayish[],
-      _beforeInboxCount: BigNumberish,
-      _prevDeadlineTicks: BigNumberish,
-      _prevChildType: BigNumberish,
-      _numSteps: BigNumberish,
-      _importedMessageCount: BigNumberish,
-      _didInboxInsn: boolean,
-      _numArbGas: BigNumberish,
-      _stakerProof: Arrayish[],
+      fields: Arrayish[],
+      beforeInboxCount: BigNumberish,
+      prevDeadlineTicks: BigNumberish,
+      prevChildType: BigNumberish,
+      numSteps: BigNumberish,
+      importedMessageCount: BigNumberish,
+      didInboxInsn: boolean,
+      numArbGas: BigNumberish,
+      stakerProof: Arrayish[],
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -414,8 +410,6 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    supportedContracts(arg0: string): Promise<string>
-
     vmParams(): Promise<{
       gracePeriodTicks: BigNumber
       arbGasSpeedLimitPerTick: BigNumber
@@ -468,15 +462,15 @@ export class ArbRollup extends Contract {
   latestConfirmed(): Promise<string>
 
   makeAssertion(
-    _fields: Arrayish[],
-    _beforeInboxCount: BigNumberish,
-    _prevDeadlineTicks: BigNumberish,
-    _prevChildType: BigNumberish,
-    _numSteps: BigNumberish,
-    _importedMessageCount: BigNumberish,
-    _didInboxInsn: boolean,
-    _numArbGas: BigNumberish,
-    _stakerProof: Arrayish[],
+    fields: Arrayish[],
+    beforeInboxCount: BigNumberish,
+    prevDeadlineTicks: BigNumberish,
+    prevChildType: BigNumberish,
+    numSteps: BigNumberish,
+    importedMessageCount: BigNumberish,
+    didInboxInsn: boolean,
+    numArbGas: BigNumberish,
+    stakerProof: Arrayish[],
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -554,8 +548,6 @@ export class ArbRollup extends Contract {
     challengerPeriodTicks: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
-
-  supportedContracts(arg0: string): Promise<string>
 
   vmParams(): Promise<{
     gracePeriodTicks: BigNumber
@@ -647,15 +639,15 @@ export class ArbRollup extends Contract {
     latestConfirmed(): Promise<BigNumber>
 
     makeAssertion(
-      _fields: Arrayish[],
-      _beforeInboxCount: BigNumberish,
-      _prevDeadlineTicks: BigNumberish,
-      _prevChildType: BigNumberish,
-      _numSteps: BigNumberish,
-      _importedMessageCount: BigNumberish,
-      _didInboxInsn: boolean,
-      _numArbGas: BigNumberish,
-      _stakerProof: Arrayish[]
+      fields: Arrayish[],
+      beforeInboxCount: BigNumberish,
+      prevDeadlineTicks: BigNumberish,
+      prevChildType: BigNumberish,
+      numSteps: BigNumberish,
+      importedMessageCount: BigNumberish,
+      didInboxInsn: boolean,
+      numArbGas: BigNumberish,
+      stakerProof: Arrayish[]
     ): Promise<BigNumber>
 
     moveStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
@@ -712,8 +704,6 @@ export class ArbRollup extends Contract {
       challengerDataHash: Arrayish,
       challengerPeriodTicks: BigNumberish
     ): Promise<BigNumber>
-
-    supportedContracts(arg0: string): Promise<BigNumber>
 
     vmParams(): Promise<BigNumber>
   }

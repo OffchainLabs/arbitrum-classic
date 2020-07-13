@@ -41,7 +41,7 @@ interface ArbFactoryInterface extends Interface {
 
   events: {
     RollupCreated: TypedEventDescription<{
-      encodeTopics([vmAddress]: [null]): string[]
+      encodeTopics([rollupAddress]: [null]): string[]
     }>
   }
 }
@@ -94,7 +94,7 @@ export class ArbFactory extends Contract {
   rollupTemplate(): Promise<string>
 
   filters: {
-    RollupCreated(vmAddress: null): EventFilter
+    RollupCreated(rollupAddress: null): EventFilter
   }
 
   estimate: {

@@ -94,7 +94,7 @@ func (con *arbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	return common.NewAddressFromEth(event.VmAddress), GetReceiptBlockID(receipt), nil
+	return common.NewAddressFromEth(event.RollupAddress), GetReceiptBlockID(receipt), nil
 }
 
 type arbFactoryWatcher struct {

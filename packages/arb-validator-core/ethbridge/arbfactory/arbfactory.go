@@ -27,7 +27,7 @@ var (
 )
 
 // ArbFactoryABI is the input ABI used to generate the binding from.
-const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactoryAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInboxAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"rollupTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"rollupAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactoryAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint64\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInboxAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"rollupTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ArbFactoryFuncSigs = map[string]string{
@@ -38,7 +38,7 @@ var ArbFactoryFuncSigs = map[string]string{
 }
 
 // ArbFactoryBin is the compiled bytecode used for deploying new contracts.
-var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516103363803806103368339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102a78061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063f67e043914610085575b600080fd5b6100596100e5565b604080516001600160a01b039092168252519081900360200190f35b6100596100f4565b610059610103565b6100e3600480360360c081101561009b57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff169160808101359091169060a001356001600160a01b0316610112565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b60008054610128906001600160a01b0316610220565b600254600154604080516319f4c3a760e01b8152600481018c90526001600160801b03808c166024830152808b16604483015267ffffffffffffffff8a166064830152881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916319f4c3a7916101048082019260009290919082900301818387803b1580156101c257600080fd5b505af11580156101d6573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a150505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820758e90592396810e25ae1b05de59b8d3280babaa14824f54fb442e557fbe57af64736f6c63430005110032"
+var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516103363803806103368339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102a78061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063f67e043914610085575b600080fd5b6100596100e5565b604080516001600160a01b039092168252519081900360200190f35b6100596100f4565b610059610103565b6100e3600480360360c081101561009b57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013567ffffffffffffffff169160808101359091169060a001356001600160a01b0316610112565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b60008054610128906001600160a01b0316610220565b600254600154604080516319f4c3a760e01b8152600481018c90526001600160801b03808c166024830152808b16604483015267ffffffffffffffff8a166064830152881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916319f4c3a7916101048082019260009290919082900301818387803b1580156101c257600080fd5b505af11580156101d6573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a150505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820e8ccab518b46a5c7219f9da94c9019220239f268c8228e60d41468f6946ac24464736f6c63430005110032"
 
 // DeployArbFactory deploys a new Ethereum contract, binding an instance of ArbFactory to it.
 func DeployArbFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _rollupTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ArbFactory, error) {
@@ -364,13 +364,13 @@ func (it *ArbFactoryRollupCreatedIterator) Close() error {
 
 // ArbFactoryRollupCreated represents a RollupCreated event raised by the ArbFactory contract.
 type ArbFactoryRollupCreated struct {
-	VmAddress common.Address
-	Raw       types.Log // Blockchain specific contextual infos
+	RollupAddress common.Address
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
 // FilterRollupCreated is a free log retrieval operation binding the contract event 0x84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c.
 //
-// Solidity: event RollupCreated(address vmAddress)
+// Solidity: event RollupCreated(address rollupAddress)
 func (_ArbFactory *ArbFactoryFilterer) FilterRollupCreated(opts *bind.FilterOpts) (*ArbFactoryRollupCreatedIterator, error) {
 
 	logs, sub, err := _ArbFactory.contract.FilterLogs(opts, "RollupCreated")
@@ -382,7 +382,7 @@ func (_ArbFactory *ArbFactoryFilterer) FilterRollupCreated(opts *bind.FilterOpts
 
 // WatchRollupCreated is a free log subscription operation binding the contract event 0x84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c.
 //
-// Solidity: event RollupCreated(address vmAddress)
+// Solidity: event RollupCreated(address rollupAddress)
 func (_ArbFactory *ArbFactoryFilterer) WatchRollupCreated(opts *bind.WatchOpts, sink chan<- *ArbFactoryRollupCreated) (event.Subscription, error) {
 
 	logs, sub, err := _ArbFactory.contract.WatchLogs(opts, "RollupCreated")
@@ -419,7 +419,7 @@ func (_ArbFactory *ArbFactoryFilterer) WatchRollupCreated(opts *bind.WatchOpts, 
 
 // ParseRollupCreated is a log parse operation binding the contract event 0x84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c.
 //
-// Solidity: event RollupCreated(address vmAddress)
+// Solidity: event RollupCreated(address rollupAddress)
 func (_ArbFactory *ArbFactoryFilterer) ParseRollupCreated(log types.Log) (*ArbFactoryRollupCreated, error) {
 	event := new(ArbFactoryRollupCreated)
 	if err := _ArbFactory.contract.UnpackLog(event, "RollupCreated", log); err != nil {
