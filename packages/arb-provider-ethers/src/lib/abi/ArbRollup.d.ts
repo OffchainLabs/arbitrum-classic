@@ -58,6 +58,7 @@ interface ArbRollupInterface extends Interface {
         _owner,
         _challengeFactoryAddress,
         _globalInboxAddress,
+        _extraConfig,
       ]: [
         Arrayish,
         BigNumberish,
@@ -66,7 +67,8 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         string,
         string,
-        string
+        string,
+        Arrayish
       ]): string
     }>
 
@@ -244,7 +246,15 @@ interface ArbRollupInterface extends Interface {
     }>
 
     RollupCreated: TypedEventDescription<{
-      encodeTopics([initVMHash]: [null]): string[]
+      encodeTopics([
+        initVMHash,
+        gracePeriodTicks,
+        arbGasSpeedLimitPerTick,
+        maxExecutionSteps,
+        stakeRequirement,
+        owner,
+        extraConfig,
+      ]: [null, null, null, null, null, null, null]): string[]
     }>
 
     RollupPruned: TypedEventDescription<{
@@ -311,6 +321,7 @@ export class ArbRollup extends Contract {
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,
+      _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -452,6 +463,7 @@ export class ArbRollup extends Contract {
     _owner: string,
     _challengeFactoryAddress: string,
     _globalInboxAddress: string,
+    _extraConfig: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -587,7 +599,15 @@ export class ArbRollup extends Contract {
 
     RollupConfirmed(nodeHash: null): EventFilter
 
-    RollupCreated(initVMHash: null): EventFilter
+    RollupCreated(
+      initVMHash: null,
+      gracePeriodTicks: null,
+      arbGasSpeedLimitPerTick: null,
+      maxExecutionSteps: null,
+      stakeRequirement: null,
+      owner: null,
+      extraConfig: null
+    ): EventFilter
 
     RollupPruned(leaf: null): EventFilter
 
@@ -629,7 +649,8 @@ export class ArbRollup extends Contract {
       _stakeRequirement: BigNumberish,
       _owner: string,
       _challengeFactoryAddress: string,
-      _globalInboxAddress: string
+      _globalInboxAddress: string,
+      _extraConfig: Arrayish
     ): Promise<BigNumber>
 
     isStaked(_stakerAddress: string): Promise<BigNumber>

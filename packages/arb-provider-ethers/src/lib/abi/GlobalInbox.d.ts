@@ -72,6 +72,10 @@ interface GlobalInboxInterface extends Interface {
       encode([_owner]: [string]): string
     }>
 
+    sendInitializationMessage: TypedFunctionDescription<{
+      encode([messageData]: [Arrayish]): string
+    }>
+
     sendL2Message: TypedFunctionDescription<{
       encode([chain, messageData]: [string, Arrayish]): string
     }>
@@ -205,6 +209,11 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<string[]>
 
+    sendInitializationMessage(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     sendL2Message(
       chain: string,
       messageData: Arrayish,
@@ -296,6 +305,11 @@ export class GlobalInbox extends Contract {
   ownedERC20s(_owner: string): Promise<string[]>
 
   ownedERC721s(_owner: string): Promise<string[]>
+
+  sendInitializationMessage(
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   sendL2Message(
     chain: string,
@@ -402,6 +416,8 @@ export class GlobalInbox extends Contract {
     ownedERC20s(_owner: string): Promise<BigNumber>
 
     ownedERC721s(_owner: string): Promise<BigNumber>
+
+    sendInitializationMessage(messageData: Arrayish): Promise<BigNumber>
 
     sendL2Message(chain: string, messageData: Arrayish): Promise<BigNumber>
 

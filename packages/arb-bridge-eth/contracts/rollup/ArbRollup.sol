@@ -18,11 +18,12 @@
 
 pragma solidity ^0.5.11;
 
+import "./IArbRollup.sol";
 import "./NodeGraph.sol";
 import "./Staking.sol";
 import "../inbox/IGlobalInbox.sol";
 
-contract ArbRollup is NodeGraph, Staking {
+contract ArbRollup is IArbRollup, NodeGraph, Staking {
     // invalid path proof
     string private constant PLACE_LEAF = "PLACE_LEAF";
 
@@ -59,6 +60,16 @@ contract ArbRollup is NodeGraph, Staking {
 
     IGlobalInbox public globalInbox;
 
+    event RollupCreated(
+        bytes32 initVMHash,
+        uint128 gracePeriodTicks,
+        uint128 arbGasSpeedLimitPerTick,
+        uint64 maxExecutionSteps,
+        uint128 stakeRequirement,
+        address owner,
+        bytes extraConfig
+    );
+
     event ConfirmedAssertion(bytes32[] logsAccHash);
 
     event ConfirmedValidAssertion(bytes32 indexed nodeHash);
@@ -71,7 +82,8 @@ contract ArbRollup is NodeGraph, Staking {
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
-        address _globalInboxAddress
+        address _globalInboxAddress,
+        bytes calldata _extraConfig
     ) external {
         NodeGraph.init(
             _vmState,
@@ -82,6 +94,27 @@ contract ArbRollup is NodeGraph, Staking {
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
         globalInbox = IGlobalInbox(_globalInboxAddress);
         owner = _owner;
+
+        globalInbox.sendInitializationMessage(
+            abi.encodePacked(
+                _gracePeriodTicks,
+                _arbGasSpeedLimitPerTick,
+                _maxExecutionSteps,
+                _stakeRequirement,
+                _owner,
+                _extraConfig
+            )
+        );
+
+        emit RollupCreated(
+            _vmState,
+            _gracePeriodTicks,
+            _arbGasSpeedLimitPerTick,
+            _maxExecutionSteps,
+            _stakeRequirement,
+            _owner,
+            _extraConfig
+        );
     }
 
     /**

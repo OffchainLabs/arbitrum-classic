@@ -45,7 +45,8 @@ contract ArbFactory is CloneFactory {
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
         uint128 _stakeRequirement,
-        address payable _owner
+        address payable _owner,
+        bytes calldata _extraConfig
     ) external {
         address clone = createClone(rollupTemplate);
         IArbRollup(clone).init(
@@ -56,7 +57,8 @@ contract ArbFactory is CloneFactory {
             _stakeRequirement,
             _owner,
             challengeFactoryAddress,
-            globalInboxAddress
+            globalInboxAddress,
+            _extraConfig
         );
         emit RollupCreated(clone);
     }

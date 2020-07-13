@@ -71,8 +71,6 @@ contract NodeGraph {
 
     event RollupPruned(bytes32 leaf);
 
-    event RollupCreated(bytes32 initVMHash);
-
     VM.Params public vmParams;
     mapping(bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
@@ -146,8 +144,6 @@ contract NodeGraph {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-
-        emit RollupCreated(_vmState);
     }
 
     function makeAssertion(

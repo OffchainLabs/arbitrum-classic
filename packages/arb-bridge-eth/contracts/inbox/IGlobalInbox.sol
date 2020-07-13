@@ -41,4 +41,6 @@ interface IGlobalInbox {
         uint256[] calldata messageCounts,
         bytes32[] calldata nodeHashes
     ) external;
+
+    function sendInitializationMessage(bytes calldata messageData) external;
 }

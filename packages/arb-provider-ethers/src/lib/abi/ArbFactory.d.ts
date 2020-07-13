@@ -24,13 +24,15 @@ interface ArbFactoryInterface extends Interface {
         _maxExecutionSteps,
         _stakeRequirement,
         _owner,
+        _extraConfig,
       ]: [
         Arrayish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        string
+        string,
+        Arrayish
       ]): string
     }>
 
@@ -69,6 +71,7 @@ export class ArbFactory extends Contract {
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string,
+      _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -86,6 +89,7 @@ export class ArbFactory extends Contract {
     _maxExecutionSteps: BigNumberish,
     _stakeRequirement: BigNumberish,
     _owner: string,
+    _extraConfig: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -106,7 +110,8 @@ export class ArbFactory extends Contract {
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
-      _owner: string
+      _owner: string,
+      _extraConfig: Arrayish
     ): Promise<BigNumber>
 
     globalInboxAddress(): Promise<BigNumber>

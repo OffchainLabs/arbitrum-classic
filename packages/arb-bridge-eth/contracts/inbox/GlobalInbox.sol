@@ -36,6 +36,7 @@ contract GlobalInbox is
     uint8 internal constant ERC20_TRANSFER = 1;
     uint8 internal constant ERC721_TRANSFER = 2;
     uint8 internal constant L2_MSG = 3;
+    uint8 internal constant INITIALIZATION_MSG = 4;
 
     struct Inbox {
         bytes32 value;
@@ -117,6 +118,20 @@ contract GlobalInbox is
      */
     function sendL2Message(address chain, bytes calldata messageData) external {
         _deliverMessage(chain, L2_MSG, msg.sender, messageData);
+    }
+
+    /**
+     * @notice Send a generic L2 message to a given Arbitrum Rollup chain
+     * @dev This method can be used to send any type of message that doesn't require L1 validation
+     * @param messageData Data of the message being sent
+     */
+    function sendInitializationMessage(bytes calldata messageData) external {
+        _deliverMessage(
+            msg.sender,
+            INITIALIZATION_MSG,
+            msg.sender,
+            messageData
+        );
     }
 
     /**
