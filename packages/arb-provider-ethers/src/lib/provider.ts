@@ -8,7 +8,7 @@
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on afn "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -16,12 +16,19 @@
 /* eslint-env node */
 'use strict'
 
-import { Result, ResultCode, Log, MessageCode, L2MessageCode } from './message'
+import {
+  Result,
+  ResultCode,
+  Log,
+  MessageCode,
+  L2MessageCode,
+  L2Call,
+  L2Message,
+} from './message'
 import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
-import * as Hashing from './hashing'
 
 import * as ethers from 'ethers'
 
@@ -40,10 +47,8 @@ import { ArbInfoFactory } from './abi/ArbInfoFactory'
 
 // EthBridge event names
 const EB_EVENT_CDA = 'RollupAsserted'
-const TransactionMessageDelivered = 'TransactionMessageDelivered'
-const EthDepositMessageDelivered = 'EthDepositMessageDelivered'
-const ERC20DepositMessageDelivered = 'ERC20DepositMessageDelivered'
-const ERC721DepositMessageDelivered = 'ERC721DepositMessageDelivered'
+const MessageDelivered = 'MessageDelivered'
+const MessageDeliveredFromOrigin = 'MessageDeliveredFromOrigin'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
@@ -80,7 +85,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public client: ArbClient
   public aggregator?: AggregatorClient
 
-  private deterministicAssertions: boolean
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
@@ -90,18 +94,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   constructor(
     validatorUrl: string,
     provider: ethers.providers.JsonRpcProvider,
-    aggregatorUrl?: string,
-    deterministicAssertions?: boolean
+    aggregatorUrl?: string
   ) {
     super(123456789)
     this.chainId = 123456789
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
-    if (deterministicAssertions) {
-      this.deterministicAssertions = deterministicAssertions
-    } else {
-      this.deterministicAssertions = false
-    }
 
     if (aggregatorUrl) {
       this.aggregator = new AggregatorClient(aggregatorUrl)
@@ -168,25 +166,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (!log) {
           continue
         }
-        if (log.name == TransactionMessageDelivered) {
-          const vmId = await this.getVmID()
-          return Hashing.calculateTransactionHash(
-            vmId,
-            log.values.to,
-            log.values.from,
-            log.values.seqNumber,
-            log.values.value,
-            log.values.data
-          )
-        } else if (
-          log.name == EthDepositMessageDelivered ||
-          log.name == ERC20DepositMessageDelivered ||
-          log.name == ERC721DepositMessageDelivered
-        ) {
-          return ethers.utils.hexZeroPad(
-            log.values.messageNum.toHexString(),
-            32
-          )
+        if (log.name == MessageDelivered) {
+          if (log.values.kind == MessageCode.L2) {
+            const msg = L2Message.fromData(log.values.data)
+            if (msg.message.kind == L2MessageCode.Transaction) {
+              return msg.message.messageID(log.values.sender)
+            }
+          }
+          return log.values.inboxSeqNum
         }
       }
     }
@@ -307,22 +294,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           return null
         }
 
-        let status = 0
-        let logs: Log[] = []
-        if (result.result.resultCode === ResultCode.Return) {
-          status = 1
-          logs = result.result.logs
-        }
-
-        let confirmations = 0
-        const l1Confs = result.nodeInfo?.l1Confirmations
-        if (this.deterministicAssertions) {
-          const currentBlockNum = await this.ethProvider.getBlockNumber()
-          const messageBlockNum = result.result.incoming.blockNumber.toNumber()
-          confirmations = currentBlockNum - messageBlockNum + 1
-        } else if (l1Confs !== undefined) {
-          confirmations = l1Confs
-        }
+        const currentBlockNum = await this.ethProvider.getBlockNumber()
+        const messageBlockNum = result.result.incoming.blockNumber.toNumber()
+        const confirmations = currentBlockNum - messageBlockNum + 1
+        const block = await this.ethProvider.getBlock(messageBlockNum)
 
         const incoming = result.result.incoming
         if (
@@ -335,13 +310,40 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         const l2tx = incoming.msg.message
 
+        let contractAddress = undefined
+        if (ethers.utils.hexStripZeros(l2tx.destAddress) == '0x0') {
+          contractAddress = ethers.utils.hexlify(
+            result.result.returnData.slice(12)
+          )
+        }
+
+        let status = 0
+        const logs: ethers.providers.Log[] = []
+        if (result.result.resultCode === ResultCode.Return) {
+          status = 1
+          let logIndex = 0
+          for (const log of result.result.logs) {
+            logs.push({
+              ...log,
+              transactionLogIndex: 0,
+              transactionIndex: 0,
+              blockNumber: messageBlockNum,
+              transactionHash: result.txHash,
+              logIndex,
+              blockHash: block.hash,
+            })
+            logIndex++
+          }
+        }
+
         const txReceipt: ethers.providers.TransactionReceipt = {
-          blockHash: result.nodeInfo.nodeHash,
-          blockNumber: result.nodeInfo.nodeHeight,
+          blockHash: block.hash,
+          blockNumber: messageBlockNum,
+          contractAddress: contractAddress,
           confirmations: confirmations,
-          cumulativeGasUsed: ethers.utils.bigNumberify(1),
+          cumulativeGasUsed: result.result.gasUsed,
           from: result.result.incoming.sender,
-          gasUsed: ethers.utils.bigNumberify(1),
+          gasUsed: result.result.gasUsed,
           logs,
           status,
           to: l2tx.destAddress,
@@ -412,12 +414,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return arbInfo.getBalance(params.address)
       }
       case 'getBlockNumber': {
-        let location: NodeInfo | undefined
-        if (this.deterministicAssertions) {
-          location = await this.client.getLatestPendingNodeLocation()
-        } else {
-          location = await this.client.getLatestNodeLocation()
-        }
+        const location = await this.client.getLatestPendingNodeLocation()
         if (location) {
           if (
             this.latestLocation &&
@@ -431,50 +428,38 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.ethProvider.getBlockNumber()
       }
     }
-    const forwardResponse = this.ethProvider.perform(method, params)
-    // console.log('Forwarding query to provider', method, forwardResponse);
-    return forwardResponse
+    // console.log('Forwarding query to provider', method, params);
+    return await this.ethProvider.perform(method, params)
   }
 
   public async call(
     transaction: ethers.providers.TransactionRequest,
     blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
   ): Promise<string> {
-    if (!transaction.to) {
-      throw Error('Cannot create call without a destination')
-    }
-    const to = await transaction.to
     const from = await transaction.from
-    const rawData = await transaction.data
-    let data = '0x'
-    if (rawData) {
-      data = ethers.utils.hexlify(rawData)
-    }
+    const tx = new L2Call(
+      await transaction.gasLimit,
+      await transaction.gasPrice,
+      await transaction.to,
+      await transaction.data
+    )
 
-    const callLatest = (
-      to: string,
-      from: string | undefined,
-      data: string
-    ): Promise<ArbValue.Value> => {
-      if (this.deterministicAssertions) {
-        return this.client.pendingCall(to, from, data)
-      } else {
-        return this.client.call(to, from, data)
-      }
+    const callLatest = (): Promise<ArbValue.Value> => {
+      return this.client.pendingCall(tx, from)
     }
 
     let resultVal: ArbValue.Value
-    if (blockTag) {
-      const tag = await blockTag
+    const tag = await blockTag
+    if (tag) {
       if (tag == 'pending') {
-        resultVal = await this.client.pendingCall(to, from, data)
+        resultVal = await this.client.pendingCall(tx, from)
       } else if (tag == 'latest') {
-        resultVal = await callLatest(to, from, data)
+        resultVal = await callLatest()
       } else {
         throw Error('Invalid block tag')
       }
     } else {
-      resultVal = await callLatest(to, from, data)
+      resultVal = await callLatest()
     }
     const result = Result.fromValue(resultVal)
     if (result.resultCode != ResultCode.Return) {

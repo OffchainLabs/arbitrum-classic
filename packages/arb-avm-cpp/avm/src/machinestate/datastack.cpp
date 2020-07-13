@@ -80,12 +80,13 @@ Datastack::Datastack(Tuple tuple_rep) : Datastack() {
 }
 
 void Datastack::addHash() const {
-    HashPreImage prev;
-    if (hashes.size() > 0) {
-        prev = hashes.back();
-    } else {
-        prev = Tuple().getHashPreImage();
-    }
+    HashPreImage prev = [&]() {
+        if (hashes.size() > 0) {
+            return hashes.back();
+        } else {
+            return Tuple().getHashPreImage();
+        }
+    }();
 
     auto newVal = values[hashes.size()];
     TuplePool pool;

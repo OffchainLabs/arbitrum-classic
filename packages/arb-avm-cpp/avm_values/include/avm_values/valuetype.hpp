@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,4 +14,12 @@
  * limitations under the License.
  */
 
-module.exports = require('./lib/index.js')
+#ifndef valuetype_h
+#define valuetype_h
+
+// Proof values will only include values types up to TUPLE + 8 (11)
+// All types declared with types creater than 11 are used for the internal
+// marshalling format Used to pass values between the AVM and the validator
+enum ValueTypes { NUM, CODEPT, HASH_PRE_IMAGE, TUPLE, CODE_POINT_STUB = 12 };
+
+#endif /* valuetype_h */

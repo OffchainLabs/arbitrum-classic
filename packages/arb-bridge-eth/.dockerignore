@@ -3,7 +3,6 @@ workspace/
 arb-compiler-evm
 arb-provider-ethers
 arb-provider-go
-arb-provider-truffle
 arb-provider-web3
 arb-validator.Dockerfile
 **/arb-avm-cpp/rocksdb

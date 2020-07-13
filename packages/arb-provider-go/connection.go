@@ -127,7 +127,21 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
+	var dest common.Address
+	if call.To != nil {
+		dest = common.NewAddressFromEth(*call.To)
+	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
+	tx := message.Call{
+		MaxGas:      new(big.Int).SetUint64(call.Gas),
+		GasPriceBid: gasPriceBid,
+		DestAddress: dest,
+		Data:        call.Data,
+	}
+	retValue, err := conn.proxy.CallMessage(ctx, tx, call.From)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +172,21 @@ func (conn *ArbConnection) PendingCodeAt(
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
 func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
-	retValue, err := conn.proxy.PendingCall(ctx, *call.To, call.From, call.Data)
+	var dest common.Address
+	if call.To != nil {
+		dest = common.NewAddressFromEth(*call.To)
+	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
+	tx := message.Call{
+		MaxGas:      new(big.Int).SetUint64(call.Gas),
+		GasPriceBid: gasPriceBid,
+		DestAddress: dest,
+		Data:        call.Data,
+	}
+	retValue, err := conn.proxy.PendingCall(ctx, tx, call.From)
 	if err != nil {
 		return nil, err
 	}

@@ -49,9 +49,8 @@ declare namespace validatorserver {
   }
 
   export interface CallMessageArgs {
-    contractAddress?: string
-    sender?: string
     data?: string
+    sender?: string
   }
 
   export interface CallMessageReply {

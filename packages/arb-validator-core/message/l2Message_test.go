@@ -52,7 +52,7 @@ func TestL2MessageSerialization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if bytes.Equal(decoded.asData(), data) {
+			if bytes.Equal(decoded.AsData(), data) {
 				t.Fatal("decoded l2 message not equal")
 			}
 		})

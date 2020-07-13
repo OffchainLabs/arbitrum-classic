@@ -63,7 +63,7 @@ void getTuple(const Transaction& transaction,
 
     auto loadedTuple = nonstd::get<Tuple>(results.data);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(loadedTuple.calculateHash() == tuple.calculateHash());
+    REQUIRE(loadedTuple == tuple);
     REQUIRE(loadedTuple.tuple_size() == tuple.tuple_size());
     REQUIRE(results.status.ok() == expected_status);
 }

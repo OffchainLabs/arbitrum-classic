@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,8 +23,8 @@ type ValidatorProxy interface {
 	GetAssertionCount(ctx context.Context) (int, error)
 	GetVMInfo(ctx context.Context) (string, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topics [][]common.Hash) ([]evm.FullLog, error)
-	CallMessage(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error)
-	PendingCall(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error)
+	CallMessage(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error)
+	PendingCall(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -62,12 +63,12 @@ func _encodeAddressArraySlice(slice []common.Address) []string {
 }
 
 func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, request interface{}, response interface{}) error {
-	message, err := json.EncodeClientRequest("Validator."+methodName, request)
+	msg, err := json.EncodeClientRequest("Validator."+methodName, request)
 	if err != nil {
 		log.Println("ValProxy.doCall: error in json.Enc:", err)
 		return err
 	}
-	req, err := http.NewRequest("POST", vp.url, bytes.NewBuffer(message))
+	req, err := http.NewRequest("POST", vp.url, bytes.NewBuffer(msg))
 	if err != nil {
 		return err
 	}
@@ -176,11 +177,10 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error) {
+func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
 	request := &validatorserver.CallMessageArgs{
-		ContractAddress: hexutil.Encode(contract[:]),
-		Sender:          hexutil.Encode(sender[:]),
-		Data:            hexutil.Encode(data),
+		Data:   hexutil.Encode(msg.AsData()),
+		Sender: hexutil.Encode(sender[:]),
 	}
 	var response validatorserver.CallMessageReply
 	if err := vp.doCall(ctx, "CallMessage", request, &response); err != nil {
@@ -189,11 +189,10 @@ func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, contract common.A
 	return hexToValue(response.RawVal)
 }
 
-func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, contract common.Address, sender common.Address, data []byte) (value.Value, error) {
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
 	request := &validatorserver.CallMessageArgs{
-		ContractAddress: hexutil.Encode(contract[:]),
-		Sender:          hexutil.Encode(sender[:]),
-		Data:            hexutil.Encode(data),
+		Data:   hexutil.Encode(msg.AsData()),
+		Sender: hexutil.Encode(sender[:]),
 	}
 	var response validatorserver.CallMessageReply
 	if err := vp.doCall(ctx, "PendingCall", request, &response); err != nil {

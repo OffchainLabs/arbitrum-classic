@@ -27,6 +27,15 @@ type Eth struct {
 	Value *big.Int
 }
 
+func NewEthFromData(data []byte) Eth {
+	destAddress, data := extractAddress(data)
+	payment, data := extractUInt256(data)
+	return Eth{
+		Dest:  destAddress,
+		Value: payment,
+	}
+}
+
 func NewRandomEth() Eth {
 	return Eth{
 		Dest:  common.RandAddress(),
@@ -49,6 +58,17 @@ type ERC20 struct {
 	Token common.Address
 	Dest  common.Address
 	Value *big.Int
+}
+
+func NewERC20FromData(data []byte) ERC20 {
+	token, data := extractAddress(data)
+	destAddress, data := extractAddress(data)
+	payment, data := extractUInt256(data)
+	return ERC20{
+		Token: token,
+		Dest:  destAddress,
+		Value: payment,
+	}
 }
 
 func NewRandomERC20() ERC20 {
@@ -75,6 +95,17 @@ type ERC721 struct {
 	Token common.Address
 	Dest  common.Address
 	ID    *big.Int
+}
+
+func NewERC721FromData(data []byte) ERC721 {
+	token, data := extractAddress(data)
+	destAddress, data := extractAddress(data)
+	id, data := extractUInt256(data)
+	return ERC721{
+		Token: token,
+		Dest:  destAddress,
+		ID:    id,
+	}
 }
 
 func NewRandomERC721() ERC721 {

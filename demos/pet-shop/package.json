@@ -12,6 +12,7 @@
     "watch": "webpack --watch"
   },
   "devDependencies": {
+    "arb-ethers-web3-bridge": "^0.7.0",
     "css-loader": "^3.4.2",
     "file-loader": "^5.0.2",
     "style-loader": "^1.1.3",
@@ -22,9 +23,9 @@
     "webpack-dev-server": "~3.10.2"
   },
   "dependencies": {
-    "arb-provider-truffle": "^0.6.0",
-    "arb-provider-web3": "^0.6.0",
+    "arb-provider-ethers": "^0.6.5",
     "bootstrap": "^4.4.1",
+    "ethers": "4.0.44",
     "jquery": "^3.5.0",
     "web3": "~1.2.6"
   },

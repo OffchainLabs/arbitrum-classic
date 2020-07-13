@@ -11,25 +11,30 @@ easy to use.
 
 ### Javascript
 
-Arbitrum has providers for both Web3.js and Ethers.js. Both providers are created using two parameters: 1) A URL to a validator of the ArbChain 2) An existing Ethereum provider
+Arbitrum is compatible with both Ethers.js and Web3.js. Providers are created using two parameters: 1) A URL to a validator of the ArbChain 2) An existing Ethereum provider
 
 The validator URL is used for RPC queries requesting off-chain information about the ArbChain. This validator does not need to be trusted, since any client can cheaply verify the correctness of returned results.
 
 #### Web3.js
 
 ```js
-const ArbProvider = require("arb-provider-web3");
-let web3 = new Web3(ArbProvider("http://localhost:1235", ethProvider));
+const ethers = require('ethers')
+const ArbProvider = require('arb-provider-ethers').ArbProvider
+const ArbEth = require('arb-provider-ethers')
+const ProviderBridge = require('arb-ethers-web3-bridge')
+
+const arbProvider = new ArbEth.ArbProvider('http://localhost:1235', ethProvider)
+let web3 = new Web3(new ProviderBridge(arbProvider))
 ```
 
 #### Ethers.js
 
 ```js
-const ArbProvider = require("arb-provider-ethers").ArbProvider;
+const ArbProvider = require('arb-provider-ethers').ArbProvider
 let provider = new ArbProvider(
-    "http://localhost:1235",
-    new ethers.providers.Web3Provider(ethProvider)
-);
+  'http://localhost:1235',
+  new ethers.providers.Web3Provider(ethProvider)
+)
 ```
 
 ### Golang

@@ -14,12 +14,10 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "build": "truffle compile",
-    "update-templates": "truffle migrate --network arbitrum && cp -f build/contracts/ArbSys.json ../arbitrum/evm && cp -f compiled.json ../arbitrum/evm/contract-templates.json"
+    "build": "truffle compile"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.5.0",
-    "arb-provider-truffle": "^0.6.0"
+    "@openzeppelin/contracts": "^2.5.0"
   },
   "devDependencies": {
     "truffle": "^5.1.11"

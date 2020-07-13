@@ -24,10 +24,9 @@
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
-const ArbProvider = require("arb-provider-truffle");
-const path = require("path");
+const path = require('path')
 const mnemonic =
-  "jar deny prosper gasp flush glass core corn alarm treat leg smart";
+  'jar deny prosper gasp flush glass core corn alarm treat leg smart'
 
 module.exports = {
   /**
@@ -41,22 +40,6 @@ module.exports = {
    */
 
   networks: {
-    arbitrum: {
-      provider: function() {
-        if (typeof this.provider.prov == "undefined") {
-          this.provider.prov = ArbProvider.provider(
-            __dirname,
-            "build/contracts",
-            {
-              mnemonic: mnemonic
-            },
-            false
-          );
-        }
-        return this.provider.prov;
-      },
-      network_id: "*"
-    }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
     // You should run a client (like ganache-cli, geth or parity) in a separate terminal
@@ -68,7 +51,6 @@ module.exports = {
     //  port: 8545,            // Standard Ethereum port (default: none)
     //  network_id: "*",       // Any network (default: none)
     // },
-
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -78,7 +60,6 @@ module.exports = {
     // from: <address>,        // Account to send txs from (default: accounts[0])
     // websockets: true        // Enable EventEmitter interface for web3 (default: false)
     // },
-
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
     // ropsten: {
@@ -89,7 +70,6 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
@@ -106,16 +86,16 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.5.10", // Fetch exact version from solc-bin (default: truffle's version)
+      version: '0.5.10', // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       settings: {
         // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: false,
-          runs: 200
-        }
+          runs: 200,
+        },
         //  evmVersion: "byzantium"
-      }
-    }
-  }
-};
+      },
+    },
+  },
+}

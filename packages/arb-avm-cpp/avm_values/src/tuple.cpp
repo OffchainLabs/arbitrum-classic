@@ -19,51 +19,15 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-uint256_t hashPreImage(std::array<unsigned char, 32> first_hash,
-                       uint256_t size) {
-    std::array<unsigned char, 65> tupData2;
-    tupData2[0] = TUPLE;
-    auto iter = tupData2.begin();
-    iter++;
-
-    iter = std::copy(first_hash.begin(), first_hash.end(), iter);
-    to_big_endian(size, iter);
-
-    std::array<unsigned char, 32> hashData2;
-    evm::Keccak_256(tupData2.data(), tupData2.size(), hashData2.data());
-    return from_big_endian(hashData2.begin(), hashData2.end());
-}
-
-uint256_t HashPreImage::hash() const {
-    return hashPreImage(firstHash, valueSize);
-}
-
-void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
-    buf.insert(buf.end(), firstHash.begin(), firstHash.end());
-
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(valueSize, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-std::ostream& operator<<(std::ostream& os, const HashPreImage& val) {
-    os << "HashPreImage(" << val.hash() << ")";
-    return os;
-}
-
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
     tpl->data.push_back(std::move(val));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
@@ -71,8 +35,6 @@ Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
@@ -81,8 +43,6 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -97,8 +57,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -115,8 +73,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -135,8 +91,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(value val1,
@@ -157,8 +111,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
     tpl->data.push_back(std::move(val8));
-    tpl->deferredHashing = true;
-    computeValueSize();
 }
 
 Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
@@ -166,11 +118,6 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
         tpl = pool->getResource(values.size());
         for (auto& val : values) {
             tpl->data.push_back(std::move(val));
-        }
-        // tpl is only defined if values has nonzero length
-        if (tpl) {
-            tpl->cachedHash = calculateHash();
-            computeValueSize();
         }
     }
 }
@@ -182,19 +129,9 @@ void Tuple::marshal(std::vector<unsigned char>& buf) const {
     }
 }
 
-uint256_t Tuple::getSize() const {
-    return value_size;
-}
-
-void Tuple::computeValueSize() {
-    value_size = 1;
-    for (uint64_t i = 0; i < tpl->data.size(); i++) {
-        value_size += ::getSize(tpl->data[i]);
-    }
-}
-
-HashPreImage Tuple::getHashPreImage() const {
+HashPreImage Tuple::calculateHashPreImage() const {
     std::array<unsigned char, 1 + 8 * 32> tupData;
+    uint256_t size = 1;
 
     tupData[0] = tuple_size();
     auto oit = tupData.begin();
@@ -202,8 +139,10 @@ HashPreImage Tuple::getHashPreImage() const {
 
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
-        auto valHash = hash_value(get_element(i));
+        const auto& element = get_element(i);
+        auto valHash = hash_value(element);
         oit = to_big_endian(valHash, oit);
+        size += ::getSize(element);
     }
 
     std::array<unsigned char, 32> hashData;
@@ -211,21 +150,16 @@ HashPreImage Tuple::getHashPreImage() const {
                     static_cast<unsigned int>(1 + val_length * (tuple_size())),
                     hashData.data());
 
-    return HashPreImage{hashData, getSize()};
+    return HashPreImage{hashData, size};
 }
 
-uint256_t Tuple::calculateHash() const {
-    auto preImage = getHashPreImage();
-    return preImage.hash();
-}
-
-uint256_t zeroHash() {
+HashPreImage zeroPreimage() {
     std::array<unsigned char, 1> tupData;
     tupData[0] = 0;
 
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(tupData.data(), 1, hashData.data());
-    return hashPreImage(hashData, 1);
+    return HashPreImage(hashData, 1);
 }
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val) {

@@ -17,7 +17,9 @@
 import * as ArbValue from './lib/value'
 import * as abi from './lib/abi'
 import * as Message from './lib/message'
+import * as Program from './lib/program'
 
-export { ArbValue, Message, abi }
+export { ArbValue, Message, abi, Program }
 export { ArbProvider } from './lib/provider'
 export { ArbWallet } from './lib/wallet'
+export { ArbConversion } from './lib/conversion'
