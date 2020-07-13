@@ -97,11 +97,11 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
 
         globalInbox.sendInitializationMessage(
             abi.encodePacked(
-                _gracePeriodTicks,
-                _arbGasSpeedLimitPerTick,
-                _maxExecutionSteps,
-                _stakeRequirement,
-                _owner,
+                uint256(_gracePeriodTicks),
+                uint256(_arbGasSpeedLimitPerTick),
+                uint256(_maxExecutionSteps),
+                uint256(_stakeRequirement),
+                bytes32(bytes20(_owner)),
                 _extraConfig
             )
         );
