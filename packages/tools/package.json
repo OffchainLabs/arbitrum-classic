@@ -5,7 +5,8 @@
   "license": "Apache-2.0",
   "private": true,
   "scripts": {
-    "initialize-local-validators": "ts-node ./scripts/setup_validators.ts"
+    "demo:initialize": "ts-node ./scripts/setup_validators_demo.ts init",
+    "prod:initialize": "ts-node ./scripts/setup_validators.ts init"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.1",

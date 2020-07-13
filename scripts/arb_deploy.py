@@ -91,11 +91,11 @@ def compose_validator(
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(sudo_flag, build_flag, up_flag, validator_states_dir, password):
+def deploy(sudo_flag, build_flag, up_flag, rollup, password):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
-    states_path = os.path.abspath(os.path.join(validator_states_dir, "validator%s"))
+    states_path = os.path.abspath(os.path.join("rollups", rollup, "validator%s"))
 
     n_validators = 1
     while True:
@@ -191,7 +191,7 @@ def halt_docker(sudo_flag):
 def main():
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
-    parser.add_argument("dir", help="The validator states directory.")
+    parser.add_argument("rollup", type=str, help="The address of the rollup chain.")
 
     parser.add_argument("-p", "--password", help="Password protecting validator keys.")
     # Optional
@@ -217,7 +217,7 @@ def main():
     args = parser.parse_args()
 
     # Deploy
-    deploy(args.sudo, args.build, args.up, args.dir, args.password)
+    deploy(args.sudo, args.build, args.up, args.rollup, args.password)
 
 
 if __name__ == "__main__":

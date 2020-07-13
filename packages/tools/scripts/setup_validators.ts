@@ -1,128 +1,82 @@
-import * as ethers from 'ethers'
-import { abi, Program, ArbConversion } from 'arb-provider-ethers'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 
-import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
+const root = '../../'
+const rollupsPath = root + 'rollups/'
 
-const argv = yargs.options({
-  force: {
-    description: 'clear any existing state',
-  },
-  validatorcount: {
-    description: 'number of validators to deploy',
-    default: 1,
-  },
-  blocktime: {
-    description: 'expected length of time between blocks',
-    default: 2,
-  },
-}).argv
-
-const arbConversion = new ArbConversion()
-
-interface RollupCreatedParams {
-  vmAddress: string
+export interface Config {
+  rollup_address: string
+  eth_url: string
+  password?: string
+  blocktime: number
 }
 
-const provider = new ethers.providers.JsonRpcProvider('http://localhost:7545')
-
-const wallet = provider.getSigner(0)
-const validatorsPath = '../../validator-states'
-
-const optionDefinitions = [{ name: 'force', alias: 'f', type: Boolean }]
-
-async function setupRollup(arbOSData: string) {
-  const arbOSHash = Program.programMachineHash(arbOSData)
-
-  const factoryAddress = addresses['ArbFactory']
-
-  const factory = abi.ArbFactoryFactory.connect(factoryAddress, wallet)
-
-  console.log(`Initializing rollup chain for machine with hash ${arbOSHash}`)
-
-  const tx = await factory.createRollup(
-    arbOSHash,
-    arbConversion.blocksToTicks(30),
-    80000000,
-    10000000000,
-    ethers.utils.parseEther('.01'),
-    ethers.utils.hexZeroPad('0x', 20)
-  )
-  const result = await tx.wait()
-
-  const e = result.events?.find((e: ethers.Event) =>
-    e.topics.includes(
-      (factory.interface.events.RollupCreated as ethers.utils.EventDescription)
-        .topic
-    )
-  )
-
-  const {
-    vmAddress,
-  }: RollupCreatedParams = (e?.args as any) as RollupCreatedParams
-
-  return vmAddress
-}
-
-async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
-  const wallets: ethers.Wallet[] = []
-  const waits = []
-  for (let i = 0; i < count; i++) {
-    const newWallet = ethers.Wallet.createRandom()
-    const tx = {
-      to: newWallet.address,
-      value: ethers.utils.parseEther('5.0'),
-    }
-    const send = await wallet.sendTransaction(tx)
-    wallets.push(newWallet)
-    waits.push(send.wait())
-  }
-  await Promise.all(waits)
-  return wallets
-}
-
-async function setupValidatorStates(count: number, blocktime: number) {
+export async function setupValidatorStates(
+  count: number,
+  folder: string,
+  config: Config
+): void {
   if (count < 1) {
     throw Error('must create at least 1 validator')
   }
-  if (fs.existsSync(validatorsPath)) {
-    if (argv.force) {
-      fs.removeSync(validatorsPath)
-    } else {
-      throw Error(
-        'validator-states folder already exists. First manually delete it or run with --force'
-      )
-    }
+  if (!fs.existsSync(rollupsPath)) {
+    fs.mkdirSync(rollupsPath)
   }
-  const wallets = await initializeWallets(count)
 
   const arbOSData = fs.readFileSync('../../arbos.mexe', 'utf8')
-  const rollup = await setupRollup(arbOSData)
-  console.log('Created rollup', rollup)
 
-  const config = {
-    rollup_address: rollup,
-    eth_url: 'http://localhost:7545',
-    password: 'pass',
-    blocktime: blocktime,
+  const rollupPath = rollupsPath + folder + '/'
+  if (fs.existsSync(rollupPath)) {
+    throw Error(`${rollupPath} folder already exists`)
   }
 
-  fs.mkdirSync(validatorsPath)
-  let i = 0
-  for (const wallet of wallets) {
-    const valPath = validatorsPath + '/validator' + i
-    const walletPath = valPath + '/wallets'
+  fs.mkdirSync(rollupPath)
+  for (let i = 0; i < count; i++) {
+    const valPath = rollupPath + 'validator' + i + '/'
     fs.mkdirSync(valPath)
-    fs.mkdirSync(walletPath)
-    const encryptedWallet = await wallet.encrypt('pass')
-    fs.writeFileSync(walletPath + '/' + wallet.address, encryptedWallet)
-    fs.writeFileSync(valPath + '/config.json', JSON.stringify(config))
-    fs.writeFileSync(valPath + '/contract.mexe', arbOSData)
-    i++
+    fs.writeFileSync(valPath + 'config.json', JSON.stringify(config))
+    fs.writeFileSync(valPath + 'contract.mexe', arbOSData)
   }
 }
 
 if (require.main === module) {
-  setupValidatorStates(argv.validatorcount, argv.blocktime)
+  const argv = yargs.command(
+    'init [rollup] [ethurl]',
+    'initialize validators for the given rollup chain',
+    yargsBuilder =>
+      yargsBuilder
+        .positional('rollup', {
+          describe: 'address of the rollup chain',
+          type: 'string',
+          demandOption: true,
+        })
+        .positional('ethurl', {
+          describe: 'url for ethereum node',
+          type: 'string',
+          demandOption: true,
+        })
+        .options({
+          validatorcount: {
+            description: 'number of validators to deploy',
+            default: 1,
+          },
+          blocktime: {
+            description: 'expected length of time between blocks',
+            default: 2,
+          },
+        }),
+    args => {
+      if (!args.rollup || !args.ethurl) {
+        console.error('Must supply rollup address and eth url')
+        return
+      }
+      const config: Config = {
+        rollup_address: args.rollup,
+        eth_url: args.ethurl,
+        blocktime: args.blocktime,
+      }
+
+      setupValidatorStates(args.validatorcount, config.rollup_address, config)
+    }
+  ).argv
 }

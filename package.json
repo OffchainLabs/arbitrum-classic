@@ -26,8 +26,10 @@
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
     "prepare": "yarn workspace arb-provider-ethers prepare",
     "go:vet": "./scripts/go-vet",
-    "demo:initialize": "yarn workspace tools initialize-local-validators",
-    "demo:deploy": "./scripts/arb_deploy.py validator-states"
+    "demo:initialize": "yarn workspace tools demo:initialize",
+    "demo:deploy": "./scripts/arb_deploy.py local",
+    "prod:initialize": "yarn workspace tools prod:initialize",
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
