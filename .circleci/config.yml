@@ -8,15 +8,6 @@ aliases:
     paths:
       - ~/.cache/yarn
     key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-  - &restore_python_cache
-    keys:
-      - python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-      - python-packages-v2-{{ .Branch }}-
-      - python-packages-v2-
-  - &save_python_cache
-    paths:
-      - ~/.local/lib/python3.7/site-packages
-    key: python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
   - &restore_ethbridge_cache
     keys:
       - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
@@ -78,18 +69,6 @@ jobs:
       - restore_cache: *restore_yarn_cache
       - run: yarn install --cache-folder ~/.cache/yarn
       - save_cache: *save_yarn_cache
-      - restore_cache: *restore_python_cache
-      - run:
-          command: | # use pipenv to install dependencies
-            pip3 install --user -r requirements.txt
-            python3 setup.py install --user
-          working_directory: /home/user/project/packages/arb-compiler-evm
-      - save_cache: *save_python_cache
-      - run:
-          name: test arb-compiler-evm
-          command: |
-            python3 setup.py nosetests --processes=2 --process-timeout=120 --with-coverage --cover-package=arbitrum --with-xunit --xunit-file=${TEST_RESULTS}/arb-compiler-evm.xml
-          working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
           name: test arb-provider-ethers
           command: |
