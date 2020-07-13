@@ -132,20 +132,4 @@ contract MessagesChallenge is BisectionChallenge {
         emit OneStepProofCompleted();
         _asserterWin();
     }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            asserter,
-            challenger,
-            ChallengeUtils.getInvalidMsgsType()
-        );
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            challenger,
-            asserter,
-            ChallengeUtils.getInvalidMsgsType()
-        );
-    }
 }

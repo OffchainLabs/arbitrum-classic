@@ -128,16 +128,12 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        resolveChallengeAsserterWon();
+        IStaking(vmAddress).resolveChallenge(asserter, challenger);
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        resolveChallengeChallengerWon();
+        IStaking(vmAddress).resolveChallenge(challenger, asserter);
         selfdestruct(msg.sender);
     }
-
-    function resolveChallengeAsserterWon() internal;
-
-    function resolveChallengeChallengerWon() internal;
 }

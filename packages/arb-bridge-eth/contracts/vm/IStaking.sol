@@ -19,9 +19,5 @@
 pragma solidity ^0.5.11;
 
 interface IStaking {
-    function resolveChallenge(
-        address payable winner,
-        address loser,
-        uint256 challengeType
-    ) external;
+    function resolveChallenge(address payable winner, address loser) external;
 }

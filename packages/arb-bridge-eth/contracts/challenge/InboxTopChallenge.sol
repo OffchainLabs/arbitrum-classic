@@ -84,20 +84,4 @@ contract InboxTopChallenge is BisectionChallenge {
         emit OneStepProofCompleted();
         _asserterWin();
     }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            asserter,
-            challenger,
-            ChallengeUtils.getInvalidInboxType()
-        );
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            challenger,
-            asserter,
-            ChallengeUtils.getInvalidInboxType()
-        );
-    }
 }

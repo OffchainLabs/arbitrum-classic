@@ -110,11 +110,7 @@ contract Staking {
         return stakers[_stakerAddress].location != 0x00;
     }
 
-    function resolveChallenge(
-        address payable winner,
-        address loser,
-        uint256
-    ) external {
+    function resolveChallenge(address payable winner, address loser) external {
         require(challenges[msg.sender], RES_CHAL_SENDER);
         delete challenges[msg.sender];
 

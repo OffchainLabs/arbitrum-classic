@@ -251,20 +251,4 @@ contract ExecutionChallenge is BisectionChallenge {
             )
         );
     }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            asserter,
-            challenger,
-            ChallengeUtils.getInvalidExType()
-        );
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            challenger,
-            asserter,
-            ChallengeUtils.getInvalidExType()
-        );
-    }
 }
