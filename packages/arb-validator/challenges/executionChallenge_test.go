@@ -122,7 +122,7 @@ func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.
 		numSteps,
 		precondition.BeforeHash,
 		precondition.BeforeInbox.Hash(),
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)
 
 	return challengeHash, precondition, numSteps

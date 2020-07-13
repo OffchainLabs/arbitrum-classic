@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ pragma solidity ^0.5.11;
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../arch/Protocol.sol";
 import "../arch/Value.sol";
 import "../inbox/Messages.sol";
 

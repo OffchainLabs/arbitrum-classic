@@ -71,7 +71,13 @@ library ChallengeUtils {
         uint64 _numSteps,
         bytes32 _beforeHash,
         bytes32 _beforeInboxHash,
-        bytes32 _assertionHash
+        bytes32 _afterHash,
+        bool _didInboxInsn,
+        uint64 _numGas,
+        bytes32 _firstMessageHash,
+        bytes32 _lastMessageHash,
+        bytes32 _firstLogHash,
+        bytes32 _lastLogHash
     ) internal pure returns (bytes32) {
         return
             keccak256(
@@ -79,7 +85,13 @@ library ChallengeUtils {
                     _numSteps,
                     _beforeHash,
                     _beforeInboxHash,
-                    _assertionHash
+                    _afterHash,
+                    _didInboxInsn,
+                    _numGas,
+                    _firstMessageHash,
+                    _lastMessageHash,
+                    _firstLogHash,
+                    _lastLogHash
                 )
             );
     }

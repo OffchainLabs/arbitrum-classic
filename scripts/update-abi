@@ -18,7 +18,6 @@ abigen --sol=inbox/GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
 abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
 abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
 abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
-abigen --sol=test_only/ProtocolTester.sol --pkg=protocoltester --out=protocoltester.go
 abigen --sol=test_only/MachineTester.sol --pkg=machinetester --out=machinetester.go
 abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
 abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=onestepprooftester.go
@@ -33,7 +32,6 @@ abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=one
 \mv challengetester.go ../../arb-validator-core/ethbridgetest/challengetester/
 \mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
 \mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
-\mv protocoltester.go ../../arb-validator-core/ethbridgetest/protocoltester/
 \mv machinetester.go ../../arb-validator-core/ethbridgetest/machinetester/
 \mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
 \mv onestepprooftester.go ../../arb-validator-core/ethbridgetest/onestepprooftester/

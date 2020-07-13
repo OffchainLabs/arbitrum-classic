@@ -24,7 +24,6 @@ import "./VM.sol";
 import "../inbox/IGlobalInbox.sol";
 
 import "../arch/Value.sol";
-import "../arch/Protocol.sol";
 
 import "../libraries/RollupTime.sol";
 

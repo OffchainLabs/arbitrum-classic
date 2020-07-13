@@ -19,7 +19,6 @@
 pragma solidity ^0.5.11;
 
 import "./RollupUtils.sol";
-import "../arch/Protocol.sol";
 import "../libraries/RollupTime.sol";
 import "../challenge/ChallengeUtils.sol";
 import "./VM.sol";
@@ -125,15 +124,14 @@ library NodeGraphUtils {
             data.importedMessagesSlice,
             data.importedMessageCount
         );
-        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
-            challengeHash,
-            gracePeriodTicks + RollupTime.blocksToTicks(1)
-        );
         return
             RollupUtils.childNodeHash(
                 prevLeaf,
                 deadlineTicks,
-                nodeDataHash,
+                RollupUtils.challengeDataHash(
+                    challengeHash,
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
+                ),
                 ChallengeUtils.getInvalidMsgsType(),
                 vmProtoHashBefore
             );
@@ -146,30 +144,13 @@ library NodeGraphUtils {
         bytes32 vmProtoHashBefore,
         uint256 gracePeriodTicks,
         uint256 checkTimeTicks
-    ) internal pure returns (bytes32) {
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.didInboxInsn,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
-
-        bytes32 executionHash = ChallengeUtils.executionHash(
-            data.numSteps,
-            data.beforeVMHash,
-            data.importedMessagesSlice,
-            assertionHash
-        );
-
+    ) internal pure returns (bytes32 leaf) {
         return
             RollupUtils.childNodeHash(
                 prevLeaf,
                 deadlineTicks,
                 RollupUtils.challengeDataHash(
-                    executionHash,
+                    executionHash(data),
                     gracePeriodTicks + checkTimeTicks
                 ),
                 ChallengeUtils.getInvalidExType(),
@@ -196,6 +177,26 @@ library NodeGraphUtils {
                     data.afterInboxTop,
                     data.beforeInboxCount + data.importedMessageCount
                 )
+            );
+    }
+
+    function executionHash(AssertionData memory data)
+        private
+        pure
+        returns (bytes32)
+    {
+        return
+            ChallengeUtils.executionHash(
+                data.numSteps,
+                data.beforeVMHash,
+                data.importedMessagesSlice,
+                data.afterVMHash,
+                data.didInboxInsn,
+                data.numArbGas,
+                0x00,
+                data.messagesAccHash,
+                0x00,
+                data.logsAccHash
             );
     }
 }

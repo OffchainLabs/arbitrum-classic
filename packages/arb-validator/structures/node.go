@@ -342,7 +342,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			node.disputable.AssertionParams.NumSteps,
 			node.prev.vmProtoData.MachineHash,
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
-			node.disputable.AssertionClaim.AssertionStub.Hash(),
+			node.disputable.AssertionClaim.AssertionStub,
 		)
 		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))
 		return ret, challengePeriod
