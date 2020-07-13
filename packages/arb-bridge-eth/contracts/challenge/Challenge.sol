@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.11;
 
-import "../vm/IStaking.sol";
+import "../rollup/IStaking.sol";
 import "../libraries/RollupTime.sol";
 
 contract Challenge {

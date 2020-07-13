@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../challenge/IChallengeFactory.sol";
-import "../vm/IStaking.sol";
+import "../rollup/IStaking.sol";
 
 contract ChallengeTester is IStaking {
     IChallengeFactory private challengeFactory;
