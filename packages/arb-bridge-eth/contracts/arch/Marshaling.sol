@@ -30,20 +30,17 @@ library Marshaling {
     function deserializeHashPreImage(bytes memory data, uint256 startOffset)
         internal
         pure
-        returns (
-            uint256, // offset
-            Value.Data memory
-        )
+        returns (uint256 offset, Value.Data memory value)
     {
-        uint256 size;
         require(
             data.length >= startOffset && data.length - startOffset >= 64,
             "to short"
         );
-        bytes32 hashData = data.toBytes32(startOffset);
-        startOffset += 32;
-        (startOffset, size) = deserializeInt(data, startOffset);
-        return (startOffset, Value.newTuplePreImage(hashData, size));
+        bytes32 hashData;
+        uint256 size;
+        (offset, hashData) = extractBytes32(data, startOffset);
+        (offset, size) = deserializeInt(data, offset);
+        return (offset, Value.newTuplePreImage(hashData, size));
     }
 
     function deserializeInt(bytes memory data, uint256 startOffset)
@@ -90,16 +87,17 @@ library Marshaling {
         )
     {
         uint256 offset = startOffset;
-        uint8 immediateType = uint8(data[offset]);
-        offset++;
-        uint8 opCode = uint8(data[offset]);
-        offset++;
+        uint8 immediateType;
+        uint8 opCode;
         Value.Data memory immediate;
+        bytes32 nextHash;
+
+        (offset, immediateType) = extractUint8(data, offset);
+        (offset, opCode) = extractUint8(data, offset);
         if (immediateType == 1) {
             (offset, immediate) = deserialize(data, offset);
         }
-        bytes32 nextHash = data.toBytes32(offset);
-        offset += 32;
+        (offset, nextHash) = extractBytes32(data, offset);
         if (immediateType == 1) {
             return (offset, Value.newCodePoint(opCode, nextHash, immediate));
         }
@@ -135,11 +133,9 @@ library Marshaling {
         )
     {
         require(startOffset < data.length, "invalid offset");
-        uint256 offset = startOffset;
-        uint8 valType = uint8(data[offset]);
-        offset++;
-        uint256 intVal;
+        (uint256 offset, uint8 valType) = extractUint8(data, startOffset);
         if (valType == Value.intTypeCode()) {
+            uint256 intVal;
             (offset, intVal) = deserializeInt(data, offset);
             return (offset, Value.newInt(intVal));
         } else if (valType == Value.codePointTypeCode()) {
@@ -197,9 +193,8 @@ library Marshaling {
             bytes memory byteData
         )
     {
-        offset = startOffset;
-        uint8 valType = uint8(data[offset]);
-        offset++;
+        uint8 valType;
+        (offset, valType) = extractUint8(data, startOffset);
         if (valType != Value.tupleTypeCode() + 2) {
             return (false, offset, byteData);
         }
@@ -220,8 +215,7 @@ library Marshaling {
         uint256 fullChunkIndex = 0;
 
         for (uint256 i = 0; i < totalChunkCount; i++) {
-            valType = uint8(data[offset]);
-            offset++;
+            (offset, valType) = extractUint8(data, offset);
             if (valType != Value.tupleTypeCode() + 2) {
                 return (false, offset, byteData);
             }
@@ -244,12 +238,32 @@ library Marshaling {
                 fullChunkIndex++;
             }
         }
-
-        valType = uint8(data[offset]);
-        offset++;
+        (offset, valType) = extractUint8(data, offset);
         if (valType != Value.tupleTypeCode()) {
             return (false, offset, byteData);
         }
         return (true, offset, abi.encodePacked(fullChunks, partialChunk));
+    }
+
+    function extractUint8(bytes memory data, uint256 startOffset)
+        private
+        pure
+        returns (
+            uint256, // offset
+            uint8 // val
+        )
+    {
+        return (startOffset + 1, uint8(data[startOffset]));
+    }
+
+    function extractBytes32(bytes memory data, uint256 startOffset)
+        private
+        pure
+        returns (
+            uint256, // offset
+            bytes32 // val
+        )
+    {
+        return (startOffset + 32, data.toBytes32(startOffset));
     }
 }
