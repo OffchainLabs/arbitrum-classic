@@ -35,7 +35,8 @@ const (
 	EthType Type = iota
 	ERC20Type
 	ERC721Type
-	L2Type Type = iota
+	L2Type
+	InitType
 )
 
 type ChainTime struct {
@@ -202,6 +203,8 @@ func (im InboxMessage) nestedMessage() (Message, error) {
 			return nil, err
 		}
 		return L2Message{Msg: l2}, nil
+	case InitType:
+		return NewInitFromData(im.Data), nil
 	default:
 		return nil, errors.New("unknown inbox message type")
 	}

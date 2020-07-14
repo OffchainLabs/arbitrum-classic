@@ -17,6 +17,8 @@
 package ethbridgemachine
 
 import (
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"math/big"
 	"strings"
@@ -240,14 +242,18 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestBatch(t *testing.T) {
+	chain := common.RandAddress()
+	chainId := new(big.Int).SetBytes(chain[:8])
+
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	//results := runMessage(t, mach)
+
 	//dest := common.RandAddress()
 	dest := deployFib(t, mach, common.RandAddress())
-	chain := common.RandAddress()
 
 	batchSize := 20
 	txes := make([]message.BatchTx, 0, batchSize)
@@ -280,9 +286,18 @@ func TestBatch(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        []byte{},
 		}
-		sigRaw, err := crypto.Sign(tx.BatchTxHash(chain).Bytes(), pk)
+
+		ethTx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 0, big.NewInt(0), []byte{})
+
+		signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(chainId), pk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v, r, s := signedTx.RawSignatureValues()
 		var sig [65]byte
-		copy(sig[:], sigRaw)
+		copy(sig[:], math.U256Bytes(r))
+		copy(sig[:], math.U256Bytes(s))
+		sig[64] = byte(v.Uint64() % 2)
 		batchTx := message.BatchTx{
 			Transaction: tx,
 			Signature:   sig,
