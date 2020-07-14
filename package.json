@@ -26,6 +26,7 @@
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
     "prepare": "yarn workspace arb-provider-ethers prepare",
     "go:vet": "./scripts/go-vet",
+    "go:generate": "./scripts/go-generate",
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",

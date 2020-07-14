@@ -3,40 +3,7 @@
 ### update-go-abi
 ### --------------------------------------------------------------------
 
-cd packages/arb-bridge-eth/contracts
-
-abigen --sol=rollup/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
-abigen --sol=rollup/ArbRollup.sol --pkg=rollup --out=arbrollup.go
-
-abigen --sol=challenge/ChallengeFactory.sol --pkg=challengefactory --out=challengefactory.go
-abigen --sol=challenge/InboxTopChallenge.sol --pkg=inboxtopchallenge --out=inboxtopchallenge.go
-abigen --sol=challenge/MessagesChallenge.sol --pkg=messageschallenge --out=messageschallenge.go
-abigen --sol=challenge/ExecutionChallenge.sol --pkg=executionchallenge --out=executionchallenge.go
-
-abigen --sol=inbox/GlobalInbox.sol --pkg=globalinbox --out=globalinbox.go
-
-abigen --sol=test_only/ChallengeTester.sol --pkg=challengetester --out=challengetester.go
-abigen --sol=test_only/MessageTester.sol --pkg=messagetester --out=messagetester.go
-abigen --sol=test_only/ValueTester.sol --pkg=valuetester --out=valuetester.go
-abigen --sol=test_only/MachineTester.sol --pkg=machinetester --out=machinetester.go
-abigen --sol=test_only/RollupTester.sol --pkg=rolluptester --out=rolluptester.go
-abigen --sol=test_only/OneStepProofTester.sol --pkg=onestepprooftester --out=onestepprooftester.go
-
-\mv arbfactory.go ../../arb-validator-core/ethbridge/arbfactory/
-\mv arbrollup.go ../../arb-validator-core/ethbridge/rollup/
-\mv challengefactory.go ../../arb-validator-core/ethbridge/challengefactory/
-\mv inboxtopchallenge.go ../../arb-validator-core/ethbridge/inboxtopchallenge/
-\mv messageschallenge.go ../../arb-validator-core/ethbridge/messageschallenge/
-\mv executionchallenge.go ../../arb-validator-core/ethbridge/executionchallenge/
-\mv globalinbox.go ../../arb-validator-core/ethbridge/globalinbox/
-\mv challengetester.go ../../arb-validator-core/ethbridgetest/challengetester/
-\mv messagetester.go ../../arb-validator-core/ethbridgetest/messagetester/
-\mv valuetester.go ../../arb-validator-core/ethbridgetest/valuetester/
-\mv machinetester.go ../../arb-validator-core/ethbridgetest/machinetester/
-\mv rolluptester.go ../../arb-validator-core/ethbridgetest/rolluptester/
-\mv onestepprooftester.go ../../arb-validator-core/ethbridgetest/onestepprooftester/
-
-cd ../../..
+yarn go:generate
 
 yarn workspace arb-provider-ethers update-abi
 cd packages/arb-compiler-evm/contract-templates/contracts
