@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package chainobserver
 
 import (
 	"context"
@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -192,7 +191,7 @@ func TestProtoStateHash(t *testing.T) {
 var dummyRollupAddress = common.Address{1}
 var dummyAddress common.Address
 
-func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*chainobserver.ChainObserver, error) {
+func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
 	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
@@ -205,7 +204,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	if err := checkpointer.Initialize(contractPath); err != nil {
 		return nil, err
 	}
-	chain, err := chainobserver.NewChain(
+	chain, err := NewChain(
 		dummyAddress,
 		checkpointer,
 		valprotocol.ChainParams{
@@ -234,23 +233,26 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertion := chain.PrepareAssertion()
-
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		assertion.GetAssertionParams(),
-		assertion.BeforeState.InboxCount,
-		assertion.Prev.Deadline().Val,
-		uint32(assertion.Prev.LinkType()),
-		assertion.Params.NumSteps,
-		assertion.Params.ImportedMessageCount,
-		assertion.Claim.AssertionStub.DidInboxInsn,
-		assertion.Claim.AssertionStub.NumGas)
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if assertion.Prev.Hash().ToEthHash() != bridgeHash {
+	bridgeHash, _, err := tester.ComputePrevLeaf(
+		nil,
+		prepared.GetAssertionParams(),
+		prepared.BeforeState.InboxCount,
+		prepared.Prev.Deadline().Val,
+		uint32(prepared.Prev.LinkType()),
+		prepared.Params.NumSteps,
+		prepared.Params.ImportedMessageCount,
+		prepared.Claim.AssertionStub.DidInboxInsn,
+		prepared.Claim.AssertionStub.NumGas)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if prepared.Prev.Hash().ToEthHash() != bridgeHash {
 		t.Error(bridgeHash)
 	}
 }
@@ -287,7 +289,10 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
 
-	prepared := chain.PrepareAssertion()
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 
@@ -334,7 +339,10 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	assertion := randomAssertion()
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
-	prepared := chain.PrepareAssertion()
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 
@@ -381,7 +389,10 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	assertion := randomAssertion()
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
-	prepared := chain.PrepareAssertion()
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 

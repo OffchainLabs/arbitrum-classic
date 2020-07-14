@@ -18,6 +18,7 @@ package chainobserver
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -98,8 +99,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
-			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertionsMut.Lock()
+			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
 			preparedAssertionsMut.Unlock()
 			chain.RLock()
@@ -145,24 +146,26 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					}
 					chain.RLock()
 				}
-				if !chain.atHead {
+				if !chain.atHead || chain.calculatedValidNode.Machine() == nil {
 					chain.RUnlock()
 					break
 				}
 				// Prepare next assertion
+				preparedAssertionsMut.Lock()
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
+				preparingAssertions[chain.calculatedValidNode.Hash()] = true
+				preparedAssertionsMut.Unlock()
 				if !isPreparing {
-					newMessages := chain.calculatedValidNode.VMProtoData().InboxTop != chain.Inbox.GetTopHash()
-					if chain.calculatedValidNode.Machine() != nil &&
-						chain.calculatedValidNode.Machine().IsBlocked(newMessages) == nil {
-						preparingAssertions[chain.calculatedValidNode.Hash()] = true
-						go func() {
-							prepped := chain.PrepareAssertion()
-							preparedAssertionsMut.Lock()
-							preparedAssertions[prepped.Prev.Hash()] = prepped
-							preparedAssertionsMut.Unlock()
-						}()
-					}
+					go func() {
+						prepped, err := chain.prepareAssertion(chain.latestBlockId)
+						preparedAssertionsMut.Lock()
+						defer preparedAssertionsMut.Unlock()
+						if err != nil {
+							preparingAssertions[chain.calculatedValidNode.Hash()] = false
+							return
+						}
+						preparedAssertions[prepped.Prev.Hash()] = prepped
+					}()
 				} else {
 					preparedAssertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
@@ -179,7 +182,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 								chain.GetChainParams(),
 								chain.NodeGraph,
 								chain.KnownValidNode,
-								chain.LatestBlockId,
+								chain.latestBlockId,
 								prepared.Clone())
 						}
 					}
@@ -191,16 +194,36 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion {
+func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*chainlistener.PreparedAssertion, error) {
 	chain.RLock()
 	currentOpinion := chain.calculatedValidNode
-	beforeState := currentOpinion.VMProtoData().Clone()
+
 	if !chain.NodeGraph.Leaves().IsLeaf(currentOpinion) {
-		return nil
+		return nil, errors.New("current opinion is not a leaf")
 	}
-	afterInboxTop := chain.Inbox.GetTopHash()
+
+	beforeState := currentOpinion.VMProtoData().Clone()
+
+	var newMessages bool
+	var maxMessageCount *big.Int
+	var found bool
+	found, maxMessageCount = chain.Inbox.GetMaxAtHeight(maxValidBlock.Height)
+	if !found {
+		return nil, errors.New("no new messages")
+	}
+
+	newMessages = maxMessageCount.Cmp(beforeState.InboxCount) > 0
+
+	if currentOpinion.Machine().IsBlocked(newMessages) != nil {
+		return nil, errors.New("machine blocked")
+	}
+
 	beforeInboxTop := beforeState.InboxTop
-	newMessageCount := new(big.Int).Sub(chain.Inbox.TopCount(), beforeState.InboxCount)
+	afterInboxTop, err := chain.Inbox.GetHashAtIndex(maxMessageCount)
+	if err != nil {
+		return nil, err
+	}
+	newMessageCount := new(big.Int).Sub(maxMessageCount, beforeState.InboxCount)
 
 	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
@@ -256,7 +279,8 @@ func (chain *ChainObserver) PrepareAssertion() *chainlistener.PreparedAssertion 
 		Claim:       claim,
 		Assertion:   assertion,
 		Machine:     mach,
-	}
+		ValidBlock:  maxValidBlock,
+	}, nil
 }
 
 func getNodeOpinion(

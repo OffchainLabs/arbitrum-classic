@@ -46,7 +46,7 @@ type ChainObserver struct {
 	Inbox               *structures.Inbox
 	KnownValidNode      *structures.Node
 	calculatedValidNode *structures.Node
-	LatestBlockId       *common.BlockId
+	latestBlockId       *common.BlockId
 	listeners           []chainlistener.ChainListener
 	checkpointer        checkpointing.RollupCheckpointer
 	isOpinionated       bool
@@ -74,7 +74,7 @@ func NewChain(
 		Inbox:               structures.NewInbox(),
 		KnownValidNode:      nodeGraph.LatestConfirmed(),
 		calculatedValidNode: nodeGraph.LatestConfirmed(),
-		LatestBlockId:       startBlockId,
+		latestBlockId:       startBlockId,
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       false,
@@ -137,7 +137,7 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.LatestBlockId.Height))
+				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.latestBlockId.Height))
 				if confOpp != nil {
 					for _, listener := range chain.listeners {
 						listener.ConfirmableNodes(ctx, confOpp)
@@ -244,7 +244,7 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointCont
 		Inbox:               chain.Inbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      chain.KnownValidNode.Hash().MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.Hash().MarshalToBuf(),
-		LatestBlockId:       chain.LatestBlockId.MarshalToBuf(),
+		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
 		IsOpinionated:       chain.isOpinionated,
 	}
 }
@@ -278,7 +278,7 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 		Inbox:               &structures.Inbox{MessageStack: inbox},
 		KnownValidNode:      knownValidNode,
 		calculatedValidNode: calculatedValidNode,
-		LatestBlockId:       x.LatestBlockId.Unmarshal(),
+		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       x.IsOpinionated,
@@ -329,7 +329,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.LatestBlockId = blockId
+	chain.latestBlockId = blockId
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
@@ -341,7 +341,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
 	chain.RLock()
 	defer chain.RUnlock()
-	return chain.LatestBlockId.Clone()
+	return chain.latestBlockId.Clone()
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {

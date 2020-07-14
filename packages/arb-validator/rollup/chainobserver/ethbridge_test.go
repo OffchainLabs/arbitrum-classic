@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package rollup
+package chainobserver
 
 import (
 	"context"
@@ -40,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 )
 
 var dbPath = "./testdb"
@@ -168,7 +167,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chain, err := chainobserver.NewChain(
+	chain, err := NewChain(
 		rollupAddress,
 		checkpointer,
 		chainParams,
@@ -219,7 +218,11 @@ func TestConfirmAssertion(t *testing.T) {
 
 	assertion := evm.NewRandomEVMAssertion(results, messages)
 	assertion.NumGas = 100
-	prepared := chain.PrepareAssertion()
+
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	t.Run("make assertion", func(t *testing.T) {

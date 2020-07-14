@@ -18,8 +18,6 @@ package chainobserver
 
 import (
 	"context"
-	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -31,17 +29,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
-
-var dummyAddress common.Address
 
 var dummyRollupAddress1 = common.Address{1}
 var dummyRollupAddress2 = common.Address{2}
 var dummyRollupAddress3 = common.Address{3}
 var dummyRollupAddress4 = common.Address{4}
-
-var contractPath = gotest.TestMachinePath()
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain(dummyRollupAddress1, "dummy", contractPath, t)
@@ -130,7 +123,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	createOneStaker(chain, staker1addr, validTip.Hash())
 	createOneStaker(chain, staker2addr, tip2.Hash())
 	challenge := nodegraph.NewChallenge(
-		chain.LatestBlockId,
+		chain.latestBlockId,
 		0,
 		staker1addr,
 		staker2addr,
@@ -197,42 +190,6 @@ func testCreateStakers(dummyRollupAddress common.Address, checkpointType string,
 	if checkpointType != "dummy" {
 		tryMarshalUnmarshal(chain, t)
 	}
-}
-
-func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
-	var checkpointer checkpointing.RollupCheckpointer
-	switch checkpointType {
-	case "dummy":
-		checkpointer = checkpointing.NewDummyCheckpointer()
-	case "fresh_rocksdb":
-		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
-	default:
-		return nil, errors.New("invalid checkpoint type")
-	}
-	if err := checkpointer.Initialize(contractPath); err != nil {
-		return nil, err
-	}
-	chain, err := NewChain(
-		dummyAddress,
-		checkpointer,
-		valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(1),
-			GracePeriod:             common.TicksFromSeconds(60 * 60),
-			MaxExecutionSteps:       1000000,
-			ArbGasSpeedLimitPerTick: 1000,
-		},
-		false,
-		&common.BlockId{
-			Height:     common.NewTimeBlocks(big.NewInt(10)),
-			HeaderHash: common.Hash{},
-		},
-		common.Hash{},
-	)
-	if err != nil {
-		return nil, err
-	}
-	chain.Start(context.Background())
-	return chain, nil
 }
 
 func createSomeStakers(chain *ChainObserver) {
