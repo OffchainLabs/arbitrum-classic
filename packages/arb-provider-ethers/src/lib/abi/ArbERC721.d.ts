@@ -10,18 +10,52 @@ import {
   TypedFunctionDescription,
 } from '.'
 
-interface ArbERC721Interface extends Interface {
+interface ArbErc721Interface extends Interface {
   functions: {
-    supportsInterface: TypedFunctionDescription<{
-      encode([interfaceId]: [Arrayish]): string
+    adminMint: TypedFunctionDescription<{
+      encode([account, tokenId]: [string, BigNumberish]): string
     }>
+
+    approve: TypedFunctionDescription<{
+      encode([to, tokenId]: [string, BigNumberish]): string
+    }>
+
+    balanceOf: TypedFunctionDescription<{ encode([owner]: [string]): string }>
 
     getApproved: TypedFunctionDescription<{
       encode([tokenId]: [BigNumberish]): string
     }>
 
-    approve: TypedFunctionDescription<{
-      encode([to, tokenId]: [string, BigNumberish]): string
+    isApprovedForAll: TypedFunctionDescription<{
+      encode([owner, operator]: [string, string]): string
+    }>
+
+    ownerOf: TypedFunctionDescription<{
+      encode([tokenId]: [BigNumberish]): string
+    }>
+
+    safeTransferFrom: TypedFunctionDescription<{
+      encode([from, to, tokenId]: [string, string, BigNumberish]): string
+    }>
+
+    setApprovalForAll: TypedFunctionDescription<{
+      encode([to, approved]: [string, boolean]): string
+    }>
+
+    supportsInterface: TypedFunctionDescription<{
+      encode([interfaceId]: [Arrayish]): string
+    }>
+
+    tokenByIndex: TypedFunctionDescription<{
+      encode([index]: [BigNumberish]): string
+    }>
+
+    tokenOfOwnerByIndex: TypedFunctionDescription<{
+      encode([owner, index]: [string, BigNumberish]): string
+    }>
+
+    tokensOfOwner: TypedFunctionDescription<{
+      encode([owner]: [string]): string
     }>
 
     totalSupply: TypedFunctionDescription<{ encode([]: []): string }>
@@ -30,54 +64,12 @@ interface ArbERC721Interface extends Interface {
       encode([from, to, tokenId]: [string, string, BigNumberish]): string
     }>
 
-    tokenOfOwnerByIndex: TypedFunctionDescription<{
-      encode([owner, index]: [string, BigNumberish]): string
-    }>
-
-    safeTransferFrom: TypedFunctionDescription<{
-      encode([from, to, tokenId]: [string, string, BigNumberish]): string
-    }>
-
-    tokenByIndex: TypedFunctionDescription<{
-      encode([index]: [BigNumberish]): string
-    }>
-
-    ownerOf: TypedFunctionDescription<{
-      encode([tokenId]: [BigNumberish]): string
-    }>
-
-    balanceOf: TypedFunctionDescription<{ encode([owner]: [string]): string }>
-
-    setApprovalForAll: TypedFunctionDescription<{
-      encode([to, approved]: [string, boolean]): string
-    }>
-
-    isApprovedForAll: TypedFunctionDescription<{
-      encode([owner, operator]: [string, string]): string
-    }>
-
-    tokensOfOwner: TypedFunctionDescription<{
-      encode([owner]: [string]): string
-    }>
-
-    adminMint: TypedFunctionDescription<{
-      encode([account, tokenId]: [string, BigNumberish]): string
-    }>
-
     withdraw: TypedFunctionDescription<{
       encode([account, tokenId]: [string, BigNumberish]): string
     }>
   }
 
   events: {
-    Transfer: TypedEventDescription<{
-      encodeTopics([from, to, tokenId]: [
-        string | null,
-        string | null,
-        BigNumberish | null
-      ]): string[]
-    }>
-
     Approval: TypedEventDescription<{
       encodeTopics([owner, approved, tokenId]: [
         string | null,
@@ -93,26 +85,36 @@ interface ArbERC721Interface extends Interface {
         null
       ]): string[]
     }>
+
+    Transfer: TypedEventDescription<{
+      encodeTopics([from, to, tokenId]: [
+        string | null,
+        string | null,
+        BigNumberish | null
+      ]): string[]
+    }>
   }
 }
 
-export class ArbERC721 extends Contract {
-  connect(signerOrProvider: Signer | Provider | string): ArbERC721
-  attach(addressOrName: string): ArbERC721
-  deployed(): Promise<ArbERC721>
+export class ArbErc721 extends Contract {
+  connect(signerOrProvider: Signer | Provider | string): ArbErc721
+  attach(addressOrName: string): ArbErc721
+  deployed(): Promise<ArbErc721>
 
-  on(event: EventFilter | string, listener: Listener): ArbERC721
-  once(event: EventFilter | string, listener: Listener): ArbERC721
-  addListener(eventName: EventFilter | string, listener: Listener): ArbERC721
-  removeAllListeners(eventName: EventFilter | string): ArbERC721
-  removeListener(eventName: any, listener: Listener): ArbERC721
+  on(event: EventFilter | string, listener: Listener): ArbErc721
+  once(event: EventFilter | string, listener: Listener): ArbErc721
+  addListener(eventName: EventFilter | string, listener: Listener): ArbErc721
+  removeAllListeners(eventName: EventFilter | string): ArbErc721
+  removeListener(eventName: any, listener: Listener): ArbErc721
 
-  interface: ArbERC721Interface
+  interface: ArbErc721Interface
 
   functions: {
-    supportsInterface(interfaceId: Arrayish): Promise<boolean>
-
-    getApproved(tokenId: BigNumberish): Promise<string>
+    adminMint(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     approve(
       to: string,
@@ -120,29 +122,28 @@ export class ArbERC721 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    totalSupply(): Promise<BigNumber>
+    balanceOf(owner: string): Promise<BigNumber>
 
-    transferFrom(
-      from: string,
-      to: string,
-      tokenId: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
+    getApproved(tokenId: BigNumberish): Promise<string>
 
-    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
-
-    safeTransferFrom(
-      from: string,
-      to: string,
-      tokenId: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    tokenByIndex(index: BigNumberish): Promise<BigNumber>
+    isApprovedForAll(owner: string, operator: string): Promise<boolean>
 
     ownerOf(tokenId: BigNumberish): Promise<string>
 
-    balanceOf(owner: string): Promise<BigNumber>
+    'safeTransferFrom(address,address,uint256)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'safeTransferFrom(address,address,uint256,bytes)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      _data: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     setApprovalForAll(
       to: string,
@@ -150,12 +151,19 @@ export class ArbERC721 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    isApprovedForAll(owner: string, operator: string): Promise<boolean>
+    supportsInterface(interfaceId: Arrayish): Promise<boolean>
+
+    tokenByIndex(index: BigNumberish): Promise<BigNumber>
+
+    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
 
     tokensOfOwner(owner: string): Promise<BigNumber[]>
 
-    adminMint(
-      account: string,
+    totalSupply(): Promise<BigNumber>
+
+    transferFrom(
+      from: string,
+      to: string,
       tokenId: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -167,9 +175,11 @@ export class ArbERC721 extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  supportsInterface(interfaceId: Arrayish): Promise<boolean>
-
-  getApproved(tokenId: BigNumberish): Promise<string>
+  adminMint(
+    account: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   approve(
     to: string,
@@ -177,29 +187,28 @@ export class ArbERC721 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  totalSupply(): Promise<BigNumber>
+  balanceOf(owner: string): Promise<BigNumber>
 
-  transferFrom(
-    from: string,
-    to: string,
-    tokenId: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
+  getApproved(tokenId: BigNumberish): Promise<string>
 
-  tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
-
-  safeTransferFrom(
-    from: string,
-    to: string,
-    tokenId: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  tokenByIndex(index: BigNumberish): Promise<BigNumber>
+  isApprovedForAll(owner: string, operator: string): Promise<boolean>
 
   ownerOf(tokenId: BigNumberish): Promise<string>
 
-  balanceOf(owner: string): Promise<BigNumber>
+  'safeTransferFrom(address,address,uint256)'(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'safeTransferFrom(address,address,uint256,bytes)'(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    _data: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   setApprovalForAll(
     to: string,
@@ -207,12 +216,19 @@ export class ArbERC721 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  isApprovedForAll(owner: string, operator: string): Promise<boolean>
+  supportsInterface(interfaceId: Arrayish): Promise<boolean>
+
+  tokenByIndex(index: BigNumberish): Promise<BigNumber>
+
+  tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
 
   tokensOfOwner(owner: string): Promise<BigNumber[]>
 
-  adminMint(
-    account: string,
+  totalSupply(): Promise<BigNumber>
+
+  transferFrom(
+    from: string,
+    to: string,
     tokenId: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -224,12 +240,6 @@ export class ArbERC721 extends Contract {
   ): Promise<ContractTransaction>
 
   filters: {
-    Transfer(
-      from: string | null,
-      to: string | null,
-      tokenId: BigNumberish | null
-    ): EventFilter
-
     Approval(
       owner: string | null,
       approved: string | null,
@@ -241,14 +251,42 @@ export class ArbERC721 extends Contract {
       operator: string | null,
       approved: null
     ): EventFilter
+
+    Transfer(
+      from: string | null,
+      to: string | null,
+      tokenId: BigNumberish | null
+    ): EventFilter
   }
 
   estimate: {
-    supportsInterface(interfaceId: Arrayish): Promise<BigNumber>
+    adminMint(account: string, tokenId: BigNumberish): Promise<BigNumber>
+
+    approve(to: string, tokenId: BigNumberish): Promise<BigNumber>
+
+    balanceOf(owner: string): Promise<BigNumber>
 
     getApproved(tokenId: BigNumberish): Promise<BigNumber>
 
-    approve(to: string, tokenId: BigNumberish): Promise<BigNumber>
+    isApprovedForAll(owner: string, operator: string): Promise<BigNumber>
+
+    ownerOf(tokenId: BigNumberish): Promise<BigNumber>
+
+    safeTransferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish
+    ): Promise<BigNumber>
+
+    setApprovalForAll(to: string, approved: boolean): Promise<BigNumber>
+
+    supportsInterface(interfaceId: Arrayish): Promise<BigNumber>
+
+    tokenByIndex(index: BigNumberish): Promise<BigNumber>
+
+    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
+
+    tokensOfOwner(owner: string): Promise<BigNumber>
 
     totalSupply(): Promise<BigNumber>
 
@@ -257,28 +295,6 @@ export class ArbERC721 extends Contract {
       to: string,
       tokenId: BigNumberish
     ): Promise<BigNumber>
-
-    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
-
-    safeTransferFrom(
-      from: string,
-      to: string,
-      tokenId: BigNumberish
-    ): Promise<BigNumber>
-
-    tokenByIndex(index: BigNumberish): Promise<BigNumber>
-
-    ownerOf(tokenId: BigNumberish): Promise<BigNumber>
-
-    balanceOf(owner: string): Promise<BigNumber>
-
-    setApprovalForAll(to: string, approved: boolean): Promise<BigNumber>
-
-    isApprovedForAll(owner: string, operator: string): Promise<BigNumber>
-
-    tokensOfOwner(owner: string): Promise<BigNumber>
-
-    adminMint(account: string, tokenId: BigNumberish): Promise<BigNumber>
 
     withdraw(account: string, tokenId: BigNumberish): Promise<BigNumber>
   }

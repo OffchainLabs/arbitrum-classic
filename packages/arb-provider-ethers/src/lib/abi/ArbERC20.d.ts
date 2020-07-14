@@ -10,24 +10,18 @@ import {
   TypedFunctionDescription,
 } from '.'
 
-interface ArbERC20Interface extends Interface {
+interface ArbErc20Interface extends Interface {
   functions: {
+    adminMint: TypedFunctionDescription<{
+      encode([account, amount]: [string, BigNumberish]): string
+    }>
+
+    allowance: TypedFunctionDescription<{
+      encode([owner, spender]: [string, string]): string
+    }>
+
     approve: TypedFunctionDescription<{
       encode([spender, amount]: [string, BigNumberish]): string
-    }>
-
-    totalSupply: TypedFunctionDescription<{ encode([]: []): string }>
-
-    transferFrom: TypedFunctionDescription<{
-      encode([sender, recipient, amount]: [
-        string,
-        string,
-        BigNumberish
-      ]): string
-    }>
-
-    increaseAllowance: TypedFunctionDescription<{
-      encode([spender, addedValue]: [string, BigNumberish]): string
     }>
 
     balanceOf: TypedFunctionDescription<{
@@ -38,16 +32,22 @@ interface ArbERC20Interface extends Interface {
       encode([spender, subtractedValue]: [string, BigNumberish]): string
     }>
 
+    increaseAllowance: TypedFunctionDescription<{
+      encode([spender, addedValue]: [string, BigNumberish]): string
+    }>
+
+    totalSupply: TypedFunctionDescription<{ encode([]: []): string }>
+
     transfer: TypedFunctionDescription<{
       encode([recipient, amount]: [string, BigNumberish]): string
     }>
 
-    allowance: TypedFunctionDescription<{
-      encode([owner, spender]: [string, string]): string
-    }>
-
-    adminMint: TypedFunctionDescription<{
-      encode([account, amount]: [string, BigNumberish]): string
+    transferFrom: TypedFunctionDescription<{
+      encode([sender, recipient, amount]: [
+        string,
+        string,
+        BigNumberish
+      ]): string
     }>
 
     withdraw: TypedFunctionDescription<{
@@ -56,16 +56,16 @@ interface ArbERC20Interface extends Interface {
   }
 
   events: {
-    Transfer: TypedEventDescription<{
-      encodeTopics([from, to, value]: [
+    Approval: TypedEventDescription<{
+      encodeTopics([owner, spender, value]: [
         string | null,
         string | null,
         null
       ]): string[]
     }>
 
-    Approval: TypedEventDescription<{
-      encodeTopics([owner, spender, value]: [
+    Transfer: TypedEventDescription<{
+      encodeTopics([from, to, value]: [
         string | null,
         string | null,
         null
@@ -74,38 +74,31 @@ interface ArbERC20Interface extends Interface {
   }
 }
 
-export class ArbERC20 extends Contract {
-  connect(signerOrProvider: Signer | Provider | string): ArbERC20
-  attach(addressOrName: string): ArbERC20
-  deployed(): Promise<ArbERC20>
+export class ArbErc20 extends Contract {
+  connect(signerOrProvider: Signer | Provider | string): ArbErc20
+  attach(addressOrName: string): ArbErc20
+  deployed(): Promise<ArbErc20>
 
-  on(event: EventFilter | string, listener: Listener): ArbERC20
-  once(event: EventFilter | string, listener: Listener): ArbERC20
-  addListener(eventName: EventFilter | string, listener: Listener): ArbERC20
-  removeAllListeners(eventName: EventFilter | string): ArbERC20
-  removeListener(eventName: any, listener: Listener): ArbERC20
+  on(event: EventFilter | string, listener: Listener): ArbErc20
+  once(event: EventFilter | string, listener: Listener): ArbErc20
+  addListener(eventName: EventFilter | string, listener: Listener): ArbErc20
+  removeAllListeners(eventName: EventFilter | string): ArbErc20
+  removeListener(eventName: any, listener: Listener): ArbErc20
 
-  interface: ArbERC20Interface
+  interface: ArbErc20Interface
 
   functions: {
+    adminMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    allowance(owner: string, spender: string): Promise<BigNumber>
+
     approve(
       spender: string,
       amount: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    totalSupply(): Promise<BigNumber>
-
-    transferFrom(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -117,16 +110,23 @@ export class ArbERC20 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    increaseAllowance(
+      spender: string,
+      addedValue: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    totalSupply(): Promise<BigNumber>
+
     transfer(
       recipient: string,
       amount: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    allowance(owner: string, spender: string): Promise<BigNumber>
-
-    adminMint(
-      account: string,
+    transferFrom(
+      sender: string,
+      recipient: string,
       amount: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -138,24 +138,17 @@ export class ArbERC20 extends Contract {
     ): Promise<ContractTransaction>
   }
 
+  adminMint(
+    account: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  allowance(owner: string, spender: string): Promise<BigNumber>
+
   approve(
     spender: string,
     amount: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  totalSupply(): Promise<BigNumber>
-
-  transferFrom(
-    sender: string,
-    recipient: string,
-    amount: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  increaseAllowance(
-    spender: string,
-    addedValue: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -167,16 +160,23 @@ export class ArbERC20 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  increaseAllowance(
+    spender: string,
+    addedValue: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  totalSupply(): Promise<BigNumber>
+
   transfer(
     recipient: string,
     amount: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  allowance(owner: string, spender: string): Promise<BigNumber>
-
-  adminMint(
-    account: string,
+  transferFrom(
+    sender: string,
+    recipient: string,
     amount: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -188,30 +188,21 @@ export class ArbERC20 extends Contract {
   ): Promise<ContractTransaction>
 
   filters: {
-    Transfer(from: string | null, to: string | null, value: null): EventFilter
-
     Approval(
       owner: string | null,
       spender: string | null,
       value: null
     ): EventFilter
+
+    Transfer(from: string | null, to: string | null, value: null): EventFilter
   }
 
   estimate: {
+    adminMint(account: string, amount: BigNumberish): Promise<BigNumber>
+
+    allowance(owner: string, spender: string): Promise<BigNumber>
+
     approve(spender: string, amount: BigNumberish): Promise<BigNumber>
-
-    totalSupply(): Promise<BigNumber>
-
-    transferFrom(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish
-    ): Promise<BigNumber>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish
-    ): Promise<BigNumber>
 
     balanceOf(account: string): Promise<BigNumber>
 
@@ -220,11 +211,20 @@ export class ArbERC20 extends Contract {
       subtractedValue: BigNumberish
     ): Promise<BigNumber>
 
+    increaseAllowance(
+      spender: string,
+      addedValue: BigNumberish
+    ): Promise<BigNumber>
+
+    totalSupply(): Promise<BigNumber>
+
     transfer(recipient: string, amount: BigNumberish): Promise<BigNumber>
 
-    allowance(owner: string, spender: string): Promise<BigNumber>
-
-    adminMint(account: string, amount: BigNumberish): Promise<BigNumber>
+    transferFrom(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish
+    ): Promise<BigNumber>
 
     withdraw(account: string, amount: BigNumberish): Promise<BigNumber>
   }
