@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-validator
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.9.15
+	github.com/ethereum/go-ethereum v1.9.16
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/rpc v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4
