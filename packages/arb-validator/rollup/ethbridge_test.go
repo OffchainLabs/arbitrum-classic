@@ -18,7 +18,7 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"log"
 	"math/big"
 	"math/rand"
@@ -45,7 +45,7 @@ import (
 
 var dbPath = "./testdb"
 
-var rollupTester *ethbridgetest.RollupTester
+var rollupTester *ethbridgetestcontracts.RollupTester
 var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	_, tx, deployedTester, err := ethbridgetest.DeployRollupTester(
+	_, tx, deployedTester, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,
 		ethclnt,
 	)

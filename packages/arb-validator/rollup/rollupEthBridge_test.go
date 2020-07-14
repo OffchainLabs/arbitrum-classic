@@ -25,7 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -39,13 +39,13 @@ import (
 	"testing"
 )
 
-var tester *ethbridgetest.RollupTester
+var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
 
-	_, machineTx, deployedArbRollup, err := ethbridgetest.DeployRollupTester(
+	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,
 		client,
 	)

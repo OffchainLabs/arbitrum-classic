@@ -24,7 +24,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"log"
@@ -299,7 +299,7 @@ func getChallengeInfo(
 	asserterClient := ethbridge.NewEthAuthClient(client, asserter)
 	challengerClient := ethbridge.NewEthAuthClient(client, challenger)
 
-	tester, err := ethbridgetest.NewChallengeTester(testerAddress, client)
+	tester, err := ethbridgetestcontracts.NewChallengeTester(testerAddress, client)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}

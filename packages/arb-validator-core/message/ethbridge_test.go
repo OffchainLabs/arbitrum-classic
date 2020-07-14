@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package ethbridgetest
+package message
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 var errHash = errors.New("ethbridge calculated wrong hash")
@@ -43,12 +41,12 @@ func setupRand(t *testing.T) {
 func TestMessage(t *testing.T) {
 	setupRand(t)
 
-	msg := message.InboxMessage{
-		Kind:        message.L2Type,
+	msg := InboxMessage{
+		Kind:        L2Type,
 		Sender:      common.RandAddress(),
 		InboxSeqNum: common.RandBigInt(),
 		Data:        common.RandBytes(200),
-		ChainTime:   message.NewRandomChainTime(),
+		ChainTime:   NewRandomChainTime(),
 	}
 
 	bridgeHash, err := tester.MessageHash(
@@ -125,7 +123,7 @@ func TestDeliveredMessage(t *testing.T) {
 }
 
 func TestUnmarshalOutgoing(t *testing.T) {
-	msg := message.NewRandomOutMessage(message.NewRandomEth())
+	msg := NewRandomOutMessage(NewRandomEth())
 	var valData bytes.Buffer
 	if err := value.MarshalValue(msg.AsValue(), &valData); err != nil {
 		t.Fatal(err)
@@ -140,7 +138,7 @@ func TestUnmarshalOutgoing(t *testing.T) {
 	if offset.Uint64() != uint64(len(valData.Bytes())) {
 		t.Error("incorrect offset")
 	}
-	if message.Type(kind) != msg.Kind {
+	if Type(kind) != msg.Kind {
 		t.Error("incorrect message type")
 	}
 	if sender != msg.Sender.ToEthAddress() {
@@ -152,7 +150,7 @@ func TestUnmarshalOutgoing(t *testing.T) {
 }
 
 func TestParseEthMessage(t *testing.T) {
-	msg := message.NewRandomEth()
+	msg := NewRandomEth()
 	ret, err := tester.ParseEthMessage(nil, msg.AsData())
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +168,7 @@ func TestParseEthMessage(t *testing.T) {
 }
 
 func TestParseERC20Message(t *testing.T) {
-	msg := message.NewRandomERC20()
+	msg := NewRandomERC20()
 	ret, err := tester.ParseERC20Message(nil, msg.AsData())
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +189,7 @@ func TestParseERC20Message(t *testing.T) {
 }
 
 func TestParseERC721Message(t *testing.T) {
-	msg := message.NewRandomERC721()
+	msg := NewRandomERC721()
 	ret, err := tester.ParseERC721Message(nil, msg.AsData())
 	if err != nil {
 		t.Error(err)
