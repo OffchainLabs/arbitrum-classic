@@ -153,6 +153,13 @@ library Marshaling {
         require(false, "invalid typecode");
     }
 
+    /**
+     * @notice Convert data[startOffset:startOffset + dataLength] into an Arbitrum bytestack value
+     * @dev The bytestack object is a series of nested 2 tuples terminating in an empty tuple, ex. (size, (data1, (data2, (data3, ()))))
+     * @param data Data object containing a superset of the data we want to serialize
+     * @param startOffset Offset in data where the data we want to convert beings
+     * @param dataLength Number of bytes that we want to include in the bytestack result
+     */
     function bytesToBytestack(
         bytes memory data,
         uint256 startOffset,
@@ -164,13 +171,16 @@ library Marshaling {
         Value.Data memory stack = Value.newEmptyTuple();
         Value.Data[] memory vals = new Value.Data[](2);
 
+        // Break each full chunk of the data into 32 byte ints an interatively construct nested tuples including the data
         for (uint256 i = 0; i < wholeChunkCount; i++) {
             vals[0] = Value.newInt(data.toUint(startOffset + i * 32));
             vals[1] = stack;
             stack = Hashing.getTuplePreImage(vals);
         }
 
+        // If the data didn't evenly divide into chunks. We take the remaining data and add it to the bytestack
         if (dataLength % 32 != 0) {
+            // Grab the last 32 byte of the data and then shift it over to get only the relevent value. This way we avoid reading beyond the end of the data
             uint256 lastVal = data.toUint(startOffset + dataLength - 32);
             lastVal <<= (32 - (dataLength % 32)) * 8;
             vals[0] = Value.newInt(lastVal);
@@ -178,12 +188,19 @@ library Marshaling {
             stack = Hashing.getTuplePreImage(vals);
         }
 
+        // Include the length of the included data at the top level of the tuple stack
         vals[0] = Value.newInt(dataLength);
         vals[1] = stack;
 
         return Hashing.getTuplePreImage(vals);
     }
 
+    /**
+     * @notice If the data passed to this function is a valid bytestack object, return the convertion of it to raw bytes form. Otherwise return that it was invalid.
+     * @dev The bytestack format is described in the documentation of bytesToBytestack
+     * @param data Data object containing the potential serialized bytestack value
+     * @param startOffset Offset in data where the bytestack is claimed to begin
+     */
     function bytestackToBytes(bytes memory data, uint256 startOffset)
         internal
         pure
@@ -193,17 +210,14 @@ library Marshaling {
             bytes memory byteData
         )
     {
-        uint8 valType;
-        (offset, valType) = extractUint8(data, startOffset);
-        if (valType != Value.tupleTypeCode() + 2) {
-            return (false, offset, byteData);
-        }
-
+        // Bytestack should start with the size in bytes of the contained data
         uint256 byteCount;
-        (valid, offset, byteCount) = deserializeCheckedInt(data, offset);
+        (valid, offset, byteCount) = parseBytestackChunk(data, startOffset);
         if (!valid) {
             return (false, offset, byteData);
         }
+
+        // If byteCount % 32 != 0, the last chunk will have byteCount % 32 bytes of data in it and the rest should be ignored
         uint256 fullChunkCount = byteCount / 32;
         uint256 partialChunkSize = byteCount % 32;
         uint256 totalChunkCount = fullChunkCount +
@@ -215,34 +229,57 @@ library Marshaling {
         uint256 fullChunkIndex = 0;
 
         for (uint256 i = 0; i < totalChunkCount; i++) {
-            (offset, valType) = extractUint8(data, offset);
-            if (valType != Value.tupleTypeCode() + 2) {
-                return (false, offset, byteData);
-            }
-
             uint256 nextChunk;
-            (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
+            (valid, offset, nextChunk) = parseBytestackChunk(data, offset);
             if (!valid) {
                 return (false, offset, byteData);
             }
 
+            // The chunks appear backwards in the serialization so we reverse their order there
+            // Therefore the first chunk is the one which may be partial
             if (i == 0 && partialChunkSize > 0) {
+                // Copy only partialChunkSize bytes over into partialChunk
                 bytes32 chunkBytes = bytes32(nextChunk);
                 for (uint256 j = 0; j < partialChunkSize; j++) {
                     partialChunk[j] = chunkBytes[j];
                 }
             } else {
+                // Put the chunks into fullChunks in reverse order
+                // We use a separate index fullChunkIndex since we may or may not have included a partial chunk
                 fullChunks[fullChunkCount - 1 - fullChunkIndex] = bytes32(
                     nextChunk
                 );
                 fullChunkIndex++;
             }
         }
+        // The bytestack should end with an empty tuple
+        uint8 valType;
         (offset, valType) = extractUint8(data, offset);
         if (valType != Value.tupleTypeCode()) {
             return (false, offset, byteData);
         }
         return (true, offset, abi.encodePacked(fullChunks, partialChunk));
+    }
+
+    function parseBytestackChunk(bytes memory data, uint256 startOffset)
+        private
+        pure
+        returns (
+            bool valid,
+            uint256 offset,
+            uint256 nextChunk
+        )
+    {
+        uint8 valType;
+        (offset, valType) = extractUint8(data, startOffset);
+        if (valType != Value.tupleTypeCode() + 2) {
+            return (false, offset, nextChunk);
+        }
+        (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
+        if (!valid) {
+            return (false, offset, nextChunk);
+        }
+        return (true, offset, nextChunk);
     }
 
     function extractUint8(bytes memory data, uint256 startOffset)
