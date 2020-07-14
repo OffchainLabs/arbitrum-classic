@@ -310,7 +310,7 @@ func TestBatch(t *testing.T) {
 		v, r, s := signedTx.RawSignatureValues()
 		var sig [65]byte
 		copy(sig[:], math.U256Bytes(r))
-		copy(sig[:], math.U256Bytes(s))
+		copy(sig[32:], math.U256Bytes(s))
 		sig[64] = byte(v.Uint64() % 2)
 		batchTx := message.BatchTx{
 			Transaction: tx,
