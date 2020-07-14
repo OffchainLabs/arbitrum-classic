@@ -161,7 +161,7 @@ library Marshaling {
         uint256 wholeChunkCount = dataLength / 32;
 
         // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
-        Value.Data memory stack = Value.newNone();
+        Value.Data memory stack = Value.newEmptyTuple();
         Value.Data[] memory vals = new Value.Data[](2);
 
         for (uint256 i = 0; i < wholeChunkCount; i++) {

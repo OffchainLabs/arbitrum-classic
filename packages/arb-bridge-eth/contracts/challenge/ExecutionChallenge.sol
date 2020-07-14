@@ -122,7 +122,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
         for (uint256 i = 1; i < bisectionCount; i++) {
             if (_data.didInboxInsns[i - 1]) {
-                _data.beforeInbox = Value.newNone().hash();
+                _data.beforeInbox = Value.newEmptyTuple().hash();
             }
             hashes[i] = ChallengeUtils.executionHash(
                 uint32(

@@ -119,7 +119,7 @@ library Value {
         }
     }
 
-    function newNone() internal pure returns (Data memory) {
+    function newEmptyTuple() internal pure returns (Data memory) {
         return newTuple(new Data[](0));
     }
 

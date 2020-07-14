@@ -590,7 +590,9 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.dataStack.hash() == Value.newNone().hash())
+            Value.newBoolean(
+                machine.dataStack.hash() == Value.newEmptyTuple().hash()
+            )
         );
         return true;
     }
@@ -617,7 +619,9 @@ library OneStepProof {
         returns (bool)
     {
         machine.addDataStackValue(
-            Value.newBoolean(machine.auxStack.hash() == Value.newNone().hash())
+            Value.newBoolean(
+                machine.auxStack.hash() == Value.newEmptyTuple().hash()
+            )
         );
         return true;
     }
@@ -830,7 +834,7 @@ library OneStepProof {
         Value.Data memory beforeInbox
     ) internal pure returns (bool) {
         require(
-            beforeInbox.hash() != Value.newNone().hash(),
+            beforeInbox.hash() != Value.newEmptyTuple().hash(),
             "Inbox instruction was blocked"
         );
         machine.addDataStackValue(beforeInbox);

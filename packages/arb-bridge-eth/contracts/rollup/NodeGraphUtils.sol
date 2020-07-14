@@ -120,7 +120,7 @@ library NodeGraphUtils {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
             data.beforeInboxTop,
             data.afterInboxTop,
-            Value.newNone().hash(),
+            Value.newEmptyTuple().hash(),
             data.importedMessagesSlice,
             data.importedMessageCount
         );
