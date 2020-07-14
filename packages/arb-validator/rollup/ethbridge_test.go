@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"log"
 	"math/big"
 	"math/rand"
@@ -32,20 +33,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/rolluptester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
 )
 
 var dbPath = "./testdb"
 
-var rollupTester *rolluptester.RollupTester
+var rollupTester *ethbridgetestcontracts.RollupTester
 var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	_, tx, deployedTester, err := rolluptester.DeployRollupTester(
+	_, tx, deployedTester, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,
 		ethclnt,
 	)

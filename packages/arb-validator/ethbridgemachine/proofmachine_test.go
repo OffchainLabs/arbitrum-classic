@@ -18,9 +18,12 @@ package ethbridgemachine
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+
 	"math/big"
 	"path/filepath"
 	"runtime"
@@ -29,11 +32,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester.OneStepProofTester) {
+func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProofTester) {
 	t.Log("proof test contact: ", contract)
 
 	proofs, err := generateProofCases(contract)
@@ -85,7 +87,7 @@ func TestValidateProof(t *testing.T) {
 
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
-	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, client)
+	_, tx, osp, err := ethbridgetestcontracts.DeployOneStepProofTester(auth, client)
 	if err != nil {
 		t.Fatal(err)
 	}

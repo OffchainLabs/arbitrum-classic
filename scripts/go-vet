@@ -1,10 +1,4 @@
 #!/bin/bash
-### --------------------------------------------------------------------
-### install-deps
-### --------------------------------------------------------------------
-
-# When running `pip3 install --user ...` the bin location is in:
-# python3 -c "import site; print(site.USER_BASE + '/bin')"
 
 # Exit on error
 set -e

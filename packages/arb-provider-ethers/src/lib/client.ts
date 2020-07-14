@@ -21,8 +21,7 @@ import { L2Call } from './message'
 
 import * as ethers from 'ethers'
 
-import { evm } from './abi/evm.evm.d'
-import { validatorserver } from './abi/validatorserver.server.d'
+import evm from './abi/evm.evm.d'
 
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
@@ -88,12 +87,12 @@ function convertBlockTag(tag?: ethers.providers.BlockTag): string | undefined {
 
 function convertTopics(
   topicGroups?: Array<string | Array<string>>
-): Array<validatorserver.TopicGroup> | undefined {
+): Array<evm.TopicGroup> | undefined {
   if (topicGroups == undefined) {
     return topicGroups
   }
   return topicGroups.map(
-    (topics): validatorserver.TopicGroup => {
+    (topics): evm.TopicGroup => {
       if (typeof topics == 'string') {
         return { topics: [topics] }
       } else {
@@ -150,20 +149,16 @@ export class ArbClient {
     AssertionNodeHash: string,
     msgIndex: string
   ): Promise<OutputMessage | null> {
-    const params: validatorserver.GetOutputMessageArgs = {
+    const params: evm.GetOutputMessageArgs = {
       AssertionNodeHash,
       MsgIndex: msgIndex,
     }
-    const msgResult = await new Promise<validatorserver.GetOutputMessageReply>(
+    const msgResult = await new Promise<evm.GetOutputMessageReply>(
       (resolve, reject): void => {
         this.client.request(
           'Validator.GetOutputMessage',
           [params],
-          (
-            err: Error,
-            error: Error,
-            result: validatorserver.GetOutputMessageReply
-          ) => {
+          (err: Error, error: Error, result: evm.GetOutputMessageReply) => {
             if (err) {
               reject(err)
             } else if (error) {
@@ -189,30 +184,26 @@ export class ArbClient {
   public async getMessageResult(
     txHash: string
   ): Promise<RawMessageResult | null> {
-    const params: validatorserver.GetMessageResultArgs = {
+    const params: evm.GetMessageResultArgs = {
       txHash,
     }
-    const messageResult = await new Promise<
-      validatorserver.GetMessageResultReply
-    >((resolve, reject): void => {
-      this.client.request(
-        'Validator.GetMessageResult',
-        [params],
-        (
-          err: Error,
-          error: Error,
-          result: validatorserver.GetMessageResultReply
-        ) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(result)
+    const messageResult = await new Promise<evm.GetMessageResultReply>(
+      (resolve, reject): void => {
+        this.client.request(
+          'Validator.GetMessageResult',
+          [params],
+          (err: Error, error: Error, result: evm.GetMessageResultReply) => {
+            if (err) {
+              reject(err)
+            } else if (error) {
+              reject(error)
+            } else {
+              resolve(result)
+            }
           }
-        }
-      )
-    })
+        )
+      }
+    )
     if (messageResult.tx && messageResult.tx.found) {
       const tx = messageResult.tx
       if (tx.rawVal === undefined) {
@@ -240,18 +231,14 @@ export class ArbClient {
     sender: string | undefined
   ): Promise<ArbValue.Value> {
     return new Promise((resolve, reject): void => {
-      const params: validatorserver.CallMessageArgs = {
+      const params: evm.CallMessageArgs = {
         data: ethers.utils.hexlify(l2Call.asData()),
         sender,
       }
       this.client.request(
         callFunc,
         [params],
-        (
-          err: Error,
-          error: Error,
-          result: validatorserver.CallMessageReply
-        ) => {
+        (err: Error, error: Error, result: evm.CallMessageReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -286,7 +273,7 @@ export class ArbClient {
         addresses.push(filter.address)
       }
 
-      const params: validatorserver.FindLogsArgs = {
+      const params: evm.FindLogsArgs = {
         addresses,
         fromHeight: convertBlockTag(filter.fromBlock),
         toHeight: convertBlockTag(filter.toBlock),
@@ -295,7 +282,7 @@ export class ArbClient {
       return this.client.request(
         'Validator.FindLogs',
         [params],
-        (err: Error, error: Error, result: validatorserver.FindLogsReply) => {
+        (err: Error, error: Error, result: evm.FindLogsReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -309,12 +296,12 @@ export class ArbClient {
   }
 
   public getVmID(): Promise<string> {
-    const params: validatorserver.GetVMInfoArgs = {}
+    const params: evm.GetVMInfoArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
         'Validator.GetVMInfo',
         [params],
-        (err: Error, error: Error, result: validatorserver.GetVMInfoReply) => {
+        (err: Error, error: Error, result: evm.GetVMInfoReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -328,16 +315,12 @@ export class ArbClient {
   }
 
   public getAssertionCount(): Promise<number> {
-    const params: validatorserver.GetAssertionCountArgs = {}
+    const params: evm.GetAssertionCountArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
         'Validator.GetAssertionCount',
         [params],
-        (
-          err: Error,
-          error: Error,
-          result: validatorserver.GetAssertionCountReply
-        ) => {
+        (err: Error, error: Error, result: evm.GetAssertionCountReply) => {
           if (err) {
             reject(err)
           } else if (error) {
@@ -353,16 +336,12 @@ export class ArbClient {
   private async getNodeLocation(
     funcType: string
   ): Promise<NodeInfo | undefined> {
-    const params: validatorserver.GetLatestNodeLocationArgs = {}
+    const params: evm.GetLatestNodeLocationArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
         funcType,
         [params],
-        (
-          err: Error,
-          error: Error,
-          result: validatorserver.GetLatestNodeLocationReply
-        ) => {
+        (err: Error, error: Error, result: evm.GetLatestNodeLocationReply) => {
           if (err) {
             reject(err)
           } else if (error) {

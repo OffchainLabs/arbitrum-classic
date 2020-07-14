@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,4 +49,80 @@ message TxInfoBuf {
     uint64 startLogIndex = 5;
     NodeLocation location = 6;
     AVMLogProof proof = 7;
+}
+
+message TopicGroup {
+    repeated string topics = 1;
+}
+
+message FindLogsArgs {
+    string fromHeight = 1;
+    string toHeight = 2;
+    repeated string addresses = 3;
+    repeated TopicGroup topicGroups = 4;
+}
+
+message FindLogsReply {
+    repeated FullLogBuf logs = 4;
+}
+
+message GetOutputMessageArgs {
+    string AssertionNodeHash = 1;
+    string MsgIndex = 2;
+}
+
+message GetOutputMessageReply {
+    bool found = 1;
+    string rawVal = 2;
+}
+
+message GetMessageResultArgs {
+    string txHash = 1;
+}
+
+message GetMessageResultReply {
+    TxInfoBuf tx = 1;
+}
+
+message GetAssertionCountArgs {
+
+}
+
+message GetAssertionCountReply {
+    int32 assertionCount = 1;
+}
+
+message GetVMInfoArgs {
+
+}
+
+message GetVMInfoReply {
+    string vmID = 1;
+}
+
+message CallMessageArgs {
+    string data = 1;
+    string sender = 2;
+}
+
+message CallMessageReply {
+    string rawVal = 1;
+}
+
+message GetLatestNodeLocationArgs {
+}
+
+message GetLatestNodeLocationReply {
+    NodeLocation location = 1;
+}
+
+service RollupValidator {
+    rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
+    rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
+    rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
+    rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
+    rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
+    rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
+    rpc GetLatestNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
+    rpc GetLatestPendingNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
 }

@@ -20,7 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"log"
 	"os"
 	"path/filepath"

@@ -18,19 +18,19 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type executionChallenge struct {
 	*bisectionChallenge
-	challenge *executionchallenge.ExecutionChallenge
+	challenge *ethbridgecontracts.ExecutionChallenge
 }
 
 func newExecutionChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*executionChallenge, error) {
@@ -38,7 +38,7 @@ func newExecutionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	if err != nil {
 		return nil, err
 	}
-	executionContract, err := executionchallenge.NewExecutionChallenge(address, client)
+	executionContract, err := ethbridgecontracts.NewExecutionChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}

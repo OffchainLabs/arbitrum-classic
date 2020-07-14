@@ -1,5 +1,5 @@
 //
-// Copyright 2019-2020, Offchain Labs, Inc.
+// Copyright 2019, Offchain Labs, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -364,6 +364,732 @@ func (x *TxInfoBuf) GetProof() *AVMLogProof {
 	return nil
 }
 
+type TopicGroup struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Topics []string `protobuf:"bytes,1,rep,name=topics,proto3" json:"topics,omitempty"`
+}
+
+func (x *TopicGroup) Reset() {
+	*x = TopicGroup{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TopicGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TopicGroup) ProtoMessage() {}
+
+func (x *TopicGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TopicGroup.ProtoReflect.Descriptor instead.
+func (*TopicGroup) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TopicGroup) GetTopics() []string {
+	if x != nil {
+		return x.Topics
+	}
+	return nil
+}
+
+type FindLogsArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FromHeight  string        `protobuf:"bytes,1,opt,name=fromHeight,proto3" json:"fromHeight,omitempty"`
+	ToHeight    string        `protobuf:"bytes,2,opt,name=toHeight,proto3" json:"toHeight,omitempty"`
+	Addresses   []string      `protobuf:"bytes,3,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	TopicGroups []*TopicGroup `protobuf:"bytes,4,rep,name=topicGroups,proto3" json:"topicGroups,omitempty"`
+}
+
+func (x *FindLogsArgs) Reset() {
+	*x = FindLogsArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FindLogsArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FindLogsArgs) ProtoMessage() {}
+
+func (x *FindLogsArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FindLogsArgs.ProtoReflect.Descriptor instead.
+func (*FindLogsArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FindLogsArgs) GetFromHeight() string {
+	if x != nil {
+		return x.FromHeight
+	}
+	return ""
+}
+
+func (x *FindLogsArgs) GetToHeight() string {
+	if x != nil {
+		return x.ToHeight
+	}
+	return ""
+}
+
+func (x *FindLogsArgs) GetAddresses() []string {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
+func (x *FindLogsArgs) GetTopicGroups() []*TopicGroup {
+	if x != nil {
+		return x.TopicGroups
+	}
+	return nil
+}
+
+type FindLogsReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Logs []*FullLogBuf `protobuf:"bytes,4,rep,name=logs,proto3" json:"logs,omitempty"`
+}
+
+func (x *FindLogsReply) Reset() {
+	*x = FindLogsReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FindLogsReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FindLogsReply) ProtoMessage() {}
+
+func (x *FindLogsReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FindLogsReply.ProtoReflect.Descriptor instead.
+func (*FindLogsReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FindLogsReply) GetLogs() []*FullLogBuf {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+type GetOutputMessageArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	AssertionNodeHash string `protobuf:"bytes,1,opt,name=AssertionNodeHash,proto3" json:"AssertionNodeHash,omitempty"`
+	MsgIndex          string `protobuf:"bytes,2,opt,name=MsgIndex,proto3" json:"MsgIndex,omitempty"`
+}
+
+func (x *GetOutputMessageArgs) Reset() {
+	*x = GetOutputMessageArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetOutputMessageArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOutputMessageArgs) ProtoMessage() {}
+
+func (x *GetOutputMessageArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOutputMessageArgs.ProtoReflect.Descriptor instead.
+func (*GetOutputMessageArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetOutputMessageArgs) GetAssertionNodeHash() string {
+	if x != nil {
+		return x.AssertionNodeHash
+	}
+	return ""
+}
+
+func (x *GetOutputMessageArgs) GetMsgIndex() string {
+	if x != nil {
+		return x.MsgIndex
+	}
+	return ""
+}
+
+type GetOutputMessageReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Found  bool   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	RawVal string `protobuf:"bytes,2,opt,name=rawVal,proto3" json:"rawVal,omitempty"`
+}
+
+func (x *GetOutputMessageReply) Reset() {
+	*x = GetOutputMessageReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetOutputMessageReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOutputMessageReply) ProtoMessage() {}
+
+func (x *GetOutputMessageReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOutputMessageReply.ProtoReflect.Descriptor instead.
+func (*GetOutputMessageReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetOutputMessageReply) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
+func (x *GetOutputMessageReply) GetRawVal() string {
+	if x != nil {
+		return x.RawVal
+	}
+	return ""
+}
+
+type GetMessageResultArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	TxHash string `protobuf:"bytes,1,opt,name=txHash,proto3" json:"txHash,omitempty"`
+}
+
+func (x *GetMessageResultArgs) Reset() {
+	*x = GetMessageResultArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMessageResultArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMessageResultArgs) ProtoMessage() {}
+
+func (x *GetMessageResultArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMessageResultArgs.ProtoReflect.Descriptor instead.
+func (*GetMessageResultArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetMessageResultArgs) GetTxHash() string {
+	if x != nil {
+		return x.TxHash
+	}
+	return ""
+}
+
+type GetMessageResultReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tx *TxInfoBuf `protobuf:"bytes,1,opt,name=tx,proto3" json:"tx,omitempty"`
+}
+
+func (x *GetMessageResultReply) Reset() {
+	*x = GetMessageResultReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMessageResultReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMessageResultReply) ProtoMessage() {}
+
+func (x *GetMessageResultReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMessageResultReply.ProtoReflect.Descriptor instead.
+func (*GetMessageResultReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetMessageResultReply) GetTx() *TxInfoBuf {
+	if x != nil {
+		return x.Tx
+	}
+	return nil
+}
+
+type GetAssertionCountArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetAssertionCountArgs) Reset() {
+	*x = GetAssertionCountArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetAssertionCountArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAssertionCountArgs) ProtoMessage() {}
+
+func (x *GetAssertionCountArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAssertionCountArgs.ProtoReflect.Descriptor instead.
+func (*GetAssertionCountArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{11}
+}
+
+type GetAssertionCountReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	AssertionCount int32 `protobuf:"varint,1,opt,name=assertionCount,proto3" json:"assertionCount,omitempty"`
+}
+
+func (x *GetAssertionCountReply) Reset() {
+	*x = GetAssertionCountReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetAssertionCountReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAssertionCountReply) ProtoMessage() {}
+
+func (x *GetAssertionCountReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAssertionCountReply.ProtoReflect.Descriptor instead.
+func (*GetAssertionCountReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetAssertionCountReply) GetAssertionCount() int32 {
+	if x != nil {
+		return x.AssertionCount
+	}
+	return 0
+}
+
+type GetVMInfoArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetVMInfoArgs) Reset() {
+	*x = GetVMInfoArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetVMInfoArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVMInfoArgs) ProtoMessage() {}
+
+func (x *GetVMInfoArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVMInfoArgs.ProtoReflect.Descriptor instead.
+func (*GetVMInfoArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{13}
+}
+
+type GetVMInfoReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	VmID string `protobuf:"bytes,1,opt,name=vmID,proto3" json:"vmID,omitempty"`
+}
+
+func (x *GetVMInfoReply) Reset() {
+	*x = GetVMInfoReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetVMInfoReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVMInfoReply) ProtoMessage() {}
+
+func (x *GetVMInfoReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVMInfoReply.ProtoReflect.Descriptor instead.
+func (*GetVMInfoReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetVMInfoReply) GetVmID() string {
+	if x != nil {
+		return x.VmID
+	}
+	return ""
+}
+
+type CallMessageArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Data   string `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Sender string `protobuf:"bytes,2,opt,name=sender,proto3" json:"sender,omitempty"`
+}
+
+func (x *CallMessageArgs) Reset() {
+	*x = CallMessageArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CallMessageArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallMessageArgs) ProtoMessage() {}
+
+func (x *CallMessageArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallMessageArgs.ProtoReflect.Descriptor instead.
+func (*CallMessageArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CallMessageArgs) GetData() string {
+	if x != nil {
+		return x.Data
+	}
+	return ""
+}
+
+func (x *CallMessageArgs) GetSender() string {
+	if x != nil {
+		return x.Sender
+	}
+	return ""
+}
+
+type CallMessageReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	RawVal string `protobuf:"bytes,1,opt,name=rawVal,proto3" json:"rawVal,omitempty"`
+}
+
+func (x *CallMessageReply) Reset() {
+	*x = CallMessageReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CallMessageReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallMessageReply) ProtoMessage() {}
+
+func (x *CallMessageReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallMessageReply.ProtoReflect.Descriptor instead.
+func (*CallMessageReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CallMessageReply) GetRawVal() string {
+	if x != nil {
+		return x.RawVal
+	}
+	return ""
+}
+
+type GetLatestNodeLocationArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetLatestNodeLocationArgs) Reset() {
+	*x = GetLatestNodeLocationArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetLatestNodeLocationArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLatestNodeLocationArgs) ProtoMessage() {}
+
+func (x *GetLatestNodeLocationArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLatestNodeLocationArgs.ProtoReflect.Descriptor instead.
+func (*GetLatestNodeLocationArgs) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{17}
+}
+
+type GetLatestNodeLocationReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Location *NodeLocation `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+}
+
+func (x *GetLatestNodeLocationReply) Reset() {
+	*x = GetLatestNodeLocationReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_evm_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetLatestNodeLocationReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLatestNodeLocationReply) ProtoMessage() {}
+
+func (x *GetLatestNodeLocationReply) ProtoReflect() protoreflect.Message {
+	mi := &file_evm_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLatestNodeLocationReply.ProtoReflect.Descriptor instead.
+func (*GetLatestNodeLocationReply) Descriptor() ([]byte, []int) {
+	return file_evm_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetLatestNodeLocationReply) GetLocation() *NodeLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
 var File_evm_proto protoreflect.FileDescriptor
 
 var file_evm_proto_rawDesc = []byte{
@@ -413,11 +1139,104 @@ var file_evm_proto_rawDesc = []byte{
 	0x6f, 0x6e, 0x52, 0x08, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x26, 0x0a, 0x05,
 	0x70, 0x72, 0x6f, 0x6f, 0x66, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x65, 0x76,
 	0x6d, 0x2e, 0x41, 0x56, 0x4d, 0x4c, 0x6f, 0x67, 0x50, 0x72, 0x6f, 0x6f, 0x66, 0x52, 0x05, 0x70,
-	0x72, 0x6f, 0x6f, 0x66, 0x42, 0x42, 0x5a, 0x40, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x6f, 0x66, 0x66, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6c, 0x61, 0x62, 0x73, 0x2f,
-	0x61, 0x72, 0x62, 0x69, 0x74, 0x72, 0x75, 0x6d, 0x2f, 0x70, 0x61, 0x63, 0x6b, 0x61, 0x67, 0x65,
-	0x73, 0x2f, 0x61, 0x72, 0x62, 0x2d, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2d,
-	0x63, 0x6f, 0x72, 0x65, 0x2f, 0x65, 0x76, 0x6d, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x72, 0x6f, 0x6f, 0x66, 0x22, 0x24, 0x0a, 0x0a, 0x54, 0x6f, 0x70, 0x69, 0x63, 0x47, 0x72, 0x6f,
+	0x75, 0x70, 0x12, 0x16, 0x0a, 0x06, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x09, 0x52, 0x06, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x73, 0x22, 0x9b, 0x01, 0x0a, 0x0c, 0x46,
+	0x69, 0x6e, 0x64, 0x4c, 0x6f, 0x67, 0x73, 0x41, 0x72, 0x67, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x66,
+	0x72, 0x6f, 0x6d, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0a, 0x66, 0x72, 0x6f, 0x6d, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x74,
+	0x6f, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x74,
+	0x6f, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x61, 0x64, 0x64, 0x72, 0x65,
+	0x73, 0x73, 0x65, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x61, 0x64, 0x64, 0x72,
+	0x65, 0x73, 0x73, 0x65, 0x73, 0x12, 0x31, 0x0a, 0x0b, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x47, 0x72,
+	0x6f, 0x75, 0x70, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x65, 0x76, 0x6d,
+	0x2e, 0x54, 0x6f, 0x70, 0x69, 0x63, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x52, 0x0b, 0x74, 0x6f, 0x70,
+	0x69, 0x63, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x22, 0x34, 0x0a, 0x0d, 0x46, 0x69, 0x6e, 0x64,
+	0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x23, 0x0a, 0x04, 0x6c, 0x6f, 0x67,
+	0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x46, 0x75,
+	0x6c, 0x6c, 0x4c, 0x6f, 0x67, 0x42, 0x75, 0x66, 0x52, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x22, 0x60,
+	0x0a, 0x14, 0x47, 0x65, 0x74, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x41, 0x72, 0x67, 0x73, 0x12, 0x2c, 0x0a, 0x11, 0x41, 0x73, 0x73, 0x65, 0x72, 0x74,
+	0x69, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65, 0x48, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x11, 0x41, 0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65,
+	0x48, 0x61, 0x73, 0x68, 0x12, 0x1a, 0x0a, 0x08, 0x4d, 0x73, 0x67, 0x49, 0x6e, 0x64, 0x65, 0x78,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x4d, 0x73, 0x67, 0x49, 0x6e, 0x64, 0x65, 0x78,
+	0x22, 0x45, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x4d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x6f, 0x75,
+	0x6e, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x66, 0x6f, 0x75, 0x6e, 0x64, 0x12,
+	0x16, 0x0a, 0x06, 0x72, 0x61, 0x77, 0x56, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x72, 0x61, 0x77, 0x56, 0x61, 0x6c, 0x22, 0x2e, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x4d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x41, 0x72, 0x67, 0x73, 0x12,
+	0x16, 0x0a, 0x06, 0x74, 0x78, 0x48, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x74, 0x78, 0x48, 0x61, 0x73, 0x68, 0x22, 0x37, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x4d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x12, 0x1e, 0x0a, 0x02, 0x74, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x65,
+	0x76, 0x6d, 0x2e, 0x54, 0x78, 0x49, 0x6e, 0x66, 0x6f, 0x42, 0x75, 0x66, 0x52, 0x02, 0x74, 0x78,
+	0x22, 0x17, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x41, 0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e,
+	0x43, 0x6f, 0x75, 0x6e, 0x74, 0x41, 0x72, 0x67, 0x73, 0x22, 0x40, 0x0a, 0x16, 0x47, 0x65, 0x74,
+	0x41, 0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65,
+	0x70, 0x6c, 0x79, 0x12, 0x26, 0x0a, 0x0e, 0x61, 0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e,
+	0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0e, 0x61, 0x73, 0x73,
+	0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x22, 0x0f, 0x0a, 0x0d, 0x47,
+	0x65, 0x74, 0x56, 0x4d, 0x49, 0x6e, 0x66, 0x6f, 0x41, 0x72, 0x67, 0x73, 0x22, 0x24, 0x0a, 0x0e,
+	0x47, 0x65, 0x74, 0x56, 0x4d, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x12,
+	0x0a, 0x04, 0x76, 0x6d, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x76, 0x6d,
+	0x49, 0x44, 0x22, 0x3d, 0x0a, 0x0f, 0x43, 0x61, 0x6c, 0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x41, 0x72, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x65, 0x6e,
+	0x64, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x65, 0x6e, 0x64, 0x65,
+	0x72, 0x22, 0x2a, 0x0a, 0x10, 0x43, 0x61, 0x6c, 0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
+	0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x61, 0x77, 0x56, 0x61, 0x6c, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x61, 0x77, 0x56, 0x61, 0x6c, 0x22, 0x1b, 0x0a,
+	0x19, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x6f,
+	0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x72, 0x67, 0x73, 0x22, 0x4b, 0x0a, 0x1a, 0x47, 0x65,
+	0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x2d, 0x0a, 0x08, 0x6c, 0x6f, 0x63, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x65, 0x76, 0x6d,
+	0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x08, 0x6c,
+	0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x32, 0xd5, 0x04, 0x0a, 0x0f, 0x52, 0x6f, 0x6c, 0x6c,
+	0x75, 0x70, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x12, 0x49, 0x0a, 0x10, 0x47,
+	0x65, 0x74, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12,
+	0x19, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x4d,
+	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x1a, 0x2e, 0x65, 0x76, 0x6d,
+	0x2e, 0x47, 0x65, 0x74, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x49, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x19, 0x2e, 0x65, 0x76, 0x6d,
+	0x2e, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c,
+	0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x1a, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4d,
+	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52, 0x65, 0x70, 0x6c,
+	0x79, 0x12, 0x3a, 0x0a, 0x0b, 0x43, 0x61, 0x6c, 0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
+	0x12, 0x14, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x43, 0x61, 0x6c, 0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x15, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x43, 0x61, 0x6c,
+	0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x31, 0x0a,
+	0x08, 0x46, 0x69, 0x6e, 0x64, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x11, 0x2e, 0x65, 0x76, 0x6d, 0x2e,
+	0x46, 0x69, 0x6e, 0x64, 0x4c, 0x6f, 0x67, 0x73, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x12, 0x2e, 0x65,
+	0x76, 0x6d, 0x2e, 0x46, 0x69, 0x6e, 0x64, 0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x12, 0x4c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x41, 0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e,
+	0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x1a, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x41,
+	0x73, 0x73, 0x65, 0x72, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x41, 0x72, 0x67,
+	0x73, 0x1a, 0x1b, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x41, 0x73, 0x73, 0x65, 0x72,
+	0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x34,
+	0x0a, 0x09, 0x47, 0x65, 0x74, 0x56, 0x4d, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12, 0x2e, 0x65, 0x76,
+	0x6d, 0x2e, 0x47, 0x65, 0x74, 0x56, 0x4d, 0x49, 0x6e, 0x66, 0x6f, 0x41, 0x72, 0x67, 0x73, 0x1a,
+	0x13, 0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x56, 0x4d, 0x49, 0x6e, 0x66, 0x6f, 0x52,
+	0x65, 0x70, 0x6c, 0x79, 0x12, 0x58, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73,
+	0x74, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1e, 0x2e,
+	0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f, 0x64,
+	0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x1f, 0x2e,
+	0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f, 0x64,
+	0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x5f,
+	0x0a, 0x1c, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x50, 0x65, 0x6e, 0x64, 0x69,
+	0x6e, 0x67, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1e,
+	0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f,
+	0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x1f,
+	0x2e, 0x65, 0x76, 0x6d, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x4e, 0x6f,
+	0x64, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x42,
+	0x42, 0x5a, 0x40, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6f, 0x66,
+	0x66, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x61, 0x72, 0x62, 0x69, 0x74,
+	0x72, 0x75, 0x6d, 0x2f, 0x70, 0x61, 0x63, 0x6b, 0x61, 0x67, 0x65, 0x73, 0x2f, 0x61, 0x72, 0x62,
+	0x2d, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2d, 0x63, 0x6f, 0x72, 0x65, 0x2f,
+	0x65, 0x76, 0x6d, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -432,22 +1251,57 @@ func file_evm_proto_rawDescGZIP() []byte {
 	return file_evm_proto_rawDescData
 }
 
-var file_evm_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_evm_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_evm_proto_goTypes = []interface{}{
-	(*NodeLocation)(nil), // 0: evm.NodeLocation
-	(*FullLogBuf)(nil),   // 1: evm.FullLogBuf
-	(*AVMLogProof)(nil),  // 2: evm.AVMLogProof
-	(*TxInfoBuf)(nil),    // 3: evm.TxInfoBuf
+	(*NodeLocation)(nil),               // 0: evm.NodeLocation
+	(*FullLogBuf)(nil),                 // 1: evm.FullLogBuf
+	(*AVMLogProof)(nil),                // 2: evm.AVMLogProof
+	(*TxInfoBuf)(nil),                  // 3: evm.TxInfoBuf
+	(*TopicGroup)(nil),                 // 4: evm.TopicGroup
+	(*FindLogsArgs)(nil),               // 5: evm.FindLogsArgs
+	(*FindLogsReply)(nil),              // 6: evm.FindLogsReply
+	(*GetOutputMessageArgs)(nil),       // 7: evm.GetOutputMessageArgs
+	(*GetOutputMessageReply)(nil),      // 8: evm.GetOutputMessageReply
+	(*GetMessageResultArgs)(nil),       // 9: evm.GetMessageResultArgs
+	(*GetMessageResultReply)(nil),      // 10: evm.GetMessageResultReply
+	(*GetAssertionCountArgs)(nil),      // 11: evm.GetAssertionCountArgs
+	(*GetAssertionCountReply)(nil),     // 12: evm.GetAssertionCountReply
+	(*GetVMInfoArgs)(nil),              // 13: evm.GetVMInfoArgs
+	(*GetVMInfoReply)(nil),             // 14: evm.GetVMInfoReply
+	(*CallMessageArgs)(nil),            // 15: evm.CallMessageArgs
+	(*CallMessageReply)(nil),           // 16: evm.CallMessageReply
+	(*GetLatestNodeLocationArgs)(nil),  // 17: evm.GetLatestNodeLocationArgs
+	(*GetLatestNodeLocationReply)(nil), // 18: evm.GetLatestNodeLocationReply
 }
 var file_evm_proto_depIdxs = []int32{
-	0, // 0: evm.FullLogBuf.location:type_name -> evm.NodeLocation
-	0, // 1: evm.TxInfoBuf.location:type_name -> evm.NodeLocation
-	2, // 2: evm.TxInfoBuf.proof:type_name -> evm.AVMLogProof
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: evm.FullLogBuf.location:type_name -> evm.NodeLocation
+	0,  // 1: evm.TxInfoBuf.location:type_name -> evm.NodeLocation
+	2,  // 2: evm.TxInfoBuf.proof:type_name -> evm.AVMLogProof
+	4,  // 3: evm.FindLogsArgs.topicGroups:type_name -> evm.TopicGroup
+	1,  // 4: evm.FindLogsReply.logs:type_name -> evm.FullLogBuf
+	3,  // 5: evm.GetMessageResultReply.tx:type_name -> evm.TxInfoBuf
+	0,  // 6: evm.GetLatestNodeLocationReply.location:type_name -> evm.NodeLocation
+	7,  // 7: evm.RollupValidator.GetOutputMessage:input_type -> evm.GetOutputMessageArgs
+	9,  // 8: evm.RollupValidator.GetMessageResult:input_type -> evm.GetMessageResultArgs
+	15, // 9: evm.RollupValidator.CallMessage:input_type -> evm.CallMessageArgs
+	5,  // 10: evm.RollupValidator.FindLogs:input_type -> evm.FindLogsArgs
+	11, // 11: evm.RollupValidator.GetAssertionCount:input_type -> evm.GetAssertionCountArgs
+	13, // 12: evm.RollupValidator.GetVMInfo:input_type -> evm.GetVMInfoArgs
+	17, // 13: evm.RollupValidator.GetLatestNodeLocation:input_type -> evm.GetLatestNodeLocationArgs
+	17, // 14: evm.RollupValidator.GetLatestPendingNodeLocation:input_type -> evm.GetLatestNodeLocationArgs
+	8,  // 15: evm.RollupValidator.GetOutputMessage:output_type -> evm.GetOutputMessageReply
+	10, // 16: evm.RollupValidator.GetMessageResult:output_type -> evm.GetMessageResultReply
+	16, // 17: evm.RollupValidator.CallMessage:output_type -> evm.CallMessageReply
+	6,  // 18: evm.RollupValidator.FindLogs:output_type -> evm.FindLogsReply
+	12, // 19: evm.RollupValidator.GetAssertionCount:output_type -> evm.GetAssertionCountReply
+	14, // 20: evm.RollupValidator.GetVMInfo:output_type -> evm.GetVMInfoReply
+	18, // 21: evm.RollupValidator.GetLatestNodeLocation:output_type -> evm.GetLatestNodeLocationReply
+	18, // 22: evm.RollupValidator.GetLatestPendingNodeLocation:output_type -> evm.GetLatestNodeLocationReply
+	15, // [15:23] is the sub-list for method output_type
+	7,  // [7:15] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_evm_proto_init() }
@@ -504,6 +1358,186 @@ func file_evm_proto_init() {
 				return nil
 			}
 		}
+		file_evm_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TopicGroup); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FindLogsArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FindLogsReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetOutputMessageArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetOutputMessageReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetMessageResultArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetMessageResultReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetAssertionCountArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetAssertionCountReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetVMInfoArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetVMInfoReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CallMessageArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CallMessageReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetLatestNodeLocationArgs); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_evm_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetLatestNodeLocationReply); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -511,9 +1545,9 @@ func file_evm_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_evm_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   19,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_evm_proto_goTypes,
 		DependencyIndexes: file_evm_proto_depIdxs,

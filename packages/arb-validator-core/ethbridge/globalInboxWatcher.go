@@ -19,11 +19,10 @@ package ethbridge
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
 
 	errors2 "github.com/pkg/errors"
 
@@ -42,7 +41,7 @@ var messageDeliveredFromOriginID ethcommon.Hash
 var l2MessageFromOriginCallABI abi.Method
 
 func init() {
-	inbox, err := abi.JSON(strings.NewReader(globalinbox.GlobalInboxABI))
+	inbox, err := abi.JSON(strings.NewReader(ethbridgecontracts.GlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +51,7 @@ func init() {
 }
 
 type globalInboxWatcher struct {
-	GlobalInbox *globalinbox.GlobalInbox
+	GlobalInbox *ethbridgecontracts.GlobalInbox
 
 	rollupAddress ethcommon.Address
 	inboxAddress  ethcommon.Address
@@ -64,7 +63,7 @@ func newGlobalInboxWatcher(
 	rollupAddress ethcommon.Address,
 	client ethutils.EthClient,
 ) (*globalInboxWatcher, error) {
-	globalInboxContract, err := globalinbox.NewGlobalInbox(
+	globalInboxContract, err := ethbridgecontracts.NewGlobalInbox(
 		globalInboxAddress,
 		client,
 	)

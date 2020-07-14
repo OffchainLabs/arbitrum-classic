@@ -1,7 +1,6 @@
 syntax = "proto3";
 package valprotocol;
 import "arb-util/common/common.proto";
-import "arb-util/protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol";
 
 message PreconditionBuf {
@@ -24,17 +23,6 @@ message ChainParamsBuf {
     common.TimeTicksBuf gracePeriod = 2;
     uint64 maxExecutionSteps = 3;
     uint64 ArbGasSpeedLimitPerTick = 4;
-}
-
-message TokenTypeBuf {
-    bytes value = 1;
-}
-
-message MessageBuf {
-    bytes value = 1;
-    TokenTypeBuf tokenType = 2;
-    common.BigIntegerBuf amount = 3;
-    common.AddressBuf sender = 4;
 }
 
 message VMProtoDataBuf {

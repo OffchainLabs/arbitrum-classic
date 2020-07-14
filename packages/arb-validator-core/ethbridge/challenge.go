@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strings"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 var initiatedChallengeID ethcommon.Hash
@@ -37,7 +37,7 @@ var timedOutAsserterID ethcommon.Hash
 var timedOutChallengerID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.ExecutionChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func init() {
 }
 
 type challenge struct {
-	Challenge *executionchallenge.Challenge
+	Challenge *ethbridgecontracts.Challenge
 
 	client          ethutils.EthClient
 	auth            *TransactAuth
@@ -55,7 +55,7 @@ type challenge struct {
 }
 
 func newChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challenge, error) {
-	challengeContract, err := executionchallenge.NewChallenge(address, client)
+	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -83,11 +83,11 @@ func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, m
 }
 
 type challengeWatcher struct {
-	Challenge *executionchallenge.Challenge
+	Challenge *ethbridgecontracts.Challenge
 }
 
 func newChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*challengeWatcher, error) {
-	challengeContract, err := executionchallenge.NewChallenge(address, client)
+	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}

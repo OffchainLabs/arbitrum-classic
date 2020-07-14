@@ -18,26 +18,26 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/messageschallenge"
 )
 
 var messagesBisectedID ethcommon.Hash
 var messagesOneStepProofCompletedID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.MessagesChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func init() {
 
 type messagesChallengeWatcher struct {
 	*bisectionChallengeWatcher
-	contract *messageschallenge.MessagesChallenge
+	contract *ethbridgecontracts.MessagesChallenge
 	client   ethutils.EthClient
 	address  ethcommon.Address
 	topics   [][]ethcommon.Hash
@@ -58,7 +58,7 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client ethutils.EthC
 	if err != nil {
 		return nil, err
 	}
-	messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
+	messagesContract, err := ethbridgecontracts.NewMessagesChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}

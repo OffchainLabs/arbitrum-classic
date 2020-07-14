@@ -4,26 +4,14 @@
 ### --------------------------------------------------------------------
 
 yarn workspace arb-bridge-eth typechain
-yarn workspace contract-templates install
-yarn workspace contract-templates build
+yarn workspace arbos-contracts buidler typechain
 
 cd ../arb-bridge-eth/build/types
-\cp -rf ArbFactory* ArbRollup* GlobalInbox* ../../../arb-provider-ethers/src/lib/abi
-cd ../../../arb-provider-ethers
 
-yarn run typechain \
-    --target=ethers \
-    --outDir src/lib/abi \
-    '../arb-compiler-evm/contract-templates/build/contracts/ArbERC721.json'
-yarn run typechain \
-    --target=ethers \
-    --outDir src/lib/abi \
-    '../arb-compiler-evm/contract-templates/build/contracts/ArbERC20.json'
-yarn run typechain \
-    --target=ethers \
-    --outDir src/lib/abi \
-    '../arb-compiler-evm/contract-templates/build/contracts/ArbSys.json'
-yarn run typechain \
-    --target=ethers \
-    --outDir src/lib/abi \
-    '../arb-compiler-evm/contract-templates/build/contracts/ArbInfo.json'
+\cp -rf ArbFactory* ArbRollup* GlobalInbox* ../../../arb-provider-ethers/src/lib/abi
+
+cd ../../../arbos-contracts/typechain
+
+\cp -rf Arb* ../../arb-provider-ethers/src/lib/abi
+
+cd ../../arb-provider-ethers

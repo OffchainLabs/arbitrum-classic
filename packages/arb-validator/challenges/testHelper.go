@@ -24,7 +24,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"log"
@@ -299,22 +299,34 @@ func getChallengeInfo(
 	asserterClient := ethbridge.NewEthAuthClient(client, asserter)
 	challengerClient := ethbridge.NewEthAuthClient(client, challenger)
 
-	tester, err := ethbridgetest.NewChallengeTester(testerAddress, client, asserter)
+	tester, err := ethbridgetestcontracts.NewChallengeTester(testerAddress, client)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
 
-	challengeAddress, blockId, err := tester.StartChallenge(
-		context.Background(),
-		asserterClient.Address(),
-		challengerClient.Address(),
-		common.TicksFromBlockNum(common.NewTimeBlocksInt(5)),
+	tx, err := tester.StartChallenge(
+		asserter,
+		asserterClient.Address().ToEthAddress(),
+		challengerClient.Address().ToEthAddress(),
+		common.TicksFromBlockNum(common.NewTimeBlocksInt(5)).Val,
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
 	}
+
+	receipt, err := ethbridge.WaitForReceiptWithResults(context.Background(), client, asserter.From, tx, "StartChallenge")
+	if err != nil {
+		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
+	}
+
+	if len(receipt.Logs) != 1 {
+		return nil, nil, common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
+	}
+
+	challengeAddress := common.NewAddressFromEth(receipt.Logs[0].Address)
+	blockId := ethbridge.GetReceiptBlockID(receipt)
 
 	log.Println("Started challenge at block", blockId)
 
