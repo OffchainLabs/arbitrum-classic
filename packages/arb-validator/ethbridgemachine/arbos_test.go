@@ -20,6 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -74,7 +77,7 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.Message, sen
 }
 
 func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
-	info, err := abi.JSON(strings.NewReader(goarbitrum.ArbInfoABI))
+	info, err := abi.JSON(strings.NewReader(arboscontracts.ArbInfoABI))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +253,18 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//results := runMessage(t, mach)
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	results := runMessage(t, mach, initMsg, chain)
+	log.Println(results)
 
 	//dest := common.RandAddress()
 	dest := deployFib(t, mach, common.RandAddress())
@@ -306,7 +320,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	msg := message.TransactionBatch{Transactions: txes}
-	results := runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
+	results = runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count")
 	}
