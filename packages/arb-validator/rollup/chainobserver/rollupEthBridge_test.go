@@ -204,7 +204,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	if err := checkpointer.Initialize(contractPath); err != nil {
 		return nil, err
 	}
-	chain, err := NewChain(
+	chain, err := newChain(
 		dummyAddress,
 		checkpointer,
 		valprotocol.ChainParams{
@@ -213,7 +213,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
-		false,
 		&common.BlockId{
 			Height:     common.NewTimeBlocks(big.NewInt(10)),
 			HeaderHash: common.Hash{},

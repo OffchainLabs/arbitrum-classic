@@ -55,7 +55,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := ckptcontext.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2, err := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
+	chain2, err := chainBuf.unmarshalFromCheckpoint(ctx, nil)
 	if err != nil {
 		t.Error(err)
 	}

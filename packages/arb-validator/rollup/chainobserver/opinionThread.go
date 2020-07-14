@@ -39,7 +39,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 		log.Println("Launching opinion thread")
 		preparingAssertions := make(map[common.Hash]bool)
 		preparedAssertions := make(map[common.Hash]*chainlistener.PreparedAssertion)
-		preparedAssertionsMut := new(sync.Mutex)
+		// This mutex protects all access to preparingAssertions and preparedAssertions
+		assertionsMut := new(sync.Mutex)
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
@@ -62,9 +63,9 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			var newOpinion valprotocol.ChildType
 			var nextMachine machine.Machine
 			var validExecution *protocol.ExecutionAssertion
-			preparedAssertionsMut.Lock()
+			assertionsMut.Lock()
 			prepped, found := preparedAssertions[currentHash]
-			preparedAssertionsMut.Unlock()
+			assertionsMut.Unlock()
 			disputable := successor.Disputable()
 
 			if disputable == nil {
@@ -99,10 +100,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
 			}
 			// Reset prepared
-			preparedAssertionsMut.Lock()
+			assertionsMut.Lock()
 			preparingAssertions = make(map[common.Hash]bool)
 			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
-			preparedAssertionsMut.Unlock()
+			assertionsMut.Unlock()
 			chain.RLock()
 			correctNode := chain.NodeGraph.GetSuccessor(currentOpinion, newOpinion)
 			if correctNode != nil {
@@ -151,15 +152,15 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					break
 				}
 				// Prepare next assertion
-				preparedAssertionsMut.Lock()
+				assertionsMut.Lock()
 				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
 				preparingAssertions[chain.calculatedValidNode.Hash()] = true
-				preparedAssertionsMut.Unlock()
+				assertionsMut.Unlock()
 				if !isPreparing {
 					go func() {
-						prepped, err := chain.prepareAssertion(chain.latestBlockId)
-						preparedAssertionsMut.Lock()
-						defer preparedAssertionsMut.Unlock()
+						prepped, err := chain.prepareAssertion(chain.assumedValidBlock)
+						assertionsMut.Lock()
+						defer assertionsMut.Unlock()
 						if err != nil {
 							preparingAssertions[chain.calculatedValidNode.Hash()] = false
 							return
@@ -167,9 +168,9 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						preparedAssertions[prepped.Prev.Hash()] = prepped
 					}()
 				} else {
-					preparedAssertionsMut.Lock()
+					assertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
-					preparedAssertionsMut.Unlock()
+					assertionsMut.Unlock()
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
 						chain.RUnlock()
 						chain.Lock()

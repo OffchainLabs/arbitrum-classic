@@ -15,12 +15,12 @@
  */
 
 syntax = "proto3";
-package rollup;
+package chainobserver;
 import "arb-util/common/common.proto";
 import "arb-validator/nodegraph/nodegraph.proto";
 import "arb-validator/structures/structures.proto";
 
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver";
 
 message ChainObserverBuf {
     nodegraph.StakedNodeGraphBuf stakedNodeGraph = 1;
@@ -29,5 +29,4 @@ message ChainObserverBuf {
     common.HashBuf knownValidNode = 4;
     common.HashBuf calculatedValidNode = 5;
     common.BlockIdBuf latestBlockId = 6;
-    bool isOpinionated = 7;
 }

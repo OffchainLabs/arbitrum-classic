@@ -23,7 +23,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
+	errors2 "github.com/pkg/errors"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 
@@ -37,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-//go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. chainobserver.proto
+//go:generate protoc -I. -I ../../.. --go_out=paths=source_relative:. chainobserver.proto
 
 type ChainObserver struct {
 	*sync.RWMutex
@@ -47,80 +49,83 @@ type ChainObserver struct {
 	KnownValidNode      *structures.Node
 	calculatedValidNode *structures.Node
 	latestBlockId       *common.BlockId
-	listeners           []chainlistener.ChainListener
-	checkpointer        checkpointing.RollupCheckpointer
-	isOpinionated       bool
-	atHead              bool
-	pendingState        machine.Machine
+	// assumedValidBlock is used when making assertions so that we don't include messages past the threshold
+	// If there is a reorg past that depth, our assertion could be invalidated. Invalidation isn't a problem
+	// and would only lose the validator a small amount of money, so this assumption being violated is safe.
+	assumedValidBlock *common.BlockId
+	listeners         []chainlistener.ChainListener
+	checkpointer      checkpointing.RollupCheckpointer
+	isOpinionated     bool
+	atHead            bool
+	pendingState      machine.Machine
 }
 
-func NewChain(
-	rollupAddr common.Address,
+func tryRestoreFromCheckpoint(
+	ctx context.Context,
+	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
-	vmParams valprotocol.ChainParams,
-	updateOpinion bool,
-	startBlockId *common.BlockId,
-	creationTxHash common.Hash,
-) (*ChainObserver, error) {
-	mach, err := checkpointer.GetInitialMachine()
-	if err != nil {
-		return nil, err
+) *ChainObserver {
+	var chain *ChainObserver
+	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+		chainObserverBuf := &ChainObserverBuf{}
+		if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
+			return err
+		}
+		var err error
+		chain, err = chainObserverBuf.unmarshalFromCheckpoint(restoreCtx, checkpointer)
+		return err
+	})
+	if err != nil || chain == nil {
+		return nil
 	}
-	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams, creationTxHash)
-	ret := &ChainObserver{
-		RWMutex:             &sync.RWMutex{},
-		NodeGraph:           nodeGraph,
-		rollupAddr:          rollupAddr,
-		Inbox:               structures.NewInbox(),
-		KnownValidNode:      nodeGraph.LatestConfirmed(),
-		calculatedValidNode: nodeGraph.LatestConfirmed(),
-		latestBlockId:       startBlockId,
-		listeners:           []chainlistener.ChainListener{},
-		checkpointer:        checkpointer,
-		isOpinionated:       false,
-		atHead:              false,
-	}
-	ret.Lock()
-	defer ret.Unlock()
-	if updateOpinion {
-		ret.isOpinionated = true
-	}
-	return ret, nil
+	return chain
 }
 
-func InitializeChainObserver(
+func NewChainObserver(
 	ctx context.Context,
 	rollupAddr common.Address,
 	updateOpinion bool,
 	clnt arbbridge.ChainTimeGetter,
 	watcher arbbridge.ArbRollupWatcher,
 	checkpointer checkpointing.RollupCheckpointer,
+	assumedValidDepth int64,
 ) (*ChainObserver, error) {
+	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var chain *ChainObserver
 	if checkpointer.HasCheckpointedState() {
-		var chain *ChainObserver
-		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
-			chainObserverBuf := &ChainObserverBuf{}
-			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
-				return err
-			}
-			var err error
-			chain, err = chainObserverBuf.UnmarshalFromCheckpoint(restoreCtx, checkpointer)
-			return err
-		}); err == nil && chain != nil {
-			return chain, nil
+		chain = tryRestoreFromCheckpoint(ctx, clnt, checkpointer)
+	}
+	if chain == nil {
+		params, err := watcher.GetParams(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		chain, err = newChain(
+			rollupAddr,
+			checkpointer,
+			params,
+			blockId,
+			creationHash,
+		)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	log.Println("No valid checkpoints so starting from fresh state")
-	params, err := watcher.GetParams(ctx)
+	chain.isOpinionated = updateOpinion
+
+	err = chain.UpdateAssumedValidBlock(ctx, clnt, assumedValidDepth)
 	if err != nil {
-		log.Fatal(err)
+		// If we can't update the valid block right now, just use the chain creation height
+		chain.assumedValidBlock = blockId
 	}
-	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return NewChain(rollupAddr, checkpointer, params, updateOpinion, blockId, creationHash)
+
+	return chain, nil
 }
 
 func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
@@ -245,11 +250,10 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointCont
 		KnownValidNode:      chain.KnownValidNode.Hash().MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.Hash().MarshalToBuf(),
 		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
-		IsOpinionated:       chain.isOpinionated,
 	}
 }
 
-func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
+func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
 ) (*ChainObserver, error) {
@@ -281,7 +285,34 @@ func (x *ChainObserverBuf) UnmarshalFromCheckpoint(
 		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
-		isOpinionated:       x.IsOpinionated,
+		atHead:              false,
+	}, nil
+}
+
+func newChain(
+	rollupAddr common.Address,
+	checkpointer checkpointing.RollupCheckpointer,
+	vmParams valprotocol.ChainParams,
+	startBlockId *common.BlockId,
+	creationTxHash common.Hash,
+) (*ChainObserver, error) {
+	mach, err := checkpointer.GetInitialMachine()
+	if err != nil {
+		return nil, err
+	}
+	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams, creationTxHash)
+	return &ChainObserver{
+		RWMutex:             &sync.RWMutex{},
+		NodeGraph:           nodeGraph,
+		rollupAddr:          rollupAddr,
+		Inbox:               structures.NewInbox(),
+		KnownValidNode:      nodeGraph.LatestConfirmed(),
+		calculatedValidNode: nodeGraph.LatestConfirmed(),
+		latestBlockId:       startBlockId,
+		assumedValidBlock:   startBlockId,
+		listeners:           []chainlistener.ChainListener{},
+		checkpointer:        checkpointer,
+		isOpinionated:       true,
 		atHead:              false,
 	}, nil
 }
@@ -323,6 +354,22 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.ConfirmedEvent:
 		return chain.confirmNode(ctx, ev)
 	}
+	return nil
+}
+
+func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
+	latestL1BlockId, err := clnt.CurrentBlockId(ctx)
+	if err != nil {
+		return errors2.Wrap(err, "Getting current block header")
+	}
+
+	assumedValidBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))))
+	if err != nil {
+		return errors2.Wrap(err, "Getting assumed valid block header")
+	}
+	chain.Lock()
+	defer chain.Unlock()
+	chain.assumedValidBlock = assumedValidBlock
 	return nil
 }
 

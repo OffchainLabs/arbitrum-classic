@@ -167,11 +167,10 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chain, err := NewChain(
+	chain, err := newChain(
 		rollupAddress,
 		checkpointer,
 		chainParams,
-		false,
 		blockCreated,
 		common.Hash{},
 	)
