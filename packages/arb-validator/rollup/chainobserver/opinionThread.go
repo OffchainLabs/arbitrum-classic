@@ -199,6 +199,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	currentOpinion := chain.calculatedValidNode
 
 	if !chain.NodeGraph.Leaves().IsLeaf(currentOpinion) {
+		chain.RUnlock()
 		return nil, errors.New("current opinion is not a leaf")
 	}
 
@@ -209,12 +210,13 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	var found bool
 	found, maxMessageCount = chain.Inbox.GetMaxAtHeight(maxValidBlock.Height)
 	if !found {
-		return nil, errors.New("no new messages")
+		maxMessageCount = beforeState.InboxCount
 	}
 
 	newMessages = maxMessageCount.Cmp(beforeState.InboxCount) > 0
 
 	if currentOpinion.Machine().IsBlocked(newMessages) != nil {
+		chain.RUnlock()
 		return nil, errors.New("machine blocked")
 	}
 
