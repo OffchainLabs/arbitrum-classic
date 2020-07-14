@@ -246,7 +246,7 @@ func TestDeposit(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	chain := common.RandAddress()
-	chainId := new(big.Int).SetBytes(chain[:8])
+	chainId := new(big.Int).SetBytes(chain[12:])
 
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
 	if err != nil {
