@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate ./abigen.sh
+
 package ethbridgetest
 
 import (
@@ -21,18 +23,17 @@ import (
 	"os"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/messagetester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/valuetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-var tester *messagetester.MessageTester
-var valueTester *valuetester.ValueTester
+var tester *MessageTester
+var valueTester *ValueTester
+var protocolTester *ProtocolTester
 
 func TestMain(m *testing.M) {
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
-	_, _, deployedMessageTester, err := messagetester.DeployMessageTester(
+	_, _, deployedMessageTester, err := DeployMessageTester(
 		auth,
 		client,
 	)
@@ -40,13 +41,14 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	_, _, deployedValueTester, err := valuetester.DeployValueTester(
+	_, _, deployedValueTester, err := DeployValueTester(
 		auth,
 		client,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 
 	client.Commit()
 
