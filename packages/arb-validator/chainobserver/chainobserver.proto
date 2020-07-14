@@ -20,7 +20,7 @@ import "arb-util/common/common.proto";
 import "arb-validator/nodegraph/nodegraph.proto";
 import "arb-validator/structures/structures.proto";
 
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver";
 
 message ChainObserverBuf {
     nodegraph.StakedNodeGraphBuf stakedNodeGraph = 1;

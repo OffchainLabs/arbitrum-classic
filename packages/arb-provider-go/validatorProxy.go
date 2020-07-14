@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 )
 
 type ValidatorProxy interface {
@@ -113,10 +112,10 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 //}
 
 func (vp *ValidatorProxyImpl) GetMessageResult(ctx context.Context, txHash []byte) (*evm.TxInfo, error) {
-	request := &validatorserver.GetMessageResultArgs{
+	request := &evm.GetMessageResultArgs{
 		TxHash: hexutil.Encode(txHash),
 	}
-	var response validatorserver.GetMessageResultReply
+	var response evm.GetMessageResultReply
 	if err := vp.doCall(ctx, "GetMessageResult", request, &response); err != nil {
 		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
 		return nil, err
@@ -126,7 +125,7 @@ func (vp *ValidatorProxyImpl) GetMessageResult(ctx context.Context, txHash []byt
 
 func (vp *ValidatorProxyImpl) GetAssertionCount(ctx context.Context) (int, error) {
 	request := &struct{}{}
-	var response validatorserver.GetAssertionCountReply
+	var response evm.GetAssertionCountReply
 	if err := vp.doCall(ctx, "GetAssertionCount", request, &response); err != nil {
 		return 0, err
 	}
@@ -135,7 +134,7 @@ func (vp *ValidatorProxyImpl) GetAssertionCount(ctx context.Context) (int, error
 
 func (vp *ValidatorProxyImpl) GetVMInfo(ctx context.Context) (string, error) {
 	request := &struct{}{}
-	var response validatorserver.GetVMInfoReply
+	var response evm.GetVMInfoReply
 	if err := vp.doCall(ctx, "GetVMInfo", request, &response); err != nil {
 		return "", err
 	}
@@ -143,17 +142,17 @@ func (vp *ValidatorProxyImpl) GetVMInfo(ctx context.Context) (string, error) {
 }
 
 func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topicGroups [][]common.Hash) ([]evm.FullLog, error) {
-	tgs := make([]*validatorserver.TopicGroup, 0, len(topicGroups))
+	tgs := make([]*evm.TopicGroup, 0, len(topicGroups))
 	for _, topicGroup := range topicGroups {
-		tgs = append(tgs, &validatorserver.TopicGroup{Topics: _encodeByteArraySlice(topicGroup)})
+		tgs = append(tgs, &evm.TopicGroup{Topics: _encodeByteArraySlice(topicGroup)})
 	}
-	request := &validatorserver.FindLogsArgs{
+	request := &evm.FindLogsArgs{
 		FromHeight:  _encodeInt(fromHeight),
 		ToHeight:    _encodeInt(toHeight),
 		Addresses:   _encodeAddressArraySlice(addresses),
 		TopicGroups: tgs,
 	}
-	var response validatorserver.FindLogsReply
+	var response evm.FindLogsReply
 	if err := vp.doCall(ctx, "FindLogs", request, &response); err != nil {
 		return nil, err
 	}
@@ -178,11 +177,11 @@ func hexToValue(rawVal string) (value.Value, error) {
 }
 
 func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
-	request := &validatorserver.CallMessageArgs{
+	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
 	}
-	var response validatorserver.CallMessageReply
+	var response evm.CallMessageReply
 	if err := vp.doCall(ctx, "CallMessage", request, &response); err != nil {
 		return nil, err
 	}
@@ -190,11 +189,11 @@ func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call,
 }
 
 func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
-	request := &validatorserver.CallMessageArgs{
+	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
 	}
-	var response validatorserver.CallMessageReply
+	var response evm.CallMessageReply
 	if err := vp.doCall(ctx, "PendingCall", request, &response); err != nil {
 		return nil, err
 	}

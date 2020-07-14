@@ -16,4 +16,4 @@
 
 package evm
 
-//go:generate protoc -I. -I ../.. --tstypes_out=../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. evm.proto
+//go:generate protoc -I. -I ../.. --tstypes_out=declare_namespace=false:../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. evm.proto

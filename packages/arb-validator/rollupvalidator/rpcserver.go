@@ -18,10 +18,10 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"net/http"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
@@ -43,8 +43,8 @@ func NewRPCServer(
 // the query
 func (m *RPCServer) FindLogs(
 	_ *http.Request,
-	args *validatorserver.FindLogsArgs,
-	reply *validatorserver.FindLogsReply,
+	args *evm.FindLogsArgs,
+	reply *evm.FindLogsReply,
 ) error {
 	ret, err := m.Server.FindLogs(context.Background(), args)
 	if err != nil || ret == nil {
@@ -56,8 +56,8 @@ func (m *RPCServer) FindLogs(
 
 func (m *RPCServer) GetOutputMessage(
 	_ *http.Request,
-	args *validatorserver.GetOutputMessageArgs,
-	reply *validatorserver.GetOutputMessageReply,
+	args *evm.GetOutputMessageArgs,
+	reply *evm.GetOutputMessageReply,
 ) error {
 	ret, err := m.Server.GetOutputMessage(context.Background(), args)
 	if err != nil || ret == nil {
@@ -72,8 +72,8 @@ func (m *RPCServer) GetOutputMessage(
 //message with the given hash
 func (m *RPCServer) GetMessageResult(
 	_ *http.Request,
-	args *validatorserver.GetMessageResultArgs,
-	reply *validatorserver.GetMessageResultReply,
+	args *evm.GetMessageResultArgs,
+	reply *evm.GetMessageResultReply,
 ) error {
 	ret, err := m.Server.GetMessageResult(context.Background(), args)
 	if err != nil || ret == nil {
@@ -86,8 +86,8 @@ func (m *RPCServer) GetMessageResult(
 // GetAssertionCount returns the total number of finalized assertions
 func (m *RPCServer) GetAssertionCount(
 	_ *http.Request,
-	args *validatorserver.GetAssertionCountArgs,
-	reply *validatorserver.GetAssertionCountReply,
+	args *evm.GetAssertionCountArgs,
+	reply *evm.GetAssertionCountReply,
 ) error {
 	ret, err := m.Server.GetAssertionCount(context.Background(), args)
 	if err != nil || ret == nil {
@@ -100,8 +100,8 @@ func (m *RPCServer) GetAssertionCount(
 // GetVMInfo returns current metadata about this VM
 func (m *RPCServer) GetVMInfo(
 	_ *http.Request,
-	args *validatorserver.GetVMInfoArgs,
-	reply *validatorserver.GetVMInfoReply,
+	args *evm.GetVMInfoArgs,
+	reply *evm.GetVMInfoReply,
 ) error {
 	ret, err := m.Server.GetVMInfo(context.Background(), args)
 	if err != nil || ret == nil {
@@ -115,8 +115,8 @@ func (m *RPCServer) GetVMInfo(
 // and return the result
 func (m *RPCServer) CallMessage(
 	_ *http.Request,
-	args *validatorserver.CallMessageArgs,
-	reply *validatorserver.CallMessageReply,
+	args *evm.CallMessageArgs,
+	reply *evm.CallMessageReply,
 ) error {
 	ret, err := m.Server.CallMessage(context.Background(), args)
 	if err != nil || ret == nil {
@@ -130,8 +130,8 @@ func (m *RPCServer) CallMessage(
 // and return the result
 func (m *RPCServer) PendingCall(
 	_ *http.Request,
-	args *validatorserver.CallMessageArgs,
-	reply *validatorserver.CallMessageReply,
+	args *evm.CallMessageArgs,
+	reply *evm.CallMessageReply,
 ) error {
 	ret, err := m.Server.PendingCall(context.Background(), args)
 	if err != nil || ret == nil {
@@ -143,8 +143,8 @@ func (m *RPCServer) PendingCall(
 
 func (m *RPCServer) GetLatestNodeLocation(
 	_ *http.Request,
-	args *validatorserver.GetLatestNodeLocationArgs,
-	reply *validatorserver.GetLatestNodeLocationReply,
+	args *evm.GetLatestNodeLocationArgs,
+	reply *evm.GetLatestNodeLocationReply,
 ) error {
 	ret, err := m.Server.GetLatestNodeLocation(context.Background(), args)
 	if err != nil || ret == nil {
@@ -156,8 +156,8 @@ func (m *RPCServer) GetLatestNodeLocation(
 
 func (m *RPCServer) GetLatestPendingNodeLocation(
 	_ *http.Request,
-	args *validatorserver.GetLatestNodeLocationArgs,
-	reply *validatorserver.GetLatestNodeLocationReply,
+	args *evm.GetLatestNodeLocationArgs,
+	reply *evm.GetLatestNodeLocationReply,
 ) error {
 	ret, err := m.Server.GetLatestPendingNodeLocation(context.Background(), args)
 	if err != nil || ret == nil {

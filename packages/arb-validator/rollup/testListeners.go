@@ -18,8 +18,8 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup/chainobserver"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

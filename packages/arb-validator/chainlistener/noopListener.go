@@ -82,4 +82,5 @@ func (NoopListener) MootableStakes(context.Context, []nodegraph.RecoverStakeMoot
 func (NoopListener) OldStakes(context.Context, []nodegraph.RecoverStakeOldParams) {
 }
 
-func (NoopListener) AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node) {}
+func (NoopListener) AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node) {
+}
