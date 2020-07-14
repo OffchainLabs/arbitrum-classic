@@ -21,15 +21,14 @@ pragma solidity ^0.5.11;
 import "./RollupUtils.sol";
 import "./NodeGraphUtils.sol";
 import "./VM.sol";
-import "../IGlobalInbox.sol";
 
 import "../arch/Value.sol";
-import "../arch/Protocol.sol";
 
 import "../libraries/RollupTime.sol";
 
 contract NodeGraph {
     using SafeMath for uint256;
+    using Hashing for Value.Data;
 
     // invalid leaf
     string private constant MAKE_LEAF = "MAKE_LEAF";
@@ -72,84 +71,22 @@ contract NodeGraph {
 
     event RollupPruned(bytes32 leaf);
 
-    event RollupCreated(bytes32 initVMHash);
-
-    IGlobalInbox public globalInbox;
     VM.Params public vmParams;
     mapping(bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
 
-    function init(
-        bytes32 _vmState,
-        uint128 _gracePeriodTicks,
-        uint128 _arbGasSpeedLimitPerTick,
-        uint64 _maxExecutionSteps,
-        address _globalInboxAddress
-    ) internal {
-        globalInbox = IGlobalInbox(_globalInboxAddress);
-
-        // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
-            _vmState,
-            Value.hashEmptyTuple(),
-            0
-        );
-        bytes32 initialNode = RollupUtils.childNodeHash(
-            0,
-            0,
-            0,
-            0,
-            vmProtoStateHash
-        );
-        latestConfirmedPriv = initialNode;
-        leaves[initialNode] = true;
-
-        // VM parameters
-        vmParams.gracePeriodTicks = _gracePeriodTicks;
-        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
-        vmParams.maxExecutionSteps = _maxExecutionSteps;
-
-        emit RollupCreated(_vmState);
-    }
-
-    function makeAssertion(NodeGraphUtils.AssertionData memory data)
-        internal
-        returns (bytes32, bytes32)
-    {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
-            .computePrevLeaf(data);
-        require(isValidLeaf(prevLeaf), MAKE_LEAF);
-        _verifyAssertionData(data);
-
-        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(
-            address(this)
-        );
-        require(
-            data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount),
-            MAKE_MESSAGE_CNT
-        );
-
-        bytes32 validLeaf = _initializeAssertionLeaves(
-            data,
-            prevLeaf,
-            vmProtoHashBefore,
-            inboxValue,
-            inboxCount
-        );
-
-        delete leaves[prevLeaf];
-
-        emitAssertedEvent(data, prevLeaf, validLeaf, inboxValue, inboxCount);
-        return (prevLeaf, validLeaf);
-    }
-
+    /**
+     * @notice Prune an arbitrary number of leaves from the node graph
+     * @dev Pruning leaves frees up blockchain storage, but is otherwise unnecessary
+     * @notice See _pruneLeaf for parameter documentation
+     */
     function pruneLeaves(
-        bytes32[] memory fromNodes,
-        bytes32[] memory leafProofs,
-        uint256[] memory leafProofLengths,
-        bytes32[] memory latestConfProofs,
-        uint256[] memory latestConfirmedProofLengths
-    ) public {
+        bytes32[] calldata fromNodes,
+        bytes32[] calldata leafProofs,
+        uint256[] calldata leafProofLengths,
+        bytes32[] calldata latestConfProofs,
+        uint256[] calldata latestConfirmedProofLengths
+    ) external {
         uint256 pruneCount = fromNodes.length;
 
         require(
@@ -179,6 +116,63 @@ contract NodeGraph {
 
     function isValidLeaf(bytes32 leaf) public view returns (bool) {
         return leaves[leaf];
+    }
+
+    function init(
+        bytes32 _vmState,
+        uint128 _gracePeriodTicks,
+        uint128 _arbGasSpeedLimitPerTick,
+        uint64 _maxExecutionSteps
+    ) internal {
+        // VM protocol state
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
+            _vmState,
+            Value.newEmptyTuple().hash(),
+            0
+        );
+        bytes32 initialNode = RollupUtils.childNodeHash(
+            0,
+            0,
+            0,
+            0,
+            vmProtoStateHash
+        );
+        latestConfirmedPriv = initialNode;
+        leaves[initialNode] = true;
+
+        // VM parameters
+        vmParams.gracePeriodTicks = _gracePeriodTicks;
+        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
+        vmParams.maxExecutionSteps = _maxExecutionSteps;
+    }
+
+    function makeAssertion(
+        NodeGraphUtils.AssertionData memory data,
+        bytes32 inboxValue,
+        uint256 inboxCount
+    ) internal returns (bytes32, bytes32) {
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
+            .computePrevLeaf(data);
+        require(isValidLeaf(prevLeaf), MAKE_LEAF);
+        _verifyAssertionData(data);
+
+        require(
+            data.importedMessageCount <= inboxCount.sub(data.beforeInboxCount),
+            MAKE_MESSAGE_CNT
+        );
+
+        bytes32 validLeaf = _initializeAssertionLeaves(
+            data,
+            prevLeaf,
+            vmProtoHashBefore,
+            inboxValue,
+            inboxCount
+        );
+
+        delete leaves[prevLeaf];
+
+        emitAssertedEvent(data, prevLeaf, validLeaf, inboxValue, inboxCount);
+        return (prevLeaf, validLeaf);
     }
 
     function confirmNode(bytes32 to) internal {
@@ -212,6 +206,17 @@ contract NodeGraph {
         );
     }
 
+    /**
+     * @notice Prune a leaf from the node graph if it conflicts with the latest confirmed node
+     * @dev Pruning leaves frees up blockchain storage, but is otherwise unnecessary
+     * @param from The node where the leaf we want to prune diverged from the correct path
+     * @param latestConfirmedProofLength Length of the proof showing the from is an ancestor of latest confirmed
+     * @param leafProofLength Length of the proof showing the the pruned leaf conflicts with the from node
+     * @param leafProofs Array containing the leaf conflict proof
+     * @param latestConfProofs Array containing the leaf confirmed proof
+     * @param prevLeafOffset Index into the leaf proof
+     * @param prevConfOffset Index into the confirm proof
+     */
     function _pruneLeaf(
         bytes32 from,
         uint256 latestConfirmedProofLength,

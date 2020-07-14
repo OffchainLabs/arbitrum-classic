@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.11;
 
-import "./interfaces/IERC20.sol";
+import "../interfaces/IERC20.sol";
 
 contract GlobalFTWallet {
     struct FTWallet {

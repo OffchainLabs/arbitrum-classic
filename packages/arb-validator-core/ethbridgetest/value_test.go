@@ -30,34 +30,6 @@ import (
 	"testing"
 )
 
-func TestEmptyTupleHashing(t *testing.T) {
-
-	tup := value.NewEmptyTuple()
-	preImage := tup.GetPreImage()
-
-	emptyBridgeHash, err := valueTester.HashEmptyTuple(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	preImageBridgeHash, err := valueTester.HashTuplePreImage(nil, preImage.GetInnerHash(), big.NewInt(preImage.Size()))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if preImage.Hash().ToEthHash() != preImageBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-
-	if tup.Hash().ToEthHash() != emptyBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-
-	if preImage.Hash().ToEthHash() != emptyBridgeHash {
-		t.Error(errors.New("calculated wrong empty tuple hash"))
-	}
-}
-
 func TestTupleHashing(t *testing.T) {
 
 	intVal := value.NewInt64Value(111)
@@ -173,12 +145,9 @@ func TestDeserialize(t *testing.T) {
 				t.Error(err)
 			}
 
-			valid, offset, valHash, err := valueTester.DeserializeHash(nil, valBytes, big.NewInt(0))
+			offset, valHash, err := valueTester.DeserializeHash(nil, valBytes, big.NewInt(0))
 			if err != nil {
 				t.Error(err)
-			}
-			if !valid {
-				t.Error("value was invalid")
 			}
 			if offset.Cmp(big.NewInt(int64(len(valBytes)))) != 0 {
 				t.Errorf("offset was incorrect, was %v, should have been %v", offset, len(valBytes))

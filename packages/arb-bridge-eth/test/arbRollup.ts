@@ -442,7 +442,8 @@ describe('ArbRollup', function () {
       1000000, // arbGasSpeedLimitPerTick
       maxExecutionSteps, // maxExecutionSteps
       stakeRequirement, // stakeRequirement
-      await accounts[0].getAddress() // owner
+      await accounts[0].getAddress(), // owner
+      '0x'
     )
     await expect(tx).to.emit(arbFactory, 'RollupCreated')
 
@@ -454,9 +455,9 @@ describe('ArbRollup', function () {
     const logs = receipt.logs.map((log: providers.Log) =>
       arbFactory.interface.parseLog(log)
     )
-    const ev = logs[1]
+    const ev = logs[2]
     expect(ev.name).to.equal('RollupCreated')
-    const chainAddress = ev.values.vmAddress
+    const chainAddress = ev.values.rollupAddress
     const ArbRollup = await ethers.getContractFactory('ArbRollup')
     arbRollup = ArbRollup.attach(chainAddress) as ArbRollup
 

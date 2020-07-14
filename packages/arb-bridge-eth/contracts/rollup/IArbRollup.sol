@@ -27,13 +27,7 @@ interface IArbRollup {
         uint128 _stakeRequirement,
         address payable _owner,
         address _challengeFactoryAddress,
-        address _globalInboxAddress
+        address _globalInboxAddress,
+        bytes calldata _extraConfig
     ) external;
-
-    function forwardContractMessage(
-        address _sender,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data
-    ) external payable;
 }

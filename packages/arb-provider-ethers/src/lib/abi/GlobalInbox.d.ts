@@ -13,7 +13,7 @@ import {
 interface GlobalInboxInterface extends Interface {
   functions: {
     depositERC20Message: TypedFunctionDescription<{
-      encode([_chain, _erc20, _to, _value]: [
+      encode([chain, erc20, to, value]: [
         string,
         string,
         string,
@@ -22,7 +22,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     depositERC721Message: TypedFunctionDescription<{
-      encode([_chain, _erc721, _to, _id]: [
+      encode([chain, erc721, to, id]: [
         string,
         string,
         string,
@@ -31,7 +31,7 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     depositEthMessage: TypedFunctionDescription<{
-      encode([_chain, _to]: [string, string]): string
+      encode([chain, to]: [string, string]): string
     }>
 
     getERC20Balance: TypedFunctionDescription<{
@@ -72,16 +72,20 @@ interface GlobalInboxInterface extends Interface {
       encode([_owner]: [string]): string
     }>
 
+    sendInitializationMessage: TypedFunctionDescription<{
+      encode([messageData]: [Arrayish]): string
+    }>
+
     sendL2Message: TypedFunctionDescription<{
-      encode([_chain, _messageData]: [string, Arrayish]): string
+      encode([chain, messageData]: [string, Arrayish]): string
     }>
 
     sendL2MessageFromOrigin: TypedFunctionDescription<{
-      encode([_chain, _messageData]: [string, Arrayish]): string
+      encode([chain, messageData]: [string, Arrayish]): string
     }>
 
     sendMessages: TypedFunctionDescription<{
-      encode([_messages, messageCounts, nodeHashes]: [
+      encode([messages, messageCounts, nodeHashes]: [
         Arrayish,
         BigNumberish[],
         Arrayish[]
@@ -155,24 +159,24 @@ export class GlobalInbox extends Contract {
 
   functions: {
     depositERC20Message(
-      _chain: string,
-      _erc20: string,
-      _to: string,
-      _value: BigNumberish,
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     depositERC721Message(
-      _chain: string,
-      _erc721: string,
-      _to: string,
-      _id: BigNumberish,
+      chain: string,
+      erc721: string,
+      to: string,
+      id: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     depositEthMessage(
-      _chain: string,
-      _to: string,
+      chain: string,
+      to: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -205,20 +209,25 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<string[]>
 
+    sendInitializationMessage(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     sendL2Message(
-      _chain: string,
-      _messageData: Arrayish,
+      chain: string,
+      messageData: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     sendL2MessageFromOrigin(
-      _chain: string,
-      _messageData: Arrayish,
+      chain: string,
+      messageData: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     sendMessages(
-      _messages: Arrayish,
+      messages: Arrayish,
       messageCounts: BigNumberish[],
       nodeHashes: Arrayish[],
       overrides?: TransactionOverrides
@@ -247,24 +256,24 @@ export class GlobalInbox extends Contract {
   }
 
   depositERC20Message(
-    _chain: string,
-    _erc20: string,
-    _to: string,
-    _value: BigNumberish,
+    chain: string,
+    erc20: string,
+    to: string,
+    value: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   depositERC721Message(
-    _chain: string,
-    _erc721: string,
-    _to: string,
-    _id: BigNumberish,
+    chain: string,
+    erc721: string,
+    to: string,
+    id: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   depositEthMessage(
-    _chain: string,
-    _to: string,
+    chain: string,
+    to: string,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -297,20 +306,25 @@ export class GlobalInbox extends Contract {
 
   ownedERC721s(_owner: string): Promise<string[]>
 
+  sendInitializationMessage(
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   sendL2Message(
-    _chain: string,
-    _messageData: Arrayish,
+    chain: string,
+    messageData: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   sendL2MessageFromOrigin(
-    _chain: string,
-    _messageData: Arrayish,
+    chain: string,
+    messageData: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
   sendMessages(
-    _messages: Arrayish,
+    messages: Arrayish,
     messageCounts: BigNumberish[],
     nodeHashes: Arrayish[],
     overrides?: TransactionOverrides
@@ -364,20 +378,20 @@ export class GlobalInbox extends Contract {
 
   estimate: {
     depositERC20Message(
-      _chain: string,
-      _erc20: string,
-      _to: string,
-      _value: BigNumberish
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish
     ): Promise<BigNumber>
 
     depositERC721Message(
-      _chain: string,
-      _erc721: string,
-      _to: string,
-      _id: BigNumberish
+      chain: string,
+      erc721: string,
+      to: string,
+      id: BigNumberish
     ): Promise<BigNumber>
 
-    depositEthMessage(_chain: string, _to: string): Promise<BigNumber>
+    depositEthMessage(chain: string, to: string): Promise<BigNumber>
 
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
 
@@ -403,15 +417,17 @@ export class GlobalInbox extends Contract {
 
     ownedERC721s(_owner: string): Promise<BigNumber>
 
-    sendL2Message(_chain: string, _messageData: Arrayish): Promise<BigNumber>
+    sendInitializationMessage(messageData: Arrayish): Promise<BigNumber>
+
+    sendL2Message(chain: string, messageData: Arrayish): Promise<BigNumber>
 
     sendL2MessageFromOrigin(
-      _chain: string,
-      _messageData: Arrayish
+      chain: string,
+      messageData: Arrayish
     ): Promise<BigNumber>
 
     sendMessages(
-      _messages: Arrayish,
+      messages: Arrayish,
       messageCounts: BigNumberish[],
       nodeHashes: Arrayish[]
     ): Promise<BigNumber>

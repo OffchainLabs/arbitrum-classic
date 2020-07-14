@@ -18,8 +18,9 @@
 
 pragma solidity ^0.5.11;
 
-import "./arch/Value.sol";
-import "./libraries/BytesLib.sol";
+import "../arch/Value.sol";
+import "../arch/Marshaling.sol";
+import "../libraries/BytesLib.sol";
 
 library Messages {
     using BytesLib for bytes;
@@ -59,7 +60,11 @@ library Messages {
         tupData[2] = Value.newInt(timestamp);
         tupData[3] = Value.newInt(uint256(sender));
         tupData[4] = Value.newInt(inboxSeqNum);
-        tupData[5] = Value.bytesToBytestack(messageData, 0, messageData.length);
+        tupData[5] = Marshaling.bytesToBytestack(
+            messageData,
+            0,
+            messageData.length
+        );
         return Value.newTuple(tupData);
     }
 
@@ -126,20 +131,29 @@ library Messages {
         }
 
         uint256 rawKind;
-        (valid, offset, rawKind) = Value.deserializeCheckedInt(data, offset);
+        (valid, offset, rawKind) = Marshaling.deserializeCheckedInt(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, startOffset, message);
         }
         message.kind = uint8(rawKind);
 
         uint256 senderRaw;
-        (valid, offset, senderRaw) = Value.deserializeCheckedInt(data, offset);
+        (valid, offset, senderRaw) = Marshaling.deserializeCheckedInt(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, startOffset, message);
         }
 
         message.sender = address(uint160((senderRaw)));
-        (valid, offset, message.data) = Value.bytestackToBytes(data, offset);
+        (valid, offset, message.data) = Marshaling.bytestackToBytes(
+            data,
+            offset
+        );
         if (!valid) {
             return (false, startOffset, message);
         }

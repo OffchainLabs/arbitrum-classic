@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
@@ -79,6 +80,7 @@ func (con *arbFactory) CreateRollup(
 		params.MaxExecutionSteps,
 		params.StakeRequirement,
 		owner.ToEthAddress(),
+		[]byte{},
 	)
 	if err != nil {
 		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
@@ -87,14 +89,14 @@ func (con *arbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	if len(receipt.Logs) != 2 {
-		return common.Address{}, nil, errors2.New("Wrong receipt count")
+	if len(receipt.Logs) != 3 {
+		return common.Address{}, nil, fmt.Errorf("Wrong receipt count %v instead of 2", len(receipt.Logs))
 	}
-	event, err := con.contract.ParseRollupCreated(*receipt.Logs[1])
+	event, err := con.contract.ParseRollupCreated(*receipt.Logs[2])
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	return common.NewAddressFromEth(event.VmAddress), GetReceiptBlockID(receipt), nil
+	return common.NewAddressFromEth(event.RollupAddress), GetReceiptBlockID(receipt), nil
 }
 
 type arbFactoryWatcher struct {

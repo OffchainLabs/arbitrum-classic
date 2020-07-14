@@ -154,7 +154,7 @@ func (c *executionChallenge) ChooseSegment(
 		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			valprotocol.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
+			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, preconditions[i].BeforeInbox.Hash(), assertions[i]),
 		)
 	}
 

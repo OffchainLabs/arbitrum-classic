@@ -18,26 +18,76 @@ package ethbridgemachine
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"io/ioutil"
 	"math/big"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/onestepprooftester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
-func setupTestValidateProof(t *testing.T) (*onestepprooftester.OneStepProofTester, error) {
+func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester.OneStepProofTester) {
+	t.Log("proof test contact: ", contract)
+
+	proofs, err := generateProofCases(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := json.Marshal(proofs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		err := errors.New("failed to get filename")
+		t.Fatal(err)
+	}
+
+	file := filepath.Join(filepath.Dir(filename), "../../arb-bridge-eth/test/proofs", filepath.Base(contract)+"-proofs.json")
+
+	if err := ioutil.WriteFile(file, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, proof := range proofs {
+		afterHash, err := osp.ValidateProof(
+			&bind.CallOpts{Context: context.Background()},
+			proof.BeforeHash,
+			proof.InboxInner,
+			big.NewInt(proof.InboxSize),
+			proof.Assertion.DidInboxInsn,
+			proof.Assertion.FirstMessageHash,
+			proof.Assertion.LastMessageHash,
+			proof.Assertion.FirstLogHash,
+			proof.Assertion.LastLogHash,
+			proof.Assertion.NumGas,
+			proof.Proof,
+		)
+		if err != nil {
+			t.Fatal("Proof invalid with error", err)
+		} else if proof.Assertion.AfterHash != afterHash {
+			t.Fatal("Proof invalid")
+		}
+	}
+}
+
+func TestValidateProof(t *testing.T) {
+	testMachines := gotest.OpCodeTestFiles()
+
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
 	_, tx, osp, err := onestepprooftester.DeployOneStepProofTester(auth, client)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
 	client.Commit()
 	if _, err := ethbridge.WaitForReceiptWithResults(
@@ -47,84 +97,14 @@ func setupTestValidateProof(t *testing.T) (*onestepprooftester.OneStepProofTeste
 		tx,
 		"DeployOneStepProof",
 	); err != nil {
-		return nil, err
-	}
-	return osp, nil
-}
-
-func runTestValidateProof(t *testing.T, contract string, osp *onestepprooftester.OneStepProofTester) {
-	t.Log("proof test contact: ", contract)
-	mach, err := loader.LoadMachineFromFile(contract, true, "cpp")
-	if err != nil {
 		t.Fatal(err)
 	}
 
-	maxSteps := uint64(100000)
-	inbox := value.NewEmptyTuple()
-
-	for i := uint64(0); i < maxSteps; i++ {
-		proof, err := mach.MarshalForProof()
-		if err != nil {
-			t.Fatal(err)
-		}
-		beforeHash := mach.Hash()
-		beforeMach := mach.Clone()
-		a, ranSteps := mach.ExecuteAssertion(1, inbox, 0)
-		if ranSteps == 0 {
-			break
-		}
-		if ranSteps != 1 {
-			t.Fatal("Executed incorrect step count", ranSteps)
-		}
-		if mach.CurrentStatus() == machine.ErrorStop {
-			beforeMach.PrintState()
-			mach.PrintState()
-			t.Fatal("machine stopped in error state")
-		}
-
-		//precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
-		stub := valprotocol.NewExecutionAssertionStubFromAssertion(a)
-		hashPreImage := inbox.GetPreImage()
-		res, err := osp.ValidateProof(
-			&bind.CallOpts{Context: context.Background()},
-			beforeHash,
-			hashPreImage.GetInnerHash(),
-			big.NewInt(hashPreImage.Size()),
-			stub.AfterHash,
-			stub.DidInboxInsn,
-			stub.FirstMessageHash,
-			stub.LastMessageHash,
-			stub.FirstLogHash,
-			stub.LastLogHash,
-			stub.NumGas,
-			proof,
-		)
-		if err != nil {
-			beforeMach.PrintState()
-			mach.PrintState()
-			t.Fatal("Proof invalid with error", err)
-		} else if res.Cmp(big.NewInt(0)) != 0 {
-			mach.PrintState()
-			t.Fatal("Proof invalid")
-		}
-
-		if a.DidInboxInsn {
-			inbox = value.NewEmptyTuple()
-		}
-	}
-}
-
-func TestValidateProof(t *testing.T) {
-	testMachines := gotest.OpCodeTestFiles()
-	ethCon, err := setupTestValidateProof(t)
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, machName := range testMachines {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, ethCon)
+			runTestValidateProof(t, machName, osp)
 		})
 	}
 }

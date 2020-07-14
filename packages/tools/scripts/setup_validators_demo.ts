@@ -9,7 +9,7 @@ import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
 const arbConversion = new ArbConversion()
 
 interface RollupCreatedParams {
-  vmAddress: string
+  rollupAddress: string
 }
 
 const provider = new ethers.providers.JsonRpcProvider('http://localhost:7545')
@@ -45,10 +45,10 @@ async function setupRollup(arbOSData: string) {
   )
 
   const {
-    vmAddress,
+    rollupAddress,
   }: RollupCreatedParams = (e?.args as any) as RollupCreatedParams
 
-  return vmAddress
+  return rollupAddress
 }
 
 async function initializeWallets(count: number): Promise<ethers.Wallet[]> {

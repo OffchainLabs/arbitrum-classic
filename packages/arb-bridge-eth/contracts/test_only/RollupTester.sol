@@ -17,8 +17,8 @@
  */
 pragma solidity ^0.5.11;
 
-import "../vm/RollupUtils.sol";
-import "../vm/NodeGraphUtils.sol";
+import "../rollup/RollupUtils.sol";
+import "../rollup/NodeGraphUtils.sol";
 
 contract RollupTester {
     function confirm(
