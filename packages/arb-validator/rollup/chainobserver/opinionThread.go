@@ -166,18 +166,16 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 							return
 						}
 						preparedAssertions[prepped.Prev.Hash()] = prepped
+						chain.Lock()
+						chain.pendingState = prepped.Machine
+						chain.Unlock()
 					}()
 				} else {
 					assertionsMut.Lock()
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.Hash()]
 					assertionsMut.Unlock()
 					if isPrepared && chain.NodeGraph.Leaves().IsLeaf(chain.calculatedValidNode) {
-						if new(big.Int).Sub(chain.latestBlockId.Height.AsInt(), prepared.ValidBlock.Height.AsInt()).Cmp(big.NewInt(200)) < 0 {
-							chain.RUnlock()
-							chain.Lock()
-							chain.pendingState = prepared.Machine
-							chain.Unlock()
-							chain.RLock()
+						if new(big.Int).Sub(chain.assumedValidBlock.Height.AsInt(), prepared.ValidBlock.Height.AsInt()).Cmp(big.NewInt(200)) < 0 {
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(
 									ctx,
@@ -190,6 +188,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						} else {
 							assertionsMut.Lock()
 							// Prepared assertion is out of date
+							log.Println("Throwing out old assertion")
 							delete(preparingAssertions, chain.calculatedValidNode.Hash())
 							delete(preparedAssertions, chain.calculatedValidNode.Hash())
 							assertionsMut.Unlock()
