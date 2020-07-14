@@ -1,3 +1,0 @@
--i https://pypi.org/simple
-web3
-eth-account
