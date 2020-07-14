@@ -266,7 +266,6 @@ func TestBatch(t *testing.T) {
 	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
-	//dest := common.RandAddress()
 	dest := deployFib(t, mach, common.RandAddress())
 
 	batchSize := 20
