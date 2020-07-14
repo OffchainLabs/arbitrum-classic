@@ -84,20 +84,25 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
   public aggregator?: AggregatorClient
+  public chainAddress: string
 
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
-  private vmIdCache?: string
   private latestLocation?: NodeInfo
 
   constructor(
+    chainAddress: string,
     validatorUrl: string,
     provider: ethers.providers.JsonRpcProvider,
     aggregatorUrl?: string
   ) {
-    super(123456789)
-    this.chainId = 123456789
+    const chainId = ethers.utils
+      .bigNumberify(ethers.utils.hexDataSlice(chainAddress, 12))
+      .toNumber()
+    super(chainId)
+    this.chainAddress = chainAddress
+    this.chainId = chainId
     this.ethProvider = provider
     this.client = new ArbClient(validatorUrl)
 
@@ -106,23 +111,21 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
   }
 
-  public async arbRollupConn(): Promise<ArbRollup> {
+  public arbRollupConn(): ArbRollup {
     if (!this.arbRollupCache) {
-      const vmID = await this.client.getVmID()
-      const arbRollup = ArbRollupFactory.connect(vmID, this.ethProvider)
+      const arbRollup = ArbRollupFactory.connect(
+        this.chainAddress,
+        this.ethProvider
+      )
       this.arbRollupCache = arbRollup
       return arbRollup
     }
     return this.arbRollupCache
   }
 
-  public async chainAddress(): Promise<string> {
-    return this.client.getVmID()
-  }
-
   public async globalInboxConn(): Promise<GlobalInbox> {
     if (!this.globalInboxCache) {
-      const arbRollup = await this.arbRollupConn()
+      const arbRollup = this.arbRollupConn()
       const globalInboxAddress = await arbRollup.globalInbox()
       const globalInbox = GlobalInboxFactory.connect(
         globalInboxAddress,
@@ -140,18 +143,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
   public getSigner(index: number): ArbWallet {
     return new ArbWallet(this.ethProvider.getSigner(index), this)
-  }
-
-  public async getVmID(): Promise<string> {
-    if (!this.vmIdCache) {
-      const vmId = await this.client.getVmID()
-      // Guard against race condition
-      if (!this.vmIdCache) {
-        this.vmIdCache = vmId
-      }
-      return vmId
-    }
-    return this.vmIdCache
   }
 
   private async getArbTxId(
@@ -510,7 +501,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     if (!receipt.logs) {
       throw Error('RollupAsserted tx had no logs')
     }
-    const arbRollup = await this.arbRollupConn()
+    const arbRollup = this.arbRollupConn()
     const events = receipt.logs.map(l => arbRollup.interface.parseLog(l))
     // DisputableAssertion Event
     const eventIndex = events.findIndex(event => event.name === EB_EVENT_CDA)
@@ -520,14 +511,13 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     const rawLog = receipt.logs[eventIndex]
     const cda = events[eventIndex]
-    const vmId = await this.getVmID()
     // Check correct VM
-    if (rawLog.address.toLowerCase() !== vmId.toLowerCase()) {
+    if (rawLog.address.toLowerCase() !== this.chainAddress.toLowerCase()) {
       throw Error(
         'RollupAsserted Event is from a different address: ' +
           rawLog.address +
           '\nExpected address: ' +
-          vmId
+          this.chainAddress
       )
     }
 
