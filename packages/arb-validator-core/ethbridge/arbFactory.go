@@ -20,8 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/globalinbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
@@ -29,18 +28,17 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type arbFactory struct {
-	contract *arbfactory.ArbFactory
+	contract *ethbridgecontracts.ArbFactory
 	client   ethutils.EthClient
 	auth     *TransactAuth
 }
 
 func newArbFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*arbFactory, error) {
-	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
+	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
@@ -48,11 +46,11 @@ func newArbFactory(address ethcommon.Address, client ethutils.EthClient, auth *T
 }
 
 func DeployRollupFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
-	rollupAddr, _, _, err := rollup.DeployArbRollup(auth, client)
+	rollupAddr, _, _, err := ethbridgecontracts.DeployArbRollup(auth, client)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	inbox, _, _, err := globalinbox.DeployGlobalInbox(auth, client)
+	inbox, _, _, err := ethbridgecontracts.DeployGlobalInbox(auth, client)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
@@ -60,7 +58,7 @@ func DeployRollupFactory(auth *bind.TransactOpts, client ethutils.EthClient) (et
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	factoryAddr, _, _, err := arbfactory.DeployArbFactory(auth, client, rollupAddr, inbox, chalFactory)
+	factoryAddr, _, _, err := ethbridgecontracts.DeployArbFactory(auth, client, rollupAddr, inbox, chalFactory)
 	return factoryAddr, err
 }
 
@@ -100,13 +98,13 @@ func (con *arbFactory) CreateRollup(
 }
 
 type arbFactoryWatcher struct {
-	contract *arbfactory.ArbFactory
+	contract *ethbridgecontracts.ArbFactory
 	client   ethutils.EthClient
 	address  ethcommon.Address
 }
 
 func newArbFactoryWatcher(address ethcommon.Address, client ethutils.EthClient) (*arbFactoryWatcher, error) {
-	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
+	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}

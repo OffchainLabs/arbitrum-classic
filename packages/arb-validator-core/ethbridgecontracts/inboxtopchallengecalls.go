@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package inboxtopchallenge
+package ethbridgecontracts
 
 import (
 	"bytes"
@@ -28,10 +28,10 @@ import (
 )
 
 func (_InboxTopChallenge *InboxTopChallengeTransactor) BisectCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _chainHashes [][32]byte, _chainLength *big.Int) error {
-	return callCheck(ctx, client, from, contractAddress, "bisect", _chainHashes, _chainLength)
+	return callCheckInbox(ctx, client, from, contractAddress, "bisect", _chainHashes, _chainLength)
 }
 
-func callCheck(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
+func callCheckInbox(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(InboxTopChallengeABI)))
 	if err != nil {
 		return err

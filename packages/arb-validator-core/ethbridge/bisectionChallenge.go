@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
@@ -29,13 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 var continuedChallengeID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.BisectionChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.BisectionChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +44,7 @@ func init() {
 
 type bisectionChallenge struct {
 	*challenge
-	BisectionChallenge *executionchallenge.BisectionChallenge
+	BisectionChallenge *ethbridgecontracts.BisectionChallenge
 }
 
 func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*bisectionChallenge, error) {
@@ -52,7 +52,7 @@ func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	if err != nil {
 		return nil, err
 	}
-	bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -95,7 +95,7 @@ func (c *bisectionChallenge) chooseSegment(
 
 type bisectionChallengeWatcher struct {
 	*challengeWatcher
-	BisectionChallenge *executionchallenge.BisectionChallenge
+	BisectionChallenge *ethbridgecontracts.BisectionChallenge
 }
 
 func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*bisectionChallengeWatcher, error) {
@@ -103,7 +103,7 @@ func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	if err != nil {
 		return nil, err
 	}
-	bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}

@@ -32,8 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-//go:generate abigen --sol=../../arb-bridge-eth/contracts/rollup/ArbFactory.sol --pkg=arbfactory --out=arbfactory/arbfactory.go
-
 type EthArbClient struct {
 	client ethutils.EthClient
 }

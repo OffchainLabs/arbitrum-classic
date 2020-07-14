@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
@@ -32,14 +33,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 var bisectedAssertionID ethcommon.Hash
 var oneStepProofCompletedID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.ExecutionChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +49,7 @@ func init() {
 
 type executionChallengeWatcher struct {
 	*bisectionChallengeWatcher
-	challenge *executionchallenge.ExecutionChallenge
+	challenge *ethbridgecontracts.ExecutionChallenge
 	client    ethutils.EthClient
 	address   ethcommon.Address
 	topics    [][]ethcommon.Hash
@@ -60,7 +60,7 @@ func newExecutionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	if err != nil {
 		return nil, err
 	}
-	executionContract, err := executionchallenge.NewExecutionChallenge(address, client)
+	executionContract, err := ethbridgecontracts.NewExecutionChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
