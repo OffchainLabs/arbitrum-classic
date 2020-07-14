@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
@@ -167,14 +166,6 @@ func (t Transaction) asData() []byte {
 	return ret
 }
 
-func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
-	data := make([]byte, 0)
-	//data = append(data, addressData(chain)...)
-	data = append(data, byte(TransactionType))
-	data = append(data, t.AsData()...)
-	return marshaledBytesHash(data)
-}
-
 func (t Transaction) MessageID(sender common.Address) common.Hash {
 	return hashing.SoliditySHA3(hashing.Address(sender), t.AsData())
 }
@@ -290,12 +281,16 @@ type BatchTx struct {
 
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
 	tx := NewRandomTransaction()
-	hash := tx.BatchTxHash(chain)
-	messageHash := hashing.SoliditySHA3WithPrefix(hash[:])
-	sigBytes, _ := crypto.Sign(messageHash.Bytes(), privKey)
 
+	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(new(big.Int).SetBytes(chain[12:])), privKey)
+	if err != nil {
+		panic(err)
+	}
+	v, r, s := signedTx.RawSignatureValues()
 	var sig [65]byte
-	copy(sig[:], sigBytes)
+	copy(sig[:], math.U256Bytes(r))
+	copy(sig[32:], math.U256Bytes(s))
+	sig[64] = byte(v.Uint64() % 2)
 
 	return BatchTx{
 		Transaction: tx,
