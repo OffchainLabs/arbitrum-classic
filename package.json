@@ -16,7 +16,7 @@
     "install:deps": "./scripts/install-deps",
     "install:ci": "./scripts/install-ci",
     "install:validator": "./scripts/install-validator",
-    "update-abi": "./scripts/update-abi",
+    "update-abi": "yarn go:generate && yarn workspace arb-provider-ethers update-abi",
     "build": "yarn workspace arb-provider-ethers build",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
@@ -26,6 +26,7 @@
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
     "prepare": "yarn workspace arb-provider-ethers prepare",
     "go:vet": "./scripts/go-vet",
+    "go:generate": "./scripts/go-generate",
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
@@ -42,8 +43,7 @@
     "packages": [
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
-      "packages/arb-compiler-evm/contract-templates",
-      "packages/arb-compiler-evm/tests/sol-syscall",
+      "packages/arbos-contracts",
       "packages/tools",
       "demos/*",
       "workspace/*"

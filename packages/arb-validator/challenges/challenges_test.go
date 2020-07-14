@@ -19,7 +19,7 @@ package challenges
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/challengetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"testing"
 	"time"
@@ -35,7 +35,7 @@ func TestChallenges(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testerAddress, _, _, err = challengetester.DeployChallengeTester(auths[0], client, factorAddr)
+	testerAddress, _, _, err = ethbridgetestcontracts.DeployChallengeTester(auths[0], client, factorAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -29,8 +29,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/validatorserver"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
@@ -62,7 +60,7 @@ func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, 
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
-func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArgs) (*validatorserver.FindLogsReply, error) {
+func (m *Server) FindLogs(ctx context.Context, args *evm.FindLogsArgs) (*evm.FindLogsReply, error) {
 	addresses := make([]common.Address, 0, 1)
 	for _, addr := range args.Addresses {
 		addresses = append(addresses, common.HexToAddress(addr))
@@ -107,12 +105,12 @@ func (m *Server) FindLogs(ctx context.Context, args *validatorserver.FindLogsArg
 		logInfos = append(logInfos, l.Marshal())
 	}
 
-	return &validatorserver.FindLogsReply{
+	return &evm.FindLogsReply{
 		Logs: logInfos,
 	}, nil
 }
 
-func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.GetOutputMessageArgs) (*validatorserver.GetOutputMessageReply, error) {
+func (m *Server) GetOutputMessage(ctx context.Context, args *evm.GetOutputMessageArgs) (*evm.GetOutputMessageReply, error) {
 	assertionHashBytes, err := hexutil.Decode(args.AssertionNodeHash)
 	if err != nil {
 		return nil, err
@@ -123,13 +121,13 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 	outputValue, err := m.tracker.OutputMsgVal(ctx, assertionHash, msgIndex)
 
 	if outputValue == nil || err != nil {
-		return &validatorserver.GetOutputMessageReply{
+		return &evm.GetOutputMessageReply{
 			Found: false,
 		}, err
 	} else {
 		var buf bytes.Buffer
 		_ = value.MarshalValue(outputValue, &buf)
-		return &validatorserver.GetOutputMessageReply{
+		return &evm.GetOutputMessageReply{
 			Found:  true,
 			RawVal: hexutil.Encode(buf.Bytes()),
 		}, nil
@@ -137,37 +135,37 @@ func (m *Server) GetOutputMessage(ctx context.Context, args *validatorserver.Get
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
-func (m *Server) GetMessageResult(ctx context.Context, args *validatorserver.GetMessageResultArgs) (*validatorserver.GetMessageResultReply, error) {
+func (m *Server) GetMessageResult(ctx context.Context, args *evm.GetMessageResultArgs) (*evm.GetMessageResultReply, error) {
 	txHash := common.NewHashFromEth(ethcommon.HexToHash(args.TxHash))
 	txInfo, err := m.tracker.TxInfo(ctx, txHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return &validatorserver.GetMessageResultReply{
+	return &evm.GetMessageResultReply{
 		Tx: txInfo.Marshal(),
 	}, nil
 }
 
 // GetAssertionCount returns the total number of finalized assertions
-func (m *Server) GetAssertionCount(ctx context.Context, _ *validatorserver.GetAssertionCountArgs) (*validatorserver.GetAssertionCountReply, error) {
+func (m *Server) GetAssertionCount(ctx context.Context, _ *evm.GetAssertionCountArgs) (*evm.GetAssertionCountReply, error) {
 	req, err := m.tracker.AssertionCount(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &validatorserver.GetAssertionCountReply{
+	return &evm.GetAssertionCountReply{
 		AssertionCount: int32(req),
 	}, nil
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetVMInfo(_ context.Context, _ *validatorserver.GetVMInfoArgs) (*validatorserver.GetVMInfoReply, error) {
-	return &validatorserver.GetVMInfoReply{
+func (m *Server) GetVMInfo(_ context.Context, _ *evm.GetVMInfoArgs) (*evm.GetVMInfoReply, error) {
+	return &evm.GetVMInfoReply{
 		VmID: hexutil.Encode(m.rollupAddress[:]),
 	}, nil
 }
 
-func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+func (m *Server) executeCall(mach machine.Machine, args *evm.CallMessageArgs) (*evm.CallMessageReply, error) {
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
@@ -236,13 +234,13 @@ func (m *Server) executeCall(mach machine.Machine, args *validatorserver.CallMes
 	result := results[len(results)-1]
 	var buf bytes.Buffer
 	_ = value.MarshalValue(result, &buf) // error can only occur from writes and bytes.Buffer is safe
-	return &validatorserver.CallMessageReply{
+	return &evm.CallMessageReply{
 		RawVal: hexutil.Encode(buf.Bytes()),
 	}, nil
 }
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
-func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+func (m *Server) CallMessage(ctx context.Context, args *evm.CallMessageArgs) (*evm.CallMessageReply, error) {
 	mach, err := m.man.GetLatestMachine()
 	if err != nil {
 		return nil, err
@@ -251,7 +249,7 @@ func (m *Server) CallMessage(ctx context.Context, args *validatorserver.CallMess
 }
 
 // PendingCall takes a request from a client to process in a temporary context and return the result
-func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMessageArgs) (*validatorserver.CallMessageReply, error) {
+func (m *Server) PendingCall(ctx context.Context, args *evm.CallMessageArgs) (*evm.CallMessageReply, error) {
 	mach, err := m.man.GetPendingMachine()
 	if err != nil {
 		return nil, err
@@ -259,20 +257,20 @@ func (m *Server) PendingCall(ctx context.Context, args *validatorserver.CallMess
 	return m.executeCall(mach, args)
 }
 
-func (m *Server) GetLatestNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
-) (*validatorserver.GetLatestNodeLocationReply, error) {
+func (m *Server) GetLatestNodeLocation(ctx context.Context, args *evm.GetLatestNodeLocationArgs,
+) (*evm.GetLatestNodeLocationReply, error) {
 	loc, err := m.tracker.GetLatestNodeLocation(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+	return &evm.GetLatestNodeLocationReply{Location: loc}, nil
 }
 
-func (m *Server) GetLatestPendingNodeLocation(ctx context.Context, args *validatorserver.GetLatestNodeLocationArgs,
-) (*validatorserver.GetLatestNodeLocationReply, error) {
+func (m *Server) GetLatestPendingNodeLocation(ctx context.Context, args *evm.GetLatestNodeLocationArgs,
+) (*evm.GetLatestNodeLocationReply, error) {
 	loc, err := m.tracker.GetLatestPendingNodeLocation(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &validatorserver.GetLatestNodeLocationReply{Location: loc}, nil
+	return &evm.GetLatestNodeLocationReply{Location: loc}, nil
 }

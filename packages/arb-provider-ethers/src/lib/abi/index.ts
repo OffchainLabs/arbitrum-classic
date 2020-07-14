@@ -24,8 +24,8 @@ export interface TypedFunctionDescription<
   encode: T['encode']
 }
 
-export type { ArbERC20 } from './ArbERC20'
-export type { ArbERC721 } from './ArbERC721.d'
+export type { ArbErc20 } from './ArbErc20'
+export type { ArbErc721 } from './ArbErc721.d'
 export type { ArbFactory } from './ArbFactory.d'
 export type { ArbInfo } from './ArbInfo.d'
 export type { ArbRollup } from './ArbRollup.d'

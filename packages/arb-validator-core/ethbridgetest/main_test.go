@@ -21,26 +21,17 @@ import (
 	"os"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/messagetester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/valuetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-var tester *messagetester.MessageTester
-var valueTester *valuetester.ValueTester
+var valueTester *ethbridgetestcontracts.ValueTester
 
 func TestMain(m *testing.M) {
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
-	_, _, deployedMessageTester, err := messagetester.DeployMessageTester(
-		auth,
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	_, _, deployedValueTester, err := valuetester.DeployValueTester(
+	_, _, deployedValueTester, err := ethbridgetestcontracts.DeployValueTester(
 		auth,
 		client,
 	)
@@ -50,7 +41,6 @@ func TestMain(m *testing.M) {
 
 	client.Commit()
 
-	tester = deployedMessageTester
 	valueTester = deployedValueTester
 
 	code := m.Run()

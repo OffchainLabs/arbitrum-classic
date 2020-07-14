@@ -14,13 +14,36 @@ export class ArbSysFactory {
 
 const _abi = [
   {
+    constant: true,
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+    ],
+    name: 'getTransactionCount',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    payable: false,
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
       },
       {
+        internalType: 'uint256',
         name: 'amount',
         type: 'uint256',
       },
@@ -35,10 +58,12 @@ const _abi = [
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
       },
       {
+        internalType: 'uint256',
         name: 'id',
         type: 'uint256',
       },
@@ -53,6 +78,7 @@ const _abi = [
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
       },
@@ -61,25 +87,6 @@ const _abi = [
     outputs: [],
     payable: true,
     stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: 'account',
-        type: 'address',
-      },
-    ],
-    name: 'getTransactionCount',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
     type: 'function',
   },
 ]

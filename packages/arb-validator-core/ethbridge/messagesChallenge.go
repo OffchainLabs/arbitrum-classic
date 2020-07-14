@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
@@ -27,13 +28,12 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/messageschallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type messagesChallenge struct {
 	*bisectionChallenge
-	contract *messageschallenge.MessagesChallenge
+	contract *ethbridgecontracts.MessagesChallenge
 }
 
 func newMessagesChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*messagesChallenge, error) {
@@ -41,7 +41,7 @@ func newMessagesChallenge(address ethcommon.Address, client ethutils.EthClient, 
 	if err != nil {
 		return nil, err
 	}
-	messagesContract, err := messageschallenge.NewMessagesChallenge(address, client)
+	messagesContract, err := ethbridgecontracts.NewMessagesChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}

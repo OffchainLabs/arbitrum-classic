@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"math/big"
@@ -54,12 +55,12 @@ func Dial(url string, auth *bind.TransactOpts, ethclint ethutils.EthClient) (*Ar
 	return &ArbConnection{proxy: proxy, vmId: vmId, globalInbox: globalInbox}, nil
 }
 
-func (conn *ArbConnection) getInfoCon() (*ArbInfo, error) {
-	return NewArbInfo(ARB_INFO_ADDRESS, conn)
+func (conn *ArbConnection) getInfoCon() (*arboscontracts.ArbInfo, error) {
+	return arboscontracts.NewArbInfo(ARB_INFO_ADDRESS, conn)
 }
 
-func (conn *ArbConnection) getSysCon() (*ArbSys, error) {
-	return NewArbSys(ARB_SYS_ADDRESS, conn)
+func (conn *ArbConnection) getSysCon() (*arboscontracts.ArbSys, error) {
+	return arboscontracts.NewArbSys(ARB_SYS_ADDRESS, conn)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.

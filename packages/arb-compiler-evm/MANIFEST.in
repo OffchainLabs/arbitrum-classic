@@ -1,5 +1,0 @@
-include arbitrum/evm/contract-templates.json
-include arbitrum/evm/ArbSys.json
-global-exclude *.pyc
-global-exclude ._*
-global-exclude *.mo

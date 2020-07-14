@@ -25,18 +25,18 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/machinetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"math/big"
 	"testing"
 )
 
-func getTester(t *testing.T) *machinetester.MachineTester {
+func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	client, auths := test.SimulatedBackend()
 	auth := auths[0]
 
-	_, machineTx, deployedMachineTester, err := machinetester.DeployMachineTester(
+	_, machineTx, deployedMachineTester, err := ethbridgetestcontracts.DeployMachineTester(
 		auth,
 		client,
 	)

@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
@@ -32,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -48,7 +48,7 @@ var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
 
 func init() {
-	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
+	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.ArbRollupABI))
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func init() {
 }
 
 type ethRollupWatcher struct {
-	ArbRollup *rollup.ArbRollup
+	ArbRollup *ethbridgecontracts.ArbRollup
 
 	rollupAddress ethcommon.Address
 	client        ethutils.EthClient
@@ -75,7 +75,7 @@ func newRollupWatcher(
 	rollupAddress ethcommon.Address,
 	client ethutils.EthClient,
 ) (*ethRollupWatcher, error) {
-	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
+	arbitrumRollupContract, err := ethbridgecontracts.NewArbRollup(rollupAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
