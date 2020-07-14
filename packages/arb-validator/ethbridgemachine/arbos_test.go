@@ -300,9 +300,7 @@ func TestBatch(t *testing.T) {
 			Data:        []byte{},
 		}
 
-		ethTx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 0, big.NewInt(0), []byte{})
-
-		signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(chainId), pk)
+		signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(chainId), pk)
 		if err != nil {
 			t.Fatal(err)
 		}

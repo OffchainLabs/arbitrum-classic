@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
 	"log"
 	"math/big"
 	"net/http"
@@ -34,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
@@ -210,26 +210,19 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 	if err != nil {
 		return errors2.Wrap(err, "error decoding signature")
 	}
-
 	if len(signature) != signatureLength {
 		return errors.New("signature of wrong length")
 	}
 
-	// Convert sig with normalized v
-	if signature[recoverBitPos] == 27 {
-		signature[recoverBitPos] = 0
-	} else if signature[recoverBitPos] == 28 {
-		signature[recoverBitPos] = 1
+	chainId := new(big.Int).SetBytes(m.rollupAddress[12:])
+	signer := types.NewEIP155Signer(chainId)
+	signedTx, err := tx.AsEthTx().WithSignature(signer, signature)
+	if err != nil {
+		return err
 	}
-
-	txDataHash := tx.BatchTxHash(m.rollupAddress)
-	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
-	if !crypto.VerifySignature(
-		pubkeyBytes,
-		messageHash[:],
-		signature[:len(signature)-1],
-	) {
-		return errors.New("invalid signature")
+	sender, err := signer.Sender(signedTx)
+	if err != nil {
+		return err
 	}
 
 	var sigData [signatureLength]byte
@@ -240,20 +233,7 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 		Signature:   sigData,
 	}
 
-	var pubkey *ecdsa.PublicKey
-	var pubkeyErr error
-	if len(pubkeyBytes) == 33 {
-		pubkey, pubkeyErr = crypto.DecompressPubkey(pubkeyBytes)
-	} else {
-		x, y := elliptic.Unmarshal(crypto.S256(), pubkeyBytes)
-		pubkey = &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}
-	}
-
-	if pubkeyErr != nil {
-		return err
-	}
-	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)
+	log.Println("Got tx: ", tx, "with hash", tx.MessageID(common.NewAddressFromEth(sender)), "from", sender.Hex())
 
 	m.Lock()
 	defer m.Unlock()
