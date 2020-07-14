@@ -16,7 +16,7 @@
     "install:deps": "./scripts/install-deps",
     "install:ci": "./scripts/install-ci",
     "install:validator": "./scripts/install-validator",
-    "update-abi": "./scripts/update-abi",
+    "update-abi": "yarn go:generate && yarn workspace arb-provider-ethers update-abi",
     "build": "yarn workspace arb-provider-ethers build",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
