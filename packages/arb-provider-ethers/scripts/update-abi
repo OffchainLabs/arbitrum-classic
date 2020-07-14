@@ -4,7 +4,7 @@
 ### --------------------------------------------------------------------
 
 yarn workspace arb-bridge-eth typechain
-yarn workspace arbos-contracts typechain
+yarn workspace arbos-contracts buidler typechain
 
 cd ../arb-bridge-eth/build/types
 

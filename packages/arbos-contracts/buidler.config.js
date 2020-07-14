@@ -11,4 +11,7 @@ module.exports = {
       runs: 200,
     },
   },
+  typechain: {
+    target: 'ethers-v4',
+  },
 }
