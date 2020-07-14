@@ -37,7 +37,7 @@ import (
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
 		log.Println("Launching opinion thread")
-		preparingAssertions := make(map[common.Hash]bool)
+		preparingAssertions := make(map[common.Hash]struct{})
 		preparedAssertions := make(map[common.Hash]*chainlistener.PreparedAssertion)
 		// This mutex protects all access to preparingAssertions and preparedAssertions
 		assertionsMut := new(sync.Mutex)
@@ -101,7 +101,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			}
 			// Reset prepared
 			assertionsMut.Lock()
-			preparingAssertions = make(map[common.Hash]bool)
+			preparingAssertions = make(map[common.Hash]struct{})
 			preparedAssertions = make(map[common.Hash]*chainlistener.PreparedAssertion)
 			assertionsMut.Unlock()
 			chain.RLock()
@@ -153,19 +153,21 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				// Prepare next assertion
 				assertionsMut.Lock()
-				_, isPreparing := preparingAssertions[chain.calculatedValidNode.Hash()]
-				preparingAssertions[chain.calculatedValidNode.Hash()] = true
+				prevNode := chain.calculatedValidNode.Hash()
+				_, isPreparing := preparingAssertions[prevNode]
+				preparingAssertions[prevNode] = struct{}{}
 				assertionsMut.Unlock()
 				if !isPreparing {
 					go func() {
 						prepped, err := chain.prepareAssertion(chain.assumedValidBlock)
 						assertionsMut.Lock()
-						defer assertionsMut.Unlock()
 						if err != nil {
-							preparingAssertions[chain.calculatedValidNode.Hash()] = false
+							delete(preparingAssertions, prevNode)
+							assertionsMut.Unlock()
 							return
 						}
-						preparedAssertions[prepped.Prev.Hash()] = prepped
+						preparedAssertions[prevNode] = prepped
+						assertionsMut.Unlock()
 						chain.Lock()
 						chain.pendingState = prepped.Machine
 						chain.Unlock()
