@@ -19,7 +19,7 @@
     "prepublishOnly": "yarn build && yarn format && yarn test",
     "preversion": "yarn lint",
     "prepare": "install-peers",
-    "build": "rm -r ./dist && tsc",
+    "build": "rm -rf ./dist && tsc",
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
