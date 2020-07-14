@@ -7,7 +7,6 @@ export interface SendTransactionArgs {
   destAddress?: string
   payment?: string
   data?: string
-  pubkey?: string
   signature?: string
 }
 

@@ -25,8 +25,7 @@ message SendTransactionArgs {
     string destAddress = 4;
     string payment = 5;
     string data = 6;
-    string pubkey = 7;
-    string signature = 8;
+    string signature = 7;
 }
 
 message SendTransactionReply {

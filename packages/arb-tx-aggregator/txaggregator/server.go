@@ -18,8 +18,6 @@ package txaggregator
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"log"
@@ -32,7 +30,6 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -42,18 +39,10 @@ import (
 const maxTransactions = 200
 
 const signatureLength = 65
-const recoverBitPos = signatureLength - 1
 
 type DecodedBatchTx struct {
 	tx     message.BatchTx
-	pubkey []byte
-}
-
-func NewDecodedBatchTx(tx message.BatchTx, key ecdsa.PublicKey) DecodedBatchTx {
-	return DecodedBatchTx{
-		tx:     tx,
-		pubkey: elliptic.Marshal(crypto.S256(), key.X, key.Y),
-	}
+	sender common.Address
 }
 
 type Server struct {
@@ -108,10 +97,9 @@ func NewServer(
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
 func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
-	transactionsBySender := make(map[string][]DecodedBatchTx)
+	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
 	for _, tx := range txes {
-		senderPubkey := hexutil.Encode(tx.pubkey)
-		transactionsBySender[senderPubkey] = append(transactionsBySender[senderPubkey], tx)
+		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
 	}
 
 	for _, txes := range transactionsBySender {
@@ -122,9 +110,8 @@ func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 
 	batchTxes := make([]message.BatchTx, 0, len(txes))
 	for _, tx := range txes {
-		senderPubkey := hexutil.Encode(tx.pubkey)
-		nextTx := transactionsBySender[senderPubkey][0]
-		transactionsBySender[senderPubkey] = transactionsBySender[senderPubkey][1:]
+		nextTx := transactionsBySender[tx.sender][0]
+		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
 		batchTxes = append(batchTxes, nextTx.tx)
 	}
 	return message.TransactionBatch{Transactions: batchTxes}
@@ -201,11 +188,6 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 		Data:        data,
 	}
 
-	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding pubkey")
-	}
-
 	signature, err := hexutil.Decode(args.Signature)
 	if err != nil {
 		return errors2.Wrap(err, "error decoding signature")
@@ -220,10 +202,11 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 	if err != nil {
 		return err
 	}
-	sender, err := signer.Sender(signedTx)
+	ethSender, err := signer.Sender(signedTx)
 	if err != nil {
 		return err
 	}
+	sender := common.NewAddressFromEth(ethSender)
 
 	var sigData [signatureLength]byte
 	copy(sigData[:], signature)
@@ -233,7 +216,7 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 		Signature:   sigData,
 	}
 
-	log.Println("Got tx: ", tx, "with hash", tx.MessageID(common.NewAddressFromEth(sender)), "from", sender.Hex())
+	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)
 
 	m.Lock()
 	defer m.Unlock()
@@ -244,7 +227,7 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 
 	m.transactions = append(m.transactions, DecodedBatchTx{
 		tx:     batchTx,
-		pubkey: pubkeyBytes,
+		sender: sender,
 	})
 	return nil
 }

@@ -49,7 +49,10 @@ func TestPrepareTransactions(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.Transaction.SequenceNum = big.NewInt(int64(i))
-			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
+			decoded := DecodedBatchTx{
+				tx:     batchTx,
+				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
+			}
 			decodedTxes = append(decodedTxes, decoded)
 			sortedTxes = append(sortedTxes, decoded.tx)
 		}
@@ -65,7 +68,10 @@ func TestPrepareTransactions(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
-			decoded := NewDecodedBatchTx(batchTx, keys[0].PublicKey)
+			decoded := DecodedBatchTx{
+				tx:     batchTx,
+				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
+			}
 			decodedTxes = append(decodedTxes, decoded)
 		}
 		for i := range decodedTxes {
@@ -84,7 +90,10 @@ func TestPrepareTransactions(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			batchTx := message.NewRandomBatchTx(chain, keys[i])
 			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
-			decoded := NewDecodedBatchTx(batchTx, keys[i].PublicKey)
+			decoded := DecodedBatchTx{
+				tx:     batchTx,
+				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[i].PublicKey)),
+			}
 			decodedTxes = append(decodedTxes, decoded)
 			sortedTxes = append(sortedTxes, decoded.tx)
 		}
