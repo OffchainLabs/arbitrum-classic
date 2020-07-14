@@ -26,58 +26,43 @@
 #include <string>
 #include <thread>
 
-std::vector<char> hexStringToBytes(const std::string& hexstr) {
-    std::vector<char> bytes;
-    bytes.reserve(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return bytes;
-}
-
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
-    std::string filename;
-    unsigned long long stepCount = 10000000000;
-    if (argc < 2) {
-        std::cout << "Usage: AVMTest <ao file>" << std::endl;
-        std::cout << "   defaulting to use add.ao" << std::endl;
-        filename = "add.ao";
-    } else {
-        filename = argv[1];
+    if (argc < 3 || (std::string(argv[1]) != "--hexops" &&
+                     std::string(argv[1]) != "--mexe")) {
+        std::cout << "Usage: \n"
+                     "avm_runner --hexops filename\n"
+                     "avm_runner --mexe filename\n";
+        return 1;
     }
-    std::cout << filename << std::endl;
+    auto mode = std::string(argv[1]);
+    std::string filename = argv[2];
 
-    auto mach = Machine::loadFromFile(filename);
+    auto mach = [&]() {
+        if (mode == "--hexops") {
+            std::ifstream file(filename, std::ios::binary);
+            std::vector<unsigned char> raw_ops(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
 
-    auto start = std::chrono::high_resolution_clock::now();
+            auto code = std::make_shared<Code>();
+            auto stub = code->addSegment();
+            // Code segments are built back to front so add operations in
+            // reverse
+            for (auto it = raw_ops.rbegin(); it != raw_ops.rend(); ++it) {
+                stub = code->addOperation(stub.pc,
+                                          Operation(static_cast<OpCode>(*it)));
+            }
+            return Machine(MachineState(std::move(code), Tuple(),
+                                        std::make_shared<TuplePool>()));
+        } else {
+            return Machine::loadFromFile(filename);
+        }
+    }();
 
-    auto msg1DataRaw = hexStringToBytes(
-        "06000000000000000000000000000000000000000000000000000000000000000afe00"
-        "7ec3319c8348582438bc9155320d99b577975540efd44c0878246f4007110342060000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000c7711f36b2c13e00821ffd9ec54b04a60aefbd1b070000000000"
-        "0000000000000000d02bec7ee5ee73a271b144e829eed1c19218d81300ffffffffffff"
-        "fffffffffffffffffffffffffffffffffffffffffffffffffffe000000000000000000"
-        "000000000000000000000000000000000000000000000000050b030b03030303030303"
-        "000aefbd1b000000000000000000000000000000000000000000000000000000000303"
-        "0303030070a08231000000000000000000000000c7711f36b2c13e00821ffd9ec54b04"
-        "a6000000000000000000000000000000000000000000000000000000000000000024");
+    auto assertion = mach.run(100000000, Tuple(), std::chrono::seconds(0));
 
-    auto msg1DataRawPtr = const_cast<const char*>(msg1DataRaw.data());
-
-    auto msg1 =
-        nonstd::get<Tuple>(deserialize_value(msg1DataRawPtr, mach.getPool()));
-
-    std::cout << "Msg " << msg1 << std::endl;
-
-    Assertion assertion1 =
-        mach.run(stepCount, std::move(msg1), std::chrono::seconds{1000});
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    std::cout << assertion1.stepCount << " "
-              << " steps in " << elapsed.count() * 1000 << " milliseconds"
-              << std::endl;
-    std::cout << to_hex_str(mach.hash()) << "\n" << mach << std::endl;
-    std::this_thread::sleep_for(1s);
+    std::cout << "Ran " << assertion.stepCount << " ending in state "
+              << static_cast<int>(mach.currentStatus()) << "\n";
     return 0;
 }
