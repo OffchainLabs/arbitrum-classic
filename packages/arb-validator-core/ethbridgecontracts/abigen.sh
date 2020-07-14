@@ -1,11 +1,11 @@
 #!/bin/bash
 PREFIX=../../arb-bridge-eth/contracts
 IGNORED_LIB=$PREFIX/libraries/MerkleLib.sol:MerkleLib,$PREFIX/libraries/BytesLib.sol:BytesLib,$PREFIX/libraries/CloneFactory.sol:CloneFactory,$PREFIX/libraries/BytesLib.sol:BytesLib,$PREFIX/libraries/DebugPrint.sol:DebugPrint,$PREFIX/libraries/RollupTime.sol:RollupTime
-IGNORED_ARCH=$PREFIX/arch/Value.sol:Value,$PREFIX/arch/Protocol.sol:Protocol,$PREFIX/arch/Machine.sol:Machine
+IGNORED_ARCH=$PREFIX/arch/Value.sol:Value,$PREFIX/arch/Marshaling.sol:Marshaling,$PREFIX/arch/Hashing.sol:Hashing,$PREFIX/arch/Protocol.sol:Protocol,$PREFIX/arch/Machine.sol:Machine
 CHAL_PREFIX=$PREFIX/challenge
 IGNORED_CHALLENGE=$CHAL_PREFIX/ChallengeUtils.sol:ChallengeUtils,$CHAL_PREFIX/IChallengeFactory.sol:IChallengeFactory,$CHAL_PREFIX/IBisectionChallenge.sol:IBisectionChallenge
 IGNORED_INBOX=$PREFIX/inbox/IGlobalInbox.sol:IGlobalInbox,$PREFIX/inbox/Messages.sol:Messages
-IGNORED_ROLLUP=$PREFIX/rollup/IStaking.sol:IStaking
+IGNORED_ROLLUP=$PREFIX/rollup/IStaking.sol:IStaking,$PREFIX/rollup/IArbRollup.sol:IArbRollup
 IGNORED=$IGNORED_LIB,$IGNORED_ARCH,$IGNORED_CHALLENGE,$IGNORED_INBOX,$IGNORED_ROLLUP
 IGNORED_WITH_CHALLENGES=$IGNORED,$CHAL_PREFIX/Challenge.sol:Challenge,$CHAL_PREFIX/BisectionChallenge.sol:BisectionChallenge
 PACKAGE=ethbridgecontracts
